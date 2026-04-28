@@ -20,28 +20,28 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
   const {
     activeDrawer,
-    applyDefaults,
-    contextPanelOpen,
+    contentAsideOpen,
+    enterModule,
     modulePanelOpen,
     rightPanelOpen,
     setActiveDrawer,
-    setContextPanelOpen,
+    setContentAsideOpen,
     setModulePanelOpen,
     setRightPanelOpen,
   } = useLayoutStore();
 
   useEffect(() => {
-    applyDefaults(moduleDefinition);
-  }, [applyDefaults, moduleDefinition]);
+    enterModule();
+  }, [enterModule, moduleDefinition.id]);
 
   useEffect(() => {
     const modulePanel = searchParams.get("modulePanel");
-    const context = searchParams.get("context");
+    const aside = searchParams.get("aside") ?? searchParams.get("context");
     const right = searchParams.get("right");
     const drawer = searchParams.get("drawer");
 
     if (modulePanel) setModulePanelOpen(modulePanel === "open");
-    if (context) setContextPanelOpen(context !== "closed");
+    if (aside) setContentAsideOpen(aside !== "closed");
     if (right) setRightPanelOpen(right !== "closed");
     if (drawer) {
       const [type, id] = drawer.split(":");
@@ -50,7 +50,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }, [
     searchParams,
     setActiveDrawer,
-    setContextPanelOpen,
+    setContentAsideOpen,
     setModulePanelOpen,
     setRightPanelOpen,
   ]);
@@ -58,8 +58,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   useEffect(() => {
     const params = new URLSearchParams();
     params.set("modulePanel", modulePanelOpen ? "open" : "closed");
-    if (moduleDefinition.contextPanel) {
-      params.set("context", contextPanelOpen ? "history" : "closed");
+    if (moduleDefinition.contentAside) {
+      params.set("aside", contentAsideOpen ? "history" : "closed");
     }
     if (moduleDefinition.rightPanel) {
       params.set("right", rightPanelOpen ? "open" : "closed");
@@ -70,8 +70,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [
     activeDrawer,
-    contextPanelOpen,
-    moduleDefinition.contextPanel,
+    contentAsideOpen,
+    moduleDefinition.contentAside,
     moduleDefinition.rightPanel,
     modulePanelOpen,
     pathname,

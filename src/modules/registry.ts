@@ -12,10 +12,9 @@ import {
 import type { ModuleDefinition } from "@/types/emr";
 import {
   DispensingContent,
-  DispensingContextPanel,
+  DispensingContentAside,
   DispensingDrawer,
   DispensingHeader,
-  DispensingRightPanel,
   DispensingSidePanel,
 } from "@/features/dispensing/module";
 import {
@@ -31,7 +30,6 @@ export const modules: ModuleDefinition[] = [
     icon: Home,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
-    defaultLayout: { modulePanelOpen: true },
   },
   {
     id: "reception",
@@ -40,7 +38,6 @@ export const modules: ModuleDefinition[] = [
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
-    defaultLayout: { modulePanelOpen: true, rightPanelOpen: true },
   },
   {
     id: "treatment",
@@ -49,7 +46,6 @@ export const modules: ModuleDefinition[] = [
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
-    defaultLayout: { modulePanelOpen: true, rightPanelOpen: true },
   },
   {
     id: "lab",
@@ -57,9 +53,8 @@ export const modules: ModuleDefinition[] = [
     icon: FlaskConical,
     sidePanel: PlaceholderSidePanel,
     contentHeader: DispensingHeader,
-    contextPanel: DispensingContextPanel,
+    contentAside: DispensingContentAside,
     content: PlaceholderContent,
-    defaultLayout: { modulePanelOpen: true, contextPanelOpen: true },
   },
   {
     id: "imaging",
@@ -67,7 +62,6 @@ export const modules: ModuleDefinition[] = [
     icon: Images,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
-    defaultLayout: { modulePanelOpen: true },
   },
   {
     id: "dispensing",
@@ -75,16 +69,9 @@ export const modules: ModuleDefinition[] = [
     icon: Pill,
     sidePanel: DispensingSidePanel,
     contentHeader: DispensingHeader,
-    contextPanel: DispensingContextPanel,
+    contentAside: DispensingContentAside,
     content: DispensingContent,
-    rightPanel: DispensingRightPanel,
     drawer: DispensingDrawer,
-    defaultLayout: {
-      modulePanelOpen: true,
-      contextPanelOpen: false,
-      rightPanelOpen: true,
-      rightPanelWidth: 316,
-    },
   },
   {
     id: "orders",
@@ -93,7 +80,6 @@ export const modules: ModuleDefinition[] = [
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
-    defaultLayout: { modulePanelOpen: true, rightPanelOpen: false },
   },
   {
     id: "billing",
@@ -101,7 +87,6 @@ export const modules: ModuleDefinition[] = [
     icon: CreditCard,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
-    defaultLayout: { modulePanelOpen: true },
   },
   {
     id: "inpatient",
@@ -110,7 +95,6 @@ export const modules: ModuleDefinition[] = [
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
-    defaultLayout: { modulePanelOpen: true, rightPanelOpen: true },
   },
 ];
 

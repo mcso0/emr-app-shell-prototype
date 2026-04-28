@@ -9,7 +9,11 @@ export type DrawerState = {
 export type ShellComponentProps = {
   workspaceId: string;
   moduleId: string;
+  hasContentAside?: boolean;
+  hasRightPanel?: boolean;
 };
+
+export type PanelState = "open" | "closed";
 
 export type ModuleDefinition = {
   id: string;
@@ -17,16 +21,10 @@ export type ModuleDefinition = {
   icon: LucideIcon;
   sidePanel?: ComponentType<ShellComponentProps>;
   contentHeader?: ComponentType<ShellComponentProps>;
-  contextPanel?: ComponentType<ShellComponentProps>;
+  contentAside?: ComponentType<ShellComponentProps>;
   content: ComponentType<ShellComponentProps>;
   rightPanel?: ComponentType<ShellComponentProps>;
   drawer?: ComponentType<ShellComponentProps>;
-  defaultLayout: {
-    modulePanelOpen: boolean;
-    contextPanelOpen?: boolean;
-    rightPanelOpen?: boolean;
-    rightPanelWidth?: number;
-  };
 };
 
 export type Order = {

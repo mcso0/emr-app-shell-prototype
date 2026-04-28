@@ -106,17 +106,17 @@ export function DispensingSidePanel() {
 }
 
 export function DispensingHeader() {
-  const { contextPanelOpen, setContextPanelOpen } = useLayoutStore();
+  const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
 
   return (
     <div className="border-b bg-white">
       <div className="flex h-11 items-center gap-2 px-4">
         <Button
-          variant={contextPanelOpen ? "secondary" : "outline"}
+          variant={contentAsideOpen ? "secondary" : "outline"}
           size="sm"
-          onClick={() => setContextPanelOpen(!contextPanelOpen)}
+          onClick={() => setContentAsideOpen(!contentAsideOpen)}
         >
-          {contextPanelOpen ? <PanelLeftOpen data-icon="inline-start" /> : <Clock data-icon="inline-start" />}
+          {contentAsideOpen ? <PanelLeftOpen data-icon="inline-start" /> : <Clock data-icon="inline-start" />}
           검사이력
         </Button>
         {[
@@ -138,7 +138,7 @@ export function DispensingHeader() {
   );
 }
 
-export function DispensingContextPanel() {
+export function DispensingContentAside() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-12 items-center justify-between border-b px-4">
@@ -278,27 +278,6 @@ export function DispensingContent() {
         </ScrollArea>
       </section>
     </div>
-  );
-}
-
-export function DispensingRightPanel() {
-  return (
-    <ScrollArea className="min-h-0 flex-1">
-      <div className="flex flex-col gap-3 p-3">
-        <div className="rounded-md border bg-[#f8fafc] p-3">
-          <div className="text-[12px] text-muted-foreground">오늘의 주의 정보</div>
-          <div className="mt-1 font-semibold">검사 결과 확인 후 조제 진행</div>
-        </div>
-        {["복약 안내", "보호자 연락", "재고 상태", "담당자 메모"].map((item) => (
-          <div key={item} className="rounded-md border bg-white p-3">
-            <div className="font-semibold">{item}</div>
-            <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
-              업무 중 필요한 보조 정보와 빠른 액션이 이 영역에 표시됩니다.
-            </p>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
   );
 }
 

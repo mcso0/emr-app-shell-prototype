@@ -2,48 +2,48 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { DrawerState, ModuleDefinition } from "@/types/emr";
+import type { DrawerState } from "@/types/emr";
+import { SHELL_LAYOUT } from "@/shell/layout-contract";
 
 type LayoutStore = {
   activeDrawer: DrawerState;
-  contextPanelOpen: boolean;
+  contentAsideOpen: boolean;
   modulePanelOpen: boolean;
   rightPanelOpen: boolean;
+  moduleSidePanelWidth: number;
+  contentAsideWidth: number;
   rightPanelWidth: number;
   setActiveDrawer: (drawer: DrawerState) => void;
-  setContextPanelOpen: (open: boolean) => void;
+  setContentAsideOpen: (open: boolean) => void;
   setModulePanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
-  applyDefaults: (definition: ModuleDefinition) => void;
+  enterModule: () => void;
 };
 
 export const useLayoutStore = create<LayoutStore>()(
   persist(
     (set) => ({
       activeDrawer: null,
-      contextPanelOpen: false,
+      contentAsideOpen: false,
       modulePanelOpen: true,
       rightPanelOpen: true,
-      rightPanelWidth: 300,
+      moduleSidePanelWidth: SHELL_LAYOUT.moduleSidePanel.defaultWidth,
+      contentAsideWidth: SHELL_LAYOUT.contentAside.defaultWidth,
+      rightPanelWidth: SHELL_LAYOUT.rightPanel.defaultWidth,
       setActiveDrawer: (activeDrawer) => set({ activeDrawer }),
-      setContextPanelOpen: (contextPanelOpen) => set({ contextPanelOpen }),
+      setContentAsideOpen: (contentAsideOpen) => set({ contentAsideOpen }),
       setModulePanelOpen: (modulePanelOpen) => set({ modulePanelOpen }),
       setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
-      applyDefaults: (definition) =>
-        set({
-          activeDrawer: null,
-          contextPanelOpen: Boolean(definition.defaultLayout.contextPanelOpen),
-          modulePanelOpen: definition.defaultLayout.modulePanelOpen,
-          rightPanelOpen: Boolean(definition.defaultLayout.rightPanelOpen),
-          rightPanelWidth: definition.defaultLayout.rightPanelWidth ?? 300,
-        }),
+      enterModule: () => set({ activeDrawer: null }),
     }),
     {
       name: "clair-emr-shell-layout",
       partialize: (state) => ({
-        contextPanelOpen: state.contextPanelOpen,
+        contentAsideOpen: state.contentAsideOpen,
         modulePanelOpen: state.modulePanelOpen,
         rightPanelOpen: state.rightPanelOpen,
+        moduleSidePanelWidth: state.moduleSidePanelWidth,
+        contentAsideWidth: state.contentAsideWidth,
         rightPanelWidth: state.rightPanelWidth,
       }),
     }
