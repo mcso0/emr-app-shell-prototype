@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Figma local secrets and captures
+figma/figma_token.md
+figma/figma-captures/

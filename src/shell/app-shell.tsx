@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -17,7 +17,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
+  const urlStateReadyRef = useRef(false);
   const {
     activeDrawer,
     contentAsideOpen,
@@ -35,20 +37,29 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }, [enterModule, moduleDefinition.id]);
 
   useEffect(() => {
-    const modulePanel = searchParams.get("modulePanel");
-    const aside = searchParams.get("aside") ?? searchParams.get("context");
-    const right = searchParams.get("right");
-    const drawer = searchParams.get("drawer");
+    urlStateReadyRef.current = false;
+    const readyTimer = window.setTimeout(() => {
+      const urlParams = new URLSearchParams(search);
+      const modulePanel = urlParams.get("modulePanel");
+      const aside = urlParams.get("aside") ?? urlParams.get("context");
+      const right = urlParams.get("right");
+      const drawer = urlParams.get("drawer");
 
-    if (modulePanel) setModulePanelOpen(modulePanel === "open");
-    if (aside) setContentAsideOpen(aside !== "closed");
-    if (right) setRightPanelOpen(right !== "closed");
-    if (drawer) {
-      const [type, id] = drawer.split(":");
-      if (type && id) setActiveDrawer({ type, id });
-    }
+      if (modulePanel) setModulePanelOpen(modulePanel === "open");
+      if (aside) setContentAsideOpen(aside !== "closed");
+      if (right) setRightPanelOpen(right !== "closed");
+      if (drawer) {
+        const [type, id] = drawer.split(":");
+        if (type && id) setActiveDrawer({ type, id });
+      }
+      window.setTimeout(() => {
+        urlStateReadyRef.current = true;
+      }, 0);
+    }, 0);
+
+    return () => window.clearTimeout(readyTimer);
   }, [
-    searchParams,
+    search,
     setActiveDrawer,
     setContentAsideOpen,
     setModulePanelOpen,
@@ -56,6 +67,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   ]);
 
   useEffect(() => {
+    if (!urlStateReadyRef.current) return;
+
     const params = new URLSearchParams();
     params.set("modulePanel", modulePanelOpen ? "open" : "closed");
     if (moduleDefinition.contentAside) {
@@ -67,7 +80,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     if (activeDrawer) {
       params.set("drawer", `${activeDrawer.type}:${activeDrawer.id}`);
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const nextSearch = params.toString();
+    if (search !== nextSearch) {
+      router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+    }
   }, [
     activeDrawer,
     contentAsideOpen,
@@ -77,12 +93,13 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     pathname,
     rightPanelOpen,
     router,
+    search,
   ]);
 
   return (
-    <div className="h-screen min-h-0 overflow-hidden bg-background text-foreground">
+    <div className="h-screen min-h-0 overflow-hidden bg-secondary text-foreground">
       <TopMenu workspaceId={workspaceId} />
-      <div className="grid h-[calc(100vh-44px)] grid-cols-[56px_1fr]">
+      <div className="grid h-[calc(100vh-52px)] grid-cols-[60px_1fr] gap-2.5 px-2.5 pb-2.5">
         <NavRail activeModuleId={moduleDefinition.id} workspaceId={workspaceId} />
         <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
       </div>

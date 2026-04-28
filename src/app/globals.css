@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "../styles/tokens/shadcn.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -39,6 +39,10 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand: var(--brand);
+  --color-selection-border: var(--selection-border);
+  --color-selection: var(--selection);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -49,85 +53,54 @@
 }
 
 :root {
-  --background: #f7f9fc;
-  --foreground: #172033;
-  --card: oklch(1 0 0);
-  --card-foreground: #172033;
-  --popover: oklch(1 0 0);
-  --popover-foreground: #172033;
-  --primary: #111827;
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: #edf2f7;
-  --secondary-foreground: #27364d;
-  --muted: #f1f5f9;
-  --muted-foreground: #66758c;
-  --accent: #e8f3ff;
-  --accent-foreground: #0b65c2;
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: #d8e2ef;
-  --input: #d8e2ef;
-  --ring: #7ab8ff;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.5rem;
-  --sidebar: #121927;
-  --sidebar-foreground: #e9eef7;
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --chart-1: var(--clair-color-atomic-blue-500);
+  --chart-2: var(--clair-color-atomic-green-500);
+  --chart-3: var(--clair-color-atomic-orange-500);
+  --chart-4: var(--clair-color-atomic-purple-500);
+  --chart-5: var(--clair-color-atomic-cyan-500);
+  --sidebar: var(--clair-color-atomic-gray-900);
+  --sidebar-foreground: var(--clair-color-atomic-gray-50);
+  --sidebar-primary: var(--clair-color-atomic-gray-800);
+  --sidebar-primary-foreground: var(--clair-color-atomic-common-100);
+  --sidebar-accent: var(--clair-color-atomic-gray-800);
+  --sidebar-accent-foreground: var(--clair-color-atomic-gray-50);
+  --sidebar-border: var(--clair-color-atomic-gray-700);
+  --sidebar-ring: var(--clair-color-atomic-sky-500);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: var(--clair-color-atomic-gray-900);
+  --foreground: var(--clair-color-atomic-gray-50);
+  --card: var(--clair-color-atomic-gray-800);
+  --card-foreground: var(--clair-color-atomic-gray-50);
+  --popover: var(--clair-color-atomic-gray-800);
+  --popover-foreground: var(--clair-color-atomic-gray-50);
+  --primary: var(--clair-color-atomic-gray-50);
+  --primary-foreground: var(--clair-color-atomic-gray-900);
+  --secondary: var(--clair-color-atomic-gray-800);
+  --secondary-foreground: var(--clair-color-atomic-gray-50);
+  --muted: var(--clair-color-atomic-gray-800);
+  --muted-foreground: var(--clair-color-atomic-gray-400);
+  --accent: var(--clair-color-atomic-gray-700);
+  --accent-foreground: var(--clair-color-atomic-gray-50);
+  --border: var(--clair-color-atomic-gray-700);
+  --input: var(--clair-color-atomic-gray-700);
+  --ring: var(--clair-color-atomic-sky-500);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    @apply font-sans;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-size: 13px;
     letter-spacing: 0;
-  }
-  html {
-    @apply font-sans;
   }
 }
 

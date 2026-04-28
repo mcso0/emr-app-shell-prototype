@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { PanelLeftClose, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { ModuleDefinition } from "@/types/emr";
 import { Button } from "@/components/ui/button";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -23,7 +23,6 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     rightPanelOpen,
     rightPanelWidth,
     setActiveDrawer,
-    setModulePanelOpen,
   } = useLayoutStore();
   const SidePanel = moduleDefinition.sidePanel;
   const Header = moduleDefinition.contentHeader;
@@ -31,6 +30,18 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const Drawer = moduleDefinition.drawer;
+  const effectiveModuleSidePanelWidth = Math.max(
+    moduleSidePanelWidth,
+    SHELL_LAYOUT.moduleSidePanel.minWidth
+  );
+  const effectiveContentAsideWidth = Math.max(
+    contentAsideWidth,
+    SHELL_LAYOUT.contentAside.minWidth
+  );
+  const effectiveRightPanelWidth = Math.max(
+    rightPanelWidth,
+    SHELL_LAYOUT.rightPanel.defaultWidth
+  );
   const slotProps = {
     workspaceId,
     moduleId: moduleDefinition.id,
@@ -40,57 +51,43 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 transition-[grid-template-columns] duration-200"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-input bg-card transition-[grid-template-columns] duration-200"
       style={{
         gridTemplateColumns: `${
-          modulePanelOpen && SidePanel ? `${moduleSidePanelWidth}px` : "0px"
+          modulePanelOpen && SidePanel ? `${effectiveModuleSidePanelWidth}px` : "0px"
         } minmax(0, 1fr) ${
-          RightPanel && rightPanelOpen ? `${rightPanelWidth}px` : "0px"
+          RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
         }`,
       }}
     >
-      <aside className="min-h-0 overflow-hidden border-r bg-white">
+      <aside className="min-h-0 overflow-hidden border-r bg-card">
         <div
           className="flex h-full flex-col"
           style={{
             minWidth: SHELL_LAYOUT.moduleSidePanel.minWidth,
-            width: moduleSidePanelWidth,
+            width: effectiveModuleSidePanelWidth,
           }}
         >
-          <div className="flex h-12 items-center justify-between border-b px-3">
-            <div className="min-w-0">
-              <div className="truncate text-[15px] font-semibold">{moduleDefinition.label}</div>
-              <div className="text-[11px] text-muted-foreground">Navigation Subpanel</div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="사이드 패널 접기"
-              onClick={() => setModulePanelOpen(false)}
-            >
-              <PanelLeftClose />
-            </Button>
-          </div>
           {SidePanel ? <SidePanel {...slotProps} /> : null}
         </div>
       </aside>
 
-      <section className="relative flex min-h-0 min-w-0 flex-col bg-[#f8fafc]">
+      <section className="relative flex min-h-0 min-w-0 flex-col bg-card">
         {Header ? <Header {...slotProps} /> : null}
         <div
           className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200"
           style={{
             gridTemplateColumns: `${
-              ContentAside && contentAsideOpen ? `${contentAsideWidth}px` : "0px"
+              ContentAside && contentAsideOpen ? `${effectiveContentAsideWidth}px` : "0px"
             } minmax(0, 1fr)`,
           }}
         >
-          <aside className="min-h-0 overflow-hidden border-r bg-white">
+          <aside className="min-h-0 overflow-hidden border-r bg-card">
             <div
               className="h-full"
               style={{
                 minWidth: SHELL_LAYOUT.contentAside.minWidth,
-                width: contentAsideWidth,
+                width: effectiveContentAsideWidth,
               }}
             >
               {ContentAside ? (
@@ -111,7 +108,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 480, opacity: 0 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute inset-y-0 right-0 border-l bg-white shadow-2xl"
+              className="absolute inset-y-0 right-0 border-l bg-card shadow-2xl"
               style={{
                 width: SHELL_LAYOUT.drawer.defaultWidth,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
@@ -139,11 +136,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 overflow-hidden border-l bg-white transition-opacity duration-150",
+          "min-h-0 overflow-hidden border-l bg-card transition-opacity duration-150",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}
       >
-        <div className="flex h-full w-full min-w-[280px] flex-col">
+        <div className="flex h-full w-full flex-col" style={{ minWidth: SHELL_LAYOUT.rightPanel.defaultWidth }}>
           {RightPanel ? <RightPanel {...slotProps} /> : null}
         </div>
       </aside>

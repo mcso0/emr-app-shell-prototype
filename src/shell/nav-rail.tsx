@@ -17,7 +17,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
   const { modulePanelOpen, setModulePanelOpen } = useLayoutStore();
 
   return (
-    <nav className="flex min-h-0 flex-col items-center border-r border-[#253149] bg-[#111827] py-2 text-white">
+    <nav className="flex min-h-0 flex-col items-center rounded-lg bg-sidebar py-2 text-sidebar-foreground">
       {!modulePanelOpen ? (
         <Tooltip>
           <TooltipTrigger
@@ -25,7 +25,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="mb-2 text-white hover:bg-white/10 hover:text-white"
+                className="mb-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 onClick={() => setModulePanelOpen(true)}
                 aria-label="사이드 패널 펼치기"
               >
@@ -49,8 +49,8 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
                   <Link
                     href={`/w/${workspaceId}/${module.id}`}
                     className={cn(
-                      "flex size-10 items-center justify-center rounded-md text-[#aab7cc] transition-colors hover:bg-white/10 hover:text-white",
-                      active && "bg-[#2563eb] text-white shadow-sm"
+                      "flex size-11 items-center justify-center rounded-md text-[var(--clair-color-atomic-gray-400)] transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      active && "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                     )}
                     aria-label={module.label}
                   >

@@ -15,14 +15,16 @@ export function PlaceholderSidePanel({ moduleId }: ShellComponentProps) {
           <button
             key={item}
             className={`flex h-9 items-center justify-between rounded-md px-3 text-left ${
-              index === 0 ? "bg-[#eef7ff] text-[#0b65c2]" : "hover:bg-muted"
+              index === 0
+                ? "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                : "hover:bg-muted"
             }`}
           >
             <span>{item}</span>
             <Badge variant="secondary">{index + 2}</Badge>
           </button>
         ))}
-        <div className="mt-4 rounded-md border bg-white p-3 text-[12px] leading-5 text-muted-foreground">
+        <div className="mt-4 rounded-md border bg-card p-3 text-[12px] leading-5 text-muted-foreground">
           {moduleId} 메뉴의 탐색/필터/그룹 패널을 검증하기 위한 저충실도 영역입니다.
         </div>
       </div>
@@ -65,7 +67,7 @@ export function PlaceholderContent({ hasRightPanel, moduleId }: ShellComponentPr
           ["진행중", "8", ClipboardList],
           ["완료", "24", CheckCircle2],
         ].map(([label, value, Icon]) => (
-          <div key={label as string} className="h-32 rounded-lg border bg-white p-4">
+          <div key={label as string} className="h-32 rounded-lg border bg-card p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Icon className="size-4" />
               {label as string}
@@ -88,7 +90,7 @@ export function PlaceholderRightPanel() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
           {["상세 정보", "보조 정보", "액션"].map((item) => (
-            <div key={item} className="rounded-md border bg-white p-3">
+            <div key={item} className="rounded-md border bg-card p-3">
               <div className="font-semibold">{item}</div>
               <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
                 이 메뉴에서는 우측 패널을 접고 펼칠 수 있습니다.

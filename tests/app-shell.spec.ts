@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
-  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
 
   await page.getByRole("button", { name: "검사이력" }).click();
   await expect(page.getByText("26.04.11")).toBeVisible();
@@ -14,6 +14,14 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
 
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await expect(page.getByText("상세 정보")).toBeHidden();
+});
+
+test("dispensing history aside can open from shared URL state", async ({ page }) => {
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=history");
+
+  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
+  await expect(page.getByText("검사이력 12")).toBeVisible();
+  await expect(page.getByText("26.04.11")).toBeVisible();
 });
 
 test("right panel can be collapsed on a module that owns it", async ({ page }) => {

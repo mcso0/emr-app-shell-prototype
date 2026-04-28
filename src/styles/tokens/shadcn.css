@@ -1,0 +1,30 @@
+/* Auto-generated shadcn semantic bridge. Do not edit directly. */
+@import "./clair.css";
+
+:root {
+  --background: var(--clair-color-background-normal);
+  --foreground: var(--clair-color-label-strong);
+  --card: var(--clair-color-background-normal);
+  --card-foreground: var(--clair-color-label-strong);
+  --popover: var(--clair-color-background-normal);
+  --popover-foreground: var(--clair-color-label-strong);
+  --primary: var(--clair-color-atomic-gray-900);
+  --primary-foreground: #FFFFFF;
+  --brand: var(--clair-color-atomic-sky-500);
+  --brand-foreground: #FFFFFF;
+  --selection: var(--clair-color-atomic-mint-50);
+  --selection-border: var(--clair-color-atomic-mint-500);
+  --secondary: var(--clair-color-background-surface);
+  --secondary-foreground: var(--clair-color-label-normal);
+  --muted: var(--clair-color-background-subtle);
+  --muted-foreground: var(--clair-color-label-alternative);
+  --accent: var(--clair-color-background-surface);
+  --accent-foreground: var(--clair-color-label-strong);
+  --destructive: var(--clair-color-status-negative-foreground);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--clair-color-line-normal);
+  --input: var(--clair-color-line-normal);
+  --ring: var(--clair-color-atomic-sky-500);
+  --radius: var(--clair-radius-md);
+}
+
