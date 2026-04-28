@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { CloseIcon } from "@/components/icons";
 import type { ModuleDefinition } from "@/types/emr";
 import { Button } from "@/components/ui/button";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -125,7 +125,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
                   aria-label="상세 닫기"
                   onClick={() => setActiveDrawer(null)}
                 >
-                  <X />
+                  <CloseIcon />
                 </Button>
               </div>
               <Drawer {...slotProps} />

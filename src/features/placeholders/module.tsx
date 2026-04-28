@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, CheckCircle2, ClipboardList } from "lucide-react";
+import { ActivityIcon, CheckIcon, ClipboardListIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,16 +56,16 @@ export function PlaceholderContent({ hasRightPanel, moduleId }: ShellComponentPr
             </Button>
           ) : null}
           <Button size="sm">
-            <ClipboardList data-icon="inline-start" />
+            <ClipboardListIcon data-icon="inline-start" />
             새 작업
           </Button>
         </div>
       </div>
       <div className="grid flex-1 grid-cols-3 gap-3">
         {[
-          ["대기", "12", Activity],
-          ["진행중", "8", ClipboardList],
-          ["완료", "24", CheckCircle2],
+          ["대기", "12", ActivityIcon],
+          ["진행중", "8", ClipboardListIcon],
+          ["완료", "24", CheckIcon],
         ].map(([label, value, Icon]) => (
           <div key={label as string} className="h-32 rounded-lg border bg-card p-4">
             <div className="flex items-center gap-2 text-muted-foreground">

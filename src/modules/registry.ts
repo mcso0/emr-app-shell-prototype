@@ -1,14 +1,14 @@
 import {
-  Bed,
-  Building2,
-  ClipboardList,
-  CreditCard,
-  FlaskConical,
-  Home,
-  Images,
-  Pill,
-  Stethoscope,
-} from "lucide-react";
+  BedIcon,
+  BuildingIcon,
+  ClipboardListIcon,
+  CreditCardIcon,
+  FlaskIcon,
+  HomeIcon,
+  ImagesIcon,
+  PillIcon,
+  StethoscopeIcon,
+} from "@/components/icons";
 import type { ModuleDefinition } from "@/types/emr";
 import {
   DispensingContent,
@@ -27,14 +27,14 @@ export const modules: ModuleDefinition[] = [
   {
     id: "home",
     label: "홈",
-    icon: Home,
+    icon: HomeIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
   },
   {
     id: "reception",
     label: "접수",
-    icon: Building2,
+    icon: BuildingIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
@@ -42,7 +42,7 @@ export const modules: ModuleDefinition[] = [
   {
     id: "treatment",
     label: "진료",
-    icon: Stethoscope,
+    icon: StethoscopeIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
@@ -50,7 +50,7 @@ export const modules: ModuleDefinition[] = [
   {
     id: "lab",
     label: "검사",
-    icon: FlaskConical,
+    icon: FlaskIcon,
     sidePanel: PlaceholderSidePanel,
     contentHeader: DispensingHeader,
     contentAside: DispensingContentAside,
@@ -59,14 +59,14 @@ export const modules: ModuleDefinition[] = [
   {
     id: "imaging",
     label: "영상",
-    icon: Images,
+    icon: ImagesIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
   },
   {
     id: "dispensing",
     label: "조제",
-    icon: Pill,
+    icon: PillIcon,
     sidePanel: DispensingSidePanel,
     contentHeader: DispensingHeader,
     contentAside: DispensingContentAside,
@@ -76,7 +76,7 @@ export const modules: ModuleDefinition[] = [
   {
     id: "orders",
     label: "오더",
-    icon: ClipboardList,
+    icon: ClipboardListIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,
@@ -84,14 +84,14 @@ export const modules: ModuleDefinition[] = [
   {
     id: "billing",
     label: "수납",
-    icon: CreditCard,
+    icon: CreditCardIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
   },
   {
     id: "inpatient",
     label: "병동",
-    icon: Bed,
+    icon: BedIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,
     rightPanel: PlaceholderRightPanel,

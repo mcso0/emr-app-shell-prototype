@@ -6,7 +6,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { Check, ChevronRight } from "lucide-react";
+import { CheckIcon, ChevronRightIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -53,7 +53,7 @@ const columns: ColumnDef<Order>[] = [
     header: "오더명",
     cell: () => (
       <div className="flex min-w-[260px] items-center gap-2">
-        <ChevronRight className="size-3 text-muted-foreground" />
+        <ChevronRightIcon className="size-3 text-muted-foreground" />
         <span className="truncate font-medium text-foreground">
           Amoxicillin 500(mg) C head 1mg
         </span>
@@ -97,7 +97,7 @@ const columns: ColumnDef<Order>[] = [
             : "border-border text-foreground"
         )}
       >
-        <Check className="size-3" />
+        <CheckIcon className="size-3" />
         완료
       </span>
     ),

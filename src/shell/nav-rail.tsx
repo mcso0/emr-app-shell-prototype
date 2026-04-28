@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PanelLeftOpen } from "lucide-react";
+import { PanelOpenIcon } from "@/components/icons";
 import { modules } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
                 onClick={() => setModulePanelOpen(true)}
                 aria-label="사이드 패널 펼치기"
               >
-                <PanelLeftOpen />
+                <PanelOpenIcon />
               </Button>
             }
           />

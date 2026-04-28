@@ -1,20 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import {
-  CalendarDays,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Download,
-  Filter,
-  MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Printer,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+  CalendarIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  DownloadIcon,
+  FilterIcon,
+  MenuIcon,
+  PanelCloseIcon,
+  PanelOpenIcon,
+  PrinterIcon,
+  SearchIcon,
+  SlidersIcon,
+} from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +50,7 @@ export function DispensingSidePanel() {
             aria-label="사이드 패널 접기"
             onClick={() => setModulePanelOpen(false)}
           >
-            <PanelLeftClose />
+            <PanelCloseIcon />
           </Button>
           <span className="truncate text-[16px] font-semibold text-foreground">menuTitle</span>
         </div>
@@ -69,17 +70,17 @@ export function DispensingSidePanel() {
       </div>
       <div className="flex h-12 items-center gap-2 px-4">
         <Button variant="outline" size="icon-sm" className="bg-card" aria-label="이전 날짜">
-          <ChevronLeft />
+          <ChevronLeftIcon />
         </Button>
         <div className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg text-[13px] font-medium text-foreground">
-          <CalendarDays className="size-4 text-muted-foreground" />
+          <CalendarIcon className="size-4 text-muted-foreground" />
           yy.mm.dd(week)
           <Badge variant="outline" className="h-5 rounded-md bg-card px-1.5 text-[11px]">
             오늘
           </Badge>
         </div>
         <Button variant="outline" size="icon-sm" className="bg-card" aria-label="다음 날짜">
-          <ChevronRight />
+          <ChevronRightIcon />
         </Button>
       </div>
       <div className="mx-4 flex h-10 items-center justify-between border-y border-border text-[13px] text-muted-foreground">
@@ -91,13 +92,13 @@ export function DispensingSidePanel() {
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-xs" aria-label="정렬">
-            <SlidersHorizontal />
+            <SlidersIcon />
           </Button>
           <Button variant="ghost" size="icon-xs" aria-label="필터">
-            <Filter />
+            <FilterIcon />
           </Button>
           <Button variant="ghost" size="icon-xs" aria-label="검색">
-            <Search />
+            <SearchIcon />
           </Button>
         </div>
       </div>
@@ -107,7 +108,7 @@ export function DispensingSidePanel() {
             <div key={item.id} className="flex flex-col gap-2">
               <div className="flex h-8 items-center justify-between text-[13px] text-muted-foreground">
                 <div className="border-l-2 border-[var(--clair-color-atomic-orange-400)] pl-3">text num</div>
-                <ChevronDown className="size-4" />
+                <ChevronDownIcon className="size-4" />
               </div>
               <div
                 className={`rounded-lg border p-3 transition-colors ${
@@ -139,7 +140,7 @@ export function DispensingSidePanel() {
                     </Badge>
                   </div>
                   <span className="flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <ClockIcon className="size-3" />
                     hh:mm state
                   </span>
                 </div>
@@ -164,7 +165,7 @@ export function DispensingHeader() {
           className="h-[26px] bg-card"
           onClick={() => setContentAsideOpen(!contentAsideOpen)}
         >
-          {contentAsideOpen ? <PanelLeftOpen data-icon="inline-start" /> : <Clock data-icon="inline-start" />}
+          {contentAsideOpen ? <PanelOpenIcon data-icon="inline-start" /> : <ClockIcon data-icon="inline-start" />}
           검사이력
         </Button>
         <div className="h-[18px] w-px bg-border" />
@@ -190,13 +191,13 @@ export function DispensingHeader() {
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-xs" aria-label="이전">
-            <ChevronLeft />
+            <ChevronLeftIcon />
           </Button>
           <Button variant="ghost" size="icon-xs" aria-label="다음">
-            <ChevronRight />
+            <ChevronRightIcon />
           </Button>
           <Button variant="ghost" size="icon-xs" aria-label="메뉴">
-            <MoreHorizontal />
+            <MenuIcon />
           </Button>
         </div>
       </div>
@@ -209,18 +210,18 @@ export function DispensingContentAside() {
     <div className="flex h-full flex-col bg-card">
       <div className="mx-4 flex h-12 items-center justify-between border-b border-border">
         <div className="flex items-center gap-2 text-[14px] font-semibold text-foreground">
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon className="size-4" />
           검사이력 <span className="text-muted-foreground">12</span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-xs" aria-label="정렬">
-            <SlidersHorizontal />
+            <SlidersIcon />
           </Button>
           <Button variant="ghost" size="icon-xs" aria-label="필터">
-            <Filter />
+            <FilterIcon />
           </Button>
           <Button variant="ghost" size="icon-xs" aria-label="검색">
-            <Search />
+            <SearchIcon />
           </Button>
         </div>
       </div>
@@ -232,7 +233,7 @@ export function DispensingContentAside() {
                 <span>
                   {group.date} <span>{group.count}</span>
                 </span>
-                <ChevronDown className="size-4" />
+                <ChevronDownIcon className="size-4" />
               </div>
               <div className="mt-3 flex flex-col gap-3">
                 {group.items.map((item) => (
@@ -262,16 +263,16 @@ export function DispensingContent() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="bg-card">
-            <Download data-icon="inline-start" />
+            <DownloadIcon data-icon="inline-start" />
             PDF 다운로드
           </Button>
           <Button variant="outline" size="sm" className="bg-card">
-            <Printer data-icon="inline-start" />
+            <PrinterIcon data-icon="inline-start" />
             출력하기
           </Button>
           <Button size="sm">
             담당하기
-            <ChevronDown data-icon="inline-end" />
+            <ChevronDownIcon data-icon="inline-end" />
           </Button>
         </div>
       </div>
@@ -310,7 +311,7 @@ export function DispensingContent() {
       <section className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-card">
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-2">
-            <ChevronDown className="size-4 text-muted-foreground" />
+            <ChevronDownIcon className="size-4 text-muted-foreground" />
             <span className="text-[14px] font-semibold text-foreground">항생제 세트 A</span>
             <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
               6
@@ -321,12 +322,12 @@ export function DispensingContent() {
             {["수정이력조회", "리마인"].map((label) => (
               <Button key={label} variant="outline" size="xs" className="bg-card">
                 {label}
-                <MoreHorizontal data-icon="inline-end" />
+                <MenuIcon data-icon="inline-end" />
               </Button>
             ))}
             <Button variant="outline" size="xs" className="border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]">
               조제중
-              <ChevronDown data-icon="inline-end" />
+              <ChevronDownIcon data-icon="inline-end" />
             </Button>
           </div>
         </div>
@@ -376,12 +377,24 @@ export function DispensingDrawer() {
       </div>
       <label className="flex flex-col gap-1 text-[12px] text-muted-foreground">
         용량
-        <Input defaultValue={order.dose} className="h-8 bg-card text-foreground" />
+        <DoseInput key={order.id} initialDose={order.dose} />
       </label>
       <div className="mt-auto flex justify-end gap-2 border-t pt-4">
         <Button variant="outline">변경 이력</Button>
         <Button>수정 저장</Button>
       </div>
     </div>
+  );
+}
+
+function DoseInput({ initialDose }: { initialDose: string }) {
+  const [doseValue, setDoseValue] = useState(initialDose);
+
+  return (
+    <Input
+      value={doseValue}
+      onValueChange={setDoseValue}
+      className="h-8 bg-card text-foreground"
+    />
   );
 }

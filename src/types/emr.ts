@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { AppIcon } from "@/components/icons";
 
 export type DrawerState = {
   type: string;
@@ -18,7 +18,7 @@ export type PanelState = "open" | "closed";
 export type ModuleDefinition = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: AppIcon;
   sidePanel?: ComponentType<ShellComponentProps>;
   contentHeader?: ComponentType<ShellComponentProps>;
   contentAside?: ComponentType<ShellComponentProps>;
