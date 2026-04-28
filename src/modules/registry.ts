@@ -41,7 +41,7 @@ export const modules: ModuleDefinition[] = [
   },
   {
     id: "treatment",
-    label: "진료",
+    label: "처치",
     icon: StethoscopeIcon,
     sidePanel: PlaceholderSidePanel,
     content: PlaceholderContent,

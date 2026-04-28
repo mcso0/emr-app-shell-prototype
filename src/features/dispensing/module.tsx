@@ -10,12 +10,12 @@ import {
   DownloadIcon,
   FilterIcon,
   MenuIcon,
-  PanelCloseIcon,
   PanelOpenIcon,
   PrinterIcon,
   SearchIcon,
   SlidersIcon,
 } from "@/components/icons";
+import { CollapseGnbIcon } from "@/components/gnb-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { useLayoutStore } from "@/stores/layout-store";
 import { historyGroups, orderRows, patient } from "@/features/dispensing/data";
+import type { ShellComponentProps } from "@/types/emr";
 
 const sideItems = Array.from({ length: 8 }, (_, index) => ({
   id: index,
@@ -37,36 +38,31 @@ const orderGroups = [
   { label: "취소된 오더", count: 1, tone: "bg-[var(--clair-color-atomic-red-500)]" },
 ];
 
-export function DispensingSidePanel() {
+export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-card">
-      <div className="flex h-[60px] items-center justify-between px-4">
-        <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-h-0 flex-1 flex-col bg-white">
+      <div className="flex h-16 items-start p-4">
+        <div className="flex min-w-0 items-center gap-1.5">
           <Button
             variant="ghost"
             size="icon-xs"
+            className="rounded bg-transparent text-[#4a5568] hover:bg-muted hover:text-[#171923]"
             aria-label="사이드 패널 접기"
             onClick={() => setModulePanelOpen(false)}
           >
-            <PanelCloseIcon />
+            <span className="flex size-6 items-center justify-center" aria-hidden="true">
+              <CollapseGnbIcon className="h-[11.5px] w-[15px]" />
+            </span>
           </Button>
-          <span className="truncate text-[16px] font-semibold text-foreground">menuTitle</span>
+          <span
+            className="truncate text-[18px] font-semibold leading-[26px] tracking-[-0.036px] text-[#171923]"
+            data-testid="module-side-panel-title"
+          >
+            {moduleLabel}
+          </span>
         </div>
-        <Tabs defaultValue="tab1">
-          <TabsList className="h-7 rounded-lg bg-muted p-1">
-            <TabsTrigger value="tab1" className="h-5 rounded-md px-2 text-[11px]">
-              Tab1
-            </TabsTrigger>
-            <TabsTrigger value="tab2" className="h-5 rounded-md px-2 text-[11px]">
-              Tab2
-            </TabsTrigger>
-            <TabsTrigger value="tab3" className="h-5 rounded-md px-2 text-[11px]">
-              Tab3
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
       <div className="flex h-12 items-center gap-2 px-4">
         <Button variant="outline" size="icon-sm" className="bg-card" aria-label="이전 날짜">

@@ -1,6 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import type { Transition } from "framer-motion";
 import { CloseIcon } from "@/components/icons";
 import type { ModuleDefinition } from "@/types/emr";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,11 @@ type WorkspaceFrameProps = {
   workspaceId: string;
 };
 
+const PANEL_ENTER_EASE = [0.16, 0, 0.08, 1] as const;
+const PANEL_EXIT_EASE = [0.32, 0, 1, 1] as const;
+
 export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrameProps) {
+  const reduceMotion = useReducedMotion();
   const {
     activeDrawer,
     contentAsideOpen,
@@ -30,10 +35,17 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const Drawer = moduleDefinition.drawer;
+  const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
   const effectiveModuleSidePanelWidth = Math.max(
     moduleSidePanelWidth,
     SHELL_LAYOUT.moduleSidePanel.minWidth
   );
+  const modulePanelTransition: Transition = reduceMotion
+    ? { duration: 0 }
+    : {
+        duration: modulePanelOpen ? 0.16 : 0.12,
+        ease: modulePanelOpen ? PANEL_ENTER_EASE : PANEL_EXIT_EASE,
+      };
   const effectiveContentAsideWidth = Math.max(
     contentAsideWidth,
     SHELL_LAYOUT.contentAside.minWidth
@@ -45,30 +57,57 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const slotProps = {
     workspaceId,
     moduleId: moduleDefinition.id,
+    moduleLabel: moduleDefinition.label,
     hasContentAside: Boolean(ContentAside),
     hasRightPanel: Boolean(RightPanel),
   };
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-input bg-card transition-[grid-template-columns] duration-200"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-input bg-card transition-[grid-template-columns]"
       style={{
         gridTemplateColumns: `${
           modulePanelOpen && SidePanel ? `${effectiveModuleSidePanelWidth}px` : "0px"
         } minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
         }`,
+        transitionDuration: reduceMotion
+          ? "0ms"
+          : modulePanelOpen
+            ? "var(--clair-motion-duration-panel-enter)"
+            : "var(--clair-motion-duration-panel-exit)",
+        transitionTimingFunction: modulePanelOpen
+          ? "var(--clair-motion-easing-panel-enter)"
+          : "var(--clair-motion-easing-panel-exit)",
       }}
     >
-      <aside className="min-h-0 overflow-hidden border-r bg-card">
+      <aside
+        className={cn(
+          "min-h-0 overflow-hidden bg-white",
+          shouldShowModuleSidePanel && "rounded-lg border border-[#cbd5e0]"
+        )}
+      >
         <div
-          className="flex h-full flex-col"
+          className="relative flex h-full flex-col"
           style={{
             minWidth: SHELL_LAYOUT.moduleSidePanel.minWidth,
             width: effectiveModuleSidePanelWidth,
           }}
         >
-          {SidePanel ? <SidePanel {...slotProps} /> : null}
+          <AnimatePresence initial={false}>
+            {shouldShowModuleSidePanel && SidePanel ? (
+              <motion.div
+                key={`${moduleDefinition.id}-module-side-panel`}
+                initial={reduceMotion ? false : { opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reduceMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
+                transition={modulePanelTransition}
+                className="h-full min-h-0"
+              >
+                <SidePanel {...slotProps} />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       </aside>
 

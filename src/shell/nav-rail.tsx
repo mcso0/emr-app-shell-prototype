@@ -1,11 +1,26 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { PanelOpenIcon } from "@/components/icons";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import type { Transition } from "framer-motion";
+import {
+  BellGnbIcon,
+  CalendarGnbIcon,
+  HomeGnbIcon,
+  HospitalGnbIcon,
+  HotelGnbIcon,
+  MedicalGnbIcon,
+  PayGnbIcon,
+  PetGnbIcon,
+  PharmacyGnbIcon,
+  PillGnbIcon,
+  RadiographyGnbIcon,
+  SidebarGnbIcon,
+} from "@/components/gnb-icons";
 import { modules } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type NavRailProps = {
@@ -13,56 +28,294 @@ type NavRailProps = {
   workspaceId: string;
 };
 
+type GnbIcon = (props: { className?: string }) => ReactNode;
+
+type RailNavItem = {
+  id: string;
+  icon: GnbIcon;
+  iconClassName: string;
+  label: string;
+  moduleId?: string;
+};
+
+const moduleIconById: Record<string, { icon: GnbIcon; iconClassName: string }> = {
+  home: { icon: HomeGnbIcon, iconClassName: "h-[17.105px] w-[18.5px]" },
+  reception: { icon: PharmacyGnbIcon, iconClassName: "h-[17.5px] w-[12.5px] rotate-45" },
+  treatment: { icon: MedicalGnbIcon, iconClassName: "h-[17.793px] w-[19.5px]" },
+  lab: { icon: CalendarGnbIcon, iconClassName: "h-[18.472px] w-[19px]" },
+  imaging: { icon: RadiographyGnbIcon, iconClassName: "size-[18.5px]" },
+  dispensing: { icon: PillGnbIcon, iconClassName: "h-[18.397px] w-[17.533px]" },
+  billing: { icon: PayGnbIcon, iconClassName: "size-[19.5px]" },
+  inpatient: { icon: HotelGnbIcon, iconClassName: "h-[14.5px] w-[18.5px]" },
+  orders: { icon: HospitalGnbIcon, iconClassName: "size-[19px]" },
+};
+
+const moduleSections = [
+  ["home"],
+  ["lab", "treatment", "reception", "imaging", "dispensing", "billing", "inpatient"],
+  ["orders"],
+] as const;
+
+const RAIL_LAYOUT_TRANSITION: Transition = {
+  type: "spring",
+  stiffness: 430,
+  damping: 38,
+  mass: 0.8,
+};
+
+const RAIL_REDUCED_TRANSITION: Transition = { duration: 0 };
+const RAIL_TOP_ENTER_TRANSITION: Transition = {
+  duration: 0.22,
+  ease: [0.22, 1, 0.36, 1],
+};
+const RAIL_TOP_EXIT_TRANSITION: Transition = {
+  duration: 0.18,
+  ease: [0.22, 1, 0.36, 1],
+};
+
+function getModuleItem(moduleId: string): RailNavItem | null {
+  const moduleDefinition = modules.find((item) => item.id === moduleId);
+  const iconSpec = moduleIconById[moduleId];
+
+  if (!moduleDefinition || !iconSpec) {
+    return null;
+  }
+
+  return {
+    id: moduleDefinition.id,
+    icon: iconSpec.icon,
+    iconClassName: iconSpec.iconClassName,
+    label: moduleDefinition.label,
+    moduleId: moduleDefinition.id,
+  };
+}
+
 export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
   const { modulePanelOpen, setModulePanelOpen } = useLayoutStore();
+  const reduceMotion = useReducedMotion();
+  const railLayoutTransition = reduceMotion
+    ? RAIL_REDUCED_TRANSITION
+    : RAIL_LAYOUT_TRANSITION;
+  const collapsedTopTransition: Transition = reduceMotion
+    ? RAIL_REDUCED_TRANSITION
+    : modulePanelOpen
+      ? RAIL_TOP_EXIT_TRANSITION
+      : RAIL_TOP_ENTER_TRANSITION;
+  const sections = moduleSections.map((section) =>
+    section.map(getModuleItem).filter((item): item is RailNavItem => Boolean(item))
+  );
 
   return (
-    <nav className="flex min-h-0 flex-col items-center rounded-lg bg-sidebar py-2 text-sidebar-foreground">
-      {!modulePanelOpen ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="mb-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={() => setModulePanelOpen(true)}
-                aria-label="사이드 패널 펼치기"
-              >
-                <PanelOpenIcon />
-              </Button>
-            }
-          />
-          <TooltipContent side="right">사이드 패널 펼치기</TooltipContent>
-        </Tooltip>
-      ) : (
-        <div className="mb-2 size-7" />
-      )}
-      <div className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto">
-        {modules.map((module) => {
-          const Icon = module.icon;
-          const active = module.id === activeModuleId;
-          return (
-            <Tooltip key={module.id}>
-              <TooltipTrigger
-                render={
-                  <Link
-                    href={`/w/${workspaceId}/${module.id}`}
-                    className={cn(
-                      "flex size-11 items-center justify-center rounded-md text-[var(--clair-color-atomic-gray-400)] transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      active && "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                    )}
-                    aria-label={module.label}
-                  >
-                    <Icon className="size-4" />
-                  </Link>
-                }
-              />
-              <TooltipContent side="right">{module.label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
+    <nav className="flex min-h-0 min-w-[60px] max-w-[60px] flex-col items-center rounded-lg bg-[#171923] p-2 text-[#cbd5e0]">
+      <div className="flex min-h-0 w-11 flex-1 flex-col items-center gap-0.5 overflow-y-auto">
+        <AnimatePresence initial={false}>
+          {!modulePanelOpen ? (
+            <motion.div
+              key="collapsed-panel-toggle"
+              initial={reduceMotion ? false : { height: 0, opacity: 0, y: -8 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={reduceMotion ? { height: 0 } : { height: 0, opacity: 0, y: -8 }}
+              transition={collapsedTopTransition}
+              className="flex w-full shrink-0 flex-col items-center gap-0.5 overflow-hidden"
+            >
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+                      onClick={() => setModulePanelOpen(true)}
+                      aria-label="사이드 패널 펼치기"
+                    >
+                      <IconFrame>
+                        <SidebarGnbIcon className="h-[14.5px] w-[19.5px]" />
+                      </IconFrame>
+                    </button>
+                  }
+                />
+                <TooltipContent side="right">사이드 패널 펼치기</TooltipContent>
+              </Tooltip>
+              <NavDivider transition={railLayoutTransition} />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <NavSection
+          activeModuleId={activeModuleId}
+          items={sections[0]}
+          transition={railLayoutTransition}
+          workspaceId={workspaceId}
+        />
+        <RailActionItem
+          icon={BellGnbIcon}
+          iconClassName="h-[18.299px] w-[18.5px]"
+          label="알림"
+          transition={railLayoutTransition}
+        />
+        <NavDivider transition={railLayoutTransition} />
+        <NavSection
+          activeModuleId={activeModuleId}
+          items={sections[1]}
+          transition={railLayoutTransition}
+          workspaceId={workspaceId}
+        />
+        <NavDivider transition={railLayoutTransition} />
+        <RailActionItem
+          icon={PetGnbIcon}
+          iconClassName="h-[18.359px] w-[19.5px]"
+          label="반려동물"
+          transition={railLayoutTransition}
+        />
+        <NavSection
+          activeModuleId={activeModuleId}
+          items={sections[2]}
+          transition={railLayoutTransition}
+          workspaceId={workspaceId}
+        />
       </div>
+      <button
+        type="button"
+        className="relative mt-2 flex size-11 items-center justify-center rounded-[6px] outline-none focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+        aria-label="사용자 프로필"
+      >
+        <span className="relative flex size-7 items-center justify-center rounded-full bg-[#a0aec0] text-[9px] font-medium leading-none text-black">
+          SH
+          <span className="absolute bottom-0 right-0 size-1.5 rounded-full border border-[#171923] bg-[var(--clair-color-atomic-green-500)]" />
+        </span>
+      </button>
     </nav>
+  );
+}
+
+function NavSection({
+  activeModuleId,
+  items,
+  transition,
+  workspaceId,
+}: {
+  activeModuleId: string;
+  items: RailNavItem[];
+  transition: Transition;
+  workspaceId: string;
+}) {
+  return (
+    <>
+      {items.map((item) => (
+        <RailModuleItem
+          key={item.id}
+          active={item.moduleId === activeModuleId}
+          item={item}
+          transition={transition}
+          workspaceId={workspaceId}
+        />
+      ))}
+    </>
+  );
+}
+
+function RailModuleItem({
+  active,
+  item,
+  transition,
+  workspaceId,
+}: {
+  active: boolean;
+  item: RailNavItem;
+  transition: Transition;
+  workspaceId: string;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <RailLayoutItem transition={transition}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Link
+              href={`/w/${workspaceId}/${item.moduleId}`}
+              className={cn(
+                "flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50",
+                active && "bg-[rgba(255,255,255,0.16)] text-white"
+              )}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              data-testid={active ? "nav-rail-active-item" : undefined}
+            >
+              <IconFrame>
+                <Icon className={item.iconClassName} />
+              </IconFrame>
+            </Link>
+          }
+        />
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    </RailLayoutItem>
+  );
+}
+
+function RailActionItem({
+  icon: Icon,
+  iconClassName,
+  label,
+  transition,
+}: {
+  icon: GnbIcon;
+  iconClassName: string;
+  label: string;
+  transition: Transition;
+}) {
+  return (
+    <RailLayoutItem transition={transition}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              className="flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+              aria-label={label}
+            >
+              <IconFrame>
+                <Icon className={iconClassName} />
+              </IconFrame>
+            </button>
+          }
+        />
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    </RailLayoutItem>
+  );
+}
+
+function IconFrame({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex size-6 items-center justify-center" aria-hidden="true">
+      {children}
+    </span>
+  );
+}
+
+function RailLayoutItem({
+  children,
+  transition,
+}: {
+  children: ReactNode;
+  transition: Transition;
+}) {
+  return (
+    <motion.div layout="position" transition={transition} className="w-full shrink-0">
+      {children}
+    </motion.div>
+  );
+}
+
+function NavDivider({ transition }: { transition: Transition }) {
+  return (
+    <motion.div
+      layout="position"
+      transition={transition}
+      className="flex w-full shrink-0 flex-col items-start overflow-hidden px-1.5 py-3"
+    >
+      <div className="h-px w-full bg-[#2d3748]" />
+    </motion.div>
   );
 }

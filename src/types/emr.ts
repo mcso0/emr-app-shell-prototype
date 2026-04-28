@@ -9,6 +9,7 @@ export type DrawerState = {
 export type ShellComponentProps = {
   workspaceId: string;
   moduleId: string;
+  moduleLabel: string;
   hasContentAside?: boolean;
   hasRightPanel?: boolean;
 };

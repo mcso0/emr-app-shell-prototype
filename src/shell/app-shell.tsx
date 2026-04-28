@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -20,6 +20,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
   const urlStateReadyRef = useRef(false);
+  const [urlStateVersion, setUrlStateVersion] = useState(0);
   const {
     activeDrawer,
     contentAsideOpen,
@@ -36,28 +37,29 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     enterModule();
   }, [enterModule, moduleDefinition.id]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     urlStateReadyRef.current = false;
-    const readyTimer = window.setTimeout(() => {
-      const urlParams = new URLSearchParams(search);
-      const modulePanel = urlParams.get("modulePanel");
-      const aside = urlParams.get("aside") ?? urlParams.get("context");
-      const right = urlParams.get("right");
-      const drawer = urlParams.get("drawer");
+    const urlParams = new URLSearchParams(search);
+    const modulePanel = urlParams.get("modulePanel");
+    const aside = urlParams.get("aside") ?? urlParams.get("context");
+    const right = urlParams.get("right");
+    const drawer = urlParams.get("drawer");
 
-      if (modulePanel) setModulePanelOpen(modulePanel === "open");
-      if (aside) setContentAsideOpen(aside !== "closed");
-      if (right) setRightPanelOpen(right !== "closed");
-      if (drawer) {
-        const [type, id] = drawer.split(":");
-        if (type && id) setActiveDrawer({ type, id });
-      }
-      window.setTimeout(() => {
-        urlStateReadyRef.current = true;
-      }, 0);
+    if (modulePanel) setModulePanelOpen(modulePanel === "open");
+    if (aside) setContentAsideOpen(aside !== "closed");
+    if (right) setRightPanelOpen(right !== "closed");
+    if (drawer) {
+      const [type, id] = drawer.split(":");
+      if (type && id) setActiveDrawer({ type, id });
+    }
+    const syncReadyTimer = window.setTimeout(() => {
+      urlStateReadyRef.current = true;
+      setUrlStateVersion((version) => version + 1);
     }, 0);
 
-    return () => window.clearTimeout(readyTimer);
+    return () => {
+      window.clearTimeout(syncReadyTimer);
+    };
   }, [
     search,
     setActiveDrawer,
@@ -94,6 +96,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     rightPanelOpen,
     router,
     search,
+    urlStateVersion,
   ]);
 
   return (
