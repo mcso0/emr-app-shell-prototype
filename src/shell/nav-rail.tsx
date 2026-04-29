@@ -64,6 +64,7 @@ const RAIL_LAYOUT_TRANSITION: Transition = {
 };
 
 const RAIL_REDUCED_TRANSITION: Transition = { duration: 0 };
+const RAIL_TOOLTIP_SIDE_OFFSET = 16;
 const RAIL_TOP_ENTER_TRANSITION: Transition = {
   duration: 0.22,
   ease: [0.22, 1, 0.36, 1],
@@ -133,7 +134,9 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
                     </button>
                   }
                 />
-                <TooltipContent side="right">사이드 패널 펼치기</TooltipContent>
+                <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_SIDE_OFFSET}>
+                  사이드 패널 펼치기
+                </TooltipContent>
               </Tooltip>
               <NavDivider transition={railLayoutTransition} />
             </motion.div>
@@ -247,7 +250,9 @@ function RailModuleItem({
             </Link>
           }
         />
-        <TooltipContent side="right">{item.label}</TooltipContent>
+        <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_SIDE_OFFSET}>
+          {item.label}
+        </TooltipContent>
       </Tooltip>
     </RailLayoutItem>
   );
@@ -280,7 +285,9 @@ function RailActionItem({
             </button>
           }
         />
-        <TooltipContent side="right">{label}</TooltipContent>
+        <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_SIDE_OFFSET}>
+          {label}
+        </TooltipContent>
       </Tooltip>
     </RailLayoutItem>
   );

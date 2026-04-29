@@ -171,3 +171,35 @@ export const StethoscopeIcon = createIcon(
   "StethoscopeIcon",
 );
 export const WarningIcon = createIcon(IconWarningTriangle, "WarningIcon");
+
+export const WorkspaceLogoMarkIcon = React.forwardRef<
+  SVGSVGElement,
+  AppIconProps
+>(({ color, size = 16, style, ...props }, ref) =>
+  React.createElement(
+    "svg",
+    {
+      ...props,
+      ref,
+      width: size,
+      height: size,
+      viewBox: "0 0 16 16",
+      fill: "none",
+      xmlns: "http://www.w3.org/2000/svg",
+      style: { color, ...style },
+    },
+    React.createElement(
+      "g",
+      { transform: "translate(4.28569 3.42857)" },
+      React.createElement("path", {
+        d: "M1.31159e-08 2.66755C-3.79695e-05 2.5078 0.0824223 2.35952 0.217716 2.27609L3.79845 0.0675967C3.93372 -0.0158421 4.10237 -0.0224488 4.24368 0.0501571L7.17994 1.55879C7.49698 1.72169 7.51455 2.17128 7.21116 2.35874L0.694891 6.38508C0.39124 6.57271 0.000797685 6.35277 0.00072172 5.99403L1.31159e-08 2.66755Z",
+        fill: "currentColor",
+      }),
+      React.createElement("path", {
+        d: "M1.10266 7.436C0.800698 7.23374 0.810739 6.78488 1.12144 6.59643L4.22422 4.71453C4.39559 4.6106 4.61242 4.62042 4.77376 4.73943L7.22649 6.54863C7.48513 6.73941 7.49762 7.12295 7.25195 7.33029L4.74567 9.16907C4.57706 9.31137 4.33513 9.32482 4.15189 9.20209L1.10266 7.436Z",
+        fill: "currentColor",
+      }),
+    ),
+  ),
+);
+WorkspaceLogoMarkIcon.displayName = "WorkspaceLogoMarkIcon";

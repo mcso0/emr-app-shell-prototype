@@ -83,7 +83,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     >
       <aside
         className={cn(
-          "min-h-0 overflow-hidden bg-white",
+          "min-h-0 min-w-0 overflow-hidden bg-white",
           shouldShowModuleSidePanel && "rounded-lg border border-[#cbd5e0]"
         )}
       >
@@ -121,7 +121,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
             } minmax(0, 1fr)`,
           }}
         >
-          <aside className="min-h-0 overflow-hidden border-r bg-card">
+          <aside className="min-h-0 min-w-0 overflow-hidden border-r bg-card">
             <div
               className="h-full"
               style={{
@@ -175,7 +175,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 overflow-hidden border-l bg-card transition-opacity duration-150",
+          "min-h-0 min-w-0 overflow-hidden border-l bg-card transition-opacity duration-150",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}
       >

@@ -43,6 +43,7 @@ type EmrListHeaderProps = {
   className?: string;
   count?: ReactNode;
   headerActions?: ReactNode;
+  leadingAction?: ReactNode;
   leadingIcon?: ReactNode;
 };
 
@@ -53,6 +54,7 @@ type EmrListGroupProps = {
   collapsed?: boolean;
   count?: ReactNode;
   groupActions?: ReactNode;
+  onToggle?: () => void;
 };
 
 type EmrListItemProps = {
@@ -123,7 +125,7 @@ export function EmrDateNavigator({
   todayLabel,
 }: EmrDateNavigatorProps) {
   return (
-    <div className={cn("flex h-12 shrink-0 items-center justify-between px-4", className)}>
+    <div className={cn("flex h-12 shrink-0 items-center justify-between gap-1 px-4", className)}>
       <Button
         variant="outline"
         size="icon-sm"
@@ -139,7 +141,10 @@ export function EmrDateNavigator({
         onClick={onOpenDatePicker}
         aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
       >
-        <CalendarIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <CalendarIcon
+          className="size-4 shrink-0 text-[var(--clair-color-atomic-gray-400)]"
+          aria-hidden="true"
+        />
         <span className="truncate">{dateLabel}</span>
         {todayLabel ? (
           <Badge variant="outline" className="h-5 rounded-md bg-card px-1.5 text-[11px]">
@@ -165,21 +170,54 @@ export function EmrListHeader({
   className,
   count,
   headerActions,
+  leadingAction,
   leadingIcon,
 }: EmrListHeaderProps) {
   return (
     <div className={cn("mx-4 flex h-10 shrink-0 items-center border-y border-border", className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-label-alternative)]">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-600)]">
+        {leadingAction}
         {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
         <span className="truncate">{label}</span>
         {count !== undefined ? (
-          <Badge variant="secondary" className="h-5 min-w-5 rounded-md px-1.5 text-[11px]">
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--clair-color-atomic-gray-50)] px-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)]">
             {count}
           </Badge>
         ) : null}
       </div>
-      {headerActions ? <div className="flex shrink-0 items-center gap-1">{headerActions}</div> : null}
+      {headerActions ? <div className="flex shrink-0 items-start gap-1.5">{headerActions}</div> : null}
     </div>
+  );
+}
+
+export function EmrListHeaderIconButton({
+  ariaLabel,
+  children,
+  iconSize = "sm",
+  onClick,
+}: {
+  ariaLabel: string;
+  children: ReactNode;
+  iconSize?: "sm" | "md";
+  onClick?: () => void;
+}) {
+  const iconSlotClassName =
+    iconSize === "md"
+      ? "size-4 [&_svg]:size-4"
+      : "size-[14px] [&_svg]:size-[14px]";
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      className="size-6 rounded-[var(--clair-radius-sm)] bg-transparent p-0 text-[var(--clair-color-label-normal)] hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-[#0000001A]"
+      aria-label={ariaLabel}
+      onClick={onClick}
+    >
+      <span className={cn("flex shrink-0 items-center justify-center overflow-hidden", iconSlotClassName)}>
+        {children}
+      </span>
+    </Button>
   );
 }
 
@@ -190,25 +228,49 @@ export function EmrListGroup({
   collapsed = false,
   count,
   groupActions,
+  onToggle,
 }: EmrListGroupProps) {
-  return (
-    <section className={cn("flex flex-col gap-1 rounded-[var(--clair-radius-atomic-10)]", className)}>
-      <div className="flex h-8 items-center gap-3 rounded-md p-1">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 border-l-2 border-[var(--clair-color-atomic-orange-400)] pl-2 text-[14px] font-medium leading-5 tracking-[0.196px]">
-          <span className="truncate text-[var(--clair-color-label-alternative)]">{label}</span>
+  const titleContent = (
+    <>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <span className="h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--clair-color-atomic-orange-400)]" />
+        <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px]">
+          <span className="truncate text-[var(--clair-color-atomic-gray-600)]">{label}</span>
           {count !== undefined ? (
-            <span className="shrink-0 text-[var(--clair-color-label-assistive)]">{count}</span>
+            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{count}</span>
           ) : null}
         </div>
-        {groupActions ? (
-          <div className="flex shrink-0 items-center gap-1">{groupActions}</div>
-        ) : (
+      </div>
+      {groupActions ? (
+        <div className="flex shrink-0 items-center gap-1">{groupActions}</div>
+      ) : (
+        <span className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1">
           <ChevronDownIcon
-            className={cn("size-4 shrink-0 text-muted-foreground transition-transform", collapsed && "-rotate-90")}
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform duration-[var(--clair-motion-duration-normal)] ease-[var(--clair-motion-easing-standard)]",
+              collapsed && "rotate-180"
+            )}
             aria-hidden="true"
           />
-        )}
-      </div>
+        </span>
+      )}
+    </>
+  );
+
+  return (
+    <section className={cn("flex flex-col gap-1 rounded-[var(--clair-radius-atomic-10)]", className)}>
+      {onToggle ? (
+        <button
+          type="button"
+          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-8) focus-visible:ring-3 focus-visible:ring-ring/50"
+          aria-expanded={!collapsed}
+          onClick={onToggle}
+        >
+          {titleContent}
+        </button>
+      ) : (
+        <div className="flex h-8 items-center gap-3 rounded-md p-1">{titleContent}</div>
+      )}
       {collapsed ? null : <div className="flex flex-col gap-1">{children}</div>}
     </section>
   );
@@ -251,26 +313,42 @@ export function EmrListItem({
     </>
   );
   const itemClassName = cn(
-    "w-full rounded-md border text-left transition-colors",
-    variant === "outline" ? "px-3 py-2.5" : "px-1 py-1",
+    "group/emr-list-item w-full border text-left transition-colors",
+    variant === "outline"
+      ? "rounded-[var(--clair-radius-atomic-8)] px-3 pb-2.5 pt-2"
+      : "rounded-[var(--clair-radius-sm)] px-1 py-1",
     selected
-      ? "border-[var(--selection-border)] bg-selection"
+      ? variant === "outline"
+        ? "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
+        : "border-transparent bg-[var(--clair-color-atomic-black-alpha-6)]"
       : variant === "outline"
-        ? "border-border bg-card hover:bg-background"
+        ? "border-[var(--clair-color-atomic-gray-200)] bg-card hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
         : "border-transparent bg-transparent hover:border-border hover:bg-card",
     className
   );
 
   if (onSelect) {
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         className={cn(itemClassName, "outline-none focus-visible:ring-3 focus-visible:ring-ring/50")}
+        data-selected={selected ? "true" : undefined}
         aria-pressed={selected}
         onClick={onSelect}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) {
+            return;
+          }
+
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect();
+          }
+        }}
       >
         {content}
-      </button>
+      </div>
     );
   }
 
