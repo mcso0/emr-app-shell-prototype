@@ -4,10 +4,10 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
 
-  await page.getByRole("button", { name: "검사이력" }).click();
+  await page.getByRole("button", { name: "조제이력" }).click();
   await expect(page.getByText("26.04.11")).toBeVisible();
 
-  await page.getByRole("button", { name: "검사이력" }).click();
+  await page.getByRole("button", { name: "조제이력" }).click();
   await page.getByTestId("order-row-section-0-o-10023").click();
   await expect(page.getByText("상세 정보")).toBeVisible();
   await expect(page.locator('input[value="Atorvastatin 20mg"]')).toBeVisible();
@@ -20,8 +20,23 @@ test("dispensing history aside can open from shared URL state", async ({ page })
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=history");
 
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
-  await expect(page.getByText("검사이력 12")).toBeVisible();
+  await expect(page.getByRole("button", { name: "이력 패널 접기" })).toBeVisible();
+  await expect(page.getByText("5", { exact: true })).toBeVisible();
   await expect(page.getByText("26.04.11")).toBeVisible();
+
+  const firstHistoryGroup = page.getByTestId("history-group-26.04.11");
+  const firstHistoryGroupToggle = firstHistoryGroup.getByTestId("history-group-toggle-26.04.11");
+
+  await expect(firstHistoryGroupToggle).toHaveAttribute("aria-expanded", "true");
+  await firstHistoryGroupToggle.click();
+  await expect(firstHistoryGroupToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(firstHistoryGroup.getByText("[CBC] CBC 검사 세트")).toBeHidden();
+  await expect(firstHistoryGroup.getByText("Atorvastatin 20(mg) T 9:00 AM")).toBeHidden();
+  await expect(page.getByTestId("history-group-26.03.12").getByText("[CBC] CBC 검사 세트")).toBeVisible();
+
+  await firstHistoryGroupToggle.click();
+  await expect(firstHistoryGroupToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(firstHistoryGroup.getByText("[CBC] CBC 검사 세트")).toBeVisible();
 });
 
 test("module side panel can collapse and reopen from the rail", async ({ page }) => {

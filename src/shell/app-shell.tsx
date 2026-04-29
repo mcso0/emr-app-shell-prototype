@@ -39,7 +39,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   useLayoutEffect(() => {
     urlStateReadyRef.current = false;
-    const urlParams = new URLSearchParams(search);
+    const urlParams = new URLSearchParams(window.location.search || search);
     const modulePanel = urlParams.get("modulePanel");
     const aside = urlParams.get("aside") ?? urlParams.get("context");
     const right = urlParams.get("right");
