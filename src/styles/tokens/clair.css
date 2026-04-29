@@ -499,9 +499,43 @@
   --clair-layout-dialog-lg: 720px;
 
   /* control-height */
-  --clair-control-height-xs: 28px;
-  --clair-control-height-sm: 32px;
-  --clair-control-height-md: 40px;
-  --clair-control-height-lg: 48px;
-  --clair-control-height-xl: 56px;
+  --clair-control-height-xs: 24px;
+  --clair-control-height-sm: 28px;
+  --clair-control-height-md: 32px;
+  --clair-control-height-lg: 36px;
+  --clair-control-height-xl: 40px;
+}
+
+.dark {
+  /* color.semantic (dark) */
+  --clair-color-primary-normal: #1F99FFFF;
+  --clair-color-primary-strong: #53B1FFFF;
+  --clair-color-primary-heavy: #87C9FFFF;
+  --clair-color-label-strong: #F7FAFCFF;
+  --clair-color-label-normal: #E2E8F0FF;
+  --clair-color-label-alternative: #CBD5E0FF;
+  --clair-color-label-assistive: #718096FF;
+  --clair-color-label-disable: #4A5568FF;
+  --clair-color-background-normal: #171923FF;
+  --clair-color-background-surface: #1A202CFF;
+  --clair-color-background-subtle: #2D3748FF;
+  --clair-color-fill-alternative: #FFFFFF0A;
+  --clair-color-fill-normal: #FFFFFF14;
+  --clair-color-fill-strong: #FFFFFF29;
+  --clair-color-line-subtle: #2D3748FF;
+  --clair-color-line-normal: #4A5568FF;
+  --clair-color-line-strong: #718096FF;
+  --clair-color-interaction-inactive: #718096FF;
+  --clair-color-interaction-disable: #2D3748FF;
+  --clair-color-status-positive-foreground: #68D391FF;
+  --clair-color-status-positive-background: #1C4532FF;
+  --clair-color-status-warning-foreground: #F6AD55FF;
+  --clair-color-status-warning-background: #7B341EFF;
+  --clair-color-status-negative-foreground: #FC8181FF;
+  --clair-color-status-negative-background: #822727FF;
+  --clair-color-status-info-foreground: #63B3EDFF;
+  --clair-color-status-info-background: #2A4365FF;
+  --clair-color-static-white: #FFFFFFFF;
+  --clair-color-static-black: #000000FF;
+  --clair-color-material-dimmer: #000000B2;
 }

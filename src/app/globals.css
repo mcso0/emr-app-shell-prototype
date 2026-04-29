@@ -69,23 +69,24 @@
 }
 
 .dark {
-  --background: var(--clair-color-atomic-gray-900);
-  --foreground: var(--clair-color-atomic-gray-50);
-  --card: var(--clair-color-atomic-gray-800);
-  --card-foreground: var(--clair-color-atomic-gray-50);
-  --popover: var(--clair-color-atomic-gray-800);
-  --popover-foreground: var(--clair-color-atomic-gray-50);
-  --primary: var(--clair-color-atomic-gray-50);
-  --primary-foreground: var(--clair-color-atomic-gray-900);
-  --secondary: var(--clair-color-atomic-gray-800);
-  --secondary-foreground: var(--clair-color-atomic-gray-50);
-  --muted: var(--clair-color-atomic-gray-800);
-  --muted-foreground: var(--clair-color-atomic-gray-400);
-  --accent: var(--clair-color-atomic-gray-700);
-  --accent-foreground: var(--clair-color-atomic-gray-50);
-  --border: var(--clair-color-atomic-gray-700);
-  --input: var(--clair-color-atomic-gray-700);
-  --ring: var(--clair-color-atomic-sky-500);
+  --background: var(--clair-color-background-normal);
+  --foreground: var(--clair-color-label-strong);
+  --card: var(--clair-color-background-surface);
+  --card-foreground: var(--clair-color-label-strong);
+  --popover: var(--clair-color-background-surface);
+  --popover-foreground: var(--clair-color-label-strong);
+  --primary: var(--clair-color-primary-normal);
+  --primary-foreground: var(--clair-color-static-white);
+  --secondary: var(--clair-color-background-surface);
+  --secondary-foreground: var(--clair-color-label-normal);
+  --muted: var(--clair-color-background-subtle);
+  --muted-foreground: var(--clair-color-label-alternative);
+  --accent: var(--clair-color-background-subtle);
+  --accent-foreground: var(--clair-color-label-strong);
+  --destructive: var(--clair-color-status-negative-foreground);
+  --border: var(--clair-color-line-normal);
+  --input: var(--clair-color-line-normal);
+  --ring: var(--clair-color-primary-normal);
 }
 
 @layer base {

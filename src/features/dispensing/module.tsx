@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  CalendarIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -15,7 +14,15 @@ import {
   SearchIcon,
   SlidersIcon,
 } from "@/components/icons";
-import { CollapseGnbIcon } from "@/components/gnb-icons";
+import {
+  EmrDateNavigator,
+  EmrListGroup,
+  EmrListHeader,
+  EmrListItem,
+  EmrSubpanel,
+  EmrSubpanelBody,
+  EmrSubpanelTitle,
+} from "@/components/emr/subpanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +35,7 @@ import type { ShellComponentProps } from "@/types/emr";
 
 const sideItems = Array.from({ length: 8 }, (_, index) => ({
   id: index,
-  selected: index === 2,
+  groupLabel: index < 4 ? "text num" : "yy.mm.dd num",
 }));
 
 const orderGroups = [
@@ -40,94 +47,49 @@ const orderGroups = [
 
 export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const [selectedSideItemId, setSelectedSideItemId] = useState(2);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
-      <div className="flex h-16 items-start p-4">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="rounded bg-transparent text-[#4a5568] hover:bg-muted hover:text-[#171923]"
-            aria-label="사이드 패널 접기"
-            onClick={() => setModulePanelOpen(false)}
-          >
-            <span className="flex size-6 items-center justify-center" aria-hidden="true">
-              <CollapseGnbIcon className="h-[11.5px] w-[15px]" />
-            </span>
-          </Button>
-          <span
-            className="truncate text-[18px] font-semibold leading-[26px] tracking-[-0.036px] text-[#171923]"
-            data-testid="module-side-panel-title"
-          >
-            {moduleLabel}
-          </span>
-        </div>
-      </div>
-      <div className="flex h-12 items-center gap-2 px-4">
-        <Button variant="outline" size="icon-sm" className="bg-card" aria-label="이전 날짜">
-          <ChevronLeftIcon />
-        </Button>
-        <div className="flex h-8 flex-1 items-center justify-center gap-2 rounded-lg text-[13px] font-medium text-foreground">
-          <CalendarIcon className="size-4 text-muted-foreground" />
-          yy.mm.dd(week)
-          <Badge variant="outline" className="h-5 rounded-md bg-card px-1.5 text-[11px]">
-            오늘
-          </Badge>
-        </div>
-        <Button variant="outline" size="icon-sm" className="bg-card" aria-label="다음 날짜">
-          <ChevronRightIcon />
-        </Button>
-      </div>
-      <div className="mx-4 flex h-10 items-center justify-between border-y border-border text-[13px] text-muted-foreground">
-        <div className="flex items-center gap-2">
-          total
-          <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
-            2
-          </Badge>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-xs" aria-label="정렬">
-            <SlidersIcon />
-          </Button>
-          <Button variant="ghost" size="icon-xs" aria-label="필터">
-            <FilterIcon />
-          </Button>
-          <Button variant="ghost" size="icon-xs" aria-label="검색">
-            <SearchIcon />
-          </Button>
-        </div>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 px-4 py-2">
-          {sideItems.map((item) => (
-            <div key={item.id} className="flex flex-col gap-2">
-              <div className="flex h-8 items-center justify-between text-[13px] text-muted-foreground">
-                <div className="border-l-2 border-[var(--clair-color-atomic-orange-400)] pl-3">text num</div>
-                <ChevronDownIcon className="size-4" />
-              </div>
-              <div
-                className={`rounded-lg border p-3 transition-colors ${
-                  item.selected
-                    ? "border-[var(--selection-border)] bg-selection"
-                    : "border-border bg-card hover:bg-background"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-[13px] font-semibold text-foreground">
-                      titletext · titletext
-                    </div>
-                    <div className="mt-1 text-[12px] text-muted-foreground">
-                      subtext · Description
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
-                    Badge
-                  </Badge>
-                </div>
-                <div className="mt-2 flex items-center justify-between border-t border-[var(--clair-color-line-subtle)] pt-2 text-[11px] text-muted-foreground">
-                  <div className="flex gap-1">
+    <EmrSubpanel>
+      <EmrSubpanelTitle
+        title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
+        onCollapse={() => setModulePanelOpen(false)}
+      />
+      <EmrDateNavigator dateLabel="yy.mm.dd(week)" todayLabel="오늘" />
+      <EmrListHeader
+        label="total"
+        count={2}
+        headerActions={
+          <>
+            <Button variant="ghost" size="icon-xs" aria-label="정렬">
+              <SlidersIcon />
+            </Button>
+            <Button variant="ghost" size="icon-xs" aria-label="필터">
+              <FilterIcon />
+            </Button>
+            <Button variant="ghost" size="icon-xs" aria-label="검색">
+              <SearchIcon />
+            </Button>
+          </>
+        }
+      />
+      <EmrSubpanelBody>
+        {sideItems.map((item) => (
+          <EmrListGroup key={item.id} label={item.groupLabel}>
+            <EmrListItem
+              title="titletext · titletext"
+              subtitle="subtext · Description"
+              variant="outline"
+              selected={selectedSideItemId === item.id}
+              onSelect={() => setSelectedSideItemId(item.id)}
+              itemBadge={
+                <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
+                  Badge
+                </Badge>
+              }
+              footer={
+                <>
+                  <div className="flex min-w-0 gap-1">
                     <Badge variant="outline" className="h-5 rounded px-1.5 font-medium">
                       title text
                     </Badge>
@@ -135,17 +97,17 @@ export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
                       title text
                     </Badge>
                   </div>
-                  <span className="flex items-center gap-1">
-                    <ClockIcon className="size-3" />
+                  <span className="flex shrink-0 items-center gap-1">
+                    <ClockIcon className="size-3" aria-hidden="true" />
                     hh:mm state
                   </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+                </>
+              }
+            />
+          </EmrListGroup>
+        ))}
+      </EmrSubpanelBody>
+    </EmrSubpanel>
   );
 }
 
