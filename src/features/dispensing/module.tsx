@@ -1,11 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useState, type SVGProps } from "react";
+import { useState } from "react";
 import {
+  CheckIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ClockIcon,
   DownloadIcon,
   MenuIcon,
@@ -20,10 +19,8 @@ import {
   CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
-import {
-  CdsUtilitiesHistoryIcon,
-  CdsUtilitiesSortIcon,
-} from "@/components/cds-icons/utilities-and-misc";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import {
   EmrDateNavigator,
   EmrListGroup,
@@ -34,28 +31,94 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { EmrInstructionHeaderStack } from "@/components/emr/instruction-header-stack";
+import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
+import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import { historyGroups, orderRows, patient } from "@/features/dispensing/data";
-import type { ShellComponentProps } from "@/types/emr";
+import {
+  allOrderRows,
+  currentTechnician,
+  historyGroups,
+  orderTableGroups,
+  patient,
+  technicianUsers,
+  type OrderTableGroup,
+} from "@/features/dispensing/data";
+import type { Order, ShellComponentProps, TechnicianUser } from "@/types/emr";
 
-const sideItems = Array.from({ length: 8 }, (_, index) => ({
-  id: index,
-  groupLabel: index < 4 ? "text" : "yy.mm.dd",
-  items: [{ id: `${index}-item` }],
-}));
+type OrderGroupFilter = "all" | "oral" | "other";
+type SideOrderTypeFilter = "all" | "dispensing" | "treatment";
+type SideOrderType = Exclude<SideOrderTypeFilter, "all">;
 
-const orderGroups = [
-  { label: "추가된 오더", count: 1, tone: "bg-[var(--clair-color-atomic-green-500)]" },
-  { label: "수정된 오더", count: 2, tone: "bg-[var(--clair-color-atomic-orange-400)]" },
-  { label: "요청된 오더", count: 2, tone: "bg-[var(--clair-color-atomic-blue-500)]" },
-  { label: "취소된 오더", count: 1, tone: "bg-[var(--clair-color-atomic-red-500)]" },
+const sideOrderGroups: Array<{
+  id: number;
+  groupLabel: string;
+  orderType: SideOrderType;
+  items: Array<{ id: string; title: string; subtitle: string }>;
+}> = [
+  {
+    id: 0,
+    groupLabel: "조제",
+    orderType: "dispensing",
+    items: [{ id: "dispensing-0", title: "항생제 세트 A", subtitle: "Amoxicillin · 재요청" }],
+  },
+  {
+    id: 1,
+    groupLabel: "처치",
+    orderType: "treatment",
+    items: [{ id: "treatment-1", title: "수액 처치", subtitle: "IV fluid · 요청" }],
+  },
+  {
+    id: 2,
+    groupLabel: "조제",
+    orderType: "dispensing",
+    items: [{ id: "dispensing-2", title: "소염제 세트", subtitle: "Meloxicam · 조제중" }],
+  },
+  {
+    id: 3,
+    groupLabel: "조제",
+    orderType: "dispensing",
+    items: [{ id: "dispensing-3", title: "위장약 세트", subtitle: "Famotidine · 요청" }],
+  },
+  {
+    id: 4,
+    groupLabel: "처치",
+    orderType: "treatment",
+    items: [{ id: "treatment-4", title: "드레싱 처치", subtitle: "Wound dressing · 요청" }],
+  },
+  {
+    id: 5,
+    groupLabel: "조제",
+    orderType: "dispensing",
+    items: [{ id: "dispensing-5", title: "심장약 세트", subtitle: "Pimobendan · 완료" }],
+  },
+  {
+    id: 6,
+    groupLabel: "처치",
+    orderType: "treatment",
+    items: [{ id: "treatment-6", title: "네뷸라이징", subtitle: "Nebulizing · 요청" }],
+  },
+  {
+    id: 7,
+    groupLabel: "조제",
+    orderType: "dispensing",
+    items: [{ id: "dispensing-7", title: "간보조제 세트", subtitle: "SAMe · 요청" }],
+  },
 ];
+
 const HISTORY_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
 const HISTORY_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
 
@@ -73,11 +136,24 @@ function splitHistoryItem(item: string) {
   };
 }
 
-export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
+export function DispensingSidePanel() {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [collapsedSideGroupIds, setCollapsedSideGroupIds] = useState<Set<number>>(() => new Set());
   const [selectedSideItemId, setSelectedSideItemId] = useState(2);
-  const totalSideItemCount = sideItems.reduce((total, group) => total + group.items.length, 0);
+  const [sideOrderTypeFilter, setSideOrderTypeFilter] = useState<SideOrderTypeFilter>("all");
+  const sideOrderTypeFilterItems = [
+    { value: "all" as const, label: "전체" },
+    { value: "dispensing" as const, label: "조제" },
+    { value: "treatment" as const, label: "처치" },
+  ];
+  const visibleSideOrderGroups =
+    sideOrderTypeFilter === "all"
+      ? sideOrderGroups
+      : sideOrderGroups.filter((group) => group.orderType === sideOrderTypeFilter);
+  const totalSideItemCount = visibleSideOrderGroups.reduce(
+    (total, group) => total + group.items.length,
+    0
+  );
   const toggleSideGroup = (id: number) => {
     setCollapsedSideGroupIds((current) => {
       const next = new Set(current);
@@ -95,8 +171,18 @@ export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
   return (
     <EmrSubpanel>
       <EmrSubpanelTitle
-        title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
+        title={<span data-testid="module-side-panel-title">조제/처치</span>}
         onCollapse={() => setModulePanelOpen(false)}
+        tabs={
+          <SegmentedControl
+            aria-label="오더 유형 필터"
+            className="shrink-0"
+            items={sideOrderTypeFilterItems}
+            value={sideOrderTypeFilter}
+            variant="tabs"
+            onValueChange={setSideOrderTypeFilter}
+          />
+        }
       />
       <EmrDateNavigator dateLabel="26.04.29 (수)" todayLabel="오늘" />
       <EmrListHeader
@@ -117,7 +203,7 @@ export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       <EmrSubpanelBody>
-        {sideItems.map((item) => {
+        {visibleSideOrderGroups.map((item) => {
           const collapsed = collapsedSideGroupIds.has(item.id);
 
           return (
@@ -131,8 +217,8 @@ export function DispensingSidePanel({ moduleLabel }: ShellComponentProps) {
               {item.items.map((sideItem) => (
                 <EmrListItem
                   key={sideItem.id}
-                  title="titletext · titletext"
-                  subtitle="subtext · Description"
+                  title={sideItem.title}
+                  subtitle={sideItem.subtitle}
                   variant="outline"
                   selected={selectedSideItemId === item.id}
                   onSelect={() => setSelectedSideItemId(item.id)}
@@ -181,107 +267,39 @@ function SideItemHoverAction() {
   );
 }
 
-export function DispensingHeader() {
-  const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
+export function DispensingHeader({ hasRightPanel }: ShellComponentProps) {
+  const { contentAsideOpen, setContentAsideOpen, setRightPanelOpen } = useLayoutStore();
 
   return (
-    <div className="border-b border-border bg-card">
-      <div className="flex h-[50px] items-center gap-3 px-4">
-        <Button
-          variant="outline"
-          size="xs"
-          className="h-[26px] aria-expanded:border-ring aria-expanded:bg-background aria-expanded:ring-3 aria-expanded:ring-ring/50"
-          aria-expanded={contentAsideOpen}
-          aria-controls="dispensing-content-aside"
-          onClick={() => setContentAsideOpen(!contentAsideOpen)}
-        >
-          <CdsUtilitiesHistoryIcon data-icon="inline-start" />
-          조제이력
-        </Button>
-        <div className="h-[18px] w-px bg-border" />
-        <PatientInfoStrip />
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-xs" aria-label="이전">
-            <ChevronLeftIcon />
-          </Button>
-          <Button variant="ghost" size="icon-xs" aria-label="다음">
-            <ChevronRightIcon />
-          </Button>
-          <Button variant="ghost" size="icon-xs" aria-label="메뉴">
-            <MenuIcon />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PatientInfoStrip() {
-  const details = [
-    ["환자", patient.name],
-    ["보호자", patient.guardian],
-    ["품종", "코리안숏헤어"],
-    ["나이", patient.age],
-    ["성별", patient.sex],
-  ] as const;
-
-  return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-      <PatientDogIcon className="size-5 shrink-0" aria-hidden="true" />
-      {details.map(([label, value]) => (
-        <PatientDetailBadge key={`${label}-${value}`} label={label} value={value} />
-      ))}
-    </div>
-  );
-}
-
-function PatientDetailBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <Badge
-      variant="secondary"
-      className="h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-gray-50)] px-2 py-0.5 text-[13px] font-medium leading-[18px] tracking-[0.247px]"
-    >
-      <span className="text-[var(--clair-color-atomic-gray-500)]">{label}</span>
-      <span className="text-[var(--clair-color-atomic-gray-700)]">{value}</span>
-    </Badge>
-  );
-}
-
-function PatientDogIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      {...props}
-    >
-      <path
-        d="M9.04492 2.63144C8.777 2.42103 8.44533 2.29181 8.04825 2.29181C3.5532 2.29181 0.625 5.8884 0.625 8.75015C0.625 9.46252 0.798567 10.4598 1.49653 11.2882C2.00219 11.8884 2.7398 12.3492 3.76491 12.5682C3.87307 9.88398 4.56275 7.47573 5.60129 5.68827C6.51625 4.11346 7.71704 2.99866 9.04492 2.63144Z"
-        fill="var(--clair-color-atomic-sky-500)"
-      />
-      <path
-        d="M10.9535 2.63145C11.2214 2.42103 11.5531 2.29181 11.9502 2.29181C16.4452 2.29181 19.3734 5.8884 19.3734 8.75015C19.3734 9.46252 19.1999 10.4598 18.5019 11.2882C17.9962 11.8884 17.2586 12.3492 16.2335 12.5682C16.1254 9.88398 15.4356 7.47573 14.3971 5.68827C13.4821 4.11348 12.2814 2.99867 10.9535 2.63145Z"
-        fill="var(--clair-color-atomic-sky-500)"
-      />
-      <path
-        d="M10.0012 1.45819C11.9879 1.45819 13.8147 2.87414 15.133 5.0891C16.4553 7.31073 17.2928 10.3744 17.2928 13.7697V13.7765C17.2928 14.3765 17.2929 15.5852 16.3545 16.6366C15.4121 17.6925 13.5696 18.5415 10.0012 18.5415C6.43273 18.5415 4.59023 17.6925 3.64783 16.6366C2.70948 15.5852 2.7095 14.3765 2.70952 13.7766V13.7697C2.70952 10.3744 3.54708 7.31073 4.86935 5.0891C6.18764 2.87414 8.01448 1.45819 10.0012 1.45819Z"
-        fill="var(--clair-color-atomic-sky-100)"
-      />
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M8.12392 12.2369C8.12392 12.9994 8.66983 13.6196 9.37392 13.8556V14.8048C9.34187 14.8414 9.29896 14.8845 9.24392 14.9285C9.08633 15.0546 8.80546 15.2082 8.33229 15.2082C7.85912 15.2082 7.57821 15.0546 7.42062 14.9285C7.34404 14.8672 7.26958 14.7937 7.21875 14.7089C7.06092 14.4086 6.691 14.2884 6.38612 14.4409C6.07737 14.5952 5.95225 14.9706 6.10658 15.2794L6.10729 15.2807C6.23008 15.5243 6.42887 15.7359 6.63975 15.9046C7.003 16.1952 7.55546 16.4582 8.33229 16.4582C9.09092 16.4582 9.63554 16.2074 9.99896 15.9249C10.3624 16.2074 10.907 16.4582 11.6656 16.4582C12.4425 16.4582 12.9949 16.1952 13.3581 15.9046C13.5725 15.7331 13.767 15.5272 13.891 15.28C14.0435 14.9753 13.9169 14.5934 13.6118 14.4409C13.3069 14.2884 12.937 14.4086 12.7791 14.7089L12.7777 14.7113C12.765 14.7322 12.7011 14.8294 12.5772 14.9285C12.4197 15.0546 12.1388 15.2082 11.6656 15.2082C11.1925 15.2082 10.9115 15.0546 10.754 14.9285C10.6989 14.8844 10.656 14.8413 10.6239 14.8047V13.8556C11.328 13.6196 11.8739 12.9994 11.8739 12.2369V12.2337C11.874 12.1927 11.874 12.1028 11.8309 12.0026C11.7851 11.8963 11.7002 11.7981 11.5638 11.7169C11.3043 11.5625 10.839 11.4582 9.99892 11.4582C9.15887 11.4582 8.6935 11.5625 8.43404 11.7169C8.29771 11.7981 8.21279 11.8963 8.16696 12.0026C8.12379 12.1028 8.12387 12.1927 8.12392 12.2337V12.2369Z"
-        fill="var(--clair-color-atomic-sky-500)"
-      />
-      <path
-        d="M7.49882 7.5C7.03857 7.5 6.66548 7.87308 6.66548 8.33333V8.75C6.66548 9.21025 7.03857 9.58333 7.49882 9.58333C7.95907 9.58333 8.33215 9.21025 8.33215 8.75V8.33333C8.33215 7.87308 7.95907 7.5 7.49882 7.5Z"
-        fill="var(--clair-color-atomic-sky-500)"
-      />
-      <path
-        d="M12.4988 7.5C12.9591 7.5 13.3321 7.87308 13.3321 8.33333V8.75C13.3321 9.21025 12.9591 9.58333 12.4988 9.58333C12.0386 9.58333 11.6655 9.21025 11.6655 8.75V8.33333C11.6655 7.87308 12.0386 7.5 12.4988 7.5Z"
-        fill="var(--clair-color-atomic-sky-500)"
-      />
-    </svg>
+    <EmrPatientContextBar
+      historyButton={{
+        controls: "dispensing-content-aside",
+        expanded: contentAsideOpen,
+        label: "조제이력",
+        onClick: () => setContentAsideOpen(!contentAsideOpen),
+      }}
+      patientItems={[
+        { label: "환자", value: patient.name },
+        { label: "보호자", value: patient.guardian },
+        { label: "품종", value: patient.breed },
+        { label: "나이", value: patient.age },
+        { label: "성별", value: patient.sex },
+      ]}
+      vitalItems={[
+        { label: "체중", value: patient.weight },
+        { label: "체온", value: patient.temperature },
+        { label: "호흡", value: patient.respiration },
+        { label: "혈압", value: patient.bloodPressure },
+      ]}
+      memoActions={[
+        { label: "방문목적" },
+        { label: "보호자메모", locked: true },
+        { label: "환자메모" },
+        { label: "수납메모", disabled: true },
+      ]}
+      onOpenRightPanel={() => setRightPanelOpen(true)}
+      rightPanelDisabled={!hasRightPanel}
+    />
   );
 }
 
@@ -319,6 +337,33 @@ export function DispensingContentAside() {
               group={group}
               onToggle={() => toggleHistoryGroup(group.date)}
             />
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+export function DispensingRightPanel() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex h-12 flex-col justify-center border-b px-3">
+        <div className="text-sm font-semibold">환자 사이드 패널</div>
+        <div className="text-[11px] text-muted-foreground">환자 컨텍스트와 작업 참고 정보</div>
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-3 p-3">
+          {[
+            ["조제 참고", "환자의 최근 조제 이력과 주의 메모를 확인하는 영역입니다."],
+            ["보호자 메모", "복약 안내 전 확인해야 하는 보호자 전달사항을 표시합니다."],
+            ["환자 메모", "처치와 조제 업무에서 함께 참고할 환자 특이사항을 표시합니다."],
+          ].map(([title, description]) => (
+            <section key={title} className="rounded-md border bg-card p-3">
+              <div className="font-semibold">{title}</div>
+              <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+                {description}
+              </p>
+            </section>
           ))}
         </div>
       </ScrollArea>
@@ -449,116 +494,460 @@ function HistoryItem({ item }: { item: string }) {
   );
 }
 
-export function DispensingContent() {
+function cloneOrderTableGroups(): OrderTableGroup[] {
+  return orderTableGroups.map((group) => ({
+    ...group,
+    assigneeIds: [...group.assigneeIds],
+    rows: group.rows.map((row) => ({
+      ...row,
+      diffs: row.diffs ? { ...row.diffs } : undefined,
+    })),
+  }));
+}
+
+function isEditableOrder(row: Order) {
+  return row.status !== "완료" && row.status !== "취소" && row.workStatus !== "완료";
+}
+
+function findTechnician(technicianId: string) {
+  return technicianUsers.find((technician) => technician.id === technicianId) ?? currentTechnician;
+}
+
+function assignOrder(row: Order, technician: TechnicianUser): Order {
+  return {
+    ...row,
+    assigneeId: technician.id,
+    assignee: technician.name,
+    assigneeInitial: technician.initial,
+  };
+}
+
+function clearOrderAssignee(row: Order): Order {
+  return {
+    ...row,
+    assigneeId: undefined,
+    assignee: "미지정",
+    assigneeInitial: "미",
+  };
+}
+
+function getRequestedStatus(row: Order) {
+  return row.warningMessage || row.diffs ? "재요청" : "요청";
+}
+
+function getGroupAssigneeIds(rows: Order[]) {
+  return Array.from(
+    new Set(rows.map((row) => row.assigneeId).filter((assigneeId): assigneeId is string => Boolean(assigneeId)))
+  );
+}
+
+function getAssigneeSummary(assigneeIds: string[]) {
+  if (!assigneeIds.length) return "미지정";
+
+  return assigneeIds.map((assigneeId) => findTechnician(assigneeId).name).join(" · ");
+}
+
+function completeOrders(rows: Order[], rowIds: string[]) {
+  const selected = new Set(rowIds);
+
+  return rows.map((row) =>
+    selected.has(row.id)
+      ? {
+          ...row,
+          status: "완료" as const,
+          workStatus: "완료" as const,
+          warningMessage: undefined,
+          diffs: undefined,
+        }
+      : row
+  );
+}
+
+function startOrderGroup(group: OrderTableGroup) {
+  const rows = group.rows.map((row) => {
+    if (!isEditableOrder(row)) return row;
+
+    const assignedRow = row.assigneeId ? row : assignOrder(row, currentTechnician);
+
+    return {
+      ...assignedRow,
+      status: "조제중" as const,
+      workStatus: "대기" as const,
+    };
+  });
+
+  return {
+    ...group,
+    workStatus: "진행중" as const,
+    assigneeIds: getGroupAssigneeIds(rows),
+    rows,
+  };
+}
+
+function cancelOrderGroupAssignment(group: OrderTableGroup) {
+  const rows = group.rows.map((row) => {
+    if (!isEditableOrder(row)) return row;
+
+    return clearOrderAssignee({
+      ...row,
+      status: getRequestedStatus(row),
+      workStatus: "대기" as const,
+    });
+  });
+
+  return {
+    ...group,
+    workStatus: "요청" as const,
+    assigneeIds: [],
+    rows,
+  };
+}
+
+function completeOrderGroup(group: OrderTableGroup) {
+  const rows = group.rows.map((row) =>
+    row.status === "취소"
+      ? row
+      : {
+          ...row,
+          status: "완료" as const,
+          workStatus: "완료" as const,
+          warningMessage: undefined,
+          diffs: undefined,
+        }
+  );
+
+  return {
+    ...group,
+    workStatus: "완료" as const,
+    assigneeIds: getGroupAssigneeIds(rows),
+    rows,
+  };
+}
+
+function assignOrderInGroup(group: OrderTableGroup, rowId: string, technicianId: string) {
+  const technician = findTechnician(technicianId);
+  const rows = group.rows.map((row) =>
+    row.id === rowId && isEditableOrder(row) ? assignOrder(row, technician) : row
+  );
+
+  return {
+    ...group,
+    assigneeIds: getGroupAssigneeIds(rows),
+    rows,
+  };
+}
+
+function GroupStatusAction({
+  group,
+  statusLabel,
+  completeLabel,
+  size = "xs",
+  onStart,
+  onComplete,
+  onCancelAssignment,
+}: {
+  group: OrderTableGroup;
+  statusLabel: string;
+  completeLabel: string;
+  size?: "xs" | "sm";
+  onStart: () => void;
+  onComplete: () => void;
+  onCancelAssignment: () => void;
+}) {
+  if (group.workStatus === "완료") {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size={size}
+        disabled
+        className="border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]"
+      >
+        <CheckIcon data-icon="inline-start" />
+        {completeLabel}
+      </Button>
+    );
+  }
+
+  if (group.workStatus === "진행중") {
+    return (
+      <div className="inline-flex items-center">
+        <Button
+          type="button"
+          variant="outline"
+          size={size}
+          className="rounded-r-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+        >
+          {statusLabel}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={`${group.title} 상태 액션`}
+            className={cn(
+              buttonVariants({ variant: "outline", size: size === "sm" ? "icon-sm" : "icon-xs" }),
+              "-ml-px rounded-l-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+            )}
+          >
+            <ChevronDownIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem
+              className="h-8 cursor-pointer"
+              onClick={onComplete}
+            >
+              <CheckIcon className="size-3" />
+              완료
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="h-8 cursor-pointer"
+              onClick={onCancelAssignment}
+            >
+              담당취소
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }
+
+  return (
+    <Button type="button" size={size} onClick={onStart}>
+      담당하기
+      <ChevronDownIcon data-icon="inline-end" />
+    </Button>
+  );
+}
+
+export function DispensingContent({
+  hasRightPanel,
+  moduleLabel,
+}: ShellComponentProps) {
+  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
+  const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
+    cloneOrderTableGroups()
+  );
+  const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
+  const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<Set<string>>(() => new Set());
+  const primaryGroup = tableGroups[0];
+  const totalOrderCount = tableGroups.reduce((total, group) => total + group.rows.length, 0);
+  const regularOrderCount = tableGroups.find((group) => group.id === "oral")?.rows.length ?? 0;
+  const otherOrderCount = tableGroups.find((group) => group.id === "other")?.rows.length ?? 0;
+  const visibleTableGroups =
+    orderGroupFilter === "all"
+      ? tableGroups
+      : tableGroups.filter((group) => group.id === orderGroupFilter);
+  const orderGroupFilterItems = [
+    { value: "all" as const, label: "전체", count: totalOrderCount },
+    { value: "oral" as const, label: "경구제", count: regularOrderCount },
+    { value: "other" as const, label: "기타", count: otherOrderCount },
+  ];
+  const instructionType = moduleLabel === "처치" ? "처치" : "조제";
+  const statusLabel = moduleLabel === "처치" ? "처치중" : "조제중";
+  const completeLabel = moduleLabel === "처치" ? "처치완료" : "조제완료";
+  const primaryAssigneeSummary = primaryGroup ? getAssigneeSummary(primaryGroup.assigneeIds) : "미지정";
+  const primaryStartStatus =
+    primaryGroup?.workStatus === "진행중"
+      ? statusLabel
+      : primaryGroup?.workStatus === "완료"
+        ? completeLabel
+        : "대기중";
+  const updateGroup = (
+    groupId: string,
+    updater: (group: OrderTableGroup) => OrderTableGroup
+  ) => {
+    setTableGroups((current) =>
+      current.map((group) => (group.id === groupId ? updater(group) : group))
+    );
+  };
+  const completeGroupRows = (groupId: string, rowIds: string[]) => {
+    setTableGroups((current) =>
+      current.map((group) => {
+        if (group.id !== groupId) return group;
+
+        const rows = completeOrders(group.rows, rowIds);
+        const activeRows = rows.filter((row) => row.status !== "취소");
+        const allActiveRowsCompleted = activeRows.every((row) => row.workStatus === "완료");
+
+        return {
+          ...group,
+          workStatus: allActiveRowsCompleted ? "완료" : group.workStatus,
+          assigneeIds: getGroupAssigneeIds(rows),
+          rows,
+        };
+      })
+    );
+  };
+  const assignGroupOrder = (groupId: string, rowId: string, technicianId: string) => {
+    updateGroup(groupId, (group) => assignOrderInGroup(group, rowId, technicianId));
+  };
+  const startGroup = (groupId: string) => {
+    updateGroup(groupId, startOrderGroup);
+  };
+  const completeGroup = (groupId: string) => {
+    updateGroup(groupId, completeOrderGroup);
+  };
+  const cancelGroupAssignment = (groupId: string) => {
+    updateGroup(groupId, cancelOrderGroupAssignment);
+  };
+  const toggleOrderGroup = (groupId: string) => {
+    setCollapsedOrderGroupIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+
+      return next;
+    });
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col px-4 py-3">
-      <div className="mb-3 flex h-9 items-center justify-between">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <CdsFilesDocumentAltFillIcon
-              className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
-              aria-hidden="true"
-            />
-            <h1 className="text-[18px] font-semibold leading-[26px] tracking-[-0.002em] text-foreground">
-              조제 지시서
-            </h1>
-          </div>
-          <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
-            RX-260414-0008
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="bg-card">
-            <DownloadIcon data-icon="inline-start" />
-            PDF 다운로드
-          </Button>
-          <Button variant="outline" size="sm" className="bg-card">
-            <PrinterIcon data-icon="inline-start" />
-            출력하기
-          </Button>
-          <Button size="sm">
-            담당하기
-            <ChevronDownIcon data-icon="inline-end" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="mb-3 grid grid-cols-5 rounded-lg border border-border bg-card px-4 py-3">
-        {[
-          ["요청 일시", "2026.04.14 10:30"],
-          ["환자 정보", `${patient.name}(${patient.age}) · 코리...`],
-          ["요청 수의사", "이수지"],
-          ["조제 담당", "미지정"],
-          ["조제 시작", "대기중"],
-        ].map(([label, value]) => (
-          <div key={label} className="border-r border-border px-3 last:border-r-0">
-            <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-            <div className="mt-1 text-[13px] font-semibold text-foreground">{value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mb-3 flex items-center justify-between">
-        <Tabs defaultValue="result">
-          <TabsList className="h-8 rounded-full bg-transparent p-0">
-            <TabsTrigger value="result" className="h-8 rounded-full px-3 text-[12px]">
-              전체 10
-            </TabsTrigger>
-            <TabsTrigger value="condition" className="h-8 rounded-full px-3 text-[12px]">
-              정규제 8
-            </TabsTrigger>
-            <TabsTrigger value="tab" className="h-8 rounded-full px-3 text-[12px]">
-              기타 8
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <section className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-card">
-        <div className="flex h-14 items-center justify-between border-b border-border px-4">
-          <div className="flex items-center gap-2">
-            <ChevronDownIcon className="size-4 text-muted-foreground" />
-            <span className="text-[14px] font-semibold text-foreground">항생제 세트 A</span>
-            <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
-              6
-            </Badge>
-            <span className="text-[12px] text-muted-foreground">subtext</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {["수정이력조회", "리마인"].map((label) => (
-              <Button key={label} variant="outline" size="xs" className="bg-card">
-                {label}
-                <MenuIcon data-icon="inline-end" />
+      <EmrInstructionHeaderStack
+        resultDivider
+        titleBar={
+          <div className="flex h-9 items-center justify-between">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <CdsFilesDocumentAltFillIcon
+                  className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
+                  aria-hidden="true"
+                />
+                <h1 className="text-[18px] font-semibold leading-[26px] tracking-[-0.002em] text-foreground">
+                  {instructionType} 지시서
+                </h1>
+              </div>
+              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+                RX-260414-0008
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              {hasRightPanel && moduleLabel === "처치" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-card"
+                  aria-label={rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
+                  onClick={() => setRightPanelOpen(!rightPanelOpen)}
+                >
+                  {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
+                </Button>
+              ) : null}
+              <Button variant="outline" size="sm" className="bg-card">
+                <DownloadIcon data-icon="inline-start" />
+                PDF 다운로드
               </Button>
-            ))}
-            <Button variant="outline" size="xs" className="border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]">
-              조제중
-              <ChevronDownIcon data-icon="inline-end" />
-            </Button>
+              <Button variant="outline" size="sm" className="bg-card">
+                <PrinterIcon data-icon="inline-start" />
+                출력하기
+              </Button>
+              {primaryGroup ? (
+                <GroupStatusAction
+                  group={primaryGroup}
+                  statusLabel={statusLabel}
+                  completeLabel={completeLabel}
+                  size="sm"
+                  onStart={() => startGroup(primaryGroup.id)}
+                  onComplete={() => completeGroup(primaryGroup.id)}
+                  onCancelAssignment={() => cancelGroupAssignment(primaryGroup.id)}
+                />
+              ) : null}
+            </div>
           </div>
-        </div>
-        <ScrollArea className="h-[calc(100%-56px)]">
-          <div className="p-4 pt-3">
-            {orderGroups.map((group, section) => (
-              <div key={group.label} className="mb-4">
-                <div className="mb-2 flex h-6 items-center gap-2 text-[13px] font-medium text-foreground">
-                  <span className={`size-3 rounded-[3px] ${group.tone}`} />
-                  {group.label}
-                  <span className="text-[12px] text-muted-foreground">{group.count}</span>
-                </div>
-                <EmrDataTable rows={orderRows} sectionId={`section-${section}`} />
+        }
+        orderInfo={
+          <div className="grid grid-cols-5 rounded-lg border border-border bg-card px-4 py-3">
+            {[
+              ["요청 일시", "2026.04.14 10:30"],
+              ["환자 정보", `${patient.name}(${patient.age}) · 코리...`],
+              ["요청 수의사", "이수지"],
+              [`${instructionType} 담당`, primaryAssigneeSummary],
+              [`${instructionType} 시작`, primaryStartStatus],
+            ].map(([label, value]) => (
+              <div key={label} className="border-r border-border px-3 last:border-r-0">
+                <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
+                <div className="mt-1 text-[13px] font-semibold text-foreground">{value}</div>
               </div>
             ))}
           </div>
-        </ScrollArea>
-      </section>
+        }
+        filters={
+          <SegmentedControl
+            aria-label="오더 그룹 필터"
+            value={orderGroupFilter}
+            items={orderGroupFilterItems}
+            onValueChange={setOrderGroupFilter}
+          />
+        }
+      />
+
+      <ScrollArea data-slot="instruction-result-scroll-area" className="min-h-0 flex-1">
+        <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 pb-10 pt-4">
+          {visibleTableGroups.map((group, section) => {
+            const completedCount = group.rows.filter((row) => row.workStatus === "완료").length;
+            const collapsed = collapsedOrderGroupIds.has(group.id);
+
+            return (
+              <EmrOrderGroupSection
+                key={group.id}
+                collapsed={collapsed}
+                count={group.rows.length}
+                label={group.label}
+                title={group.title}
+                meta={
+                  <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
+                    작업 완료 {completedCount}/{group.rows.length}
+                  </span>
+                }
+                actions={
+                  <>
+                    <Button variant="outline" size="xs" className="bg-card">
+                      수정이력조회
+                      <MenuIcon data-icon="inline-end" />
+                    </Button>
+                    <div className="h-[18px] w-px bg-[var(--clair-color-line-normal)]" />
+                    <Button variant="outline" size="xs" className="bg-card">
+                      필터 1
+                    </Button>
+                    <Button variant="outline" size="xs" className="max-w-24 bg-card">
+                      <span className="truncate">{getAssigneeSummary(group.assigneeIds)}</span>
+                    </Button>
+                    <GroupStatusAction
+                      group={group}
+                      statusLabel={statusLabel}
+                      completeLabel={completeLabel}
+                      onStart={() => startGroup(group.id)}
+                      onComplete={() => completeGroup(group.id)}
+                      onCancelAssignment={() => cancelGroupAssignment(group.id)}
+                    />
+                  </>
+                }
+                onToggle={() => toggleOrderGroup(group.id)}
+              >
+                <EmrDataTable
+                  rows={group.rows}
+                  sectionId={`section-${section}`}
+                  technicians={technicianUsers}
+                  onCompleteRows={(rowIds) => completeGroupRows(group.id, rowIds)}
+                  onAssignOrder={(rowId, technicianId) =>
+                    assignGroupOrder(group.id, rowId, technicianId)
+                  }
+                />
+              </EmrOrderGroupSection>
+            );
+          })}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
 
 export function DispensingDrawer() {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const order = orderRows.find((row) => row.id === activeDrawer?.id) ?? orderRows[0];
+  const order = allOrderRows.find((row) => row.id === activeDrawer?.id) ?? allOrderRows[0];
 
   return (
     <div className="flex h-[calc(100%-48px)] flex-col gap-4 overflow-y-auto p-4">

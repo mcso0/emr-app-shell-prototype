@@ -15,6 +15,7 @@ import {
   DispensingContentAside,
   DispensingDrawer,
   DispensingHeader,
+  DispensingRightPanel,
   DispensingSidePanel,
 } from "@/features/dispensing/module";
 import {
@@ -44,8 +45,9 @@ export const modules: ModuleDefinition[] = [
     label: "처치",
     icon: StethoscopeIcon,
     sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
+    content: DispensingContent,
     rightPanel: PlaceholderRightPanel,
+    drawer: DispensingDrawer,
   },
   {
     id: "lab",
@@ -71,6 +73,8 @@ export const modules: ModuleDefinition[] = [
     contentHeader: DispensingHeader,
     contentAside: DispensingContentAside,
     content: DispensingContent,
+    rightPanel: DispensingRightPanel,
+    defaultRightPanelOpen: false,
     drawer: DispensingDrawer,
   },
   {

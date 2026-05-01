@@ -66,6 +66,8 @@
   --sidebar-accent-foreground: var(--clair-color-atomic-gray-50);
   --sidebar-border: var(--clair-color-atomic-gray-700);
   --sidebar-ring: var(--clair-color-atomic-sky-500);
+  --selection: var(--clair-color-fill-alternative);
+  --selection-border: var(--clair-color-line-strong);
 }
 
 .dark {

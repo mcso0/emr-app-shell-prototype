@@ -8,6 +8,7 @@ import {
   ChevronRightIcon,
 } from "@/components/icons";
 import { CollapseGnbIcon } from "@/components/gnb-icons";
+import { EmrIconButton } from "@/components/emr/icon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,6 +46,7 @@ type EmrListHeaderProps = {
   headerActions?: ReactNode;
   leadingAction?: ReactNode;
   leadingIcon?: ReactNode;
+  topDividerVisible?: boolean;
 };
 
 type EmrListGroupProps = {
@@ -172,9 +174,16 @@ export function EmrListHeader({
   headerActions,
   leadingAction,
   leadingIcon,
+  topDividerVisible = false,
 }: EmrListHeaderProps) {
   return (
-    <div className={cn("mx-4 flex h-10 shrink-0 items-center border-y border-border", className)}>
+    <div
+      className={cn(
+        "mx-4 flex h-10 shrink-0 items-center border-y border-border",
+        !topDividerVisible && "border-t-transparent",
+        className
+      )}
+    >
       <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-600)]">
         {leadingAction}
         {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
@@ -201,23 +210,10 @@ export function EmrListHeaderIconButton({
   iconSize?: "sm" | "md";
   onClick?: () => void;
 }) {
-  const iconSlotClassName =
-    iconSize === "md"
-      ? "size-4 [&_svg]:size-4"
-      : "size-[14px] [&_svg]:size-[14px]";
-
   return (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      className="size-6 rounded-[var(--clair-radius-sm)] bg-transparent p-0 text-[var(--clair-color-label-normal)] hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-[#0000001A]"
-      aria-label={ariaLabel}
-      onClick={onClick}
-    >
-      <span className={cn("flex shrink-0 items-center justify-center overflow-hidden", iconSlotClassName)}>
-        {children}
-      </span>
-    </Button>
+    <EmrIconButton aria-label={ariaLabel} iconSize={iconSize} onClick={onClick}>
+      {children}
+    </EmrIconButton>
   );
 }
 
