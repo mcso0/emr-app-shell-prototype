@@ -1,0 +1,97 @@
+"use client";
+
+import * as React from "react";
+import {
+  CdsActionsCheckCircleIcon,
+  CdsActionsRotateCcwIcon,
+  CdsActionsXCircleIcon,
+} from "@/components/cds-icons/actions-and-controls";
+import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
+import { CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsUtilitiesCircleIcon } from "@/components/cds-icons/utilities-and-misc";
+import type { AppIcon } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+type EmrStatusBadgeProps = {
+  label: string;
+  className?: string;
+  marker?: "icon" | "none";
+  testId?: string;
+};
+
+const CdsUtilitiesCircleDashIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<AppIcon>>(
+  ({ color, size = 16, style, ...props }, ref) => (
+    <svg
+      {...props}
+      ref={ref}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ color, ...style }}
+    >
+      <path
+        d="M13.9512 2.19043L14.0194 1.84789C14.0626 1.63103 13.9218 1.41949 13.7034 1.38468C13.1482 1.29617 12.5791 1.25 12 1.25C11.4209 1.25 10.8518 1.29617 10.2966 1.38468C10.0782 1.41949 9.93739 1.63103 9.98059 1.84789L10.0488 2.19043L10.1167 2.53343C10.1596 2.75012 10.3699 2.89014 10.5883 2.85675C11.0482 2.78643 11.5196 2.75 12 2.75C12.4804 2.75 12.9518 2.78643 13.4117 2.85675C13.6301 2.89014 13.8404 2.75012 13.8833 2.53343L13.9512 2.19043ZM3.97513 6.63828C4.15871 6.76143 4.40668 6.71175 4.53747 6.53353C5.09712 5.77096 5.77096 5.09712 6.53353 4.53747C6.71175 4.40668 6.76143 4.1587 6.63828 3.97513L6.44336 3.68457L6.24889 3.394C6.126 3.21039 5.87704 3.16057 5.69813 3.29023C4.77367 3.96019 3.96019 4.77367 3.29023 5.69814C3.16058 5.87704 3.21039 6.126 3.394 6.24889L3.68457 6.44336L3.97513 6.63828ZM20.3154 6.44336L20.606 6.24889C20.7896 6.126 20.8394 5.87704 20.7098 5.69814C20.0398 4.77367 19.2263 3.9602 18.3019 3.29023C18.123 3.16058 17.874 3.21039 17.7511 3.394L17.5566 3.68457L17.3617 3.97513C17.2386 4.15871 17.2883 4.40668 17.4665 4.53747C18.229 5.09712 18.9029 5.77096 19.4625 6.53353C19.5933 6.71175 19.8413 6.76143 20.0249 6.63828L20.3154 6.44336ZM1.25 12C1.25 12.5791 1.29616 13.1482 1.38468 13.7034C1.41949 13.9218 1.63103 14.0626 1.84789 14.0194L2.19043 13.9512L2.53343 13.8833C2.75012 13.8404 2.89014 13.6301 2.85675 13.4117C2.78643 12.9518 2.75 12.4804 2.75 12C2.75 11.5196 2.78643 11.0482 2.85675 10.5883C2.89014 10.3699 2.75012 10.1596 2.53343 10.1167L2.19043 10.0488L1.84789 9.98059C1.63103 9.93739 1.41949 10.0782 1.38468 10.2966C1.29616 10.8518 1.25 11.4209 1.25 12ZM21.25 12C21.25 12.4804 21.2136 12.9518 21.1432 13.4117C21.1099 13.6301 21.2499 13.8404 21.4666 13.8833L21.8096 13.9512L22.1521 14.0194C22.369 14.0626 22.5805 13.9218 22.6153 13.7034C22.7038 13.1482 22.75 12.5791 22.75 12C22.75 11.4209 22.7038 10.8518 22.6153 10.2966C22.5805 10.0782 22.369 9.93739 22.1521 9.98059L21.8096 10.0488L21.4666 10.1167C21.2499 10.1596 21.1099 10.3699 21.1432 10.5883C21.2136 11.0482 21.25 11.5196 21.25 12ZM6.44336 20.3154L6.63828 20.0249C6.76143 19.8413 6.71175 19.5933 6.53353 19.4625C5.77096 18.9029 5.09712 18.229 4.53747 17.4665C4.40668 17.2882 4.15871 17.2386 3.97513 17.3617L3.68457 17.5566L3.394 17.7511C3.21039 17.874 3.16058 18.123 3.29023 18.3019C3.96019 19.2263 4.77367 20.0398 5.69813 20.7098C5.87704 20.8394 6.126 20.7896 6.24889 20.606L6.44336 20.3154ZM17.7511 20.606C17.874 20.7896 18.123 20.8394 18.3019 20.7098C19.2263 20.0398 20.0398 19.2263 20.7098 18.3019C20.8394 18.123 20.7896 17.874 20.606 17.7511L20.3154 17.5566L20.0249 17.3617C19.8413 17.2386 19.5933 17.2882 19.4625 17.4665C18.9029 18.229 18.229 18.9029 17.4665 19.4625C17.2883 19.5933 17.2386 19.8413 17.3617 20.0249L17.5566 20.3154L17.7511 20.606ZM12 22.75C12.5791 22.75 13.1482 22.7038 13.7034 22.6153C13.9218 22.5805 14.0626 22.369 14.0194 22.1521L13.9512 21.8096L13.8833 21.4666C13.8404 21.2499 13.6301 21.1099 13.4117 21.1432C12.9518 21.2136 12.4804 21.25 12 21.25C11.5196 21.25 11.0482 21.2136 10.5883 21.1432C10.3699 21.1099 10.1596 21.2499 10.1167 21.4666L10.0488 21.8096L9.98059 22.1521C9.93739 22.369 10.0782 22.5805 10.2966 22.6153C10.8518 22.7038 11.4209 22.75 12 22.75Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+);
+CdsUtilitiesCircleDashIcon.displayName = "CdsUtilitiesCircleDashIcon";
+
+const statusTone: Record<string, string> = {
+  재요청:
+    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
+  요청: "border-border bg-card text-[var(--clair-color-label-normal)]",
+  조제중:
+    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
+  진행중:
+    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
+  대기중: "border-border bg-card text-[var(--clair-color-label-normal)]",
+  완료:
+    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-600)]",
+  취소:
+    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
+};
+
+const statusIcon: Record<string, AppIcon> = {
+  재요청: CdsActionsRotateCcwIcon,
+  요청: CdsUtilitiesCircleDashIcon,
+  조제중: CdsAlertsLoaderIcon,
+  진행중: CdsAlertsLoaderIcon,
+  대기중: CdsFilesClockIcon,
+  완료: CdsActionsCheckCircleIcon,
+  취소: CdsActionsXCircleIcon,
+};
+
+export function EmrStatusBadge({
+  className,
+  label,
+  marker = "icon",
+  testId,
+}: EmrStatusBadgeProps) {
+  const Icon = statusIcon[label] ?? CdsUtilitiesCircleIcon;
+
+  return (
+    <Badge
+      data-testid={testId}
+      className={cn(
+        "h-6 rounded-lg px-2 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em]",
+        statusTone[label] ?? "border-border bg-card text-[var(--clair-color-label-normal)]",
+        className
+      )}
+      variant="outline"
+    >
+      {marker === "icon" ? (
+        <Icon
+          className="size-3 shrink-0"
+          aria-hidden="true"
+          data-testid={testId ? `${testId}-icon` : undefined}
+        />
+      ) : null}
+      {label}
+    </Badge>
+  );
+}

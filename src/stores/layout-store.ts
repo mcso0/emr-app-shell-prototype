@@ -9,6 +9,7 @@ type LayoutStore = {
   contentAsideOpen: boolean;
   modulePanelOpen: boolean;
   rightPanelOpen: boolean;
+  selectedQueueItemIds: Record<string, string>;
   moduleSidePanelWidth: number;
   contentAsideWidth: number;
   rightPanelWidth: number;
@@ -16,6 +17,7 @@ type LayoutStore = {
   setContentAsideOpen: (open: boolean) => void;
   setModulePanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
+  setSelectedQueueItem: (moduleId: string, itemId: string) => void;
   enterModule: () => void;
 };
 
@@ -24,6 +26,7 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   contentAsideOpen: false,
   modulePanelOpen: true,
   rightPanelOpen: true,
+  selectedQueueItemIds: {},
   moduleSidePanelWidth: SHELL_LAYOUT.moduleSidePanel.defaultWidth,
   contentAsideWidth: SHELL_LAYOUT.contentAside.defaultWidth,
   rightPanelWidth: SHELL_LAYOUT.rightPanel.defaultWidth,
@@ -31,5 +34,12 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   setContentAsideOpen: (contentAsideOpen) => set({ contentAsideOpen }),
   setModulePanelOpen: (modulePanelOpen) => set({ modulePanelOpen }),
   setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
+  setSelectedQueueItem: (moduleId, itemId) =>
+    set((state) => ({
+      selectedQueueItemIds: {
+        ...state.selectedQueueItemIds,
+        [moduleId]: itemId,
+      },
+    })),
   enterModule: () => set({ activeDrawer: null }),
 }));

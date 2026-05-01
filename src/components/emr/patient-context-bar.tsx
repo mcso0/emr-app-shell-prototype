@@ -46,9 +46,10 @@ type PatientContextBarProps = {
     onClick?: () => void;
   };
   memoActions?: PatientContextMemoAction[];
-  onOpenRightPanel?: () => void;
+  onToggleRightPanel?: () => void;
   patientItems: PatientContextDatum[];
   rightPanelDisabled?: boolean;
+  rightPanelOpen?: boolean;
   vitalItems?: PatientContextDatum[];
 };
 
@@ -81,9 +82,10 @@ export function EmrPatientContextBar({
   className,
   historyButton,
   memoActions = [],
-  onOpenRightPanel,
+  onToggleRightPanel,
   patientItems,
   rightPanelDisabled = false,
+  rightPanelOpen = false,
   vitalItems = [],
 }: PatientContextBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -209,9 +211,9 @@ export function EmrPatientContextBar({
           </div>
           <div className="h-[18px] w-px shrink-0 bg-border" />
           <PatientContextControlButton
-            aria-label="우측 패널 열기"
+            aria-label={rightPanelOpen ? "환자 사이드 패널 접기" : "환자 사이드 패널 열기"}
             disabled={rightPanelDisabled}
-            onClick={onOpenRightPanel}
+            onClick={onToggleRightPanel}
           >
             <CdsFilesMenuIcon />
           </PatientContextControlButton>

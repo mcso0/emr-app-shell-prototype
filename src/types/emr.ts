@@ -35,6 +35,38 @@ export type OrderWorkStatus = "대기" | "완료";
 
 export type OrderGroupWorkStatus = "요청" | "진행중" | "완료";
 
+export type OrderQueueType = "dispensing" | "treatment";
+
+export type OrderQueueStatusDefinition = {
+  id: string;
+  label: string;
+  colorToken: string;
+  sortOrder: number;
+};
+
+export type OrderQueueItem = {
+  id: string;
+  instructionId: string;
+  patientName: string;
+  guardianName: string;
+  patientAge?: string;
+  patientBreed?: string;
+  patientSex?: string;
+  patientWeight?: string;
+  patientTemperature?: string;
+  patientRespiration?: string;
+  patientBloodPressure?: string;
+  receptionType: string;
+  orderType: string;
+  orderTypeCategory: OrderQueueType;
+  orderName: string;
+  requesterName: string;
+  assigneeName?: string;
+  startedAt?: string;
+  time: string;
+  statusId: string;
+};
+
 export type TechnicianUser = {
   id: string;
   name: string;

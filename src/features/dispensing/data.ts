@@ -210,6 +210,84 @@ const cloneRowsForGroup = (groupId: string, category: string) =>
     category,
   }));
 
+const createOrderRow = ({
+  amount = "1",
+  assignee = unassignedOrder,
+  category,
+  days = "7",
+  dose,
+  doseTiming = "sid",
+  dosageForm = "T",
+  doctor,
+  frequency,
+  id,
+  medicationGuide = "식전무관",
+  name,
+  quantity = "7",
+  requestedAt,
+  route,
+  servings = "1",
+  status = "요청",
+  storage = "실온보관",
+  unit = "ea",
+  warningMessage,
+  workStatus = "대기",
+}: {
+  amount?: string;
+  assignee?: Pick<Order, "assignee" | "assigneeId" | "assigneeInitial">;
+  category: string;
+  days?: string;
+  dose: string;
+  doseTiming?: string;
+  dosageForm?: string;
+  doctor: string;
+  frequency: string;
+  id: string;
+  medicationGuide?: string;
+  name: string;
+  quantity?: string;
+  requestedAt: string;
+  route: string;
+  servings?: string;
+  status?: Order["status"];
+  storage?: string;
+  unit?: string;
+  warningMessage?: string;
+  workStatus?: Order["workStatus"];
+}): Order => ({
+  id,
+  category,
+  name,
+  route,
+  dose,
+  frequency,
+  status,
+  requestedAt,
+  doctor,
+  days,
+  doseTiming,
+  servings,
+  amount,
+  unit,
+  quantity,
+  dosageForm,
+  storage,
+  medicationGuide,
+  ...assignee,
+  workStatus,
+  warningMessage,
+});
+
+const assignedTo = (assigneeId: string): Pick<Order, "assignee" | "assigneeId" | "assigneeInitial"> => {
+  const technician = technicianUsers.find((user) => user.id === assigneeId) ?? currentTechnician;
+
+  return {
+    assigneeId: technician.id,
+    assignee: technician.name,
+    assigneeInitial: technician.initial,
+  };
+};
+
 export const orderTableGroups: OrderTableGroup[] = [
   {
     id: "oral",
@@ -230,6 +308,299 @@ export const orderTableGroups: OrderTableGroup[] = [
 ];
 
 export const allOrderRows = orderTableGroups.flatMap((group) => group.rows);
+
+const dispensingQueueOrderGroups: Record<string, OrderTableGroup[]> = {
+  "dispensing-queue-1": [
+    {
+      id: "oral",
+      label: "주사제 오더 그룹",
+      title: "수액 처치",
+      workStatus: "진행중",
+      assigneeIds: ["tech-sh"],
+      rows: [
+        createOrderRow({
+          id: "fluid-o-20010",
+          category: "처치",
+          name: "Lactated Ringer's 120ml SC",
+          route: "SC",
+          dose: "120ml",
+          frequency: "once",
+          status: "조제중",
+          requestedAt: "2026.04.14 10:42",
+          doctor: "김도윤",
+          days: "1",
+          doseTiming: "once",
+          amount: "120",
+          unit: "ml",
+          quantity: "1",
+          dosageForm: "수액",
+          assignee: assignedTo("tech-sh"),
+        }),
+        createOrderRow({
+          id: "fluid-o-20011",
+          category: "처치",
+          name: "IV catheter flush 3ml",
+          route: "IV",
+          dose: "3ml",
+          frequency: "once",
+          status: "요청",
+          requestedAt: "2026.04.14 10:43",
+          doctor: "김도윤",
+          days: "1",
+          doseTiming: "once",
+          amount: "3",
+          unit: "ml",
+          quantity: "1",
+          dosageForm: "시린지",
+        }),
+        createOrderRow({
+          id: "fluid-o-20012",
+          category: "관찰",
+          name: "수액 후 호흡수 재측정",
+          route: "MON",
+          dose: "20분 후",
+          frequency: "once",
+          status: "요청",
+          requestedAt: "2026.04.14 10:44",
+          doctor: "김도윤",
+          days: "1",
+          doseTiming: "once",
+          amount: "1",
+          unit: "회",
+          quantity: "1",
+          dosageForm: "기록",
+        }),
+      ],
+    },
+    {
+      id: "other",
+      label: "처치 보조 오더 그룹",
+      title: "수액 보조 처치",
+      workStatus: "요청",
+      assigneeIds: [],
+      rows: [
+        createOrderRow({
+          id: "fluid-o-20020",
+          category: "소모품",
+          name: "Extension line 교체",
+          route: "SUP",
+          dose: "1ea",
+          frequency: "once",
+          status: "요청",
+          requestedAt: "2026.04.14 10:45",
+          doctor: "김도윤",
+          dosageForm: "소모품",
+        }),
+      ],
+    },
+  ],
+  "dispensing-queue-2": [
+    {
+      id: "oral",
+      label: "경구제 오더 그룹",
+      title: "소염제 세트",
+      workStatus: "요청",
+      assigneeIds: [],
+      rows: [
+        createOrderRow({
+          id: "anti-o-30010",
+          category: "조제",
+          name: "Meloxicam 0.5mg T",
+          route: "PO",
+          dose: "0.5mg",
+          frequency: "sid",
+          status: "요청",
+          requestedAt: "2026.04.14 10:47",
+          doctor: "이수지",
+          days: "5",
+          doseTiming: "sid",
+          amount: "0.5",
+          unit: "T",
+          quantity: "5",
+          warningMessage: "체중 기준 용량 확인이 필요합니다.",
+        }),
+        createOrderRow({
+          id: "anti-o-30011",
+          category: "조제",
+          name: "Famotidine 5mg T",
+          route: "PO",
+          dose: "5mg",
+          frequency: "sid",
+          status: "요청",
+          requestedAt: "2026.04.14 10:48",
+          doctor: "이수지",
+          days: "5",
+          doseTiming: "sid",
+          amount: "1",
+          unit: "T",
+          quantity: "5",
+        }),
+      ],
+    },
+    {
+      id: "other",
+      label: "기타 오더 그룹",
+      title: "소염제 복약 안내",
+      workStatus: "요청",
+      assigneeIds: [],
+      rows: [
+        createOrderRow({
+          id: "anti-o-30020",
+          category: "안내",
+          name: "식후 투약 및 구토 여부 안내",
+          route: "GUIDE",
+          dose: "보호자 설명",
+          frequency: "once",
+          status: "요청",
+          requestedAt: "2026.04.14 10:49",
+          doctor: "이수지",
+          days: "1",
+          dosageForm: "안내",
+          medicationGuide: "식후",
+        }),
+      ],
+    },
+  ],
+  "dispensing-queue-3": [
+    {
+      id: "oral",
+      label: "경구제 오더 그룹",
+      title: "위장약 세트",
+      workStatus: "요청",
+      assigneeIds: [],
+      rows: [
+        createOrderRow({
+          id: "gi-o-40010",
+          category: "조제",
+          name: "Famotidine 5mg T",
+          route: "PO",
+          dose: "5mg",
+          frequency: "bid",
+          status: "요청",
+          requestedAt: "2026.04.14 10:55",
+          doctor: "김도윤",
+          days: "3",
+          doseTiming: "bid",
+          amount: "1",
+          unit: "T",
+          quantity: "6",
+        }),
+        createOrderRow({
+          id: "gi-o-40011",
+          category: "조제",
+          name: "Probiotic powder 1g",
+          route: "PO",
+          dose: "1g",
+          frequency: "sid",
+          status: "요청",
+          requestedAt: "2026.04.14 10:56",
+          doctor: "김도윤",
+          days: "3",
+          doseTiming: "sid",
+          amount: "1",
+          unit: "포",
+          quantity: "3",
+          dosageForm: "Powder",
+        }),
+      ],
+    },
+  ],
+  "dispensing-queue-4": [
+    {
+      id: "oral",
+      label: "처치-기타 오더 그룹",
+      title: "네뷸라이징",
+      workStatus: "완료",
+      assigneeIds: ["tech-jh"],
+      rows: [
+        createOrderRow({
+          id: "neb-o-50010",
+          category: "처치",
+          name: "Nebulizing saline 5ml",
+          route: "INH",
+          dose: "5ml",
+          frequency: "once",
+          status: "완료",
+          requestedAt: "2026.04.14 11:05",
+          doctor: "이수지",
+          days: "1",
+          doseTiming: "once",
+          amount: "5",
+          unit: "ml",
+          quantity: "1",
+          dosageForm: "Nebule",
+          assignee: assignedTo("tech-jh"),
+          workStatus: "완료",
+        }),
+        createOrderRow({
+          id: "neb-o-50011",
+          category: "관찰",
+          name: "처치 후 기침 빈도 확인",
+          route: "MON",
+          dose: "15분 후",
+          frequency: "once",
+          status: "완료",
+          requestedAt: "2026.04.14 11:06",
+          doctor: "이수지",
+          days: "1",
+          dosageForm: "기록",
+          assignee: assignedTo("tech-jh"),
+          workStatus: "완료",
+        }),
+      ],
+    },
+  ],
+  "dispensing-queue-5": [
+    {
+      id: "oral",
+      label: "경구제 오더 그룹",
+      title: "심장약 세트",
+      workStatus: "요청",
+      assigneeIds: ["tech-km"],
+      rows: [
+        createOrderRow({
+          id: "cardio-o-60010",
+          category: "조제",
+          name: "Pimobendan 1.25mg T",
+          route: "PO",
+          dose: "1.25mg",
+          frequency: "bid",
+          status: "취소",
+          requestedAt: "2026.04.14 11:12",
+          doctor: "김도윤",
+          days: "7",
+          doseTiming: "bid",
+          amount: "0.5",
+          unit: "T",
+          quantity: "7",
+          assignee: assignedTo("tech-km"),
+          workStatus: "완료",
+        }),
+        createOrderRow({
+          id: "cardio-o-60011",
+          category: "조제",
+          name: "Furosemide 10mg T",
+          route: "PO",
+          dose: "10mg",
+          frequency: "sid",
+          status: "취소",
+          requestedAt: "2026.04.14 11:13",
+          doctor: "김도윤",
+          days: "7",
+          doseTiming: "sid",
+          amount: "0.5",
+          unit: "T",
+          quantity: "4",
+          assignee: assignedTo("tech-km"),
+          workStatus: "완료",
+        }),
+      ],
+    },
+  ],
+};
+
+export const getOrderTableGroupsForQueueItem = (queueItemId?: string) =>
+  queueItemId ? dispensingQueueOrderGroups[queueItemId] ?? orderTableGroups : orderTableGroups;
 
 export const historyGroups = [
   {

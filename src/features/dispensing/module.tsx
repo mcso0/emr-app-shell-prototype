@@ -1,11 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
-  ClockIcon,
   DownloadIcon,
   MenuIcon,
   PrinterIcon,
@@ -16,20 +15,15 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsFilesDocumentAltFillIcon,
-  CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
+import { EmrStatusBadge } from "@/components/emr/status-badge";
 import {
-  EmrDateNavigator,
-  EmrListGroup,
   EmrListHeader,
   EmrListHeaderIconButton,
-  EmrListItem,
-  EmrSubpanel,
-  EmrSubpanelBody,
-  EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
 import { EmrInstructionHeaderStack } from "@/components/emr/instruction-header-stack";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
@@ -43,81 +37,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import {
+  getOrderQueueItems,
+  getOrderQueueStatuses,
+  getSelectedOrderQueueItem,
+} from "@/features/order-queue/data";
+import {
   allOrderRows,
   currentTechnician,
+  getOrderTableGroupsForQueueItem,
   historyGroups,
-  orderTableGroups,
   patient,
   technicianUsers,
   type OrderTableGroup,
 } from "@/features/dispensing/data";
-import type { Order, ShellComponentProps, TechnicianUser } from "@/types/emr";
+import type { Order, OrderQueueItem, ShellComponentProps, TechnicianUser } from "@/types/emr";
 
 type OrderGroupFilter = "all" | "oral" | "other";
-type SideOrderTypeFilter = "all" | "dispensing" | "treatment";
-type SideOrderType = Exclude<SideOrderTypeFilter, "all">;
-
-const sideOrderGroups: Array<{
-  id: number;
-  groupLabel: string;
-  orderType: SideOrderType;
-  items: Array<{ id: string; title: string; subtitle: string }>;
-}> = [
-  {
-    id: 0,
-    groupLabel: "조제",
-    orderType: "dispensing",
-    items: [{ id: "dispensing-0", title: "항생제 세트 A", subtitle: "Amoxicillin · 재요청" }],
-  },
-  {
-    id: 1,
-    groupLabel: "처치",
-    orderType: "treatment",
-    items: [{ id: "treatment-1", title: "수액 처치", subtitle: "IV fluid · 요청" }],
-  },
-  {
-    id: 2,
-    groupLabel: "조제",
-    orderType: "dispensing",
-    items: [{ id: "dispensing-2", title: "소염제 세트", subtitle: "Meloxicam · 조제중" }],
-  },
-  {
-    id: 3,
-    groupLabel: "조제",
-    orderType: "dispensing",
-    items: [{ id: "dispensing-3", title: "위장약 세트", subtitle: "Famotidine · 요청" }],
-  },
-  {
-    id: 4,
-    groupLabel: "처치",
-    orderType: "treatment",
-    items: [{ id: "treatment-4", title: "드레싱 처치", subtitle: "Wound dressing · 요청" }],
-  },
-  {
-    id: 5,
-    groupLabel: "조제",
-    orderType: "dispensing",
-    items: [{ id: "dispensing-5", title: "심장약 세트", subtitle: "Pimobendan · 완료" }],
-  },
-  {
-    id: 6,
-    groupLabel: "처치",
-    orderType: "treatment",
-    items: [{ id: "treatment-6", title: "네뷸라이징", subtitle: "Nebulizing · 요청" }],
-  },
-  {
-    id: 7,
-    groupLabel: "조제",
-    orderType: "dispensing",
-    items: [{ id: "dispensing-7", title: "간보조제 세트", subtitle: "SAMe · 요청" }],
-  },
-];
+type DispensingContentBodyProps = Pick<
+  ShellComponentProps,
+  "hasRightPanel" | "moduleId" | "moduleLabel"
+> & {
+  selectedQueueItem: OrderQueueItem | null;
+};
 
 const HISTORY_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
 const HISTORY_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
@@ -136,139 +83,45 @@ function splitHistoryItem(item: string) {
   };
 }
 
+function getQueueStatusLabel(moduleId: string, item: OrderQueueItem | null) {
+  if (!item) return "대기중";
+
+  return getOrderQueueStatuses(moduleId).find((status) => status.id === item.statusId)?.label ?? item.statusId;
+}
+
+function getQueuePatientSummary(item: OrderQueueItem | null) {
+  if (!item) return `${patient.name}(${patient.age}) · 코리...`;
+
+  return `${item.patientName}(${item.patientAge ?? patient.age}) · ${item.patientBreed ?? patient.breed}`;
+}
+
 export function DispensingSidePanel() {
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const [collapsedSideGroupIds, setCollapsedSideGroupIds] = useState<Set<number>>(() => new Set());
-  const [selectedSideItemId, setSelectedSideItemId] = useState(2);
-  const [sideOrderTypeFilter, setSideOrderTypeFilter] = useState<SideOrderTypeFilter>("all");
-  const sideOrderTypeFilterItems = [
-    { value: "all" as const, label: "전체" },
-    { value: "dispensing" as const, label: "조제" },
-    { value: "treatment" as const, label: "처치" },
-  ];
-  const visibleSideOrderGroups =
-    sideOrderTypeFilter === "all"
-      ? sideOrderGroups
-      : sideOrderGroups.filter((group) => group.orderType === sideOrderTypeFilter);
-  const totalSideItemCount = visibleSideOrderGroups.reduce(
-    (total, group) => total + group.items.length,
-    0
-  );
-  const toggleSideGroup = (id: number) => {
-    setCollapsedSideGroupIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-
-      return next;
-    });
-  };
+  const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
+  const items = getOrderQueueItems("dispensing");
+  const statuses = getOrderQueueStatuses("dispensing");
 
   return (
-    <EmrSubpanel>
-      <EmrSubpanelTitle
-        title={<span data-testid="module-side-panel-title">조제/처치</span>}
-        onCollapse={() => setModulePanelOpen(false)}
-        tabs={
-          <SegmentedControl
-            aria-label="오더 유형 필터"
-            className="shrink-0"
-            items={sideOrderTypeFilterItems}
-            value={sideOrderTypeFilter}
-            variant="tabs"
-            onValueChange={setSideOrderTypeFilter}
-          />
-        }
-      />
-      <EmrDateNavigator dateLabel="26.04.29 (수)" todayLabel="오늘" />
-      <EmrListHeader
-        label="전체 오더"
-        count={totalSideItemCount}
-        headerActions={
-          <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="필터">
-              <CdsActionsListFilterIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="검색">
-              <CdsActionsSearchIcon className="size-4" />
-            </EmrListHeaderIconButton>
-          </>
-        }
-      />
-      <EmrSubpanelBody>
-        {visibleSideOrderGroups.map((item) => {
-          const collapsed = collapsedSideGroupIds.has(item.id);
-
-          return (
-            <EmrListGroup
-              key={item.id}
-              collapsed={collapsed}
-              count={item.items.length}
-              label={item.groupLabel}
-              onToggle={() => toggleSideGroup(item.id)}
-            >
-              {item.items.map((sideItem) => (
-                <EmrListItem
-                  key={sideItem.id}
-                  title={sideItem.title}
-                  subtitle={sideItem.subtitle}
-                  variant="outline"
-                  selected={selectedSideItemId === item.id}
-                  onSelect={() => setSelectedSideItemId(item.id)}
-                  itemBadge={<SideItemHoverAction />}
-                  footer={
-                    <>
-                      <div className="flex min-w-0 gap-1">
-                        <Badge variant="outline" className="h-5 rounded px-1.5 font-medium">
-                          title text
-                        </Badge>
-                        <Badge variant="outline" className="h-5 rounded px-1.5 font-medium">
-                          title text
-                        </Badge>
-                      </div>
-                      <span className="flex shrink-0 items-center gap-1">
-                        <ClockIcon className="size-3" aria-hidden="true" />
-                        hh:mm state
-                      </span>
-                    </>
-                  }
-                />
-              ))}
-            </EmrListGroup>
-          );
-        })}
-      </EmrSubpanelBody>
-    </EmrSubpanel>
+    <EmrOrderQueueSidePanel
+      items={items}
+      statuses={statuses}
+      title="조제/처치"
+      selectedItemId={selectedQueueItemIds.dispensing}
+      onCollapse={() => setModulePanelOpen(false)}
+      onSelectItem={(itemId) => setSelectedQueueItem("dispensing", itemId)}
+    />
   );
 }
 
-function SideItemHoverAction() {
-  return (
-    <div className="relative flex size-6 items-center justify-center">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-xs"
-        className="size-6 rounded-[var(--clair-radius-sm)] bg-card p-0 text-[var(--clair-color-label-normal)] opacity-0 transition-opacity hover:bg-[var(--clair-color-background-surface)] focus-visible:opacity-100 group-hover/emr-list-item:opacity-100 group-focus-within/emr-list-item:opacity-100 group-data-[selected=true]/emr-list-item:opacity-100 [&_svg]:size-4"
-        aria-label="더보기"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <CdsFilesMoreHorizontalIcon aria-hidden="true" />
-      </Button>
-    </div>
-  );
-}
-
-export function DispensingHeader({ hasRightPanel }: ShellComponentProps) {
-  const { contentAsideOpen, setContentAsideOpen, setRightPanelOpen } = useLayoutStore();
+export function DispensingHeader({ hasRightPanel, moduleId }: ShellComponentProps) {
+  const {
+    contentAsideOpen,
+    rightPanelOpen,
+    selectedQueueItemIds,
+    setContentAsideOpen,
+    setRightPanelOpen,
+  } =
+    useLayoutStore();
+  const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
 
   return (
     <EmrPatientContextBar
@@ -279,17 +132,17 @@ export function DispensingHeader({ hasRightPanel }: ShellComponentProps) {
         onClick: () => setContentAsideOpen(!contentAsideOpen),
       }}
       patientItems={[
-        { label: "환자", value: patient.name },
-        { label: "보호자", value: patient.guardian },
-        { label: "품종", value: patient.breed },
-        { label: "나이", value: patient.age },
-        { label: "성별", value: patient.sex },
+        { label: "환자", value: selectedQueueItem?.patientName ?? patient.name },
+        { label: "보호자", value: selectedQueueItem?.guardianName ?? patient.guardian },
+        { label: "품종", value: selectedQueueItem?.patientBreed ?? patient.breed },
+        { label: "나이", value: selectedQueueItem?.patientAge ?? patient.age },
+        { label: "성별", value: selectedQueueItem?.patientSex ?? patient.sex },
       ]}
       vitalItems={[
-        { label: "체중", value: patient.weight },
-        { label: "체온", value: patient.temperature },
-        { label: "호흡", value: patient.respiration },
-        { label: "혈압", value: patient.bloodPressure },
+        { label: "체중", value: selectedQueueItem?.patientWeight ?? patient.weight },
+        { label: "체온", value: selectedQueueItem?.patientTemperature ?? patient.temperature },
+        { label: "호흡", value: selectedQueueItem?.patientRespiration ?? patient.respiration },
+        { label: "혈압", value: selectedQueueItem?.patientBloodPressure ?? patient.bloodPressure },
       ]}
       memoActions={[
         { label: "방문목적" },
@@ -297,8 +150,9 @@ export function DispensingHeader({ hasRightPanel }: ShellComponentProps) {
         { label: "환자메모" },
         { label: "수납메모", disabled: true },
       ]}
-      onOpenRightPanel={() => setRightPanelOpen(true)}
+      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
       rightPanelDisabled={!hasRightPanel}
+      rightPanelOpen={rightPanelOpen}
     />
   );
 }
@@ -494,8 +348,8 @@ function HistoryItem({ item }: { item: string }) {
   );
 }
 
-function cloneOrderTableGroups(): OrderTableGroup[] {
-  return orderTableGroups.map((group) => ({
+function cloneOrderTableGroups(queueItemId?: string): OrderTableGroup[] {
+  return getOrderTableGroupsForQueueItem(queueItemId).map((group) => ({
     ...group,
     assigneeIds: [...group.assigneeIds],
     rows: group.rows.map((row) => ({
@@ -721,12 +575,35 @@ function GroupStatusAction({
 
 export function DispensingContent({
   hasRightPanel,
+  moduleId,
   moduleLabel,
 }: ShellComponentProps) {
-  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
-  const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
-    cloneOrderTableGroups()
+  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
+  const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
+
+  return (
+    <DispensingContentBody
+      key={selectedQueueItem?.id ?? "default"}
+      hasRightPanel={hasRightPanel}
+      moduleId={moduleId}
+      moduleLabel={moduleLabel}
+      selectedQueueItem={selectedQueueItem}
+    />
   );
+}
+
+function DispensingContentBody({
+  hasRightPanel,
+  moduleId,
+  moduleLabel,
+  selectedQueueItem,
+}: DispensingContentBodyProps) {
+  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
+  const selectedQueueItemId = selectedQueueItem?.id;
+  const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
+    cloneOrderTableGroups(selectedQueueItemId)
+  );
+  const selectedQueueStatusLabel = getQueueStatusLabel(moduleId, selectedQueueItem);
   const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
   const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<Set<string>>(() => new Set());
   const primaryGroup = tableGroups[0];
@@ -738,10 +615,26 @@ export function DispensingContent({
       ? tableGroups
       : tableGroups.filter((group) => group.id === orderGroupFilter);
   const orderGroupFilterItems = [
-    { value: "all" as const, label: "전체", count: totalOrderCount },
-    { value: "oral" as const, label: "경구제", count: regularOrderCount },
-    { value: "other" as const, label: "기타", count: otherOrderCount },
+    {
+      value: "all" as const,
+      label: "전체",
+      count: totalOrderCount > 0 ? totalOrderCount : undefined,
+      disabled: totalOrderCount === 0,
+    },
+    {
+      value: "oral" as const,
+      label: "경구제",
+      count: regularOrderCount > 0 ? regularOrderCount : undefined,
+      disabled: regularOrderCount === 0,
+    },
+    {
+      value: "other" as const,
+      label: "기타",
+      count: otherOrderCount > 0 ? otherOrderCount : undefined,
+      disabled: otherOrderCount === 0,
+    },
   ];
+
   const instructionType = moduleLabel === "처치" ? "처치" : "조제";
   const statusLabel = moduleLabel === "처치" ? "처치중" : "조제중";
   const completeLabel = moduleLabel === "처치" ? "처치완료" : "조제완료";
@@ -752,6 +645,34 @@ export function DispensingContent({
       : primaryGroup?.workStatus === "완료"
         ? completeLabel
         : "대기중";
+  const instructionRequestedAt = selectedQueueItem
+    ? `2026.04.14 ${selectedQueueItem.time}`
+    : "2026.04.14 10:30";
+  const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
+  const instructionId = selectedQueueItem?.instructionId ?? "RX-260414-0008";
+  const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
+  const instructionAssignee = selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
+  const instructionStartStatus = selectedQueueItem ? selectedQueueStatusLabel : primaryStartStatus;
+  const instructionStartedAt = selectedQueueItem?.startedAt ?? "미시작";
+  const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
+    {
+      label: "요청 일시",
+      value: (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span>{instructionRequestedAt}</span>
+          <EmrStatusBadge
+            label={instructionStartStatus}
+            marker="none"
+            testId="instruction-status-label"
+          />
+        </span>
+      ),
+    },
+    { label: "환자 정보", value: instructionPatientSummary },
+    { label: "요청 수의사", value: instructionRequester },
+    { label: `${instructionType} 담당`, value: instructionAssignee },
+    { label: `${instructionType} 시작`, value: instructionStartedAt },
+  ];
   const updateGroup = (
     groupId: string,
     updater: (group: OrderTableGroup) => OrderTableGroup
@@ -807,7 +728,6 @@ export function DispensingContent({
   return (
     <div className="flex h-full min-h-0 flex-col px-4 py-3">
       <EmrInstructionHeaderStack
-        resultDivider
         titleBar={
           <div className="flex h-9 items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
@@ -821,7 +741,7 @@ export function DispensingContent({
                 </h1>
               </div>
               <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
-                RX-260414-0008
+                {instructionId}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
@@ -860,23 +780,18 @@ export function DispensingContent({
         }
         orderInfo={
           <div className="grid grid-cols-5 rounded-lg border border-border bg-card px-4 py-3">
-            {[
-              ["요청 일시", "2026.04.14 10:30"],
-              ["환자 정보", `${patient.name}(${patient.age}) · 코리...`],
-              ["요청 수의사", "이수지"],
-              [`${instructionType} 담당`, primaryAssigneeSummary],
-              [`${instructionType} 시작`, primaryStartStatus],
-            ].map(([label, value]) => (
+            {instructionInfoItems.map(({ label, value }) => (
               <div key={label} className="border-r border-border px-3 last:border-r-0">
                 <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-                <div className="mt-1 text-[13px] font-semibold text-foreground">{value}</div>
+                <div className="mt-1 flex min-h-6 items-center text-[13px] font-medium text-foreground">{value}</div>
               </div>
             ))}
           </div>
         }
         filters={
-          <SegmentedControl
+          <LineTabs
             aria-label="오더 그룹 필터"
+            className="w-full border-b border-[var(--clair-color-line-normal)]"
             value={orderGroupFilter}
             items={orderGroupFilterItems}
             onValueChange={setOrderGroupFilter}

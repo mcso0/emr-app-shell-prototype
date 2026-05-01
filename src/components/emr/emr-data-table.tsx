@@ -11,7 +11,7 @@ import {
   type RowSelectionState,
 } from "@tanstack/react-table";
 import { CheckIcon, ChevronDownIcon, WarningIcon } from "@/components/icons";
-import { Badge } from "@/components/ui/badge";
+import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { Order, OrderDiffField, OrderStatus, TechnicianUser } from "@/types/emr";
+import type { Order, OrderDiffField, TechnicianUser } from "@/types/emr";
 
 type EmrDataTableProps = {
   rows: Order[];
@@ -36,17 +36,6 @@ type EmrDataTableProps = {
 
 type ColumnMeta = {
   align?: "left" | "center" | "right";
-};
-
-const statusTone: Record<OrderStatus, string> = {
-  재요청:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
-  요청: "border-border bg-card text-[var(--clair-color-label-normal)]",
-  조제중:
-    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
-  완료:
-    "border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]",
-  취소: "border-border bg-card text-[var(--clair-color-label-alternative)]",
 };
 
 const numericDiffFields = new Set<OrderDiffField>([
@@ -62,21 +51,6 @@ function isSelectableOrder(order: Order) {
 
 function getCellAlign(column: ColumnDef<Order>) {
   return (column.meta as ColumnMeta | undefined)?.align ?? "left";
-}
-
-function OrderStatusBadge({ status }: { status: OrderStatus }) {
-  return (
-    <Badge
-      className={cn(
-        "h-6 rounded-lg px-2 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em]",
-        statusTone[status]
-      )}
-      variant="outline"
-    >
-      <span className="mr-1 size-3 rounded-[3px] border border-dashed border-current" />
-      {status}
-    </Badge>
-  );
 }
 
 function OrderValue({
@@ -354,7 +328,12 @@ export function EmrDataTable({
         header: "상태",
         size: 80,
         minSize: 76,
-        cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <EmrStatusBadge
+            label={row.original.status}
+            testId={`order-status-badge-${row.original.id}`}
+          />
+        ),
       },
       {
         accessorKey: "days",

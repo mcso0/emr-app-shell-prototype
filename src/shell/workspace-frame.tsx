@@ -84,7 +84,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       <aside
         className={cn(
           "min-h-0 min-w-0 overflow-hidden bg-white",
-          shouldShowModuleSidePanel && "rounded-lg border border-[#cbd5e0]"
+          shouldShowModuleSidePanel && "border-r border-input"
         )}
       >
         <div
@@ -121,7 +121,12 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
             } minmax(0, 1fr)`,
           }}
         >
-          <aside className="min-h-0 min-w-0 overflow-hidden border-r bg-card">
+          <aside
+            className={cn(
+              "min-h-0 min-w-0 overflow-hidden bg-card",
+              ContentAside && contentAsideOpen && "border-r"
+            )}
+          >
             <div
               className="h-full"
               style={{
@@ -175,12 +180,16 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 min-w-0 overflow-hidden border-l bg-card transition-opacity duration-150",
+          "min-h-0 min-w-0 overflow-hidden bg-card transition-opacity duration-150",
+          RightPanel && rightPanelOpen && "border-l",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}
       >
-        <div className="flex h-full w-full flex-col" style={{ minWidth: SHELL_LAYOUT.rightPanel.defaultWidth }}>
-          {RightPanel ? <RightPanel {...slotProps} /> : null}
+        <div
+          className="flex h-full w-full flex-col"
+          style={{ minWidth: rightPanelOpen ? SHELL_LAYOUT.rightPanel.defaultWidth : 0 }}
+        >
+          {RightPanel && rightPanelOpen ? <RightPanel {...slotProps} /> : null}
         </div>
       </aside>
     </main>

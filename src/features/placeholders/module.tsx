@@ -1,65 +1,39 @@
 "use client";
 
 import { ActivityIcon, CheckIcon, ClipboardListIcon } from "@/components/icons";
-import { CollapseGnbIcon } from "@/components/gnb-icons";
-import { Badge } from "@/components/ui/badge";
+import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
+import { OrderQueueSelectionSummary } from "@/components/emr/order-queue-summary";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  getOrderQueueItems,
+  getOrderQueueStatuses,
+  getSelectedOrderQueueItem,
+} from "@/features/order-queue/data";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 
 export function PlaceholderSidePanel({ moduleId, moduleLabel }: ShellComponentProps) {
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
+  const items = getOrderQueueItems(moduleId);
+  const statuses = getOrderQueueStatuses(moduleId);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white">
-      <div className="flex h-16 items-start p-4">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="rounded bg-transparent text-[#4a5568] hover:bg-muted hover:text-[#171923]"
-            aria-label="사이드 패널 접기"
-            onClick={() => setModulePanelOpen(false)}
-          >
-            <span className="flex size-6 items-center justify-center" aria-hidden="true">
-              <CollapseGnbIcon className="h-[11.5px] w-[15px]" />
-            </span>
-          </Button>
-          <span
-            className="truncate text-[18px] font-semibold leading-[26px] tracking-[-0.036px] text-[#171923]"
-            data-testid="module-side-panel-title"
-          >
-            {moduleLabel}
-          </span>
-        </div>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 p-3">
-          {["전체", "대기", "진행중", "완료", "보류"].map((item, index) => (
-            <button
-              key={item}
-              className={`flex h-9 items-center justify-between rounded-md px-3 text-left ${
-                index === 0
-                  ? "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
-                  : "hover:bg-muted"
-              }`}
-            >
-              <span>{item}</span>
-              <Badge variant="secondary">{index + 2}</Badge>
-            </button>
-          ))}
-          <div className="mt-4 rounded-md border bg-card p-3 text-[12px] leading-5 text-muted-foreground">
-            {moduleId} 메뉴의 탐색/필터/그룹 패널을 검증하기 위한 저충실도 영역입니다.
-          </div>
-        </div>
-      </ScrollArea>
-    </div>
+    <EmrOrderQueueSidePanel
+      items={items}
+      statuses={statuses}
+      title={moduleLabel}
+      selectedItemId={selectedQueueItemIds[moduleId]}
+      onCollapse={() => setModulePanelOpen(false)}
+      onSelectItem={(itemId) => setSelectedQueueItem(moduleId, itemId)}
+    />
   );
 }
 
 export function PlaceholderContent({ hasRightPanel, moduleId }: ShellComponentProps) {
-  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
+  const { rightPanelOpen, selectedQueueItemIds, setRightPanelOpen } = useLayoutStore();
+  const statuses = getOrderQueueStatuses(moduleId);
+  const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col p-4">
@@ -87,6 +61,11 @@ export function PlaceholderContent({ hasRightPanel, moduleId }: ShellComponentPr
           </Button>
         </div>
       </div>
+      <OrderQueueSelectionSummary
+        className="mb-4"
+        item={selectedQueueItem}
+        statuses={statuses}
+      />
       <div className="grid flex-1 grid-cols-3 gap-3">
         {[
           ["대기", "12", ActivityIcon],
