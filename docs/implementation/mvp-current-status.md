@@ -106,6 +106,8 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 다음 작업은 **PR7: Figma Reference Capture & MVP Screen Alignment**를 추천한다.
 
+PR7과 foundation 작업을 여러 채팅에서 병렬로 진행할 때는 `docs/implementation/mvp-parallel-workstreams.md`를 먼저 읽고, 각 작업을 전용 `git worktree`와 브랜치에서 진행한다.
+
 PR7 목표:
 
 - Figma의 기존 화면 예시를 기능별 캡처 이미지로 repo에 저장한다.
@@ -125,6 +127,7 @@ PR7에서 우선 확인할 화면:
 ## 관련 문서
 
 - 구현 문서 목차: `docs/implementation/README.md`
+- 병렬 작업 계획: `docs/implementation/mvp-parallel-workstreams.md`
 - PR 1-6 구현 기록: `docs/implementation/pr1-pr6-realigned-plan.md`
 - 갭 분석: `docs/implementation/mvp-gap-analysis.md`
 - 백로그: `docs/implementation/mvp-implementation-backlog.md`
