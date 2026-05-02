@@ -4,6 +4,16 @@ Updated: 2026-05-02
 
 이 문서는 EMR SaaS MVP 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
+## Foundation 진행 현황
+
+PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통합되어 있다.
+
+- API boundary selectors는 mock domain을 나중에 API/DB로 교체하기 위한 read repository와 selector layer를 제공한다.
+- Service catalog/role seed는 수가/서비스 항목과 `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 역할 seed를 제공한다.
+- Audit log foundation은 status transition, profile edit, SOAP save, order status change, billing action event builder와 fixture를 제공한다.
+- Auth mock foundation은 `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper를 제공한다.
+- 실제 API route, DB client, migration, auth provider, 권한 enforcement, 전역 app shell auth guard는 아직 연결하지 않았다.
+
 ## 한눈에 보기
 
 현재 MVP는 **주요 외래 업무 흐름을 눌러볼 수 있는 프론트엔드 프로토타입 1차 완성본**이다. 아직 실제 DB/API 연동 제품은 아니지만, 접수에서 진료, 검사/영상, 조제, 수납까지 이어지는 핵심 화면과 연결형 mock 데이터가 구현되어 있다.
@@ -19,11 +29,11 @@ Updated: 2026-05-02
 - 수납
 - 연결형 EMR mock domain, status label mapper, Playwright 회귀 테스트
 - Service catalog, role seed, permission seed foundation
+- Audit log event model foundation
+- API boundary selectors foundation
+- `/login` mock role/session foundation
 
-현재 `main`에는 PR 1-6 구현이 병합되어 있다. 대표 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이다.
-`codex/service-catalog-role-seed` 작업 브랜치에는 UI 연결 없이 service catalog/role/permission seed와 lookup helper, consistency test가 추가되어 있다.
-
-현재 `codex/audit-log-foundation` worktree에서는 후속 foundation 작업으로 audit log event model을 분리 구현 중이다. UI나 backend 저장 연결 없이 `src/types/audit-log.ts`, `src/lib/emr-domain/audit-log.ts`, `src/mocks/audit-log.ts`에 status transition, profile edit, SOAP save, order status change, billing action seed와 deterministic append/build helper를 추가했다.
+현재 `main`에는 PR 1-6 구현과 A/B/C/D foundation 작업이 병합되어 있다. 대표 PR 1-6 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이다.
 
 ## 목적과 목표
 
@@ -58,6 +68,7 @@ MVP 목표:
 | 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
 | 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
 | 수납 | 구현됨 | 대기/미납/종료 목록, 보호자 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 수납 액션 |
+| 로그인 mock | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, auth helper/store, shell 역할 표시, permission helper |
 
 주요 구현 파일은 기능별 `src/features/*`에 있다. 새 작업자는 개별 파일을 보기 전에 이 문서와 관련 implementation 문서를 먼저 확인한다.
 
@@ -69,6 +80,8 @@ MVP 목표:
 | Service catalog seed | foundation 추가 | 진료, 처방/조제, 처치, 검사, 영상, 수납 invoice line에서 공통 참조할 mock category/item/price seed |
 | Role/permission seed | foundation 추가 | `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 추천 역할과 권한 seed |
 | Catalog lookup helper | foundation 추가 | service item/category/current price/role permission lookup, order/invoice consistency report |
+| Audit log foundation | foundation 추가 | status transition, profile edit, SOAP save, order status change, billing action seed와 deterministic append/build helper |
+| Auth mock foundation | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper |
 
 이 foundation들은 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동, 실제 권한 enforcement도 포함하지 않는다.
 
@@ -84,12 +97,6 @@ MVP 목표:
 | PR 5 Lab/Image | 완료 | 검사/영상 workspace 구현 |
 | PR 6 Billing | 완료 | 수납 workspace 구현 |
 
-## 후속 Foundation 진행 현황
-
-| 작업 | 상태 | 결과 |
-|---|---|---|
-| Audit Log Foundation | 진행 중 | UI 연결, backend 저장, 권한 enforcement 없이 typed audit event union, append/build helper, 대표 mock event seed, deterministic Playwright test 추가 |
-
 ## 현재 검증 상태
 
 2026-05-02 기준 `main` 병합 전후로 아래 검증이 통과했다.
@@ -99,19 +106,15 @@ MVP 목표:
 - `npm run build`
 - `npx playwright test tests/billing.spec.ts tests/lab-imaging.spec.ts tests/chart.spec.ts tests/reception.spec.ts tests/domain-baseline.spec.ts tests/app-shell.spec.ts --reporter=line`
 
-2026-05-02 기준 `codex/service-catalog-role-seed` 작업 브랜치에서 아래 추가 검증이 통과했다.
+2026-05-02 기준 foundation 통합 후 아래 추가 검증이 통과했다.
 
 - `npm run lint`
 - `npx tsc --noEmit`
-- `npx playwright test tests/service-catalog.spec.ts --reporter=line`
+- `npm run build`
+- `npx playwright test tests/api-boundary.spec.ts tests/service-catalog.spec.ts tests/audit-log.spec.ts tests/auth.spec.ts --reporter=line`
+- `npx playwright test tests/billing.spec.ts tests/lab-imaging.spec.ts tests/chart.spec.ts tests/reception.spec.ts tests/domain-baseline.spec.ts tests/app-shell.spec.ts --reporter=line`
 
 화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
-
-`codex/audit-log-foundation` worktree 기준 추가 검증:
-
-- `npm run lint` 통과
-- `npx playwright test tests/audit-log.spec.ts --reporter=line` 통과
-- `npx tsc --noEmit`은 기존 `src/components/emr/patient-context-bar.tsx`의 SVG import 3건을 찾지 못해 실패한다. audit log foundation 변경 파일에서 새 TypeScript 오류는 확인되지 않았다.
 
 ## 작업 시 주의사항
 
@@ -120,6 +123,7 @@ MVP 목표:
 - 조제/처치 화면의 현재 디자인과 동작은 명시 요청 없이는 수정하지 않는다.
 - 입원과 병원관리 전체 화면은 현재 PR 1-6 범위 밖이었다.
 - 병원관리의 Order 관리 / Order 세트 화면은 참고 자료일 뿐 구현 대상이 아니었다.
+- 로그인 mock foundation은 데모 역할 선택, session helper/store, shell 역할 표시, permission helper만 제공한다. 기존 app shell에는 전역 auth guard나 역할별 UI 차단이 없다.
 - UI는 Figma나 screenshot을 1:1 복제하지 않고, 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
 - 공통 컴포넌트 추출은 반복 패턴이 안정된 뒤 진행한다. PR7 화면 정렬 전에는 무리하게 공통화하지 않는다.
 - prototype 상태는 session-only이다. 새로고침 후 유지되는 persistence를 전제로 만들지 않는다.
