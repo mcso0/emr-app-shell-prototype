@@ -22,11 +22,19 @@ test("patient bundle connects guardian through clinical and billing records", ()
 test("patient and encounter bundles include PR 3-6 domain baseline records", () => {
   const patientBundle = getMockPatientBundle("patient-coco");
   const encounterBundle = getMockEncounterBundle("encounter-coco-260501");
+  const latestShortcuts = getMockLatestWorkShortcutsForPatient("patient-coco");
 
   expect(patientBundle?.csHistories.map((item) => item.id)).toContain("cs-coco-checkin-call");
   expect(patientBundle?.latestWorkShortcuts.map((item) => item.workType)).toEqual(
     expect.arrayContaining(["chart", "lab", "imaging", "dispensing", "billing"])
   );
+  expect(latestShortcuts.find((item) => item.workType === "dispensing")).toMatchObject({
+    enabled: true,
+    href: "/w/clair-demo/dispensing",
+  });
+  expect(latestShortcuts.find((item) => item.workType === "lab")).toMatchObject({
+    enabled: false,
+  });
   expect(patientBundle?.labResults.map((item) => item.id)).toContain("lab-result-coco-cbc");
   expect(patientBundle?.imagingStudies.map((item) => item.id)).toContain("imaging-coco-thorax");
   expect(patientBundle?.attachments.map((item) => item.id)).toContain("attachment-coco-cbc-pdf");
