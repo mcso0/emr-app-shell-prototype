@@ -319,29 +319,28 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("color", "rgb(197, 48, 48)");
 });
 
-test("module-specific order queue status extensions render after defaults", async ({ page }) => {
+test("treatment module renders the chart queue instead of the order queue placeholder", async ({ page }) => {
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
 
   const sidePanel = page.locator("aside").first();
-  await expect(sidePanel.getByTestId("order-queue-status-partiallyCompleted")).toContainText("부분완료");
-  await expect(sidePanel.getByText("처치 부분완료 오더")).toBeVisible();
+  await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
+  await expect(sidePanel.getByText("코코 · P-260414-0008")).toBeVisible();
+  await expect(page.getByText("SOAP")).toBeVisible();
+  await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
 test("right panel can be collapsed on a module that owns it", async ({ page }) => {
-  await page.goto("/w/clair-demo/treatment");
-  await expect(page.getByTestId("module-side-panel-title")).toHaveText("처치");
-  await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
-  await expect(page.getByText("Right Subpanel")).toBeVisible();
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=open");
+  await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
+  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
+  await expect(page.getByText("환자 사이드 패널")).toBeVisible();
   await expect(page).toHaveURL(/right=open/);
-  await page.getByTestId("order-row-section-0-o-10023").click({ position: { x: 100, y: 20 } });
-  await expect(page.getByRole("button", { name: "상세 닫기" })).toBeVisible();
-  await page.getByRole("button", { name: "상세 닫기" }).click();
-  await page.getByRole("button", { name: "우측 패널 접기" }).click();
+  await page.getByRole("button", { name: "환자 사이드 패널 접기" }).click();
   await expect(page).toHaveURL(/right=closed/);
-  await expect(page.getByRole("button", { name: "우측 패널 펼치기" })).toBeVisible();
-  await page.getByRole("button", { name: "우측 패널 펼치기" }).click();
+  await expect(page.getByRole("button", { name: "환자 사이드 패널 열기" })).toBeVisible();
+  await page.getByRole("button", { name: "환자 사이드 패널 열기" }).click();
   await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByText("Right Subpanel")).toBeVisible();
+  await expect(page.getByText("환자 사이드 패널")).toBeVisible();
 });
 
 test("patient side panel trigger toggles the open panel", async ({ page }) => {

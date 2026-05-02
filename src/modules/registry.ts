@@ -11,6 +11,10 @@ import {
 } from "@/components/icons";
 import type { ModuleDefinition } from "@/types/emr";
 import {
+  ChartContent,
+  ChartSidePanel,
+} from "@/features/chart/module";
+import {
   DispensingContent,
   DispensingContentAside,
   DispensingDrawer,
@@ -47,12 +51,10 @@ export const modules: ModuleDefinition[] = [
   },
   {
     id: "treatment",
-    label: "처치",
+    label: "진료(차트)",
     icon: StethoscopeIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: DispensingContent,
-    rightPanel: PlaceholderRightPanel,
-    drawer: DispensingDrawer,
+    sidePanel: ChartSidePanel,
+    content: ChartContent,
   },
   {
     id: "lab",
