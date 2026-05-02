@@ -8,19 +8,45 @@ import {
 
 const storageKey = "clair.mockAuth.session.v1";
 
-test("login creates a localStorage-backed mock session and restores it", async ({ page }) => {
-  await page.goto("/login");
+test.use({ storageState: { cookies: [], origins: [] } });
 
-  await expect(page.getByRole("heading", { name: "로그인 역할 선택" })).toBeVisible();
-  await expect(page.getByTestId("mock-session-status")).toContainText("세션 없음");
+test("root starts at login", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
+  await expect(page.getByText("병원 워크스페이스에 접속하려면 계정 정보를 입력하세요.")).toBeVisible();
+  await expect(page.getByPlaceholder("name@hospital.com")).toBeVisible();
+  await expect(page.getByPlaceholder("비밀번호")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "MVP 테스트 옵션" })).toBeVisible();
+  await expect(page.getByText("현재는 Supabase Auth 연결 전 mock session으로 진입합니다.")).toBeVisible();
+  await expect(page.getByTestId("mock-session-status")).toBeVisible();
+});
+
+test("workspace routes require login and preserve the requested URL", async ({ page }) => {
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
+
+  await expect(page).toHaveURL(/\/login\?next=/);
+  expect(new URL(page.url()).searchParams.get("next")).toBe(
+    "/w/clair-demo/billing?modulePanel=open&aside=closed"
+  );
+});
+
+test("login creates a localStorage-backed session and opens the requested workspace", async ({ page }) => {
+  await page.goto(
+    "/login?next=%2Fw%2Fclair-demo%2Fbilling%3FmodulePanel%3Dopen%26aside%3Dclosed"
+  );
+
+  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
+  await expect(page.getByTestId("mock-session-status")).toContainText("로그인 전");
 
   await page.getByRole("button", { name: /수의사/ }).click();
-  await page.getByLabel("브라우저 localStorage").check();
-  await page.getByRole("button", { name: "mock session 생성" }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
 
-  await expect(page.getByTestId("mock-session-status")).toContainText("로그인됨");
-  await expect(page.getByTestId("mock-session-status")).toContainText("수의사 (vet)");
-  await expect(page.getByTestId("mock-session-status")).toContainText("브라우저 localStorage");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
+  await expect(page.getByText("INV-260501-0001 · 코코 · 이지은")).toBeVisible();
 
   const stored = await page.evaluate((key) => {
     const value = window.localStorage.getItem(key);
@@ -33,22 +59,57 @@ test("login creates a localStorage-backed mock session and restores it", async (
     storageMode: "local",
   });
 
-  await page.reload();
+  await page.goto("/login");
   await expect(page.getByTestId("mock-session-status")).toContainText("수의사 (vet)");
+  await expect(page.getByTestId("mock-session-status")).toContainText("브라우저에 유지");
+});
+
+test("login without next opens the MVP default workspace", async ({ page }) => {
+  await page.goto("/login");
+
+  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
+
+  await page.getByRole("button", { name: /프론트 데스크/ }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await expect(page.getByRole("group", { name: "접수 목록 유형" })).toBeVisible();
+  await expect(page.getByText("코코 · P-260414-0008")).toBeVisible();
 });
 
 test("logout clears mock session from both browser stores", async ({ page }) => {
   await page.goto("/login");
 
   await page.getByRole("button", { name: /수납 관리자/ }).click();
-  await page.getByLabel("탭 세션").check();
-  await page.getByRole("button", { name: "mock session 생성" }).click();
+  await page.getByLabel("이번 탭만").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await page.getByRole("button", { name: "로그아웃" }).click();
+  await expect(page).toHaveURL(/\/login/);
+
+  await page.goto("/login");
+  await page.evaluate(
+    ([key, session]) => {
+      window.sessionStorage.setItem(key, session);
+    },
+    [
+      storageKey,
+      JSON.stringify({
+        id: "test-session",
+        role: "billing_admin",
+        roleLabel: "수납 관리자",
+        storageMode: "session",
+        issuedAt: new Date().toISOString(),
+      }),
+    ]
+  );
+  await page.reload();
   await expect(page.getByTestId("mock-session-status")).toContainText(
     "수납 관리자 (billing_admin)"
   );
-
   await page.getByRole("button", { name: "로그아웃" }).click();
-  await expect(page.getByTestId("mock-session-status")).toContainText("세션 없음");
+  await expect(page.getByTestId("mock-session-status")).toContainText("로그인 전");
 
   const stored = await page.evaluate((key) => ({
     session: window.sessionStorage.getItem(key),
@@ -58,23 +119,14 @@ test("logout clears mock session from both browser stores", async ({ page }) => 
   expect(stored).toEqual({ session: null, local: null });
 });
 
-test("mock auth foundation does not guard the existing app shell", async ({ page }) => {
-  await page.goto("/w/clair-demo/dispensing");
-
-  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
-  await expect(page).not.toHaveURL(/\/login/);
-});
-
-test("app shell displays the selected mock role without enforcing a guard", async ({ page }) => {
+test("app shell displays the selected mock role after login", async ({ page }) => {
   await page.goto("/login");
 
   await page.getByRole("button", { name: /간호사/ }).click();
-  await page.getByLabel("브라우저 localStorage").check();
-  await page.getByRole("button", { name: "mock session 생성" }).click();
-  await page.getByRole("link", { name: "워크스페이스 열기" }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
 
-  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
-  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await expect(page.getByTestId("top-menu-mock-user")).toContainText("간호사");
   await expect(page.getByTestId("top-menu-mock-user")).toContainText("nurse");
 });

@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const mockAuthSession = {
+  id: "playwright-default-session",
+  role: "hospital_admin",
+  roleLabel: "병원 관리자",
+  storageMode: "local",
+  issuedAt: "2026-05-02T00:00:00.000Z",
+};
+
 export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
@@ -8,6 +16,20 @@ export default defineConfig({
   },
   use: {
     baseURL: "http://127.0.0.1:3000",
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: "http://127.0.0.1:3000",
+          localStorage: [
+            {
+              name: "clair.mockAuth.session.v1",
+              value: JSON.stringify(mockAuthSession),
+            },
+          ],
+        },
+      ],
+    },
     trace: "on-first-retry",
     viewport: { width: 1920, height: 1080 },
   },
