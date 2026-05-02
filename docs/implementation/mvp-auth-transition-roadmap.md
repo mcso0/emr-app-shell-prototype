@@ -36,6 +36,7 @@ Updated: 2026-05-03
 다음 추천 단계:
 
 - Supabase 실제 연결 전 `### 3. Supabase Auth 매핑 설계`를 문서로 먼저 진행한다.
+- 로그인 구현 작업 패키지는 `docs/implementation/auth-login/README.md`를 시작점으로 사용한다.
 - 실제 Supabase package/env/API 연결, callback route, DB migration, RLS, server-side permission enforcement는 계속 금지 범위로 유지한다.
 
 ## 최종 목표와 결과물

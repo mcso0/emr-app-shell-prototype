@@ -209,12 +209,13 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 - Supabase 실제 연결 전에 `auth.users`, 앱 도메인 `users`, `user_memberships`, `permission_policies` 매핑 계획을 정리한다.
 - 실제 auth provider, DB/API session, 서버 권한 enforcement는 별도 후속 계획에서 연결한다.
 
-구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7, Supabase 공식 문서를 함께 확인한다.
+구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/auth-login/README.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7, Supabase 공식 문서를 함께 확인한다.
 
 ## 관련 문서
 
 - 구현 문서 목차: `docs/implementation/README.md`
 - MVP Auth 제품화 전환 기준: `docs/implementation/mvp-auth-transition-roadmap.md`
+- 로그인 구현 작업 패키지: `docs/implementation/auth-login/README.md`
 - 데모 세일즈 전략: `docs/implementation/demo-sales-strategy.md`
 - Sales Demo Wave 2 closeout: `docs/implementation/sales-demo-wave2-closeout.md`
 - 병렬 작업 계획: `docs/implementation/mvp-parallel-workstreams.md`
