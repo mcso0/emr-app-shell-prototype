@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
@@ -30,7 +30,9 @@ import {
   getImagingWorkItems,
   getLabDetail,
   getLabWorkItems,
+  type ImagingDetail,
   type ImagingWorkItem,
+  type LabDetail,
   type LabWorkItem,
 } from "@/features/lab-imaging/data";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
@@ -49,6 +51,7 @@ import type {
   EquipmentReceipt,
   ImagingStudy,
   LabResult,
+  LabResultRow,
   Patient,
 } from "@/types/emr-domain";
 
@@ -60,6 +63,18 @@ const formatFileSize = (bytes?: number) => {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
 
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+};
+
+const getVisitContext = (encounter: Encounter) => encounter.chiefComplaint ?? encounter.visitPurpose;
+
+const getActionableLabRows = (result: LabResult) =>
+  result.rows.filter((row) => row.judgment !== "normal" && row.judgment !== "not_judged");
+
+const formatLabFinding = (row: LabResultRow) => {
+  const value = [row.value, row.unit].filter(Boolean).join(" ");
+  const judgment = getStatusLabel("labJudgment", row.judgment);
+
+  return [row.analyteName, value, judgment, row.note].filter(Boolean).join(" · ");
 };
 
 function QueueActions() {
@@ -217,6 +232,11 @@ function PatientHeader({
             {patient.breed ?? "품종 미상"} · {getPatientDisplayAge(patient)} ·{" "}
             {getPatientSexLabel(patient)}
           </div>
+          {getVisitContext(encounter) ? (
+            <div className="mt-2 text-[13px] font-medium text-foreground">
+              내원 사유: {getVisitContext(encounter)}
+            </div>
+          ) : null}
         </div>
         <div className="text-right text-[13px] text-muted-foreground">
           <div>{primaryGuardianName ?? "보호자 미지정"}</div>
@@ -224,6 +244,86 @@ function PatientHeader({
         </div>
       </div>
     </section>
+  );
+}
+
+function ResultFlowPanel({
+  children,
+  steps,
+}: {
+  children?: ReactNode;
+  steps: Array<[string, string]>;
+}) {
+  return (
+    <section className="rounded-lg border bg-card">
+      <div className="border-b px-4 py-3">
+        <h2 className="text-[14px] font-semibold">데모 결과 흐름</h2>
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          검사/영상 담당자가 결과를 확인한 뒤 진료 판단과 수납 항목으로 이어지는 연결 상태입니다.
+        </p>
+      </div>
+      <div className="grid gap-3 p-4 md:grid-cols-3">
+        {steps.map(([label, value], index) => (
+          <div key={label} className="min-w-0">
+            <div className="text-[12px] font-medium text-muted-foreground">
+              {index + 1}. {label}
+            </div>
+            <div className="mt-1 text-[13px] font-semibold leading-5">{value}</div>
+          </div>
+        ))}
+      </div>
+      {children ? <div className="border-t px-4 py-3">{children}</div> : null}
+    </section>
+  );
+}
+
+function LabResultFlowPanel({ detail }: { detail: LabDetail }) {
+  const actionableRows = getActionableLabRows(detail.result);
+  const keyFinding =
+    actionableRows.length > 0
+      ? actionableRows.map(formatLabFinding).join(" / ")
+      : `${detail.result.resultName} · ${getStatusLabel("labResult", detail.result.status)}`;
+
+  return (
+    <ResultFlowPanel
+      steps={[
+        [
+          "차트 오더",
+          `${detail.order?.displayName ?? detail.result.resultName} · ${getVisitContext(detail.encounter) ?? detail.encounter.encounterNo}`,
+        ],
+        ["결과 확인", keyFinding],
+        [
+          "수의사/수납 연결",
+          `입력 ${formatShortDateTime(detail.result.enteredAt ?? detail.result.receivedAt)} · 진료 판단과 청구 확인`,
+        ],
+      ]}
+    />
+  );
+}
+
+function ImagingResultFlowPanel({ detail }: { detail: ImagingDetail }) {
+  return (
+    <ResultFlowPanel
+      steps={[
+        [
+          "차트 오더",
+          `${detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}`} · ${getVisitContext(detail.encounter) ?? detail.encounter.encounterNo}`,
+        ],
+        ["판독 확인", `${detail.study.modality} ${detail.study.bodyPart} · ${getStatusLabel("imagingStudy", detail.study.status)}`],
+        ["수의사/수납 연결", "종합소견 확인 후 영상 항목 청구 확인"],
+      ]}
+    >
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-muted-foreground">판독 요약</div>
+          <p className="mt-1 text-[13px] leading-5">{detail.study.reading ?? "-"}</p>
+        </div>
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-muted-foreground">종합소견</div>
+          <p className="mt-1 text-[13px] leading-5">{detail.study.impression ?? "-"}</p>
+        </div>
+      </div>
+    </ResultFlowPanel>
   );
 }
 
@@ -370,6 +470,7 @@ export function LabContent() {
               ["수신", formatShortDateTime(detail.result.receivedAt)],
             ]}
           />
+          <LabResultFlowPanel detail={detail} />
           <ResultInputTable result={detail.result} />
           <EquipmentReceiptsPanel receipts={detail.equipmentReceipts} />
           <AttachmentStrip attachments={detail.attachments} />
@@ -451,6 +552,7 @@ export function ImagingContent() {
               ["판독", detail.radiologistName ?? "판독 미지정"],
             ]}
           />
+          <ImagingResultFlowPanel detail={detail} />
           <ImagingReadingPanel study={detail.study} />
           <AttachmentStrip attachments={detail.attachments} />
         </div>
