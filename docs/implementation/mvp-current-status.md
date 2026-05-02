@@ -21,6 +21,8 @@ Updated: 2026-05-02
 
 현재 `main`에는 PR 1-6 구현이 병합되어 있다. 대표 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이다.
 
+현재 `codex/audit-log-foundation` worktree에서는 후속 foundation 작업으로 audit log event model을 분리 구현 중이다. UI나 backend 저장 연결 없이 `src/types/audit-log.ts`, `src/lib/emr-domain/audit-log.ts`, `src/mocks/audit-log.ts`에 status transition, profile edit, SOAP save, order status change, billing action seed와 deterministic append/build helper를 추가했다.
+
 ## 목적과 목표
 
 이 MVP의 목적은 동물병원 외래 진료 운영 흐름을 하나의 encounter 중심 프로토타입으로 검증하는 것이다.
@@ -67,6 +69,12 @@ MVP 목표:
 | PR 5 Lab/Image | 완료 | 검사/영상 workspace 구현 |
 | PR 6 Billing | 완료 | 수납 workspace 구현 |
 
+## 후속 Foundation 진행 현황
+
+| 작업 | 상태 | 결과 |
+|---|---|---|
+| Audit Log Foundation | 진행 중 | UI 연결, backend 저장, 권한 enforcement 없이 typed audit event union, append/build helper, 대표 mock event seed, deterministic Playwright test 추가 |
+
 ## 현재 검증 상태
 
 2026-05-02 기준 `main` 병합 전후로 아래 검증이 통과했다.
@@ -77,6 +85,12 @@ MVP 목표:
 - `npx playwright test tests/billing.spec.ts tests/lab-imaging.spec.ts tests/chart.spec.ts tests/reception.spec.ts tests/domain-baseline.spec.ts tests/app-shell.spec.ts --reporter=line`
 
 화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
+
+`codex/audit-log-foundation` worktree 기준 추가 검증:
+
+- `npm run lint` 통과
+- `npx playwright test tests/audit-log.spec.ts --reporter=line` 통과
+- `npx tsc --noEmit`은 기존 `src/components/emr/patient-context-bar.tsx`의 SVG import 3건을 찾지 못해 실패한다. audit log foundation 변경 파일에서 새 TypeScript 오류는 확인되지 않았다.
 
 ## 작업 시 주의사항
 
