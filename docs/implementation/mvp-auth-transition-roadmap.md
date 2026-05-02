@@ -26,16 +26,18 @@ Updated: 2026-05-03
 - 현재 상태 고정: roadmap/current status/implementation README 연결을 확인하고 closeout 규칙을 auth 작업 기준으로 재확인했다.
 - Auth Boundary 정리: `useAuthClient()`를 추가하고 login form, app guard, top menu가 `useMockAuthStore`를 직접 import하지 않게 했다.
 - 로그인 UX 상태 추가: submit 중 `로그인 중` disabled 상태와 form 내부 `role="alert"` provider error 영역을 추가했다.
+- Supabase Auth 매핑 설계: `auth.users.id`와 앱 `users.id`를 같은 UUID로 고정하고, `user_memberships`와 `permission_policies`를 membership/permission source로 분리했다.
 
 완료 문서:
 
 - `docs/completed/auth/2026-05-03-auth-roadmap-baseline.md`
 - `docs/completed/auth/2026-05-03-auth-boundary.md`
 - `docs/completed/auth/2026-05-03-login-ux-state.md`
+- `docs/completed/auth/2026-05-03-supabase-auth-mapping.md`
 
 다음 추천 단계:
 
-- Supabase 실제 연결 전 `### 3. Supabase Auth 매핑 설계`를 문서로 먼저 진행한다.
+- Supabase 실제 연결 전 `### 5. Supabase 실제 연동 준비`를 문서로 먼저 진행한다.
 - 로그인 구현 작업 패키지는 `docs/implementation/auth-login/README.md`를 시작점으로 사용한다.
 - 실제 Supabase package/env/API 연결, callback route, DB migration, RLS, server-side permission enforcement는 계속 금지 범위로 유지한다.
 
@@ -111,12 +113,19 @@ Updated: 2026-05-03
 
 - Supabase Auth와 앱 도메인 사용자/멤버십/권한 모델의 연결 방식을 구현 전에 문서로 고정한다.
 
+결정 문서:
+
+- `docs/implementation/auth-login/supabase-auth-mapping.md`
+
 작업:
 
 - `auth.users.id`와 앱 도메인 `users`의 식별자 관계를 정한다.
 - 사용자가 여러 병원/워크스페이스에 속할 수 있는 `user_memberships` 모델을 정의한다.
 - 역할/권한은 `permission_policies` 또는 role permission source에서 관리하도록 계획한다.
 - RLS, server-side enforcement, migration은 이 단계에서 설계만 하고 구현하지 않는다.
+- `users.id`는 로그인 가능한 앱 사용자에 대해 `auth.users.id`와 같은 UUID를 사용한다.
+- Supabase Auth는 session/identity source이고, 앱 `users`, `user_memberships`, `permission_policies`는 domain profile, membership, permission source다.
+- 사용자 수정 가능 metadata는 권한 판단 source로 쓰지 않는다.
 
 사용 스킬:
 
@@ -128,6 +137,10 @@ Updated: 2026-05-03
 
 - 실제 DB 변경 없이도 후속 migration 계획을 작성할 수 있을 만큼 매핑 문서가 명확하다.
 - 권한 source와 session source가 분리되어 있다.
+
+상태:
+
+- 2026-05-03 완료. 실제 Supabase package/env/API 연결, DB migration, RLS policy, auth code 변경은 하지 않았다.
 
 ### 4. 실제 로그인 UX 상태 추가
 

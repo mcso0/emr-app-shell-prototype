@@ -24,6 +24,7 @@
 | `plan.md` | 4단계 master plan과 단계별 gate |
 | `agent-briefing.md` | 작업 전 에이전트 운영 규칙과 금지 범위 |
 | `completed-summary.md` | 완료된 auth/login closeout 문서 요약 인덱스 |
+| `supabase-auth-mapping.md` | Supabase Auth session과 앱 users/user_memberships/permission_policies 매핑 결정 |
 | `work-orders/01-supabase-auth-mapping.md` | Supabase Auth와 앱 도메인 사용자/멤버십/권한 매핑 설계 |
 | `work-orders/02-supabase-integration-readiness.md` | 실제 연결 전 설치/env/callback/session/helper/middleware 계획 |
 | `work-orders/03-supabase-provider-implementation.md` | 승인된 계획 기준 실제 Supabase provider adapter 구현 |
