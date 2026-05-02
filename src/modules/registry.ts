@@ -15,6 +15,10 @@ import {
   ChartSidePanel,
 } from "@/features/chart/module";
 import {
+  BillingContent,
+  BillingSidePanel,
+} from "@/features/billing/module";
+import {
   DispensingContent,
   DispensingContentAside,
   DispensingDrawer,
@@ -100,8 +104,8 @@ export const modules: ModuleDefinition[] = [
     id: "billing",
     label: "수납",
     icon: CreditCardIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
+    sidePanel: BillingSidePanel,
+    content: BillingContent,
   },
   {
     id: "inpatient",
