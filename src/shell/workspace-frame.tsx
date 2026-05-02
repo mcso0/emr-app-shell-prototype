@@ -36,7 +36,15 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const RightPanel = moduleDefinition.rightPanel;
   const Drawer = moduleDefinition.drawer;
   const drawerTitle =
-    activeDrawer?.type === "reception-form" ? "접수" : "상세 정보";
+    activeDrawer?.type === "reception-form"
+      ? "접수"
+      : activeDrawer?.type === "reception-patient"
+        ? "환자 정보"
+        : activeDrawer?.type === "reception-guardian"
+          ? "보호자 정보"
+          : activeDrawer?.type === "reception-appointment"
+            ? "예약 상세"
+            : "상세 정보";
   const drawerWidth =
     activeDrawer?.type === "reception-form"
       ? SHELL_LAYOUT.drawer.largeWidth

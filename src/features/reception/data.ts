@@ -3,6 +3,7 @@ import {
   mockAppointments,
   mockEncounters,
   mockGuardians,
+  mockPatientGuardians,
   mockPatients,
   mockStaffUsers,
   mockWaitingQueueEntries,
@@ -13,6 +14,7 @@ import type {
   Encounter,
   Guardian,
   Patient,
+  PatientGuardian,
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 
@@ -38,10 +40,32 @@ export type ReceptionQueueRow = {
   veterinarianName?: string;
 };
 
+export type ReceptionProfileDataset = {
+  guardians: Guardian[];
+  patientGuardians: PatientGuardian[];
+  patients: Patient[];
+};
+
 const TODAY_PREFIX = "2026-05-01";
 
-const getPrimaryGuardian = (patientId: EmrId) =>
-  getMockPatientBundle(patientId)?.primaryGuardian;
+const defaultProfileDataset: ReceptionProfileDataset = {
+  guardians: mockGuardians,
+  patientGuardians: mockPatientGuardians,
+  patients: mockPatients,
+};
+
+const getPrimaryGuardian = (
+  patientId: EmrId,
+  dataset: ReceptionProfileDataset = defaultProfileDataset
+) => {
+  const primaryGuardianId = dataset.patientGuardians.find(
+    (link) => link.patientId === patientId && link.isPrimary
+  )?.guardianId;
+
+  return primaryGuardianId
+    ? dataset.guardians.find((guardian) => guardian.id === primaryGuardianId)
+    : getMockPatientBundle(patientId)?.primaryGuardian;
+};
 
 const getStaffName = (userId?: EmrId) =>
   userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
@@ -70,14 +94,15 @@ export const getSpeciesLabel = (patient: Patient) => {
 };
 
 export const getReceptionPatientSummaries = (
-  draftCheckIns: ReceptionDraftCheckIn[]
+  draftCheckIns: ReceptionDraftCheckIn[],
+  dataset: ReceptionProfileDataset = defaultProfileDataset
 ): ReceptionPatientSummary[] => {
   const draftEncounters = draftCheckIns.map((draft) => draft.encounter);
   const encounters = [...draftEncounters, ...mockEncounters];
   const appointments = getEffectiveAppointments(draftCheckIns);
 
-  return mockPatients.map((patient) => {
-    const primaryGuardian = getPrimaryGuardian(patient.id);
+  return dataset.patients.map((patient) => {
+    const primaryGuardian = getPrimaryGuardian(patient.id, dataset);
     const patientAppointments = appointments.filter((appointment) => appointment.patientId === patient.id);
     const patientEncounters = encounters.filter((encounter) => encounter.patientId === patient.id);
     const activeEncounter = patientEncounters.find((encounter) =>

@@ -43,6 +43,12 @@ import {
   getTodayAppointments,
   type ReceptionPatientSummary,
 } from "@/features/reception/data";
+import {
+  GuardianProfileDrawer,
+  NewPatientButton,
+  PatientProfileDrawer,
+} from "@/features/reception/profile-drawer";
+import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { useReceptionStore } from "@/features/reception/store";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
@@ -252,12 +258,15 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const searchQuery = useReceptionStore((state) => state.searchQuery);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
   const selectPatient = useReceptionStore((state) => state.selectPatient);
+  const patients = usePatientProfileStore((state) => state.patients);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const setSearchQuery = useReceptionStore((state) => state.setSearchQuery);
   const patientSummaries = useMemo(
-    () => getReceptionPatientSummaries(draftCheckIns),
-    [draftCheckIns]
+    () => getReceptionPatientSummaries(draftCheckIns, { guardians, patientGuardians, patients }),
+    [draftCheckIns, guardians, patientGuardians, patients]
   );
   const filteredPatients = useMemo(
     () => getFilteredReceptionPatients(patientSummaries, searchQuery),
@@ -293,6 +302,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         count={sideListCount}
         headerActions={
           <>
+            <NewPatientButton />
             <EmrListHeaderIconButton ariaLabel="정렬">
               <CdsUtilitiesSortIcon className="size-4" />
             </EmrListHeaderIconButton>
@@ -893,6 +903,15 @@ export function ReceptionDrawer() {
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
   const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+
+  if (activeDrawer?.type === "reception-patient") {
+    return <PatientProfileDrawer patientId={activeDrawer.id} />;
+  }
+
+  if (activeDrawer?.type === "reception-guardian") {
+    return <GuardianProfileDrawer guardianId={activeDrawer.id} />;
+  }
+
   const selectedAppointment =
     activeDrawer?.type === "reception-appointment"
       ? appointments.find((appointment) => appointment.id === activeDrawer.id)

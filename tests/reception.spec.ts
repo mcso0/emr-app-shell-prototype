@@ -60,7 +60,13 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   await expect(calendar.getByText("이수지", { exact: true }).first()).toBeVisible();
   await expect(calendar.getByText("김도윤", { exact: true }).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "수의사 2" }).click();
+  const veterinarianButton = page.getByRole("button", { name: "수의사 2" });
+  await expect(async () => {
+    await veterinarianButton.click();
+    await expect(veterinarianButton).toHaveAttribute("aria-expanded", "true", {
+      timeout: 1_000,
+    });
+  }).toPass();
   await page.getByRole("menuitemcheckbox", { name: "김도윤" }).click();
 
   await expect(page.getByRole("button", { name: "이수지" })).toBeVisible();
@@ -77,9 +83,68 @@ test("reception cards open the reception detail drawer", async ({ page }) => {
     .first()
     .click();
 
-  await expect(page.getByText("예약 상세")).toBeVisible();
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
   await expect(page.getByText("나비 · 오세아")).toBeVisible();
   await expect(page.getByRole("button", { name: "접수 처리" }).last()).toBeVisible();
+});
+
+test("patient drawer supports editing and guardian navigation", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const sidePanel = page.locator("aside").first();
+  await sidePanel.getByText("두부 · P-260501-0002").click();
+
+  await expect(page.getByText("환자 정보")).toBeVisible();
+  await expect(page.getByText("보호자 연결")).toBeVisible();
+  await expect(page.getByText("정하린", { exact: true })).toBeVisible();
+  await expect(page.getByText("강서윤", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "수정" }).click();
+  await page.getByLabel("품종").fill("포메라니안 믹스");
+  await page.getByRole("button", { name: "저장" }).click();
+  await expect(page.getByLabel("품종")).toHaveValue("포메라니안 믹스");
+
+  await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
+
+  await expect(page.getByText("보호자 정보")).toBeVisible();
+  await expect(page.getByText("연결 환자").last()).toBeVisible();
+  await expect(page.getByText("하루", { exact: true }).last()).toBeVisible();
+  await expect(page.getByText("두부", { exact: true }).last()).toBeVisible();
+});
+
+test("patient drawer shows CS history and latest shortcuts", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const sidePanel = page.locator("aside").first();
+  await sidePanel.getByText("코코 · P-260414-0008").click();
+
+  await page.getByRole("button", { name: "CS 이력" }).click();
+  await expect(page.getByText("접수 문의")).toBeVisible();
+  await page.getByRole("button", { name: "KakaoTalk" }).click();
+  await expect(page.getByText("검사 결과 안내")).toBeVisible();
+
+  await page.getByRole("button", { name: "최신내역" }).click();
+  await expect(page.getByText("최근 조제")).toBeVisible();
+  await expect(page.getByText("최근 검사")).toBeVisible();
+});
+
+test("new patient registration validates and opens the patient drawer", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  await page.getByRole("button", { name: "신규 환자" }).click();
+  await page.getByRole("button", { name: "등록" }).click();
+  await expect(page.getByText("환자명은 필수입니다.")).toBeVisible();
+
+  await page.getByLabel("환자명").fill("새롬");
+  await page.getByLabel("품종").fill("푸들");
+  await page.getByLabel("보호자명").fill("김새봄");
+  await page.getByLabel("보호자 휴대전화").fill("010-2222-3333");
+  await page.getByRole("button", { name: "등록" }).click();
+
+  await expect(page.getByText("환자 정보")).toBeVisible();
+  await expect(page.getByText("새롬", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("품종").first()).toHaveValue("푸들");
+  await expect(page.getByText("김새봄", { exact: true })).toBeVisible();
 });
 
 test("nav rail maps menu labels to the intended modules", async ({ page }) => {
@@ -149,7 +214,7 @@ test("reception creates a walk-in waiting row for the selected patient", async (
 
   const sidePanel = page.locator("aside").first();
   await sidePanel.getByText("두부 · P-260501-0002").click();
-  await expect(page.getByText("접수 상세")).toBeVisible();
+  await expect(page.getByText("환자 정보")).toBeVisible();
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await page.getByRole("button", { name: "현장 접수" }).click();
 
