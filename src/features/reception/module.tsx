@@ -991,6 +991,13 @@ export function ReceptionDrawer() {
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
   const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+  const [receptionDepartment, setReceptionDepartment] = useState(
+    "영상의학과 · 방사선종양학과"
+  );
+  const [receptionVeterinarian, setReceptionVeterinarian] = useState(
+    defaultVeterinarian?.name ?? "수의사미지정"
+  );
+  const [receptionDuration, setReceptionDuration] = useState("30분");
 
   if (activeDrawer?.type === "reception-patient") {
     return <PatientProfileDrawer patientId={activeDrawer.id} />;
@@ -1054,7 +1061,12 @@ export function ReceptionDrawer() {
                   required
                   supportingText="다른 진료과로의 접수는 먼저 진료과를 변경한 후 가능합니다."
                 >
-                  <Select defaultValue="영상의학과 · 방사선종양학과">
+                  <Select
+                    value={receptionDepartment}
+                    onValueChange={(value) => {
+                      if (value) setReceptionDepartment(value);
+                    }}
+                  >
                     <SelectTrigger
                       aria-label="진료과"
                       className={cn(receptionReferenceInputClassName, "justify-between")}
@@ -1077,7 +1089,12 @@ export function ReceptionDrawer() {
                   label="담당의"
                   supportingText="담당의 지정시 진료시작시간을 설정할 수 있습니다."
                 >
-                  <Select defaultValue={defaultVeterinarian?.name ?? "수의사미지정"}>
+                  <Select
+                    value={receptionVeterinarian}
+                    onValueChange={(value) => {
+                      if (value) setReceptionVeterinarian(value);
+                    }}
+                  >
                     <SelectTrigger
                       aria-label="담당의"
                       className={cn(receptionReferenceInputClassName, "justify-between")}
@@ -1199,7 +1216,12 @@ export function ReceptionDrawer() {
                 </ReceptionReferenceField>
 
                 <ReceptionReferenceField label="소요시간" required>
-                  <Select defaultValue="30분">
+                  <Select
+                    value={receptionDuration}
+                    onValueChange={(value) => {
+                      if (value) setReceptionDuration(value);
+                    }}
+                  >
                     <SelectTrigger
                       aria-label="소요시간"
                       className={cn(receptionReferenceDisabledInputClassName, "justify-between")}
