@@ -6,6 +6,8 @@ Updated: 2026-05-02
 
 Wave 2의 목표는 새 기능을 넓게 추가하는 것이 아니라, 이미 `main`에 들어간 `kong-vomit` 골든 시나리오를 기준으로 접수, 진료, 검사/영상, 수납 화면이 더 자연스럽게 이어져 보이게 만드는 것이다.
 
+Status: 2026-05-02 기준 Wave 2 작업은 완료되어 `main`에 병합되었다. 완료 결과는 `docs/implementation/sales-demo-wave2-closeout.md`를 기준으로 확인한다.
+
 ## Operating Model
 
 진행 방식:
@@ -414,4 +416,3 @@ sales demo spine이 main에 들어갔어. Wave 2 중 "Demo Flow Integration"을 
 - UX/flow change summary
 - tests run and result
 - known gaps or handoff notes for integration
-

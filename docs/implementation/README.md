@@ -10,6 +10,7 @@
 | `demo-sales-strategy.md` | 잠재 고객 계약 전환을 위한 데모 목적, 시나리오, 우선순위 |
 | `sales-demo-readiness-audit.md` | 7분 골든 데모 경로, 화면별 gap, reference 상태, 후속 PR 경계 |
 | `sales-demo-wave2-parallel-prompts.md` | sales demo spine 이후 Wave 2 병렬 작업 분해와 채팅별 붙여넣기 프롬프트 |
+| `sales-demo-wave2-closeout.md` | Wave 2 완료 범위, 병합 커밋, 검증 결과, 남은 gap, 다음 추천 작업 |
 | `mvp-parallel-workstreams.md` | 병렬 작업 브랜치/워크트리 전략과 A/B/C/D 핸드오프 프롬프트 |
 | `pr1-pr6-realigned-plan.md` | PR 1-6 구현 순서와 완료 기록 |
 | `mvp-gap-analysis.md` | MVP 요구와 현재 구현 사이의 갭 및 다음 우선순위 |
@@ -26,6 +27,7 @@
 - `mvp-current-status.md`를 읽고 현재 완료/제외 범위를 확인한다.
 - 데모 품질, 데모 데이터, 세일즈 시나리오와 관련된 작업이면 `demo-sales-strategy.md`를 함께 확인한다.
 - 데모 flow/seed/launcher 작업이면 `sales-demo-readiness-audit.md`의 골든 경로와 PR 경계를 확인한다.
+- Wave 2 이후 작업이면 `sales-demo-wave2-closeout.md`에서 완료 범위와 남은 gap을 확인한다.
 - sales demo spine 이후 화면별 병렬 작업이면 `sales-demo-wave2-parallel-prompts.md`에서 worktree/branch와 채팅별 프롬프트를 확인한다.
 - 병렬 작업이면 `mvp-parallel-workstreams.md`를 읽고 전용 worktree에서 시작한다.
 - 화면 작업이면 `reference-screen-index.md`와 실제 이미지 파일 존재 여부를 확인한다.
