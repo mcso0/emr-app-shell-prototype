@@ -55,6 +55,14 @@ MVP 목표:
 
 주요 구현 파일은 기능별 `src/features/*`에 있다. 새 작업자는 개별 파일을 보기 전에 이 문서와 관련 implementation 문서를 먼저 확인한다.
 
+비화면/기반 작업:
+
+| 영역 | 상태 | 주요 내용 |
+|---|---|---|
+| API boundary selectors | 초안 추가 | mock domain을 나중에 API/DB로 교체하기 위한 read repository interface, selector/helper, mock adapter, contract test, 후속 통합 가이드 추가 |
+
+이 boundary는 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동도 포함하지 않는다.
+
 ## PR 0-6 완료 현황
 
 | PR | 상태 | 결과 |
@@ -131,4 +139,6 @@ PR7에서 우선 확인할 화면:
 - 확인 필요 항목: `docs/implementation/open-questions.md`
 - 레퍼런스 화면 인덱스: `docs/implementation/reference-screen-index.md`
 - 공통화 후보: `docs/implementation/reusable-component-candidates.md`
+- API boundary selector 설계: `docs/implementation/api-boundary-selectors.md`
+- API boundary 후속 통합 가이드: `docs/implementation/api-boundary-integration-guide.md`
 - App shell layout contract: `docs/app-shell-layout-contract.md`

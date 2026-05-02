@@ -14,6 +14,8 @@
 | `reference-screen-index.md` | Figma/screenshot reference file index |
 | `reusable-component-candidates.md` | 공통화 후보와 추출 기준 |
 | `reception-reusable-ui-notes.md` | 접수/예약 관련 UI 재사용 메모 |
+| `api-boundary-selectors.md` | mock domain을 API/DB로 교체하기 위한 read repository/selector boundary |
+| `api-boundary-integration-guide.md` | read boundary를 feature module에 점진 통합하는 후속 가이드 |
 
 ## 작업 시작 체크리스트
 
