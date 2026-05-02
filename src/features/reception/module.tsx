@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
@@ -65,6 +66,7 @@ import {
 } from "@/features/reception/profile-drawer";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { useReceptionStore } from "@/features/reception/store";
+import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { getMockPatientBundle, mockStaffUsers } from "@/mocks/emr-domain";
@@ -809,16 +811,23 @@ function ReceptionScheduleBoard({
 }
 
 export function ReceptionContent() {
+  const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const [calendarView, setCalendarView] = useState<ReceptionCalendarView>("day");
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     todayWorkingVeterinarians.map((veterinarian) => veterinarian.id)
   );
   const selectedAppointmentId = useReceptionStore((state) => state.selectedAppointmentId);
+  const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
   const checkInAppointment = useReceptionStore((state) => state.checkInAppointment);
   const selectAppointment = useReceptionStore((state) => state.selectAppointment);
+  const selectEncounter = useReceptionStore((state) => state.selectEncounter);
+  const selectPatient = useReceptionStore((state) => state.selectPatient);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryPatientId = searchParams.get("patientId") ?? scenario?.patientId;
+  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
   const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
   const selectedVeterinarians = useMemo(
     () =>
@@ -851,6 +860,28 @@ export function ReceptionContent() {
     selectAppointment(appointment.id);
     setActiveDrawer({ type: "reception-appointment", id: appointment.id });
   };
+
+  useEffect(() => {
+    if (queryPatientId && queryPatientId !== selectedPatientId) {
+      selectPatient(queryPatientId);
+    }
+    if (scenario?.appointmentId && scenario.appointmentId !== selectedAppointmentId) {
+      selectAppointment(scenario.appointmentId);
+    }
+    if (queryEncounterId && queryEncounterId !== selectedEncounterId) {
+      selectEncounter(queryEncounterId);
+    }
+  }, [
+    queryEncounterId,
+    queryPatientId,
+    scenario?.appointmentId,
+    selectAppointment,
+    selectEncounter,
+    selectPatient,
+    selectedAppointmentId,
+    selectedEncounterId,
+    selectedPatientId,
+  ]);
 
   if (!selectedPatient) {
     return (

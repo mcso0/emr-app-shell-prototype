@@ -42,6 +42,10 @@ Next.js application code를 작성하거나 수정해야 한다면, 코드 작�
 | Workstream | Branch | Worktree path |
 |---|---|---|
 | PR7 Sales Demo Readiness | `codex/pr7-sales-demo-readiness` | `../emr-app-shell-prototype-pr7` |
+| PR8 Demo Scenario Seed Data | `codex/pr8-demo-scenario-seed-data` | `../emr-app-shell-prototype-pr8` |
+| PR9 Guided Demo Entry | `codex/pr9-guided-demo-entry` | `../emr-app-shell-prototype-pr9` |
+| PR10 Demo Flow Continuity | `codex/pr10-demo-flow-continuity` | `../emr-app-shell-prototype-pr10` |
+| PR11 Sales Polish | `codex/pr11-sales-polish` | `../emr-app-shell-prototype-pr11` |
 | A. Auth Mock Foundation | `codex/auth-mock-foundation` | `../emr-app-shell-prototype-auth` |
 | B. Audit Log Foundation | `codex/audit-log-foundation` | `../emr-app-shell-prototype-audit` |
 | C. Service Catalog / Role Seed | `codex/service-catalog-role-seed` | `../emr-app-shell-prototype-service-catalog` |
@@ -117,6 +121,23 @@ Do not:
 - 조제/처치 화면을 변경하지 않는다.
 - 새 backend/auth/API integration을 만들지 않는다.
 - 병원관리/입원 화면을 구현하지 않는다.
+
+## Sales Demo Spine Workstreams
+
+Wave 1은 골든 데모 spine을 먼저 고정하고, Wave 2는 PR8 seed data가 병합된 뒤 화면별 연결감을 병렬로 다듬는다.
+
+| Wave | Workstream | Scope | Avoid |
+|---|---|---|---|
+| 1 | PR7 Readiness Audit | `sales-demo-readiness-audit.md`, demo script, reference status | feature UI implementation |
+| 1 | PR8 Seed Data | demo scenario registry, 김하늘/콩이 linked mock data, data contract tests | shell URL sync, broad UI polish |
+| 1 | PR9 Guided Entry | `/w/clair-demo/home` launcher and role quick starts | feature module state changes |
+| 1 | Reference Audit | reference image/index verification and polish checklist | claiming pixel alignment for missing assets |
+| 2 | Reception/Patient Continuity | scenario-preferred selection in reception and profile context | changing 조제/처치 |
+| 2 | Chart/Order Continuity | scenario-preferred chart/SOAP/order context | editing billing store |
+| 2 | Lab/Imaging Continuity | scenario-preferred lab/imaging result context | editing shell URL sync |
+| 2 | Billing Polish | scenario invoice, amount/status wording, payment flow | editing chart/lab state |
+
+Shell URL query preservation is owned by PR10 only. Other chats must not independently rewrite `src/shell/app-shell.tsx`.
 
 ## Workstream A: Auth Mock Foundation
 

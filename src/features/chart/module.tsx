@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
@@ -30,6 +31,7 @@ import {
   getSpeciesLabel,
 } from "@/features/reception/data";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type { Diagnosis, Encounter, SoapNote } from "@/types/emr-domain";
@@ -313,9 +315,13 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
 }
 
 export function ChartContent() {
+  const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
-  const bundle = getChartEncounter(selectedEncounterId) ?? getChartEncounter("encounter-coco-260501");
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
+  const effectiveEncounterId = queryEncounterId ?? selectedEncounterId;
+  const bundle = getChartEncounter(effectiveEncounterId) ?? getChartEncounter("encounter-coco-260501");
   const historyRows = useMemo(
     () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
     [bundle]
@@ -324,6 +330,12 @@ export function ChartContent() {
     () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
     [bundle]
   );
+
+  useEffect(() => {
+    if (queryEncounterId && queryEncounterId !== selectedEncounterId) {
+      selectEncounter(queryEncounterId);
+    }
+  }, [queryEncounterId, selectEncounter, selectedEncounterId]);
 
   if (!bundle) {
     return (

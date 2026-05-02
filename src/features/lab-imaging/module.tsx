@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
@@ -39,6 +40,7 @@ import {
   getSpeciesLabel,
 } from "@/features/reception/data";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
@@ -327,8 +329,19 @@ function AttachmentStrip({ attachments }: { attachments: EmrAttachment[] }) {
 }
 
 export function LabContent() {
+  const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
-  const detail = getLabDetail(selectedLabResultId) ?? getLabDetail("lab-result-coco-cbc");
+  const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryLabResultId = searchParams.get("labResultId") ?? scenario?.labResultId;
+  const effectiveLabResultId = queryLabResultId ?? selectedLabResultId;
+  const detail = getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc");
+
+  useEffect(() => {
+    if (queryLabResultId && queryLabResultId !== selectedLabResultId) {
+      selectLabResult(queryLabResultId);
+    }
+  }, [queryLabResultId, selectLabResult, selectedLabResultId]);
 
   if (!detail) {
     return (
@@ -397,8 +410,19 @@ function ImagingReadingPanel({ study }: { study: ImagingStudy }) {
 }
 
 export function ImagingContent() {
+  const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
-  const detail = getImagingDetail(selectedImagingStudyId) ?? getImagingDetail("imaging-coco-thorax");
+  const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryImagingStudyId = searchParams.get("imagingStudyId") ?? scenario?.imagingStudyId;
+  const effectiveImagingStudyId = queryImagingStudyId ?? selectedImagingStudyId;
+  const detail = getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax");
+
+  useEffect(() => {
+    if (queryImagingStudyId && queryImagingStudyId !== selectedImagingStudyId) {
+      selectImagingStudy(queryImagingStudyId);
+    }
+  }, [queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
 
   if (!detail) {
     return (
