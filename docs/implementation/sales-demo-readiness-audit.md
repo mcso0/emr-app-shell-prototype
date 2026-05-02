@@ -75,9 +75,11 @@ Verification run for integration:
 
 ## Follow-up PR Boundaries
 
-| PR | Responsibility |
-|---|---|
-| PR8 Demo Scenario Seed Data | Add scenario registry and linked 김하늘/콩이 mock data. |
-| PR9 Guided Demo Entry | Replace home placeholder with demo launcher and role quick starts. |
-| PR10 Demo Flow Continuity | Preserve scenario URL params and apply scenario selection in modules. |
-| PR11 Sales Polish | Polish text, status, amount, empty states, and CTA hierarchy after the flow works. |
+The original follow-up boundaries below have been completed through Sales Demo Spine and Wave 2 integration. They remain as historical scope notes.
+
+| PR / Workstream | Status | Responsibility |
+|---|---|---|
+| PR8 Demo Scenario Seed Data | Completed | Add scenario registry and linked 김하늘/콩이 mock data. |
+| PR9 Guided Demo Entry | Completed | Replace home placeholder with demo launcher and role quick starts. |
+| PR10 Demo Flow Continuity | Completed | Preserve scenario URL params and apply scenario selection in modules. |
+| PR11 Sales Polish / Wave 2 Polish | Completed for demo scope | Polish text, status, amount, empty states, and CTA hierarchy after the flow works. |

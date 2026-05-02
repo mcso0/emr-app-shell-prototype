@@ -16,6 +16,8 @@ Updated: 2026-05-02
 - 한 환자/보호자/encounter 맥락에서 접수, 진료, 검사/영상, 조제/처치, 수납이 연결되는 경험을 보여준다.
 - 실제 DB/API/auth/외부 연동 완성보다 데모 시나리오, 데모 데이터, 화면 품질, 진행감, 신뢰감을 우선한다.
 
+2026-05-02 기준 **Sales Demo Wave 2는 완료되어 `main`에 병합**되어 있다. 완료 범위와 검증 결과는 `docs/implementation/sales-demo-wave2-closeout.md`를 기준으로 확인한다.
+
 ## Foundation 진행 현황
 
 PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통합되어 있다.
@@ -25,6 +27,25 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - Audit log foundation은 status transition, profile edit, SOAP save, order status change, billing action event builder와 fixture를 제공한다.
 - Auth mock foundation은 `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper를 제공한다.
 - 실제 API route, DB client, migration, auth provider, 권한 enforcement, 전역 app shell auth guard는 아직 연결하지 않았다.
+
+## Sales Demo 진행 현황
+
+Sales Demo Prototype 작업은 spine-first 방식으로 진행되었고, Wave 2까지 `main`에 통합되어 있다.
+
+| Area | Status | Result |
+|---|---|---|
+| Sales Demo Strategy | 완료 | 데모 목표, 대상, 7분 대표 외래 시나리오, 제외 범위 정리 |
+| Sales Demo Spine | 완료 | `kong-vomit` scenario registry, 김하늘/콩이 seed data, home launcher, query-based continuity 추가 |
+| Wave 2 Reception/Patient | 완료 | 접수 화면과 환자/보호자 drawer에서 김하늘/콩이/구토 내원 맥락 우선 노출 |
+| Wave 2 Chart/SOAP/Order | 완료 | 콩이 SOAP, Assessment, order 흐름을 데모 설명 기준으로 강화 |
+| Wave 2 Lab/Imaging | 완료 | 콩이 CBC 결과와 복부 영상 판독/종합소견 흐름 강화 |
+| Wave 2 Billing | 완료 | 콩이 invoice, 금액, 수납 완료 상태를 sales demo 관점으로 polish |
+| Wave 2 Integration | 완료 | shell query 보존, nav rail demo context propagation, golden path Playwright coverage 추가 |
+
+통합 PR:
+
+- [GitHub PR #6](https://github.com/mcso0/emr-app-shell-prototype/pull/6): `feat: add sales demo spine`
+- [GitHub PR #7](https://github.com/mcso0/emr-app-shell-prototype/pull/7): `Integrate Wave 2 demo flow`
 
 ## 한눈에 보기
 
@@ -39,13 +60,16 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 영상검사
 - 조제/처치 기존 화면 보존
 - 수납
+- `김하늘 / 콩이 / 구토 내원` sales demo golden path
+- `/w/clair-demo/home` demo launcher와 역할/모듈 quick start
+- 주요 화면의 demo query context preservation
 - 연결형 EMR mock domain, status label mapper, Playwright 회귀 테스트
 - Service catalog, role seed, permission seed foundation
 - Audit log event model foundation
 - API boundary selectors foundation
 - `/login` mock role/session foundation
 
-현재 `main`에는 PR 1-6 구현과 A/B/C/D foundation 작업이 병합되어 있다. 대표 PR 1-6 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이다.
+현재 `main`에는 PR 1-6 구현, A/B/C/D foundation, Sales Demo Spine, Wave 2 demo flow integration이 병합되어 있다. 대표 PR 1-6 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이고, 최신 Sales Demo integration PR은 [GitHub PR #7](https://github.com/mcso0/emr-app-shell-prototype/pull/7)이다.
 
 ## 목적과 목표
 
@@ -126,6 +150,13 @@ MVP 목표:
 - `npx playwright test tests/api-boundary.spec.ts tests/service-catalog.spec.ts tests/audit-log.spec.ts tests/auth.spec.ts --reporter=line`
 - `npx playwright test tests/billing.spec.ts tests/lab-imaging.spec.ts tests/chart.spec.ts tests/reception.spec.ts tests/domain-baseline.spec.ts tests/app-shell.spec.ts --reporter=line`
 
+2026-05-02 기준 Sales Demo Wave 2 통합 후 최신 `main`에서 아래 검증이 통과했다.
+
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test --reporter=line` (`69 passed`)
+
 화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
 
 ## 작업 시 주의사항
@@ -155,30 +186,22 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 ## 다음 추천 작업
 
-다음 작업은 **PR7: Sales Demo Readiness & Screen Alignment**를 추천한다.
+다음 작업은 **Sales Demo Closeout & Rehearsal**을 추천한다.
 
-PR7과 foundation 작업을 여러 채팅에서 병렬로 진행할 때는 `docs/implementation/mvp-parallel-workstreams.md`를 먼저 읽고, 각 작업을 전용 `git worktree`와 브랜치에서 진행한다.
+목표:
 
-PR7 목표:
+- `김하늘 / 콩이 / 구토 내원` 7분 talk track을 작성한다.
+- 실제 브라우저에서 데모를 리허설하고, 말로 보완해야 하는 gap을 기록한다.
+- 첫 외부 세일즈 데모 전에 필요한 최소 polish와 reference screenshot 확보 여부를 결정한다.
+- one-click demo reset이 필요한지 판단한다.
 
-- Figma의 기존 화면 예시를 기능별 캡처 이미지로 repo에 저장한다.
-- PR 1-6 화면을 실제 reference image와 비교한다.
-- 기능과 데이터 흐름은 유지하면서 레이아웃, 정보 우선순위, 텍스트, 상태 표현, 밀도를 데모 품질로 정렬한다.
-- 새 기능 추가보다 고객이 계약을 상상할 수 있는 세일즈 데모 완성도를 먼저 높인다.
-
-PR7에서 우선 확인할 화면:
-
-- 접수/예약 캘린더와 사이드 목록
-- 환자/보호자 드로어
-- 진료(차트) queue/history/SOAP/Order 구성
-- 검사 결과 입력 테이블
-- 영상 판독/첨부 영역
-- 수납 대기/미납/종료 목록과 청구 항목 편집
+구현을 시작하기 전에는 `docs/implementation/sales-demo-wave2-closeout.md`의 남은 gap과 추천 작업을 먼저 확인한다.
 
 ## 관련 문서
 
 - 구현 문서 목차: `docs/implementation/README.md`
 - 데모 세일즈 전략: `docs/implementation/demo-sales-strategy.md`
+- Sales Demo Wave 2 closeout: `docs/implementation/sales-demo-wave2-closeout.md`
 - 병렬 작업 계획: `docs/implementation/mvp-parallel-workstreams.md`
 - PR 1-6 구현 기록: `docs/implementation/pr1-pr6-realigned-plan.md`
 - 갭 분석: `docs/implementation/mvp-gap-analysis.md`

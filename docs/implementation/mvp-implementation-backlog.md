@@ -32,30 +32,30 @@ Start with `docs/implementation/mvp-current-status.md` before using this backlog
 | Chart | Completed | Queue, past history, SOAP, Assessment, Assessment History, Order area. |
 | Lab/Image | Completed | Lab result entry, equipment receipt history, imaging reading/impression, attachments. |
 | Billing | Completed | Waiting/unpaid/closed queues, guardian billing groups, invoice line editing, payment actions. |
+| Sales Demo Spine | Completed | `kong-vomit` scenario registry, 김하늘/콩이 linked seed data, guided launcher, query-based continuity. |
+| Sales Demo Wave 2 | Completed | Reception, chart, lab/imaging, billing polish plus shell/golden path integration. See `docs/implementation/sales-demo-wave2-closeout.md`. |
 
-## Recommended Next PR
+## Recommended Next Work
 
-### PR7. Sales Demo Readiness & Screen Alignment
+### Sales Demo Closeout & Rehearsal
 
-**Goal:** 실제 Figma 화면 예시를 repo에 캡처 이미지로 저장하고, PR 1-6 화면을 reference와 세일즈 데모 목적에 맞춰 정렬한다.
+**Goal:** `김하늘 / 콩이 / 구토 내원` golden path를 실제 세일즈 대화에서 쓸 수 있게 리허설하고, 남은 gap을 데모 전 최소 작업으로 좁힌다.
 
 **Implementation Tasks**
 
 | Task | Priority | Depends on | Suggested UI/module | Done when |
 |---|---|---|---|---|
-| Figma reference export | P0 | Figma access | `docs/assets/reference-screens/*` | 기능별 PNG가 index 경로에 저장된다. |
-| Reference index verification | P0 | reference export | `reference-screen-index.md` | 각 reference file의 존재 여부와 notes가 최신화된다. |
-| PR 1-6 screen audit | P0 | reference export | reception, drawers, chart, lab, imaging, billing | 주요 화면별 차이와 수정 항목이 정리된다. |
-| Sales demo screen alignment | P0 | screen audit | same modules | 기능을 유지한 채 정보 우선순위, 밀도, 간격, 상태 표현이 reference intent와 데모 설득 목적에 맞춰진다. |
-| Demo scenario audit | P0 | `demo-sales-strategy.md` | reception, chart, lab, imaging, billing | 대표 외래 케이스가 접수부터 수납까지 끊기지 않고 설명 가능한지 확인된다. |
-| Regression verification | P0 | screen alignment | Playwright | 기존 domain/reception/chart/lab-imaging/billing/app-shell 테스트가 통과한다. |
+| 7-minute talk track | P0 | Wave 2 complete | docs/demo script | 홈 -> 접수 -> 진료 -> 검사/영상 -> 조제/처치 -> 수납 흐름을 7분 안에 설명할 수 있다. |
+| Manual rehearsal | P0 | talk track | browser | 실제 클릭 리허설 중 막히는 지점과 말로 보완해야 하는 gap이 기록된다. |
+| Remaining gap triage | P0 | rehearsal | docs/backlog | 외부 데모 전 필수/선택/보류 항목이 분류된다. |
+| Reference screenshot decision | P1 | rehearsal | `docs/assets/reference-screens/*` | 필요한 화면만 reference screenshot을 확보하거나 missing으로 유지한다. |
+| Demo reset decision | P1 | rehearsal | home/shell or docs | one-click reset을 구현할지, 말로 안내할지 결정한다. |
 
 **Acceptance Criteria**
 
-- Reference image binary files are present for the PR7 target screens.
-- 구현 화면이 reference의 workflow, density, and layout intent를 따른다.
-- 조제/처치 화면은 명시된 변경 없이 보존된다.
-- PR7 변경 후 주요 Playwright suite가 통과한다.
+- Wave 2 golden path를 실제 브라우저에서 처음부터 끝까지 시연할 수 있다.
+- 남은 gap이 첫 외부 데모 blocking 여부 기준으로 정리된다.
+- 새 implementation을 시작한다면 Sales Demo Prototype 범위와 product MVP 범위를 분리한다.
 
 ---
 

@@ -59,13 +59,15 @@ Updated: 2026-05-02
 
 ## Recommended Work Sequence
 
-| Step | Name | Goal |
-|---|---|---|
-| PR7 | Sales Demo Readiness & Screen Alignment | reference image를 확보하고 PR 1-6 화면을 데모 품질로 정렬한다. |
-| PR8 | Demo Scenario Seed Data | 세일즈 미팅에서 사용할 대표 환자/보호자/encounter 데이터를 정리한다. |
-| PR9 | Guided Demo Entry | 역할별 데모 시작점, 추천 흐름 시작, 데모 reset 액션을 제공한다. |
-| PR10 | Demo Flow Continuity | 화면 간 선택 상태와 업무 진행감이 자연스럽게 이어지게 한다. |
-| PR11 | Sales Polish | 원장님 관점의 문구, 상태, 금액, 이력, 빈 화면을 다듬는다. |
+2026-05-02 기준 아래 sequence는 Sales Demo Spine과 Wave 2 integration으로 완료되었다. 다음 작업은 `docs/implementation/sales-demo-wave2-closeout.md`의 Sales Demo Closeout & Rehearsal을 따른다.
+
+| Step | Status | Name | Goal |
+|---|---|---|---|
+| PR7 | Completed | Sales Demo Readiness & Screen Alignment | reference 상태, 데모 경로, 후속 PR 경계를 정리한다. |
+| PR8 | Completed | Demo Scenario Seed Data | 세일즈 미팅에서 사용할 대표 환자/보호자/encounter 데이터를 정리한다. |
+| PR9 | Completed | Guided Demo Entry | 역할별 데모 시작점과 추천 흐름 시작점을 제공한다. |
+| PR10 | Completed | Demo Flow Continuity | 화면 간 선택 상태와 업무 진행감이 자연스럽게 이어지게 한다. |
+| PR11 / Wave 2 | Completed for demo scope | Sales Polish | 원장님 관점의 문구, 상태, 금액, 이력, 빈 화면을 다듬는다. |
 
 ## Out Of Scope For Immediate Demo
 

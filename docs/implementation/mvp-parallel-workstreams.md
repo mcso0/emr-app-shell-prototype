@@ -6,16 +6,15 @@ Updated: 2026-05-02
 
 ## Purpose
 
-현재 primary 작업은 **PR7: Sales Demo Readiness & Screen Alignment**이다. 이 작업은 접수/예약, 환자/보호자 드로어, 진료(차트), 검사/영상, 수납 화면의 UI 파일을 넓게 건드릴 수 있다.
+이 문서는 병렬 작업을 시작할 때 worktree/branch 소유권과 충돌 방지 기준을 확인하기 위한 historical guide다. 2026-05-02 기준 Sales Demo Spine과 Wave 2는 `main`에 병합되었으며, 완료 범위는 `docs/implementation/sales-demo-wave2-closeout.md`를 기준으로 확인한다.
 
-따라서 A/B/C/D 병렬 작업은 PR7 UI 정렬과 충돌하지 않는 foundation 작업으로 제한한다.
+이전 PR7/Wave 병렬 작업 기록은 유지하지만, 새 병렬 작업을 시작할 때는 현재 목표에 맞춰 branch/worktree map을 새로 작성한다.
 
 목표:
 
 - 각 채팅의 작업 범위와 금지 범위를 명확히 한다.
 - 같은 repo 폴더에서 여러 채팅이 동시에 `git checkout`하지 않게 한다.
-- PR7 UI 작업과 A/B/C/D foundation 작업의 merge conflict 가능성을 낮춘다.
-- 나중에 Sales Demo Prototype 통합 순서와 검증 기준을 분명히 남긴다.
+- 완료된 Sales Demo Prototype 통합 순서와 검증 기준을 참고 자료로 남긴다.
 
 ## Global Start Procedure
 
@@ -83,7 +82,9 @@ src/styles/tokens/*
 src/app/globals.css
 ```
 
-## Current Primary Workstream: PR7 Sales Demo Readiness
+## Historical Primary Workstream: PR7 Sales Demo Readiness
+
+Status: Completed and superseded by Sales Demo Spine plus Wave 2 integration. Keep this section as a reference for how the PR7 workstream was scoped.
 
 Branch:
 
