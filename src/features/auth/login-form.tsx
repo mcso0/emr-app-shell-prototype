@@ -55,7 +55,17 @@ export function LoginForm() {
   const [storageMode, setStorageMode] = useState<MockSessionStorageMode>("session");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const { hydrated, session, hydrate, signInWithMockRole, signOut } = useAuthClient();
+  const {
+    authProvider,
+    hydrated,
+    session,
+    hydrate,
+    signInWithMockRole,
+    signInWithPassword,
+    signOut,
+    supabaseConfigured,
+  } = useAuthClient();
+  const usesSupabaseProvider = authProvider === "supabase";
 
   useEffect(() => {
     hydrate();
@@ -63,16 +73,37 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
     setIsSubmitting(true);
     setLoginError(null);
 
     try {
-      await signInWithMockRole(selectedRole, storageMode, {
-        forceProviderError: searchParams.get("mockProviderError") === "1",
-      });
+      if (usesSupabaseProvider) {
+        if (!supabaseConfigured) {
+          throw new Error("supabase-not-configured");
+        }
+
+        if (!email || !password) {
+          throw new Error("supabase-missing-credentials");
+        }
+
+        await signInWithPassword({ email, password });
+      } else {
+        await signInWithMockRole(selectedRole, storageMode, {
+          forceProviderError: searchParams.get("mockProviderError") === "1",
+        });
+      }
+
       router.replace(getSafeNextHref(searchParams.get("next")));
     } catch {
-      setLoginError("로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요.");
+      setLoginError(
+        usesSupabaseProvider
+          ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
+          : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
+      );
       setIsSubmitting(false);
     }
   }
@@ -152,7 +183,9 @@ export function LoginForm() {
                 MVP 테스트 옵션
               </h2>
               <p className="text-[14px] leading-6 text-[var(--clair-color-label-neutral)]">
-                현재는 Supabase Auth 연결 전 mock session으로 진입합니다.
+                {usesSupabaseProvider
+                  ? "Supabase Auth로 로그인합니다. MVP 테스트 옵션은 local demo 확인용으로 유지합니다."
+                  : "현재는 Supabase Auth 연결 전 mock session으로 진입합니다."}
               </p>
             </div>
 
@@ -267,7 +300,11 @@ export function LoginForm() {
                         저장소
                       </p>
                       <p className="font-medium">
-                        {session.storageMode === "session" ? "이번 탭만" : "브라우저에 유지"}
+                        {session.storageMode === "cookie"
+                          ? "Supabase cookie session"
+                          : session.storageMode === "session"
+                            ? "이번 탭만"
+                            : "브라우저에 유지"}
                       </p>
                     </div>
                   </div>

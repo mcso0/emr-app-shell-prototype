@@ -27,8 +27,8 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
     hydrate();
   }, [hydrate]);
 
-  function handleLogout() {
-    signOut();
+  async function handleLogout() {
+    await signOut();
     router.replace("/login");
   }
 

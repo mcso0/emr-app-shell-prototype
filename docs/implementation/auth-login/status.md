@@ -27,9 +27,15 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `useAuthClient()` boundary가 추가되어 auth UI가 mock store를 직접 import하지 않는다.
 - login pending/disabled 상태와 provider error 영역이 있다.
 - Supabase Auth mapping은 `docs/implementation/auth-login/supabase-auth-mapping.md`에 문서화되어 있다.
+- Supabase integration readiness는 `docs/implementation/auth-login/supabase-integration-readiness.md`에 문서화되어 있다.
 - `users.id`는 로그인 가능한 앱 사용자에 대해 `auth.users.id`와 같은 UUID를 사용한다.
 - `user_memberships`와 `permission_policies`가 workspace membership과 권한 source이며, session source와 permission source는 분리한다.
-- Supabase package, env, project API, callback route, DB migration, RLS, server permission enforcement는 아직 연결하지 않았다.
+- Work Order 03의 package 설치 대상은 `@supabase/supabase-js`와 `@supabase/ssr`로 승인되어 있다.
+- Supabase env naming은 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_AUTH_MODE`로 결정되어 있다.
+- Supabase provider adapter가 `useAuthClient()` boundary 뒤에 구현되어 있다.
+- `NEXT_PUBLIC_AUTH_MODE=auto` 기본값은 Supabase env가 있으면 provider를 쓰고, env가 없으면 mock/local demo fallback을 유지한다.
+- Membership/permission enforcement plan은 `docs/implementation/auth-login/membership-permission-enforcement.md`에 문서화되어 있다.
+- Supabase project API live validation, callback route, DB migration, RLS, server permission enforcement code는 아직 연결하지 않았다.
 
 ## 완료된 작업
 
@@ -37,13 +43,14 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `docs/completed/auth/2026-05-03-auth-boundary.md`
 - `docs/completed/auth/2026-05-03-login-ux-state.md`
 - `docs/completed/auth/2026-05-03-supabase-auth-mapping.md`
+- `docs/completed/auth/2026-05-03-supabase-integration-readiness.md`
+- `docs/completed/auth/2026-05-03-supabase-provider-implementation.md`
+- `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`
 - GitHub PR #10: `feat: add auth transition boundary`
 
 ## 다음 작업
 
-1. `work-orders/02-supabase-integration-readiness.md`
-2. `work-orders/03-supabase-provider-implementation.md`
-3. `work-orders/04-membership-permission-enforcement.md`
+1. 별도 승인 후 permission resolver, migration/RLS, API/server action enforcement 중 하나를 독립 work order로 진행한다.
 
 ## 금지 범위
 
@@ -69,3 +76,29 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `rg "Supabase Auth|user_memberships|permission_policies" docs/implementation`
 
 검증 결과와 세부 결정은 `docs/completed/auth/2026-05-03-supabase-auth-mapping.md`에 남긴다.
+
+2026-05-03 Work Order 02 Supabase Integration Readiness:
+
+- `npm run lint`
+- `rg "supabase-integration-readiness|@supabase/ssr|callback route|cookie session" docs/implementation`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-03-supabase-integration-readiness.md`에 남긴다.
+
+2026-05-03 Work Order 03 Supabase Provider Implementation:
+
+- Red: `npx playwright test tests/auth.spec.ts --reporter=line` failed on missing `src/lib/supabase/config.ts`
+- Red: `npx playwright test tests/auth.spec.ts:168 --reporter=line` failed on missing `NEXT_PUBLIC_AUTH_MODE=mock` Playwright pin
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts --reporter=line` (`11 passed`)
+- `npx playwright test tests/app-shell.spec.ts tests/reception.spec.ts tests/billing.spec.ts tests/chart.spec.ts tests/lab-imaging.spec.ts tests/sales-demo-flow.spec.ts --reporter=line` (`44 passed`)
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-03-supabase-provider-implementation.md`에 남긴다.
+
+2026-05-03 Work Order 04 Membership Permission Enforcement:
+
+- `npm run lint`
+- `rg "membership|permission|RLS|server-side enforcement" docs/implementation`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`에 남긴다.

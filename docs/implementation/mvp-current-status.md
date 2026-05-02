@@ -28,7 +28,8 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - Audit log foundation은 status transition, profile edit, SOAP save, order status change, billing action event builder와 fixture를 제공한다.
 - Auth mock foundation은 `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper를 제공한다.
 - 2026-05-03 기준 auth UI는 `useAuthClient()` boundary를 통해 mock session을 사용하며, 로그인 pending/error 상태가 회귀 테스트에 추가되었다.
-- 실제 API route, DB client, migration, auth provider, 서버 권한 enforcement는 아직 연결하지 않았다.
+- 2026-05-03 기준 Supabase provider adapter가 `useAuthClient()` boundary 뒤에 추가되었다. env 미설정 또는 `NEXT_PUBLIC_AUTH_MODE=mock`에서는 mock/local demo fallback을 유지한다.
+- membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
 - Auth 후속 작업은 `docs/implementation/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.
 
@@ -108,7 +109,7 @@ MVP 목표:
 | 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
 | 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
 | 수납 | 구현됨 | 대기/미납/종료 목록, 보호자 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 수납 액션 |
-| 로그인 mock | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, auth client boundary, login pending/error UI, logout utility, shell 역할 표시, permission helper |
+| 로그인/auth provider | adapter 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, auth client boundary, login pending/error UI, logout utility, shell 역할 표시, permission helper, Supabase provider adapter와 env 기반 fallback |
 
 주요 구현 파일은 기능별 `src/features/*`에 있다. 새 작업자는 개별 파일을 보기 전에 이 문서와 관련 implementation 문서를 먼저 확인한다.
 
@@ -121,7 +122,7 @@ MVP 목표:
 | Role/permission seed | foundation 추가 | `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 추천 역할과 권한 seed |
 | Catalog lookup helper | foundation 추가 | service item/category/current price/role permission lookup, order/invoice consistency report |
 | Audit log foundation | foundation 추가 | status transition, profile edit, SOAP save, order status change, billing action seed와 deterministic append/build helper |
-| Auth mock foundation | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, `useAuthClient()` boundary, logout utility, shell 역할 표시, permission helper |
+| Auth provider foundation | adapter 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, `useAuthClient()` boundary, Supabase SSR/browser/server/proxy helper, logout utility, shell 역할 표시, permission helper |
 
 이 foundation들은 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동, 실제 권한 enforcement도 포함하지 않는다.
 
@@ -179,7 +180,9 @@ MVP 목표:
 - 조제/처치 화면의 현재 디자인과 동작은 명시 요청 없이는 수정하지 않는다.
 - 입원과 병원관리 전체 화면은 현재 PR 1-6 범위 밖이었다.
 - 병원관리의 Order 관리 / Order 세트 화면은 참고 자료일 뿐 구현 대상이 아니었다.
-- 로그인은 mock session 기반으로 app shell 진입을 보호한다. 아직 실제 auth provider, DB/API session, 서버 권한 enforcement는 연결하지 않았다.
+- 로그인은 기본 local demo 환경에서 mock session 기반으로 app shell 진입을 보호하고, Supabase env/auth mode가 준비되면 provider session adapter를 사용할 수 있다. 아직 DB/API session과 서버 권한 enforcement는 연결하지 않았다.
+- Supabase provider adapter는 추가되었지만 env 미설정 기본값은 mock/local demo fallback이다. live project 검증과 서버 권한 enforcement는 완료된 것으로 보지 않는다.
+- Membership/permission enforcement는 plan-only로 완료되었다. migration/RLS/server resolver 구현은 별도 승인 전까지 하지 않는다.
 - UI는 Figma나 screenshot을 1:1 복제하지 않고, 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
 - 공통 컴포넌트 추출은 반복 패턴이 안정된 뒤 진행한다. PR7 화면 정렬 전에는 무리하게 공통화하지 않는다.
 - prototype 상태는 session-only이다. 새로고침 후 유지되는 persistence를 전제로 만들지 않는다.
@@ -200,16 +203,15 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 ## 다음 추천 작업
 
-다음 작업은 **Supabase 실제 연동 준비 계획**을 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`와 `docs/implementation/auth-login/supabase-auth-mapping.md`이다.
+다음 작업은 **permission resolver 또는 migration/RLS 구현 단위 승인**을 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/auth-login/supabase-auth-mapping.md`, `docs/implementation/auth-login/supabase-integration-readiness.md`, `docs/implementation/auth-login/membership-permission-enforcement.md`이다.
 
 목표:
 
-- 현재 mock session 기반 `/login`, app guard, logout, role display를 유지한다.
-- 이미 추가된 auth boundary, session interface, login UX 상태를 유지한다.
-- 완료된 `auth.users`, 앱 도메인 `users`, `user_memberships`, `permission_policies` 매핑 결정을 기준으로 설치/env/callback/session/helper/middleware 범위를 정리한다.
-- 실제 auth provider, DB/API session, 서버 권한 enforcement는 별도 후속 계획에서 연결한다.
+- permission resolver, membership/profile migration, RLS policies, app route/server action enforcement 중 하나를 독립적으로 승인한다.
+- live Supabase project 또는 local Supabase verification 방식을 먼저 정한다.
+- client UI gating만으로 권한 구현 완료처럼 처리하지 않는다.
 
-구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/auth-login/README.md`, `docs/implementation/auth-login/supabase-auth-mapping.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7, Supabase 공식 문서를 함께 확인한다.
+구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/auth-login/README.md`, `docs/implementation/auth-login/supabase-auth-mapping.md`, `docs/implementation/auth-login/supabase-integration-readiness.md`, `docs/emr-saas-db-structure-spec.ko.md`, Supabase 공식 문서를 함께 확인한다.
 
 ## 관련 문서
 
