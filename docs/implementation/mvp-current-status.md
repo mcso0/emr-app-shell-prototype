@@ -2,7 +2,19 @@
 
 Updated: 2026-05-02
 
-이 문서는 EMR SaaS MVP 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
+이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
+
+## Current Working Target
+
+초기 문서들은 MVP라는 표현을 사용하지만, 2026-05-02 기준 당장의 작업 목표는 **Sales Demo Prototype**이다.
+
+현재 구현물은 실제 운영 제품 MVP라기보다, 잠재 고객이 핵심 외래 업무를 우리 서비스 안에서 경험하고 계약을 상상하게 만들기 위한 데모 프로토타입으로 본다. 제품 MVP 관련 문서는 장기 제품 범위와 도메인 구조의 기준으로 유지하되, 가까운 작업 우선순위는 `docs/implementation/demo-sales-strategy.md`의 데모 전략을 따른다.
+
+데모 목표:
+
+- 동물병원 원장, 개원 예정 수의사, 운영 의사결정자가 접수부터 수납까지 이어지는 하루 외래 흐름을 빠르게 이해한다.
+- 한 환자/보호자/encounter 맥락에서 접수, 진료, 검사/영상, 조제/처치, 수납이 연결되는 경험을 보여준다.
+- 실제 DB/API/auth/외부 연동 완성보다 데모 시나리오, 데모 데이터, 화면 품질, 진행감, 신뢰감을 우선한다.
 
 ## Foundation 진행 현황
 
@@ -143,7 +155,7 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 ## 다음 추천 작업
 
-다음 작업은 **PR7: Figma Reference Capture & MVP Screen Alignment**를 추천한다.
+다음 작업은 **PR7: Sales Demo Readiness & Screen Alignment**를 추천한다.
 
 PR7과 foundation 작업을 여러 채팅에서 병렬로 진행할 때는 `docs/implementation/mvp-parallel-workstreams.md`를 먼저 읽고, 각 작업을 전용 `git worktree`와 브랜치에서 진행한다.
 
@@ -151,8 +163,8 @@ PR7 목표:
 
 - Figma의 기존 화면 예시를 기능별 캡처 이미지로 repo에 저장한다.
 - PR 1-6 화면을 실제 reference image와 비교한다.
-- 기능과 데이터 흐름은 유지하면서 레이아웃, 정보 우선순위, 텍스트, 상태 표현, 밀도를 정렬한다.
-- 새 기능 추가보다 데모 품질과 화면 일관성을 먼저 높인다.
+- 기능과 데이터 흐름은 유지하면서 레이아웃, 정보 우선순위, 텍스트, 상태 표현, 밀도를 데모 품질로 정렬한다.
+- 새 기능 추가보다 고객이 계약을 상상할 수 있는 세일즈 데모 완성도를 먼저 높인다.
 
 PR7에서 우선 확인할 화면:
 
@@ -166,6 +178,7 @@ PR7에서 우선 확인할 화면:
 ## 관련 문서
 
 - 구현 문서 목차: `docs/implementation/README.md`
+- 데모 세일즈 전략: `docs/implementation/demo-sales-strategy.md`
 - 병렬 작업 계획: `docs/implementation/mvp-parallel-workstreams.md`
 - PR 1-6 구현 기록: `docs/implementation/pr1-pr6-realigned-plan.md`
 - 갭 분석: `docs/implementation/mvp-gap-analysis.md`
