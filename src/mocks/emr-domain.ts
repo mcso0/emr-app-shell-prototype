@@ -2,13 +2,19 @@ import type {
   Appointment,
   AuditLogEntry,
   Consent,
+  CsHistoryEntry,
   Diagnosis,
   EmrId,
+  EmrAttachment,
   EmrOrder,
   Encounter,
+  EquipmentReceipt,
   Guardian,
+  ImagingStudy,
   Invoice,
   InvoiceLine,
+  LabResult,
+  LatestWorkShortcut,
   MessageDelivery,
   MessageTemplate,
   OrderAssignment,
@@ -240,6 +246,15 @@ export const mockPatientGuardians: PatientGuardian[] = [
     isPrimary: true,
     canReceiveMessages: true,
     createdAt: "2026-04-02T15:05:00+09:00",
+  },
+  {
+    id: "pg-dubu-seoyun",
+    patientId: "patient-dubu",
+    guardianId: "guardian-kang-seoyun",
+    relationship: "가족",
+    isPrimary: false,
+    canReceiveMessages: false,
+    createdAt: "2026-05-01T09:46:00+09:00",
   },
 ];
 
@@ -611,6 +626,12 @@ export const mockServiceCategories: ServiceCategory[] = [
     name: "검사",
     sortOrder: 40,
   },
+  {
+    id: "svc-cat-imaging",
+    workspaceId: MOCK_WORKSPACE_ID,
+    name: "영상",
+    sortOrder: 50,
+  },
 ];
 
 export const mockServiceItems: ServiceItem[] = [
@@ -667,6 +688,17 @@ export const mockServiceItems: ServiceItem[] = [
     isBillable: true,
     isActive: true,
   },
+  {
+    id: "svc-imaging-thorax",
+    workspaceId: MOCK_WORKSPACE_ID,
+    categoryId: "svc-cat-imaging",
+    name: "흉부 방사선",
+    itemType: "imaging",
+    defaultDurationMinutes: 20,
+    isOrderable: true,
+    isBillable: true,
+    isActive: true,
+  },
 ];
 
 export const mockServiceItemPrices: ServiceItemPrice[] = [
@@ -705,6 +737,13 @@ export const mockServiceItemPrices: ServiceItemPrice[] = [
     currency: "KRW",
     effectiveFrom: "2026-01-01",
   },
+  {
+    id: "price-thorax-2026",
+    serviceItemId: "svc-imaging-thorax",
+    price: 42000,
+    currency: "KRW",
+    effectiveFrom: "2026-01-01",
+  },
 ];
 
 export const mockOrderGroups: OrderGroup[] = [
@@ -734,6 +773,19 @@ export const mockOrderGroups: OrderGroup[] = [
     createdByUserId: "user-vet-suji",
     createdAt: "2026-05-01T10:35:00+09:00",
     updatedAt: "2026-05-01T10:40:00+09:00",
+  },
+  {
+    id: "order-group-coco-imaging",
+    encounterId: "encounter-coco-260501",
+    groupType: "imaging",
+    title: "구토 원인 영상 확인",
+    label: "영상 오더 그룹",
+    status: "in_progress",
+    priority: "normal",
+    sortOrder: 30,
+    createdByUserId: "user-vet-suji",
+    createdAt: "2026-05-01T10:37:00+09:00",
+    updatedAt: "2026-05-01T10:52:00+09:00",
   },
   {
     id: "order-group-dubu-med",
@@ -808,6 +860,25 @@ export const mockOrders: EmrOrder[] = [
     sortOrder: 30,
     createdAt: "2026-05-01T10:36:00+09:00",
     updatedAt: "2026-05-01T10:38:00+09:00",
+  },
+  {
+    id: "order-coco-thorax",
+    orderGroupId: "order-group-coco-imaging",
+    workspaceId: MOCK_WORKSPACE_ID,
+    encounterId: "encounter-coco-260501",
+    serviceItemId: "svc-imaging-thorax",
+    orderType: "imaging",
+    displayName: "흉부 방사선",
+    status: "in_progress",
+    workStatus: "pending",
+    priority: "normal",
+    requestedByUserId: "user-vet-suji",
+    requestedAt: "2026-05-01T10:37:00+09:00",
+    dueAt: "2026-05-01T11:20:00+09:00",
+    instruction: "구토 관련 흉복부 이상 여부 확인",
+    sortOrder: 40,
+    createdAt: "2026-05-01T10:37:00+09:00",
+    updatedAt: "2026-05-01T10:52:00+09:00",
   },
   {
     id: "order-dubu-carprofen",
@@ -893,10 +964,10 @@ export const mockInvoices: Invoice[] = [
     guardianId: "guardian-lee-jieun",
     invoiceNo: "INV-260501-0001",
     status: "draft",
-    subtotalAmount: 79500,
+    subtotalAmount: 121500,
     discountAmount: 0,
     taxAmount: 0,
-    totalAmount: 79500,
+    totalAmount: 121500,
     createdAt: "2026-05-01T10:40:00+09:00",
   },
   {
@@ -970,6 +1041,16 @@ export const mockInvoiceLines: InvoiceLine[] = [
     lineTotal: 4500,
   },
   {
+    id: "invoice-line-coco-thorax",
+    invoiceId: "invoice-coco-260501",
+    serviceItemId: "svc-imaging-thorax",
+    orderId: "order-coco-thorax",
+    description: "흉부 방사선",
+    quantity: 1,
+    unitPrice: 42000,
+    lineTotal: 42000,
+  },
+  {
     id: "invoice-line-dubu-consult",
     invoiceId: "invoice-dubu-260501",
     serviceItemId: "svc-consult-general",
@@ -999,6 +1080,171 @@ export const mockPayments: Payment[] = [
     status: "approved",
     paidAt: "2026-04-14T11:06:00+09:00",
     metadata: { approvalNo: "A2604147781" },
+  },
+];
+
+export const mockCsHistories: CsHistoryEntry[] = [
+  {
+    id: "cs-coco-checkin-call",
+    workspaceId: MOCK_WORKSPACE_ID,
+    guardianId: "guardian-lee-jieun",
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    channel: "phone",
+    direction: "inbound",
+    status: "completed",
+    category: "접수 문의",
+    summary: "구토 증상으로 예약 시간보다 먼저 내원 가능한지 문의.",
+    handledByUserId: "user-desk-yuna",
+    occurredAt: "2026-05-01T09:20:00+09:00",
+    createdAt: "2026-05-01T09:22:00+09:00",
+  },
+  {
+    id: "cs-coco-result-followup",
+    workspaceId: MOCK_WORKSPACE_ID,
+    guardianId: "guardian-lee-jieun",
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    channel: "kakao_alimtalk",
+    direction: "outbound",
+    status: "needs_follow_up",
+    category: "검사 결과 안내",
+    summary: "CBC 결과와 복약 안내 발송 예정. 수의사 확인 후 후속 안내 필요.",
+    handledByUserId: "user-desk-yuna",
+    occurredAt: "2026-05-01T11:05:00+09:00",
+    followUpAt: "2026-05-01T15:00:00+09:00",
+    createdAt: "2026-05-01T11:05:00+09:00",
+  },
+  {
+    id: "cs-dubu-rehab",
+    workspaceId: MOCK_WORKSPACE_ID,
+    guardianId: "guardian-kang-seoyun",
+    patientId: "patient-dubu",
+    encounterId: "encounter-dubu-260501",
+    channel: "phone",
+    direction: "outbound",
+    status: "completed",
+    category: "재활 안내",
+    summary: "재활 운동 횟수와 계단 제한사항을 보호자에게 안내.",
+    handledByUserId: "user-vet-doyun",
+    occurredAt: "2026-05-01T10:35:00+09:00",
+    createdAt: "2026-05-01T10:35:00+09:00",
+  },
+];
+
+export const mockLabResults: LabResult[] = [
+  {
+    id: "lab-result-coco-cbc",
+    workspaceId: MOCK_WORKSPACE_ID,
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    orderId: "order-coco-cbc",
+    resultName: "CBC 검사",
+    status: "entered",
+    collectedAt: "2026-05-01T10:42:00+09:00",
+    receivedAt: "2026-05-01T10:49:00+09:00",
+    enteredAt: "2026-05-01T10:55:00+09:00",
+    performedByUserId: "user-tech-hayun",
+    rows: [
+      {
+        id: "lab-row-coco-wbc",
+        analyteName: "WBC",
+        value: "18.2",
+        unit: "K/uL",
+        referenceRange: "5.5-19.5",
+        judgment: "normal",
+      },
+      {
+        id: "lab-row-coco-hct",
+        analyteName: "HCT",
+        value: "27",
+        unit: "%",
+        referenceRange: "30-45",
+        judgment: "low",
+        note: "경도 저하",
+      },
+      {
+        id: "lab-row-coco-plt",
+        analyteName: "PLT",
+        value: "620",
+        unit: "K/uL",
+        referenceRange: "175-500",
+        judgment: "high",
+      },
+    ],
+  },
+];
+
+export const mockEquipmentReceipts: EquipmentReceipt[] = [
+  {
+    id: "equipment-coco-cbc-receipt",
+    workspaceId: MOCK_WORKSPACE_ID,
+    equipmentName: "ProCyte Dx",
+    externalResultId: "PCDX-260501-1011",
+    status: "matched",
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    orderId: "order-coco-cbc",
+    receivedAt: "2026-05-01T10:49:00+09:00",
+    payloadSummary: "CBC 18개 항목 수신. 환자/오더 mock 매칭 완료.",
+  },
+  {
+    id: "equipment-unmatched-260501",
+    workspaceId: MOCK_WORKSPACE_ID,
+    equipmentName: "Catalyst One",
+    externalResultId: "CAT-260501-0032",
+    status: "unmatched",
+    receivedAt: "2026-05-01T11:08:00+09:00",
+    payloadSummary: "장비 수신은 되었으나 환자번호가 없어 수동 매칭 필요.",
+  },
+];
+
+export const mockImagingStudies: ImagingStudy[] = [
+  {
+    id: "imaging-coco-thorax",
+    workspaceId: MOCK_WORKSPACE_ID,
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    orderId: "order-coco-thorax",
+    modality: "X-ray",
+    bodyPart: "흉복부",
+    status: "reading",
+    reading: "복부 가스 음영 증가. 명확한 이물 소견은 보이지 않음.",
+    impression: "위장관염 가능성. 임상 증상과 CBC 결과 종합 필요.",
+    requestedAt: "2026-05-01T10:37:00+09:00",
+    capturedAt: "2026-05-01T10:52:00+09:00",
+    radiologistUserId: "user-vet-suji",
+  },
+];
+
+export const mockAttachments: EmrAttachment[] = [
+  {
+    id: "attachment-coco-cbc-pdf",
+    workspaceId: MOCK_WORKSPACE_ID,
+    ownerType: "lab_result",
+    ownerId: "lab-result-coco-cbc",
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    fileName: "coco-cbc-260501.pdf",
+    mimeType: "application/pdf",
+    fileSizeBytes: 184320,
+    url: "/mock-documents/lab/coco-cbc-260501.pdf",
+    uploadedByUserId: "user-tech-hayun",
+    uploadedAt: "2026-05-01T10:56:00+09:00",
+  },
+  {
+    id: "attachment-coco-thorax-image",
+    workspaceId: MOCK_WORKSPACE_ID,
+    ownerType: "imaging_study",
+    ownerId: "imaging-coco-thorax",
+    patientId: "patient-coco",
+    encounterId: "encounter-coco-260501",
+    fileName: "coco-thorax-lateral.png",
+    mimeType: "image/png",
+    fileSizeBytes: 734003,
+    url: "/mock-documents/imaging/coco-thorax-lateral.png",
+    uploadedByUserId: "user-vet-suji",
+    uploadedAt: "2026-05-01T10:53:00+09:00",
   },
 ];
 
@@ -1103,6 +1349,127 @@ export const mockAuditLogs: AuditLogEntry[] = [
   },
 ];
 
+const getLatestByTime = <Item>(
+  items: Item[],
+  getTime: (item: Item) => string | undefined
+) =>
+  [...items].sort((a, b) => {
+    const aTime = getTime(a) ?? "";
+    const bTime = getTime(b) ?? "";
+
+    return bTime.localeCompare(aTime);
+  })[0];
+
+export const getMockLatestWorkShortcutsForPatient = (
+  patientId: EmrId
+): LatestWorkShortcut[] => {
+  const patient = mockPatients.find((item) => item.id === patientId);
+
+  if (!patient) return [];
+
+  const encounters = mockEncounters.filter((item) => item.patientId === patientId);
+  const encounterIds = new Set(encounters.map((item) => item.id));
+  const guardianId = mockPatientGuardians.find(
+    (item) => item.patientId === patientId && item.isPrimary
+  )?.guardianId;
+  const latestEncounter = getLatestByTime(encounters, (item) => item.updatedAt);
+  const latestSoap = getLatestByTime(
+    mockSoapNotes.filter((item) => encounterIds.has(item.encounterId)),
+    (item) => item.updatedAt
+  );
+  const latestLab = getLatestByTime(
+    mockLabResults.filter((item) => item.patientId === patientId),
+    (item) => item.reviewedAt ?? item.enteredAt ?? item.receivedAt ?? item.collectedAt
+  );
+  const latestImaging = getLatestByTime(
+    mockImagingStudies.filter((item) => item.patientId === patientId),
+    (item) => item.reviewedAt ?? item.readAt ?? item.capturedAt ?? item.requestedAt
+  );
+  const latestDispensingOrder = getLatestByTime(
+    mockOrders.filter(
+      (item) => item.orderType === "dispensing" && encounterIds.has(item.encounterId)
+    ),
+    (item) => item.updatedAt
+  );
+  const latestInvoice = getLatestByTime(
+    mockInvoices.filter((item) => encounterIds.has(item.encounterId)),
+    (item) => item.issuedAt ?? item.createdAt
+  );
+
+  return [
+    {
+      id: `latest-chart-${patientId}`,
+      workspaceId: MOCK_WORKSPACE_ID,
+      patientId,
+      guardianId,
+      encounterId: latestSoap?.encounterId ?? latestEncounter?.id,
+      workType: "chart",
+      title: "최근 차트",
+      description: latestSoap?.assessment ?? latestEncounter?.chiefComplaint ?? "차트 내역 없음",
+      statusLabel: latestSoap?.status,
+      occurredAt: latestSoap?.updatedAt ?? latestEncounter?.updatedAt,
+      enabled: false,
+    },
+    {
+      id: `latest-lab-${patientId}`,
+      workspaceId: MOCK_WORKSPACE_ID,
+      patientId,
+      guardianId,
+      encounterId: latestLab?.encounterId,
+      workType: "lab",
+      title: "최근 검사",
+      description: latestLab?.resultName ?? "검사 내역 없음",
+      statusLabel: latestLab?.status,
+      occurredAt: latestLab?.reviewedAt ?? latestLab?.enteredAt ?? latestLab?.receivedAt,
+      enabled: false,
+    },
+    {
+      id: `latest-imaging-${patientId}`,
+      workspaceId: MOCK_WORKSPACE_ID,
+      patientId,
+      guardianId,
+      encounterId: latestImaging?.encounterId,
+      workType: "imaging",
+      title: "최근 영상",
+      description: latestImaging
+        ? `${latestImaging.modality} · ${latestImaging.bodyPart}`
+        : "영상 내역 없음",
+      statusLabel: latestImaging?.status,
+      occurredAt: latestImaging?.reviewedAt ?? latestImaging?.readAt ?? latestImaging?.capturedAt,
+      enabled: false,
+    },
+    {
+      id: `latest-dispensing-${patientId}`,
+      workspaceId: MOCK_WORKSPACE_ID,
+      patientId,
+      guardianId,
+      encounterId: latestDispensingOrder?.encounterId,
+      workType: "dispensing",
+      title: "최근 조제",
+      description: latestDispensingOrder?.displayName ?? "조제 내역 없음",
+      statusLabel: latestDispensingOrder?.status,
+      occurredAt: latestDispensingOrder?.updatedAt,
+      href: latestDispensingOrder ? `/w/${MOCK_WORKSPACE_ID}/dispensing` : undefined,
+      enabled: Boolean(latestDispensingOrder),
+    },
+    {
+      id: `latest-billing-${patientId}`,
+      workspaceId: MOCK_WORKSPACE_ID,
+      patientId,
+      guardianId,
+      encounterId: latestInvoice?.encounterId,
+      workType: "billing",
+      title: "최근 수납",
+      description: latestInvoice
+        ? `${latestInvoice.invoiceNo} · ${latestInvoice.totalAmount.toLocaleString()}원`
+        : "수납 내역 없음",
+      statusLabel: latestInvoice?.status,
+      occurredAt: latestInvoice?.issuedAt ?? latestInvoice?.createdAt,
+      enabled: false,
+    },
+  ];
+};
+
 export const getMockPatientBundle = (patientId: EmrId) => {
   const patient = mockPatients.find((item) => item.id === patientId);
 
@@ -1123,6 +1490,10 @@ export const getMockPatientBundle = (patientId: EmrId) => {
   const orderIds = new Set(orders.map((item) => item.id));
   const invoices = mockInvoices.filter((item) => encounterIds.has(item.encounterId));
   const invoiceIds = new Set(invoices.map((item) => item.id));
+  const labResults = mockLabResults.filter((item) => item.patientId === patientId);
+  const labResultIds = new Set(labResults.map((item) => item.id));
+  const imagingStudies = mockImagingStudies.filter((item) => item.patientId === patientId);
+  const imagingStudyIds = new Set(imagingStudies.map((item) => item.id));
 
   return {
     patient,
@@ -1144,6 +1515,23 @@ export const getMockPatientBundle = (patientId: EmrId) => {
     invoices,
     invoiceLines: mockInvoiceLines.filter((item) => invoiceIds.has(item.invoiceId)),
     payments: mockPayments.filter((item) => invoiceIds.has(item.invoiceId)),
+    csHistories: mockCsHistories.filter(
+      (item) => item.patientId === patientId || Boolean(item.guardianId && guardianIds.has(item.guardianId))
+    ),
+    latestWorkShortcuts: getMockLatestWorkShortcutsForPatient(patientId),
+    labResults,
+    equipmentReceipts: mockEquipmentReceipts.filter(
+      (item) =>
+        item.patientId === patientId || Boolean(item.encounterId && encounterIds.has(item.encounterId))
+    ),
+    imagingStudies,
+    attachments: mockAttachments.filter(
+      (item) =>
+        item.patientId === patientId ||
+        Boolean(item.encounterId && encounterIds.has(item.encounterId)) ||
+        labResultIds.has(item.ownerId) ||
+        imagingStudyIds.has(item.ownerId)
+    ),
     messageDeliveries: mockMessageDeliveries.filter(
       (item) => item.patientId === patientId || Boolean(item.encounterId && encounterIds.has(item.encounterId))
     ),
@@ -1165,6 +1553,10 @@ export const getMockEncounterBundle = (encounterId: EmrId) => {
   const orderIds = new Set(orders.map((item) => item.id));
   const invoices = mockInvoices.filter((item) => item.encounterId === encounterId);
   const invoiceIds = new Set(invoices.map((item) => item.id));
+  const labResults = mockLabResults.filter((item) => item.encounterId === encounterId);
+  const labResultIds = new Set(labResults.map((item) => item.id));
+  const imagingStudies = mockImagingStudies.filter((item) => item.encounterId === encounterId);
+  const imagingStudyIds = new Set(imagingStudies.map((item) => item.id));
 
   if (!patientBundle) return null;
 
@@ -1188,7 +1580,86 @@ export const getMockEncounterBundle = (encounterId: EmrId) => {
     invoices,
     invoiceLines: mockInvoiceLines.filter((item) => invoiceIds.has(item.invoiceId)),
     payments: mockPayments.filter((item) => invoiceIds.has(item.invoiceId)),
+    csHistories: mockCsHistories.filter((item) => item.encounterId === encounterId),
+    labResults,
+    equipmentReceipts: mockEquipmentReceipts.filter((item) => item.encounterId === encounterId),
+    imagingStudies,
+    attachments: mockAttachments.filter(
+      (item) =>
+        item.encounterId === encounterId ||
+        labResultIds.has(item.ownerId) ||
+        imagingStudyIds.has(item.ownerId)
+    ),
     messageDeliveries: mockMessageDeliveries.filter((item) => item.encounterId === encounterId),
     auditLogs: mockAuditLogs.filter((item) => item.encounterId === encounterId),
   };
 };
+
+export const getMockGuardianBundle = (guardianId: EmrId) => {
+  const guardian = mockGuardians.find((item) => item.id === guardianId);
+
+  if (!guardian) return null;
+
+  const patientGuardians = mockPatientGuardians.filter((item) => item.guardianId === guardianId);
+  const patientIds = new Set(patientGuardians.map((item) => item.patientId));
+  const patients = mockPatients.filter((item) => patientIds.has(item.id));
+  const encounters = mockEncounters.filter((item) => patientIds.has(item.patientId));
+  const encounterIds = new Set(encounters.map((item) => item.id));
+  const invoices = mockInvoices.filter(
+    (item) => item.guardianId === guardianId || encounterIds.has(item.encounterId)
+  );
+  const invoiceIds = new Set(invoices.map((item) => item.id));
+
+  return {
+    guardian,
+    patientGuardians,
+    patients,
+    consents: mockConsents.filter(
+      (item) => item.guardianId === guardianId || Boolean(item.patientId && patientIds.has(item.patientId))
+    ),
+    appointments: mockAppointments.filter(
+      (item) => item.guardianId === guardianId || patientIds.has(item.patientId)
+    ),
+    encounters,
+    invoices,
+    invoiceLines: mockInvoiceLines.filter((item) => invoiceIds.has(item.invoiceId)),
+    payments: mockPayments.filter((item) => invoiceIds.has(item.invoiceId)),
+    csHistories: mockCsHistories.filter(
+      (item) => item.guardianId === guardianId || Boolean(item.patientId && patientIds.has(item.patientId))
+    ),
+    messageDeliveries: mockMessageDeliveries.filter(
+      (item) => item.guardianId === guardianId || Boolean(item.patientId && patientIds.has(item.patientId))
+    ),
+    latestWorkShortcuts: patients.flatMap((patientItem) =>
+      getMockLatestWorkShortcutsForPatient(patientItem.id)
+    ),
+    auditLogs: mockAuditLogs.filter(
+      (item) => Boolean(item.patientId && patientIds.has(item.patientId)) || invoiceIds.has(item.entityId)
+    ),
+  };
+};
+
+export const getMockBillingGroupsByGuardian = () =>
+  mockGuardians
+    .map((guardian) => {
+      const invoices = mockInvoices.filter((invoice) => invoice.guardianId === guardian.id);
+      const invoiceIds = new Set(invoices.map((invoice) => invoice.id));
+      const encounterIds = new Set(invoices.map((invoice) => invoice.encounterId));
+      const patientIds = new Set(
+        mockEncounters
+          .filter((encounter) => encounterIds.has(encounter.id))
+          .map((encounter) => encounter.patientId)
+      );
+
+      return {
+        guardian,
+        patients: mockPatients.filter((patient) => patientIds.has(patient.id)),
+        invoices,
+        invoiceLines: mockInvoiceLines.filter((line) => invoiceIds.has(line.invoiceId)),
+        payments: mockPayments.filter((payment) => invoiceIds.has(payment.invoiceId)),
+        totalDueAmount: invoices
+          .filter((invoice) => invoice.status !== "paid" && invoice.status !== "refunded" && invoice.status !== "voided")
+          .reduce((total, invoice) => total + invoice.totalAmount, 0),
+      };
+    })
+    .filter((group) => group.invoices.length > 0);

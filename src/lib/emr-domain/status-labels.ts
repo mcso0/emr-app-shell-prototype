@@ -1,13 +1,19 @@
 import type {
   AppointmentStatus,
   ConsentStatus,
+  CsHistoryStatus,
   EmrOrderStatus,
   EmrOrderWorkStatus,
   EncounterStatus,
+  EquipmentReceiptStatus,
+  ImagingStudyStatus,
   InvoiceStatus,
+  LabResultJudgment,
+  LabResultStatus,
   MessageStatus,
   OrderGroupStatus,
   OrderPriority,
+  PaymentStatus,
   PrescriptionStatus,
   SoapNoteStatus,
   WaitingQueueStatus,
@@ -16,12 +22,18 @@ import type {
 export type StatusLabelDomainMap = {
   appointment: AppointmentStatus;
   consent: ConsentStatus;
+  csHistory: CsHistoryStatus;
   encounter: EncounterStatus;
+  equipmentReceipt: EquipmentReceiptStatus;
+  imagingStudy: ImagingStudyStatus;
   invoice: InvoiceStatus;
+  labJudgment: LabResultJudgment;
+  labResult: LabResultStatus;
   message: MessageStatus;
   order: EmrOrderStatus;
   orderGroup: OrderGroupStatus;
   orderWork: EmrOrderWorkStatus;
+  payment: PaymentStatus;
   prescription: PrescriptionStatus;
   priority: OrderPriority;
   queue: WaitingQueueStatus;
@@ -41,6 +53,12 @@ export const statusLabels = {
     granted: "동의",
     revoked: "철회",
   },
+  csHistory: {
+    queued: "대기",
+    in_progress: "처리중",
+    completed: "완료",
+    needs_follow_up: "추적필요",
+  },
   encounter: {
     waiting: "대기",
     in_consultation: "진료중",
@@ -49,6 +67,19 @@ export const statusLabels = {
     completed: "완료",
     cancelled: "취소",
   },
+  equipmentReceipt: {
+    received: "수신",
+    matched: "매칭",
+    unmatched: "미매칭",
+    ignored: "무시",
+  },
+  imagingStudy: {
+    requested: "요청",
+    captured: "촬영",
+    reading: "판독중",
+    read: "판독완료",
+    reviewed: "확인",
+  },
   invoice: {
     draft: "미수납",
     issued: "청구확정",
@@ -56,6 +87,20 @@ export const statusLabels = {
     refund_requested: "환불요청",
     refunded: "환불완료",
     voided: "무효",
+  },
+  labJudgment: {
+    low: "낮음",
+    normal: "정상",
+    high: "높음",
+    critical: "위험",
+    not_judged: "미판정",
+  },
+  labResult: {
+    pending: "대기",
+    received: "수신",
+    entered: "입력",
+    completed: "완료",
+    reviewed: "확인",
   },
   message: {
     queued: "대기",
@@ -80,6 +125,12 @@ export const statusLabels = {
   orderWork: {
     pending: "대기",
     completed: "완료",
+  },
+  payment: {
+    approved: "승인",
+    cancelled: "취소",
+    refunded: "환불",
+    failed: "실패",
   },
   prescription: {
     draft: "임시저장",

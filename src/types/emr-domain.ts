@@ -65,6 +65,25 @@ export type InvoiceStatus = "draft" | "issued" | "paid" | "refund_requested" | "
 export type PaymentMethod = "card" | "cash" | "transfer" | "other";
 export type PaymentStatus = "approved" | "cancelled" | "refunded" | "failed";
 
+export type CsHistoryStatus = "queued" | "in_progress" | "completed" | "needs_follow_up";
+export type CsHistoryChannel = "phone" | "kakao_alimtalk" | "sms" | "in_person";
+export type CsHistoryDirection = "inbound" | "outbound";
+
+export type LatestWorkType = "chart" | "lab" | "imaging" | "dispensing" | "billing";
+
+export type LabResultStatus = "pending" | "received" | "entered" | "completed" | "reviewed";
+export type LabResultJudgment = "low" | "normal" | "high" | "critical" | "not_judged";
+export type EquipmentReceiptStatus = "received" | "matched" | "unmatched" | "ignored";
+export type ImagingStudyStatus = "requested" | "captured" | "reading" | "read" | "reviewed";
+
+export type AttachmentOwnerType =
+  | "patient"
+  | "guardian"
+  | "encounter"
+  | "lab_result"
+  | "imaging_study"
+  | "invoice";
+
 export type MessageChannel = "kakao_alimtalk" | "sms" | "email";
 export type MessageType =
   | "appointment"
@@ -361,6 +380,111 @@ export type Payment = {
   status: PaymentStatus;
   paidAt: IsoDateTime;
   metadata?: Record<string, unknown>;
+};
+
+export type CsHistoryEntry = {
+  id: EmrId;
+  workspaceId: EmrId;
+  guardianId?: EmrId;
+  patientId?: EmrId;
+  encounterId?: EmrId;
+  channel: CsHistoryChannel;
+  direction: CsHistoryDirection;
+  status: CsHistoryStatus;
+  category: string;
+  summary: string;
+  handledByUserId?: EmrId;
+  occurredAt: IsoDateTime;
+  followUpAt?: IsoDateTime;
+  createdAt: IsoDateTime;
+};
+
+export type LatestWorkShortcut = {
+  id: EmrId;
+  workspaceId: EmrId;
+  patientId: EmrId;
+  guardianId?: EmrId;
+  encounterId?: EmrId;
+  workType: LatestWorkType;
+  title: string;
+  description?: string;
+  statusLabel?: string;
+  occurredAt?: IsoDateTime;
+  href?: string;
+  enabled: boolean;
+};
+
+export type LabResultRow = {
+  id: EmrId;
+  analyteName: string;
+  value?: string;
+  unit?: string;
+  referenceRange?: string;
+  judgment: LabResultJudgment;
+  note?: string;
+};
+
+export type LabResult = {
+  id: EmrId;
+  workspaceId: EmrId;
+  patientId: EmrId;
+  encounterId: EmrId;
+  orderId?: EmrId;
+  resultName: string;
+  status: LabResultStatus;
+  rows: LabResultRow[];
+  collectedAt?: IsoDateTime;
+  receivedAt?: IsoDateTime;
+  enteredAt?: IsoDateTime;
+  reviewedAt?: IsoDateTime;
+  performedByUserId?: EmrId;
+  reviewedByUserId?: EmrId;
+};
+
+export type EquipmentReceipt = {
+  id: EmrId;
+  workspaceId: EmrId;
+  equipmentName: string;
+  externalResultId: string;
+  status: EquipmentReceiptStatus;
+  patientId?: EmrId;
+  encounterId?: EmrId;
+  orderId?: EmrId;
+  receivedAt: IsoDateTime;
+  payloadSummary: string;
+};
+
+export type ImagingStudy = {
+  id: EmrId;
+  workspaceId: EmrId;
+  patientId: EmrId;
+  encounterId: EmrId;
+  orderId?: EmrId;
+  modality: string;
+  bodyPart: string;
+  status: ImagingStudyStatus;
+  reading?: string;
+  impression?: string;
+  requestedAt: IsoDateTime;
+  capturedAt?: IsoDateTime;
+  readAt?: IsoDateTime;
+  reviewedAt?: IsoDateTime;
+  radiologistUserId?: EmrId;
+};
+
+export type EmrAttachment = {
+  id: EmrId;
+  workspaceId: EmrId;
+  ownerType: AttachmentOwnerType;
+  ownerId: EmrId;
+  patientId?: EmrId;
+  encounterId?: EmrId;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes?: number;
+  url: string;
+  uploadedByUserId?: EmrId;
+  uploadedAt: IsoDateTime;
 };
 
 export type MessageTemplate = {
