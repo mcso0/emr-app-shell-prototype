@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
@@ -34,13 +34,20 @@ import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
-import type { Diagnosis, Encounter, SoapNote } from "@/types/emr-domain";
+import type { Diagnosis, EmrOrderType, Encounter, SoapNote } from "@/types/emr-domain";
 
 const getShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
 
 const getDiagnosisLabel = (diagnoses: Diagnosis[]) =>
   diagnoses.length ? diagnoses.map((diagnosis) => diagnosis.diagnosisText).join(", ") : "진단 미입력";
+
+const orderTypeNarrative: Record<EmrOrderType, { handoff: string; label: string }> = {
+  dispensing: { label: "조제", handoff: "조제 대기열 → 수납 청구" },
+  imaging: { label: "영상", handoff: "영상 판독 → 수납 청구" },
+  lab: { label: "검사", handoff: "검사 결과 → 수납 청구" },
+  treatment: { label: "처치", handoff: "처치 진행 → 수납 청구" },
+};
 
 function ChartQueueItem({
   row,
@@ -191,12 +198,50 @@ function PatientHeader({
   );
 }
 
+function EncounterNarrative({
+  encounter,
+  primaryGuardianName,
+  soapNote,
+}: {
+  encounter: Encounter;
+  primaryGuardianName?: string;
+  soapNote?: SoapNote;
+}) {
+  return (
+    <section className="rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-muted-foreground">오늘 진료 흐름</div>
+          <p className="mt-1 text-[14px] font-semibold leading-5">
+            {primaryGuardianName ?? "보호자"} 보호자가 {encounter.chiefComplaint ?? encounter.visitPurpose}로 내원했습니다.
+          </p>
+        </div>
+        <Badge variant="outline">{encounter.encounterNo}</Badge>
+      </div>
+      <div className="mt-3 grid gap-2 text-[13px] leading-5 md:grid-cols-3">
+        <div className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
+          <div className="text-[12px] font-medium text-muted-foreground">SOAP 핵심</div>
+          <p className="mt-1">{soapNote?.subjective ?? "주관 기록 대기"}</p>
+        </div>
+        <div className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
+          <div className="text-[12px] font-medium text-muted-foreground">Assessment</div>
+          <p className="mt-1">{soapNote?.assessment ?? "평가 기록 대기"}</p>
+        </div>
+        <div className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
+          <div className="text-[12px] font-medium text-muted-foreground">Plan / 다음 업무</div>
+          <p className="mt-1">{soapNote?.plan ?? "계획 기록 대기"}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function SoapPanel({ soapNote }: { soapNote?: SoapNote }) {
   const soapFields = [
-    ["Subjective", soapNote?.subjective],
-    ["Objective", soapNote?.objective],
-    ["Assessment", soapNote?.assessment],
-    ["Plan", soapNote?.plan],
+    ["S 주관", soapNote?.subjective],
+    ["O 객관", soapNote?.objective],
+    ["A 평가", soapNote?.assessment],
+    ["P 계획", soapNote?.plan],
   ];
 
   return (
@@ -277,11 +322,26 @@ function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) 
 }
 
 function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
+  const orderCount = orderGroups.reduce((total, group) => total + group.orders.length, 0);
+  const orderedTypes = Array.from(
+    new Set(orderGroups.flatMap(({ orders }) => orders.map((order) => order.orderType)))
+  );
+
   return (
     <section className="rounded-lg border bg-card">
-      <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="text-[14px] font-semibold">Order</h2>
-        <Badge variant="secondary">{orderGroups.reduce((total, group) => total + group.orders.length, 0)}</Badge>
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+        <div>
+          <h2 className="text-[14px] font-semibold">Order</h2>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {orderedTypes.map((orderType) => (
+              <Badge key={orderType} variant="outline">
+                {orderTypeNarrative[orderType].label}
+              </Badge>
+            ))}
+            {orderCount ? <Badge variant="outline">수납 청구</Badge> : null}
+          </div>
+        </div>
+        <Badge variant="secondary">{orderCount}</Badge>
       </div>
       <div className="flex flex-col gap-3 p-4">
         {orderGroups.map(({ group, orders }) => (
@@ -297,13 +357,19 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
             </div>
             <div className="divide-y">
               {orders.map((order) => (
-                <div key={order.id} className="grid grid-cols-[1fr_80px_80px] gap-3 px-3 py-2 text-[13px]">
+                <div
+                  key={order.id}
+                  className="grid grid-cols-[minmax(0,1fr)_64px_80px_150px] gap-3 px-3 py-2 text-[13px]"
+                >
                   <div className="min-w-0">
                     <div className="truncate font-medium">{order.displayName}</div>
                     <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? "지시 없음"}</div>
                   </div>
+                  <div>
+                    <Badge variant="outline">{orderTypeNarrative[order.orderType].label}</Badge>
+                  </div>
                   <div>{getStatusLabel("order", order.status)}</div>
-                  <div>{getStatusLabel("priority", order.priority)}</div>
+                  <div className="text-[12px] text-muted-foreground">{orderTypeNarrative[order.orderType].handoff}</div>
                 </div>
               ))}
             </div>
@@ -316,12 +382,14 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
 
 export function ChartContent() {
   const searchParams = useSearchParams();
+  const lastAppliedQueryEncounterId = useRef<string | null>(null);
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const scenario = getDemoScenarioFromParams(searchParams);
-  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
-  const effectiveEncounterId = queryEncounterId ?? selectedEncounterId;
-  const bundle = getChartEncounter(effectiveEncounterId) ?? getChartEncounter("encounter-coco-260501");
+  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
+  const queryEncounterBundle = queryEncounterId ? getChartEncounter(queryEncounterId) : null;
+  const hasValidQueryEncounter = queryEncounterId !== null && queryEncounterBundle !== null;
+  const bundle = getChartEncounter(selectedEncounterId) ?? getChartEncounter("encounter-coco-260501");
   const historyRows = useMemo(
     () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
     [bundle]
@@ -332,10 +400,14 @@ export function ChartContent() {
   );
 
   useEffect(() => {
-    if (queryEncounterId && queryEncounterId !== selectedEncounterId) {
+    if (!queryEncounterId || !hasValidQueryEncounter) return;
+    if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
+
+    lastAppliedQueryEncounterId.current = queryEncounterId;
+    if (selectedEncounterId !== queryEncounterId) {
       selectEncounter(queryEncounterId);
     }
-  }, [queryEncounterId, selectEncounter, selectedEncounterId]);
+  }, [hasValidQueryEncounter, queryEncounterId, selectEncounter, selectedEncounterId]);
 
   if (!bundle) {
     return (
@@ -362,6 +434,11 @@ export function ChartContent() {
         />
         <ScrollArea className="min-h-0 flex-1">
           <div className="grid gap-4 p-5">
+            <EncounterNarrative
+              encounter={bundle.encounter}
+              primaryGuardianName={bundle.primaryGuardian?.name}
+              soapNote={latestSoap}
+            />
             <SoapPanel soapNote={latestSoap} />
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)] gap-4">
               <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
