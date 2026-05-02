@@ -219,7 +219,7 @@ test("reception creates a walk-in waiting row for the selected patient", async (
   await expect(page).not.toHaveURL(/drawer=/);
   await page.getByRole("button", { name: "현장 접수" }).click();
   await expect(page).toHaveURL(/drawer=reception-form/);
-  await expect(page.getByRole("heading", { name: "접수" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "접수" }).last()).toBeVisible();
   await expect(page.getByLabel("방문 목적")).toBeVisible();
   await page.getByRole("button", { name: "생성" }).click();
 

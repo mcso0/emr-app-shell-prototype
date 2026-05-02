@@ -124,16 +124,23 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       pendingUrlStateRef.current = null;
     }
 
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(search);
     params.set("modulePanel", modulePanelOpen ? "open" : "closed");
     if (moduleDefinition.contentAside) {
       params.set("aside", contentAsideOpen ? "history" : "closed");
+    } else {
+      params.delete("aside");
+      params.delete("context");
     }
     if (moduleDefinition.rightPanel) {
       params.set("right", rightPanelOpen ? "open" : "closed");
+    } else {
+      params.delete("right");
     }
     if (activeDrawer) {
       params.set("drawer", `${activeDrawer.type}:${activeDrawer.id}`);
+    } else {
+      params.delete("drawer");
     }
     const nextSearch = params.toString();
     if (search !== nextSearch) {

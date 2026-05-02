@@ -262,14 +262,14 @@ test("order queue status groups can collapse and expand", async ({ page }) => {
 });
 
 test("shared order queue applies to placeholder modules and syncs selection summary", async ({ page }) => {
-  await page.goto("/w/clair-demo/home?modulePanel=open&aside=closed");
+  await page.goto("/w/clair-demo/orders?modulePanel=open&aside=closed");
 
-  await expect(page.getByTestId("module-side-panel-title")).toHaveText("홈");
+  await expect(page.getByTestId("module-side-panel-title")).toHaveText("오더");
   await expect(page.getByTestId("order-queue-status-reRequested")).toContainText("재요청");
-  await page.getByText("홈 진행 오더").click();
+  await page.getByText("오더 진행 오더").click();
 
   const summary = page.getByTestId("order-queue-selection-summary");
-  await expect(summary).toContainText("홈 진행 오더");
+  await expect(summary).toContainText("오더 진행 오더");
   await expect(summary).toContainText("진행중");
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/features/billing/data";
 import { useBillingStore, type BillingFilter } from "@/features/billing/store";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type { InvoiceLine, PaymentMethod } from "@/types/emr-domain";
@@ -349,6 +351,7 @@ function PaymentPanel({
 }
 
 export function BillingContent() {
+  const searchParams = useSearchParams();
   const combinedInvoiceIds = useBillingStore((state) => state.combinedInvoiceIds);
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const invoices = useBillingStore((state) => state.invoices);
@@ -364,12 +367,27 @@ export function BillingContent() {
   const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
   const toggleInvoiceSelection = useBillingStore((state) => state.toggleInvoiceSelection);
   const updateInvoiceLineQuantity = useBillingStore((state) => state.updateInvoiceLineQuantity);
-  const detail = getBillingDetail(selectedInvoiceId, invoices, invoiceLines, payments)
+  const selectInvoice = useBillingStore((state) => state.selectInvoice);
+  const setFilter = useBillingStore((state) => state.setFilter);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
+  const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
+  const detail = getBillingDetail(effectiveInvoiceId, invoices, invoiceLines, payments)
     ?? getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
   const groups = useMemo(
     () => getBillingGuardianGroups(invoices, invoiceLines, payments),
     [invoiceLines, invoices, payments]
   );
+
+  useEffect(() => {
+    if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
+
+    const invoice = invoices.find((item) => item.id === queryInvoiceId);
+    if (!invoice) return;
+
+    selectInvoice(queryInvoiceId);
+    setFilter(getBillingFilterForInvoice(invoice));
+  }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId, setFilter]);
 
   if (!detail) {
     return (

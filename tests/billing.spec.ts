@@ -4,7 +4,7 @@ test("billing workspace renders waiting invoice, guardian group, editable lines,
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=closed");
 
   const sidePanel = page.locator("aside").first();
-  await expect(sidePanel.getByRole("button", { name: "대기 1" })).toHaveAttribute("aria-pressed", "true");
+  await expect(sidePanel.getByRole("button", { name: "대기 2" })).toHaveAttribute("aria-pressed", "true");
   await expect(sidePanel.getByTestId("billing-queue-item-invoice-coco-260501")).toContainText("코코");
   await expect(page.getByRole("heading", { name: "수납" })).toBeVisible();
   await expect(page.getByText("INV-260501-0001 · 코코 · 이지은")).toBeVisible();
