@@ -37,9 +37,11 @@ Updated: 2026-05-03
 
 다음 추천 단계:
 
-- Supabase 실제 연결 전 `### 5. Supabase 실제 연동 준비`를 문서로 먼저 진행한다.
+- Supabase 실제 연결 전 `### 5. Supabase 실제 연동 준비`를 문서로 완료했다.
 - 로그인 구현 작업 패키지는 `docs/implementation/auth-login/README.md`를 시작점으로 사용한다.
-- 실제 Supabase package/env/API 연결, callback route, DB migration, RLS, server-side permission enforcement는 계속 금지 범위로 유지한다.
+- Supabase provider adapter 구현을 완료했다. `@supabase/supabase-js`, `@supabase/ssr`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_AUTH_MODE` 기준을 사용한다.
+- 실제 Supabase project/API live validation, callback route, DB migration, RLS, server-side permission enforcement는 계속 금지 범위로 유지한다.
+- Membership/permission enforcement 범위 계획을 완료했다. 실제 resolver code, migration, RLS policy는 별도 승인 후 진행한다.
 
 ## 최종 목표와 결과물
 
@@ -192,6 +194,45 @@ Updated: 2026-05-03
 
 - 실제 연결 작업자가 Supabase 프로젝트/env/API 연결 전에 필요한 결정을 모두 알 수 있다.
 - 민감 기능을 직접 구현하지 않고 Supabase Auth에 위임할 범위가 분리되어 있다.
+
+상태:
+
+- 2026-05-03 완료. 결정 문서는 `docs/implementation/auth-login/supabase-integration-readiness.md`이고 closeout은 `docs/completed/auth/2026-05-03-supabase-integration-readiness.md`이다.
+- Work Order 03 package 설치 대상은 `@supabase/supabase-js`와 `@supabase/ssr`이다.
+- public env naming은 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_AUTH_MODE=mock|supabase|auto`로 고정했다.
+- `auto` mode는 Supabase env가 있으면 provider를 쓰고 env가 없으면 mock/local demo fallback을 유지한다.
+- email/password login은 Supabase Auth에 위임하고, OAuth/magic link/OTP/password reset callback route는 후속 별도 범위로 둔다.
+
+### 6. Supabase provider adapter 구현
+
+목표:
+
+- 승인된 readiness 기준으로 `useAuthClient()` 뒤에 Supabase provider adapter를 연결한다.
+- 기존 mock/local demo auth 흐름을 env 미설정과 test 기본값에서 유지한다.
+
+상태:
+
+- 2026-05-03 완료. closeout은 `docs/completed/auth/2026-05-03-supabase-provider-implementation.md`이다.
+- `@supabase/supabase-js`와 `@supabase/ssr`를 설치했다.
+- `src/lib/supabase/config.ts`, `client.ts`, `server.ts`, `proxy.ts`, `src/proxy.ts`를 추가했다.
+- `NEXT_PUBLIC_AUTH_MODE=mock|supabase|auto`를 구현했고 미설정 기본값은 `auto`다.
+- Supabase mode에서는 email/password submit을 `signInWithPassword()`에 위임한다.
+- 실제 password 검증, OAuth callback, MFA, refresh token, email verification은 직접 구현하지 않았다.
+- DB migration, RLS policy, server-side permission enforcement는 Work Order 04 범위에서 plan-only로 다룬다.
+
+### 7. Membership/permission enforcement 범위 계획
+
+목표:
+
+- provider session과 앱 domain membership/permission source를 분리한다.
+- server-side enforcement와 RLS/migration 구현 단위를 별도 승인 가능한 scope로 나눈다.
+
+상태:
+
+- 2026-05-03 plan-only로 완료. 계획 문서는 `docs/implementation/auth-login/membership-permission-enforcement.md`이고 closeout은 `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`이다.
+- `users.id = auth.users.id`, active `user_memberships`, `permission_policies` 기준을 유지한다.
+- 후속 구현 단위는 permission resolver, membership/profile migration, RLS policies, app route/server action enforcement로 분리했다.
+- 이번 단계에서는 migration file, RLS SQL policy, server-side enforcement code, business screen UI를 작성하지 않았다.
 
 ## 스킬 사용 규칙
 

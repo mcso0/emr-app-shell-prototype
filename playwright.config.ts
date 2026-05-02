@@ -41,6 +41,9 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run dev -- -H 127.0.0.1",
+    env: {
+      NEXT_PUBLIC_AUTH_MODE: "mock",
+    },
     url: "http://127.0.0.1:3000",
     reuseExistingServer: true,
     timeout: 120_000,

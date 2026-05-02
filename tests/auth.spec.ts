@@ -147,6 +147,31 @@ test("auth UI components use the auth client boundary", () => {
   }
 });
 
+test("supabase adapter keeps local demo fallback and public env boundary", () => {
+  const authClient = readFileSync("src/features/auth/auth-client.ts", "utf8");
+  const supabaseConfig = readFileSync("src/lib/supabase/config.ts", "utf8");
+  const browserClient = readFileSync("src/lib/supabase/client.ts", "utf8");
+  const proxy = readFileSync("src/proxy.ts", "utf8");
+
+  expect(authClient).toContain("signInWithPassword");
+  expect(authClient).toContain("signInWithMockRole");
+  expect(supabaseConfig).toContain("NEXT_PUBLIC_AUTH_MODE");
+  expect(supabaseConfig).toContain("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+  expect(browserClient).toContain("createBrowserClient");
+  expect(proxy).toContain("updateSession");
+
+  for (const source of [authClient, supabaseConfig, browserClient, proxy]) {
+    expect(source).not.toMatch(/service_role|SECRET|SUPABASE_SECRET/i);
+  }
+});
+
+test("playwright auth regressions pin mock auth mode", () => {
+  const config = readFileSync("playwright.config.ts", "utf8");
+
+  expect(config).toContain("NEXT_PUBLIC_AUTH_MODE");
+  expect(config).toContain("mock");
+});
+
 test("login exposes pending and provider error states without creating a session", async ({
   page,
 }) => {
