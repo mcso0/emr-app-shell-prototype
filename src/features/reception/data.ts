@@ -30,6 +30,7 @@ export type ReceptionPatientSummary = {
   patient: Patient;
   primaryGuardian?: Guardian;
   searchText: string;
+  veterinarianName?: string;
 };
 
 export type ReceptionQueueRow = {
@@ -128,6 +129,9 @@ export const getReceptionPatientSummaries = (
       patient,
       primaryGuardian,
       searchText,
+      veterinarianName:
+        getStaffName(activeEncounter?.primaryVeterinarianId) ??
+        getStaffName(latestAppointment?.assignedVeterinarianId),
     };
   });
 };

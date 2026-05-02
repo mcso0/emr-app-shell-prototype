@@ -159,6 +159,59 @@ const getAppointmentDurationLabel = (appointment: Appointment) => {
   return `${minutes}분`;
 };
 
+const getStaffDisplayName = (userId?: string) =>
+  userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
+
+const getReceptionVisitReason = ({
+  appointment,
+  encounter,
+  patientSpecialNote,
+}: {
+  appointment?: Appointment;
+  encounter?: Encounter;
+  patientSpecialNote?: string;
+}) =>
+  encounter?.chiefComplaint ??
+  appointment?.symptomNote ??
+  appointment?.visitPurpose ??
+  patientSpecialNote ??
+  "내원 목적 확인";
+
+const getReceptionVisitSummary = ({
+  appointment,
+  encounter,
+}: {
+  appointment?: Appointment;
+  encounter?: Encounter;
+}) => {
+  const checkedInAt = encounter?.checkedInAt ? `${getShortTime(encounter.checkedInAt)} 접수` : null;
+  const appointmentAt = appointment?.scheduledStartAt
+    ? `${getShortTime(appointment.scheduledStartAt)} 예약`
+    : null;
+  const veterinarianName =
+    getStaffDisplayName(encounter?.primaryVeterinarianId) ??
+    getStaffDisplayName(appointment?.assignedVeterinarianId) ??
+    "담당의 미지정";
+  const encounterNo = encounter?.encounterNo ?? "encounter 생성 전";
+
+  return [checkedInAt ?? appointmentAt, veterinarianName, encounterNo].filter(Boolean).join(" · ");
+};
+
+const findScenarioEncounter = (
+  encounters: Encounter[] | undefined,
+  encounterId?: string | null
+) => {
+  if (!encounters?.length) return undefined;
+
+  return (
+    encounters.find((encounter) => encounter.id === encounterId) ??
+    encounters.find((encounter) =>
+      ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
+    ) ??
+    encounters[0]
+  );
+};
+
 function ReceptionStatusBadge({
   className,
   label,
@@ -258,7 +311,8 @@ function PatientCard({
           <>
             <span className="truncate">{timeText}</span>
             <span className="shrink-0">
-              {getSpeciesLabel(summary.patient)} · {getPatientDisplayAge(summary.patient)}
+              {summary.veterinarianName ?? "담당의 미지정"} · {getSpeciesLabel(summary.patient)} ·{" "}
+              {getPatientDisplayAge(summary.patient)}
             </span>
           </>
         }
@@ -269,6 +323,7 @@ function PatientCard({
 }
 
 export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const [listMode, setListMode] = useState<ReceptionSideListMode>("all");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -281,6 +336,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const setSearchQuery = useReceptionStore((state) => state.setSearchQuery);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const querySelectedPatientId = searchParams.get("patientId") ?? scenario?.patientId;
   const patientSummaries = useMemo(
     () => getReceptionPatientSummaries(draftCheckIns, { guardians, patientGuardians, patients }),
     [draftCheckIns, guardians, patientGuardians, patients]
@@ -290,8 +347,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     [patientSummaries, searchQuery]
   );
   const visiblePatients = useMemo(
-    () => getReceptionSideListItems(filteredPatients, listMode),
-    [filteredPatients, listMode]
+    () => getReceptionSideListItems(filteredPatients, listMode, querySelectedPatientId ?? selectedPatientId),
+    [filteredPatients, listMode, querySelectedPatientId, selectedPatientId]
   );
   const sideListLabel =
     receptionQueueTabItems.find((item) => item.value === listMode)?.label ?? "전체";
@@ -358,7 +415,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             <PatientCard
               key={summary.patient.id}
               summary={summary}
-              selected={summary.patient.id === selectedPatientId}
+              selected={summary.patient.id === (querySelectedPatientId ?? selectedPatientId)}
               onSelect={() => {
                 selectPatient(summary.patient.id);
                 setActiveDrawer({ type: "reception-patient", id: summary.patient.id });
@@ -377,19 +434,32 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
 
 function getReceptionSideListItems(
   summaries: ReceptionPatientSummary[],
-  mode: ReceptionSideListMode
+  mode: ReceptionSideListMode,
+  preferredPatientId?: string
 ) {
+  const prioritizePreferredPatient = (items: ReceptionPatientSummary[]) => {
+    if (!preferredPatientId) return items;
+
+    return [...items].sort((a, b) => {
+      if (a.patient.id === preferredPatientId) return -1;
+      if (b.patient.id === preferredPatientId) return 1;
+      return 0;
+    });
+  };
+
   if (mode === "reception") {
-    return summaries.filter((summary) => Boolean(summary.activeEncounter));
+    return prioritizePreferredPatient(summaries.filter((summary) => Boolean(summary.activeEncounter)));
   }
 
   if (mode === "appointment") {
-    return summaries.filter(
-      (summary) => !summary.activeEncounter && summary.latestAppointment?.status === "confirmed"
+    return prioritizePreferredPatient(
+      summaries.filter(
+        (summary) => !summary.activeEncounter && summary.latestAppointment?.status === "confirmed"
+      )
     );
   }
 
-  return summaries;
+  return prioritizePreferredPatient(summaries);
 }
 
 function ScheduleAppointmentCard({
@@ -550,6 +620,55 @@ function ScheduleToolbar({
         </DropdownMenu>
       </div>
     </div>
+  );
+}
+
+function ReceptionVisitContextBanner({
+  appointment,
+  encounter,
+  guardianName,
+  patientName,
+  patientNo,
+  reason,
+}: {
+  appointment?: Appointment;
+  encounter?: Encounter;
+  guardianName?: string;
+  patientName: string;
+  patientNo: string;
+  reason: string;
+}) {
+  const statusLabel = encounter
+    ? getStatusLabel("encounter", encounter.status)
+    : appointment
+      ? getStatusLabel("appointment", appointment.status)
+      : "선택";
+  const statusTone = encounter
+    ? getEncounterTone(encounter.status)
+    : appointment
+      ? getAppointmentTone(appointment.status)
+      : "default";
+  const summary = getReceptionVisitSummary({ appointment, encounter });
+
+  return (
+    <section className="border-b bg-[var(--clair-color-atomic-sky-50)] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <ReceptionStatusBadge label={statusLabel} tone={statusTone} />
+            <h2 className="truncate text-[15px] font-semibold text-[var(--clair-color-label-strong)]">
+              오늘 내원: {reason}
+            </h2>
+          </div>
+          <div className="mt-1 text-[12px] text-[var(--clair-color-label-normal)]">
+            {guardianName ?? "보호자 미지정"} 보호자 · {patientName}({patientNo}) · {summary}
+          </div>
+        </div>
+        <div className="rounded-md border border-[var(--clair-color-atomic-sky-100)] bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+          session-only demo context
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -847,6 +966,18 @@ export function ReceptionContent() {
   );
   const selectedBundle = getMockPatientBundle(selectedPatientId);
   const selectedPatient = selectedBundle?.patient;
+  const selectedAppointment = appointments.find(
+    (appointment) =>
+      appointment.id === selectedAppointmentId ||
+      appointment.id === scenario?.appointmentId ||
+      appointment.patientId === selectedPatientId
+  );
+  const selectedEncounter = findScenarioEncounter(selectedBundle?.encounters, queryEncounterId);
+  const selectedVisitReason = getReceptionVisitReason({
+    appointment: selectedAppointment,
+    encounter: selectedEncounter,
+    patientSpecialNote: selectedPatient?.specialNote,
+  });
   const toggleVeterinarian = (veterinarianId: string) => {
     setSelectedVeterinarianIds((current) => {
       if (current.includes(veterinarianId)) {
@@ -900,6 +1031,16 @@ export function ReceptionContent() {
         onToggleVeterinarian={toggleVeterinarian}
         onCreateWalkIn={() => setActiveDrawer({ type: "reception-form", id: selectedPatient.id })}
       />
+      {scenario || queryPatientId || queryEncounterId ? (
+        <ReceptionVisitContextBanner
+          appointment={selectedAppointment}
+          encounter={selectedEncounter}
+          guardianName={selectedBundle?.primaryGuardian?.name}
+          patientName={selectedPatient.name}
+          patientNo={selectedPatient.patientNo}
+          reason={selectedVisitReason}
+        />
+      ) : null}
       <ReceptionScheduleBoard
         appointments={visibleAppointments}
         selectedAppointmentId={selectedAppointmentId}
@@ -1020,6 +1161,7 @@ export function ReceptionDrawer() {
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const checkInAppointment = useReceptionStore((state) => state.checkInAppointment);
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
+  const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
   const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
   const [receptionDepartment, setReceptionDepartment] = useState(
@@ -1055,6 +1197,27 @@ export function ReceptionDrawer() {
         (b.checkedInAt ?? b.createdAt).localeCompare(a.checkedInAt ?? a.createdAt)
       )
     : [];
+  const selectedEncounter =
+    selectedAppointment
+      ? recentEncounters.find((encounter) => encounter.appointmentId === selectedAppointment.id)
+      : recentEncounters.find((encounter) => encounter.id === selectedEncounterId) ?? recentEncounters[0];
+  const visitReason = getReceptionVisitReason({
+    appointment: selectedAppointment,
+    encounter: selectedEncounter,
+    patientSpecialNote: patient?.specialNote,
+  });
+  const visitSummary = getReceptionVisitSummary({
+    appointment: selectedAppointment,
+    encounter: selectedEncounter,
+  });
+  const veterinarianName =
+    getStaffDisplayName(selectedEncounter?.primaryVeterinarianId) ??
+    getStaffDisplayName(selectedAppointment?.assignedVeterinarianId) ??
+    defaultVeterinarian?.name ??
+    "담당의 미지정";
+  const receptionDate = getShortDate(
+    selectedEncounter?.checkedInAt ?? selectedAppointment?.scheduledStartAt
+  );
 
   if (!patient || !bundle) {
     return (
@@ -1322,7 +1485,10 @@ export function ReceptionDrawer() {
                   {selectedAppointment ? "예약 상세" : "접수 상세"}
                 </div>
                 <div className="mt-1 text-[12px] text-muted-foreground">
-                  {patient.name} · {guardian?.name ?? "보호자 미지정"}
+                  {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · {visitSummary}
+                </div>
+                <div className="mt-2 text-[13px] font-medium text-[var(--clair-color-label-strong)]">
+                  오늘 내원: {visitReason}
                 </div>
               </div>
               {selectedAppointment ? (
@@ -1336,10 +1502,10 @@ export function ReceptionDrawer() {
 
           <section className="grid grid-cols-2 gap-3">
             <ReceptionFormField label="진료과" required>
-              <Input value="영상의학과 · 방사선종양학과" readOnly className="h-9 bg-card" />
+              <Input value={selectedEncounter?.visitPurpose ?? "영상의학과 · 방사선종양학과"} readOnly className="h-9 bg-card" />
             </ReceptionFormField>
             <ReceptionFormField label="담당의">
-              <Input value={defaultVeterinarian?.name ?? "담당의 미지정"} readOnly className="h-9 bg-card" />
+              <Input value={veterinarianName} readOnly className="h-9 bg-card" />
             </ReceptionFormField>
           </section>
 
@@ -1363,7 +1529,7 @@ export function ReceptionDrawer() {
 
           <ReceptionFormField label="방문 목적" required>
             <Input
-              value={patient.handlingCautionNote ?? "방문 목적 텍스트"}
+              value={visitReason}
               readOnly
               className="h-9 bg-card"
             />
@@ -1371,13 +1537,19 @@ export function ReceptionDrawer() {
 
           <section className="grid grid-cols-3 gap-3">
             <ReceptionFormField label="접수일">
-              <Input value="26.05.01" readOnly className="h-9 bg-card" />
+              <Input value={receptionDate} readOnly className="h-9 bg-card" />
             </ReceptionFormField>
             <ReceptionFormField label="진료시작시간">
               <Input
-                value={selectedAppointment ? getShortTime(selectedAppointment.scheduledStartAt) : "진료시간"}
-                disabled={!selectedAppointment}
-                readOnly={Boolean(selectedAppointment)}
+                value={
+                  selectedEncounter?.startedAt
+                    ? getShortTime(selectedEncounter.startedAt)
+                    : selectedAppointment
+                      ? getShortTime(selectedAppointment.scheduledStartAt)
+                      : "진료시간"
+                }
+                disabled={!selectedAppointment && !selectedEncounter?.startedAt}
+                readOnly={Boolean(selectedAppointment || selectedEncounter?.startedAt)}
                 className="h-9 bg-card disabled:bg-input/50"
               />
             </ReceptionFormField>
@@ -1392,7 +1564,7 @@ export function ReceptionDrawer() {
 
           <ReceptionFormField label="접수/예약 메모">
             <textarea
-              value="접수/예약 메모 텍스트"
+              value={`${guardian?.name ?? "보호자"} 보호자: ${selectedAppointment?.symptomNote ?? patient.specialNote ?? visitReason}`}
               readOnly
               className="min-h-20 w-full resize-none rounded-lg border border-input bg-card px-2.5 py-2 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             />

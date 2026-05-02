@@ -37,13 +37,16 @@ import {
   getMockLatestWorkShortcutsForPatient,
   getMockPatientBundle,
   mockCsHistories,
+  mockStaffUsers,
 } from "@/mocks/emr-domain";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
   CsHistoryChannel,
   CsHistoryEntry,
   EmrId,
+  Encounter,
   Guardian,
+  Appointment,
   LatestWorkShortcut,
   Patient,
   PatientGuardian,
@@ -51,6 +54,8 @@ import type {
 } from "@/types/emr-domain";
 
 type PatientProfileBundle = {
+  activeEncounter?: Encounter;
+  latestAppointment?: Appointment;
   patient: Patient;
   guardians: Guardian[];
   patientGuardians: PatientGuardian[];
@@ -91,6 +96,31 @@ const getChannelLabel = (channel: CsHistoryChannel) => {
   return "방문";
 };
 
+const getStaffDisplayName = (userId?: EmrId) =>
+  userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
+
+const getPatientVisitReason = (bundle: PatientProfileBundle) =>
+  bundle.activeEncounter?.chiefComplaint ??
+  bundle.latestAppointment?.symptomNote ??
+  bundle.latestAppointment?.visitPurpose ??
+  bundle.patient.specialNote ??
+  "내원 목적 확인";
+
+const getPatientVisitSummary = (bundle: PatientProfileBundle) => {
+  const time = bundle.activeEncounter?.checkedInAt
+    ? `${getShortDateTime(bundle.activeEncounter.checkedInAt)} 접수`
+    : bundle.latestAppointment?.scheduledStartAt
+      ? `${getShortDateTime(bundle.latestAppointment.scheduledStartAt)} 예약`
+      : "오늘 내원";
+  const veterinarianName =
+    getStaffDisplayName(bundle.activeEncounter?.primaryVeterinarianId) ??
+    getStaffDisplayName(bundle.latestAppointment?.assignedVeterinarianId) ??
+    "담당의 미지정";
+  const encounterNo = bundle.activeEncounter?.encounterNo ?? "encounter 생성 전";
+
+  return `${time} · ${veterinarianName} · ${encounterNo}`;
+};
+
 const getProfileBundle = (
   patientId: EmrId,
   patients: Patient[],
@@ -108,8 +138,15 @@ const getProfileBundle = (
   const primaryGuardian = linkedGuardians.find((guardian) =>
     links.some((link) => link.guardianId === guardian.id && link.isPrimary)
   );
+  const activeEncounter =
+    baseBundle?.encounters.find((encounter) =>
+      ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
+    ) ?? baseBundle?.encounters[0];
+  const latestAppointment = baseBundle?.appointments.at(-1);
 
   return {
+    activeEncounter,
+    latestAppointment,
     patient,
     guardians: linkedGuardians,
     patientGuardians: links,
@@ -283,6 +320,31 @@ function LatestWorkGrid({
           </button>
         );
       })}
+    </section>
+  );
+}
+
+function PatientVisitContextCard({ bundle }: { bundle: PatientProfileBundle }) {
+  const reason = getPatientVisitReason(bundle);
+  const summary = getPatientVisitSummary(bundle);
+  const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
+
+  return (
+    <section className="rounded-lg border border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[12px] font-semibold text-[var(--clair-color-primary-normal)]">
+            오늘 내원 맥락
+          </div>
+          <div className="mt-1 text-[14px] font-semibold text-[var(--clair-color-label-strong)]">
+            {guardianName} 보호자가 {bundle.patient.name}를 {reason}로 접수
+          </div>
+          <div className="mt-1 text-[12px] text-muted-foreground">{summary}</div>
+        </div>
+        <Badge variant="outline" className="bg-card">
+          session-only
+        </Badge>
+      </div>
     </section>
   );
 }
@@ -500,6 +562,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
           />
           {activeTab === "summary" ? (
             <>
+              <PatientVisitContextCard bundle={bundle} />
               <PatientSummaryFields
                 bundle={bundle}
                 draft={editing ? draft : {

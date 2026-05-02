@@ -37,6 +37,39 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await expect(page.getByRole("button", { name: "스케줄 생성" })).toHaveCount(0);
 });
 
+test("reception prioritizes the Kong vomit demo context from query params", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501"
+  );
+
+  const sidePanel = page.locator("aside").first();
+  const kongCard = sidePanel.getByTestId("patient-card-patient-kong");
+
+  await expect(page.getByText("오늘 내원: 반복 구토와 식욕 저하")).toBeVisible();
+  await expect(page.getByText("김하늘 보호자 · 콩이(P-260501-0003)")).toBeVisible();
+  await expect(kongCard).toBeVisible();
+  await expect(kongCard).toContainText("콩이 · P-260501-0003");
+  await expect(kongCard).toContainText("김하늘");
+  await expect(kongCard).toContainText("반복 구토와 식욕 저하");
+  await expect(kongCard).toContainText("이수지");
+
+  await page
+    .getByTestId("appointment-card-appointment-kong-260501")
+    .getByRole("button")
+    .first()
+    .click();
+
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+  await expect(page.getByText("김하늘 보호자 · 콩이 · 09:28 접수")).toBeVisible();
+  await expect(page.getByLabel("방문 목적")).toHaveValue("반복 구토와 식욕 저하");
+
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+  await kongCard.click();
+
+  await expect(page.getByText("오늘 내원 맥락").first()).toBeVisible();
+  await expect(page.getByText("김하늘 보호자가 콩이를 반복 구토와 식욕 저하로 접수").first()).toBeVisible();
+});
+
 test("reception calendar options expose Excel import and export actions", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
@@ -69,7 +102,7 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   }).toPass();
   await page.getByRole("menuitemcheckbox", { name: "김도윤" }).click();
 
-  await expect(page.getByRole("button", { name: "이수지" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이수지", exact: true })).toBeVisible();
   await expect(calendar.getByText("김도윤", { exact: true })).toHaveCount(0);
   await expect(page.getByTestId("appointment-card-appointment-nabi-260501")).toHaveCount(0);
 });
@@ -84,7 +117,7 @@ test("reception cards open the reception detail drawer", async ({ page }) => {
     .click();
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await expect(page.getByText("나비 · 오세아")).toBeVisible();
+  await expect(page.getByText("오세아 보호자 · 나비 · 10:40 예약")).toBeVisible();
   await expect(page.getByRole("button", { name: "접수 처리" }).last()).toBeVisible();
 });
 
