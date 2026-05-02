@@ -221,10 +221,20 @@ function RowCheckbox({ row }: { row: Row<Order> }) {
     <span
       data-row-interactive="true"
       className="inline-flex size-6 items-center justify-center"
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        toggleSelected();
+      }}
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+
+        if (event.key === " " || event.key === "Enter") {
+          event.preventDefault();
+          toggleSelected();
+        }
+      }}
     >
       <Checkbox
         aria-label={`${row.original.name} 선택`}
@@ -236,18 +246,6 @@ function RowCheckbox({ row }: { row: Row<Order> }) {
             ? "opacity-0 group-hover/order-row:opacity-100 group-focus-within/order-row:opacity-100 group-data-[state=selected]/order-row:opacity-100"
             : "pointer-events-none opacity-0"
         )}
-        onClick={(event) => {
-          event.stopPropagation();
-          toggleSelected();
-        }}
-        onKeyDown={(event) => {
-          event.stopPropagation();
-
-          if (event.key === " " || event.key === "Enter") {
-            event.preventDefault();
-            toggleSelected();
-          }
-        }}
       />
     </span>
   );
@@ -279,27 +277,25 @@ export function EmrDataTable({
           <span
             data-row-interactive="true"
             className="inline-flex size-6 items-center justify-center"
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected());
+            }}
             onMouseDown={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+
+              if (event.key === " " || event.key === "Enter") {
+                event.preventDefault();
+                table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected());
+              }
+            }}
           >
             <Checkbox
               aria-label="전체 선택"
               checked={table.getIsAllPageRowsSelected()}
               indeterminate={table.getIsSomePageRowsSelected()}
-              onClick={(event) => {
-                event.stopPropagation();
-                table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected());
-              }}
-              onKeyDown={(event) => {
-                event.stopPropagation();
-
-                if (event.key === " " || event.key === "Enter") {
-                  event.preventDefault();
-                  table.toggleAllPageRowsSelected(!table.getIsAllPageRowsSelected());
-                }
-              }}
             />
           </span>
         ),
