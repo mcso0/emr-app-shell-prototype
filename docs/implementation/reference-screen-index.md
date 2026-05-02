@@ -6,7 +6,7 @@ This index records the screenshots reviewed during MVP planning. The images are 
 
 ## Current Asset Status
 
-The repository currently contains the reference folder structure and this filename index only. The binary PNG files listed below are not present yet. PR7 should export or capture the Figma reference screens into these paths before pixel-level or layout-density QA begins.
+PR7 has started capturing binary reference images under `docs/assets/reference-screens/*`. At this point, only the 접수/예약 reception form drawer capture is present. Rows marked reference missing are still planned paths and must not be described as pixel-level alignment sources.
 
 ## Usage Rules
 
@@ -21,12 +21,12 @@ The repository currently contains the reference folder structure and this filena
 
 | Area | Reference file | Notes |
 |---|---|---|
-| 접수/예약 | `docs/assets/reference-screens/reception/reception-calendar-day.png` | Day calendar layout reference. |
-| 접수/예약 | `docs/assets/reference-screens/reception/reception-calendar-week.png` | Week calendar density reference. |
-| 접수/예약 | `docs/assets/reference-screens/reception/reception-calendar-month.png` | Month summary reference. |
-| 접수/예약 | `docs/assets/reference-screens/reception/reception-form-drawer.png` | Reception form drawer reference. |
-| 접수/예약 | `docs/assets/reference-screens/reception/reception-current-time-line.png` | Current-time line alignment reference. |
-| 접수/예약 | `docs/assets/reference-screens/reception/reception-toolbar-tabs.png` | Toolbar and side-panel tab feedback reference. |
+| 접수/예약 | `docs/assets/reference-screens/reception/reception-calendar-day.png` | Reference missing. Day calendar layout reference. |
+| 접수/예약 | `docs/assets/reference-screens/reception/reception-calendar-week.png` | Reference missing. Week calendar density reference. |
+| 접수/예약 | `docs/assets/reference-screens/reception/reception-calendar-month.png` | Reference missing. Month summary reference. |
+| 접수/예약 | `docs/assets/reference-screens/reception/reception-form-drawer.png` | Exists. Captured from Figma node `3600:14339`; walk-in reception drawer reference for field density, header/footer spacing, and action hierarchy. |
+| 접수/예약 | `docs/assets/reference-screens/reception/reception-current-time-line.png` | Reference missing. Current-time line alignment reference. |
+| 접수/예약 | `docs/assets/reference-screens/reception/reception-toolbar-tabs.png` | Reference missing. Toolbar and side-panel tab feedback reference. |
 | 진료(차트) | `docs/assets/reference-screens/chart/chart-workspace.png` | Chart workspace reference. |
 | 진료(차트) | `docs/assets/reference-screens/chart/chart-queue-side-panel.png` | Contracted treatment queue reference. |
 | 임상병리/계통 검사 | `docs/assets/reference-screens/lab/lab-result-entry.png` | Result entry workflow reference. |
