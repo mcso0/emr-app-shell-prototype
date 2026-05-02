@@ -1,5 +1,9 @@
 # MVP Implementation Backlog
 
+Updated: 2026-05-02
+
+Start with `docs/implementation/mvp-current-status.md` before using this backlog. PR 1-6 are complete; this document now separates completed prototype work from remaining backlog.
+
 | | |
 |---|---|
 | **Product** | 동물병원 전용 EMR SaaS 서비스 |
@@ -17,6 +21,40 @@
 - 환자는 내부 `id`와 직원용 `patient_no`를 분리한다.
 - 기존 조제/오더 큐 구현은 버리지 않고 공통 order workflow의 재사용 자산으로 일반화한다.
 - Post-MVP 항목은 이 백로그에 구현 task로 섞지 않는다.
+
+## Completed Prototype Wave
+
+| Area | Status | Notes |
+|---|---|---|
+| Domain Baseline | Completed | Connected EMR mock domain, status label mapper, domain baseline tests. |
+| Reception | Completed | Calendar/list/detail/check-in/walk-in prototype. |
+| Patient/Guardian Drawer | Completed | Read/edit drawers, session-only relationship management, CS history, latest shortcuts. |
+| Chart | Completed | Queue, past history, SOAP, Assessment, Assessment History, Order area. |
+| Lab/Image | Completed | Lab result entry, equipment receipt history, imaging reading/impression, attachments. |
+| Billing | Completed | Waiting/unpaid/closed queues, guardian billing groups, invoice line editing, payment actions. |
+
+## Recommended Next PR
+
+### PR7. Figma Reference Capture & MVP Screen Alignment
+
+**Goal:** 실제 Figma 화면 예시를 repo에 캡처 이미지로 저장하고, PR 1-6 화면을 reference에 맞춰 데모 품질로 정렬한다.
+
+**Implementation Tasks**
+
+| Task | Priority | Depends on | Suggested UI/module | Done when |
+|---|---|---|---|---|
+| Figma reference export | P0 | Figma access | `docs/assets/reference-screens/*` | 기능별 PNG가 index 경로에 저장된다. |
+| Reference index verification | P0 | reference export | `reference-screen-index.md` | 각 reference file의 존재 여부와 notes가 최신화된다. |
+| PR 1-6 screen audit | P0 | reference export | reception, drawers, chart, lab, imaging, billing | 주요 화면별 차이와 수정 항목이 정리된다. |
+| MVP screen alignment | P0 | screen audit | same modules | 기능을 유지한 채 정보 우선순위, 밀도, 간격, 상태 표현이 reference intent에 맞춰진다. |
+| Regression verification | P0 | screen alignment | Playwright | 기존 domain/reception/chart/lab-imaging/billing/app-shell 테스트가 통과한다. |
+
+**Acceptance Criteria**
+
+- Reference image binary files are present for the PR7 target screens.
+- 구현 화면이 reference의 workflow, density, and layout intent를 따른다.
+- 조제/처치 화면은 명시된 변경 없이 보존된다.
+- PR7 변경 후 주요 Playwright suite가 통과한다.
 
 ---
 

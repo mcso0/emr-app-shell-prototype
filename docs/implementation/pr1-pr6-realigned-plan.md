@@ -2,6 +2,21 @@
 
 Updated: 2026-05-02
 
+## Current Status
+
+PR 1-6 are complete and merged into `main` as of 2026-05-02. This document remains as the implementation record for that wave. For the current MVP state, next recommended work, and worker checklist, start with `docs/implementation/mvp-current-status.md`.
+
+Completion summary:
+
+- PR 1 Domain Baseline: completed.
+- PR 2 Reception Closeout: completed.
+- PR 3 Patient/Guardian Drawer: completed.
+- PR 4 Chart: completed.
+- PR 5 Lab/Image: completed.
+- PR 6 Billing: completed.
+
+Final validation for the merged wave included `npm run lint`, `npx tsc --noEmit`, `npm run build`, and the focused Playwright suite covering domain baseline, reception, chart, lab/imaging, billing, and app shell regressions.
+
 ## Summary
 
 PR 0 updates the product and implementation documents first. After that, PR 1-6 proceed in this order:

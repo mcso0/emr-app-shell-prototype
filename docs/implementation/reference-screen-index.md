@@ -4,6 +4,10 @@ Updated: 2026-05-02
 
 This index records the screenshots reviewed during MVP planning. The images are workflow and layout references only. They are not pixel-perfect implementation specs.
 
+## Current Asset Status
+
+The repository currently contains the reference folder structure and this filename index only. The binary PNG files listed below are not present yet. PR7 should export or capture the Figma reference screens into these paths before pixel-level or layout-density QA begins.
+
 ## Usage Rules
 
 - Use project foundation, tokens, and existing components first.
@@ -11,6 +15,7 @@ This index records the screenshots reviewed during MVP planning. The images are 
 - Preserve the current 조제/처치 screen design.
 - Hospital admin Order 관리 / Order 세트 examples are reference only in PR 1-6.
 - Binary screenshots from chat must be exported or copied into the paths below if persistent visual lookup is needed.
+- If a listed file does not exist, treat the row as a planned reference path, not an available asset.
 
 ## Index
 

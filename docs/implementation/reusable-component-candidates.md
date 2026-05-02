@@ -2,6 +2,8 @@
 
 Updated: 2026-05-02
 
+Start with `docs/implementation/mvp-current-status.md` before extracting shared UI. PR 1-6 now provide repeated queue/detail/table patterns, but PR7 Figma alignment should happen before broad component extraction.
+
 ## Strategy
 
 1. Use existing project components first.
@@ -32,6 +34,13 @@ Updated: 2026-05-02
 | Order detail/editor shell | 병원관리 reference | Later | Reference only in PR 1-6. |
 | Filter/sort/search toolbar | Most modules | PR 4+ | Search input, filter icon, sort icon, dropdowns. |
 | Multi-column operational shell | 진료, 임상병리, 영상, 수납 | PR 4+ | Queue/detail/right-panel layout. |
+
+## Post-PR 1-6 Notes
+
+- Work queue side panels now appear in reception, chart, lab, imaging, and billing. Candidate extraction is valid, but wait until PR7 confirms final density and layout intent.
+- Result input table, attachment strip, and invoice line table now have concrete prototype implementations. They should be reviewed against Figma before generalizing.
+- Status label mapping is already domain-level via `src/lib/emr-domain/status-labels.ts`; future work should extend the mapper rather than hard-code Korean status text in screens.
+- Do not refactor 조제/처치 as part of common component extraction unless a dedicated regression-safe plan explicitly includes it.
 
 ## Non-goals
 

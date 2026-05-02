@@ -1,5 +1,9 @@
 # MVP Gap Analysis
 
+Updated: 2026-05-02
+
+Start with `docs/implementation/mvp-current-status.md` for the current MVP state. This gap analysis keeps the original baseline and adds post-PR 1-6 reclassification notes below.
+
 | | |
 |---|---|
 | **Product** | 동물병원 전용 EMR SaaS 서비스 |
@@ -22,6 +26,8 @@
 
 ## Current Code Baseline
 
+> Historical note: the table below describes the pre-PR 1-6 baseline. See "2026-05-02 Post-PR 1-6 Status" for the current implemented state.
+
 | Area | Current State |
 |---|---|
 | App shell | `src/shell/*`, `src/modules/registry.ts`, `docs/app-shell-layout-contract.md`로 모듈형 레이아웃과 URL 기반 패널 상태가 잡혀 있다. |
@@ -35,6 +41,8 @@
 ---
 
 ## MVP Feature Gap Matrix
+
+> Historical note: the matrix below drove the PR 1-6 implementation wave. Several items that were Placeholder or Missing are now implemented as frontend prototype screens.
 
 | MVP Feature | Status | Current Implementation | Reusable Assets | Gap | Priority | Dependency | Next Action |
 |---|---|---|---|---|---|---|---|
@@ -109,3 +117,25 @@
 
 - 조제/처치 관련 파일은 필요한 경우가 아니면 수정하지 않는다.
 - 조제/처치 관련 파일을 건드리면 shell/nav와 해당 화면 회귀 테스트를 추가로 실행한다.
+
+---
+
+## 2026-05-02 Post-PR 1-6 Status
+
+| MVP Feature | Current Status | Notes |
+|---|---|---|
+| 보호자 및 환자 관리 | Implemented prototype | 환자/보호자 드로어, read/edit, 신규 환자 등록, 관계 관리, CS 이력, 최신내역이 mock/session 상태로 구현됨. |
+| 접수, 예약 및 대기열 관리 | Implemented prototype | 접수/예약 calendar/list/detail/check-in/walk-in flow 구현됨. |
+| 진료 Encounter 및 SOAP 차트 | Implemented prototype | 진료 대기열, 과거 이력, SOAP, Assessment, Order 영역 구현됨. |
+| 진단 및 처방 관리 | Partial | 진단/처방 domain mock과 차트 표시 기반은 있으나, 완전한 처방 작성/취소 UI는 남은 백로그. |
+| 업무 오더 생성 및 오더 큐 | Partial | 검사/영상/수납/차트가 order mock을 소비하지만, 전체 orders dashboard와 오더 생성 UI는 남은 백로그. |
+| 기본 수납 관리 | Implemented prototype | 수납 대기/미납/종료 목록, 보호자 청구 묶음, invoice line edit, payment action mock 구현됨. |
+| 병원 설정, 직원 및 권한 관리 | Missing/Deferred | PR 1-6 범위 밖. 역할/권한, 병원관리 UI, audit 조회는 후속 작업. |
+
+Remaining high-impact gaps:
+
+- Figma/reference image 기반 화면 정렬과 QA.
+- 실제 DB/API/auth/persistence 연결.
+- 권한/감사 로그 UI와 정책.
+- 처방 작성/오더 생성/전체 orders dashboard.
+- 입원과 병원관리 전체 화면.
