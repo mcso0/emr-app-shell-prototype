@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   BellIcon,
   CommandIcon,
@@ -12,8 +13,20 @@ import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useMockAuthStore } from "@/features/auth/session-store";
 
 export function TopMenu({ workspaceId }: { workspaceId: string }) {
+  const hydrated = useMockAuthStore((state) => state.hydrated);
+  const session = useMockAuthStore((state) => state.session);
+  const hydrate = useMockAuthStore((state) => state.hydrate);
+  const roleLabel = hydrated && session ? session.roleLabel : "Guest";
+  const roleId = hydrated && session ? session.role : "mock";
+  const roleInitial = hydrated && session ? session.roleLabel.slice(0, 1) : "G";
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
   return (
     <header className="flex h-[52px] items-center px-2.5">
       <Button
@@ -51,8 +64,22 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
         <Button variant="ghost" size="icon-sm" aria-label="설정">
           <SettingsIcon />
         </Button>
-        <div className="ml-1 flex size-7 items-center justify-center rounded-full bg-[var(--clair-color-status-info-background)] text-[11px] font-semibold text-[var(--clair-color-status-info-foreground)]">
-          이
+        <div
+          className="ml-1 flex h-8 max-w-[180px] items-center gap-2 rounded-[var(--clair-radius-full)] border border-[var(--clair-color-line-normal)] bg-white px-1.5 pr-2.5"
+          aria-label={`mock auth role ${roleLabel}`}
+          data-testid="top-menu-mock-user"
+        >
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-status-info-background)] text-[11px] font-semibold text-[var(--clair-color-status-info-foreground)]">
+            {roleInitial}
+          </span>
+          <span className="flex min-w-0 flex-col leading-none">
+            <span className="truncate text-[11px] font-semibold text-[var(--clair-color-label-strong)]">
+              {roleLabel}
+            </span>
+            <span className="truncate text-[10px] text-[var(--clair-color-label-neutral)]">
+              {roleId}
+            </span>
+          </span>
         </div>
       </div>
     </header>

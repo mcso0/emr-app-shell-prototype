@@ -4,6 +4,17 @@ Updated: 2026-05-02
 
 이 문서는 EMR SaaS MVP 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
+## 브랜치 작업 현황
+
+현재 작업 브랜치 `codex/auth-mock-foundation`에는 로그인 mock foundation 1차 범위가 구현되어 있다.
+
+- `/login`에서 `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 역할을 선택할 수 있다.
+- 선택한 역할은 sessionStorage 또는 localStorage 기반 mock session으로 저장할 수 있고, `/login`에서 logout으로 제거할 수 있다.
+- app shell 상단 사용자 영역은 저장된 mock session을 읽어 역할 라벨과 role id를 표시한다.
+- permission helper는 `canViewBilling`, `canEditOrders`, `canManageHospital` 등 순수 함수로만 제공한다.
+- 실제 auth provider, DB/API session, 전역 app shell auth guard, 역할별 UI 차단은 아직 연결하지 않았다.
+- 검증: `npm run lint`, `npx tsc --noEmit`, `npx playwright test tests/auth.spec.ts --reporter=line` 통과.
+
 ## 한눈에 보기
 
 현재 MVP는 **주요 외래 업무 흐름을 눌러볼 수 있는 프론트엔드 프로토타입 1차 완성본**이다. 아직 실제 DB/API 연동 제품은 아니지만, 접수에서 진료, 검사/영상, 조제, 수납까지 이어지는 핵심 화면과 연결형 mock 데이터가 구현되어 있다.
@@ -18,6 +29,7 @@ Updated: 2026-05-02
 - 조제/처치 기존 화면 보존
 - 수납
 - 연결형 EMR mock domain, status label mapper, Playwright 회귀 테스트
+- `/login` mock role/session foundation (`codex/auth-mock-foundation` 브랜치)
 
 현재 `main`에는 PR 1-6 구현이 병합되어 있다. 대표 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이다.
 
@@ -52,6 +64,7 @@ MVP 목표:
 | 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
 | 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
 | 수납 | 구현됨 | 대기/미납/종료 목록, 보호자 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 수납 액션 |
+| 로그인 mock | 브랜치 구현됨 | `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, auth helper/store, shell 역할 표시, permission helper |
 
 주요 구현 파일은 기능별 `src/features/*`에 있다. 새 작업자는 개별 파일을 보기 전에 이 문서와 관련 implementation 문서를 먼저 확인한다.
 
@@ -76,6 +89,12 @@ MVP 목표:
 - `npm run build`
 - `npx playwright test tests/billing.spec.ts tests/lab-imaging.spec.ts tests/chart.spec.ts tests/reception.spec.ts tests/domain-baseline.spec.ts tests/app-shell.spec.ts --reporter=line`
 
+`codex/auth-mock-foundation` 브랜치에서는 `/login` mock foundation과 shell 역할 표시 추가 후 아래 검증이 통과했다.
+
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npx playwright test tests/auth.spec.ts --reporter=line`
+
 화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
 
 ## 작업 시 주의사항
@@ -85,6 +104,7 @@ MVP 목표:
 - 조제/처치 화면의 현재 디자인과 동작은 명시 요청 없이는 수정하지 않는다.
 - 입원과 병원관리 전체 화면은 현재 PR 1-6 범위 밖이었다.
 - 병원관리의 Order 관리 / Order 세트 화면은 참고 자료일 뿐 구현 대상이 아니었다.
+- 로그인 mock foundation은 데모 역할 선택, session helper/store, shell 역할 표시, permission helper만 제공한다. 기존 app shell에는 전역 auth guard나 역할별 UI 차단이 없다.
 - UI는 Figma나 screenshot을 1:1 복제하지 않고, 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
 - 공통 컴포넌트 추출은 반복 패턴이 안정된 뒤 진행한다. PR7 화면 정렬 전에는 무리하게 공통화하지 않는다.
 - prototype 상태는 session-only이다. 새로고침 후 유지되는 persistence를 전제로 만들지 않는다.
