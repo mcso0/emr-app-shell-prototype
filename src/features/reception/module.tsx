@@ -22,8 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -50,6 +52,7 @@ import type { Appointment, Encounter } from "@/types/emr-domain";
 import type { ShellComponentProps } from "@/types/emr";
 
 const defaultVeterinarian = mockStaffUsers.find((user) => user.role === "veterinarian");
+const todayWorkingVeterinarians = mockStaffUsers.filter((user) => user.role === "veterinarian");
 const calendarViewItems = [
   { value: "day" as const, label: "일" },
   { value: "week" as const, label: "주" },
@@ -87,6 +90,7 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
 type ReceptionCalendarView = (typeof calendarViewItems)[number]["value"];
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
+type TodayWorkingVeterinarian = (typeof todayWorkingVeterinarians)[number];
 
 const getShortTime = (dateTime?: string) => {
   if (!dateTime) return "-";
@@ -328,7 +332,10 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
               key={summary.patient.id}
               summary={summary}
               selected={summary.patient.id === selectedPatientId}
-              onSelect={() => selectPatient(summary.patient.id)}
+              onSelect={() => {
+                selectPatient(summary.patient.id);
+                setActiveDrawer({ type: "reception-patient", id: summary.patient.id });
+              }}
             />
           ))
         ) : (
@@ -337,17 +344,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           </div>
         )}
       </EmrSubpanelBody>
-      <div className="border-t bg-[var(--clair-color-background-normal)] p-3">
-        <Button
-          className="w-full justify-center"
-          size="sm"
-          variant="default"
-          onClick={() => setActiveDrawer({ type: "reception-form", id: selectedPatientId })}
-        >
-          <CdsActionsPlusIcon data-icon="inline-start" />
-          스케줄 생성
-        </Button>
-      </div>
     </EmrSubpanel>
   );
 }
@@ -437,13 +433,25 @@ function ScheduleAppointmentCard({
 
 function ScheduleToolbar({
   onCreateWalkIn,
+  onToggleVeterinarian,
+  selectedVeterinarianIds,
   view,
   onViewChange,
 }: {
   onCreateWalkIn: () => void;
+  onToggleVeterinarian: (veterinarianId: string) => void;
+  selectedVeterinarianIds: string[];
   view: ReceptionCalendarView;
   onViewChange: (view: ReceptionCalendarView) => void;
 }) {
+  const selectedVeterinarians = todayWorkingVeterinarians.filter((veterinarian) =>
+    selectedVeterinarianIds.includes(veterinarian.id)
+  );
+  const veterinarianLabel =
+    selectedVeterinarians.length === 1
+      ? selectedVeterinarians[0]?.name
+      : `수의사 ${selectedVeterinarians.length}`;
+
   return (
     <div className="flex min-h-[68px] shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -457,10 +465,33 @@ function ScheduleToolbar({
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Button variant="outline" size="sm" className="min-w-[108px] justify-start bg-card">
-          <CdsActionsSearchIcon data-icon="inline-start" />
-          박민수
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={buttonVariants({
+              variant: "outline",
+              size: "sm",
+              className: "min-w-[124px] justify-start bg-card",
+            })}
+          >
+            <CdsActionsSearchIcon data-icon="inline-start" />
+            {veterinarianLabel}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
+              오늘 근무 수의사
+            </div>
+            <DropdownMenuSeparator />
+            {todayWorkingVeterinarians.map((veterinarian) => (
+              <DropdownMenuCheckboxItem
+                key={veterinarian.id}
+                checked={selectedVeterinarianIds.includes(veterinarian.id)}
+                onCheckedChange={() => onToggleVeterinarian(veterinarian.id)}
+              >
+                <span className="truncate">{veterinarian.name}</span>
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <SegmentedControl
           aria-label="접수 캘린더 보기"
           items={calendarViewItems}
@@ -500,40 +531,57 @@ function DayScheduleBoard({
   onCheckIn,
   onSelectAppointment,
   selectedAppointmentId,
+  selectedVeterinarians,
 }: {
   appointments: Appointment[];
   onCheckIn: (appointment: Appointment) => void;
-  onSelectAppointment: (appointmentId: Appointment["id"]) => void;
+  onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
+  selectedVeterinarians: TodayWorkingVeterinarian[];
 }) {
   const dayScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
   const currentTimeOffset = getDayCurrentTimeOffset();
+  const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
 
   return (
     <div className="flex min-h-[720px] flex-col bg-card" data-testid="reception-day-calendar">
-      <div className="sticky top-0 z-30 grid grid-cols-[56px_minmax(0,1fr)] border-b bg-card shadow-[0_1px_0_var(--border)]">
+      <div
+        className="sticky top-0 z-30 grid border-b bg-card shadow-[0_1px_0_var(--border)]"
+        style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
+      >
         <div className="border-r" />
-        <div className="p-2">
-          <div className="flex h-12 items-center rounded-md bg-[var(--clair-color-primary-normal)] px-3 text-[13px] font-semibold text-white">
-            박민수
-          </div>
-          <div className="mt-1 flex flex-col gap-1">
-            {appointments.slice(0, 2).map((appointment) => (
-              <button
-                key={`all-day-${appointment.id}`}
-                type="button"
-                className="truncate rounded border border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] px-2 py-0.5 text-left text-[11px] font-medium text-[var(--clair-color-primary-normal)]"
-                onClick={() => onSelectAppointment(appointment.id)}
-              >
-                예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
-                {appointment.visitPurpose ?? "내원"}
-              </button>
-            ))}
-          </div>
-        </div>
+        {selectedVeterinarians.map((veterinarian) => {
+          const laneAppointments = appointments.filter(
+            (appointment) => appointment.assignedVeterinarianId === veterinarian.id
+          );
+
+          return (
+            <div key={veterinarian.id} className="border-r p-2 last:border-r-0">
+              <div className="flex h-12 items-center rounded-md bg-[var(--clair-color-primary-normal)] px-3 text-[13px] font-semibold text-white">
+                {veterinarian.name}
+              </div>
+              <div className="mt-1 flex flex-col gap-1">
+                {laneAppointments.slice(0, 2).map((appointment) => (
+                  <button
+                    key={`all-day-${veterinarian.id}-${appointment.id}`}
+                    type="button"
+                    className="truncate rounded border border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] px-2 py-0.5 text-left text-[11px] font-medium text-[var(--clair-color-primary-normal)]"
+                    onClick={() => onSelectAppointment(appointment)}
+                  >
+                    예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
+                    {appointment.visitPurpose ?? "내원"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="relative grid flex-1 grid-cols-[56px_minmax(0,1fr)]">
+      <div
+        className="relative grid flex-1"
+        style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
+      >
         <div
           className="relative border-r bg-card"
           style={{ minHeight: dayScheduleHeight }}
@@ -565,7 +613,7 @@ function DayScheduleBoard({
             </div>
           ))}
         </div>
-        <div className="relative min-w-0">
+        <div className="relative col-span-full col-start-2 min-w-0">
           <div
             className="absolute -left-1 right-0 z-10 flex items-center"
             style={{ top: currentTimeOffset }}
@@ -574,34 +622,43 @@ function DayScheduleBoard({
             <span className="h-px flex-1 bg-[var(--clair-color-atomic-red-300)]" />
           </div>
           {dayScheduleHours.map((hour) => {
-            const hourAppointments = appointments.filter(
-              (appointment) => getAppointmentHour(appointment) === hour
-            );
-
             return (
               <div
                 key={hour}
                 className={cn(
-                  "grid grid-cols-1 border-b",
+                  "grid border-b",
                   !isBusinessHourRow(hour) && "bg-[var(--clair-color-atomic-gray-50)]/70"
                 )}
-                style={{ minHeight: dayScheduleHourRowHeight }}
+                style={{
+                  gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
+                  minHeight: dayScheduleHourRowHeight,
+                }}
               >
-                <div className="flex min-w-0 gap-2 p-2">
-                  {hourAppointments.length ? (
-                    hourAppointments.map((appointment) => (
-                      <ScheduleAppointmentCard
-                        key={appointment.id}
-                        appointment={appointment}
-                        selected={appointment.id === selectedAppointmentId}
-                        onSelect={() => onSelectAppointment(appointment.id)}
-                        onCheckIn={() => onCheckIn(appointment)}
-                      />
-                    ))
-                  ) : (
-                    <div className="min-h-12 flex-1 rounded-md border border-dashed border-transparent" />
-                  )}
-                </div>
+                {selectedVeterinarians.map((veterinarian) => {
+                  const hourAppointments = appointments.filter(
+                    (appointment) =>
+                      appointment.assignedVeterinarianId === veterinarian.id &&
+                      getAppointmentHour(appointment) === hour
+                  );
+
+                  return (
+                    <div key={`${hour}-${veterinarian.id}`} className="flex min-w-0 gap-2 border-r p-2 last:border-r-0">
+                      {hourAppointments.length ? (
+                        hourAppointments.map((appointment) => (
+                          <ScheduleAppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            selected={appointment.id === selectedAppointmentId}
+                            onSelect={() => onSelectAppointment(appointment)}
+                            onCheckIn={() => onCheckIn(appointment)}
+                          />
+                        ))
+                      ) : (
+                        <div className="min-h-12 flex-1 rounded-md border border-dashed border-transparent" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -619,7 +676,7 @@ function WeekScheduleBoard({
 }: {
   appointments: Appointment[];
   onCheckIn: (appointment: Appointment) => void;
-  onSelectAppointment: (appointmentId: Appointment["id"]) => void;
+  onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
 }) {
   return (
@@ -646,7 +703,7 @@ function WeekScheduleBoard({
                 key={`${day.day}-${appointment.id}`}
                 appointment={appointment}
                 selected={Boolean(day.active && appointment.id === selectedAppointmentId)}
-                onSelect={() => onSelectAppointment(appointment.id)}
+                onSelect={() => onSelectAppointment(appointment)}
                 onCheckIn={() => onCheckIn(appointment)}
               />
             ))}
@@ -686,12 +743,14 @@ function ReceptionScheduleBoard({
   onCheckIn,
   onSelectAppointment,
   selectedAppointmentId,
+  selectedVeterinarians,
   view,
 }: {
   appointments: Appointment[];
   onCheckIn: (appointment: Appointment) => void;
-  onSelectAppointment: (appointmentId: Appointment["id"]) => void;
+  onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
+  selectedVeterinarians: TodayWorkingVeterinarian[];
   view: ReceptionCalendarView;
 }) {
   return (
@@ -702,6 +761,7 @@ function ReceptionScheduleBoard({
             <DayScheduleBoard
               appointments={appointments}
               selectedAppointmentId={selectedAppointmentId}
+              selectedVeterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
               onCheckIn={onCheckIn}
             />
@@ -726,15 +786,48 @@ function ReceptionScheduleBoard({
 export function ReceptionContent() {
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const [calendarView, setCalendarView] = useState<ReceptionCalendarView>("day");
+  const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
+    todayWorkingVeterinarians.map((veterinarian) => veterinarian.id)
+  );
   const selectedAppointmentId = useReceptionStore((state) => state.selectedAppointmentId);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
   const checkInAppointment = useReceptionStore((state) => state.checkInAppointment);
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectAppointment = useReceptionStore((state) => state.selectAppointment);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+  const selectedVeterinarians = useMemo(
+    () =>
+      todayWorkingVeterinarians.filter((veterinarian) =>
+        selectedVeterinarianIds.includes(veterinarian.id)
+      ),
+    [selectedVeterinarianIds]
+  );
+  const visibleAppointments = useMemo(
+    () =>
+      appointments.filter(
+        (appointment) =>
+          appointment.assignedVeterinarianId &&
+          selectedVeterinarianIds.includes(appointment.assignedVeterinarianId)
+      ),
+    [appointments, selectedVeterinarianIds]
+  );
   const selectedBundle = getMockPatientBundle(selectedPatientId);
   const selectedPatient = selectedBundle?.patient;
   const selectedGuardian = selectedBundle?.primaryGuardian;
+  const toggleVeterinarian = (veterinarianId: string) => {
+    setSelectedVeterinarianIds((current) => {
+      if (current.includes(veterinarianId)) {
+        return current.length > 1 ? current.filter((id) => id !== veterinarianId) : current;
+      }
+
+      return [...current, veterinarianId];
+    });
+  };
+  const handleSelectAppointment = (appointment: Appointment) => {
+    selectAppointment(appointment.id);
+    setActiveDrawer({ type: "reception-appointment", id: appointment.id });
+  };
 
   if (!selectedPatient) {
     return (
@@ -749,6 +842,8 @@ export function ReceptionContent() {
       <ScheduleToolbar
         view={calendarView}
         onViewChange={setCalendarView}
+        selectedVeterinarianIds={selectedVeterinarianIds}
+        onToggleVeterinarian={toggleVeterinarian}
         onCreateWalkIn={() =>
           createWalkInCheckIn({
             guardianId: selectedGuardian?.id,
@@ -759,10 +854,11 @@ export function ReceptionContent() {
         }
       />
       <ReceptionScheduleBoard
-        appointments={appointments}
+        appointments={visibleAppointments}
         selectedAppointmentId={selectedAppointmentId}
+        selectedVeterinarians={selectedVeterinarians}
         view={calendarView}
-        onSelectAppointment={selectAppointment}
+        onSelectAppointment={handleSelectAppointment}
         onCheckIn={checkInAppointment}
       />
     </div>
@@ -792,9 +888,20 @@ function ReceptionFormField({
 export function ReceptionDrawer() {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
+  const checkInAppointment = useReceptionStore((state) => state.checkInAppointment);
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
-  const patientId = activeDrawer?.type === "reception-form" ? activeDrawer.id : selectedPatientId;
+  const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+  const selectedAppointment =
+    activeDrawer?.type === "reception-appointment"
+      ? appointments.find((appointment) => appointment.id === activeDrawer.id)
+      : undefined;
+  const patientId =
+    selectedAppointment?.patientId ??
+    (activeDrawer?.type === "reception-form" || activeDrawer?.type === "reception-patient"
+      ? activeDrawer.id
+      : selectedPatientId);
   const bundle = getMockPatientBundle(patientId) ?? getMockPatientBundle(selectedPatientId);
   const patient = bundle?.patient;
   const guardian = bundle?.primaryGuardian;
@@ -816,6 +923,25 @@ export function ReceptionDrawer() {
     <div className="flex h-[calc(100%-48px)] flex-col">
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
+          <section className="rounded-lg border bg-[var(--clair-color-background-surface)] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-[14px] font-semibold">
+                  {selectedAppointment ? "예약 상세" : "접수 상세"}
+                </div>
+                <div className="mt-1 text-[12px] text-muted-foreground">
+                  {patient.name} · {guardian?.name ?? "보호자 미지정"}
+                </div>
+              </div>
+              {selectedAppointment ? (
+                <ReceptionStatusBadge
+                  label={getStatusLabel("appointment", selectedAppointment.status)}
+                  tone={getAppointmentTone(selectedAppointment.status)}
+                />
+              ) : null}
+            </div>
+          </section>
+
           <section className="grid grid-cols-2 gap-3">
             <ReceptionFormField label="진료과" required>
               <Input value="영상의학과 · 방사선종양학과" readOnly className="h-9 bg-card" />
@@ -856,10 +982,19 @@ export function ReceptionDrawer() {
               <Input value="26.05.01" readOnly className="h-9 bg-card" />
             </ReceptionFormField>
             <ReceptionFormField label="진료시작시간">
-              <Input value="진료시간" disabled className="h-9 bg-input/50" />
+              <Input
+                value={selectedAppointment ? getShortTime(selectedAppointment.scheduledStartAt) : "진료시간"}
+                disabled={!selectedAppointment}
+                readOnly={Boolean(selectedAppointment)}
+                className="h-9 bg-card disabled:bg-input/50"
+              />
             </ReceptionFormField>
             <ReceptionFormField label="소요시간" required>
-              <Input value="30분" readOnly className="h-9 bg-card" />
+              <Input
+                value={selectedAppointment ? getAppointmentDurationLabel(selectedAppointment) : "30분"}
+                readOnly
+                className="h-9 bg-card"
+              />
             </ReceptionFormField>
           </section>
 
@@ -912,6 +1047,12 @@ export function ReceptionDrawer() {
         </Button>
         <Button
           onClick={() => {
+            if (selectedAppointment) {
+              checkInAppointment(selectedAppointment);
+              setActiveDrawer(null);
+              return;
+            }
+
             createWalkInCheckIn({
               guardianId: guardian?.id,
               patientId: patient.id,
@@ -920,8 +1061,9 @@ export function ReceptionDrawer() {
             });
             setActiveDrawer(null);
           }}
+          disabled={Boolean(selectedAppointment && selectedAppointment.status !== "confirmed")}
         >
-          생성
+          {selectedAppointment ? "접수 처리" : "생성"}
         </Button>
       </div>
     </div>

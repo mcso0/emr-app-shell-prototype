@@ -34,15 +34,52 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await expect(page.getByText("진료 대기열")).toHaveCount(0);
   await expect(page.getByText("잠금 주의사항")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "접수 폼" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "스케줄 생성" })).toHaveCount(0);
 });
 
 test("reception calendar options expose Excel import and export actions", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
-  await page.getByRole("button", { name: "캘린더 옵션" }).click();
+  const calendarOptionsButton = page.getByRole("button", { name: "캘린더 옵션" });
+  await expect(async () => {
+    await calendarOptionsButton.click();
+    await expect(calendarOptionsButton).toHaveAttribute("aria-expanded", "true", {
+      timeout: 1_000,
+    });
+  }).toPass();
 
   await expect(page.getByRole("menuitem", { name: "Excel 다운로드" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Excel 업로드" })).toBeVisible();
+});
+
+test("reception veterinarian selector controls visible schedule lanes", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const calendar = page.getByTestId("reception-day-calendar");
+
+  await expect(calendar.getByText("이수지", { exact: true }).first()).toBeVisible();
+  await expect(calendar.getByText("김도윤", { exact: true }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "수의사 2" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "김도윤" }).click();
+
+  await expect(page.getByRole("button", { name: "이수지" })).toBeVisible();
+  await expect(calendar.getByText("김도윤", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("appointment-card-appointment-nabi-260501")).toHaveCount(0);
+});
+
+test("reception cards open the reception detail drawer", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  await page
+    .getByTestId("appointment-card-appointment-nabi-260501")
+    .getByRole("button")
+    .first()
+    .click();
+
+  await expect(page.getByText("예약 상세")).toBeVisible();
+  await expect(page.getByText("나비 · 오세아")).toBeVisible();
+  await expect(page.getByRole("button", { name: "접수 처리" }).last()).toBeVisible();
 });
 
 test("nav rail maps menu labels to the intended modules", async ({ page }) => {
@@ -112,6 +149,8 @@ test("reception creates a walk-in waiting row for the selected patient", async (
 
   const sidePanel = page.locator("aside").first();
   await sidePanel.getByText("두부 · P-260501-0002").click();
+  await expect(page.getByText("접수 상세")).toBeVisible();
+  await page.getByRole("button", { name: "상세 닫기" }).click();
   await page.getByRole("button", { name: "현장 접수" }).click();
 
   await expect(page.getByTestId("patient-card-patient-dubu")).toContainText("대기");
