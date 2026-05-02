@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { CheckIcon, WorkspaceLogoMarkIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,7 @@ import {
   type MockAuthRole,
   type MockSessionStorageMode,
 } from "@/features/auth/mock-session";
-import { useMockAuthStore } from "@/features/auth/session-store";
+import { useAuthClient } from "@/features/auth/auth-client";
 import { cn } from "@/lib/utils";
 
 const storageOptions: Array<{
@@ -53,20 +53,28 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const [selectedRole, setSelectedRole] = useState<MockAuthRole>("front_desk");
   const [storageMode, setStorageMode] = useState<MockSessionStorageMode>("session");
-  const hydrated = useMockAuthStore((state) => state.hydrated);
-  const session = useMockAuthStore((state) => state.session);
-  const hydrate = useMockAuthStore((state) => state.hydrate);
-  const login = useMockAuthStore((state) => state.login);
-  const logout = useMockAuthStore((state) => state.logout);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const { hydrated, session, hydrate, signInWithMockRole, signOut } = useAuthClient();
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    login(selectedRole, storageMode);
-    router.replace(getSafeNextHref(searchParams.get("next")));
+    setIsSubmitting(true);
+    setLoginError(null);
+
+    try {
+      await signInWithMockRole(selectedRole, storageMode, {
+        forceProviderError: searchParams.get("mockProviderError") === "1",
+      });
+      router.replace(getSafeNextHref(searchParams.get("next")));
+    } catch {
+      setLoginError("로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요.");
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -117,8 +125,17 @@ export function LoginForm() {
                   />
                 </Field>
 
-                <Button type="submit" size="lg" className="w-full">
-                  로그인
+                {loginError ? (
+                  <p
+                    role="alert"
+                    className="rounded-[var(--clair-radius-md)] border border-[var(--clair-color-status-negative-background)] bg-[var(--clair-color-status-negative-background)] px-3 py-2 text-[13px] leading-5 text-[var(--clair-color-status-negative-foreground)]"
+                  >
+                    {loginError}
+                  </p>
+                ) : null}
+
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? "로그인 중" : "로그인"}
                 </Button>
               </FieldGroup>
             </form>
@@ -254,7 +271,7 @@ export function LoginForm() {
                       </p>
                     </div>
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={logout}>
+                  <Button type="button" variant="outline" size="sm" onClick={signOut}>
                     로그아웃
                   </Button>
                 </div>

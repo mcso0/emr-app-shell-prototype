@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMockAuthStore } from "@/features/auth/session-store";
+import { useAuthClient } from "@/features/auth/auth-client";
 
 type AuthGateProps = {
   children: React.ReactNode;
@@ -20,9 +20,7 @@ export function AuthGate({ children }: AuthGateProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const hydrated = useMockAuthStore((state) => state.hydrated);
-  const session = useMockAuthStore((state) => state.session);
-  const hydrate = useMockAuthStore((state) => state.hydrate);
+  const { hydrated, session, hydrate } = useAuthClient();
 
   useEffect(() => {
     hydrate();

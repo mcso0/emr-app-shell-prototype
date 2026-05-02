@@ -14,14 +14,11 @@ import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { useMockAuthStore } from "@/features/auth/session-store";
+import { useAuthClient } from "@/features/auth/auth-client";
 
 export function TopMenu({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
-  const hydrated = useMockAuthStore((state) => state.hydrated);
-  const session = useMockAuthStore((state) => state.session);
-  const hydrate = useMockAuthStore((state) => state.hydrate);
-  const logout = useMockAuthStore((state) => state.logout);
+  const { hydrated, session, hydrate, signOut } = useAuthClient();
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const roleId = hydrated && session ? session.role : "mock";
   const roleInitial = hydrated && session ? session.roleLabel.slice(0, 1) : "G";
@@ -31,7 +28,7 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
   }, [hydrate]);
 
   function handleLogout() {
-    logout();
+    signOut();
     router.replace("/login");
   }
 
