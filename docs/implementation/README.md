@@ -6,7 +6,8 @@
 
 | 문서 | 역할 |
 |---|---|
-| `mvp-current-status.md` | 현재 MVP 상태를 설명하는 단일 시작점 |
+| `mvp-current-status.md` | 현재 작업 상태와 Sales Demo Prototype 목표를 설명하는 단일 시작점 |
+| `demo-sales-strategy.md` | 잠재 고객 계약 전환을 위한 데모 목적, 시나리오, 우선순위 |
 | `mvp-parallel-workstreams.md` | 병렬 작업 브랜치/워크트리 전략과 A/B/C/D 핸드오프 프롬프트 |
 | `pr1-pr6-realigned-plan.md` | PR 1-6 구현 순서와 완료 기록 |
 | `mvp-gap-analysis.md` | MVP 요구와 현재 구현 사이의 갭 및 다음 우선순위 |
@@ -21,6 +22,7 @@
 ## 작업 시작 체크리스트
 
 - `mvp-current-status.md`를 읽고 현재 완료/제외 범위를 확인한다.
+- 데모 품질, 데모 데이터, 세일즈 시나리오와 관련된 작업이면 `demo-sales-strategy.md`를 함께 확인한다.
 - 병렬 작업이면 `mvp-parallel-workstreams.md`를 읽고 전용 worktree에서 시작한다.
 - 화면 작업이면 `reference-screen-index.md`와 실제 이미지 파일 존재 여부를 확인한다.
 - Next.js application code를 쓰기 전 `node_modules/next/dist/docs/`의 관련 문서를 확인한다.

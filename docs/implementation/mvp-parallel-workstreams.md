@@ -2,11 +2,11 @@
 
 Updated: 2026-05-02
 
-이 문서는 EMR SaaS MVP 작업을 여러 Codex/AI 채팅에서 병렬로 진행하기 위한 작업 분배 기준이다. 각 채팅은 자기 전용 `git worktree`와 브랜치를 만들고, 이 문서의 범위 안에서만 작업한다.
+이 문서는 EMR SaaS 작업을 여러 Codex/AI 채팅에서 병렬로 진행하기 위한 작업 분배 기준이다. 각 채팅은 자기 전용 `git worktree`와 브랜치를 만들고, 이 문서의 범위 안에서만 작업한다.
 
 ## Purpose
 
-현재 primary 작업은 **PR7: Figma Reference Capture & MVP Screen Alignment**이다. 이 작업은 접수/예약, 환자/보호자 드로어, 진료(차트), 검사/영상, 수납 화면의 UI 파일을 넓게 건드릴 수 있다.
+현재 primary 작업은 **PR7: Sales Demo Readiness & Screen Alignment**이다. 이 작업은 접수/예약, 환자/보호자 드로어, 진료(차트), 검사/영상, 수납 화면의 UI 파일을 넓게 건드릴 수 있다.
 
 따라서 A/B/C/D 병렬 작업은 PR7 UI 정렬과 충돌하지 않는 foundation 작업으로 제한한다.
 
@@ -15,7 +15,7 @@ Updated: 2026-05-02
 - 각 채팅의 작업 범위와 금지 범위를 명확히 한다.
 - 같은 repo 폴더에서 여러 채팅이 동시에 `git checkout`하지 않게 한다.
 - PR7 UI 작업과 A/B/C/D foundation 작업의 merge conflict 가능성을 낮춘다.
-- 나중에 MVP 통합 순서와 검증 기준을 분명히 남긴다.
+- 나중에 Sales Demo Prototype 통합 순서와 검증 기준을 분명히 남긴다.
 
 ## Global Start Procedure
 
@@ -41,7 +41,7 @@ Next.js application code를 작성하거나 수정해야 한다면, 코드 작�
 
 | Workstream | Branch | Worktree path |
 |---|---|---|
-| PR7 Reference UI Alignment | `codex/pr7-reference-ui-alignment` | `../emr-app-shell-prototype-pr7` |
+| PR7 Sales Demo Readiness | `codex/pr7-sales-demo-readiness` | `../emr-app-shell-prototype-pr7` |
 | A. Auth Mock Foundation | `codex/auth-mock-foundation` | `../emr-app-shell-prototype-auth` |
 | B. Audit Log Foundation | `codex/audit-log-foundation` | `../emr-app-shell-prototype-audit` |
 | C. Service Catalog / Role Seed | `codex/service-catalog-role-seed` | `../emr-app-shell-prototype-service-catalog` |
@@ -62,7 +62,7 @@ git worktree add <worktree-path> <branch-name>
 - 병원관리 Order 관리 / Order 세트 reference는 구현 대상이 아니다.
 - PR7 UI 정렬과 충돌할 수 있는 파일은 수정하지 않는다.
 - 기존 feature UI에 연결하기보다, 새 foundation 파일과 테스트를 우선한다.
-- 기능을 실제 DB/API/auth/provider와 연결하지 않는다. 현재 MVP는 frontend prototype과 mock/session-only foundation이다.
+- 기능을 실제 DB/API/auth/provider와 연결하지 않는다. 현재 작업 목표는 frontend prototype과 mock/session-only foundation 기반의 Sales Demo Prototype이다.
 
 ## Do Not Touch During A/B/C/D
 
@@ -79,12 +79,12 @@ src/styles/tokens/*
 src/app/globals.css
 ```
 
-## Current Primary Workstream: PR7 Reference UI Alignment
+## Current Primary Workstream: PR7 Sales Demo Readiness
 
 Branch:
 
 ```text
-codex/pr7-reference-ui-alignment
+codex/pr7-sales-demo-readiness
 ```
 
 Worktree:
@@ -97,8 +97,9 @@ Goal:
 
 - Figma/reference screen captures를 `docs/assets/reference-screens/*`에 저장한다.
 - `docs/implementation/reference-screen-index.md`의 실제 파일 존재 여부와 notes를 갱신한다.
-- PR 1-6 화면을 reference intent에 맞춰 정렬한다.
+- PR 1-6 화면을 reference intent와 세일즈 데모 목적에 맞춰 정렬한다.
 - 기능과 mock data flow는 유지하고, 정보 우선순위, 밀도, 간격, 상태 표현, 텍스트를 다듬는다.
+- `docs/implementation/demo-sales-strategy.md`의 대표 외래 시나리오가 접수부터 수납까지 설명 가능한지 확인한다.
 
 Allowed areas:
 
@@ -157,7 +158,7 @@ Out of scope:
 - 기존 app shell route에 전역 auth guard 적용
 - 실제 auth provider 연동
 - DB/API session 연동
-- PR7 UI 파일 수정
+- PR7 데모/화면 정렬 파일 수정
 - nav/shell 대규모 변경
 
 Expected result:
@@ -325,7 +326,7 @@ npx playwright test tests/api-boundary.spec.ts --reporter=line
 2. C. Service Catalog / Role Seed
 3. B. Audit Log Foundation
 4. A. Auth Mock Foundation
-5. PR7 Reference UI Alignment
+5. PR7 Sales Demo Readiness
 
 이 순서는 UI 충돌 가능성이 낮은 foundation 작업을 먼저 합치고, 화면 변경 폭이 큰 PR7을 마지막에 확인하기 위한 것이다.
 
@@ -354,7 +355,7 @@ cd ../emr-app-shell-prototype-auth
 - 기존 app shell에 전역 auth guard를 걸지 마.
 - 실제 auth provider나 DB/API session을 붙이지 마.
 - `src/features/reception/*`, `src/features/chart/*`, `src/features/lab-imaging/*`, `src/features/billing/*`, `src/features/reception/profile-drawer.tsx`, `src/components/emr/*`, `src/styles/tokens/*`, `src/app/globals.css`를 수정하지 마.
-- PR7 UI 작업 파일을 건드리지 마.
+- PR7 데모/화면 정렬 작업 파일을 건드리지 마.
 
 검증은 가능한 범위에서 `npm run lint`, `npx tsc --noEmit`, `npx playwright test tests/auth.spec.ts --reporter=line`로 해줘.
 ```

@@ -2,14 +2,14 @@
 
 Updated: 2026-05-02
 
-Start with `docs/implementation/mvp-current-status.md` before using this backlog. PR 1-6 are complete; this document now separates completed prototype work from remaining backlog.
+Start with `docs/implementation/mvp-current-status.md` before using this backlog. PR 1-6 are complete; this document now separates completed prototype work from remaining backlog. The immediate working target is the Sales Demo Prototype described in `docs/implementation/demo-sales-strategy.md`.
 
 | | |
 |---|---|
 | **Product** | 동물병원 전용 EMR SaaS 서비스 |
 | **Source Feature Spec** | `docs/features/동물병원 전용 EMR SaaS 서비스_Feature Specification_2026-05-01.md` |
 | **Gap Analysis** | `docs/implementation/mvp-gap-analysis.md` |
-| **Purpose** | MVP를 구현 가능한 Epic, User Story, Implementation Task로 분해한다. |
+| **Purpose** | 제품 MVP로 확장하기 위한 Epic, User Story, Implementation Task를 유지하되, 가까운 우선순위는 Sales Demo Prototype 완성에 맞춘다. |
 
 ---
 
@@ -35,9 +35,9 @@ Start with `docs/implementation/mvp-current-status.md` before using this backlog
 
 ## Recommended Next PR
 
-### PR7. Figma Reference Capture & MVP Screen Alignment
+### PR7. Sales Demo Readiness & Screen Alignment
 
-**Goal:** 실제 Figma 화면 예시를 repo에 캡처 이미지로 저장하고, PR 1-6 화면을 reference에 맞춰 데모 품질로 정렬한다.
+**Goal:** 실제 Figma 화면 예시를 repo에 캡처 이미지로 저장하고, PR 1-6 화면을 reference와 세일즈 데모 목적에 맞춰 정렬한다.
 
 **Implementation Tasks**
 
@@ -46,7 +46,8 @@ Start with `docs/implementation/mvp-current-status.md` before using this backlog
 | Figma reference export | P0 | Figma access | `docs/assets/reference-screens/*` | 기능별 PNG가 index 경로에 저장된다. |
 | Reference index verification | P0 | reference export | `reference-screen-index.md` | 각 reference file의 존재 여부와 notes가 최신화된다. |
 | PR 1-6 screen audit | P0 | reference export | reception, drawers, chart, lab, imaging, billing | 주요 화면별 차이와 수정 항목이 정리된다. |
-| MVP screen alignment | P0 | screen audit | same modules | 기능을 유지한 채 정보 우선순위, 밀도, 간격, 상태 표현이 reference intent에 맞춰진다. |
+| Sales demo screen alignment | P0 | screen audit | same modules | 기능을 유지한 채 정보 우선순위, 밀도, 간격, 상태 표현이 reference intent와 데모 설득 목적에 맞춰진다. |
+| Demo scenario audit | P0 | `demo-sales-strategy.md` | reception, chart, lab, imaging, billing | 대표 외래 케이스가 접수부터 수납까지 끊기지 않고 설명 가능한지 확인된다. |
 | Regression verification | P0 | screen alignment | Playwright | 기존 domain/reception/chart/lab-imaging/billing/app-shell 테스트가 통과한다. |
 
 **Acceptance Criteria**
