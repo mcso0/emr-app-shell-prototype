@@ -35,8 +35,9 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const Drawer = moduleDefinition.drawer;
+  const isReceptionFormDrawer = activeDrawer?.type === "reception-form";
   const drawerTitle =
-    activeDrawer?.type === "reception-form"
+    isReceptionFormDrawer
       ? "접수"
       : activeDrawer?.type === "reception-patient"
         ? "환자 정보"
@@ -172,20 +173,22 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
               }}
             >
-              <div className="flex h-12 items-center justify-between border-b px-4">
-                <div>
-                  <div className="text-sm font-semibold">{drawerTitle}</div>
-                  <div className="text-[11px] text-muted-foreground">{activeDrawer.id}</div>
+              {!isReceptionFormDrawer ? (
+                <div className="flex h-12 items-center justify-between border-b px-4">
+                  <div>
+                    <div className="text-sm font-semibold">{drawerTitle}</div>
+                    <div className="text-[11px] text-muted-foreground">{activeDrawer.id}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="상세 닫기"
+                    onClick={() => setActiveDrawer(null)}
+                  >
+                    <CloseIcon />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="상세 닫기"
-                  onClick={() => setActiveDrawer(null)}
-                >
-                  <CloseIcon />
-                </Button>
-              </div>
+              ) : null}
               <Drawer {...slotProps} />
             </motion.aside>
           ) : null}

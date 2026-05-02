@@ -216,7 +216,12 @@ test("reception creates a walk-in waiting row for the selected patient", async (
   await sidePanel.getByText("두부 · P-260501-0002").click();
   await expect(page.getByText("환자 정보")).toBeVisible();
   await page.getByRole("button", { name: "상세 닫기" }).click();
+  await expect(page).not.toHaveURL(/drawer=/);
   await page.getByRole("button", { name: "현장 접수" }).click();
+  await expect(page).toHaveURL(/drawer=reception-form/);
+  await expect(page.getByRole("heading", { name: "접수" })).toBeVisible();
+  await expect(page.getByLabel("방문 목적")).toBeVisible();
+  await page.getByRole("button", { name: "생성" }).click();
 
   await expect(page.getByTestId("patient-card-patient-dubu")).toContainText("대기");
 });
