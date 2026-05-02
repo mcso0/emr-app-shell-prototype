@@ -19,10 +19,15 @@
 - 문서: `docs/completed/auth/2026-05-03-login-ux-state.md`
 - 요약: login submit pending/disabled 상태와 provider error 표시 영역을 추가했다.
 
+### Supabase Auth Mapping
+
+- 문서: `docs/completed/auth/2026-05-03-supabase-auth-mapping.md`
+- 요약: `auth.users.id`와 앱 `users.id`를 같은 UUID로 고정하고, `user_memberships`와 `permission_policies`를 membership/permission source로 분리했다.
+
 ## 최근 PR
 
 - GitHub PR #10: `feat: add auth transition boundary`
 
 ## 다음 완료 문서
 
-다음 완료 문서는 `docs/completed/auth/YYYY-MM-DD-supabase-auth-mapping.md` 형식을 권장한다.
+다음 완료 문서는 `docs/completed/auth/YYYY-MM-DD-supabase-integration-readiness.md` 형식을 권장한다.

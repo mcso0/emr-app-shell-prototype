@@ -200,16 +200,16 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 ## 다음 추천 작업
 
-다음 작업은 **Supabase Auth 매핑 설계**를 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`이다.
+다음 작업은 **Supabase 실제 연동 준비 계획**을 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`와 `docs/implementation/auth-login/supabase-auth-mapping.md`이다.
 
 목표:
 
 - 현재 mock session 기반 `/login`, app guard, logout, role display를 유지한다.
 - 이미 추가된 auth boundary, session interface, login UX 상태를 유지한다.
-- Supabase 실제 연결 전에 `auth.users`, 앱 도메인 `users`, `user_memberships`, `permission_policies` 매핑 계획을 정리한다.
+- 완료된 `auth.users`, 앱 도메인 `users`, `user_memberships`, `permission_policies` 매핑 결정을 기준으로 설치/env/callback/session/helper/middleware 범위를 정리한다.
 - 실제 auth provider, DB/API session, 서버 권한 enforcement는 별도 후속 계획에서 연결한다.
 
-구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/auth-login/README.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7, Supabase 공식 문서를 함께 확인한다.
+구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/auth-login/README.md`, `docs/implementation/auth-login/supabase-auth-mapping.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7, Supabase 공식 문서를 함께 확인한다.
 
 ## 관련 문서
 
