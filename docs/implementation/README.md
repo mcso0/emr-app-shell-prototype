@@ -8,6 +8,7 @@
 |---|---|
 | `mvp-current-status.md` | 현재 작업 상태와 Product MVP 전환 목표를 설명하는 단일 시작점 |
 | `mvp-auth-transition-roadmap.md` | `/login` mock auth를 Supabase Auth로 전환 가능한 제품 auth 기반으로 끌어올리기 위한 기준 문서 |
+| `auth-login/README.md` | 실제 로그인 기능 구현을 단계별로 진행하기 위한 전용 작업 패키지 시작점 |
 | `../completed/README.md` | 완료된 작업 closeout 문서를 작업별 하위 폴더에 보관하는 규칙 |
 | `demo-sales-strategy.md` | 잠재 고객 계약 전환을 위한 데모 목적, 시나리오, 우선순위 |
 | `sales-demo-readiness-audit.md` | 7분 골든 데모 경로, 화면별 gap, reference 상태, 후속 PR 경계 |
@@ -28,6 +29,7 @@
 
 - `mvp-current-status.md`를 읽고 현재 완료/제외 범위를 확인한다.
 - auth/login/permission/session 작업이면 `mvp-auth-transition-roadmap.md`를 함께 읽고 단계별 스킬, 금지 범위, 검증 명령을 확인한다.
+- 실제 로그인 구현 작업이면 `auth-login/README.md`와 현재 work order를 함께 읽고 단계 순서를 지킨다.
 - 데모 품질, 데모 데이터, 세일즈 시나리오와 관련된 작업이면 `demo-sales-strategy.md`를 함께 확인한다.
 - 데모 flow/seed/launcher 작업이면 `sales-demo-readiness-audit.md`의 골든 경로와 PR 경계를 확인한다.
 - Wave 2 이후 작업이면 `sales-demo-wave2-closeout.md`에서 완료 범위와 남은 gap을 확인한다.
