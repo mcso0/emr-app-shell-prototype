@@ -144,6 +144,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     }
     const nextSearch = params.toString();
     if (search !== nextSearch) {
+      if (window.location.pathname !== pathname) return;
       router.replace(`${pathname}?${nextSearch}`, { scroll: false });
     }
   }, [
