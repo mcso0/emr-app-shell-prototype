@@ -1,4 +1,5 @@
 import { AppShell } from "@/shell/app-shell";
+import { AuthGate } from "@/features/auth/auth-gate";
 
 type WorkspaceModulePageProps = {
   params: Promise<{
@@ -12,5 +13,9 @@ export default async function WorkspaceModulePage({
 }: WorkspaceModulePageProps) {
   const { workspaceId, module } = await params;
 
-  return <AppShell workspaceId={workspaceId} moduleId={module} />;
+  return (
+    <AuthGate>
+      <AppShell workspaceId={workspaceId} moduleId={module} />
+    </AuthGate>
+  );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   BellIcon,
   CommandIcon,
@@ -16,9 +17,11 @@ import { Separator } from "@/components/ui/separator";
 import { useMockAuthStore } from "@/features/auth/session-store";
 
 export function TopMenu({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
   const hydrated = useMockAuthStore((state) => state.hydrated);
   const session = useMockAuthStore((state) => state.session);
   const hydrate = useMockAuthStore((state) => state.hydrate);
+  const logout = useMockAuthStore((state) => state.logout);
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const roleId = hydrated && session ? session.role : "mock";
   const roleInitial = hydrated && session ? session.roleLabel.slice(0, 1) : "G";
@@ -26,6 +29,11 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  function handleLogout() {
+    logout();
+    router.replace("/login");
+  }
 
   return (
     <header className="flex h-[52px] items-center px-2.5">
@@ -81,6 +89,9 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
             </span>
           </span>
         </div>
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
+          로그아웃
+        </Button>
       </div>
     </header>
   );

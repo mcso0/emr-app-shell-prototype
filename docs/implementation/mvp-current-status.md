@@ -1,20 +1,21 @@
 # MVP Current Status
 
-Updated: 2026-05-02
+Updated: 2026-05-03
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
 ## Current Working Target
 
-초기 문서들은 MVP라는 표현을 사용하지만, 2026-05-02 기준 당장의 작업 목표는 **Sales Demo Prototype**이다.
+초기 문서들은 MVP라는 표현을 사용했고 한동안 Sales Demo Prototype을 우선했지만, 2026-05-02 기준 당장의 작업 목표는 다시 **Product MVP 제작**으로 전환한다.
 
-현재 구현물은 실제 운영 제품 MVP라기보다, 잠재 고객이 핵심 외래 업무를 우리 서비스 안에서 경험하고 계약을 상상하게 만들기 위한 데모 프로토타입으로 본다. 제품 MVP 관련 문서는 장기 제품 범위와 도메인 구조의 기준으로 유지하되, 가까운 작업 우선순위는 `docs/implementation/demo-sales-strategy.md`의 데모 전략을 따른다.
+현재 구현물은 Sales Demo Prototype으로 검증한 외래 흐름을 제품 MVP로 끌어올리는 단계로 본다. 데모 전략 문서는 세일즈 시나리오와 화면 품질 기준으로 유지하되, 가까운 작업 우선순위는 로그인/권한, API/DB boundary 통합, persistence, audit/service catalog 통합처럼 실제 운영 제품으로 가는 기반 작업을 우선한다.
 
-데모 목표:
+MVP 전환 목표:
 
-- 동물병원 원장, 개원 예정 수의사, 운영 의사결정자가 접수부터 수납까지 이어지는 하루 외래 흐름을 빠르게 이해한다.
-- 한 환자/보호자/encounter 맥락에서 접수, 진료, 검사/영상, 조제/처치, 수납이 연결되는 경험을 보여준다.
-- 실제 DB/API/auth/외부 연동 완성보다 데모 시나리오, 데모 데이터, 화면 품질, 진행감, 신뢰감을 우선한다.
+- 사용자가 로그인한 뒤 워크스페이스에 진입한다.
+- 역할/권한 기반 UX를 mock foundation에서 시작해 실제 auth provider와 DB/API session으로 교체 가능한 경계로 만든다.
+- 접수부터 수납까지 이어지는 외래 흐름은 유지하되, demo-only 설명보다 제품 동작과 데이터 경계를 우선한다.
+- Sales Demo golden path는 회귀 테스트와 대표 fixture로 보존한다.
 
 2026-05-02 기준 **Sales Demo Wave 2는 완료되어 `main`에 병합**되어 있다. 완료 범위와 검증 결과는 `docs/implementation/sales-demo-wave2-closeout.md`를 기준으로 확인한다.
 
@@ -26,7 +27,9 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - Service catalog/role seed는 수가/서비스 항목과 `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 역할 seed를 제공한다.
 - Audit log foundation은 status transition, profile edit, SOAP save, order status change, billing action event builder와 fixture를 제공한다.
 - Auth mock foundation은 `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper를 제공한다.
-- 실제 API route, DB client, migration, auth provider, 권한 enforcement, 전역 app shell auth guard는 아직 연결하지 않았다.
+- 실제 API route, DB client, migration, auth provider, 서버 권한 enforcement는 아직 연결하지 않았다.
+- MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합한다.
+- Auth 후속 작업은 `docs/implementation/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.
 
 ## Sales Demo 진행 현황
 
@@ -84,8 +87,8 @@ MVP 목표:
 
 아직 목표가 아닌 것:
 
-- 실제 backend, DB, auth, 권한, 파일 저장, 외부 연동 완성
-- 실제 권한 enforcement 또는 역할별 화면 제한
+- 실제 backend, DB, auth provider, 파일 저장, 외부 연동 완성
+- 서버 권한 enforcement 또는 역할별 데이터 제한
 - service catalog/role/permission 설정 화면
 - 실제 KakaoTalk, Excel, PACS, 장비 수신, 결제 연동
 - 병원관리 전체 화면과 입원 화면
@@ -166,10 +169,11 @@ MVP 목표:
 - 조제/처치 화면의 현재 디자인과 동작은 명시 요청 없이는 수정하지 않는다.
 - 입원과 병원관리 전체 화면은 현재 PR 1-6 범위 밖이었다.
 - 병원관리의 Order 관리 / Order 세트 화면은 참고 자료일 뿐 구현 대상이 아니었다.
-- 로그인 mock foundation은 데모 역할 선택, session helper/store, shell 역할 표시, permission helper만 제공한다. 기존 app shell에는 전역 auth guard나 역할별 UI 차단이 없다.
+- 로그인은 mock session 기반으로 app shell 진입을 보호한다. 아직 실제 auth provider, DB/API session, 서버 권한 enforcement는 연결하지 않았다.
 - UI는 Figma나 screenshot을 1:1 복제하지 않고, 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
 - 공통 컴포넌트 추출은 반복 패턴이 안정된 뒤 진행한다. PR7 화면 정렬 전에는 무리하게 공통화하지 않는다.
 - prototype 상태는 session-only이다. 새로고침 후 유지되는 persistence를 전제로 만들지 않는다.
+- 작업 완료 시에는 이 문서 또는 해당 작업의 기준 문서를 갱신하고, 완료 보고서는 `docs/completed/<workstream>/` 아래에 보관한다.
 
 ## Reference Images 상태
 
@@ -186,20 +190,20 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 ## 다음 추천 작업
 
-다음 작업은 **Sales Demo Closeout & Rehearsal**을 추천한다.
+다음 작업은 **MVP Auth 제품화 전환**을 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`이다.
 
 목표:
 
-- `김하늘 / 콩이 / 구토 내원` 7분 talk track을 작성한다.
-- 실제 브라우저에서 데모를 리허설하고, 말로 보완해야 하는 gap을 기록한다.
-- 첫 외부 세일즈 데모 전에 필요한 최소 polish와 reference screenshot 확보 여부를 결정한다.
-- one-click demo reset이 필요한지 판단한다.
+- 현재 mock session 기반 `/login`, app guard, logout, role display를 유지한다.
+- Supabase 실제 연결 전에 auth boundary, session interface, login UX 상태, 역할/권한 매핑 계획을 정리한다.
+- 실제 auth provider, DB/API session, 서버 권한 enforcement는 별도 후속 계획에서 연결한다.
 
-구현을 시작하기 전에는 `docs/implementation/sales-demo-wave2-closeout.md`의 남은 gap과 추천 작업을 먼저 확인한다.
+구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7을 함께 확인한다.
 
 ## 관련 문서
 
 - 구현 문서 목차: `docs/implementation/README.md`
+- MVP Auth 제품화 전환 기준: `docs/implementation/mvp-auth-transition-roadmap.md`
 - 데모 세일즈 전략: `docs/implementation/demo-sales-strategy.md`
 - Sales Demo Wave 2 closeout: `docs/implementation/sales-demo-wave2-closeout.md`
 - 병렬 작업 계획: `docs/implementation/mvp-parallel-workstreams.md`
