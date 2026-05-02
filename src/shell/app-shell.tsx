@@ -20,12 +20,40 @@ type PendingUrlState = {
   rightPanelOpen?: boolean;
 };
 
+const crossModuleQueryKeys = [
+  "scenario",
+  "patientId",
+  "encounterId",
+  "labResultId",
+  "imagingStudyId",
+  "invoiceId",
+  "modulePanel",
+  "aside",
+  "context",
+  "right",
+] as const;
+
+function getCrossModuleNavigationSearch(search: string) {
+  const currentParams = new URLSearchParams(search);
+  const nextParams = new URLSearchParams();
+
+  crossModuleQueryKeys.forEach((key) => {
+    const value = currentParams.get(key);
+    if (value) {
+      nextParams.set(key, value);
+    }
+  });
+
+  return nextParams.toString();
+}
+
 export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
+  const navigationSearch = useMemo(() => getCrossModuleNavigationSearch(search), [search]);
   const pendingUrlStateRef = useRef<PendingUrlState | null>(null);
   const urlStateReadyRef = useRef(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
@@ -164,7 +192,11 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     <div className="h-screen min-h-0 overflow-hidden bg-secondary text-foreground">
       <TopMenu workspaceId={workspaceId} />
       <div className="grid h-[calc(100vh-52px)] grid-cols-[60px_1fr] gap-2.5 px-2.5 pb-2.5">
-        <NavRail activeModuleId={moduleDefinition.id} workspaceId={workspaceId} />
+        <NavRail
+          activeModuleId={moduleDefinition.id}
+          navigationSearch={navigationSearch}
+          workspaceId={workspaceId}
+        />
         <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
       </div>
     </div>

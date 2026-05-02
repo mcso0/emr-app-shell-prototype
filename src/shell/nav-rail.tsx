@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 type NavRailProps = {
   activeModuleId: string;
+  navigationSearch?: string;
   workspaceId: string;
 };
 
@@ -100,7 +101,7 @@ function getModuleItem(moduleId: string): RailNavItem | null {
   };
 }
 
-export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
+export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: NavRailProps) {
   const { modulePanelOpen, setModulePanelOpen } = useLayoutStore();
   const reduceMotion = useReducedMotion();
   const railLayoutTransition = reduceMotion
@@ -156,6 +157,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
           activeModuleId={activeModuleId}
           items={sections[0]}
           transition={railLayoutTransition}
+          navigationSearch={navigationSearch}
           workspaceId={workspaceId}
         />
         <RailActionItem
@@ -169,6 +171,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
           activeModuleId={activeModuleId}
           items={sections[1]}
           transition={railLayoutTransition}
+          navigationSearch={navigationSearch}
           workspaceId={workspaceId}
         />
         <NavDivider transition={railLayoutTransition} />
@@ -182,6 +185,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
           activeModuleId={activeModuleId}
           items={sections[2]}
           transition={railLayoutTransition}
+          navigationSearch={navigationSearch}
           workspaceId={workspaceId}
         />
       </div>
@@ -203,11 +207,13 @@ function NavSection({
   activeModuleId,
   items,
   transition,
+  navigationSearch,
   workspaceId,
 }: {
   activeModuleId: string;
   items: RailNavItem[];
   transition: Transition;
+  navigationSearch: string;
   workspaceId: string;
 }) {
   return (
@@ -218,6 +224,7 @@ function NavSection({
           active={item.moduleId === activeModuleId}
           item={item}
           transition={transition}
+          navigationSearch={navigationSearch}
           workspaceId={workspaceId}
         />
       ))}
@@ -229,14 +236,17 @@ function RailModuleItem({
   active,
   item,
   transition,
+  navigationSearch,
   workspaceId,
 }: {
   active: boolean;
   item: RailNavItem;
   transition: Transition;
+  navigationSearch: string;
   workspaceId: string;
 }) {
   const Icon = item.icon;
+  const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
 
   return (
     <RailLayoutItem transition={transition}>
@@ -244,7 +254,7 @@ function RailModuleItem({
         <TooltipTrigger
           render={
             <Link
-              href={`/w/${workspaceId}/${item.moduleId}`}
+              href={href}
               className={cn(
                 "flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50",
                 active && "bg-[rgba(255,255,255,0.16)] text-white"

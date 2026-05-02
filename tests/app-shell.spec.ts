@@ -1,4 +1,16 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+const fullDemoQuery =
+  "scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&labResultId=lab-result-kong-cbc&imagingStudyId=imaging-kong-abdomen&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed";
+
+async function expectUrlSearchParams(page: Page, expected: Record<string, string>) {
+  const url = new URL(page.url());
+
+  for (const [key, value] of Object.entries(expected)) {
+    expect(url.searchParams.get(key)).toBe(value);
+  }
+}
 
 test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
@@ -187,6 +199,34 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
 });
 
+test("shell navigation keeps demo query context across modules", async ({ page }) => {
+  await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
+  await expect(page.getByRole("heading", { name: "콩이" })).toBeVisible();
+
+  await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
+  await expect(page).toHaveURL(/modulePanel=closed/);
+  await expectUrlSearchParams(page, {
+    scenario: "kong-vomit",
+    patientId: "patient-kong",
+    encounterId: "encounter-kong-260501",
+    labResultId: "lab-result-kong-cbc",
+    imagingStudyId: "imaging-kong-abdomen",
+    invoiceId: "invoice-kong-260501",
+  });
+
+  await page.getByRole("link", { name: "임상병리검사" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+  await expect(page.getByRole("textbox", { name: "WBC 결과값" })).toHaveValue("21.4");
+  await expectUrlSearchParams(page, {
+    scenario: "kong-vomit",
+    patientId: "patient-kong",
+    encounterId: "encounter-kong-260501",
+    labResultId: "lab-result-kong-cbc",
+    imagingStudyId: "imaging-kong-abdomen",
+    invoiceId: "invoice-kong-260501",
+  });
+});
+
 test("module side panel order type segmented control filters side orders", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
@@ -325,7 +365,7 @@ test("treatment module renders the chart queue instead of the order queue placeh
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
   await expect(sidePanel.getByText("코코 · P-260414-0008")).toBeVisible();
-  await expect(page.getByText("SOAP")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "SOAP" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 

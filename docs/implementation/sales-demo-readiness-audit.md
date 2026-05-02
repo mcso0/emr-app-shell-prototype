@@ -54,6 +54,25 @@ Reference images are useful, but not blocking for the first sales demo spine. Mi
 - Existing 코코/두부/나비/하루 fixtures remain available.
 - 조제/처치 screen design and behavior are not changed.
 
+## Wave 2 Integration Result
+
+Updated: 2026-05-02
+
+- The `kong-vomit` golden path now has integration coverage from the home launcher through 접수, 진료, 검사, 영상, 조제/처치, and 수납 using shell navigation.
+- Shell module navigation preserves demo query context (`scenario`, `patientId`, `encounterId`, `labResultId`, `imagingStudyId`, `invoiceId`) while continuing to let layout sync own `modulePanel`, `aside`, and `right`.
+- 조제/처치 remains a preserved screen. Integration coverage only verifies that it is reachable in the golden path and that existing 조제/처치 regression tests still pass.
+- Remaining demo limitation: prototype state is still session-only; refresh persistence and real backend/API/auth/payment integrations remain out of scope.
+
+Verification run for integration:
+
+- `npx playwright test tests/sales-demo-flow.spec.ts --reporter=line`
+- `npx playwright test tests/app-shell.spec.ts --reporter=line`
+- `npx playwright test tests/reception.spec.ts tests/chart.spec.ts tests/lab-imaging.spec.ts tests/billing.spec.ts --reporter=line`
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test --reporter=line`
+
 ## Follow-up PR Boundaries
 
 | PR | Responsibility |

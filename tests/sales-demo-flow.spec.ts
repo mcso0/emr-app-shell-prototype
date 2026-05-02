@@ -1,8 +1,17 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 const scenarioQuery = "scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501";
 
-test("sales demo launcher opens the Kong golden scenario", async ({ page }) => {
+async function expectDemoContext(page: Page) {
+  const url = new URL(page.url());
+
+  expect(url.searchParams.get("scenario")).toBe("kong-vomit");
+  expect(url.searchParams.get("patientId")).toBe("patient-kong");
+  expect(url.searchParams.get("encounterId")).toBe("encounter-kong-260501");
+}
+
+test("sales demo launcher carries the Kong scenario through the golden path", async ({ page }) => {
   await page.goto("/w/clair-demo/home?modulePanel=open&aside=closed");
 
   await expect(page.getByRole("heading", { name: "콩이 구토 내원" })).toBeVisible();
@@ -11,8 +20,38 @@ test("sales demo launcher opens the Kong golden scenario", async ({ page }) => {
   await page.getByRole("link", { name: "데모 시작" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
-  await expect(page).toHaveURL(/scenario=kong-vomit/);
+  await expectDemoContext(page);
   await expect(page.getByText("콩이 · P-260501-0003").first()).toBeVisible();
+
+  await page.getByRole("link", { name: /진료\(차트\)/ }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expectDemoContext(page);
+  await expect(page.getByRole("heading", { name: "콩이" })).toBeVisible();
+  await expect(page.getByText("급성 위장관염 의심", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "임상병리검사" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+  await expectDemoContext(page);
+  await expect(page.getByRole("textbox", { name: "WBC 결과값" })).toHaveValue("21.4");
+
+  await page.getByRole("link", { name: "영상검사" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/imaging/);
+  await expectDemoContext(page);
+  await expect(page.getByText("복부 초음파", { exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText(
+    "급성 위장관염 가능성이 높으며"
+  );
+
+  await page.getByRole("link", { name: "조제/처치" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+  await expectDemoContext(page);
+  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
+
+  await page.getByRole("link", { name: "수납" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expectDemoContext(page);
+  await expect(page.getByText("INV-260501-0003 · 콩이 · 김하늘")).toBeVisible();
+  await expect(page.getByText("156,500원").first()).toBeVisible();
 });
 
 test("golden scenario can be opened across chart, lab, imaging, and billing", async ({ page }) => {
@@ -33,7 +72,9 @@ test("golden scenario can be opened across chart, lab, imaging, and billing", as
   );
   await expect(page.getByText("콩이 · P-260501-0003").first()).toBeVisible();
   await expect(page.getByText("복부 초음파", { exact: true })).toBeVisible();
-  await expect(page.getByText("급성 위장관염 가능성이 높으며")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText(
+    "급성 위장관염 가능성이 높으며"
+  );
   await expect(page).toHaveURL(/scenario=kong-vomit/);
 
   await page.goto(`/w/clair-demo/billing?${scenarioQuery}&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed`);
