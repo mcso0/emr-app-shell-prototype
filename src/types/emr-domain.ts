@@ -45,6 +45,33 @@ export type ServiceItemType =
   | "imaging"
   | "hospitalization"
   | "misc";
+export type StaffRoleId =
+  | "front_desk"
+  | "vet"
+  | "nurse"
+  | "billing_admin"
+  | "hospital_admin";
+export type PermissionResource =
+  | "reception"
+  | "patient"
+  | "encounter"
+  | "chart"
+  | "order"
+  | "dispensing"
+  | "lab"
+  | "imaging"
+  | "billing"
+  | "service_catalog"
+  | "role_permission";
+export type PermissionAction =
+  | "view"
+  | "create"
+  | "update"
+  | "request"
+  | "complete"
+  | "issue"
+  | "manage";
+export type PermissionId = `${PermissionResource}:${PermissionAction}`;
 export type OrderGroupType = "dispensing" | "treatment" | "lab" | "imaging" | "mixed";
 export type OrderGroupStatus = "requested" | "in_progress" | "completed" | "cancelled";
 export type EmrOrderType = "dispensing" | "treatment" | "lab" | "imaging";
@@ -287,6 +314,23 @@ export type ServiceItemPrice = {
   currency: "KRW";
   effectiveFrom: IsoDate;
   effectiveTo?: IsoDate;
+};
+
+export type PermissionSeed = {
+  id: PermissionId;
+  resource: PermissionResource;
+  action: PermissionAction;
+  label: string;
+  description?: string;
+};
+
+export type RoleSeed = {
+  id: StaffRoleId;
+  workspaceId: EmrId;
+  name: string;
+  description: string;
+  permissionIds: PermissionId[];
+  isSystem: boolean;
 };
 
 export type OrderGroup = {
