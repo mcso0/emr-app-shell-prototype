@@ -18,8 +18,10 @@ Updated: 2026-05-02
 - 조제/처치 기존 화면 보존
 - 수납
 - 연결형 EMR mock domain, status label mapper, Playwright 회귀 테스트
+- Service catalog, role seed, permission seed foundation
 
 현재 `main`에는 PR 1-6 구현이 병합되어 있다. 대표 병합 PR은 [GitHub PR #2](https://github.com/mcso0/emr-app-shell-prototype/pull/2)이다.
+`codex/service-catalog-role-seed` 작업 브랜치에는 UI 연결 없이 service catalog/role/permission seed와 lookup helper, consistency test가 추가되어 있다.
 
 ## 목적과 목표
 
@@ -35,6 +37,8 @@ MVP 목표:
 아직 목표가 아닌 것:
 
 - 실제 backend, DB, auth, 권한, 파일 저장, 외부 연동 완성
+- 실제 권한 enforcement 또는 역할별 화면 제한
+- service catalog/role/permission 설정 화면
 - 실제 KakaoTalk, Excel, PACS, 장비 수신, 결제 연동
 - 병원관리 전체 화면과 입원 화면
 - Figma 기준의 정밀 UI QA 완료
@@ -60,8 +64,11 @@ MVP 목표:
 | 영역 | 상태 | 주요 내용 |
 |---|---|---|
 | API boundary selectors | 초안 추가 | mock domain을 나중에 API/DB로 교체하기 위한 read repository interface, selector/helper, mock adapter, contract test, 후속 통합 가이드 추가 |
+| Service catalog seed | foundation 추가 | 진료, 처방/조제, 처치, 검사, 영상, 수납 invoice line에서 공통 참조할 mock category/item/price seed |
+| Role/permission seed | foundation 추가 | `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 추천 역할과 권한 seed |
+| Catalog lookup helper | foundation 추가 | service item/category/current price/role permission lookup, order/invoice consistency report |
 
-이 boundary는 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동도 포함하지 않는다.
+이 foundation들은 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동, 실제 권한 enforcement도 포함하지 않는다.
 
 ## PR 0-6 완료 현황
 
@@ -83,6 +90,12 @@ MVP 목표:
 - `npx tsc --noEmit`
 - `npm run build`
 - `npx playwright test tests/billing.spec.ts tests/lab-imaging.spec.ts tests/chart.spec.ts tests/reception.spec.ts tests/domain-baseline.spec.ts tests/app-shell.spec.ts --reporter=line`
+
+2026-05-02 기준 `codex/service-catalog-role-seed` 작업 브랜치에서 아래 추가 검증이 통과했다.
+
+- `npm run lint`
+- `npx tsc --noEmit`
+- `npx playwright test tests/service-catalog.spec.ts --reporter=line`
 
 화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
 
