@@ -23,6 +23,12 @@ import {
   DispensingSidePanel,
 } from "@/features/dispensing/module";
 import {
+  ImagingContent,
+  ImagingSidePanel,
+  LabContent,
+  LabSidePanel,
+} from "@/features/lab-imaging/module";
+import {
   PlaceholderContent,
   PlaceholderRightPanel,
   PlaceholderSidePanel,
@@ -60,17 +66,15 @@ export const modules: ModuleDefinition[] = [
     id: "lab",
     label: "검사",
     icon: FlaskIcon,
-    sidePanel: PlaceholderSidePanel,
-    contentHeader: DispensingHeader,
-    contentAside: DispensingContentAside,
-    content: PlaceholderContent,
+    sidePanel: LabSidePanel,
+    content: LabContent,
   },
   {
     id: "imaging",
     label: "영상",
     icon: ImagesIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
+    sidePanel: ImagingSidePanel,
+    content: ImagingContent,
   },
   {
     id: "dispensing",
