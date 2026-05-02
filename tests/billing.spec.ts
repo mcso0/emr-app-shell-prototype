@@ -6,7 +6,7 @@ test("billing workspace renders waiting invoice, guardian group, editable lines,
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByRole("button", { name: "대기 2" })).toHaveAttribute("aria-pressed", "true");
   await expect(sidePanel.getByTestId("billing-queue-item-invoice-coco-260501")).toContainText("코코");
-  await expect(page.getByRole("heading", { name: "수납" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
   await expect(page.getByText("INV-260501-0001 · 코코 · 이지은")).toBeVisible();
   await expect(page.getByRole("heading", { name: "보호자 청구 묶음" })).toBeVisible();
   await expect(page.getByText("이지은", { exact: true })).toBeVisible();
@@ -43,4 +43,22 @@ test("billing side panel switches between unpaid and closed queues", async ({ pa
   await sidePanel.getByTestId("billing-queue-item-invoice-nabi-260414").click();
   await expect(page.getByText("INV-260414-0007 · 나비 · 오세아")).toBeVisible();
   await expect(page.getByText("수납완료").first()).toBeVisible();
+});
+
+test("billing opens the kong-vomit invoice from query and explains completion state", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/billing?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&invoiceId=invoice-kong-260501"
+  );
+
+  await expect(page.getByText("INV-260501-0003 · 콩이 · 김하늘")).toBeVisible();
+  await expect(page.getByText("진료 / 검사 / 영상 / 조제 / 처치 항목을 보호자 김하늘에게 안내합니다")).toBeVisible();
+  await expect(page.getByText("156,500원").first()).toBeVisible();
+  await expect(page.getByText("복부 초음파")).toBeVisible();
+  await expect(page.getByText("Maropitant 16mg T")).toBeVisible();
+
+  await page.getByRole("button", { name: "수납 완료" }).click();
+
+  await expect(page.getByText("수납완료").first()).toBeVisible();
+  await expect(page.getByText("세션 내 수납 완료")).toBeVisible();
+  await expect(page.getByText("정산 완료").first()).toBeVisible();
 });
