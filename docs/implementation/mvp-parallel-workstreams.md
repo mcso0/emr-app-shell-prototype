@@ -126,6 +126,8 @@ Do not:
 
 Wave 1은 골든 데모 spine을 먼저 고정하고, Wave 2는 PR8 seed data가 병합된 뒤 화면별 연결감을 병렬로 다듬는다.
 
+Wave 2를 실제로 여러 채팅에 나눠 실행할 때는 `docs/implementation/sales-demo-wave2-parallel-prompts.md`의 branch/worktree map과 붙여넣기 프롬프트를 사용한다.
+
 | Wave | Workstream | Scope | Avoid |
 |---|---|---|---|
 | 1 | PR7 Readiness Audit | `sales-demo-readiness-audit.md`, demo script, reference status | feature UI implementation |
