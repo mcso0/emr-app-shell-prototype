@@ -35,6 +35,12 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const Drawer = moduleDefinition.drawer;
+  const drawerTitle =
+    activeDrawer?.type === "reception-form" ? "접수" : "상세 정보";
+  const drawerWidth =
+    activeDrawer?.type === "reception-form"
+      ? SHELL_LAYOUT.drawer.largeWidth
+      : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
   const effectiveModuleSidePanelWidth = Math.max(
     moduleSidePanelWidth,
@@ -154,13 +160,13 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="absolute inset-y-0 right-0 border-l bg-card shadow-2xl"
               style={{
-                width: SHELL_LAYOUT.drawer.defaultWidth,
+                width: drawerWidth,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
               }}
             >
               <div className="flex h-12 items-center justify-between border-b px-4">
                 <div>
-                  <div className="text-sm font-semibold">상세 정보</div>
+                  <div className="text-sm font-semibold">{drawerTitle}</div>
                   <div className="text-[11px] text-muted-foreground">{activeDrawer.id}</div>
                 </div>
                 <Button

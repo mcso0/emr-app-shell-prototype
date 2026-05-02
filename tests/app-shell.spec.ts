@@ -176,7 +176,7 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
-  await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "조제");
+  await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "조제/처치");
   await expect(page.getByRole("button", { name: "사용자 프로필" })).toContainText("SH");
   await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
   await expect(page).toHaveURL(/modulePanel=closed/);
@@ -239,6 +239,26 @@ test("order queue side panel renders status groups with design token colors", as
   await expect(sidePanel.getByTestId("order-queue-status-waiting").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(160, 174, 192)");
   await expect(sidePanel.getByTestId("order-queue-status-completed").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(72, 187, 120)");
   await expect(sidePanel.getByTestId("order-queue-status-canceled").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(245, 101, 101)");
+});
+
+test("order queue status groups can collapse and expand", async ({ page }) => {
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=history&right=closed");
+
+  const sidePanel = page.locator("aside").first();
+  const reRequestedGroup = sidePanel.getByTestId("order-queue-status-reRequested");
+  const toggle = reRequestedGroup.getByRole("button", { name: "재요청 접기" });
+
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(reRequestedGroup.getByTestId("order-queue-item-dispensing-queue-0")).toBeVisible();
+
+  await toggle.click();
+  const expandToggle = reRequestedGroup.getByRole("button", { name: "재요청 펼치기" });
+  await expect(expandToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(reRequestedGroup.getByTestId("order-queue-item-dispensing-queue-0")).toBeHidden();
+
+  await expandToggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(reRequestedGroup.getByTestId("order-queue-item-dispensing-queue-0")).toBeVisible();
 });
 
 test("shared order queue applies to placeholder modules and syncs selection summary", async ({ page }) => {

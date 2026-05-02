@@ -1139,3 +1139,30 @@ Unique: `(workspace_id, user_id, module_id)`.
 ## 열어둘 결정 사항
 
 - 위 결정들은 MVP 기본값이다. 실제 병원 파일럿 운영 중 정책이 달라지면 권한, 메시지 승인, 수납, 장비 연동 범위는 조정할 수 있다.
+---
+
+## 2026-05-02 MVP 데이터 보강 Addendum
+
+### PR 1 검수 기준
+
+- `encounter`를 중심으로 guardian, patient, appointment, waitingQueueEntry, soapNote, diagnosis, prescription, orderGroup, order, invoice, payment를 추적 가능하게 유지한다.
+- 환자-보호자 N:M 관계와 주 보호자 여부, 추가 보호자, consent, 연락/카카오톡/CS 이력 mock을 연결한다.
+- 최신내역은 환자와 보호자 모두에서 업무별 최신 레코드로 접근할 수 있게 한다.
+- 검사/영상/수납 mock은 실제 연동 없이 order와 invoice 흐름을 설명할 수 있는 최소 필드를 가진다.
+
+### Prototype Persistence Policy
+
+- PR 2-6의 생성/수정/수납/등록 액션은 prototype 세션 상태로 처리한다.
+- 새로고침 후 사라져도 되는 데이터는 draft로 분리한다.
+- 서버 저장, audit persistence, 외부 연동은 이번 범위에서 제외한다.
+
+### Status and Label Policy
+
+- DB spec의 영문 enum 값을 정본으로 유지한다.
+- 화면 한국어 문구는 status label mapper 또는 presentation layer에서 관리한다.
+- module-specific 문구가 필요한 경우 공통 label을 override한다.
+
+### Reference Only
+
+- 병원관리의 Order 관리 / Order 세트 화면은 domain과 reusable pattern 참고 자료다.
+- 이번 범위에서는 병원관리 화면 자체를 구현하지 않는다.

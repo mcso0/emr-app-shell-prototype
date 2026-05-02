@@ -14,6 +14,7 @@ export const SHELL_LAYOUT = {
   },
   drawer: {
     defaultWidth: 460,
+    largeWidth: 640,
     zIndex: 40,
   },
 } as const;

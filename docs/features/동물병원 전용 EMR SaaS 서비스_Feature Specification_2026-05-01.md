@@ -354,3 +354,49 @@ MVP에서는 장비 자동 연동을 구현하지 않습니다. 임상병리 검
 | 마이그레이션 | 기존 EMR 데이터 임포트/롤백 도구 | 원천 시스템별 데이터 구조 분석 필요 |
 | AI | 진단 추천, 차트 문법 검사, 학습 데이터 파이프라인 | 품질, 책임, 개인정보 비식별화 정책 필요 |
 | 약물 안전 | 상호작용, 알레르기, 마약류 경고 | 검증된 약물 DB와 임상 기준 필요 |
+---
+
+## 2026-05-02 MVP Feature Realignment
+
+### PR 0 Documentation Baseline
+
+- PRD, Feature Spec, User Flow, DB 구조 문서, MVP gap/backlog를 현재 수집한 화면 흐름 기준으로 갱신한다.
+- 공통화 후보는 `docs/implementation/reusable-component-candidates.md`, 승인/정보 필요 항목은 `docs/implementation/open-questions.md`, 화면 레퍼런스는 `docs/implementation/reference-screen-index.md`에 둔다.
+
+### PR 1 Domain Baseline
+
+- `encounter` 중심 도메인 연결을 검수하고 환자-보호자 관계, consent, CS 이력, 최신 업무 바로가기, 검사/영상/수납 mock 연결을 보강한다.
+- UI 변경은 포함하지 않는다.
+
+### PR 2 Reception Closeout
+
+- 접수/예약 사이드 패널을 `전체 / 접수 / 예약`으로 정리하고 숫자는 탭이 아니라 목록 헤더 개수로 표시한다.
+- 캘린더는 24시간 표기, `08:00-20:00` 표시 범위, `09:00-19:00` 영업시간 강조, sticky header, 현재 시간선 위치 보정을 적용한다.
+- 환자 정보바, 우측 사이드 패널, 별도 진료 대기열, 하단 스케줄 생성, 불필요한 접수 폼 바는 제거한다.
+- 카드 클릭 시 접수/예약 상세 드로어로 진입할 수 있는 구조를 둔다.
+
+### PR 3 Patient/Guardian Drawer
+
+- 환자 정보, 보호자 정보, 보호자 연결 관리, CS 이력, 최신내역을 드로어 기반으로 제공한다.
+- 읽기/수정 모드와 신규 환자 등록 모달/레이어를 mock 세션 상태로 처리한다.
+
+### PR 4 Chart
+
+- 진료(차트) 화면은 좌측 환자 과거 이력, 별도 진료 대기 사이드 패널, SOAP, Assessment, Assessment History, 하단 Order 영역으로 구성한다.
+- 과거 이력 리스트는 조제 이력과 유사한 정보 밀도를 갖되 조제/처치 화면 자체는 수정하지 않는다.
+
+### PR 5 Lab/Image
+
+- 임상병리/계통 검사와 영상검사 화면을 구현한다.
+- 검사 대기/완료, 결과 입력, 장비 수신 내역, 영상 판독, 종합소견, 첨부자료를 mock으로 연결한다.
+- 장비/PACS 연동은 no-op으로 둔다.
+
+### PR 6 Billing
+
+- 수납 화면은 대기/미납/종료 목록, 보호자 기준 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 미납/수납 액션을 제공한다.
+
+### Component Policy
+
+- 프로젝트 기존 컴포넌트, foundation, token을 우선한다.
+- 없는 패턴만 shadcn 또는 shadcn + 기존 컴포넌트 조합으로 만든다.
+- 2개 이상 화면에서 반복되고 안정화된 패턴만 PR 이후 공통 컴포넌트로 추출한다.

@@ -40,9 +40,9 @@ type RailNavItem = {
 
 const moduleIconById: Record<string, { icon: GnbIcon; iconClassName: string }> = {
   home: { icon: HomeGnbIcon, iconClassName: "h-[17.105px] w-[18.5px]" },
-  reception: { icon: PharmacyGnbIcon, iconClassName: "h-[17.5px] w-[12.5px] rotate-45" },
+  reception: { icon: CalendarGnbIcon, iconClassName: "h-[18.472px] w-[19px]" },
   treatment: { icon: MedicalGnbIcon, iconClassName: "h-[17.793px] w-[19.5px]" },
-  lab: { icon: CalendarGnbIcon, iconClassName: "h-[18.472px] w-[19px]" },
+  lab: { icon: PharmacyGnbIcon, iconClassName: "h-[17.5px] w-[12.5px] rotate-45" },
   imaging: { icon: RadiographyGnbIcon, iconClassName: "size-[18.5px]" },
   dispensing: { icon: PillGnbIcon, iconClassName: "h-[18.397px] w-[17.533px]" },
   billing: { icon: PayGnbIcon, iconClassName: "size-[19.5px]" },
@@ -50,9 +50,18 @@ const moduleIconById: Record<string, { icon: GnbIcon; iconClassName: string }> =
   orders: { icon: HospitalGnbIcon, iconClassName: "size-[19px]" },
 };
 
+const moduleNavLabelById: Partial<Record<string, string>> = {
+  treatment: "진료(차트)",
+  lab: "임상병리검사",
+  imaging: "영상검사",
+  dispensing: "조제/처치",
+  inpatient: "입원",
+  orders: "병원관리",
+};
+
 const moduleSections = [
   ["home"],
-  ["lab", "treatment", "reception", "imaging", "dispensing", "billing", "inpatient"],
+  ["reception", "treatment", "lab", "imaging", "dispensing", "billing", "inpatient"],
   ["orders"],
 ] as const;
 
@@ -86,7 +95,7 @@ function getModuleItem(moduleId: string): RailNavItem | null {
     id: moduleDefinition.id,
     icon: iconSpec.icon,
     iconClassName: iconSpec.iconClassName,
-    label: moduleDefinition.label,
+    label: moduleNavLabelById[moduleId] ?? moduleDefinition.label,
     moduleId: moduleDefinition.id,
   };
 }
@@ -166,7 +175,7 @@ export function NavRail({ activeModuleId, workspaceId }: NavRailProps) {
         <RailActionItem
           icon={PetGnbIcon}
           iconClassName="h-[18.359px] w-[19.5px]"
-          label="반려동물"
+          label="고객관리"
           transition={railLayoutTransition}
         />
         <NavSection

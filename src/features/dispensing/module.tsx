@@ -25,7 +25,10 @@ import {
   EmrListHeader,
   EmrListHeaderIconButton,
 } from "@/components/emr/subpanel";
-import { EmrInstructionHeaderStack } from "@/components/emr/instruction-header-stack";
+import {
+  EmrInstructionHeaderStack,
+  EmrInstructionTitleBar,
+} from "@/components/emr/instruction-header-stack";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -729,22 +732,21 @@ function DispensingContentBody({
     <div className="flex h-full min-h-0 flex-col px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
-          <div className="flex h-9 items-center justify-between">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="flex min-w-0 items-center gap-2">
+          <EmrInstructionTitleBar
+            title={`${instructionType} 지시서`}
+            icon={
                 <CdsFilesDocumentAltFillIcon
                   className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
                   aria-hidden="true"
                 />
-                <h1 className="text-[18px] font-semibold leading-[26px] tracking-[-0.002em] text-foreground">
-                  {instructionType} 지시서
-                </h1>
-              </div>
+            }
+            badge={
               <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
                 {instructionId}
               </Badge>
-            </div>
-            <div className="flex items-center gap-2">
+            }
+            actions={
+              <>
               {hasRightPanel && moduleLabel === "처치" ? (
                 <Button
                   variant="outline"
@@ -775,8 +777,9 @@ function DispensingContentBody({
                   onCancelAssignment={() => cancelGroupAssignment(primaryGroup.id)}
                 />
               ) : null}
-            </div>
-          </div>
+              </>
+            }
+          />
         }
         orderInfo={
           <div className="grid grid-cols-5 rounded-lg border border-border bg-card px-4 py-3">

@@ -163,3 +163,44 @@ flowchart LR
   n7 --> n16
   n38 --> n16
 ```
+---
+
+## 2026-05-02 MVP User Flow Addendum
+
+### PR Execution Flow
+
+```mermaid
+flowchart TD
+  PR0["PR 0 문서 보강"] --> PR1["PR 1 Domain Baseline"]
+  PR1 --> PR2["PR 2 접수/예약 마무리"]
+  PR2 --> PR3["PR 3 환자/보호자 드로어"]
+  PR3 --> PR4["PR 4 진료(차트)"]
+  PR4 --> PR5["PR 5 임상병리/영상검사"]
+  PR5 --> PR6["PR 6 수납"]
+```
+
+### Operational Flow
+
+```mermaid
+flowchart TD
+  Reception["접수/예약"] --> PatientDrawer["환자/보호자 드로어"]
+  Reception --> Chart["진료(차트)"]
+  Chart --> Lab["임상병리/계통 검사"]
+  Chart --> Image["영상검사"]
+  Chart --> Billing["수납"]
+  Lab --> Billing
+  Image --> Billing
+  PatientDrawer --> CS["CS 이력"]
+  PatientDrawer --> Latest["최신내역"]
+  Latest --> Chart
+  Latest --> Lab
+  Latest --> Image
+  Latest --> Billing
+```
+
+### Flow Notes
+
+- 접수/예약은 환자 정보바와 우측 상세 패널을 갖지 않는다. 필요한 상세 정보는 카드 선택 후 드로어에서 본다.
+- 환자/보호자 드로어는 접수, 진료, 검사, 영상, 수납에서 재사용 가능한 정보 확인 진입점이다.
+- 최신내역은 각 업무 화면으로 이동 가능한 shortcut 역할을 한다.
+- 입원과 병원관리 전체 화면은 이번 MVP 흐름에서 제외한다.

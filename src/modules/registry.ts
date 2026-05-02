@@ -23,6 +23,11 @@ import {
   PlaceholderRightPanel,
   PlaceholderSidePanel,
 } from "@/features/placeholders/module";
+import {
+  ReceptionContent,
+  ReceptionDrawer,
+  ReceptionSidePanel,
+} from "@/features/reception/module";
 
 export const modules: ModuleDefinition[] = [
   {
@@ -34,11 +39,11 @@ export const modules: ModuleDefinition[] = [
   },
   {
     id: "reception",
-    label: "접수",
+    label: "접수/예약",
     icon: BuildingIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
-    rightPanel: PlaceholderRightPanel,
+    sidePanel: ReceptionSidePanel,
+    content: ReceptionContent,
+    drawer: ReceptionDrawer,
   },
   {
     id: "treatment",

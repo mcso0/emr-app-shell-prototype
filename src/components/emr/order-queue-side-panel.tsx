@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { ChevronDownIcon, ClockIcon } from "@/components/icons";
 import {
@@ -47,6 +48,8 @@ const orderQueueFilterItems = [
 ];
 
 const fallbackStatusColorToken = "--clair-color-atomic-gray-400";
+const ORDER_QUEUE_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
+const ORDER_QUEUE_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
 
 const createFallbackStatus = (statusId: string, index: number): OrderQueueStatusDefinition => ({
   id: statusId,
@@ -187,6 +190,22 @@ function OrderQueueGroup({
   status: OrderQueueStatusDefinition;
   statuses: OrderQueueStatusDefinition[];
 }) {
+  const reduceMotion = useReducedMotion();
+  const contentTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        height: { duration: 0.24, ease: ORDER_QUEUE_GROUP_EASE },
+        opacity: { duration: 0.14, ease: "easeOut" },
+        y: { duration: 0.2, ease: ORDER_QUEUE_GROUP_EASE },
+      };
+  const contentExitTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        height: { duration: 0.18, ease: ORDER_QUEUE_GROUP_EXIT_EASE },
+        opacity: { duration: 0.12, ease: "easeIn" },
+        y: { duration: 0.16, ease: ORDER_QUEUE_GROUP_EXIT_EASE },
+      };
+
   return (
     <section className="flex flex-col gap-1" data-testid={`order-queue-status-${status.id}`}>
       <button
@@ -211,29 +230,38 @@ function OrderQueueGroup({
             </span>
           </span>
         </div>
-        <span className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1">
+        <motion.span
+          className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1"
+          animate={{ rotate: collapsed ? 180 : 0 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: ORDER_QUEUE_GROUP_EASE }}
+        >
           <ChevronDownIcon
-            className={cn(
-              "size-4 shrink-0 text-muted-foreground transition-transform duration-[var(--clair-motion-duration-normal)] ease-[var(--clair-motion-easing-standard)]",
-              collapsed && "rotate-180"
-            )}
+            className="size-4 shrink-0 text-muted-foreground"
             aria-hidden="true"
           />
-        </span>
+        </motion.span>
       </button>
-      {collapsed ? null : (
-        <div className="flex flex-col gap-1">
-          {items.map((item) => (
-            <OrderQueueCard
-              key={item.id}
-              item={item}
-              onSelect={() => onSelectItem?.(item.id)}
-              selected={selectedItemId === item.id}
-              statusLabel={getStatusLabel(item.statusId, statuses)}
-            />
-          ))}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {collapsed ? null : (
+          <motion.div
+            key={`${status.id}-items`}
+            className="flex flex-col gap-1 overflow-hidden"
+            initial={{ height: 0, opacity: 0, y: -4 }}
+            animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
+            exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
+          >
+            {items.map((item) => (
+              <OrderQueueCard
+                key={item.id}
+                item={item}
+                onSelect={() => onSelectItem?.(item.id)}
+                selected={selectedItemId === item.id}
+                statusLabel={getStatusLabel(item.statusId, statuses)}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

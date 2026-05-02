@@ -280,3 +280,25 @@
 | 운영 분석 | MVP 원천 데이터가 안정화된 뒤 대시보드와 집계 전략을 정한다. |
 | EMR 마이그레이션 | 원천 시스템별 mapping workshop 이후 진행한다. |
 | AI/약물 안전 | 임상 검증 데이터와 책임 정책 수립 후 진행한다. |
+---
+
+## 2026-05-02 Backlog Reordering: PR 0-6
+
+| PR | Name | Deliverables | Verification |
+| --- | --- | --- | --- |
+| PR 0 | Documentation Baseline | PRD/Feature/User Flow/DB/gap/backlog addendum, reusable candidates, open questions, reference screen index | `rg`로 문서 반영 확인 |
+| PR 1 | Domain Baseline Review | 도메인 타입, status labels, 연결형 mock dataset 보강 | `npm run lint`, `npx tsc --noEmit`, `npm run build` |
+| PR 2 | Reception Closeout | 접수/예약 필터, 캘린더 시간축, 상세 드로어 진입, 불필요 UI 제거 | PR2 Playwright + app-shell regression |
+| PR 3 | Patient/Guardian Drawer | 환자/보호자 드로어, read/edit, 신규 환자 등록, 연결 관리 | Drawer interaction tests |
+| PR 4 | Chart | 진료 대기열, 과거 이력, SOAP, Assessment, Order 영역 | Chart route/selection tests |
+| PR 5 | Lab/Image | 검사/영상 queue, 결과 입력, 영상 판독, 첨부자료 | Lab/Image route/interaction tests |
+| PR 6 | Billing | 대기/미납/종료, 청구 묶음, 합산/해제, 결제 액션 | Billing calculation/action tests |
+
+### Component Extraction Rule
+
+- PR 2-6에서는 화면 구현을 우선하고, 공통화 후보는 문서에 기록한다.
+- 동일 패턴이 2개 이상 화면에서 반복되고 구조가 안정되면 별도 PR에서 공통 컴포넌트로 추출한다.
+
+### Handoff Reports
+
+- 각 PR 종료 시 변경 파일, 검증 명령, 남은 질문, 다음날 사용자와 함께 볼 수정 포인트를 보고서에 남긴다.

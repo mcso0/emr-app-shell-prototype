@@ -41,7 +41,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setRightPanelOpen,
   } = useLayoutStore();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     enterModule();
   }, [enterModule, moduleDefinition.id]);
 

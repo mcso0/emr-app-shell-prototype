@@ -77,3 +77,31 @@ Defines the product's category and target environment. User roles are linked to 
 
 - Web
 - Mobile
+---
+
+## 2026-05-02 MVP Scope Realignment Addendum
+
+이번 MVP 파동은 PR 0-6으로 재정렬한다. PR 0은 문서 최신화, PR 1은 도메인/데이터 기반 검수, PR 2-6은 운영 화면을 순차적으로 연결한다.
+
+### In Scope
+
+- 접수/예약: 환자/보호자 검색, 예약 접수, 현장 접수, 캘린더 워크스페이스.
+- 환자/보호자 드로어: 환자 정보, 보호자 정보, 연결 관리, CS 이력, 최신내역.
+- 진료(차트): 진료 대기열, 환자 과거 이력, SOAP, Assessment, Assessment History, Order 영역.
+- 임상병리/계통 검사: 검사 대기/완료, 결과 입력, 장비 수신 내역 UI.
+- 영상검사: 영상 대기/판독, 종합소견, 첨부자료 UI.
+- 수납: 대기/미납/종료, 보호자 기준 청구 묶음, 청구 항목 편집, 합산/해제, 수납 처리.
+
+### Out of Scope
+
+- 입원 화면.
+- 병원관리 전체 화면.
+- 병원관리의 Order 관리 / Order 세트 화면 구현. 단, 도메인과 공통 패턴 참고로만 사용한다.
+- Excel/KakaoTalk/PACS/장비 실제 연동.
+
+### Product Design Constraint
+
+- 제공된 레퍼런스 화면은 정보 구조와 업무 흐름 참고용이다.
+- 구현은 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
+- 없는 패턴은 shadcn, shadcn + 기존 컴포넌트, 또는 기존 컴포넌트 기반 신규 컴포넌트로 만든다.
+- 조제/처치 화면의 현재 디자인과 동작은 보존한다.

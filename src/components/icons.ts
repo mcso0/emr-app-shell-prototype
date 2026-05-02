@@ -152,6 +152,56 @@ export const ClockIcon = createIcon(IconClock3, "ClockIcon");
 export const CloseIcon = createIcon(IconClose, "CloseIcon");
 export const CommandIcon = createIcon(IconCommand, "CommandIcon");
 export const DownloadIcon = createIcon(IconDownload, "DownloadIcon");
+export const ExcelFileIcon = React.forwardRef<SVGSVGElement, AppIconProps>(
+  ({ size = 16, style, ...props }, ref) =>
+    React.createElement(
+      "svg",
+      {
+        ...props,
+        ref,
+        width: size,
+        height: size,
+        viewBox: "0 0 24 24",
+        fill: "none",
+        xmlns: "http://www.w3.org/2000/svg",
+        style,
+      },
+      React.createElement("path", {
+        d: "M6 3.5H15.5L20 8V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V5.5C4 4.39543 4.89543 3.5 6 3.5Z",
+        fill: "#ECFDF3",
+        stroke: "#107C41",
+        strokeWidth: 1.4,
+        strokeLinejoin: "round",
+      }),
+      React.createElement("path", {
+        d: "M15.5 3.5V8H20",
+        stroke: "#107C41",
+        strokeWidth: 1.4,
+        strokeLinejoin: "round",
+      }),
+      React.createElement("path", {
+        d: "M13.5 12H17.5M13.5 16H17.5",
+        stroke: "#107C41",
+        strokeWidth: 1.4,
+        strokeLinecap: "round",
+      }),
+      React.createElement("rect", {
+        x: 2.5,
+        y: 8,
+        width: 11,
+        height: 10,
+        rx: 1.6,
+        fill: "#107C41",
+      }),
+      React.createElement("path", {
+        d: "M6 11L10 15M10 11L6 15",
+        stroke: "white",
+        strokeWidth: 1.6,
+        strokeLinecap: "round",
+      }),
+    ),
+);
+ExcelFileIcon.displayName = "ExcelFileIcon";
 export const FilterIcon = createIcon(IconFilter, "FilterIcon");
 export const FlaskIcon = createIcon(IconFlask, "FlaskIcon");
 export const HomeIcon = createIcon(IconHome, "HomeIcon");
