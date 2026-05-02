@@ -13,8 +13,30 @@ Updated: 2026-05-03
 - `/w/:workspaceId/:module`은 mock session 없이는 `/login?next=<원래 URL>`로 이동한다.
 - 로그인 성공 후 안전한 내부 `next` URL로 복귀하고, `next`가 없으면 `/w/clair-demo/reception?modulePanel=open&aside=closed`로 진입한다.
 - mock session은 `sessionStorage` 또는 `localStorage`에 저장된다.
+- auth UI는 `src/features/auth/auth-client.ts`의 `useAuthClient()` 경계를 통해 mock session을 사용한다.
+- 로그인 submit은 async pending/disabled 상태와 provider error 표시 영역을 가진다.
+- Supabase 미연결 상태의 error UI 회귀는 development/test 전용 `mockProviderError=1` query mode로만 확인한다. production에서는 이 query mode가 provider error를 강제하지 않는다.
 - top menu는 현재 mock role을 표시하고 logout은 mock session을 지운 뒤 `/login`으로 이동한다.
 - 실제 API route, DB client, migration, Supabase env, OAuth callback, refresh token, MFA, server-side permission enforcement는 아직 연결하지 않았다.
+
+## 2026-05-03 진행 기록
+
+완료된 auth 전환 sequence:
+
+- 현재 상태 고정: roadmap/current status/implementation README 연결을 확인하고 closeout 규칙을 auth 작업 기준으로 재확인했다.
+- Auth Boundary 정리: `useAuthClient()`를 추가하고 login form, app guard, top menu가 `useMockAuthStore`를 직접 import하지 않게 했다.
+- 로그인 UX 상태 추가: submit 중 `로그인 중` disabled 상태와 form 내부 `role="alert"` provider error 영역을 추가했다.
+
+완료 문서:
+
+- `docs/completed/auth/2026-05-03-auth-roadmap-baseline.md`
+- `docs/completed/auth/2026-05-03-auth-boundary.md`
+- `docs/completed/auth/2026-05-03-login-ux-state.md`
+
+다음 추천 단계:
+
+- Supabase 실제 연결 전 `### 3. Supabase Auth 매핑 설계`를 문서로 먼저 진행한다.
+- 실제 Supabase package/env/API 연결, callback route, DB migration, RLS, server-side permission enforcement는 계속 금지 범위로 유지한다.
 
 ## 최종 목표와 결과물
 
@@ -68,6 +90,7 @@ Updated: 2026-05-03
 
 - session shape, hydrate, login, logout, role display를 추상 경계로 분리한다.
 - mock 구현은 유지하되, UI와 guard가 mock 저장소 세부사항을 직접 알지 않게 한다.
+- 현재 경계는 `src/features/auth/auth-client.ts`의 `AuthSession`과 `useAuthClient()`이다.
 - 이 단계에서는 Supabase package, env, callback route, server middleware를 추가하지 않는다.
 
 사용 스킬:
@@ -116,6 +139,7 @@ Updated: 2026-05-03
 - login submit 중 loading/disabled 상태를 추가한다.
 - provider error를 표시할 위치와 문구를 정한다.
 - email/password 필드는 Supabase 연결 전까지 최소 UI 상태만 둔다.
+- provider error 회귀 확인은 development/test 전용 `mockProviderError=1` query mode로만 수행한다.
 - mock role/storage 선택은 `MVP 테스트 옵션` 패널에 남기고 실제 로그인 폼과 섞지 않는다.
 
 사용 스킬:

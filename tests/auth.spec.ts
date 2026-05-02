@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import {
   canEditOrders,
   canManageHospital,
@@ -7,6 +8,11 @@ import {
 } from "../src/features/auth/permissions";
 
 const storageKey = "clair.mockAuth.session.v1";
+const authUiFiles = [
+  "src/features/auth/login-form.tsx",
+  "src/features/auth/auth-gate.tsx",
+  "src/shell/top-menu.tsx",
+];
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -129,6 +135,38 @@ test("app shell displays the selected mock role after login", async ({ page }) =
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await expect(page.getByTestId("top-menu-mock-user")).toContainText("간호사");
   await expect(page.getByTestId("top-menu-mock-user")).toContainText("nurse");
+});
+
+test("auth UI components use the auth client boundary", () => {
+  for (const filePath of authUiFiles) {
+    const source = readFileSync(filePath, "utf8");
+
+    expect(source, `${filePath} should not import the mock store directly`).not.toContain(
+      "@/features/auth/session-store"
+    );
+  }
+});
+
+test("login exposes pending and provider error states without creating a session", async ({
+  page,
+}) => {
+  await page.goto("/login?mockProviderError=1");
+
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page.getByRole("button", { name: "로그인 중" })).toBeDisabled();
+  await expect(page.locator("form").getByRole("alert")).toContainText(
+    "로그인 처리 중 문제가 발생했습니다."
+  );
+  await expect(page).toHaveURL(/\/login\?mockProviderError=1/);
+  await expect(page.getByTestId("mock-session-status")).toContainText("로그인 전");
+
+  const stored = await page.evaluate((key) => ({
+    session: window.sessionStorage.getItem(key),
+    local: window.localStorage.getItem(key),
+  }), storageKey);
+
+  expect(stored).toEqual({ session: null, local: null });
 });
 
 test("mock auth permission helper exposes role capabilities without UI gating", () => {

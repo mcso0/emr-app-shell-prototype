@@ -27,8 +27,9 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - Service catalog/role seed는 수가/서비스 항목과 `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 역할 seed를 제공한다.
 - Audit log foundation은 status transition, profile edit, SOAP save, order status change, billing action event builder와 fixture를 제공한다.
 - Auth mock foundation은 `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper를 제공한다.
+- 2026-05-03 기준 auth UI는 `useAuthClient()` boundary를 통해 mock session을 사용하며, 로그인 pending/error 상태가 회귀 테스트에 추가되었다.
 - 실제 API route, DB client, migration, auth provider, 서버 권한 enforcement는 아직 연결하지 않았다.
-- MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합한다.
+- MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
 - Auth 후속 작업은 `docs/implementation/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.
 
 ## Sales Demo 진행 현황
@@ -107,7 +108,7 @@ MVP 목표:
 | 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
 | 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
 | 수납 | 구현됨 | 대기/미납/종료 목록, 보호자 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 수납 액션 |
-| 로그인 mock | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, auth helper/store, shell 역할 표시, permission helper |
+| 로그인 mock | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, auth client boundary, login pending/error UI, logout utility, shell 역할 표시, permission helper |
 
 주요 구현 파일은 기능별 `src/features/*`에 있다. 새 작업자는 개별 파일을 보기 전에 이 문서와 관련 implementation 문서를 먼저 확인한다.
 
@@ -120,7 +121,7 @@ MVP 목표:
 | Role/permission seed | foundation 추가 | `front_desk`, `vet`, `nurse`, `billing_admin`, `hospital_admin` 추천 역할과 권한 seed |
 | Catalog lookup helper | foundation 추가 | service item/category/current price/role permission lookup, order/invoice consistency report |
 | Audit log foundation | foundation 추가 | status transition, profile edit, SOAP save, order status change, billing action seed와 deterministic append/build helper |
-| Auth mock foundation | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, logout utility, shell 역할 표시, permission helper |
+| Auth mock foundation | foundation 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, `useAuthClient()` boundary, logout utility, shell 역할 표시, permission helper |
 
 이 foundation들은 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동, 실제 권한 enforcement도 포함하지 않는다.
 
@@ -160,6 +161,15 @@ MVP 목표:
 - `npm run build`
 - `npx playwright test --reporter=line` (`69 passed`)
 
+2026-05-03 기준 MVP Auth transition sequence 후 아래 검증이 통과했다.
+
+- `npm run lint`
+- `rg "mvp-auth-transition-roadmap" docs/implementation`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts --reporter=line` (`9 passed`)
+- `npx playwright test tests/app-shell.spec.ts tests/reception.spec.ts tests/billing.spec.ts tests/chart.spec.ts tests/lab-imaging.spec.ts tests/sales-demo-flow.spec.ts --reporter=line` (`44 passed`)
+
 화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
 
 ## 작업 시 주의사항
@@ -190,15 +200,16 @@ Figma 화면 예시를 기준으로 UI를 정렬하려면 먼저 PR7에서 실�
 
 ## 다음 추천 작업
 
-다음 작업은 **MVP Auth 제품화 전환**을 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`이다.
+다음 작업은 **Supabase Auth 매핑 설계**를 추천한다. 기준 문서는 `docs/implementation/mvp-auth-transition-roadmap.md`이다.
 
 목표:
 
 - 현재 mock session 기반 `/login`, app guard, logout, role display를 유지한다.
-- Supabase 실제 연결 전에 auth boundary, session interface, login UX 상태, 역할/권한 매핑 계획을 정리한다.
+- 이미 추가된 auth boundary, session interface, login UX 상태를 유지한다.
+- Supabase 실제 연결 전에 `auth.users`, 앱 도메인 `users`, `user_memberships`, `permission_policies` 매핑 계획을 정리한다.
 - 실제 auth provider, DB/API session, 서버 권한 enforcement는 별도 후속 계획에서 연결한다.
 
-구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7을 함께 확인한다.
+구현을 시작하기 전에는 auth foundation 파일, `docs/implementation/mvp-auth-transition-roadmap.md`, `docs/implementation/mvp-implementation-backlog.md`의 Epic 7, Supabase 공식 문서를 함께 확인한다.
 
 ## 관련 문서
 
