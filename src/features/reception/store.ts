@@ -10,8 +10,12 @@ import type {
 
 type ReceptionDraftCheckIn = {
   appointmentId?: EmrId;
+  department?: string;
+  durationMinutes?: number;
   encounter: Encounter;
+  memo?: string;
   queueEntry: WaitingQueueEntry;
+  receptionType?: "appointment" | "walk_in";
 };
 
 type ReceptionStore = {
@@ -26,7 +30,10 @@ type ReceptionStore = {
   selectPatient: (patientId: EmrId) => void;
   checkInAppointment: (appointment: Appointment) => void;
   createWalkInCheckIn: (input: {
+    department?: string;
+    durationMinutes?: number;
     guardianId?: EmrId;
+    memo?: string;
     patientId: EmrId;
     primaryVeterinarianId?: EmrId;
     visitPurpose?: string;
@@ -128,13 +135,39 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       const queueEntry = createDraftQueueEntry({ encounterId: encounter.id, index });
 
       return {
-        draftCheckIns: [...state.draftCheckIns, { appointmentId: appointment.id, encounter, queueEntry }],
+        draftCheckIns: [
+          ...state.draftCheckIns,
+          {
+            appointmentId: appointment.id,
+            durationMinutes: appointment.scheduledEndAt
+              ? Math.max(
+                  10,
+                  Math.round(
+                    (new Date(appointment.scheduledEndAt).getTime() -
+                      new Date(appointment.scheduledStartAt).getTime()) /
+                      60000
+                  )
+                )
+              : undefined,
+            encounter,
+            queueEntry,
+            receptionType: "appointment",
+          },
+        ],
         selectedAppointmentId: appointment.id,
         selectedEncounterId: encounter.id,
         selectedPatientId: appointment.patientId,
       };
     }),
-  createWalkInCheckIn: ({ guardianId, patientId, primaryVeterinarianId, visitPurpose }) =>
+  createWalkInCheckIn: ({
+    department,
+    durationMinutes,
+    guardianId,
+    memo,
+    patientId,
+    primaryVeterinarianId,
+    visitPurpose,
+  }) =>
     set((state) => {
       const existingDraft = state.draftCheckIns.find(
         (draft) => !draft.appointmentId && draft.encounter.patientId === patientId
@@ -158,7 +191,17 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       const queueEntry = createDraftQueueEntry({ encounterId: encounter.id, index });
 
       return {
-        draftCheckIns: [...state.draftCheckIns, { encounter, queueEntry }],
+        draftCheckIns: [
+          ...state.draftCheckIns,
+          {
+            department,
+            durationMinutes,
+            encounter,
+            memo,
+            queueEntry,
+            receptionType: "walk_in",
+          },
+        ],
         selectedEncounterId: encounter.id,
         selectedPatientId: patientId,
       };

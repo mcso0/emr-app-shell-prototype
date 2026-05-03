@@ -18,10 +18,19 @@ type NewPatientInput = {
   species: Patient["species"];
 };
 
+type NewGuardianInput = {
+  address?: string;
+  memo?: string;
+  mobilePhone?: string;
+  name: string;
+  phone?: string;
+};
+
 type PatientProfileStore = {
   guardians: Guardian[];
   patientGuardians: PatientGuardian[];
   patients: Patient[];
+  addGuardian: (input: NewGuardianInput) => { error?: string; guardianId?: EmrId };
   addPatient: (input: NewPatientInput) => { error?: string; patientId?: EmrId };
   setPrimaryGuardian: (patientId: EmrId, guardianId: EmrId) => void;
   toggleGuardianMessageConsent: (patientId: EmrId, guardianId: EmrId) => void;
@@ -41,6 +50,30 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
   guardians: cloneGuardians(),
   patientGuardians: clonePatientGuardians(),
   patients: clonePatients(),
+  addGuardian: (input) => {
+    const name = input.name.trim();
+
+    if (!name) return { error: "보호자명은 필수입니다." };
+
+    const guardianId = `session-guardian-${Date.now()}`;
+    const nextGuardian: Guardian = {
+      id: guardianId,
+      workspaceId: MOCK_WORKSPACE_ID,
+      name,
+      mobilePhone: input.mobilePhone?.trim() || undefined,
+      phone: input.phone?.trim() || undefined,
+      address: input.address?.trim() || undefined,
+      memo: input.memo?.trim() || undefined,
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+
+    set((state) => ({
+      guardians: [...state.guardians, nextGuardian],
+    }));
+
+    return { guardianId };
+  },
   addPatient: (input) => {
     const name = input.name.trim();
     const guardianName = input.guardianName.trim();
