@@ -20,12 +20,17 @@ import type {
 
 export type ReceptionDraftCheckIn = {
   appointmentId?: EmrId;
+  department?: string;
+  durationMinutes?: number;
   encounter: Encounter;
+  memo?: string;
   queueEntry: WaitingQueueEntry;
+  receptionType?: "appointment" | "walk_in";
 };
 
 export type ReceptionPatientSummary = {
   activeEncounter?: Encounter;
+  activeDraftCheckIn?: ReceptionDraftCheckIn;
   latestAppointment?: Appointment;
   patient: Patient;
   primaryGuardian?: Guardian;
@@ -109,6 +114,9 @@ export const getReceptionPatientSummaries = (
     const activeEncounter = patientEncounters.find((encounter) =>
       ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
     );
+    const activeDraftCheckIn = activeEncounter
+      ? draftCheckIns.find((draft) => draft.encounter.id === activeEncounter.id)
+      : undefined;
     const latestAppointment = patientAppointments.at(-1);
     const searchText = [
       patient.name,
@@ -125,6 +133,7 @@ export const getReceptionPatientSummaries = (
 
     return {
       activeEncounter,
+      activeDraftCheckIn,
       latestAppointment,
       patient,
       primaryGuardian,

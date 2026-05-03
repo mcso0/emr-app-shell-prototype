@@ -73,7 +73,7 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
 test("reception calendar options expose Excel import and export actions", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
-  const calendarOptionsButton = page.getByRole("button", { name: "캘린더 옵션" });
+  const calendarOptionsButton = page.getByRole("button", { name: "더보기" });
   await expect(async () => {
     await calendarOptionsButton.click();
     await expect(calendarOptionsButton).toHaveAttribute("aria-expanded", "true", {
@@ -164,7 +164,9 @@ test("patient drawer shows CS history and latest shortcuts", async ({ page }) =>
 test("new patient registration validates and opens the patient drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
-  await page.getByRole("button", { name: "신규 환자" }).click();
+  const sidePanel = page.locator("aside").first();
+  await expect(sidePanel.getByRole("button", { name: "신규 환자" })).toHaveCount(0);
+  await page.getByRole("button", { name: "환자 등록" }).click();
   await page.getByRole("button", { name: "등록" }).click();
   await expect(page.getByText("환자명은 필수입니다.")).toBeVisible();
 
@@ -178,6 +180,21 @@ test("new patient registration validates and opens the patient drawer", async ({
   await expect(page.getByText("새롬", { exact: true })).toBeVisible();
   await expect(page.getByLabel("품종").first()).toHaveValue("푸들");
   await expect(page.getByText("김새봄", { exact: true })).toBeVisible();
+});
+
+test("new guardian registration validates and opens the guardian drawer", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  await page.getByRole("button", { name: "보호자 등록" }).click();
+  await page.getByRole("button", { name: "등록" }).click();
+  await expect(page.getByText("보호자명은 필수입니다.")).toBeVisible();
+
+  await page.getByLabel("보호자명").fill("박보호");
+  await page.getByLabel("보호자 휴대전화").fill("010-7777-8888");
+  await page.getByRole("button", { name: "등록" }).click();
+
+  await expect(page.getByText("보호자 정보")).toBeVisible();
+  await expect(page.locator('input[value="박보호"]')).toBeVisible();
 });
 
 test("nav rail maps menu labels to the intended modules", async ({ page }) => {
@@ -250,11 +267,50 @@ test("reception creates a walk-in waiting row for the selected patient", async (
   await expect(page.getByText("환자 정보")).toBeVisible();
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await expect(page).not.toHaveURL(/drawer=/);
-  await page.getByRole("button", { name: "현장 접수" }).click();
+  await page.getByTestId("schedule-check-in-button").click();
   await expect(page).toHaveURL(/drawer=reception-form/);
-  await expect(page.getByRole("heading", { name: "접수" }).last()).toBeVisible();
-  await expect(page.getByLabel("방문 목적")).toBeVisible();
+  const walkInForm = page.getByTestId("walk-in-reception-form").last();
+  await expect(walkInForm.getByRole("heading", { name: "접수" })).toBeVisible();
+  await expect(walkInForm.getByLabel("방문 목적")).toBeVisible();
+  await walkInForm.getByLabel("방문 목적").fill("보행 재검 및 통증 상담");
+  await walkInForm.getByLabel("접수/예약 메모").fill("보호자가 계단 보행을 걱정함");
   await page.getByRole("button", { name: "생성" }).click();
 
-  await expect(page.getByTestId("patient-card-patient-dubu")).toContainText("대기");
+  const dubuCard = page.getByTestId("patient-card-patient-dubu");
+  await expect(dubuCard).toContainText("진료대기");
+  await expect(dubuCard).toContainText("보행 재검 및 통증 상담");
+  await expect(dubuCard).toContainText("보호자가 계단 보행을 걱정함");
+  await expect(dubuCard).toContainText("담당의 미지정");
+
+  const walkInCalendarCard = page.getByTestId("walkin-card-draft-encounter-walkin-patient-dubu");
+  await expect(walkInCalendarCard).toContainText("진료대기");
+  await expect(walkInCalendarCard).toContainText("담당의 미지정");
+  await expect(walkInCalendarCard).toContainText("보행 재검 및 통증 상담");
+});
+
+test("reception walk-in keeps selected veterinarian and form details", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const sidePanel = page.locator("aside").first();
+  await sidePanel.getByText("하루 · P-260501-0001").click();
+  await expect(page.getByText("환자 정보")).toBeVisible();
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+
+  await page.getByTestId("schedule-check-in-button").click();
+  const walkInForm = page.getByTestId("walk-in-reception-form").last();
+  await walkInForm.getByLabel("방문 목적").fill("예방접종 전 건강 확인");
+  await walkInForm.getByLabel("접수/예약 메모").fill("기존 노쇼 예약과 별도 현장 접수");
+  await walkInForm.getByLabel("담당의").click();
+  await page.getByRole("option", { name: "김도윤" }).click();
+  await page.getByRole("button", { name: "생성" }).click();
+
+  const haruCard = page.getByTestId("patient-card-patient-haru");
+  await expect(haruCard).toContainText("진료대기");
+  await expect(haruCard).toContainText("예방접종 전 건강 확인");
+  await expect(haruCard).toContainText("김도윤");
+
+  const walkInCalendarCard = page.getByTestId("walkin-card-draft-encounter-walkin-patient-haru");
+  await expect(walkInCalendarCard).toContainText("진료대기");
+  await expect(walkInCalendarCard).toContainText("김도윤");
+  await expect(walkInCalendarCard).toContainText("기존 노쇼 예약과 별도 현장 접수");
 });

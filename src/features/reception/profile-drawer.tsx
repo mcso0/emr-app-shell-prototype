@@ -915,18 +915,165 @@ export function NewPatientDialog({
   );
 }
 
-export function NewPatientButton() {
+function NewGuardianDialog({
+  onOpenChange,
+  open,
+}: {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  const addGuardian = usePatientProfileStore((state) => state.addGuardian);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState({
+    address: "",
+    memo: "",
+    mobilePhone: "",
+    name: "",
+    phone: "",
+  });
+
+  const reset = () => {
+    setDraft({
+      address: "",
+      memo: "",
+      mobilePhone: "",
+      name: "",
+      phone: "",
+    });
+    setError("");
+  };
+  const close = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+    if (!nextOpen) reset();
+  };
+  const save = () => {
+    const result = addGuardian(draft);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    if (result.guardianId) {
+      setActiveDrawer({ type: "reception-guardian", id: result.guardianId });
+    }
+    close(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={close}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>보호자 등록</DialogTitle>
+          <DialogDescription>
+            프로토타입 세션에만 저장됩니다.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="보호자명">
+            <Input
+              value={draft.name}
+              aria-invalid={error.includes("보호자명") || undefined}
+              onValueChange={(name) => setDraft((current) => ({ ...current, name }))}
+            />
+          </Field>
+          <Field label="보호자 휴대전화">
+            <Input
+              value={draft.mobilePhone}
+              onValueChange={(mobilePhone) =>
+                setDraft((current) => ({ ...current, mobilePhone }))
+              }
+            />
+          </Field>
+          <Field label="보호자 전화">
+            <Input
+              value={draft.phone}
+              onValueChange={(phone) => setDraft((current) => ({ ...current, phone }))}
+            />
+          </Field>
+          <Field label="주소">
+            <Input
+              value={draft.address}
+              onValueChange={(address) => setDraft((current) => ({ ...current, address }))}
+            />
+          </Field>
+          <div className="col-span-2">
+            <Field label="메모">
+              <Input
+                value={draft.memo}
+                onValueChange={(memo) => setDraft((current) => ({ ...current, memo }))}
+              />
+            </Field>
+          </div>
+        </div>
+        <div
+          className={cn(
+            "min-h-5 text-[12px]",
+            error ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {error || "환자 연결은 보호자 상세에서 후속으로 관리합니다."}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => close(false)}>취소</Button>
+          <Button onClick={save}>
+            <CdsActionsPlusIcon data-icon="inline-start" />
+            등록
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function NewGuardianButton({
+  label = "보호자 등록",
+}: {
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button
-        aria-label="신규 환자"
+        aria-label={label}
         variant="ghost"
-        size="icon-sm"
+        size="sm"
+        className="h-8 rounded-md border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 text-[12px] font-semibold text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-atomic-gray-50)]"
         onClick={() => setOpen(true)}
       >
-        <CdsActionsPlusIcon />
+        <CdsActionsPlusIcon data-icon="inline-start" />
+        {label}
+      </Button>
+      <NewGuardianDialog open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+export function NewPatientButton({
+  label = "신규 환자",
+  variant = "icon",
+}: {
+  label?: string;
+  variant?: "icon" | "text";
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        aria-label={label}
+        variant="ghost"
+        size={variant === "icon" ? "icon-sm" : "sm"}
+        className={cn(
+          variant === "text" &&
+            "h-8 rounded-md border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 text-[12px] font-semibold text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-atomic-gray-50)]"
+        )}
+        onClick={() => setOpen(true)}
+      >
+        <CdsActionsPlusIcon data-icon={variant === "text" ? "inline-start" : undefined} />
+        {variant === "text" ? label : null}
       </Button>
       <NewPatientDialog open={open} onOpenChange={setOpen} />
     </>
