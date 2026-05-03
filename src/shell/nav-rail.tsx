@@ -134,7 +134,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
                   render={
                     <button
                       type="button"
-                      className="flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+                      className="flex size-11 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-400)] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
                       onClick={() => setModulePanelOpen(true)}
                       aria-label="사이드 패널 펼치기"
                     >
@@ -256,7 +256,7 @@ function RailModuleItem({
             <Link
               href={href}
               className={cn(
-                "flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50",
+                "flex size-11 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-400)] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50",
                 active && "bg-[rgba(255,255,255,0.16)] text-white"
               )}
               aria-current={active ? "page" : undefined}
@@ -295,7 +295,7 @@ function RailActionItem({
           render={
             <button
               type="button"
-              className="flex size-11 items-center justify-center rounded-[6px] text-[#cbd5e0] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+              className="flex size-11 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-400)] outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
               aria-label={label}
             >
               <IconFrame>

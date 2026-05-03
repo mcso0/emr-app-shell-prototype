@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   IconBankCard,
   IconBed,
+  IconBone,
   IconBusiness,
   IconCalendarDates,
   IconCheck,
@@ -11,6 +12,7 @@ import {
   IconChevronUp,
   IconCircleCheck,
   IconCircleClose,
+  IconCircleCloseFill,
   IconCircleInfo,
   IconCircleQuestion,
   IconClipboardTasks,
@@ -32,6 +34,7 @@ import {
   IconSliders,
   IconSpinnerBall,
   IconStethoscope,
+  IconUser,
   IconWarningTriangle,
 } from "obra-icons-react";
 
@@ -142,6 +145,10 @@ export const ChevronRightIcon = createIcon(
 export const ChevronUpIcon = createIcon(IconChevronUp, "ChevronUpIcon");
 export const CircleCheckIcon = createIcon(IconCircleCheck, "CircleCheckIcon");
 export const CircleCloseIcon = createIcon(IconCircleClose, "CircleCloseIcon");
+export const CircleCloseFillIcon = createIcon(
+  IconCircleCloseFill,
+  "CircleCloseFillIcon",
+);
 export const InfoIcon = createIcon(IconCircleInfo, "InfoIcon");
 export const HelpIcon = createIcon(IconCircleQuestion, "HelpIcon");
 export const ClipboardListIcon = createIcon(
@@ -205,6 +212,7 @@ ExcelFileIcon.displayName = "ExcelFileIcon";
 export const FilterIcon = createIcon(IconFilter, "FilterIcon");
 export const FlaskIcon = createIcon(IconFlask, "FlaskIcon");
 export const HomeIcon = createIcon(IconHome, "HomeIcon");
+export const BoneIcon = createIcon(IconBone, "BoneIcon");
 export const ImagesIcon = createIcon(IconImage, "ImagesIcon");
 export const MenuIcon = createIcon(IconMenu, "MenuIcon");
 export const BellIcon = createIcon(IconNotification, "BellIcon");
@@ -220,6 +228,7 @@ export const StethoscopeIcon = createIcon(
   IconStethoscope,
   "StethoscopeIcon",
 );
+export const UserIcon = createIcon(IconUser, "UserIcon");
 export const WarningIcon = createIcon(IconWarningTriangle, "WarningIcon");
 
 export const WorkspaceLogoMarkIcon = React.forwardRef<

@@ -40,12 +40,17 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     isReceptionFormDrawer
       ? "접수"
       : activeDrawer?.type === "reception-patient"
-        ? "환자 정보"
-        : activeDrawer?.type === "reception-guardian"
-          ? "보호자 정보"
-          : activeDrawer?.type === "reception-appointment"
-            ? "예약 상세"
-            : "상세 정보";
+          ? "환자 정보"
+          : activeDrawer?.type === "reception-guardian"
+            ? "보호자 정보"
+            : activeDrawer?.type === "reception-appointment"
+              ? "예약 상세"
+              : activeDrawer?.type === "reception-encounter"
+                ? "접수 정보"
+                : "상세 정보";
+  const drawerSubtitle =
+    activeDrawer?.subtitle ??
+    (activeDrawer?.type === "reception-encounter" ? undefined : activeDrawer?.id);
   const drawerWidth =
     activeDrawer?.type === "reception-form"
       ? SHELL_LAYOUT.drawer.largeWidth
@@ -176,8 +181,14 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               {!isReceptionFormDrawer ? (
                 <div className="flex h-12 items-center justify-between border-b px-4">
                   <div>
-                    <div className="text-sm font-semibold">{drawerTitle}</div>
-                    <div className="text-[11px] text-muted-foreground">{activeDrawer.id}</div>
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="text-sm font-semibold">{drawerTitle}</span>
+                      {drawerSubtitle ? (
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          {drawerSubtitle}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <Button
                     variant="ghost"

@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-03
+Updated: 2026-05-04
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
@@ -30,6 +30,7 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-03 기준 auth UI는 `useAuthClient()` boundary를 통해 mock session을 사용하며, 로그인 pending/error 상태가 회귀 테스트에 추가되었다.
 - 2026-05-03 기준 Supabase provider adapter가 `useAuthClient()` boundary 뒤에 추가되었다. env 미설정 또는 `NEXT_PUBLIC_AUTH_MODE=mock`에서는 mock/local demo fallback을 유지한다.
 - 2026-05-03 기준 접수/예약 Product MVP 보강 첫 단위로 현장 접수 form 입력값이 session-only encounter/queue 생성에 반영되며, 담당의 미지정 현장 접수도 진료대기 상태로 사이드 패널과 day calendar에서 확인된다.
+- 2026-05-04 기준 접수/예약 운영 UI가 조제/처치 side panel 기준에 맞춰 보강되었고, 신규 동물/보호자 등록 dialog는 같은 작은 shadcn 기반 modal 구조로 정리되었다.
 - membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
 - Auth 후속 작업은 `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.

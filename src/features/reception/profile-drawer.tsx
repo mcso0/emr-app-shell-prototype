@@ -1,10 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
+import {
+  CdsActionsPlusIcon,
+  CdsActionsSearchIcon,
+} from "@/components/cds-icons/actions-and-controls";
 import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation";
+import { BoneIcon, UserIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Field as FormField,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,8 +36,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   getGuardianDisplay,
   getPatientDisplayAge,
@@ -50,6 +66,7 @@ import type {
   LatestWorkShortcut,
   Patient,
   PatientGuardian,
+  PatientSex,
   Species,
 } from "@/types/emr-domain";
 
@@ -98,6 +115,24 @@ const getChannelLabel = (channel: CsHistoryChannel) => {
 
 const getStaffDisplayName = (userId?: EmrId) =>
   userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
+
+const newPatientSpeciesOptions: Array<{ label: string; value: Species }> = [
+  { label: "강아지", value: "dog" },
+  { label: "고양이", value: "cat" },
+  { label: "기타", value: "other" },
+];
+
+const newPatientSexOptions: Array<{ label: string; value: PatientSex }> = [
+  { label: "미상", value: "unknown" },
+  { label: "수컷", value: "male" },
+  { label: "암컷", value: "female" },
+];
+
+const getNewPatientSpeciesLabel = (species: Species) =>
+  newPatientSpeciesOptions.find((option) => option.value === species)?.label ?? "종류 선택";
+
+const getNewPatientSexLabel = (sex: PatientSex) =>
+  newPatientSexOptions.find((option) => option.value === sex)?.label ?? "성별 선택";
 
 const getPatientVisitReason = (bundle: PatientProfileBundle) =>
   bundle.activeEncounter?.chiefComplaint ??
@@ -203,6 +238,69 @@ function Field({
       {label}
       {children}
     </label>
+  );
+}
+
+function RegistrationFormField({
+  actions,
+  children,
+  className,
+  error,
+  helper,
+  label,
+  required,
+}: {
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  error?: string;
+  helper?: string;
+  label: string;
+  required?: boolean;
+}) {
+  return (
+    <FormField className={className} data-invalid={Boolean(error) || undefined}>
+      <div className="flex min-h-5 items-center justify-between gap-3">
+        <FieldLabel className="text-[14px] font-bold leading-5 text-[var(--clair-color-label-strong)]">
+          {label}
+          {required ? (
+            <span className="ml-1 text-[var(--clair-color-primary-normal)]">*</span>
+          ) : null}
+        </FieldLabel>
+        {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
+      </div>
+      {children}
+      {error ? <FieldError className="text-[12px] leading-4">{error}</FieldError> : null}
+      {helper ? (
+        <FieldDescription className="text-[12px] font-medium leading-4">
+          {helper}
+        </FieldDescription>
+      ) : null}
+    </FormField>
+  );
+}
+
+function RegistrationFormSection({
+  children,
+  className,
+  separated = true,
+  title,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  separated?: boolean;
+  title: string;
+}) {
+  return (
+    <>
+      {separated ? <FieldSeparator className="my-0" /> : null}
+      <FieldSet className={cn("gap-0", className)}>
+        <FieldLegend className="mb-3 text-[13px] font-bold leading-5 text-[var(--clair-color-atomic-gray-400)]">
+          {title}
+        </FieldLegend>
+        <FieldGroup className="gap-5">{children}</FieldGroup>
+      </FieldSet>
+    </>
   );
 }
 
@@ -792,22 +890,48 @@ export function NewPatientDialog({
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState({
+    additionalBreed: "",
+    ageDays: "",
+    ageMonths: "",
+    ageYears: "",
     breed: "",
+    color: "",
+    estimatedAge: false,
     guardianMobilePhone: "",
     guardianName: "",
+    isMixed: false,
     microchipNo: "",
+    microchipStatus: "미선택",
     name: "",
+    patientRegistrationNo: "",
+    primaryVeterinarianId: "",
+    sex: "unknown" as PatientSex,
     species: "dog" as Species,
+    specialNote: "",
+    weight: "",
   });
 
   const reset = () => {
     setDraft({
+      additionalBreed: "",
+      ageDays: "",
+      ageMonths: "",
+      ageYears: "",
       breed: "",
+      color: "",
+      estimatedAge: false,
       guardianMobilePhone: "",
       guardianName: "",
+      isMixed: false,
       microchipNo: "",
+      microchipStatus: "미선택",
       name: "",
+      patientRegistrationNo: "",
+      primaryVeterinarianId: "",
+      sex: "unknown",
       species: "dog",
+      specialNote: "",
+      weight: "",
     });
     setError("");
   };
@@ -816,7 +940,26 @@ export function NewPatientDialog({
     if (!nextOpen) reset();
   };
   const save = () => {
-    const result = addPatient(draft);
+    const ageParts = [
+      draft.ageYears ? `${draft.ageYears}년` : "",
+      draft.ageMonths ? `${draft.ageMonths}개월` : "",
+      draft.ageDays ? `${draft.ageDays}일` : "",
+    ].filter(Boolean);
+    const result = addPatient({
+      breed: draft.isMixed && draft.additionalBreed
+        ? `${draft.breed.trim()} 믹스`
+        : draft.breed,
+      estimatedAgeText: ageParts.length
+        ? `${ageParts.join(" ")}${draft.estimatedAge ? " 추정" : ""}`
+        : undefined,
+      guardianMobilePhone: draft.guardianMobilePhone,
+      guardianName: draft.guardianName,
+      microchipNo: draft.microchipNo,
+      name: draft.name,
+      sex: draft.sex,
+      species: draft.species,
+      specialNote: draft.specialNote,
+    });
 
     if (result.error) {
       setError(result.error);
@@ -831,84 +974,247 @@ export function NewPatientDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>신규 환자 등록</DialogTitle>
-          <DialogDescription>
-            프로토타입 세션에만 저장됩니다.
+      <DialogContent className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]">
+        <DialogHeader className="px-8 pb-4 pt-7">
+          <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+            신규 동물 등록
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            새 동물 등록 양식입니다.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="환자명">
-            <Input
-              value={draft.name}
-              aria-invalid={error.includes("환자명") || undefined}
-              onValueChange={(name) => setDraft((current) => ({ ...current, name }))}
-            />
-          </Field>
-          <Field label="종">
-            <Select
-              value={draft.species}
-              onValueChange={(species) =>
-                setDraft((current) => ({ ...current, species: species as Species }))
-              }
-            >
-              <SelectTrigger className="w-full bg-card">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dog">강아지</SelectItem>
-                <SelectItem value="cat">고양이</SelectItem>
-                <SelectItem value="other">기타</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="품종">
-            <Input
-              value={draft.breed}
-              onValueChange={(breed) => setDraft((current) => ({ ...current, breed }))}
-            />
-          </Field>
-          <Field label="마이크로칩">
-            <Input
-              value={draft.microchipNo}
-              onValueChange={(microchipNo) =>
-                setDraft((current) => ({ ...current, microchipNo }))
-              }
-            />
-          </Field>
-          <Field label="보호자명">
-            <Input
-              value={draft.guardianName}
-              aria-invalid={error.includes("보호자명") || undefined}
-              onValueChange={(guardianName) =>
-                setDraft((current) => ({ ...current, guardianName }))
-              }
-            />
-          </Field>
-          <Field label="보호자 휴대전화">
-            <Input
-              value={draft.guardianMobilePhone}
-              onValueChange={(guardianMobilePhone) =>
-                setDraft((current) => ({ ...current, guardianMobilePhone }))
-              }
-            />
-          </Field>
-        </div>
-        <div
-          className={cn(
-            "min-h-5 text-[12px]",
-            error ? "text-destructive" : "text-muted-foreground"
-          )}
-        >
-          {error || "마이크로칩 중복은 현재 세션 데이터 기준으로만 확인합니다."}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => close(false)}>취소</Button>
-          <Button onClick={save}>
-            <CdsActionsPlusIcon data-icon="inline-start" />
-            등록
-          </Button>
+        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
+          <div className="flex flex-col gap-5 pb-6">
+            <RegistrationFormSection separated={false} title="보호자 연결">
+              <div className="grid grid-cols-2 gap-5">
+                <RegistrationFormField
+                  error={error.includes("보호자명") ? error : undefined}
+                  label="보호자 검색"
+                  required
+                >
+                  <div className="relative">
+                    <CdsActionsSearchIcon
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                    />
+                    <Input
+                      aria-label="보호자명"
+                      aria-invalid={error.includes("보호자명") || undefined}
+                      className="h-10 bg-card pl-9"
+                      placeholder="보호자를 검색해주세요"
+                      value={draft.guardianName}
+                      onValueChange={(guardianName) =>
+                        setDraft((current) => ({ ...current, guardianName }))
+                      }
+                    />
+                  </div>
+                </RegistrationFormField>
+                <RegistrationFormField label="보호자 휴대전화">
+                  <Input
+                    aria-label="보호자 휴대전화"
+                    className="h-10 bg-card"
+                    placeholder="010-0000-0000"
+                    value={draft.guardianMobilePhone}
+                    onValueChange={(guardianMobilePhone) =>
+                      setDraft((current) => ({ ...current, guardianMobilePhone }))
+                    }
+                  />
+                </RegistrationFormField>
+              </div>
+            </RegistrationFormSection>
+
+            <RegistrationFormSection title="동물 정보">
+              <div className="grid grid-cols-2 gap-5">
+                <RegistrationFormField
+                  error={error.includes("환자명") ? error : undefined}
+                  label="동물 이름"
+                  required
+                >
+                  <Input
+                    aria-label="환자명"
+                    aria-invalid={error.includes("환자명") || undefined}
+                    className="h-10 bg-card"
+                    placeholder="동물의 이름을 입력해주세요"
+                    value={draft.name}
+                    onValueChange={(name) => setDraft((current) => ({ ...current, name }))}
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField label="동물 종류" required>
+                  <Select
+                    value={draft.species}
+                    onValueChange={(species) =>
+                      setDraft((current) => ({ ...current, species: species as Species }))
+                    }
+                  >
+                    <SelectTrigger aria-label="종" className="h-10 w-full bg-card">
+                      <span className="flex flex-1 text-left">
+                        {getNewPatientSpeciesLabel(draft.species)}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {newPatientSpeciesOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </RegistrationFormField>
+                <RegistrationFormField
+                  label="주 품종"
+                  required
+                  actions={
+                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                      <Switch
+                        checked={draft.isMixed}
+                        onCheckedChange={(isMixed) =>
+                          setDraft((current) => ({ ...current, isMixed }))
+                        }
+                      />
+                      믹스
+                    </label>
+                  }
+                >
+                  <div className="relative">
+                    <CdsActionsSearchIcon
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                    />
+                    <Input
+                      aria-label="품종"
+                      className="h-10 bg-card pl-9"
+                      placeholder="주 품종을 선택해주세요"
+                      value={draft.breed}
+                      onValueChange={(breed) => setDraft((current) => ({ ...current, breed }))}
+                    />
+                  </div>
+                </RegistrationFormField>
+                <RegistrationFormField label="성별">
+                  <Select
+                    value={draft.sex}
+                    onValueChange={(sex) =>
+                      setDraft((current) => ({ ...current, sex: sex as PatientSex }))
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full bg-card">
+                      <span className="flex flex-1 text-left">
+                        {getNewPatientSexLabel(draft.sex)}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {newPatientSexOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </RegistrationFormField>
+                {draft.isMixed ? (
+                  <RegistrationFormField className="col-span-2" label="추가 품종">
+                    <div className="relative">
+                      <CdsActionsSearchIcon
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                      />
+                      <Input
+                        className="h-10 bg-card pl-9"
+                        placeholder="믹스의 경우 추가 품종을 선택해주세요"
+                        value={draft.additionalBreed}
+                        onValueChange={(additionalBreed) =>
+                          setDraft((current) => ({ ...current, additionalBreed }))
+                        }
+                      />
+                    </div>
+                  </RegistrationFormField>
+                ) : null}
+              </div>
+            </RegistrationFormSection>
+
+            <RegistrationFormSection title="추가 정보">
+              <div className="grid grid-cols-2 gap-5">
+                <RegistrationFormField label="동물 나이">
+                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                    <Input
+                      className="h-10 bg-card"
+                      inputMode="numeric"
+                      placeholder="년"
+                      value={draft.ageYears}
+                      onValueChange={(ageYears) =>
+                        setDraft((current) => ({ ...current, ageYears }))
+                      }
+                    />
+                    <Input
+                      className="h-10 bg-card"
+                      inputMode="numeric"
+                      placeholder="개월"
+                      value={draft.ageMonths}
+                      onValueChange={(ageMonths) =>
+                        setDraft((current) => ({ ...current, ageMonths }))
+                      }
+                    />
+                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                      <Switch
+                        size="sm"
+                        checked={draft.estimatedAge}
+                        onCheckedChange={(estimatedAge) =>
+                          setDraft((current) => ({ ...current, estimatedAge }))
+                        }
+                      />
+                      추정
+                    </label>
+                  </div>
+                </RegistrationFormField>
+                <RegistrationFormField
+                  error={error.includes("마이크로칩") ? error : undefined}
+                  label="마이크로칩"
+                >
+                  <Input
+                    aria-label="마이크로칩"
+                    className="h-10 bg-card"
+                    inputMode="numeric"
+                    placeholder="숫자만 입력해주세요"
+                    value={draft.microchipNo}
+                    onValueChange={(microchipNo) =>
+                      setDraft((current) => ({ ...current, microchipNo }))
+                    }
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField
+                  className="col-span-2"
+                  label="메모"
+                  actions={
+                    <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-500)]">
+                      {draft.specialNote.length}/500자
+                    </span>
+                  }
+                >
+                  <Textarea
+                    className="min-h-[88px] resize-none bg-card"
+                    maxLength={500}
+                    placeholder="내용을 입력해주세요"
+                    value={draft.specialNote}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, specialNote: event.target.value }))
+                    }
+                  />
+                </RegistrationFormField>
+              </div>
+            </RegistrationFormSection>
+          </div>
+        </ScrollArea>
+        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
+            마이크로칩 중복은 현재 세션 데이터 기준으로만 확인합니다.
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button variant="ghost" className="px-4 font-semibold" onClick={() => close(false)}>
+              취소
+            </Button>
+            <Button className="px-5 font-semibold" onClick={save}>
+              등록
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -927,19 +1233,29 @@ function NewGuardianDialog({
   const [error, setError] = useState("");
   const [draft, setDraft] = useState({
     address: "",
+    birthDate: "",
+    email: "",
     memo: "",
     mobilePhone: "",
     name: "",
     phone: "",
+    privacyConsent: false,
+    thirdPartyConsent: false,
+    marketingConsent: false,
   });
 
   const reset = () => {
     setDraft({
       address: "",
+      birthDate: "",
+      email: "",
       memo: "",
       mobilePhone: "",
       name: "",
       phone: "",
+      privacyConsent: false,
+      thirdPartyConsent: false,
+      marketingConsent: false,
     });
     setError("");
   };
@@ -963,64 +1279,181 @@ function NewGuardianDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>보호자 등록</DialogTitle>
-          <DialogDescription>
-            프로토타입 세션에만 저장됩니다.
+      <DialogContent className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]">
+        <DialogHeader className="px-8 pb-4 pt-7">
+          <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+            보호자 등록
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            새 보호자 등록 양식입니다.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="보호자명">
-            <Input
-              value={draft.name}
-              aria-invalid={error.includes("보호자명") || undefined}
-              onValueChange={(name) => setDraft((current) => ({ ...current, name }))}
-            />
-          </Field>
-          <Field label="보호자 휴대전화">
-            <Input
-              value={draft.mobilePhone}
-              onValueChange={(mobilePhone) =>
-                setDraft((current) => ({ ...current, mobilePhone }))
-              }
-            />
-          </Field>
-          <Field label="보호자 전화">
-            <Input
-              value={draft.phone}
-              onValueChange={(phone) => setDraft((current) => ({ ...current, phone }))}
-            />
-          </Field>
-          <Field label="주소">
-            <Input
-              value={draft.address}
-              onValueChange={(address) => setDraft((current) => ({ ...current, address }))}
-            />
-          </Field>
-          <div className="col-span-2">
-            <Field label="메모">
-              <Input
-                value={draft.memo}
-                onValueChange={(memo) => setDraft((current) => ({ ...current, memo }))}
-              />
-            </Field>
+        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
+          <div className="flex flex-col gap-5 pb-6">
+            <RegistrationFormSection separated={false} title="기본 정보">
+              <div className="grid grid-cols-2 gap-5">
+                <RegistrationFormField
+                  error={error.includes("보호자명") ? error : undefined}
+                  label="이름"
+                  required
+                >
+                  <Input
+                    aria-label="보호자명"
+                    aria-invalid={error.includes("보호자명") || undefined}
+                    className="h-10 bg-card"
+                    placeholder="이름을 입력해주세요"
+                    value={draft.name}
+                    onValueChange={(name) => setDraft((current) => ({ ...current, name }))}
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField label="생년월일">
+                  <Input
+                    className="h-10 bg-card"
+                    placeholder="날짜 선택 또는 직접 입력"
+                    value={draft.birthDate}
+                    onValueChange={(birthDate) =>
+                      setDraft((current) => ({ ...current, birthDate }))
+                    }
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField className="col-span-2" label="휴대폰 번호">
+                  <Input
+                    aria-label="보호자 휴대전화"
+                    className="h-10 bg-card"
+                    inputMode="numeric"
+                    placeholder="휴대폰 번호를 입력해주세요"
+                    value={draft.mobilePhone}
+                    onValueChange={(mobilePhone) =>
+                      setDraft((current) => ({ ...current, mobilePhone }))
+                    }
+                  />
+                </RegistrationFormField>
+              </div>
+            </RegistrationFormSection>
+
+            <RegistrationFormSection title="연락처 및 주소">
+              <div className="grid grid-cols-2 gap-5">
+                <RegistrationFormField label="추가 연락처">
+                  <Input
+                    className="h-10 bg-card"
+                    inputMode="numeric"
+                    placeholder="추가 연락처를 입력해주세요"
+                    value={draft.phone}
+                    onValueChange={(phone) => setDraft((current) => ({ ...current, phone }))}
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField label="이메일">
+                  <Input
+                    className="h-10 bg-card"
+                    placeholder="이메일 주소를 입력해주세요"
+                    value={draft.email}
+                    onValueChange={(email) => setDraft((current) => ({ ...current, email }))}
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField className="col-span-2" label="주소">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                    <Input
+                      className="h-10 bg-card"
+                      placeholder="주소를 입력해주세요"
+                      value={draft.address}
+                      onValueChange={(address) =>
+                        setDraft((current) => ({ ...current, address }))
+                      }
+                    />
+                    <Button variant="outline" className="h-10 px-3 font-semibold">
+                      주소검색
+                    </Button>
+                  </div>
+                </RegistrationFormField>
+              </div>
+            </RegistrationFormSection>
+
+            <RegistrationFormSection title="메모 및 동의">
+              <div className="grid gap-5">
+                <RegistrationFormField label="메모">
+                  <Textarea
+                    className="min-h-[88px] resize-none bg-card"
+                    placeholder="내용을 입력해주세요"
+                    value={draft.memo}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, memo: event.target.value }))
+                    }
+                  />
+                </RegistrationFormField>
+                <FieldGroup className="gap-3">
+                  <FormField orientation="horizontal">
+                    <Checkbox
+                      checked={
+                        draft.privacyConsent &&
+                        draft.thirdPartyConsent &&
+                        draft.marketingConsent
+                      }
+                      onCheckedChange={(checked) =>
+                        setDraft((current) => ({
+                          ...current,
+                          privacyConsent: Boolean(checked),
+                          thirdPartyConsent: Boolean(checked),
+                          marketingConsent: Boolean(checked),
+                        }))
+                      }
+                    />
+                    <FieldLabel className="font-semibold">전체동의</FieldLabel>
+                  </FormField>
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField orientation="horizontal">
+                      <Checkbox
+                        checked={draft.privacyConsent}
+                        onCheckedChange={(privacyConsent) =>
+                          setDraft((current) => ({
+                            ...current,
+                            privacyConsent: Boolean(privacyConsent),
+                          }))
+                        }
+                      />
+                      <FieldLabel>개인정보 수집 동의</FieldLabel>
+                    </FormField>
+                    <FormField orientation="horizontal">
+                      <Checkbox
+                        checked={draft.thirdPartyConsent}
+                        onCheckedChange={(thirdPartyConsent) =>
+                          setDraft((current) => ({
+                            ...current,
+                            thirdPartyConsent: Boolean(thirdPartyConsent),
+                          }))
+                        }
+                      />
+                      <FieldLabel>3자 제공 동의</FieldLabel>
+                    </FormField>
+                    <FormField orientation="horizontal">
+                      <Checkbox
+                        checked={draft.marketingConsent}
+                        onCheckedChange={(marketingConsent) =>
+                          setDraft((current) => ({
+                            ...current,
+                            marketingConsent: Boolean(marketingConsent),
+                          }))
+                        }
+                      />
+                      <FieldLabel>광고 수신 동의</FieldLabel>
+                    </FormField>
+                  </div>
+                </FieldGroup>
+              </div>
+            </RegistrationFormSection>
           </div>
-        </div>
-        <div
-          className={cn(
-            "min-h-5 text-[12px]",
-            error ? "text-destructive" : "text-muted-foreground"
-          )}
-        >
-          {error || "환자 연결은 보호자 상세에서 후속으로 관리합니다."}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => close(false)}>취소</Button>
-          <Button onClick={save}>
-            <CdsActionsPlusIcon data-icon="inline-start" />
-            등록
-          </Button>
+        </ScrollArea>
+        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
+            환자 연결은 보호자 상세에서 후속으로 관리합니다.
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button variant="ghost" className="px-4 font-semibold" onClick={() => close(false)}>
+              취소
+            </Button>
+            <Button className="px-5 font-semibold" onClick={save}>
+              등록
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1038,12 +1471,15 @@ export function NewGuardianButton({
     <>
       <Button
         aria-label={label}
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="h-8 rounded-md border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 text-[12px] font-semibold text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-atomic-gray-50)]"
+        className="bg-card px-3 font-semibold"
         onClick={() => setOpen(true)}
       >
-        <CdsActionsPlusIcon data-icon="inline-start" />
+        <UserIcon
+          data-icon="inline-start"
+          className="size-3 text-[var(--clair-color-atomic-gray-500)]"
+        />
         {label}
       </Button>
       <NewGuardianDialog open={open} onOpenChange={setOpen} />
@@ -1064,15 +1500,19 @@ export function NewPatientButton({
     <>
       <Button
         aria-label={label}
-        variant="ghost"
+        variant={variant === "icon" ? "ghost" : "outline"}
         size={variant === "icon" ? "icon-sm" : "sm"}
-        className={cn(
-          variant === "text" &&
-            "h-8 rounded-md border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 text-[12px] font-semibold text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-atomic-gray-50)]"
-        )}
+        className={cn(variant === "text" && "bg-card px-3 font-semibold")}
         onClick={() => setOpen(true)}
       >
-        <CdsActionsPlusIcon data-icon={variant === "text" ? "inline-start" : undefined} />
+        {variant === "text" ? (
+          <BoneIcon
+            data-icon="inline-start"
+            className="size-3 text-[var(--clair-color-atomic-gray-500)]"
+          />
+        ) : (
+          <CdsActionsPlusIcon />
+        )}
         {variant === "text" ? label : null}
       </Button>
       <NewPatientDialog open={open} onOpenChange={setOpen} />
