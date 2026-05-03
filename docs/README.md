@@ -12,10 +12,13 @@ Start here:
 
 This repository uses docs as the lightweight replacement for ClickUp or Notion. Work is planned, scoped, and handed off in repo so a new chat or sub-agent can continue without hidden context.
 
+Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, and how to review completed work with the user.
+
 Canonical docs are organized by purpose:
 
 | Area | Purpose |
 |---|---|
+| `_meta/` | Docs taxonomy, lifecycle, intake routing, templates, and result review rules |
 | `business/` | Market, customer, sales, pricing, and metrics context |
 | `product/` | PRD, feature specs, epics, product decisions, and glossary |
 | `design/` | Reference screens, UX flows, design system notes, and UI QA |
@@ -50,6 +53,26 @@ Planning document statuses:
 - `superseded`: replaced by a newer document
 - `deprecated`: retained only for historical context
 
+See `docs/_meta/lifecycle.md` for the full source-document lifecycle, including `deferred` and `archived`.
+
+## Intake Routing
+
+When the user gives a planning or work-management instruction in chat, route it through `docs/_meta/intake-rules.md`.
+
+After routing, use `docs/_meta/documentation-depth-rules.md` to avoid duplicate or overly deep records. In GitHub-backed work, PRs and issues should hold execution, review, CI, and merge context; `docs/` should hold current guidance, durable decisions, agent handoff, and archive-worthy context.
+
+Default routing:
+
+- Business model, customer, pricing, sales, or metrics context goes to `docs/business/`.
+- Product behavior, PRD, domain requirements, features, epics, stories, and roadmap go to `docs/product/`.
+- UX flows, screen-level behavior, design system notes, assets, and UI QA go to `docs/design/`.
+- Architecture, DB schema, auth/security, API boundaries, testing, and operations go to `docs/engineering/`.
+- PR-sized execution goes to `docs/work/`.
+- Completed work summaries go to `docs/completed/`.
+- Non-current historical guidance goes to `docs/archive/`.
+
+DB-related planning is split by audience: user-facing domain and data requirements live in `docs/product/domain/`; actual schema, ERD, migrations, RLS, indexes, and persistence plans live in `docs/engineering/data-model/`.
+
 ## PR Creation Gate
 
 Before creating a PR or PR-scoped work item, the agent must confirm:
@@ -79,3 +102,7 @@ Run `npm run docs:check` after docs path edits.
 
 - Internal docs path check: `npm run docs:check`
 - External link check: non-blocking `Docs External Link Check` GitHub Actions workflow using lychee
+
+## Result Reviews
+
+After finishing work, the agent must give the user a concise review following `docs/_meta/result-review-rules.md`: what changed, which files or docs changed, current status, verification result, and a useful next step.

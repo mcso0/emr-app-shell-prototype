@@ -1,3 +1,14 @@
+---
+id: ENGINEERING-DATA-MODEL-EMR-SAAS-KO
+status: approved
+area: engineering
+doc_type: data_model
+related_work: []
+supersedes: []
+superseded_by: []
+last_updated: 2026-05-03
+---
+
 # CLAiR EMR SaaS DB Structure And Spec Draft (KO)
 
 이 문서는 현재 프로젝트의 동물병원 전용 EMR SaaS 기능 명세와 유저 플로우를 기준으로 다시 작성한 DB 구조 초안입니다.

@@ -5,6 +5,30 @@ const root = process.cwd();
 const scannedFiles = [];
 const failures = [];
 
+const requiredPaths = [
+  "docs/agent-start-here.md",
+  "docs/_meta/README.md",
+  "docs/_meta/taxonomy.md",
+  "docs/_meta/lifecycle.md",
+  "docs/_meta/intake-rules.md",
+  "docs/_meta/documentation-depth-rules.md",
+  "docs/_meta/result-review-rules.md",
+  "docs/_meta/templates/feature-spec.md",
+  "docs/_meta/templates/decision.md",
+  "docs/_meta/templates/adr.md",
+  "docs/_meta/templates/changelog.md",
+  "docs/_meta/templates/closeout.md",
+  "docs/business/changelog.md",
+  "docs/product/changelog.md",
+  "docs/design/changelog.md",
+  "docs/engineering/changelog.md",
+  "docs/work/index.md",
+  "docs/work/inbox.md",
+  "docs/work/templates/work-item.md",
+  "docs/completed/README.md",
+  "docs/archive/README.md",
+];
+
 const markdownLinkPattern = /\[[^\]]+\]\(([^)]+)\)/g;
 const inlinePathPattern = /`(docs\/[^`#)]+)`/g;
 
@@ -90,6 +114,17 @@ function checkCandidate(sourceFile, candidate) {
 }
 
 walk(root);
+
+for (const requiredPath of requiredPaths) {
+  const target = path.join(root, requiredPath);
+
+  if (!existsSync(target)) {
+    failures.push({
+      source: "required docs structure",
+      target: requiredPath,
+    });
+  }
+}
 
 for (const file of scannedFiles) {
   const text = readFileSync(file, "utf8");

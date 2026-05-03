@@ -1,3 +1,14 @@
+---
+id: DESIGN-REFERENCE-SCREEN-INDEX
+status: approved
+area: design
+doc_type: screen
+related_work: []
+supersedes: []
+superseded_by: []
+last_updated: 2026-05-03
+---
+
 # Reference Screen Index
 
 Updated: 2026-05-02
