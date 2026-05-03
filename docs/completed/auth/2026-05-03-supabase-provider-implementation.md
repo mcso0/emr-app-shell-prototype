@@ -27,10 +27,10 @@
 - `src/proxy.ts`
 - `tests/auth.spec.ts`
 - `playwright.config.ts`
-- `docs/implementation/auth-login/status.md`
-- `docs/implementation/mvp-auth-transition-roadmap.md`
-- `docs/implementation/mvp-current-status.md`
-- `docs/implementation/auth-login/completed-summary.md`
+- `docs/engineering/auth-security/auth-login/status.md`
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
+- `docs/engineering/current-status.md`
+- `docs/engineering/auth-security/auth-login/completed-summary.md`
 - `docs/completed/auth/2026-05-03-supabase-provider-implementation.md`
 
 ## 사용한 스킬과 문서

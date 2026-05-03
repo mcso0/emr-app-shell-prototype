@@ -14,8 +14,8 @@
 - `src/features/auth/auth-client.ts`
 - `src/features/auth/login-form.tsx`
 - `tests/auth.spec.ts`
-- `docs/implementation/mvp-auth-transition-roadmap.md`
-- `docs/implementation/mvp-current-status.md`
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
+- `docs/engineering/current-status.md`
 
 ## 사용한 스킬과 문서
 

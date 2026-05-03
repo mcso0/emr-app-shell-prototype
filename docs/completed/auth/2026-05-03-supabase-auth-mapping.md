@@ -13,11 +13,11 @@
 
 ## 변경한 주요 파일
 
-- `docs/implementation/auth-login/supabase-auth-mapping.md`
-- `docs/implementation/auth-login/README.md`
-- `docs/implementation/auth-login/status.md`
-- `docs/implementation/mvp-auth-transition-roadmap.md`
-- `docs/implementation/mvp-current-status.md`
+- `docs/engineering/auth-security/auth-login/supabase-auth-mapping.md`
+- `docs/engineering/auth-security/auth-login/README.md`
+- `docs/engineering/auth-security/auth-login/status.md`
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
+- `docs/engineering/current-status.md`
 - `docs/completed/auth/2026-05-03-supabase-auth-mapping.md`
 
 ## 사용한 스킬과 문서
@@ -37,7 +37,7 @@
 
 확인한 로컬 문서/파일:
 
-- `docs/emr-saas-db-structure-spec.ko.md`
+- `docs/engineering/data-model/emr-saas-db-structure-spec.ko.md`
 - `src/features/auth/permissions.ts`
 - `src/features/auth/mock-session.ts`
 - `src/mocks/emr-domain.ts`
