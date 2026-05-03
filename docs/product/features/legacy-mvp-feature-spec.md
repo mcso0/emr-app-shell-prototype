@@ -1,3 +1,14 @@
+---
+id: PRODUCT-FEATURE-LEGACY-MVP
+status: approved
+area: product
+doc_type: feature
+related_work: []
+supersedes: []
+superseded_by: []
+last_updated: 2026-05-03
+---
+
 # 동물병원 전용 EMR SaaS 서비스 Feature Specification
 
 | | |

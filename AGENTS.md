@@ -72,6 +72,8 @@ Before starting repository work, read `docs/agent-start-here.md` first, then `do
 
 Work is managed in repo docs. Before creating or starting PR-scoped work, check `docs/work/index.md`, reuse an existing work item when possible, and summarize the PR gate: goal, PR-sized scope, out-of-scope items, done criteria, source docs, verification, status/dependencies, and duplicate check. If the work is still vague, put it in `docs/work/inbox.md` instead of creating an execution item.
 
+Detailed docs operating rules live in `docs/_meta/`. For planning, docs, or work-management instructions, route the user request with `docs/_meta/intake-rules.md`. After completing work, give the user a concise result review using `docs/_meta/result-review-rules.md`.
+
 After completing work, update the relevant work item and source-of-truth docs. When the work has implementation or decision value, add or update the appropriate closeout under `docs/completed/`.
 
 Preserve the current 조제/처치 screen design and behavior unless the user explicitly asks to change it. 입원 and full 병원관리 screens are outside the completed PR 1-6 scope, and 병원관리 Order 관리 / Order 세트 references are not implementation targets unless a new plan explicitly includes them.

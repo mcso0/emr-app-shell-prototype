@@ -1,0 +1,35 @@
+# Result Review Rules
+
+After completing work, the agent must give the user a concise result review.
+
+## Default Review Shape
+
+Include:
+
+- what changed
+- which files or docs changed
+- current status
+- verification result
+- useful next step
+
+Keep the first review short. Expand only when the user asks for details or when there is a notable risk.
+
+For Level 0 changes from `docs/_meta/documentation-depth-rules.md`, the result review is the only required record. Do not create a work item, changelog entry, or closeout just to document a tiny one-off change.
+
+## Good Review
+
+```text
+완료했어요. 이번 변경으로 docs/_meta 운영 규칙, 영역별 changelog/decision 구조, work item 연결이 추가됐고 docs:check도 새 필수 문서를 확인합니다.
+
+검증은 npm run docs:check와 npm run lint를 통과했습니다. 다음 작업은 기존 product/design/engineering 주요 문서에 frontmatter를 넓게 적용하는 쪽이 자연스럽습니다.
+```
+
+## Required Caveats
+
+Mention clearly when:
+
+- verification could not be run
+- a command failed
+- user-owned changes were left untouched
+- a document was intentionally left as a compatibility stub
+- implementation was not performed because the task was planning-only
