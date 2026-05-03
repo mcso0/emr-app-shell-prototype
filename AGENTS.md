@@ -74,4 +74,8 @@ Work is managed in repo docs. Before creating or starting PR-scoped work, check 
 
 After completing work, update the relevant work item and source-of-truth docs. When the work has implementation or decision value, add or update the appropriate closeout under `docs/completed/`.
 
+Preserve the current 조제/처치 screen design and behavior unless the user explicitly asks to change it. 입원 and full 병원관리 screens are outside the completed PR 1-6 scope, and 병원관리 Order 관리 / Order 세트 references are not implementation targets unless a new plan explicitly includes them.
+
+For screen work, also check `docs/design/reference-screen-index.md` and confirm whether the referenced image files actually exist under `docs/design/assets/reference-screens/`. If binary reference images are missing, do not claim pixel-level alignment.
+
 <!-- END:emr-mvp-agent-rules -->

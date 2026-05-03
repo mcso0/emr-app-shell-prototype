@@ -14,10 +14,10 @@
 
 ## 변경한 주요 파일
 
-- `docs/implementation/auth-login/supabase-integration-readiness.md`
-- `docs/implementation/auth-login/status.md`
-- `docs/implementation/mvp-auth-transition-roadmap.md`
-- `docs/implementation/auth-login/completed-summary.md`
+- `docs/engineering/auth-security/auth-login/supabase-integration-readiness.md`
+- `docs/engineering/auth-security/auth-login/status.md`
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
+- `docs/engineering/auth-security/auth-login/completed-summary.md`
 - `docs/completed/auth/2026-05-03-supabase-integration-readiness.md`
 
 ## 사용한 스킬과 문서

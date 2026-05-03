@@ -4,14 +4,14 @@
 
 ## 최종 목표와 실제 결과물
 
-- `docs/implementation/mvp-auth-transition-roadmap.md`를 auth 후속 작업의 기준 문서로 재확인했다.
-- `docs/implementation/mvp-current-status.md`와 `docs/implementation/README.md`에서 roadmap을 찾을 수 있음을 확인했다.
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`를 auth 후속 작업의 기준 문서로 재확인했다.
+- `docs/engineering/current-status.md`와 `docs/implementation/README.md`에서 roadmap을 찾을 수 있음을 확인했다.
 - 완료 문서는 `docs/completed/auth/` 아래에 보관한다는 운영 원칙을 유지했다.
 
 ## 변경한 주요 파일
 
-- `docs/implementation/mvp-auth-transition-roadmap.md`
-- `docs/implementation/mvp-current-status.md`
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
+- `docs/engineering/current-status.md`
 - `docs/completed/auth/2026-05-03-auth-roadmap-baseline.md`
 
 ## 사용한 스킬

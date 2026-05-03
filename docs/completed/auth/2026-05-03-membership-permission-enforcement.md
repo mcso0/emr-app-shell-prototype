@@ -13,11 +13,11 @@
 
 ## 변경한 주요 파일
 
-- `docs/implementation/auth-login/membership-permission-enforcement.md`
-- `docs/implementation/auth-login/status.md`
-- `docs/implementation/mvp-auth-transition-roadmap.md`
-- `docs/implementation/mvp-current-status.md`
-- `docs/implementation/auth-login/completed-summary.md`
+- `docs/engineering/auth-security/auth-login/membership-permission-enforcement.md`
+- `docs/engineering/auth-security/auth-login/status.md`
+- `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
+- `docs/engineering/current-status.md`
+- `docs/engineering/auth-security/auth-login/completed-summary.md`
 - `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`
 
 ## 사용한 스킬과 문서
@@ -33,9 +33,9 @@
 - [Supabase Auth](https://supabase.com/docs/guides/auth)
 - [Supabase Users](https://supabase.com/docs/guides/auth/users)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- `docs/emr-saas-db-structure-spec.ko.md`
-- `docs/implementation/auth-login/supabase-auth-mapping.md`
-- `docs/implementation/auth-login/supabase-integration-readiness.md`
+- `docs/engineering/data-model/emr-saas-db-structure-spec.ko.md`
+- `docs/engineering/auth-security/auth-login/supabase-auth-mapping.md`
+- `docs/engineering/auth-security/auth-login/supabase-integration-readiness.md`
 
 ## 통과한 검증 명령
 
