@@ -138,6 +138,7 @@ export type Guardian = {
   mobilePhone?: string;
   phone?: string;
   email?: string;
+  birthDate?: IsoDate;
   address?: string;
   occupation?: string;
   memo?: string;

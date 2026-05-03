@@ -19,14 +19,27 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await expect(sideTabs.getByRole("button", { name: "접수", exact: true })).toBeVisible();
   await expect(sideTabs.getByRole("button", { name: "예약", exact: true })).toBeVisible();
   await expect(sidePanel.getByText("전체", { exact: true })).toHaveCount(2);
+  await expect
+    .poll(() =>
+      sidePanel.locator('[data-testid^="patient-card-"]').evaluateAll((cards) =>
+        cards.map((card) => card.getAttribute("data-testid"))
+      )
+    )
+    .toEqual([
+      "patient-card-patient-kong",
+      "patient-card-patient-dubu",
+      "patient-card-patient-coco",
+      "patient-card-patient-nabi",
+      "patient-card-patient-haru",
+    ]);
   await sideTabs.getByRole("button", { name: "접수", exact: true }).click();
   await expect(sidePanel.getByText("접수", { exact: true })).toHaveCount(2);
-  await expect(sidePanel.getByText("나비 · P-260414-0009")).toHaveCount(0);
+  await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toHaveCount(0);
   await sideTabs.getByRole("button", { name: "예약", exact: true }).click();
   await expect(sidePanel.getByText("예약 작업")).toHaveCount(0);
-  await expect(sidePanel.getByText("예약", { exact: true })).toHaveCount(2);
-  await expect(sidePanel.getByText("나비 · P-260414-0009")).toBeVisible();
-  await expect(sidePanel.getByText("코코 · P-260414-0008")).toHaveCount(0);
+  await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toContainText("나비");
+  await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toContainText("예약");
+  await expect(sidePanel.getByTestId("patient-card-patient-coco")).toHaveCount(0);
   await expect(sidePanel.getByRole("textbox", { name: "환자 검색" })).toHaveCount(0);
   await sidePanel.getByRole("button", { name: "검색" }).click();
   await expect(sidePanel.getByRole("textbox", { name: "환자 검색" })).toBeVisible();
@@ -48,8 +61,9 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await expect(page.getByText("오늘 내원: 반복 구토와 식욕 저하")).toBeVisible();
   await expect(page.getByText("김하늘 보호자 · 콩이(P-260501-0003)")).toBeVisible();
   await expect(kongCard).toBeVisible();
-  await expect(kongCard).toContainText("콩이 · P-260501-0003");
+  await expect(kongCard).toContainText("콩이");
   await expect(kongCard).toContainText("김하늘");
+  await expect(kongCard).toContainText("예약");
   await expect(kongCard).toContainText("반복 구토와 식욕 저하");
   await expect(kongCard).toContainText("이수지");
 
@@ -66,14 +80,16 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await kongCard.click();
 
-  await expect(page.getByText("오늘 내원 맥락").first()).toBeVisible();
-  await expect(page.getByText("김하늘 보호자가 콩이를 반복 구토와 식욕 저하로 접수").first()).toBeVisible();
+  await expect(page.getByText("접수 정보")).toBeVisible();
+  await expect(page.getByText("P-260501-0003").first()).toBeVisible();
+  await expect(page.getByText("접수 상세").last()).toBeVisible();
+  await expect(page.getByText("김하늘 보호자 · 콩이 · 09:28 접수").last()).toBeVisible();
 });
 
 test("reception calendar options expose Excel import and export actions", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
-  const calendarOptionsButton = page.getByRole("button", { name: "더보기" });
+  const calendarOptionsButton = page.getByRole("button", { name: "더보기", exact: true });
   await expect(async () => {
     await calendarOptionsButton.click();
     await expect(calendarOptionsButton).toHaveAttribute("aria-expanded", "true", {
@@ -85,6 +101,40 @@ test("reception calendar options expose Excel import and export actions", async 
   await expect(page.getByRole("menuitem", { name: "Excel 업로드" })).toBeVisible();
 });
 
+test("reception week calendar shows a time axis and today's current-time marker", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception");
+
+  await page.getByRole("button", { name: "주" }).click();
+
+  const calendar = page.getByTestId("reception-week-calendar");
+  await expect(calendar).toBeVisible();
+  await expect(calendar.getByText("08:00")).toBeVisible();
+  await expect(calendar.getByText("20:00")).toBeVisible();
+  await expect(calendar.getByText("01", { exact: true })).toBeVisible();
+  await expect(calendar.getByTestId("week-current-time-indicator")).toHaveCount(1);
+});
+
+test("reception month calendar fills the available calendar height", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/w/clair-demo/reception");
+
+  await page.getByRole("button", { name: "월", exact: true }).click();
+
+  const calendar = page.getByTestId("reception-month-calendar");
+  await expect(calendar).toBeVisible();
+
+  const sizes = await calendar.evaluate((element) => {
+    const viewport = element.closest('[data-slot="scroll-area-viewport"]');
+
+    return {
+      calendarHeight: element.getBoundingClientRect().height,
+      viewportHeight: viewport?.getBoundingClientRect().height ?? 0,
+    };
+  });
+
+  expect(sizes.calendarHeight).toBeGreaterThanOrEqual(sizes.viewportHeight - 1);
+});
+
 test("reception veterinarian selector controls visible schedule lanes", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
@@ -92,18 +142,28 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
 
   await expect(calendar.getByText("이수지", { exact: true }).first()).toBeVisible();
   await expect(calendar.getByText("김도윤", { exact: true }).first()).toBeVisible();
+  await expect(calendar.getByText("SJ", { exact: true }).first()).toBeVisible();
+  await expect(calendar.getByText("DY", { exact: true }).first()).toBeVisible();
 
-  const veterinarianButton = page.getByRole("button", { name: "수의사 2" });
+  const veterinarianButton = page.getByRole("button", { name: "이수지 +9" });
   await expect(async () => {
     await veterinarianButton.click();
     await expect(veterinarianButton).toHaveAttribute("aria-expanded", "true", {
       timeout: 1_000,
     });
   }).toPass();
+  const veterinarianMenu = page.getByRole("menu");
+  await expect(veterinarianMenu.getByText("오늘 근무 수의사")).toBeVisible();
+  await expect(veterinarianMenu.getByText("그 외 수의사")).toBeVisible();
+  await expect(veterinarianMenu.getByText("SJ", { exact: true })).toBeVisible();
+  await expect(veterinarianMenu.getByText("DY", { exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitemcheckbox")).toHaveCount(10);
   await page.getByRole("menuitemcheckbox", { name: "김도윤" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "박서연" }).click();
 
-  await expect(page.getByRole("button", { name: "이수지", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이수지 +7" })).toBeVisible();
   await expect(calendar.getByText("김도윤", { exact: true })).toHaveCount(0);
+  await expect(calendar.getByText("박서연", { exact: true })).toHaveCount(0);
   await expect(page.getByTestId("appointment-card-appointment-nabi-260501")).toHaveCount(0);
 });
 
@@ -121,16 +181,47 @@ test("reception cards open the reception detail drawer", async ({ page }) => {
   await expect(page.getByRole("button", { name: "접수 처리" }).last()).toBeVisible();
 });
 
-test("patient drawer supports editing and guardian navigation", async ({ page }) => {
+test("reception side panel cards keep order, open reception info, and clear selection on close", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
-  await sidePanel.getByText("두부 · P-260501-0002").click();
+  const initialCardOrder = [
+    "patient-card-patient-kong",
+    "patient-card-patient-dubu",
+    "patient-card-patient-coco",
+    "patient-card-patient-nabi",
+    "patient-card-patient-haru",
+  ];
+  await expect
+    .poll(() =>
+      sidePanel.locator('[data-testid^="patient-card-"]').evaluateAll((cards) =>
+        cards.map((card) => card.getAttribute("data-testid"))
+      )
+    )
+    .toEqual(initialCardOrder);
+  const dubuCard = sidePanel.getByTestId("patient-card-patient-dubu");
+  await dubuCard.click();
+  await expect
+    .poll(() =>
+      sidePanel.locator('[data-testid^="patient-card-"]').evaluateAll((cards) =>
+        cards.map((card) => card.getAttribute("data-testid"))
+      )
+    )
+    .toEqual(initialCardOrder);
+  await expect(page.getByText("접수 정보")).toBeVisible();
+  await expect(page.getByText("접수 상세")).toBeVisible();
+  await expect(dubuCard).toHaveAttribute("data-selected", "true");
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+  await expect(dubuCard).not.toHaveAttribute("data-selected", "true");
+});
+
+test("patient drawer supports editing and guardian navigation", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?drawer=reception-patient:patient-dubu");
 
   await expect(page.getByText("환자 정보")).toBeVisible();
   await expect(page.getByText("보호자 연결")).toBeVisible();
-  await expect(page.getByText("정하린", { exact: true })).toBeVisible();
-  await expect(page.getByText("강서윤", { exact: true })).toBeVisible();
+  await expect(page.getByText("정하린", { exact: true }).last()).toBeVisible();
+  await expect(page.getByRole("button", { name: "보호자 강서윤 보기" })).toBeVisible();
 
   await page.getByRole("button", { name: "수정" }).click();
   await page.getByLabel("품종").fill("포메라니안 믹스");
@@ -146,10 +237,7 @@ test("patient drawer supports editing and guardian navigation", async ({ page })
 });
 
 test("patient drawer shows CS history and latest shortcuts", async ({ page }) => {
-  await page.goto("/w/clair-demo/reception");
-
-  const sidePanel = page.locator("aside").first();
-  await sidePanel.getByText("코코 · P-260414-0008").click();
+  await page.goto("/w/clair-demo/reception?drawer=reception-patient:patient-coco");
 
   await page.getByRole("button", { name: "CS 이력" }).click();
   await expect(page.getByText("접수 문의")).toBeVisible();
@@ -177,9 +265,9 @@ test("new patient registration validates and opens the patient drawer", async ({
   await page.getByRole("button", { name: "등록" }).click();
 
   await expect(page.getByText("환자 정보")).toBeVisible();
-  await expect(page.getByText("새롬", { exact: true })).toBeVisible();
+  await expect(page.locator('input[value="새롬"]')).toBeVisible();
   await expect(page.getByLabel("품종").first()).toHaveValue("푸들");
-  await expect(page.getByText("김새봄", { exact: true })).toBeVisible();
+  await expect(page.getByText("김새봄", { exact: true }).last()).toBeVisible();
 });
 
 test("new guardian registration validates and opens the guardian drawer", async ({ page }) => {
@@ -242,9 +330,12 @@ test("reception side panel searches by patient and guardian context", async ({ p
   await sidePanel.getByRole("button", { name: "검색" }).click();
   await sidePanel.getByRole("textbox", { name: "환자 검색" }).fill("코코");
 
-  await expect(sidePanel.getByText("코코 · P-260414-0008")).toBeVisible();
-  await expect(sidePanel.getByText("이지은 · 010-3245-1188")).toBeVisible();
-  await expect(sidePanel.getByText("나비 · P-260414-0009")).toBeHidden();
+  await expect(sidePanel.getByTestId("patient-card-patient-coco")).toBeVisible();
+  await expect(sidePanel.getByTestId("patient-card-patient-coco")).toContainText("이지은");
+  await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toBeHidden();
+  await sidePanel.getByRole("button", { name: "검색어 초기화" }).click();
+  await expect(sidePanel.getByRole("textbox", { name: "환자 검색" })).toHaveValue("");
+  await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toBeVisible();
 });
 
 test("reception check-in converts a confirmed appointment into a waiting encounter", async ({ page }) => {
@@ -256,15 +347,16 @@ test("reception check-in converts a confirmed appointment into a waiting encount
   await nabiAppointment.getByRole("button", { name: "접수 처리" }).click();
 
   await expect(nabiAppointment).toContainText("접수완료");
-  await expect(page.getByTestId("patient-card-patient-nabi")).toContainText("대기");
+  await expect(page.getByTestId("patient-card-patient-nabi")).toContainText("피부 재진");
+  await expect(page.getByTestId("patient-card-patient-nabi")).toContainText("김도윤");
 });
 
 test("reception creates a walk-in waiting row for the selected patient", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
-  await sidePanel.getByText("두부 · P-260501-0002").click();
-  await expect(page.getByText("환자 정보")).toBeVisible();
+  await sidePanel.getByTestId("patient-card-patient-dubu").click();
+  await expect(page.getByText("접수 정보")).toBeVisible();
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await expect(page).not.toHaveURL(/drawer=/);
   await page.getByTestId("schedule-check-in-button").click();
@@ -274,13 +366,12 @@ test("reception creates a walk-in waiting row for the selected patient", async (
   await expect(walkInForm.getByLabel("방문 목적")).toBeVisible();
   await walkInForm.getByLabel("방문 목적").fill("보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수/예약 메모").fill("보호자가 계단 보행을 걱정함");
-  await page.getByRole("button", { name: "생성" }).click();
+  await walkInForm.getByRole("button", { name: "생성" }).click();
 
   const dubuCard = page.getByTestId("patient-card-patient-dubu");
-  await expect(dubuCard).toContainText("진료대기");
+  await expect(dubuCard).toContainText("두부");
   await expect(dubuCard).toContainText("보행 재검 및 통증 상담");
-  await expect(dubuCard).toContainText("보호자가 계단 보행을 걱정함");
-  await expect(dubuCard).toContainText("담당의 미지정");
+  await expect(dubuCard).toContainText("수의사 미지정");
 
   const walkInCalendarCard = page.getByTestId("walkin-card-draft-encounter-walkin-patient-dubu");
   await expect(walkInCalendarCard).toContainText("진료대기");
@@ -292,8 +383,8 @@ test("reception walk-in keeps selected veterinarian and form details", async ({ 
   await page.goto("/w/clair-demo/reception");
 
   const sidePanel = page.locator("aside").first();
-  await sidePanel.getByText("하루 · P-260501-0001").click();
-  await expect(page.getByText("환자 정보")).toBeVisible();
+  await sidePanel.getByTestId("patient-card-patient-haru").click();
+  await expect(page.getByText("접수 정보")).toBeVisible();
   await page.getByRole("button", { name: "상세 닫기" }).click();
 
   await page.getByTestId("schedule-check-in-button").click();
@@ -302,10 +393,10 @@ test("reception walk-in keeps selected veterinarian and form details", async ({ 
   await walkInForm.getByLabel("접수/예약 메모").fill("기존 노쇼 예약과 별도 현장 접수");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
-  await page.getByRole("button", { name: "생성" }).click();
+  await walkInForm.getByRole("button", { name: "생성" }).click();
 
   const haruCard = page.getByTestId("patient-card-patient-haru");
-  await expect(haruCard).toContainText("진료대기");
+  await expect(haruCard).toContainText("하루");
   await expect(haruCard).toContainText("예방접종 전 건강 확인");
   await expect(haruCard).toContainText("김도윤");
 

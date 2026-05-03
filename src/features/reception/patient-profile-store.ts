@@ -7,19 +7,24 @@ import {
   mockPatientGuardians,
   mockPatients,
 } from "@/mocks/emr-domain";
-import type { EmrId, Guardian, Patient, PatientGuardian } from "@/types/emr-domain";
+import type { EmrId, Guardian, Patient, PatientGuardian, PatientSex } from "@/types/emr-domain";
 
 type NewPatientInput = {
   breed?: string;
+  estimatedAgeText?: string;
   guardianMobilePhone?: string;
   guardianName: string;
   microchipNo?: string;
   name: string;
+  sex?: PatientSex;
   species: Patient["species"];
+  specialNote?: string;
 };
 
 type NewGuardianInput = {
   address?: string;
+  birthDate?: string;
+  email?: string;
   memo?: string;
   mobilePhone?: string;
   name: string;
@@ -62,6 +67,8 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
       name,
       mobilePhone: input.mobilePhone?.trim() || undefined,
       phone: input.phone?.trim() || undefined,
+      email: input.email?.trim() || undefined,
+      birthDate: input.birthDate?.trim() || undefined,
       address: input.address?.trim() || undefined,
       memo: input.memo?.trim() || undefined,
       createdAt: NOW,
@@ -97,9 +104,11 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
       name,
       species: input.species,
       breed: input.breed?.trim() || undefined,
-      sex: "unknown",
+      estimatedAgeText: input.estimatedAgeText?.trim() || undefined,
+      sex: input.sex ?? "unknown",
       neutered: false,
       microchipNo,
+      specialNote: input.specialNote?.trim() || undefined,
       handlingCautionLocked: true,
       status: "active",
       createdAt: NOW,

@@ -7,7 +7,6 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   EmrDateNavigator,
@@ -17,10 +16,13 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  EmrSidePanelCard,
+  EmrSidePanelCardAction,
+  EmrSidePanelMetaBadge,
+  EmrSidePanelTypeBadge,
+} from "@/components/emr/side-panel-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { cn } from "@/lib/utils";
 import type {
   OrderQueueItem,
   OrderQueueStatusDefinition,
@@ -278,33 +280,22 @@ function OrderQueueCard({
   statusLabel: string;
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={cn(
-        "group/order-queue-card w-full rounded-[var(--clair-radius-atomic-8)] border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 pb-2.5 pt-2 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-ring/50",
-        selected &&
-          "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
-      )}
-      data-testid={`order-queue-item-${item.id}`}
-      data-selected={selected ? "true" : undefined}
-      aria-pressed={selected}
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
+    <EmrSidePanelCard
+      selected={selected}
+      testId={`order-queue-item-${item.id}`}
+      onSelect={onSelect}
     >
       <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
           <span className="truncate">{item.patientName}</span>
           <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
           <span className="truncate">{item.guardianName}</span>
-          <ReceptionTypeBadge label={item.receptionType} />
+          <EmrSidePanelTypeBadge label={item.receptionType} />
         </div>
-        <OrderQueueCardAction item={item} />
+        <EmrSidePanelCardAction
+          ariaLabel={`${item.patientName} ${item.orderName} 더보기`}
+          testId={`order-queue-item-action-${item.id}`}
+        />
       </div>
       <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
         <span className="shrink-0 truncate">{item.orderType}</span>
@@ -314,8 +305,8 @@ function OrderQueueCard({
       <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
       <div className="flex h-5 min-w-0 items-center gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-          <QueueMetaBadge label="요청" value={item.requesterName} />
-          {item.assigneeName ? <QueueMetaBadge label="담당" value={item.assigneeName} /> : null}
+          <EmrSidePanelMetaBadge label="요청" value={item.requesterName} />
+          {item.assigneeName ? <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} /> : null}
         </div>
         <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
           <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
@@ -323,50 +314,6 @@ function OrderQueueCard({
           <span>{statusLabel}</span>
         </span>
       </div>
-    </div>
-  );
-}
-
-function OrderQueueCardAction({ item }: { item: OrderQueueItem }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon-xs"
-      className="size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-card p-0 text-[var(--clair-color-label-normal)] opacity-0 transition-opacity hover:bg-[var(--clair-color-background-surface)] focus-visible:opacity-100 group-hover/order-queue-card:opacity-100 group-focus-within/order-queue-card:opacity-100 group-data-[selected=true]/order-queue-card:opacity-100 [&_svg]:size-4"
-      aria-label={`${item.patientName} ${item.orderName} 더보기`}
-      data-testid={`order-queue-item-action-${item.id}`}
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
-    >
-      <CdsFilesMoreHorizontalIcon aria-hidden="true" />
-    </Button>
-  );
-}
-
-function ReceptionTypeBadge({ label }: { label: string }) {
-  const reservation = label === "예약";
-
-  return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        "h-5 shrink-0 rounded-[var(--clair-radius-atomic-6)] border-transparent px-1.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
-        reservation
-          ? "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-atomic-blue-600)]"
-          : "bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-900)]"
-      )}
-    >
-      {label}
-    </Badge>
-  );
-}
-
-function QueueMetaBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="inline-flex h-5 max-w-[92px] shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--clair-color-atomic-black-alpha-8)] bg-card px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px]">
-      <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{label}</span>
-      <span className="truncate text-[var(--clair-color-atomic-gray-700)]">{value}</span>
-    </span>
+    </EmrSidePanelCard>
   );
 }

@@ -4,6 +4,7 @@ import type { AppIcon } from "@/components/icons";
 export type DrawerState = {
   type: string;
   id: string;
+  subtitle?: string;
 } | null;
 
 export type ShellComponentProps = {
