@@ -4,7 +4,9 @@
 
 ## 현재 시작점
 
-현재 상태는 **mock auth shell 완료, Supabase 실제 연결 전**이다. 다음 작업은 `work-orders/01-supabase-auth-mapping.md`부터 시작한다.
+현재 상태는 **mock auth shell 완료, Supabase provider adapter 구현 완료, membership/permission enforcement는 plan-only 완료**이다. `work-orders/01-supabase-auth-mapping.md`부터 `work-orders/04-membership-permission-enforcement.md`까지의 기준 작업은 완료되었고, 다음 작업은 별도 승인된 permission resolver, migration/RLS, API/server action enforcement 중 하나를 독립 구현 단위로 진행한다.
+
+최신 진행 상태는 `docs/implementation/auth-login/status.md`, 완료 요약은 `docs/implementation/auth-login/completed-summary.md`, 상위 auth 전환 기준은 `docs/implementation/mvp-auth-transition-roadmap.md`를 우선한다.
 
 ## 작업 전 읽는 순서
 
@@ -34,6 +36,7 @@
 
 - 작업 순서는 `01 -> 02 -> 03 -> 04`로 고정한다.
 - 앞 단계 완료와 closeout 없이 다음 단계로 넘어가지 않는다.
+- 01-04 완료 이후의 후속 구현은 기존 work order를 반복하지 않고, 승인된 권한/DB/API enforcement 범위를 새 독립 작업으로 분리한다.
 - 공식 완료 문서는 계속 `docs/completed/auth/YYYY-MM-DD-<slug>.md`에 작성한다.
 - 문서 작업만 할 때는 code auth 검증을 요구하지 않는다.
 - auth 코드가 바뀌면 `docs/implementation/mvp-auth-transition-roadmap.md`의 auth 코드 검증 세트를 따른다.
