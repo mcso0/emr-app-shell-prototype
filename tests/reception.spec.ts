@@ -113,13 +113,13 @@ test("reception week calendar shows a time axis and today's current-time marker"
   await expect(calendar.getByTestId("week-current-time-indicator")).toHaveCount(1);
 });
 
-test("reception day calendar emphasizes schedule card hierarchy and current time", async ({ page }) => {
+test("reception day calendar emphasizes schedule card hierarchy and current line", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
   const calendar = page.getByTestId("reception-day-calendar");
   const kongAppointment = page.getByTestId("appointment-card-appointment-kong-260501");
 
-  await expect(calendar.getByText("현재 11:20")).toBeVisible();
+  await expect(calendar.getByText("현재 11:20")).toHaveCount(0);
   await expect(kongAppointment.getByTestId("appointment-purpose-appointment-kong-260501")).toContainText("구토/식욕");
   await expect(kongAppointment.getByTestId("appointment-accent-appointment-kong-260501")).toHaveClass(/atomic-sky-500/);
   await expect(kongAppointment).toContainText("콩이");
@@ -328,18 +328,33 @@ test("patient guardian registration links an existing guardian to a new patient"
   await page.getByRole("button", { name: "환자/보호자 등록", exact: true }).click();
   await page.getByText("기존 보호자에 신규 환자 등록").click();
   await page.getByRole("button", { name: "다음" }).click();
-  await expect(page.getByRole("heading", { name: "기존 보호자 선택" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기존 보호자에 신규 환자 등록" })).toBeVisible();
+  await expect(page.getByText("입력한 정보는 최종 확인 후 등록됩니다.")).toHaveCount(0);
+  await expect(page.getByText("보호자 선택")).toBeVisible();
+  await expect(page.getByText("동물 정보")).toBeVisible();
+  await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
   await page.getByLabel("기존 보호자 검색").fill("오세아");
   await page.getByRole("option", { name: /오세아/ }).click();
-  await page.getByRole("button", { name: "다음" }).click();
+  await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
 
-  await expect(page.getByRole("heading", { name: "신규 환자 등록" })).toBeVisible();
-  await expect(page.getByText("연결 보호자")).toBeVisible();
+  const registrationDialog = page.getByLabel("기존 보호자에 신규 환자 등록");
+  await expect(page.getByLabel("기존 보호자 검색")).toHaveValue("오세아 010-7812-4401 · 나비");
   await expect(page.getByText("오세아", { exact: true })).toBeVisible();
+  await expect(page.getByText("오세아 보호자의 동물")).toBeVisible();
+  await expect(registrationDialog.getByText("나비", { exact: true })).toBeVisible();
   await page.getByLabel("환자명").fill("라떼");
   await page.getByLabel("품종").fill("말티");
   await page.getByRole("option", { name: "말티즈" }).click();
+  await page.getByText("믹스", { exact: true }).click();
+  await page.getByLabel("추가 품종").fill("푸");
+  await page.getByRole("option", { name: "푸들" }).click();
+  await page.getByLabel("추가 품종").fill("치");
+  await page.getByRole("option", { name: "치와와" }).click();
+  await expect(page.getByText("푸들")).toBeVisible();
+  await expect(page.getByText("치와와")).toBeVisible();
   await page.getByLabel("나이 개월").fill("8");
+  await page.getByLabel("동물등록번호").fill("410-2026-00001");
+  await expect(page.getByRole("button", { name: "다음" })).toBeEnabled();
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByRole("heading", { name: "등록 정보 확인" })).toBeVisible();
   await page.getByRole("button", { name: "등록" }).click();
@@ -355,9 +370,11 @@ test("patient guardian registration blocks duplicate microchips and warns duplic
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByLabel("기존 보호자 검색").fill("이지은");
   await page.getByRole("option", { name: /이지은/ }).click();
-  await page.getByRole("button", { name: "다음" }).click();
   await page.getByLabel("환자명").fill("코코");
   await expect(page.getByText("동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다.")).toBeVisible();
+  await page.getByLabel("품종").fill("푸");
+  await page.getByRole("option", { name: "푸들" }).click();
+  await page.getByLabel("나이 년").fill("2");
   await page.getByLabel("마이크로칩").fill("410098765432109");
   await page.getByRole("button", { name: "다음" }).click();
 
@@ -461,21 +478,44 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await walkInForm.getByLabel("환자 검색").click();
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
   await expect(walkInForm.getByLabel("방문 목적")).toBeVisible();
+  await walkInForm.getByRole("button", { name: "태그 추가" }).click();
+  await walkInForm.getByLabel("태그명").fill("재활");
+  await walkInForm.getByLabel("태그명").press("Enter");
+  await expect(walkInForm.getByRole("button", { name: "재활" })).toHaveAttribute(
+    "aria-pressed",
+    "true"
+  );
   await walkInForm.getByLabel("방문 목적").fill("보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
   const dubuCard = page.getByTestId("patient-card-patient-dubu");
   await expect(dubuCard).toContainText("두부");
+  await expect(dubuCard).toContainText("재활");
   await expect(dubuCard).toContainText("보행 재검 및 통증 상담");
   await expect(dubuCard).toContainText("수의사 미지정");
 
   const walkInCalendarCard = page.getByTestId("walkin-card-draft-encounter-walkin-patient-dubu");
   await expect(walkInCalendarCard).toContainText("진료대기");
   await expect(walkInCalendarCard).toContainText("담당의 미지정");
+  await expect(walkInCalendarCard).toContainText("재활");
   await expect(walkInCalendarCard).toContainText("보행 재검 및 통증 상담");
   await expect(walkInCalendarCard.getByTestId("walkin-purpose-draft-encounter-walkin-patient-dubu")).toContainText("진료");
   await expect(walkInCalendarCard.getByTestId("walkin-accent-draft-encounter-walkin-patient-dubu")).toHaveClass(/atomic-gray-300/);
+});
+
+test("reception opens the walk-in form from an empty calendar slot", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
+  );
+
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+  await page.getByTestId("day-empty-slot-14-user-vet-suji").click();
+
+  await expect(page).not.toHaveURL(/drawer=/);
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await expect(walkInForm.getByRole("heading", { name: "진료 접수" })).toBeVisible();
+  await expect(walkInForm.getByText("동물명 또는 보호자명으로 검색")).toBeVisible();
 });
 
 test("reception walk-in keeps selected veterinarian and form details", async ({ page }) => {

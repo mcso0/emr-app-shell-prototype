@@ -80,7 +80,7 @@ test("login without next opens the MVP default workspace", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await expect(page.getByRole("group", { name: "접수 목록 유형" })).toBeVisible();
-  await expect(page.getByText("코코 · P-260414-0008")).toBeVisible();
+  await expect(page.getByRole("button", { name: /코코 · 이지은/ })).toBeVisible();
 });
 
 test("logout clears mock session from both browser stores", async ({ page }) => {

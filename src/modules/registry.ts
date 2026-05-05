@@ -26,7 +26,6 @@ import {
   DispensingContentAside,
   DispensingDrawer,
   DispensingHeader,
-  DispensingRightPanel,
   DispensingSidePanel,
 } from "@/features/dispensing/module";
 import {
@@ -103,8 +102,6 @@ export const modules: ModuleDefinition[] = [
     contentHeader: DispensingHeader,
     contentAside: DispensingContentAside,
     content: DispensingContent,
-    rightPanel: DispensingRightPanel,
-    defaultRightPanelOpen: false,
     drawer: DispensingDrawer,
   },
   {

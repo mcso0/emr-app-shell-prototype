@@ -40,9 +40,16 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await expect(statusIcon).toHaveCSS("width", "12px");
   await expect(statusIcon).toHaveCSS("height", "12px");
   await expect(statusIcon).toHaveCSS("color", "rgb(45, 55, 72)");
-  await expect(checkbox).toHaveCSS("opacity", "0");
-  await row.hover();
   await expect(checkbox).toHaveCSS("opacity", "1");
+  await expect(checkbox).toHaveCSS("border-color", "rgb(203, 213, 224)");
+  const completedCheckbox = page.getByTestId("order-row-section-0-o-10027").getByRole("checkbox");
+  const canceledCheckbox = page.getByTestId("order-row-section-0-o-10028").getByRole("checkbox");
+  await expect(completedCheckbox).toBeDisabled();
+  await expect(completedCheckbox).toHaveCSS("opacity", "1");
+  await expect(completedCheckbox).toHaveCSS("border-color", "rgb(226, 232, 240)");
+  await expect(canceledCheckbox).toBeDisabled();
+  await expect(canceledCheckbox).toHaveCSS("opacity", "1");
+  await expect(canceledCheckbox).toHaveCSS("border-color", "rgb(226, 232, 240)");
 
   await checkbox.click();
   await expect(page.getByText("상세 정보")).toBeHidden();
@@ -51,6 +58,8 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   await page.getByRole("button", { name: "선택 오더 완료" }).click();
   await expect(page.getByText("선택한 오더 1개")).toBeHidden();
   await expect(row.getByText("완료").first()).toBeVisible();
+  await expect(checkbox).toBeDisabled();
+  await expect(checkbox).toHaveCSS("opacity", "1");
 });
 
 test("dispensing table column grips resize with a minimum width", async ({ page }) => {
@@ -140,6 +149,22 @@ test("dispensing order groups support assignment status actions without add or d
   await page.getByRole("menuitem", { name: "완료" }).click();
   await expect(page.getByRole("button", { name: "조제완료" }).first()).toBeVisible();
   await expect(row.getByText("완료").first()).toBeVisible();
+});
+
+test("dispensing top completion action completes all child orders", async ({ page }) => {
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const titleBar = page.locator("[data-slot='instruction-header-title-bar']");
+  await titleBar.getByRole("button", { name: "담당하기" }).click();
+  await titleBar.getByRole("button", { name: "항생제 세트 A 상태 액션" }).click();
+  await page.getByRole("menuitem", { name: "완료" }).click();
+
+  await expect(titleBar.getByRole("button", { name: "조제완료" })).toBeVisible();
+  const resultContent = page.locator("[data-slot='instruction-result-scroll-content']");
+  const statusBadges = resultContent.locator("[data-testid^='order-status-badge-']:not([data-testid$='-icon'])");
+  await expect(statusBadges).toHaveCount(12);
+  await expect(statusBadges).toHaveText(Array(12).fill("완료"));
+  await expect(resultContent.getByText("작업 완료 6/6")).toHaveCount(2);
 });
 
 test("dispensing assignee cell changes technician without opening drawer", async ({ page }) => {
@@ -371,28 +396,23 @@ test("treatment module renders the chart queue instead of the order queue placeh
 });
 
 test("right panel can be collapsed on a module that owns it", async ({ page }) => {
-  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=open");
-  await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
-  await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=open");
+  await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료(차트)");
+  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
   await expect(page.getByText("환자 사이드 패널")).toBeVisible();
   await expect(page).toHaveURL(/right=open/);
-  await page.getByRole("button", { name: "환자 사이드 패널 접기" }).click();
+  await page.getByRole("button", { name: "진단 이력 접기" }).click();
   await expect(page).toHaveURL(/right=closed/);
-  await expect(page.getByRole("button", { name: "환자 사이드 패널 열기" })).toBeVisible();
-  await page.getByRole("button", { name: "환자 사이드 패널 열기" }).click();
+  await expect(page.getByRole("button", { name: "진단 이력 열기" })).toBeVisible();
+  await page.getByRole("button", { name: "진단 이력 열기" }).click();
   await expect(page).toHaveURL(/right=open/);
   await expect(page.getByText("환자 사이드 패널")).toBeVisible();
 });
 
-test("patient side panel trigger toggles the open panel", async ({ page }) => {
+test("dispensing does not render the patient side panel or trigger", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=open");
 
-  await expect(page.getByText("환자 사이드 패널")).toBeVisible();
-  await page.getByRole("button", { name: "환자 사이드 패널 접기" }).click();
-  await expect(page).toHaveURL(/right=closed/);
   await expect(page.getByText("환자 사이드 패널")).toBeHidden();
-
-  await page.getByRole("button", { name: "환자 사이드 패널 열기" }).click();
-  await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByText("환자 사이드 패널")).toBeVisible();
+  await expect(page.getByRole("button", { name: /환자 사이드 패널/ })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/right=/);
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import Link from "@tiptap/extension-link";
@@ -23,13 +23,14 @@ import { EmrInstructionHeaderStack, EmrInstructionTitleBar } from "@/components/
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrListItem,
 } from "@/components/emr/subpanel";
-import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -67,6 +68,12 @@ import type {
 type ChartBundle = NonNullable<ReturnType<typeof getChartEncounter>>;
 type OrderFilter = "all" | EmrOrderType;
 
+const CHART_TOP_DEFAULT_PERCENT = 50;
+const CHART_TOP_MIN_PX = 180;
+const CHART_ORDER_MIN_PX = 170;
+const CHART_RESIZER_HEIGHT_PX = 18;
+const CHART_RESIZER_STEP_PERCENT = 5;
+
 const chartQueueFilterItems = [
   { value: "all", label: "전체" },
   { value: "appointment", label: "예약" },
@@ -90,6 +97,8 @@ const orderStatusLabel: Record<EmrOrderStatus, string> = {
 
 const getShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
+
+const clampNumber = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const getDiagnosisLabel = (diagnoses: Diagnosis[]) =>
   diagnoses.length ? diagnoses.map((diagnosis) => diagnosis.diagnosisText).join(", ") : "진단 미입력";
@@ -321,35 +330,30 @@ function ChartHistoryItem({
 
   return (
     <>
-      <button
-        type="button"
-        data-testid={`chart-history-item-${row.encounter.id}`}
-        className={cn(
-          "flex min-h-[74px] w-full flex-col gap-1.5 rounded-[var(--clair-radius-sm)] px-1 py-1 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-ring/50",
-          selected && "bg-[var(--clair-color-atomic-sky-50)]"
-        )}
-        onClick={onSelect}
-      >
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-              {primaryDiagnosis ?? row.encounter.encounterNo}
-            </span>
-            <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 text-[11px]">
-              {statusLabel}
-            </Badge>
-          </div>
-        </div>
-        <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-          <span className="shrink-0">{category}</span>
-          <span className="truncate">{summary}</span>
-        </div>
-        <div className="flex min-w-0 items-center gap-2 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-          <span className="truncate">담당 {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}</span>
-          <span className="truncate">{row.encounter.encounterNo}</span>
-          <span className="shrink-0">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
-        </div>
-      </button>
+      <EmrListItem
+        selected={selected}
+        testId={`chart-history-item-${row.encounter.id}`}
+        title={primaryDiagnosis ?? row.encounter.encounterNo}
+        itemBadge={
+          <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 text-[11px]">
+            {statusLabel}
+          </Badge>
+        }
+        subtitle={
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="shrink-0">{category}</span>
+            <span className="truncate">{summary}</span>
+          </span>
+        }
+        meta={
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate">담당 {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}</span>
+            <span className="truncate">{row.encounter.encounterNo}</span>
+            <span className="shrink-0">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
+          </span>
+        }
+        onSelect={onSelect}
+      />
       <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
     </>
   );
@@ -368,6 +372,15 @@ const escapeHtml = (value: string) =>
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+
+function ChartSectionTitle({ subtitle, title }: { subtitle: string; title: string }) {
+  return (
+    <h2 className="flex min-w-0 items-baseline gap-2.5">
+      <span className="shrink-0 text-[16px] font-semibold text-foreground">{title}</span>
+      <span className="min-w-0 truncate text-[13px] font-medium text-[var(--clair-color-atomic-gray-400)]">{subtitle}</span>
+    </h2>
+  );
+}
 
 function buildSoapEditorContent(soapNote?: SoapNote) {
   return soapTemplateRows
@@ -439,12 +452,9 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   };
 
   return (
-    <section className="rounded-lg border bg-card">
-      <div className="relative z-10 flex min-h-12 items-center justify-between gap-3 border-b bg-card px-4 py-2">
-        <div>
-          <h2 className="text-[16px] font-semibold">진료 기록</h2>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">진단계통별 SOAP 작성</p>
-        </div>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b bg-card px-4 py-2">
+        <ChartSectionTitle title="진료 기록" subtitle="진단계통별 SOAP 작성" />
         <div className="flex items-center gap-1.5">
           <EditorToolbarButton
             active={activeEditor?.isActive("bold") ?? false}
@@ -481,57 +491,61 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
           <Button
             type="button"
             variant="outline"
-            size="xs"
+            size="sm"
             className="bg-card"
             onClick={addAttachmentToActiveSection}
           >
             첨부
           </Button>
-          <Button type="button" variant="outline" size="xs" className="bg-card" onClick={addSoapSection}>
+          <Button type="button" variant="outline" size="sm" className="bg-card" onClick={addSoapSection}>
             SOAP 추가
           </Button>
           <Button size="sm">저장</Button>
         </div>
       </div>
-      <div className="grid gap-3 p-4">
-        {soapSections.map((section) => (
-          <div key={section.id} className="overflow-hidden rounded-md border bg-card">
-            <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b bg-[var(--clair-color-background-surface)] px-3">
-              <span className="text-[13px] font-semibold">{section.title}</span>
-              <div className="flex items-center gap-1.5">
-                <Badge variant="outline">{section.status ? getStatusLabel("soap", section.status) : "작성중"}</Badge>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  aria-label={`${section.title} 첨부 추가`}
-                  className="bg-card"
-                  onClick={() =>
-                    setAttachmentCounts((current) => ({
-                      ...current,
-                      [section.id]: (current[section.id] ?? 0) + 1,
-                    }))
-                  }
-                >
-                  첨부
-                </Button>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="grid gap-3">
+          {soapSections.map((section) => (
+            <div key={section.id} className="overflow-hidden rounded-md border bg-card">
+              <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b bg-[var(--clair-color-background-surface)] px-3">
+                <span className="text-[13px] font-semibold">{section.title}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
+                    {section.status ? getStatusLabel("soap", section.status) : "작성중"}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    aria-label={`${section.title} 첨부 추가`}
+                    className="bg-card"
+                    onClick={() =>
+                      setAttachmentCounts((current) => ({
+                        ...current,
+                        [section.id]: (current[section.id] ?? 0) + 1,
+                      }))
+                    }
+                  >
+                    첨부
+                  </Button>
+                </div>
+              </div>
+              <SoapRichTextEditor
+                key={`${soapNote?.id ?? "empty"}-${section.id}`}
+                initialContent={section.initialContent}
+                label={section.title}
+                onFocusEditor={(editor) => {
+                  setActiveSectionId(section.id);
+                  setActiveEditor(editor);
+                }}
+              />
+              <div className="flex min-h-9 items-center justify-between border-t px-3 text-[12px] text-muted-foreground">
+                <span>첨부 자료</span>
+                <Badge variant="outline">{attachmentCounts[section.id] ? `${attachmentCounts[section.id]}개` : "없음"}</Badge>
               </div>
             </div>
-            <SoapRichTextEditor
-              key={`${soapNote?.id ?? "empty"}-${section.id}`}
-              initialContent={section.initialContent}
-              label={section.title}
-              onFocusEditor={(editor) => {
-                setActiveSectionId(section.id);
-                setActiveEditor(editor);
-              }}
-            />
-            <div className="flex min-h-9 items-center justify-between border-t bg-[var(--clair-color-background-surface)] px-3 text-[12px] text-muted-foreground">
-              <span>첨부 자료</span>
-              <Badge variant="outline">{attachmentCounts[section.id] ? `${attachmentCounts[section.id]}개` : "없음"}</Badge>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -614,63 +628,62 @@ function AssessmentPanel({
   soapNote?: SoapNote;
 }) {
   return (
-    <section className="rounded-lg border bg-card">
-      <div className="flex min-h-12 items-center justify-between gap-3 border-b px-4 py-2">
-        <div>
-          <h2 className="text-[16px] font-semibold">진단명</h2>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">진단 목록 · 코멘트 · 계획</p>
-        </div>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-4 py-2">
+        <ChartSectionTitle title="진단명" subtitle="진단 목록 · 코멘트 · 계획" />
         <Button variant="outline" size="sm" className="bg-card">
           분류검색
         </Button>
       </div>
-      <div className="grid gap-3 p-4">
-        <div className="flex gap-2">
-          <Input
-            readOnly
-            value="한글, 영문, 약자, 연관검색어로 진단명 검색"
-            className="h-9 bg-card text-[13px]"
-          />
-          <Button variant="outline" size="sm" className="bg-card">
-            검색
-          </Button>
-        </div>
-        <div className="overflow-hidden rounded-md border">
-          <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
-            <span>계통분류</span>
-            <span>진단명</span>
-            <span>확진</span>
-            <span>중점</span>
-            <span>수의사</span>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="grid gap-3">
+          <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-2">
+            <Input
+              readOnly
+              value="한글, 영문, 약자, 연관검색어로 진단명 검색"
+              className="h-9 bg-card text-[13px]"
+            />
+            <Button variant="outline" size="sm" className="h-9 bg-card px-0">
+              검색
+            </Button>
           </div>
-          {diagnoses.map((diagnosis) => (
-            <div
-              key={diagnosis.id}
-              className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t px-3 py-3 text-[13px]"
-            >
-              <Badge variant="outline">{getDiagnosisSystemLabel(diagnosis)}</Badge>
-              <span className="truncate font-medium">{diagnosis.diagnosisText}</span>
-              <span>{diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}</span>
-              <span>{diagnosis.diagnosisType === "suspected" ? "-" : "✓"}</span>
-              <span className="truncate">{getChartStaffName(diagnosis.createdByUserId) ?? "미정"}</span>
+          <div className="overflow-hidden rounded-md border">
+            <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+              <span>계통분류</span>
+              <span>진단명</span>
+              <span>확진</span>
+              <span>중점</span>
+              <span>수의사</span>
             </div>
-          ))}
-          {!diagnoses.length ? (
-            <div className="border-t px-3 py-6 text-center text-[13px] text-muted-foreground">
-              진단 입력 전입니다.
-            </div>
-          ) : null}
+            {diagnoses.map((diagnosis) => (
+              <div
+                key={diagnosis.id}
+                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t px-3 py-3 text-[13px]"
+              >
+                <Badge variant="outline">{getDiagnosisSystemLabel(diagnosis)}</Badge>
+                <span className="truncate font-medium">{diagnosis.diagnosisText}</span>
+                <span>{diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}</span>
+                <span>{diagnosis.diagnosisType === "suspected" ? "-" : "✓"}</span>
+                <span className="truncate">{getChartStaffName(diagnosis.createdByUserId) ?? "미정"}</span>
+              </div>
+            ))}
+            {!diagnoses.length ? (
+              <div className="border-t px-3 py-6 text-center text-[13px] text-muted-foreground">
+                진단 입력 전입니다.
+              </div>
+            ) : null}
+          </div>
+          <AssessmentTextBox
+            key={`assessment-${soapNote?.id ?? "empty"}`}
+            label="진단 코멘트"
+            value={soapNote?.assessment ?? "평가 메모 없음"}
+          />
+          <AssessmentTextBox
+            key={`plan-${soapNote?.id ?? "empty"}`}
+            label="Plan"
+            value={soapNote?.plan ?? "계획 기록 대기"}
+          />
         </div>
-        <AssessmentTextBox
-          key={`assessment-${soapNote?.id ?? "empty"}`}
-          label="진단 코멘트"
-          value={soapNote?.assessment ?? "평가 메모 없음"}
-        />
-        <AssessmentTextBox
-          key={`plan-${soapNote?.id ?? "empty"}`}
-          label="Plan"
-          value={soapNote?.plan ?? "계획 기록 대기"}
-        />
       </div>
     </section>
   );
@@ -757,11 +770,37 @@ function ChartRightPanel() {
   );
 }
 
-function ChartOrderTable({ orders }: { orders: EmrOrder[] }) {
+type ChartOrderTableRow = {
+  groupTitle: string;
+  order: EmrOrder;
+};
+
+function ChartOrderTable({
+  allVisibleSelected,
+  onToggleAll,
+  onToggleOrder,
+  rows,
+  selectedOrderIds,
+  someVisibleSelected,
+}: {
+  allVisibleSelected: boolean;
+  onToggleAll: (checked: boolean) => void;
+  onToggleOrder: (orderId: string, checked: boolean) => void;
+  rows: ChartOrderTableRow[];
+  selectedOrderIds: Set<string>;
+  someVisibleSelected: boolean;
+}) {
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <div className="min-w-[860px]">
-        <div className="grid grid-cols-[76px_84px_minmax(180px,1fr)_minmax(220px,1fr)_80px_90px_92px_92px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+    <div className="overflow-x-auto rounded-md border bg-[var(--clair-color-atomic-common-100)]">
+      <div className="min-w-[1080px]">
+        <div className="grid grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] bg-[var(--clair-color-atomic-gray-50)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+          <Checkbox
+            aria-label="오더 전체 선택"
+            checked={allVisibleSelected}
+            indeterminate={someVisibleSelected}
+            onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
+          />
+          <span>그룹</span>
           <span>분류</span>
           <span>상태</span>
           <span>Order명</span>
@@ -770,15 +809,22 @@ function ChartOrderTable({ orders }: { orders: EmrOrder[] }) {
           <span>단가</span>
           <span>청구금액</span>
           <span>수의사</span>
+          <span className="text-right">작업</span>
         </div>
-        {orders.map((order) => {
+        {rows.map(({ groupTitle, order }) => {
           const invoiceLine = getChartInvoiceLineByOrderId(order.id);
 
           return (
             <div
               key={order.id}
-              className="grid grid-cols-[76px_84px_minmax(180px,1fr)_minmax(220px,1fr)_80px_90px_92px_92px] items-center border-t px-3 py-2 text-[13px]"
+              className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 text-[13px]"
             >
+              <Checkbox
+                aria-label={`${order.displayName} 선택`}
+                checked={selectedOrderIds.has(order.id)}
+                onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
+              />
+              <span className="truncate text-[12px] font-medium text-muted-foreground">{groupTitle}</span>
               <Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge>
               <EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" />
               <div className="min-w-0">
@@ -790,9 +836,28 @@ function ChartOrderTable({ orders }: { orders: EmrOrder[] }) {
               <span>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</span>
               <span>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</span>
               <span className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</span>
+              <div className="flex justify-end gap-1.5">
+                <Button variant="outline" size="xs" className="bg-card">
+                  이력
+                </Button>
+                <Button variant="outline" size="xs" className="bg-card">
+                  요청
+                </Button>
+              </div>
             </div>
           );
         })}
+        {!rows.length ? (
+          <div className="border-t bg-[var(--clair-color-atomic-common-100)] px-3 py-8 text-center text-[13px] text-muted-foreground">
+            표시할 오더가 없습니다.
+          </div>
+        ) : null}
+        <div className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5">
+          <span aria-hidden="true" />
+          <Button variant="ghost" size="sm" className="col-span-10 w-fit justify-start">
+            + Order 추가하기
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -800,8 +865,8 @@ function ChartOrderTable({ orders }: { orders: EmrOrder[] }) {
 
 function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
-  const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<Set<string>>(() => new Set());
-  const allOrders = orderGroups.flatMap(({ orders }) => orders);
+  const allOrders = useMemo(() => orderGroups.flatMap(({ orders }) => orders), [orderGroups]);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(() => new Set());
   const orderCountByType = allOrders.reduce<Record<EmrOrderType, number>>(
     (counts, order) => ({
       ...counts,
@@ -809,19 +874,32 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
     }),
     { dispensing: 0, imaging: 0, lab: 0, treatment: 0 }
   );
-  const filteredGroups = orderGroups
-    .map(({ group, orders }) => ({
-      group,
-      orders: orderFilter === "all" ? orders : orders.filter((order) => order.orderType === orderFilter),
-    }))
-    .filter(({ orders }) => orders.length > 0);
+  const filteredOrderRows = orderGroups.flatMap(({ group, orders }) =>
+    orders
+      .filter((order) => orderFilter === "all" || order.orderType === orderFilter)
+      .map((order) => ({
+        groupTitle: group?.title ?? "개별 오더",
+        order,
+      }))
+  );
   const totalAmount = allOrders.reduce((sum, order) => {
+    const line = getChartInvoiceLineByOrderId(order.id);
+
+    return sum + (line?.lineTotal ?? 0);
+  }, 0);
+  const selectedAmount = allOrders.reduce((sum, order) => {
+    if (!selectedOrderIds.has(order.id)) return sum;
+
     const line = getChartInvoiceLineByOrderId(order.id);
 
     return sum + (line?.lineTotal ?? 0);
   }, 0);
   const confirmedOrderCount = allOrders.filter((order) => order.status !== "cancelled").length;
   const pendingOrderCount = allOrders.length - confirmedOrderCount;
+  const visibleOrderIds = filteredOrderRows.map(({ order }) => order.id);
+  const selectedVisibleOrderCount = visibleOrderIds.filter((orderId) => selectedOrderIds.has(orderId)).length;
+  const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleOrderCount === visibleOrderIds.length;
+  const someVisibleSelected = selectedVisibleOrderCount > 0 && !allVisibleSelected;
   const tabItems = [
     { value: "all" as const, label: "전체", count: allOrders.length },
     { value: "dispensing" as const, label: "경구제", count: orderCountByType.dispensing },
@@ -829,14 +907,29 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
     { value: "imaging" as const, label: "영상", count: orderCountByType.imaging },
     { value: "treatment" as const, label: "치료", count: orderCountByType.treatment },
   ];
-  const toggleOrderGroup = (groupId: string) => {
-    setCollapsedOrderGroupIds((current) => {
+  const toggleAllVisibleOrders = (checked: boolean) => {
+    setSelectedOrderIds((current) => {
       const next = new Set(current);
 
-      if (next.has(groupId)) {
-        next.delete(groupId);
+      visibleOrderIds.forEach((orderId) => {
+        if (checked) {
+          next.add(orderId);
+        } else {
+          next.delete(orderId);
+        }
+      });
+
+      return next;
+    });
+  };
+  const toggleOrder = (orderId: string, checked: boolean) => {
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+
+      if (checked) {
+        next.add(orderId);
       } else {
-        next.add(groupId);
+        next.delete(orderId);
       }
 
       return next;
@@ -844,12 +937,9 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
   };
 
   return (
-    <section className="flex min-h-[520px] max-h-[680px] flex-col overflow-hidden rounded-lg border bg-card">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-4 py-2">
-        <div>
-          <h2 className="text-[16px] font-semibold">처방/오더</h2>
-          <p className="mt-0.5 text-[12px] text-muted-foreground">처방 · 처치 · 검사 · 영상 오더</p>
-        </div>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 px-4 py-2">
+        <ChartSectionTitle title="처방/오더" subtitle="처방 · 처치 · 검사 · 영상 오더" />
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="bg-card">
             Order 출력
@@ -860,55 +950,31 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
       <div className="shrink-0 px-4 pt-3">
         <LineTabs
           aria-label="차트 오더 필터"
-          className="w-full border-b border-[var(--clair-color-line-normal)]"
+          className="w-full"
           items={tabItems}
+          size="default"
           value={orderFilter}
           onValueChange={setOrderFilter}
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="flex flex-col gap-4">
-          {filteredGroups.map(({ group, orders }) => {
-            const groupId = group?.id ?? "ungrouped-orders";
-            const collapsed = collapsedOrderGroupIds.has(groupId);
-            const completedCount = orders.filter((order) => order.workStatus === "completed").length;
-
-            return (
-              <EmrOrderGroupSection
-                key={groupId}
-                collapsed={collapsed}
-                count={orders.length}
-                label={group?.label ?? "기타 오더 그룹"}
-                title={group?.title ?? "개별 오더"}
-                meta={
-                  <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
-                    작업 완료 {completedCount}/{orders.length}
-                  </span>
-                }
-                actions={
-                  <>
-                    <Button variant="outline" size="xs" className="bg-card">
-                      수정이력조회
-                    </Button>
-                    {group ? <EmrStatusBadge label={getStatusLabel("orderGroup", group.status)} marker="none" /> : null}
-                  </>
-                }
-                onToggle={() => toggleOrderGroup(groupId)}
-              >
-                <ChartOrderTable orders={orders} />
-              </EmrOrderGroupSection>
-            );
-          })}
-        </div>
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--clair-color-atomic-gray-50)] p-4">
+        <ChartOrderTable
+          allVisibleSelected={allVisibleSelected}
+          onToggleAll={toggleAllVisibleOrders}
+          onToggleOrder={toggleOrder}
+          rows={filteredOrderRows}
+          selectedOrderIds={selectedOrderIds}
+          someVisibleSelected={someVisibleSelected}
+        />
       </div>
-      <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t-2 border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-atomic-sky-50)] px-4 py-3 text-[13px] shadow-[0_-12px_24px_rgba(15,23,42,0.14)]">
+      <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t border-[var(--clair-color-line-normal)] bg-card px-4 py-3 text-[13px] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
         <div className="text-muted-foreground">
-          <div>미확정 오더 {pendingOrderCount}건 · 확정 오더 {confirmedOrderCount}건</div>
+          <div>선택 오더 {selectedOrderIds.size}건 · 미확정 오더 {pendingOrderCount}건 · 확정 오더 {confirmedOrderCount}건</div>
           <div className="mt-1 font-semibold text-foreground">청구 총액: {totalAmount.toLocaleString()}</div>
         </div>
         <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
           <div className="text-right">
-            <div>선택 오더 합계: {totalAmount.toLocaleString()}</div>
+            <div>선택 오더 합계: {selectedAmount.toLocaleString()}</div>
             <div className="mt-1">Order 별 할인/할증 합계: 0</div>
           </div>
           <Input readOnly value="0%" className="h-9 bg-[var(--clair-color-atomic-gray-50)] text-right" />
@@ -977,12 +1043,117 @@ export function ChartContent() {
   useScenarioEncounterSync();
 
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
+  const resizingPointerIdRef = useRef<number | null>(null);
   const bundle = getSelectedBundle(selectedEncounterId);
   const latestSoap = bundle?.soapNotes.at(-1);
+  const [chartTopPercent, setChartTopPercent] = useState(CHART_TOP_DEFAULT_PERCENT);
+  const [isChartResizing, setIsChartResizing] = useState(false);
   const orderGroups = useMemo(
     () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
     [bundle]
   );
+  const getChartSplitBounds = () => {
+    const workspace = chartWorkspaceRef.current;
+    const availableHeight = workspace
+      ? workspace.getBoundingClientRect().height - CHART_RESIZER_HEIGHT_PX
+      : 0;
+
+    if (availableHeight <= CHART_TOP_MIN_PX + CHART_ORDER_MIN_PX) {
+      return { min: 35, max: 65 };
+    }
+
+    return {
+      min: (CHART_TOP_MIN_PX / availableHeight) * 100,
+      max: ((availableHeight - CHART_ORDER_MIN_PX) / availableHeight) * 100,
+    };
+  };
+  const setClampedChartTopPercent = (nextPercent: number) => {
+    const { min, max } = getChartSplitBounds();
+
+    setChartTopPercent(clampNumber(nextPercent, min, max));
+  };
+  const resizeChartWorkspace = (clientY: number) => {
+    const workspace = chartWorkspaceRef.current;
+
+    if (!workspace) return;
+
+    const rect = workspace.getBoundingClientRect();
+    const availableHeight = rect.height - CHART_RESIZER_HEIGHT_PX;
+
+    if (availableHeight <= 0) return;
+
+    const topHeight = clientY - rect.top;
+
+    setClampedChartTopPercent((topHeight / availableHeight) * 100);
+  };
+  const handleChartResizePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    resizingPointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsChartResizing(true);
+    resizeChartWorkspace(event.clientY);
+  };
+  const handleChartResizePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    if (!isChartResizing || resizingPointerIdRef.current !== event.pointerId) return;
+
+    if (event.buttons !== 1) {
+      resizingPointerIdRef.current = null;
+      setIsChartResizing(false);
+      return;
+    }
+
+    resizeChartWorkspace(event.clientY);
+  };
+  const stopChartResize = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (resizingPointerIdRef.current !== null && resizingPointerIdRef.current !== event.pointerId) return;
+
+    resizingPointerIdRef.current = null;
+    setIsChartResizing(false);
+  };
+  const handleChartResizeKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setClampedChartTopPercent(chartTopPercent - CHART_RESIZER_STEP_PERCENT);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setClampedChartTopPercent(chartTopPercent + CHART_RESIZER_STEP_PERCENT);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setClampedChartTopPercent(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setClampedChartTopPercent(100);
+    }
+  };
+
+  useEffect(() => {
+    if (!isChartResizing) return;
+
+    const stopResize = () => {
+      resizingPointerIdRef.current = null;
+      setIsChartResizing(false);
+    };
+    const stopPointerResize = (event: globalThis.PointerEvent) => {
+      if (resizingPointerIdRef.current !== null && resizingPointerIdRef.current !== event.pointerId) return;
+
+      stopResize();
+    };
+
+    window.addEventListener("pointerup", stopPointerResize);
+    window.addEventListener("pointercancel", stopPointerResize);
+    window.addEventListener("blur", stopResize);
+
+    return () => {
+      window.removeEventListener("pointerup", stopPointerResize);
+      window.removeEventListener("pointercancel", stopPointerResize);
+      window.removeEventListener("blur", stopResize);
+    };
+  }, [isChartResizing]);
 
   if (!bundle) return <EmptyChartState />;
 
@@ -1015,15 +1186,48 @@ export function ChartContent() {
         }
         orderInfo={<ChartInstructionInfo bundle={bundle} latestSoap={latestSoap} />}
       />
-      <ScrollArea data-slot="chart-scroll-area" className="min-h-0 flex-1">
-        <div data-slot="chart-scroll-content" className="grid gap-4 pb-10 pt-4">
-          <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] gap-4">
-            <SoapPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
-            <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
-          </div>
-          <OrderArea orderGroups={orderGroups} />
+      <div
+        ref={chartWorkspaceRef}
+        data-slot="chart-workspace"
+        className={cn(
+          "mt-4 grid min-h-0 flex-1 border-t border-[var(--clair-color-line-normal)] pt-4",
+          isChartResizing && "select-none"
+        )}
+        style={{
+          gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
+        }}
+      >
+        <div className="grid min-h-0 grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-4">
+          <SoapPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
+          <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
         </div>
-      </ScrollArea>
+        <button
+          type="button"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="진료 기록과 처방/오더 영역 높이 조절"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(chartTopPercent)}
+          className={cn(
+            "group relative -mx-1 flex cursor-row-resize items-center justify-center rounded-md outline-none",
+            "focus-visible:ring-3 focus-visible:ring-ring/50",
+            isChartResizing && "bg-[var(--clair-color-atomic-black-alpha-4)]"
+          )}
+          onKeyDown={handleChartResizeKeyDown}
+          onLostPointerCapture={stopChartResize}
+          onPointerCancel={stopChartResize}
+          onPointerDown={handleChartResizePointerDown}
+          onPointerMove={handleChartResizePointerMove}
+          onPointerUp={stopChartResize}
+        >
+          <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--clair-color-line-normal)]" />
+          <span className="relative h-1.5 w-10 rounded-full bg-[var(--clair-color-atomic-gray-300)] transition-colors group-hover:bg-[var(--clair-color-atomic-gray-500)]" />
+        </button>
+        <div className="min-h-0">
+          <OrderArea key={bundle.encounter.id} orderGroups={orderGroups} />
+        </div>
+      </div>
     </div>
   );
 }

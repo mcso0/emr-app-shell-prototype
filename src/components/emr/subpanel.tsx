@@ -68,6 +68,7 @@ type EmrListItemProps = {
   onSelect?: () => void;
   selected?: boolean;
   subtitle?: ReactNode;
+  testId?: string;
   variant?: "default" | "outline";
 };
 
@@ -281,6 +282,7 @@ export function EmrListItem({
   onSelect,
   selected = false,
   subtitle,
+  testId,
   variant = "default",
 }: EmrListItemProps) {
   const content = (
@@ -330,6 +332,7 @@ export function EmrListItem({
         tabIndex={0}
         className={cn(itemClassName, "outline-none focus-visible:ring-3 focus-visible:ring-ring/50")}
         data-selected={selected ? "true" : undefined}
+        data-testid={testId}
         aria-pressed={selected}
         onClick={onSelect}
         onKeyDown={(event) => {
@@ -348,7 +351,7 @@ export function EmrListItem({
     );
   }
 
-  return <div className={itemClassName}>{content}</div>;
+  return <div className={itemClassName} data-testid={testId}>{content}</div>;
 }
 
 export function EmrSubpanelBody({ children, className }: EmrSubpanelProps) {

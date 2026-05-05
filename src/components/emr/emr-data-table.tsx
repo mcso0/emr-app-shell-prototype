@@ -12,8 +12,8 @@ import {
 } from "@tanstack/react-table";
 import { CheckIcon, ChevronDownIcon, WarningIcon } from "@/components/icons";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
+import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -236,16 +236,10 @@ function RowCheckbox({ row }: { row: Row<Order> }) {
         }
       }}
     >
-      <Checkbox
+      <EmrTableCheckbox
         aria-label={`${row.original.name} 선택`}
         checked={row.getIsSelected()}
         disabled={!canSelect}
-        className={cn(
-          "transition-opacity",
-          canSelect
-            ? "opacity-0 group-hover/order-row:opacity-100 group-focus-within/order-row:opacity-100 group-data-[state=selected]/order-row:opacity-100"
-            : "pointer-events-none opacity-0"
-        )}
       />
     </span>
   );
@@ -292,7 +286,7 @@ export function EmrDataTable({
               }
             }}
           >
-            <Checkbox
+            <EmrTableCheckbox
               aria-label="전체 선택"
               checked={table.getIsAllPageRowsSelected()}
               indeterminate={table.getIsSomePageRowsSelected()}

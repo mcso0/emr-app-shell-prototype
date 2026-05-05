@@ -6,7 +6,6 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
-  CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsFilesCalendarIcon,
@@ -81,6 +80,9 @@ import {
 } from "@/features/reception/data";
 import {
   GuardianProfileDrawer,
+  RegistrationDialogCloseButton,
+  RegistrationFormField,
+  RegistrationFormSection,
   NewUnifiedRegistrationButton,
   PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
@@ -296,8 +298,8 @@ const getAppointmentHour = (appointment: Appointment) =>
 
 const getScheduleHourLabel = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 
-const getBusinessHoursLabel = () =>
-  `영업시간 ${getScheduleHourLabel(dayBusinessOpenHour)}-${getScheduleHourLabel(dayBusinessCloseHour)}`;
+const getBusinessHoursTimeRangeLabel = () =>
+  `${getScheduleHourLabel(dayBusinessOpenHour)}-${getScheduleHourLabel(dayBusinessCloseHour)}`;
 
 const isBusinessHourRow = (hour: number) =>
   hour >= dayBusinessOpenHour && hour < dayBusinessCloseHour;
@@ -1004,18 +1006,21 @@ function ScheduleToolbar({
           dateLabel="26.05.01 (금)"
           todayLabel="오늘"
         />
-        <span className="rounded-md bg-[var(--clair-color-atomic-gray-50)] px-2 py-1 text-[12px] font-medium leading-4 text-muted-foreground">
-          {getBusinessHoursLabel()}
+        <span className="ml-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] px-2 py-1 text-[12px] font-medium leading-4 text-muted-foreground">
+          영업시간{" "}
+          <span className="font-semibold text-[var(--clair-color-primary-normal)]">
+            {getBusinessHoursTimeRangeLabel()}
+          </span>
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger
             className={buttonVariants({
-              variant: "outline",
+              variant: "secondary",
               size: "sm",
               className:
-                "min-w-[124px] justify-start border-[var(--clair-color-line-normal)] bg-card text-[var(--clair-color-label-strong)] shadow-[0_1px_0_rgba(15,23,42,0.03)] hover:bg-[var(--clair-color-background-surface)] aria-expanded:bg-[var(--clair-color-background-surface)]",
+                "min-w-[124px] justify-start text-[var(--clair-color-label-strong)]",
             })}
           >
             <CdsActionsSearchIcon data-icon="inline-start" />
@@ -1146,6 +1151,7 @@ function DayScheduleBoard({
   appointments,
   draftCheckIns,
   onCheckIn,
+  onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
   selectedAppointmentId,
@@ -1154,6 +1160,7 @@ function DayScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   onCheckIn: (appointment: Appointment) => void;
+  onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
@@ -1257,9 +1264,6 @@ function DayScheduleBoard({
             style={{ top: currentTimeOffset }}
           >
             <span className="size-2 rounded-full bg-[var(--clair-color-atomic-red-400)]" />
-            <span className="ml-1 rounded-full border border-[var(--clair-color-atomic-red-200)] bg-white px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--clair-color-atomic-red-600)] shadow-sm">
-              현재 11:20
-            </span>
             <span className="h-px flex-1 bg-[var(--clair-color-atomic-red-300)]" />
           </div>
           {dayScheduleHours.map((hour) => {
@@ -1307,7 +1311,15 @@ function DayScheduleBoard({
                           ))}
                         </>
                       ) : (
-                        <div className="min-h-12 flex-1 rounded-md border border-dashed border-transparent" />
+                        <button
+                          type="button"
+                          aria-label={`${getScheduleHourLabel(hour)} ${veterinarian.name} 빈 시간 접수 생성`}
+                          className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--clair-color-atomic-sky-200)] hover:bg-[var(--clair-color-atomic-sky-50)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                          data-testid={`day-empty-slot-${hour}-${veterinarian.id}`}
+                          onClick={onCreateWalkIn}
+                        >
+                          <span className="sr-only">진료 접수 생성</span>
+                        </button>
                       )}
                     </div>
                   );
@@ -1325,6 +1337,7 @@ function WeekScheduleBoard({
   appointments,
   draftCheckIns,
   onCheckIn,
+  onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
   selectedAppointmentId,
@@ -1332,6 +1345,7 @@ function WeekScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   onCheckIn: (appointment: Appointment) => void;
+  onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
@@ -1445,7 +1459,15 @@ function WeekScheduleBoard({
                     />
                   ))}
                   {hourAppointments.length || hourWalkIns.length ? null : (
-                    <div className="min-h-12 flex-1 rounded-md border border-dashed border-transparent" />
+                    <button
+                      type="button"
+                      aria-label={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
+                      className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--clair-color-atomic-sky-200)] hover:bg-[var(--clair-color-atomic-sky-50)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      data-testid={`week-empty-slot-${day.day}-${hour}`}
+                      onClick={onCreateWalkIn}
+                    >
+                      <span className="sr-only">진료 접수 생성</span>
+                    </button>
                   )}
                 </div>
               );
@@ -1504,6 +1526,7 @@ function ReceptionScheduleBoard({
   appointments,
   draftCheckIns,
   onCheckIn,
+  onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
   selectedAppointmentId,
@@ -1513,6 +1536,7 @@ function ReceptionScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   onCheckIn: (appointment: Appointment) => void;
+  onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
@@ -1531,6 +1555,7 @@ function ReceptionScheduleBoard({
               selectedVeterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
+              onCreateWalkIn={onCreateWalkIn}
               onCheckIn={onCheckIn}
             />
           ) : null}
@@ -1541,6 +1566,7 @@ function ReceptionScheduleBoard({
               selectedAppointmentId={selectedAppointmentId}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
+              onCreateWalkIn={onCreateWalkIn}
               onCheckIn={onCheckIn}
             />
           ) : null}
@@ -1631,6 +1657,11 @@ export function ReceptionContent() {
     selectPatient(patientId);
     setActiveDrawer({ type: "reception-patient", id: patientId });
   };
+  const openWalkInDialog = () => {
+    setActiveDrawer(null);
+    setWalkInInitialPatientId(undefined);
+    setWalkInDialogOpen(true);
+  };
 
   useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
@@ -1669,11 +1700,7 @@ export function ReceptionContent() {
         onViewChange={setCalendarView}
         selectedVeterinarianIds={selectedVeterinarianIds}
         onToggleVeterinarian={toggleVeterinarian}
-        onCreateWalkIn={() => {
-          setActiveDrawer(null);
-          setWalkInInitialPatientId(undefined);
-          setWalkInDialogOpen(true);
-        }}
+        onCreateWalkIn={openWalkInDialog}
         onUnifiedPatientReady={(patientId) => {
           setActiveDrawer(null);
           selectPatient(patientId);
@@ -1723,6 +1750,7 @@ export function ReceptionContent() {
         view={calendarView}
         onSelectAppointment={handleSelectAppointment}
         onSelectPatient={handleSelectPatientFromSchedule}
+        onCreateWalkIn={openWalkInDialog}
         onCheckIn={checkInAppointment}
       />
     </div>
@@ -1749,85 +1777,6 @@ function ReceptionFormField({
   );
 }
 
-function ReceptionReferenceLabel({
-  actions,
-  label,
-  required,
-}: {
-  actions?: ReactNode;
-  label: string;
-  required?: boolean;
-}) {
-  return (
-    <div className="flex min-h-[22px] items-center justify-between gap-2">
-      <div className="flex min-w-0 items-start gap-0.5">
-        <span className="truncate text-[14px] font-bold leading-[18px] text-[var(--clair-color-label-strong)]">
-          {label}
-        </span>
-        {required ? (
-          <span className="text-[14px] font-bold leading-[18px] text-[var(--clair-color-primary-normal)]">
-            *
-          </span>
-        ) : null}
-      </div>
-      {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
-    </div>
-  );
-}
-
-function ReceptionReferenceField({
-  actions,
-  children,
-  className,
-  label,
-  required,
-  supportingText,
-}: {
-  actions?: ReactNode;
-  children: ReactNode;
-  className?: string;
-  label: string;
-  required?: boolean;
-  supportingText?: string;
-}) {
-  return (
-    <div className={cn("flex min-w-0 flex-col gap-2", className)}>
-      <ReceptionReferenceLabel actions={actions} label={label} required={required} />
-      <div className="flex min-w-0 flex-col">
-        {children}
-        {supportingText ? (
-          <div className="min-h-5 px-2 py-1 text-[10px] font-medium leading-3 text-[var(--clair-color-atomic-gray-500)]">
-            {supportingText}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function ReceptionReferenceSection({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title: string;
-}) {
-  return (
-    <section className="flex min-w-0 flex-col gap-3">
-      <h3 className="text-[13px] font-bold leading-[18px] text-[var(--clair-color-atomic-gray-400)]">
-        {title}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
-const receptionReferenceInputClassName =
-  "h-8 w-full rounded border-[var(--clair-color-atomic-gray-200)] bg-[#fbfcfd] px-2 text-[12px] font-medium leading-[14px] text-[var(--clair-color-label-strong)] placeholder:text-[var(--clair-color-atomic-gray-500)]";
-
-const receptionReferenceDisabledInputClassName =
-  "h-8 w-full rounded border-transparent bg-[var(--clair-color-atomic-gray-200)] px-2 text-[12px] font-medium leading-[14px] text-[var(--clair-color-atomic-gray-400)] disabled:opacity-100";
-
 function WalkInReceptionDialog({
   initialPatientId,
   onCreate,
@@ -1848,6 +1797,9 @@ function WalkInReceptionDialog({
   const [receptionVeterinarianId, setReceptionVeterinarianId] = useState(
     unassignedVeterinarianValue
   );
+  const [customPurposeTags, setCustomPurposeTags] = useState<string[]>([]);
+  const [isAddingPurposeTag, setIsAddingPurposeTag] = useState(false);
+  const [newPurposeTag, setNewPurposeTag] = useState("");
   const [receptionPurposeTags, setReceptionPurposeTags] = useState<string[]>([]);
   const [receptionVisitPurpose, setReceptionVisitPurpose] = useState("");
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
@@ -1862,6 +1814,7 @@ function WalkInReceptionDialog({
   const canCreate = Boolean(patient && visitPurpose);
   const patientOptionText = selectedSummary ? getReceptionPatientOptionLabel(selectedSummary) : "";
   const patientWeightKg = getRecentPatientWeightKg(patient);
+  const purposeChips = [...receptionPurposeChips, ...customPurposeTags];
 
   const close = () => onOpenChange(false);
   const togglePurposeTag = (purpose: string) => {
@@ -1870,6 +1823,29 @@ function WalkInReceptionDialog({
         ? current.filter((item) => item !== purpose)
         : [...current, purpose]
     );
+  };
+  const addPurposeTag = () => {
+    const purpose = newPurposeTag.trim();
+
+    if (!purpose) {
+      setIsAddingPurposeTag(false);
+      setNewPurposeTag("");
+      return;
+    }
+
+    const existingPurpose = purposeChips.find((item) => item === purpose);
+
+    if (!existingPurpose) {
+      setCustomPurposeTags((current) =>
+        current.includes(purpose) ? current : [...current, purpose]
+      );
+    }
+
+    setReceptionPurposeTags((current) =>
+      current.includes(existingPurpose ?? purpose) ? current : [...current, existingPurpose ?? purpose]
+    );
+    setIsAddingPurposeTag(false);
+    setNewPurposeTag("");
   };
 
   return (
@@ -1889,27 +1865,18 @@ function WalkInReceptionDialog({
                 새 진료 접수 생성 양식입니다.
               </DialogDescription>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="size-[26px] rounded-sm text-[var(--clair-color-atomic-gray-600)] hover:bg-[var(--clair-color-atomic-gray-50)]"
-              aria-label="진료 접수 닫기"
-              onClick={close}
-            >
-              <CdsActionsXIcon className="size-4" />
-            </Button>
+            <RegistrationDialogCloseButton ariaLabel="진료 접수 닫기" onClick={close} />
           </div>
         </DialogHeader>
 
-        <ScrollArea className="min-h-0 border-t border-[var(--clair-color-line-subtle)]">
-          <div className="flex flex-col gap-5 px-6 py-4">
-            <ReceptionReferenceSection title="환자 정보">
-              <div className="grid grid-cols-[minmax(0,1fr)_140px] gap-2">
-                <ReceptionReferenceField
+        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
+          <div className="flex flex-col gap-5 px-1 pb-6 pt-3">
+            <RegistrationFormSection separated={false} title="환자 정보">
+              <div className="grid grid-cols-[minmax(0,1fr)_160px] gap-x-7 gap-y-5">
+                <RegistrationFormField
                   label="환자 검색"
                   required
-                  supportingText={patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다."}
+                  helper={patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다."}
                 >
                   <Select
                     value={receptionPatientId}
@@ -1917,7 +1884,7 @@ function WalkInReceptionDialog({
                   >
                     <SelectTrigger
                       aria-label="환자 검색"
-                      className={cn(receptionReferenceInputClassName, "justify-between")}
+                      className="h-10 w-full bg-card"
                     >
                       <CdsActionsSearchIcon
                         className="size-3 shrink-0 text-[var(--clair-color-atomic-gray-600)]"
@@ -1935,43 +1902,37 @@ function WalkInReceptionDialog({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                </ReceptionReferenceField>
+                </RegistrationFormField>
 
-                <ReceptionReferenceField label="체중">
+                <RegistrationFormField label="체중">
                   <div className="relative">
                     <Input
                       aria-label="체중"
-                      className={cn(
-                        receptionReferenceInputClassName,
-                        "pr-8 text-[var(--clair-color-atomic-gray-500)]"
-                      )}
+                      className="h-10 bg-card pr-9 text-[var(--clair-color-atomic-gray-500)]"
                       readOnly
                       value={patientWeightKg}
                     />
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[12px] font-medium leading-[14px] text-[var(--clair-color-label-strong)]">
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium leading-4 text-[var(--clair-color-label-strong)]">
                       kg
                     </span>
                   </div>
-                </ReceptionReferenceField>
+                </RegistrationFormField>
               </div>
-            </ReceptionReferenceSection>
-            <div className="h-px bg-[var(--clair-color-line-normal)]" />
 
-            <ReceptionReferenceSection title="방문 정보">
-              <ReceptionReferenceField
+              <RegistrationFormField
                 label="방문 목적"
                 required
-                supportingText="태그는 방문 목적 검색과 통계 분류에 사용하고, 상세 내용은 자유롭게 남깁니다."
+                helper="태그는 방문 목적 검색과 통계 분류에 사용하고, 상세 내용은 자유롭게 남깁니다."
               >
                 <Textarea
                   aria-label="방문 목적"
-                  className="min-h-[112px] resize-none rounded border-[var(--clair-color-atomic-gray-200)] bg-[#fbfcfd] p-2 text-[12px] font-medium leading-[1.5] text-[var(--clair-color-label-strong)] placeholder:text-[var(--clair-color-atomic-gray-500)]"
+                  className="min-h-[104px] resize-none bg-card"
                   placeholder="방문 목적을 자세히 입력해주세요"
                   value={receptionVisitPurpose}
                   onChange={(event) => setReceptionVisitPurpose(event.target.value)}
                 />
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {receptionPurposeChips.map((purpose) => {
+                  {purposeChips.map((purpose) => {
                     const selected = receptionPurposeTags.includes(purpose);
 
                     return (
@@ -1993,27 +1954,48 @@ function WalkInReceptionDialog({
                       </Button>
                     );
                   })}
+                  {isAddingPurposeTag ? (
+                    <Input
+                      aria-label="태그명"
+                      autoFocus
+                      className="h-8 w-[108px] rounded-full bg-card px-3 text-[12px] font-semibold"
+                      placeholder="태그명"
+                      value={newPurposeTag}
+                      onBlur={addPurposeTag}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addPurposeTag();
+                        }
+                        if (event.key === "Escape") {
+                          setIsAddingPurposeTag(false);
+                          setNewPurposeTag("");
+                        }
+                      }}
+                      onValueChange={setNewPurposeTag}
+                    />
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="size-7 rounded-full"
+                      aria-label="태그 추가"
+                      onClick={() => setIsAddingPurposeTag(true)}
+                    >
+                      <CdsActionsPlusIcon className="size-3.5" />
+                    </Button>
+                  )}
                 </div>
-              </ReceptionReferenceField>
+              </RegistrationFormField>
+            </RegistrationFormSection>
 
-              <ReceptionReferenceField label="접수 메모">
-                <Textarea
-                  aria-label="접수 메모"
-                  className="min-h-[80px] resize-none rounded border-[var(--clair-color-atomic-gray-200)] bg-[#fbfcfd] p-2 text-[12px] font-medium leading-[1.5] text-[var(--clair-color-label-strong)] placeholder:text-[var(--clair-color-atomic-gray-500)]"
-                  placeholder="접수 메모를 입력해주세요"
-                  value={receptionMemo}
-                  onChange={(event) => setReceptionMemo(event.target.value)}
-                />
-              </ReceptionReferenceField>
-            </ReceptionReferenceSection>
-            <div className="h-px bg-[var(--clair-color-line-normal)]" />
-
-            <ReceptionReferenceSection title="접수 정보">
-              <div className="grid grid-cols-[minmax(0,1fr)_248px] gap-2">
-                <ReceptionReferenceField
+            <RegistrationFormSection title="접수 정보">
+              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
+                <RegistrationFormField
                   label="진료과"
                   required
-                  supportingText="다른 진료과로의 접수는 먼저 진료과를 변경한 후 가능합니다."
+                  helper="다른 진료과로의 접수는 먼저 진료과를 변경한 후 가능합니다."
                 >
                 <Select
                   value={receptionDepartment}
@@ -2023,7 +2005,7 @@ function WalkInReceptionDialog({
                 >
                   <SelectTrigger
                     aria-label="진료과"
-                    className={cn(receptionReferenceInputClassName, "justify-between")}
+                    className="h-10 w-full bg-card"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -2037,11 +2019,11 @@ function WalkInReceptionDialog({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </ReceptionReferenceField>
+              </RegistrationFormField>
 
-                <ReceptionReferenceField
+                <RegistrationFormField
                   label="담당의"
-                  supportingText="담당의 지정시 진료시작시간을 설정할 수 있습니다."
+                  helper="담당의 지정 후 시간을 설정할 수 있습니다."
                 >
                 <Select
                   value={receptionVeterinarianId}
@@ -2051,7 +2033,7 @@ function WalkInReceptionDialog({
                 >
                   <SelectTrigger
                     aria-label="담당의"
-                    className={cn(receptionReferenceInputClassName, "justify-between")}
+                    className="h-10 w-full bg-card"
                   >
                     <CdsActionsSearchIcon
                       className="size-3 shrink-0 text-[var(--clair-color-atomic-gray-600)]"
@@ -2072,40 +2054,40 @@ function WalkInReceptionDialog({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </ReceptionReferenceField>
+              </RegistrationFormField>
               </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_248px] gap-2">
-                <ReceptionReferenceField label="접수일">
+              <div className="grid grid-cols-3 gap-x-7 gap-y-5">
+                <RegistrationFormField label="접수일">
                 <div className="relative">
                   <CdsFilesCalendarIcon
-                    className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[var(--clair-color-atomic-gray-600)]"
+                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--clair-color-atomic-gray-600)]"
                     aria-hidden="true"
                   />
                   <Input
                     aria-label="접수일"
-                    className="h-8 w-full rounded-none border-x-0 border-t-0 border-[var(--clair-color-atomic-gray-200)] bg-transparent px-2 pl-7 text-[12px] font-medium leading-[14px] text-[var(--clair-color-label-strong)] focus-visible:ring-0"
+                    className="h-10 bg-card pl-9"
                     readOnly
                     value="26.05.01"
                   />
                 </div>
-              </ReceptionReferenceField>
+              </RegistrationFormField>
 
-                <ReceptionReferenceField label="진료시작시간">
+                <RegistrationFormField label="진료시간">
                 <div className="relative">
                   <CdsFilesClockIcon
-                    className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[var(--clair-color-atomic-gray-400)]"
+                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--clair-color-atomic-gray-400)]"
                     aria-hidden="true"
                   />
                   <Input
-                    aria-label="진료시작시간"
-                    className={cn(receptionReferenceDisabledInputClassName, "pl-7")}
+                    aria-label="진료시간"
+                    className="h-10 bg-card pl-9 text-[var(--clair-color-atomic-gray-500)] disabled:bg-[var(--clair-color-background-surface)] disabled:opacity-100"
                     disabled
                     value="진료시간"
                   />
                 </div>
-              </ReceptionReferenceField>
+              </RegistrationFormField>
 
-                <ReceptionReferenceField label="예상소요시간" required>
+                <RegistrationFormField label="예상시간" required>
                 <Select
                   value={receptionDuration}
                   onValueChange={(value) => {
@@ -2113,8 +2095,8 @@ function WalkInReceptionDialog({
                   }}
                 >
                   <SelectTrigger
-                    aria-label="예상소요시간"
-                    className={cn(receptionReferenceInputClassName, "justify-between")}
+                    aria-label="예상시간"
+                    className="h-10 w-full bg-card"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -2126,9 +2108,18 @@ function WalkInReceptionDialog({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </ReceptionReferenceField>
+              </RegistrationFormField>
               </div>
-            </ReceptionReferenceSection>
+              <RegistrationFormField label="접수 메모">
+                <Textarea
+                  aria-label="접수 메모"
+                  className="min-h-[88px] resize-none bg-card"
+                  placeholder="접수 메모를 입력해주세요"
+                  value={receptionMemo}
+                  onChange={(event) => setReceptionMemo(event.target.value)}
+                />
+              </RegistrationFormField>
+            </RegistrationFormSection>
           </div>
         </ScrollArea>
 

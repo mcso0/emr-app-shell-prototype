@@ -17,6 +17,7 @@ type LineTabsProps<TValue extends string> = {
   className?: string;
   itemClassName?: string;
   onValueChange: (value: TValue) => void;
+  size?: "default" | "lg";
 };
 
 export function LineTabs<TValue extends string>({
@@ -26,6 +27,7 @@ export function LineTabs<TValue extends string>({
   className,
   itemClassName,
   onValueChange,
+  size = "lg",
 }: LineTabsProps<TValue>) {
   return (
     <div
@@ -44,7 +46,11 @@ export function LineTabs<TValue extends string>({
             aria-pressed={active}
             disabled={disabled}
             className={cn(
-              "inline-flex shrink-0 flex-col items-center justify-center gap-[var(--clair-spacing-8)] px-[var(--clair-spacing-8)] text-[16px] font-medium leading-6 tracking-[var(--clair-typography-body-1-normal-letter-spacing)] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              "inline-flex shrink-0 flex-col items-center justify-center font-medium tracking-[var(--clair-typography-body-1-normal-letter-spacing)] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              size === "lg" &&
+                "gap-[var(--clair-spacing-8)] px-[var(--clair-spacing-8)] text-[16px] leading-6",
+              size === "default" &&
+                "gap-1 px-2 text-[14px] leading-5",
               disabled &&
                 "cursor-not-allowed text-[var(--clair-color-atomic-gray-300)]",
               active &&
