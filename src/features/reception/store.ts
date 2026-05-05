@@ -5,6 +5,7 @@ import type {
   Appointment,
   EmrId,
   Encounter,
+  MessageDelivery,
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 
@@ -19,6 +20,7 @@ type ReceptionDraftCheckIn = {
 };
 
 type ReceptionStore = {
+  messageDeliveries: MessageDelivery[];
   searchQuery: string;
   selectedAppointmentId?: EmrId;
   selectedEncounterId?: EmrId;
@@ -36,6 +38,9 @@ type ReceptionStore = {
     memo?: string;
     patientId: EmrId;
     primaryVeterinarianId?: EmrId;
+    sendKakaoMessage?: boolean;
+    guardianMobilePhone?: string;
+    patientName?: string;
     visitPurpose?: string;
   }) => void;
 };
@@ -96,7 +101,39 @@ const createDraftQueueEntry = ({
   enteredAt: DEFAULT_NOW,
 });
 
+const createSessionCheckInMessage = ({
+  encounterId,
+  guardianId,
+  guardianMobilePhone,
+  index,
+  patientId,
+  patientName,
+}: {
+  encounterId: EmrId;
+  guardianId?: EmrId;
+  guardianMobilePhone?: string;
+  index: number;
+  patientId: EmrId;
+  patientName?: string;
+}): MessageDelivery => ({
+  id: `session-message-checkin-${encounterId}-${index}`,
+  workspaceId: WORKSPACE_ID,
+  templateId: "template-checkin",
+  guardianId,
+  patientId,
+  encounterId,
+  channel: "kakao_alimtalk",
+  recipient: guardianMobilePhone ?? "연락처 미입력",
+  bodySnapshot: `${patientName ?? "환자"} 접수가 완료되었습니다. 대기 순서를 확인해 주세요.`,
+  status: "sent",
+  providerMessageId: `session-alimtalk-${index}`,
+  retryCount: 0,
+  sentAt: DEFAULT_NOW,
+  createdAt: DEFAULT_NOW,
+});
+
 export const useReceptionStore = create<ReceptionStore>()((set) => ({
+  messageDeliveries: [],
   searchQuery: "",
   selectedPatientId: DEFAULT_PATIENT_ID,
   draftCheckIns: [],
@@ -163,9 +200,12 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
     department,
     durationMinutes,
     guardianId,
+    guardianMobilePhone,
     memo,
     patientId,
+    patientName,
     primaryVeterinarianId,
+    sendKakaoMessage,
     visitPurpose,
   }) =>
     set((state) => {
@@ -189,6 +229,16 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         visitPurpose,
       });
       const queueEntry = createDraftQueueEntry({ encounterId: encounter.id, index });
+      const messageDelivery = sendKakaoMessage
+        ? createSessionCheckInMessage({
+            encounterId: encounter.id,
+            guardianId,
+            guardianMobilePhone,
+            index: state.messageDeliveries.length,
+            patientId,
+            patientName,
+          })
+        : undefined;
 
       return {
         draftCheckIns: [
@@ -202,6 +252,9 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
             receptionType: "walk_in",
           },
         ],
+        messageDeliveries: messageDelivery
+          ? [...state.messageDeliveries, messageDelivery]
+          : state.messageDeliveries,
         selectedEncounterId: encounter.id,
         selectedPatientId: patientId,
       };

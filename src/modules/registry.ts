@@ -12,6 +12,9 @@ import {
 import type { ModuleDefinition } from "@/types/emr";
 import {
   ChartContent,
+  ChartContentAside,
+  ChartHeader,
+  ChartRightPanel,
   ChartSidePanel,
 } from "@/features/chart/module";
 import {
@@ -27,9 +30,12 @@ import {
   DispensingSidePanel,
 } from "@/features/dispensing/module";
 import {
+  LabContentAside,
   ImagingContent,
   ImagingSidePanel,
   LabContent,
+  LabHeader,
+  LabRightPanel,
   LabSidePanel,
 } from "@/features/lab-imaging/module";
 import {
@@ -64,14 +70,23 @@ export const modules: ModuleDefinition[] = [
     label: "진료(차트)",
     icon: StethoscopeIcon,
     sidePanel: ChartSidePanel,
+    contentHeader: ChartHeader,
+    contentAside: ChartContentAside,
     content: ChartContent,
+    rightPanel: ChartRightPanel,
+    defaultRightPanelOpen: false,
   },
   {
     id: "lab",
     label: "검사",
     icon: FlaskIcon,
     sidePanel: LabSidePanel,
+    contentHeader: LabHeader,
+    contentAside: LabContentAside,
     content: LabContent,
+    rightPanel: LabRightPanel,
+    defaultContentAsideOpen: true,
+    defaultRightPanelOpen: false,
   },
   {
     id: "imaging",

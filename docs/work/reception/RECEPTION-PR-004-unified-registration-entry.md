@@ -1,0 +1,40 @@
+---
+id: "RECEPTION-PR-004"
+status: "done"
+area: "reception"
+priority: "P1"
+target_pr: "PR 4"
+source_docs:
+  - "docs/agent-start-here.md"
+  - "docs/engineering/current-status.md"
+  - "docs/design/ux-flows/reception-appointment-flow.md"
+  - "docs/design/screens/reception/planning/unified-registration-entry.md"
+dependencies:
+  - "RECEPTION-PR-003"
+updated: "2026-05-05"
+---
+
+# Reception Unified Registration Entry
+
+## Goal
+
+접수/예약 toolbar의 환자/보호자 등록 진입점을 `환자/보호자 등록` 하나로 통합하고, 등록 케이스 선택 후 신규 보호자+환자 또는 기존 보호자+신규 환자를 최종 확인에서 commit하는 session-only MVP flow를 제공한다.
+
+## PR Creation Gate
+
+- Goal: branch-first patient/guardian registration with final confirmation before commit.
+- PR size: one reception UX PR including the selected Epic 1-3 MVP simulation scope.
+- Scope: unified registration entry, branch-first guardian/patient registration, local draft confirmation, patient age/birthdate and mix breed UX, smart walk-in check-in purpose chips, revisit auto-check, KakaoTalk send simulation, focused tests, docs.
+- Out of scope: live DB/API persistence, tablet/e-sign provider, KakaoTalk provider, full breed catalog, calendar drag-and-drop, appointment mutation persistence.
+- Done criteria: toolbar removes `환자 등록`/`보호자 등록`, `환자/보호자 등록` opens case selection, final confirmation commits only after review, duplicate microchip is blocked, duplicate patient name warning appears, success toast provides patient detail and check-in actions, check-in message simulation is test-visible.
+- Source docs: unified registration planning doc, reception UX flow, current status.
+- Verification: focused lint, TypeScript, reception Playwright suite, docs check.
+- Status/dependencies: done; builds on registration quality UX.
+- Duplicate check: prior reception work covered standalone registration quality and walk-in check-in, not unified branch-first registration.
+
+## Verification
+
+- `npm run lint -- src/features/reception/module.tsx src/features/reception/profile-drawer.tsx src/features/reception/patient-profile-store.ts src/features/reception/store.ts tests/reception.spec.ts`
+- `npx tsc --noEmit`
+- `npx playwright test tests/reception.spec.ts --reporter=line`
+- `npm run docs:check`

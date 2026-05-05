@@ -96,6 +96,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         pendingUrlState.contentAsideOpen = nextContentAsideOpen;
       }
       setContentAsideOpen(nextContentAsideOpen);
+    } else if (moduleDefinition.contentAside) {
+      const nextContentAsideOpen = moduleDefinition.defaultContentAsideOpen ?? false;
+      if (currentLayoutState.contentAsideOpen !== nextContentAsideOpen) {
+        pendingUrlState.contentAsideOpen = nextContentAsideOpen;
+      }
+      setContentAsideOpen(nextContentAsideOpen);
     }
     if (right) {
       const nextRightPanelOpen = right !== "closed";
@@ -129,7 +135,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setContentAsideOpen,
     setModulePanelOpen,
     setRightPanelOpen,
+    moduleDefinition.defaultContentAsideOpen,
     moduleDefinition.defaultRightPanelOpen,
+    moduleDefinition.contentAside,
     moduleDefinition.rightPanel,
   ]);
 

@@ -1,0 +1,1228 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진료(차트) Workspace Wireframe</title>
+    <style>
+      :root {
+        --bg: #f3f6f9;
+        --card: #ffffff;
+        --soft: #f8fafc;
+        --muted: #64748b;
+        --text: #1f2937;
+        --line: #d8e0e8;
+        --line-strong: #bdc8d4;
+        --primary: #0d91d6;
+        --primary-soft: #e7f5ff;
+        --orange: #f97316;
+        --orange-soft: #fff7ed;
+        --green: #16a46c;
+        --green-soft: #e9fbf2;
+        --purple: #8b5cf6;
+        --purple-soft: #f1ebff;
+        --danger: #ef4444;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .page {
+        min-height: 100vh;
+        padding: 10px;
+      }
+
+      .frame {
+        min-width: 1420px;
+        height: calc(100vh - 20px);
+        min-height: 900px;
+        display: grid;
+        grid-template-rows: 52px minmax(0, 1fr);
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: var(--card);
+      }
+
+      .top-menu {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid var(--line);
+        background: var(--soft);
+        padding: 0 10px;
+      }
+
+      .workspace-switcher {
+        width: 209px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .logo {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--primary);
+        color: white;
+        font-size: 10px;
+        font-weight: 900;
+      }
+
+      .global-search {
+        width: 560px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: white;
+        padding: 0 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .top-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .shell {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 58px 300px minmax(0, 1fr);
+      }
+
+      .rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        background: #08283b;
+        padding: 10px 8px;
+        color: #c9d8e4;
+      }
+
+      .rail-item {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .rail-item.brand,
+      .rail-item.active {
+        background: var(--primary);
+        color: white;
+      }
+
+      .module-panel,
+      .history-aside,
+      .right-panel {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        border-right: 1px solid var(--line);
+        background: var(--soft);
+      }
+
+      .right-panel {
+        grid-template-rows: auto minmax(0, 1fr);
+        border-right: 0;
+        border-left: 1px solid var(--line);
+        background: white;
+      }
+
+      .panel-title {
+        min-height: 62px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px 16px;
+      }
+
+      .panel-title h1,
+      .panel-title h2 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .tabs,
+      .header-tools,
+      .row-tools {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .date-nav,
+      .list-header,
+      .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 16px;
+      }
+
+      .date-nav {
+        border-top: 1px solid var(--line);
+      }
+
+      .scroll {
+        min-height: 0;
+        overflow: auto;
+        padding: 10px 16px;
+      }
+
+      .group {
+        margin-bottom: 14px;
+      }
+
+      .group-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .queue-card,
+      .history-card,
+      .right-card {
+        margin-bottom: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        padding: 11px 12px;
+      }
+
+      .queue-card.active,
+      .history-card.active {
+        border-color: var(--primary);
+        background: var(--primary-soft);
+      }
+
+      .card-top,
+      .card-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .card-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .card-copy {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .card-bottom {
+        margin-top: 9px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .aside-footer {
+        display: flex;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        background: white;
+        padding: 10px 14px;
+      }
+
+      .content {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: 52px minmax(0, 1fr);
+        background: var(--bg);
+      }
+
+      .patient-context-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid var(--line);
+        background: white;
+        padding: 0 12px;
+      }
+
+      .context-divider {
+        width: 1px;
+        height: 22px;
+        background: var(--line);
+      }
+
+      .context-group {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .context-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .context-spacer {
+        flex: 1 1 auto;
+      }
+
+      .content-scroll {
+        min-height: 0;
+        overflow: auto;
+        padding: 14px 16px 18px;
+      }
+
+      .content-lower {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr) 300px;
+      }
+
+      .content-main {
+        min-width: 0;
+        min-height: 0;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) 58px;
+      }
+
+      .chart-header-stack {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .title-bar,
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .title-bar h2,
+      .section-head h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .encounter-info {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: white;
+      }
+
+      .info-cell {
+        min-width: 0;
+        border-right: 1px solid var(--line);
+        padding: 12px 14px;
+      }
+
+      .info-cell:last-child {
+        border-right: 0;
+      }
+
+      .info-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .info-value {
+        margin-top: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(260px, 0.9fr);
+        gap: 14px;
+      }
+
+      .section {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: white;
+      }
+
+      .section-head {
+        min-height: 48px;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 14px;
+      }
+
+      .section-body {
+        padding: 14px;
+      }
+
+      .soap-block {
+        margin-bottom: 12px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+      }
+
+      .soap-block-head {
+        display: flex;
+        justify-content: space-between;
+        background: #eef3f7;
+        padding: 10px 12px;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .soap-text {
+        min-height: 122px;
+        padding: 12px;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .attachment-row {
+        display: flex;
+        gap: 8px;
+        padding: 0 12px 12px;
+      }
+
+      .thumb {
+        width: 78px;
+        height: 54px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .assessment-search {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 72px;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 9px 8px;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      th {
+        background: #eef3f7;
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .note-box {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .note-title {
+        display: flex;
+        justify-content: space-between;
+        background: var(--soft);
+        border-bottom: 1px solid var(--line);
+        padding: 8px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .note-body {
+        min-height: 74px;
+        padding: 11px 10px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .order-section {
+        margin-top: 16px;
+      }
+
+      .order-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .order-tabs .tab {
+        padding-bottom: 10px;
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      .order-tabs .tab.active {
+        color: var(--text);
+        border-bottom: 2px solid #111827;
+      }
+
+      .order-group {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: white;
+      }
+
+      .order-group-head {
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+      }
+
+      .order-table-wrap {
+        overflow: auto;
+        padding: 0 14px 14px;
+      }
+
+      .warning-row {
+        color: #c2410c;
+        background: var(--orange-soft);
+      }
+
+      .footer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid var(--line);
+        background: white;
+        padding: 10px 16px;
+      }
+
+      .footer-left,
+      .footer-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn,
+      .chip,
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        background: white;
+        color: var(--text);
+        font-weight: 800;
+      }
+
+      .btn {
+        min-height: 30px;
+        border-radius: 999px;
+        padding: 0 12px;
+        font-size: 12px;
+      }
+
+      .btn.primary {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: white;
+      }
+
+      .btn.dark {
+        border-color: #111827;
+        background: #111827;
+        color: white;
+      }
+
+      .btn.orange {
+        border-color: #fed7aa;
+        background: var(--orange-soft);
+        color: #c2410c;
+      }
+
+      .chip {
+        min-height: 22px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        color: var(--muted);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .chip.blue {
+        border-color: #bae6fd;
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      .chip.green {
+        border-color: #bbf7d0;
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .chip.orange {
+        border-color: #fed7aa;
+        background: var(--orange-soft);
+        color: var(--orange);
+      }
+
+      .chip.purple {
+        border-color: #ddd6fe;
+        background: var(--purple-soft);
+        color: var(--purple);
+      }
+
+      .chip.red {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: var(--danger);
+      }
+
+      .icon-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        color: var(--muted);
+      }
+
+      .field {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        padding: 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .small {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="frame">
+        <header class="top-menu">
+          <div class="workspace-switcher">
+            <span class="logo">V</span>
+            <span>VIP 동물의료센터 청담점</span>
+            <span>⌄</span>
+          </div>
+          <div class="global-search">동물명 또는 보호자명으로 검색</div>
+          <div class="top-actions">
+            <span>알림</span>
+            <span>?</span>
+            <span>설정</span>
+            <span class="chip">수의사 · vet</span>
+            <span>2026.05.05 09:00</span>
+            <span>로그아웃</span>
+          </div>
+        </header>
+
+        <main class="shell">
+          <nav class="rail">
+            <div class="rail-item brand">EMR</div>
+            <div class="rail-item">홈</div>
+            <div class="rail-item">접수</div>
+            <div class="rail-item active">진료</div>
+            <div class="rail-item">검사</div>
+            <div class="rail-item">영상</div>
+            <div class="rail-item">조제</div>
+            <div class="rail-item">수납</div>
+          </nav>
+
+          <aside class="module-panel">
+            <div class="panel-title">
+              <div>
+                <h1>진료(차트)</h1>
+                <div class="small muted">EmrOrderQueueSidePanel 재사용</div>
+              </div>
+              <div class="tabs">
+                <span class="chip">전체</span>
+                <span class="chip blue">대기</span>
+                <span class="chip">진료중</span>
+              </div>
+            </div>
+            <div class="date-nav">
+              <button class="icon-btn">‹</button>
+              <strong>26.05.05 (화)</strong>
+              <button class="icon-btn">›</button>
+            </div>
+            <div class="list-header">
+              <span>진료 대기열 <strong>7</strong></span>
+              <div class="row-tools">
+                <span>↕</span>
+                <span>≡</span>
+                <span>⌕</span>
+              </div>
+            </div>
+            <div class="scroll">
+              <section class="group">
+                <div class="group-head">
+                  <span>진료대기 3</span>
+                  <span>⌄</span>
+                </div>
+                <article class="queue-card active">
+                  <div class="card-top">
+                    <div class="card-title">콩이 · 김하늘 <span class="chip blue">예약</span></div>
+                    <span>⋯</span>
+                  </div>
+                  <div class="card-copy">반복 구토 · 식욕 저하 · 보호자 불안 호소</div>
+                  <div class="card-bottom">
+                    <span>담당 이수지</span>
+                    <span>09:40 대기</span>
+                  </div>
+                </article>
+                <article class="queue-card">
+                  <div class="card-top">
+                    <div class="card-title">코코 · 이지은 <span class="chip">외래</span></div>
+                    <span>⋯</span>
+                  </div>
+                  <div class="card-copy">급성 위장관염 의심 · CBC 예정</div>
+                  <div class="card-bottom">
+                    <span>담당 박민수</span>
+                    <span>10:05 대기</span>
+                  </div>
+                </article>
+              </section>
+              <section class="group">
+                <div class="group-head">
+                  <span>진료중 2</span>
+                  <span>⌄</span>
+                </div>
+                <article class="queue-card">
+                  <div class="card-top">
+                    <div class="card-title">나비 · 오세아 <span class="chip">외래</span></div>
+                  </div>
+                  <div class="card-copy">피부 재진 · 약 반응 확인</div>
+                  <div class="card-bottom">
+                    <span>담당 김도윤</span>
+                    <span>10:42 진료중</span>
+                  </div>
+                </article>
+              </section>
+              <section class="group">
+                <div class="group-head">
+                  <span>완료 1</span>
+                  <span>⌄</span>
+                </div>
+                <article class="queue-card">
+                  <div class="card-top">
+                    <div class="card-title">하루 · 강서윤 <span class="chip green">완료</span></div>
+                  </div>
+                  <div class="card-copy">예방접종 전 건강 확인</div>
+                  <div class="card-bottom">
+                    <span>담당 이수지</span>
+                    <span>11:05 완료</span>
+                  </div>
+                </article>
+              </section>
+            </div>
+          </aside>
+
+          <section class="content">
+            <header class="patient-context-bar">
+              <button class="btn">차트이력</button>
+              <div class="context-divider"></div>
+              <div class="context-group">
+                <span class="context-label">환자</span>
+                <span class="chip">콩이</span>
+                <span class="chip">김하늘</span>
+                <span class="chip">치와와</span>
+                <span class="chip">2세</span>
+                <span class="chip">수컷</span>
+              </div>
+              <div class="context-divider"></div>
+              <div class="context-group">
+                <span class="context-label">바이탈</span>
+                <span class="chip">2.3kg</span>
+                <span class="chip">39.1C</span>
+                <span class="chip">24rpm</span>
+                <span class="chip">130bpm</span>
+                <button class="icon-btn">+</button>
+              </div>
+              <div class="context-divider"></div>
+              <div class="context-group">
+                <span class="chip">방문목적</span>
+                <span class="chip">보호자메모 🔒</span>
+                <span class="chip">수납메모</span>
+              </div>
+              <div class="context-divider"></div>
+              <div class="context-group">
+                <span class="context-label">담당 수의사</span>
+                <span class="chip blue">이수지 · 진료의</span>
+              </div>
+              <div class="context-spacer"></div>
+              <button class="icon-btn">‹</button>
+              <button class="icon-btn">›</button>
+              <button class="btn">환자패널</button>
+            </header>
+
+            <div class="content-lower">
+              <aside class="history-aside">
+                <div class="panel-title">
+                  <h2>차트이력</h2>
+                  <span class="chip blue">5</span>
+                </div>
+                <div class="history-header">
+                  <span>콩이 과거 차트</span>
+                  <div class="row-tools">
+                    <span>↕</span>
+                    <span>≡</span>
+                    <span>⌕</span>
+                  </div>
+                </div>
+                <div class="scroll">
+                  <section class="group">
+                    <div class="group-head">
+                      <span>2026.04.12 2</span>
+                      <span>⌄</span>
+                    </div>
+                    <article class="history-card">
+                      <div class="card-title">건강검진 / 예방접종</div>
+                      <div class="card-copy">특이 소견 없이 귀가. 다음 접종 안내 완료.</div>
+                      <div class="card-bottom">
+                        <span>담당 김도윤</span>
+                        <span>차트보기</span>
+                      </div>
+                    </article>
+                    <article class="history-card">
+                      <div class="card-title">피부 가려움 재진</div>
+                      <div class="card-copy">약물 반응 양호. 보호자 안내 완료.</div>
+                      <div class="card-bottom">
+                        <span>담당 이수지</span>
+                        <span>차트보기</span>
+                      </div>
+                    </article>
+                  </section>
+                  <section class="group">
+                    <div class="group-head">
+                      <span>2026.02.10 1</span>
+                      <span>⌄</span>
+                    </div>
+                    <article class="history-card">
+                      <div class="card-title">구토 내원</div>
+                      <div class="card-copy">소화기계 진단, 항구토제 처방 후 호전.</div>
+                      <div class="card-bottom">
+                        <span>담당 이수지</span>
+                        <span>차트보기</span>
+                      </div>
+                    </article>
+                  </section>
+                </div>
+                <footer class="aside-footer">
+                  <button class="btn">수술 차트</button>
+                  <button class="btn primary">외래 차트 추가</button>
+                </footer>
+              </aside>
+
+              <div class="content-main">
+            <div class="content-scroll">
+              <div class="chart-header-stack">
+                <div class="title-bar">
+                  <div>
+                    <h2>진료 차트</h2>
+                    <div class="small muted">CH-260505-0003 · 기존 EmrInstructionHeaderStack 패턴 응용</div>
+                  </div>
+                  <div class="header-tools">
+                    <button class="btn">템플릿</button>
+                    <button class="btn">섹션 추가</button>
+                    <button class="btn primary">차트 저장</button>
+                  </div>
+                </div>
+                <div class="encounter-info">
+                  <div class="info-cell">
+                    <div class="info-label">접수 일시</div>
+                    <div class="info-value">2026.05.05 09:40</div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">환자 정보</div>
+                    <div class="info-value">콩이(2세) · 치와와</div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">담당 수의사</div>
+                    <div class="info-value">이수지</div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">차트 상태</div>
+                    <div class="info-value"><span class="chip blue">autosaved</span></div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">다음 업무</div>
+                    <div class="info-value">검사/영상 확인</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="main-grid">
+                <section class="section">
+                  <div class="section-head">
+                    <div>
+                      <h3>진단계통 SO · SOAP</h3>
+                      <div class="small muted">현재 SoapPanel을 editor-like 영역으로 확장</div>
+                    </div>
+                    <div class="header-tools">
+                      <button class="icon-btn">B</button>
+                      <button class="icon-btn">I</button>
+                      <button class="icon-btn">IMG</button>
+                      <button class="btn">저장</button>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                    <article class="soap-block">
+                      <div class="soap-block-head">
+                        <span>기본 SOAP</span>
+                        <span class="chip blue">autosaved</span>
+                      </div>
+                      <div class="soap-text">
+                        S: 전날 밤부터 구토 3회, 아침 식욕 없음. 물 섭취 후 재구토.<br />
+                        O: 체온 39.1C, 복부 촉진 시 경미한 불편감. 탈수 경도 의심.<br />
+                        A: 급성 위장관염 의심. 이물 가능성 배제를 위해 검사/영상 확인 필요.<br />
+                        P: CBC, 혈청화학, 복부 영상 확인. 피하 수액과 항구토제 처방.
+                      </div>
+                    </article>
+                    <article class="soap-block">
+                      <div class="soap-block-head">
+                        <span>비뇨생식기계 / 첨부</span>
+                        <span class="chip orange">AttachmentStrip</span>
+                      </div>
+                      <div class="soap-text">D-dimer 검사 요청, 영상 결과 확인 후 보호자 설명 예정.</div>
+                      <div class="attachment-row">
+                        <div class="thumb">image</div>
+                        <div class="thumb">image</div>
+                        <div class="thumb">pdf</div>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="section">
+                  <div class="section-head">
+                    <div>
+                      <h3>Assessment</h3>
+                      <div class="small muted">Diagnosis list + comment + plan</div>
+                    </div>
+                    <button class="btn">분류검색</button>
+                  </div>
+                  <div class="section-body">
+                    <div class="assessment-search">
+                      <div class="field">한글, 영문, 약자, 연관검색어로 진단명 검색</div>
+                      <button class="btn">검색</button>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>계통분류</th>
+                          <th>진단명</th>
+                          <th>확진</th>
+                          <th>중결</th>
+                          <th>수의사</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="chip orange">소화기</span></td>
+                          <td>급성 위장관염 의심</td>
+                          <td>✓</td>
+                          <td>-</td>
+                          <td>이수지</td>
+                        </tr>
+                        <tr>
+                          <td><span class="chip green">영상</span></td>
+                          <td>이물 가능성 배제 필요</td>
+                          <td>-</td>
+                          <td>-</td>
+                          <td>이수지</td>
+                        </tr>
+                        <tr>
+                          <td><span class="chip purple">검사</span></td>
+                          <td>염증 반응 추적</td>
+                          <td>-</td>
+                          <td>-</td>
+                          <td>이수지</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div class="note-box">
+                      <div class="note-title">
+                        <span>진단 코멘트</span>
+                        <span>49/500자</span>
+                      </div>
+                      <div class="note-body">4Dx, CBC 결과 확인 후 급성 위장관염 가능성 중심으로 설명.</div>
+                    </div>
+                    <div class="note-box">
+                      <div class="note-title">
+                        <span>Plan</span>
+                        <span>62/500자</span>
+                      </div>
+                      <div class="note-body">피하 수액, 항구토제 처방. 식욕과 구토 양상 24시간 추적.</div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <section class="order-section">
+                <div class="title-bar">
+                  <div>
+                    <h2>Order</h2>
+                    <div class="small muted">EmrOrderGroupSection + EmrDataTable 패턴을 chart order grid로 재사용</div>
+                  </div>
+                  <div class="header-tools">
+                    <button class="btn">Order 출력</button>
+                    <button class="btn">검사결과 분석</button>
+                    <button class="btn">PACS</button>
+                    <button class="btn primary">+ Order</button>
+                  </div>
+                </div>
+                <div class="order-tabs">
+                  <div class="tab active">전체 10</div>
+                  <div class="tab">진료/예방</div>
+                  <div class="tab">원내 검사</div>
+                  <div class="tab">의뢰 검사</div>
+                  <div class="tab">치료</div>
+                  <div class="tab">경구제</div>
+                  <div class="tab">주사제</div>
+                </div>
+                <article class="order-group">
+                  <div class="order-group-head">
+                    <div class="row-tools">
+                      <span>⌄</span>
+                      <strong>구토 완화 처방 세트</strong>
+                      <span class="chip">4</span>
+                      <span class="small muted">작업 완료 0/4</span>
+                    </div>
+                    <div class="header-tools">
+                      <button class="btn">수정이력조회</button>
+                      <button class="btn">필터 1</button>
+                      <button class="btn dark">Order 확정</button>
+                    </div>
+                  </div>
+                  <div class="order-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>분류</th>
+                          <th>상태</th>
+                          <th>Order명</th>
+                          <th>청구서명</th>
+                          <th>일수</th>
+                          <th>횟수</th>
+                          <th>용량</th>
+                          <th>보관</th>
+                          <th>투여/복약</th>
+                          <th>단가</th>
+                          <th>수량</th>
+                          <th>청구금액</th>
+                          <th>수의사</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="chip green">세트</span></td>
+                          <td><span class="chip orange">요청</span></td>
+                          <td>구토 완화 처방</td>
+                          <td>Maropitant 16mg T</td>
+                          <td>3</td>
+                          <td>sid</td>
+                          <td>0.5T</td>
+                          <td>실온</td>
+                          <td>식후</td>
+                          <td>5,000</td>
+                          <td>2</td>
+                          <td>10,000</td>
+                          <td>이수지</td>
+                        </tr>
+                        <tr class="warning-row">
+                          <td colspan="13">△ 수액량이 80ml에서 100ml로 변경되었습니다.</td>
+                        </tr>
+                        <tr>
+                          <td><span class="chip purple">검사</span></td>
+                          <td><span class="chip blue">진행중</span></td>
+                          <td>CBC 검사</td>
+                          <td>CBC 검사</td>
+                          <td>1</td>
+                          <td>once</td>
+                          <td>-</td>
+                          <td>-</td>
+                          <td>-</td>
+                          <td>35,000</td>
+                          <td>1</td>
+                          <td>35,000</td>
+                          <td>이수지</td>
+                        </tr>
+                        <tr>
+                          <td><span class="chip orange">처치</span></td>
+                          <td><span class="chip">대기</span></td>
+                          <td>피하 수액 처치</td>
+                          <td>피하 수액</td>
+                          <td>1</td>
+                          <td>once</td>
+                          <td>100ml</td>
+                          <td>실온</td>
+                          <td>SC</td>
+                          <td>28,000</td>
+                          <td>1</td>
+                          <td>28,000</td>
+                          <td>이수지</td>
+                        </tr>
+                        <tr>
+                          <td><span class="chip blue">영상</span></td>
+                          <td><span class="chip">판독중</span></td>
+                          <td>복부 초음파</td>
+                          <td>복부 초음파</td>
+                          <td>1</td>
+                          <td>once</td>
+                          <td>-</td>
+                          <td>-</td>
+                          <td>-</td>
+                          <td>80,000</td>
+                          <td>1</td>
+                          <td>80,000</td>
+                          <td>이수지</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              </section>
+            </div>
+
+            <footer class="footer-actions">
+              <div class="footer-left">
+                <button class="btn orange">차트 공유</button>
+                <span class="small muted">2026.05.05 09:32 차팅 완료 전 draft</span>
+              </div>
+              <div class="footer-right">
+                <button class="btn">케어 가이드 발송</button>
+                <button class="btn">입원 처리</button>
+                <button class="btn primary">수납 요청</button>
+                <button class="btn dark">Order 확정</button>
+                <button class="btn primary">차트 작성 완료</button>
+              </div>
+            </footer>
+              </div>
+
+          <aside class="right-panel">
+            <div class="panel-title">
+              <div>
+                <h2>환자 사이드 패널</h2>
+                <div class="small muted">환자 컨텍스트와 Assessment History</div>
+              </div>
+            </div>
+            <div class="scroll">
+              <section class="right-card">
+                <div class="card-title">Assessment History</div>
+                <div class="card-copy">환자 정보바 가장 우측 버튼으로 열고 닫는 패널.</div>
+              </section>
+              <section class="right-card">
+                <div class="card-top">
+                  <strong>2026.04.12</strong>
+                  <span class="chip green">치료완료</span>
+                </div>
+                <div class="card-copy">
+                  <span class="chip green">건강검진</span>
+                  <span class="chip">예방접종</span>
+                  <span class="chip">2회차</span>
+                </div>
+              </section>
+              <section class="right-card">
+                <div class="card-top">
+                  <strong>2026.03.29</strong>
+                  <span class="chip green">치료보기</span>
+                </div>
+                <div class="card-copy">
+                  <span class="chip orange">피부</span>
+                  <span class="chip">가려움</span>
+                  <span class="chip">재진</span>
+                </div>
+              </section>
+              <section class="right-card">
+                <div class="card-title">보호자 메모</div>
+                <div class="card-copy">물 섭취 후 재구토. 검사 비용 설명을 먼저 요청.</div>
+              </section>
+              <section class="right-card">
+                <div class="card-title">환자 메모</div>
+                <div class="card-copy">진료대에서 긴장도가 높아 보호자 동석 권장.</div>
+              </section>
+            </div>
+          </aside>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

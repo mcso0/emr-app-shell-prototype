@@ -35,26 +35,22 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
   const Drawer = moduleDefinition.drawer;
-  const isReceptionFormDrawer = activeDrawer?.type === "reception-form";
   const drawerTitle =
-    isReceptionFormDrawer
-      ? "접수"
-      : activeDrawer?.type === "reception-patient"
-          ? "환자 정보"
-          : activeDrawer?.type === "reception-guardian"
-            ? "보호자 정보"
-            : activeDrawer?.type === "reception-appointment"
-              ? "예약 상세"
-              : activeDrawer?.type === "reception-encounter"
-                ? "접수 정보"
-                : "상세 정보";
+    activeDrawer?.type === "reception-patient"
+      ? "환자 정보"
+      : activeDrawer?.type === "reception-guardian"
+        ? "보호자 정보"
+        : activeDrawer?.type === "reception-appointment"
+          ? "예약 상세"
+          : activeDrawer?.type === "reception-encounter"
+            ? "접수 정보"
+            : "상세 정보";
   const drawerSubtitle =
     activeDrawer?.subtitle ??
     (activeDrawer?.type === "reception-encounter" ? undefined : activeDrawer?.id);
-  const drawerWidth =
-    activeDrawer?.type === "reception-form"
-      ? SHELL_LAYOUT.drawer.largeWidth
-      : SHELL_LAYOUT.drawer.defaultWidth;
+  const drawerWidth = SHELL_LAYOUT.drawer.defaultWidth;
+  const shouldOffsetDrawerFromReceptionToolbar = activeDrawer?.type.startsWith("reception-");
+  const shouldOffsetDrawerFromToolbar = Boolean(Header) || shouldOffsetDrawerFromReceptionToolbar;
   const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
   const effectiveModuleSidePanelWidth = Math.max(
     moduleSidePanelWidth,
@@ -172,34 +168,39 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 480, opacity: 0 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute inset-y-0 right-0 border-l bg-card shadow-2xl"
+              className={cn(
+                "absolute bottom-0 right-0 border-l bg-card shadow-2xl",
+                shouldOffsetDrawerFromReceptionToolbar
+                  ? "top-[128px]"
+                  : shouldOffsetDrawerFromToolbar
+                    ? "top-[68px]"
+                    : "top-0"
+              )}
               style={{
                 width: drawerWidth,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
               }}
             >
-              {!isReceptionFormDrawer ? (
-                <div className="flex h-12 items-center justify-between border-b px-4">
-                  <div>
-                    <div className="flex min-w-0 items-baseline gap-2">
-                      <span className="text-sm font-semibold">{drawerTitle}</span>
-                      {drawerSubtitle ? (
-                        <span className="truncate text-[11px] text-muted-foreground">
-                          {drawerSubtitle}
-                        </span>
-                      ) : null}
-                    </div>
+              <div className="flex h-12 items-center justify-between border-b px-4">
+                <div>
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    <span className="text-sm font-semibold">{drawerTitle}</span>
+                    {drawerSubtitle ? (
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {drawerSubtitle}
+                      </span>
+                    ) : null}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="상세 닫기"
-                    onClick={() => setActiveDrawer(null)}
-                  >
-                    <CloseIcon />
-                  </Button>
                 </div>
-              ) : null}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="상세 닫기"
+                  onClick={() => setActiveDrawer(null)}
+                >
+                  <CloseIcon />
+                </Button>
+              </div>
               <Drawer {...slotProps} />
             </motion.aside>
           ) : null}

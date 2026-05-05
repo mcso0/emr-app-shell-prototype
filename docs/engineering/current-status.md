@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-04
+Updated: 2026-05-05
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
@@ -31,6 +31,12 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-03 기준 Supabase provider adapter가 `useAuthClient()` boundary 뒤에 추가되었다. env 미설정 또는 `NEXT_PUBLIC_AUTH_MODE=mock`에서는 mock/local demo fallback을 유지한다.
 - 2026-05-03 기준 접수/예약 Product MVP 보강 첫 단위로 현장 접수 form 입력값이 session-only encounter/queue 생성에 반영되며, 담당의 미지정 현장 접수도 진료대기 상태로 사이드 패널과 day calendar에서 확인된다.
 - 2026-05-04 기준 접수/예약 운영 UI가 조제/처치 side panel 기준에 맞춰 보강되었고, 신규 동물/보호자 등록 dialog는 같은 작은 shadcn 기반 modal 구조로 정리되었다.
+- 2026-05-05 기준 접수/예약 toolbar의 `진료 접수`는 선택된 대기열 환자의 접수 정보를 여는 drawer가 아니라 신규 접수를 만드는 dialog로 동작하며, 접수 대상 환자는 dialog 안에서 새로 선택한다.
+- 2026-05-05 기준 접수/예약 side panel은 대기 중심으로 시작하고, calendar card는 동물명/내원 목적 위계, 목적 icon label, 담당 수의사 accent bar, 현재 시각 label, 대기시간 신호등 pill을 사용한다.
+- 2026-05-05 기준 신규 동물/보호자 등록은 보호자 검색 popover, 확장된 동물 종류/성별 선택, 품종 autocomplete, session-only 개인정보/마케팅 동의 기록, tablet signing mock, 휴대전화 중복 보호자 차단을 포함한다.
+- 2026-05-05 기준 접수/예약 toolbar의 `환자 등록`/`보호자 등록`은 `환자/보호자 등록`으로 통합되었고, 케이스 선택 후 신규 보호자+환자 또는 기존 보호자+신규 환자를 등록하는 branch-first session-only flow를 제공한다. 등록 완료 후 자동 접수로 이동하지 않고 toast action으로 환자 상세 또는 진료 접수를 선택한다. 진료 접수 dialog는 환자 prefill, 재진 자동 체크, 방문 목적 chip, 카카오톡 발송 simulation을 포함한다.
+- 2026-05-05 기준 임상병리검사 화면은 조제/처치형 shell 구조를 사용한다. 검사 대기열, 환자 정보 인포바, 기본 열림 검사이력 aside, 정상범위 bar 기반 임상병리 검사결과지, 검사결과 종합소견 입력, 우측 장비결과내역 패널로 구성되며 영상검사는 기존 구조를 유지한다.
+- 2026-05-05 기준 진료(차트)는 조제/처치 workspace 슬롯 구조를 재사용하도록 재구성되었다. 진료 대기열은 공통 order queue side panel 패턴을 사용하고, patient context bar 아래 차트 이력 aside와 우측 진단 이력 환자 패널을 제공한다. SOAP는 Tiptap 기반 진단계통별 편집기로 동작하며, 진단 코멘트/Plan은 textarea로 입력 가능하다. 처방/오더 하단에는 오더 현황/금액/action 고정 footer가 있다.
 - membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
 - Auth 후속 작업은 `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.
@@ -104,10 +110,10 @@ MVP 목표:
 
 | 메뉴 | 상태 | 주요 내용 |
 |---|---|---|
-| 접수/예약 | 구현됨 | 캘린더, 접수/예약 목록, 상세 드로어, check-in, 현장 접수 form 입력값 반영과 진료대기 표시 |
-| 환자/보호자 | 구현됨 | 환자/보호자 read/edit 드로어, 관계 관리, CS 이력, 최신내역, 신규 환자 등록 |
+| 접수/예약 | 구현됨 | 캘린더, 대기 중심 접수/예약 목록, 상세 드로어, check-in, 신규 진료 접수 dialog, 환자/보호자 등록 branch-first flow, 현장 접수 form 입력값 반영과 진료대기 표시 |
+| 환자/보호자 | 구현됨 | 환자/보호자 read/edit 드로어, 관계 관리, CS 이력, 최신내역, 신규 동물/보호자 등록 품질 UX |
 | 진료(차트) | 구현됨 | 진료 대기열, 과거 진료 이력, SOAP, Assessment, Assessment History, Order |
-| 임상병리/계통 검사 | 구현됨 | 검사 대기열, 결과 입력, 장비 수신 내역, 첨부자료 |
+| 임상병리/계통 검사 | 구현됨 | 조제/처치형 검사 대기열, 환자 인포바, 기본 열림 검사이력, 정상범위 bar 검사결과지, 검사결과 종합소견, 우측 장비결과내역, 첨부자료 |
 | 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
 | 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
 | 수납 | 구현됨 | 대기/미납/종료 목록, 보호자 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 수납 액션 |

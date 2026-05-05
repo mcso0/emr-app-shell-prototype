@@ -96,6 +96,14 @@ export const getPatientSexLabel = (patient: Patient) => {
 export const getSpeciesLabel = (patient: Patient) => {
   if (patient.species === "dog") return "강아지";
   if (patient.species === "cat") return "고양이";
+  if (patient.species === "rabbit") return "토끼";
+  if (patient.species === "ferret") return "페럿";
+  if (patient.species === "hamster") return "햄스터";
+  if (patient.species === "guinea_pig") return "기니피그";
+  if (patient.species === "hedgehog") return "고슴도치";
+  if (patient.species === "bird") return "조류";
+  if (patient.species === "reptile") return "파충류";
+  if (patient.species === "turtle") return "거북이";
   return "기타";
 };
 

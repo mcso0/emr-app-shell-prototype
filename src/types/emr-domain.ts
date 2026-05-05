@@ -2,7 +2,18 @@ export type EmrId = string;
 export type IsoDate = string;
 export type IsoDateTime = string;
 
-export type Species = "dog" | "cat" | "other";
+export type Species =
+  | "dog"
+  | "cat"
+  | "rabbit"
+  | "ferret"
+  | "hamster"
+  | "guinea_pig"
+  | "hedgehog"
+  | "bird"
+  | "reptile"
+  | "turtle"
+  | "other";
 export type PatientSex = "male" | "female" | "unknown";
 export type PatientStatus = "active" | "inactive" | "deceased";
 export type ConsentType =
