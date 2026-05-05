@@ -11,7 +11,7 @@ source_docs:
   - "docs/design/ux-flows/reception-appointment-flow.md"
   - "docs/design/reference-screen-index.md"
 dependencies: []
-updated: "2026-05-03"
+updated: "2026-05-05"
 ---
 
 # Walk-In Check-In MVP Reinforcement
@@ -24,7 +24,7 @@ updated: "2026-05-03"
 
 - Goal: 현장 접수 form 입력값을 session-only encounter/queue 생성에 반영하고 진료대기 상태를 명확히 보여준다.
 - PR size: one PR. 예약 접수 처리, 예약 CRUD, 노쇼 처리는 후속 PR로 분리한다.
-- Scope: 현장 접수 drawer, `createWalkInCheckIn` action input, reception view model 표시, focused Playwright coverage.
+- Scope: 현장 접수 dialog, `createWalkInCheckIn` action input, reception view model 표시, focused Playwright coverage.
 - Out of scope: Next.js API routes, Supabase persistence, migration/RLS, server permission enforcement, 예약 생성/변경/취소, 노쇼 처리, 조제/처치 화면 변경.
 - Done criteria: 방문 목적/담당의/미지정/메모 입력값이 생성된 draft encounter와 사이드 패널/캘린더 표시로 이어진다.
 - Source docs: product feature spec, UX flow, current status, reference screen index, existing reception implementation and tests.
@@ -34,7 +34,8 @@ updated: "2026-05-03"
 
 ## Scope
 
-- Convert the walk-in reception drawer to a controlled form.
+- Convert the walk-in reception entry point to a controlled dialog.
+- Keep the `진료 접수` toolbar action independent from the currently selected queue patient; the user chooses the 접수 대상 inside the dialog.
 - Pass visit purpose, department, selected veterinarian, duration, and memo through the `createWalkInCheckIn` action boundary.
 - Allow veterinarian assignment to remain unset and display that state intentionally.
 - Keep generated draft encounter selected after creation.
@@ -52,10 +53,11 @@ updated: "2026-05-03"
 
 ## Done When
 
-- 현장 접수 drawer stores user-entered visit purpose instead of always using a fixed `"현장 접수"` value.
+- 현장 접수 dialog stores user-entered visit purpose instead of always using a fixed `"현장 접수"` value.
+- `진료 접수` opens a fresh dialog even when a side-panel patient or reception detail is selected.
 - 담당의 미지정으로 생성한 현장 접수 row is visible as `진료대기` with `담당의 미지정`.
 - 담당의를 선택한 현장 접수 row keeps that veterinarian label.
-- The generated draft remains selected in the side panel after drawer close.
+- The generated draft remains selected in the side panel after dialog close.
 - Tests cover the main walk-in creation flow and unassigned veterinarian case.
 
 ## Verification
@@ -63,7 +65,7 @@ updated: "2026-05-03"
 - `npm run docs:check` (passed)
 - `npm run lint` (passed)
 - `npx tsc --noEmit` (passed)
-- `npx playwright test tests/reception.spec.ts --reporter=line` (`13 passed`)
+- `npx playwright test tests/reception.spec.ts --reporter=line` (`17 passed`)
 
 ## Handoff Notes
 

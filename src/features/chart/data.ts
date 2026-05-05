@@ -2,10 +2,12 @@ import {
   getMockEncounterBundle,
   getMockPatientBundle,
   mockEncounters,
+  mockInvoiceLines,
   mockPatients,
   mockStaffUsers,
   mockWaitingQueueEntries,
 } from "@/mocks/emr-domain";
+import type { OrderQueueItem, OrderQueueStatusDefinition } from "@/types/emr";
 import type {
   Diagnosis,
   EmrId,
@@ -37,10 +39,33 @@ export type ChartOrderGroup = {
   orders: EmrOrder[];
 };
 
+const chartQueueStatuses: OrderQueueStatusDefinition[] = [
+  {
+    id: "in_progress",
+    label: "진료중",
+    colorToken: "--clair-color-primary-normal",
+    sortOrder: 10,
+  },
+  {
+    id: "called",
+    label: "호출",
+    colorToken: "--clair-color-atomic-orange-400",
+    sortOrder: 20,
+  },
+  {
+    id: "waiting",
+    label: "진료대기",
+    colorToken: "--clair-color-atomic-gray-400",
+    sortOrder: 30,
+  },
+];
+
 const activeEncounterStatuses = ["waiting", "in_consultation", "ordered"] as const;
 
-const getStaffName = (userId?: EmrId) =>
+export const getChartStaffName = (userId?: EmrId) =>
   userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
+
+const getShortTime = (dateTime?: string) => (dateTime ? dateTime.slice(11, 16) : "-");
 
 export const getChartQueueRows = (): ChartQueueRow[] => {
   const consultationQueue = mockWaitingQueueEntries.filter(
@@ -65,7 +90,7 @@ export const getChartQueueRows = (): ChartQueueRow[] => {
         patient,
         primaryGuardian: bundle?.primaryGuardian,
         queueEntry,
-        veterinarianName: getStaffName(encounter.primaryVeterinarianId),
+        veterinarianName: getChartStaffName(encounter.primaryVeterinarianId),
       });
 
       return rows;
@@ -74,6 +99,28 @@ export const getChartQueueRows = (): ChartQueueRow[] => {
 };
 
 export const getChartEncounter = (encounterId: EmrId) => getMockEncounterBundle(encounterId);
+
+export const getChartQueueStatuses = () => chartQueueStatuses;
+
+export const getChartQueueItems = (): OrderQueueItem[] =>
+  getChartQueueRows().map(({ encounter, patient, primaryGuardian, queueEntry, veterinarianName }) => ({
+    id: encounter.id,
+    instructionId: encounter.encounterNo,
+    patientName: patient.name,
+    guardianName: primaryGuardian?.name ?? "보호자 미지정",
+    patientAge: patient.estimatedAgeText,
+    patientBreed: patient.breed,
+    patientSex: patient.sex === "male" ? "수컷" : patient.sex === "female" ? "암컷" : "미상",
+    receptionType: encounter.appointmentId ? "예약" : "외래",
+    orderType: encounter.visitPurpose ?? "진료",
+    orderTypeCategory: "treatment",
+    orderName: encounter.chiefComplaint ?? encounter.visitPurpose ?? "진료 대기",
+    requesterName: veterinarianName ?? "담당 미정",
+    assigneeName: veterinarianName,
+    startedAt: encounter.startedAt ? getShortTime(encounter.startedAt) : undefined,
+    time: getShortTime(queueEntry.enteredAt),
+    statusId: queueEntry.status,
+  }));
 
 export const getChartHistoryRows = (patientId: EmrId): ChartHistoryRow[] => {
   const bundle = getMockPatientBundle(patientId);
@@ -121,3 +168,6 @@ export const getChartOrderGroups = (encounterId: EmrId): ChartOrderGroup[] => {
     },
   ];
 };
+
+export const getChartInvoiceLineByOrderId = (orderId: EmrId) =>
+  mockInvoiceLines.find((line) => line.orderId === orderId);

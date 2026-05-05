@@ -7,7 +7,7 @@ related_work:
   - "docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-03
+last_updated: 2026-05-05
 ---
 
 # Closeout: Walk-In Check-In MVP Reinforcement
@@ -17,6 +17,8 @@ last_updated: 2026-05-03
 현장 접수 drawer를 Product MVP 기준의 controlled form으로 보강했다. 방문 목적, 진료과, 담당의 지정/미지정, 소요시간, 메모가 session-only draft check-in action으로 전달되고, 생성된 환자는 진료대기 상태로 사이드 패널과 day calendar에서 확인된다.
 
 Follow-up review 반영으로 사이드 패널 header의 `신규 환자` icon action을 제거하고, 스케줄 운영 toolbar의 `현장 접수` 왼쪽에 `환자 등록` 버튼을 배치했다. 또한 스케줄 board는 좌측 대기열 선택과 연결된 상세 영역이 아니라, 선택된 출근 수의사들의 병원 내 접수/예약 스케줄을 일/주/월로 보는 운영 영역이라는 기획 기준을 문서화했다.
+
+2026-05-05 follow-up으로 toolbar의 `진료 접수` 액션은 선택된 대기열 환자의 접수 정보를 여는 drawer가 아니라 신규 진료 접수 dialog를 여는 동작으로 정정했다. 접수 대상 환자는 dialog 내부에서 새로 선택한다.
 
 ## Changed Docs or Files
 
@@ -40,7 +42,7 @@ Follow-up review 반영으로 사이드 패널 header의 `신규 환자` icon ac
 - `npm run docs:check` (passed)
 - `npm run lint` (passed)
 - `npx tsc --noEmit` (passed)
-- `npx playwright test tests/reception.spec.ts --reporter=line` (`13 passed`)
+- `npx playwright test tests/reception.spec.ts --reporter=line` (`17 passed`)
 
 ## Remaining Risk
 

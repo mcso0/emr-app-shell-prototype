@@ -41,6 +41,7 @@ export type ImagingWorkItem = {
 };
 
 export type LabDetail = LabWorkItem & {
+  allEquipmentReceipts: EquipmentReceipt[];
   attachments: EmrAttachment[];
   equipmentReceipts: EquipmentReceipt[];
 };
@@ -49,7 +50,7 @@ export type ImagingDetail = ImagingWorkItem & {
   attachments: EmrAttachment[];
 };
 
-const getStaffName = (userId?: EmrId) =>
+export const getStaffName = (userId?: EmrId) =>
   userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
 
 const getPatient = (patientId: EmrId) => mockPatients.find((patient) => patient.id === patientId);
@@ -98,6 +99,7 @@ export const getLabDetail = (labResultId: EmrId): LabDetail | null => {
 
   return {
     ...item,
+    allEquipmentReceipts: mockEquipmentReceipts,
     attachments: getAttachmentsForOwner(item.result.id),
     equipmentReceipts: mockEquipmentReceipts.filter(
       (receipt) => receipt.encounterId === item.encounter.id || receipt.status === "unmatched"

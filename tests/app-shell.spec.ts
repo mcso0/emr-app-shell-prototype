@@ -201,7 +201,7 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
 
 test("shell navigation keeps demo query context across modules", async ({ page }) => {
   await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
-  await expect(page.getByRole("heading", { name: "콩이" })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();
 
   await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
   await expect(page).toHaveURL(/modulePanel=closed/);
@@ -364,8 +364,9 @@ test("treatment module renders the chart queue instead of the order queue placeh
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
-  await expect(sidePanel.getByText("코코 · P-260414-0008")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "SOAP" })).toBeVisible();
+  await expect(sidePanel.getByText("코코")).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트이력" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 

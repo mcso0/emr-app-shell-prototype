@@ -1,28 +1,49 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
+import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import {
+  CdsActionsListFilterIcon,
+  CdsActionsSearchIcon,
+} from "@/components/cds-icons/actions-and-controls";
+import {
+  CdsContentBoldIcon,
+  CdsContentItalicIcon,
+  CdsContentLink2Icon,
+} from "@/components/cds-icons/content-and-editor";
+import { CdsFilesDocumentAltFillIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrInstructionHeaderStack, EmrInstructionTitleBar } from "@/components/emr/instruction-header-stack";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
-  EmrListItem,
-  EmrSubpanel,
-  EmrSubpanelBody,
-  EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
+import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
+import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
+import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   getChartEncounter,
   getChartHistoryRows,
+  getChartInvoiceLineByOrderId,
   getChartOrderGroups,
-  getChartQueueRows,
+  getChartQueueItems,
+  getChartQueueStatuses,
+  getChartStaffName,
   type ChartHistoryRow,
   type ChartOrderGroup,
-  type ChartQueueRow,
 } from "@/features/chart/data";
 import { useChartStore } from "@/features/chart/store";
 import {
@@ -30,11 +51,42 @@ import {
   getPatientSexLabel,
   getSpeciesLabel,
 } from "@/features/reception/data";
-import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
-import type { Diagnosis, EmrOrderType, Encounter, SoapNote } from "@/types/emr-domain";
+import type {
+  Diagnosis,
+  EmrOrder,
+  EmrOrderStatus,
+  EmrOrderType,
+  SoapNote,
+} from "@/types/emr-domain";
+
+type ChartBundle = NonNullable<ReturnType<typeof getChartEncounter>>;
+type OrderFilter = "all" | EmrOrderType;
+
+const chartQueueFilterItems = [
+  { value: "all", label: "전체" },
+  { value: "appointment", label: "예약" },
+  { value: "walk-in", label: "외래" },
+];
+
+const orderTypeMeta: Record<EmrOrderType, { handoff: string; label: string }> = {
+  dispensing: { label: "조제", handoff: "조제 대기열" },
+  imaging: { label: "영상", handoff: "영상 판독" },
+  lab: { label: "검사", handoff: "검사 결과" },
+  treatment: { label: "처치", handoff: "처치 진행" },
+};
+
+const orderStatusLabel: Record<EmrOrderStatus, string> = {
+  cancelled: "취소",
+  completed: "완료",
+  in_progress: "진행중",
+  re_requested: "재요청",
+  requested: "요청",
+};
 
 const getShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
@@ -42,59 +94,165 @@ const getShortDateTime = (dateTime?: string) =>
 const getDiagnosisLabel = (diagnoses: Diagnosis[]) =>
   diagnoses.length ? diagnoses.map((diagnosis) => diagnosis.diagnosisText).join(", ") : "진단 미입력";
 
-const orderTypeNarrative: Record<EmrOrderType, { handoff: string; label: string }> = {
-  dispensing: { label: "조제", handoff: "조제 대기열 → 수납 청구" },
-  imaging: { label: "영상", handoff: "영상 판독 → 수납 청구" },
-  lab: { label: "검사", handoff: "검사 결과 → 수납 청구" },
-  treatment: { label: "처치", handoff: "처치 진행 → 수납 청구" },
+const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
+  const text = diagnosis.diagnosisText;
+
+  if (/(위장|구토|식욕|설사|소화)/.test(text)) return "소화기";
+  if (/(피부|가려움|발진|재진)/.test(text)) return "피부";
+  if (/(예방|접종|건강검진)/.test(text)) return "예방";
+  if (/(검사|혈액|염증)/.test(text)) return "검사";
+
+  return "기타";
 };
 
-function ChartQueueItem({
-  row,
-  selected,
-  onSelect,
-}: {
-  onSelect: () => void;
-  row: ChartQueueRow;
-  selected: boolean;
-}) {
+function getSelectedBundle(selectedEncounterId: string) {
+  return getChartEncounter(selectedEncounterId) ?? getChartEncounter("encounter-coco-260501");
+}
+
+function getChartVitals(bundle: ChartBundle) {
+  if (bundle.patient.id === "patient-kong") {
+    return [
+      { label: "체중", value: "2.3kg" },
+      { label: "체온", value: "39.1℃" },
+      { label: "호흡", value: "24rpm" },
+      { label: "혈압", value: "130bpm" },
+    ];
+  }
+
+  return [
+    { label: "체중", value: "5.96kg" },
+    { label: "체온", value: "39.3℃" },
+    { label: "호흡", value: "20rpm" },
+    { label: "혈압", value: "170bpm" },
+  ];
+}
+
+function useScenarioEncounterSync() {
+  const searchParams = useSearchParams();
+  const lastAppliedQueryEncounterId = useRef<string | null>(null);
+  const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const selectEncounter = useChartStore((state) => state.selectEncounter);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
+  const queryEncounterBundle = queryEncounterId ? getChartEncounter(queryEncounterId) : null;
+  const hasValidQueryEncounter = queryEncounterId !== null && queryEncounterBundle !== null;
+
+  useEffect(() => {
+    if (!queryEncounterId || !hasValidQueryEncounter) return;
+    if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
+
+    lastAppliedQueryEncounterId.current = queryEncounterId;
+    if (selectedEncounterId !== queryEncounterId) {
+      selectEncounter(queryEncounterId);
+    }
+  }, [hasValidQueryEncounter, queryEncounterId, selectEncounter, selectedEncounterId]);
+}
+
+export function ChartSidePanel() {
+  const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const selectEncounter = useChartStore((state) => state.selectEncounter);
+  const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
+  const items = useMemo(() => getChartQueueItems(), []);
+
   return (
-    <div data-testid={`chart-queue-item-${row.encounter.id}`}>
-      <EmrListItem
-        selected={selected}
-        variant="outline"
-        title={`${row.patient.name} · ${row.patient.patientNo}`}
-        subtitle={`${row.primaryGuardian?.name ?? "보호자 미지정"} · ${row.patient.breed ?? "품종 미상"}`}
-        meta={row.encounter.chiefComplaint ?? row.encounter.visitPurpose}
-        itemBadge={<Badge variant="outline">{getStatusLabel("encounter", row.encounter.status)}</Badge>}
-        footer={
-          <>
-            <span>{getShortDateTime(row.queueEntry.enteredAt)}</span>
-            <span>{row.veterinarianName ?? "담당 미정"}</span>
-          </>
-        }
-        onSelect={onSelect}
-      />
-    </div>
+    <EmrOrderQueueSidePanel
+      dateLabel="26.05.05 (화)"
+      filterAriaLabel="진료 대기 유형 필터"
+      filterItems={chartQueueFilterItems}
+      getFilterValue={(item) => (item.receptionType === "예약" ? "appointment" : "walk-in")}
+      items={items}
+      listLabel="진료 대기열"
+      selectedItemId={selectedEncounterId}
+      statuses={getChartQueueStatuses()}
+      title="진료(차트)"
+      onCollapse={() => setModulePanelOpen(false)}
+      onSelectItem={(itemId) => {
+        selectEncounter(itemId);
+        setSelectedQueueItem("treatment", itemId);
+      }}
+    />
   );
 }
 
-export function ChartSidePanel({ moduleLabel }: ShellComponentProps) {
+export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
-  const selectEncounter = useChartStore((state) => state.selectEncounter);
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const rows = useMemo(() => getChartQueueRows(), []);
+  const { contentAsideOpen, rightPanelOpen, setContentAsideOpen, setRightPanelOpen } = useLayoutStore();
+  const bundle = getSelectedBundle(selectedEncounterId);
+
+  if (!bundle) return null;
+
+  const veterinarianName = getChartStaffName(bundle.encounter.primaryVeterinarianId) ?? "담당 미정";
 
   return (
-    <EmrSubpanel>
-      <EmrSubpanelTitle
-        title={moduleLabel}
-        collapseLabel="사이드 패널 접기"
-        onCollapse={() => setModulePanelOpen(false)}
-      />
+    <EmrPatientContextBar
+      historyButton={{
+        controls: "chart-content-aside",
+        expanded: contentAsideOpen,
+        label: "차트이력",
+        onClick: () => setContentAsideOpen(!contentAsideOpen),
+      }}
+      patientItems={[
+        { label: "환자", value: bundle.patient.name },
+        { label: "보호자", value: bundle.primaryGuardian?.name ?? "보호자 미지정" },
+        { label: "품종", value: bundle.patient.breed ?? getSpeciesLabel(bundle.patient) },
+        { label: "나이", value: getPatientDisplayAge(bundle.patient) },
+        { label: "성별", value: getPatientSexLabel(bundle.patient) },
+      ]}
+      vitalItems={getChartVitals(bundle)}
+  memoActions={[
+        { label: "방문목적" },
+        { label: "보호자메모", locked: true },
+        { label: "수납메모", disabled: true },
+      ]}
+      rightPanelToggleLabel="진단 이력"
+      trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
+      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+      rightPanelDisabled={!hasRightPanel}
+      rightPanelOpen={rightPanelOpen}
+    />
+  );
+}
+
+export function ChartContentAside() {
+  const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const selectEncounter = useChartStore((state) => state.selectEncounter);
+  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
+  const bundle = getSelectedBundle(selectedEncounterId);
+  const historyRows = useMemo(
+    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
+    [bundle]
+  );
+  const historyGroups = useMemo(
+    () =>
+      historyRows.reduce<Array<{ date: string; rows: ChartHistoryRow[] }>>((groups, row) => {
+        const date = getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt).slice(0, 8);
+        const group = groups.find((item) => item.date === date);
+
+        if (group) {
+          group.rows.push(row);
+        } else {
+          groups.push({ date, rows: [row] });
+        }
+
+        return groups;
+      }, []),
+    [historyRows]
+  );
+
+  return (
+    <div
+      id="chart-content-aside"
+      className="flex h-full w-full flex-col gap-2 bg-[var(--clair-color-atomic-neutral-50)] px-4 pt-4"
+    >
       <EmrListHeader
-        label="진료 대기열"
-        count={rows.length}
+        className="mx-0 h-6 border-y-0"
+        count={historyRows.length}
+        label="차트이력"
+        leadingAction={
+          <EmrListHeaderIconButton ariaLabel="차트 이력 패널 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
+            <CdsNavigationChevronsLeftIcon className="size-4" />
+          </EmrListHeaderIconButton>
+        }
         headerActions={
           <>
             <EmrListHeaderIconButton ariaLabel="정렬">
@@ -103,162 +261,348 @@ export function ChartSidePanel({ moduleLabel }: ShellComponentProps) {
             <EmrListHeaderIconButton ariaLabel="필터">
               <CdsActionsListFilterIcon className="size-4" />
             </EmrListHeaderIconButton>
+            <EmrListHeaderIconButton ariaLabel="검색">
+              <CdsActionsSearchIcon className="size-4" />
+            </EmrListHeaderIconButton>
           </>
         }
       />
-      <EmrSubpanelBody>
-        {rows.map((row) => (
-          <ChartQueueItem
-            key={row.encounter.id}
-            row={row}
-            selected={row.encounter.id === selectedEncounterId}
-            onSelect={() => selectEncounter(row.encounter.id)}
-          />
-        ))}
-      </EmrSubpanelBody>
-    </EmrSubpanel>
-  );
-}
-
-function HistoryList({
-  historyRows,
-  selectedEncounterId,
-  onSelectEncounter,
-}: {
-  historyRows: ChartHistoryRow[];
-  onSelectEncounter: (encounterId: string) => void;
-  selectedEncounterId: string;
-}) {
-  return (
-    <aside className="flex min-h-0 w-[280px] shrink-0 flex-col border-r bg-[var(--clair-color-background-normal)]">
-      <div className="flex h-12 items-center justify-between border-b px-4">
-        <div className="text-[14px] font-semibold">과거 진료 이력</div>
-        <Badge variant="secondary">{historyRows.length}</Badge>
-      </div>
+      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 p-3">
-          {historyRows.map((row) => (
-            <button
-              key={row.encounter.id}
-              type="button"
-              className={[
-                "rounded-lg border bg-card p-3 text-left transition-colors",
-                row.encounter.id === selectedEncounterId
-                  ? "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
-                  : "hover:bg-[var(--clair-color-background-surface)]",
-              ].join(" ")}
-              onClick={() => onSelectEncounter(row.encounter.id)}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-semibold">{row.encounter.encounterNo}</span>
-                <Badge variant="outline">{getStatusLabel("encounter", row.encounter.status)}</Badge>
-              </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
-                {getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}
-              </div>
-              <div className="mt-2 line-clamp-2 text-[12px]">
-                {row.soapNote?.assessment ?? row.encounter.chiefComplaint ?? "진료 기록 없음"}
-              </div>
-            </button>
+        <div className="flex flex-col gap-1 pb-3">
+          {historyGroups.map((group) => (
+            <section key={group.date} className="flex flex-col gap-1 rounded-[10px]">
+              <button
+                type="button"
+                className="flex h-8 w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-8)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                aria-expanded="true"
+              >
+                <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
+                  <span className="truncate text-[var(--clair-color-label-alternative)]">{group.date}</span>
+                  <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{group.rows.length}</span>
+                </div>
+              </button>
+              <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+              {group.rows.map((row) => (
+                <ChartHistoryItem
+                  key={row.encounter.id}
+                  row={row}
+                  selected={row.encounter.id === selectedEncounterId}
+                  onSelect={() => selectEncounter(row.encounter.id)}
+                />
+              ))}
+            </section>
           ))}
         </div>
       </ScrollArea>
-    </aside>
+      <div className="flex shrink-0 gap-2 border-t bg-[var(--clair-color-atomic-neutral-50)] py-3">
+        <Button variant="outline" size="sm" className="bg-card">
+          수술 차트
+        </Button>
+        <Button size="sm">외래 차트 추가</Button>
+      </div>
+    </div>
   );
 }
 
-function PatientHeader({
-  encounter,
-  patient,
-  primaryGuardianName,
+function ChartHistoryItem({
+  onSelect,
+  row,
+  selected,
 }: {
-  encounter: Encounter;
-  patient: NonNullable<ReturnType<typeof getChartEncounter>>["patient"];
-  primaryGuardianName?: string;
+  onSelect: () => void;
+  row: ChartHistoryRow;
+  selected: boolean;
 }) {
+  const primaryDiagnosis = row.diagnoses[0]?.diagnosisText;
+  const summary = row.soapNote?.assessment ?? primaryDiagnosis ?? row.encounter.chiefComplaint ?? "진료 기록 없음";
+  const category = row.encounter.visitPurpose ?? "외래";
+  const statusLabel = getStatusLabel("encounter", row.encounter.status);
+
   return (
-    <section className="border-b bg-card px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[20px] font-semibold leading-7">{patient.name}</h1>
-            <Badge>{getStatusLabel("encounter", encounter.status)}</Badge>
-          </div>
-          <div className="mt-1 text-[13px] text-muted-foreground">
-            {patient.patientNo} · {getSpeciesLabel(patient)} · {patient.breed ?? "품종 미상"} ·{" "}
-            {getPatientDisplayAge(patient)} · {getPatientSexLabel(patient)}
+    <>
+      <button
+        type="button"
+        data-testid={`chart-history-item-${row.encounter.id}`}
+        className={cn(
+          "flex min-h-[74px] w-full flex-col gap-1.5 rounded-[var(--clair-radius-sm)] px-1 py-1 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-ring/50",
+          selected && "bg-[var(--clair-color-atomic-sky-50)]"
+        )}
+        onClick={onSelect}
+      >
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
+              {primaryDiagnosis ?? row.encounter.encounterNo}
+            </span>
+            <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 text-[11px]">
+              {statusLabel}
+            </Badge>
           </div>
         </div>
-        <div className="text-right text-[13px] text-muted-foreground">
-          <div>{primaryGuardianName ?? "보호자 미지정"}</div>
-          <div>{encounter.encounterNo}</div>
+        <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="shrink-0">{category}</span>
+          <span className="truncate">{summary}</span>
         </div>
-      </div>
-    </section>
+        <div className="flex min-w-0 items-center gap-2 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="truncate">담당 {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}</span>
+          <span className="truncate">{row.encounter.encounterNo}</span>
+          <span className="shrink-0">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
+        </div>
+      </button>
+      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+    </>
   );
 }
 
-function EncounterNarrative({
-  encounter,
-  primaryGuardianName,
-  soapNote,
-}: {
-  encounter: Encounter;
-  primaryGuardianName?: string;
-  soapNote?: SoapNote;
-}) {
-  return (
-    <section className="rounded-lg border bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[12px] font-medium text-muted-foreground">오늘 진료 흐름</div>
-          <p className="mt-1 text-[14px] font-semibold leading-5">
-            {primaryGuardianName ?? "보호자"} 보호자가 {encounter.chiefComplaint ?? encounter.visitPurpose}로 내원했습니다.
-          </p>
-        </div>
-        <Badge variant="outline">{encounter.encounterNo}</Badge>
-      </div>
-      <div className="mt-3 grid gap-2 text-[13px] leading-5 md:grid-cols-3">
-        <div className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
-          <div className="text-[12px] font-medium text-muted-foreground">SOAP 핵심</div>
-          <p className="mt-1">{soapNote?.subjective ?? "주관 기록 대기"}</p>
-        </div>
-        <div className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
-          <div className="text-[12px] font-medium text-muted-foreground">Assessment</div>
-          <p className="mt-1">{soapNote?.assessment ?? "평가 기록 대기"}</p>
-        </div>
-        <div className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
-          <div className="text-[12px] font-medium text-muted-foreground">Plan / 다음 업무</div>
-          <p className="mt-1">{soapNote?.plan ?? "계획 기록 대기"}</p>
-        </div>
-      </div>
-    </section>
-  );
+const soapTemplateRows = [
+  { label: "주관적", valueKey: "subjective" },
+  { label: "객관적", valueKey: "objective" },
+  { label: "평가", valueKey: "assessment" },
+  { label: "계획", valueKey: "plan" },
+] as const;
+
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+
+function buildSoapEditorContent(soapNote?: SoapNote) {
+  return soapTemplateRows
+    .map(({ label, valueKey }) => {
+      const value = soapNote?.[valueKey] ?? "여기에 입력하세요.";
+
+      return `<p><strong>${label}</strong><br />: ${escapeHtml(value)}</p>`;
+    })
+    .join("");
 }
 
-function SoapPanel({ soapNote }: { soapNote?: SoapNote }) {
-  const soapFields = [
-    ["S 주관", soapNote?.subjective],
-    ["O 객관", soapNote?.objective],
-    ["A 평가", soapNote?.assessment],
-    ["P 계획", soapNote?.plan],
+function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?: SoapNote }) {
+  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
+  const [extraSections, setExtraSections] = useState<Array<{ id: string; title: string }>>([]);
+  const diagnosisSystemSections = useMemo(() => {
+    const labels = diagnoses.map(getDiagnosisSystemLabel);
+    const uniqueLabels = Array.from(new Set(labels));
+
+    return uniqueLabels.length ? uniqueLabels : ["기본"];
+  }, [diagnoses]);
+  const soapSections = [
+    ...diagnosisSystemSections.map((title, index) => ({
+      id: `diagnosis-${title}`,
+      initialContent: buildSoapEditorContent(index === 0 ? soapNote : undefined),
+      status: soapNote?.status,
+      title: `${title} SOAP`,
+    })),
+    ...extraSections.map((section) => ({
+      id: section.id,
+      initialContent: buildSoapEditorContent(),
+      status: "draft" as const,
+      title: section.title,
+    })),
   ];
+  const addSoapSection = () => {
+    setExtraSections((current) => [
+      ...current,
+      {
+        id: `extra-${current.length + 1}`,
+        title: `추가 계통 SOAP ${current.length + 1}`,
+      },
+    ]);
+  };
+  const addAttachmentToActiveSection = () => {
+    const sectionId = activeSectionId ?? soapSections[0]?.id;
+
+    if (!sectionId) return;
+
+    setAttachmentCounts((current) => ({
+      ...current,
+      [sectionId]: (current[sectionId] ?? 0) + 1,
+    }));
+  };
+  const setLink = () => {
+    if (!activeEditor) return;
+
+    const previousUrl = activeEditor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("링크 URL을 입력하세요.", previousUrl ?? "https://");
+
+    if (url === null) return;
+    if (!url) {
+      activeEditor.chain().focus().unsetLink().run();
+      return;
+    }
+
+    activeEditor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
 
   return (
     <section className="rounded-lg border bg-card">
-      <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="text-[14px] font-semibold">SOAP</h2>
-        {soapNote ? <Badge variant="outline">{getStatusLabel("soap", soapNote.status)}</Badge> : null}
+      <div className="relative z-10 flex min-h-12 items-center justify-between gap-3 border-b bg-card px-4 py-2">
+        <div>
+          <h2 className="text-[16px] font-semibold">진료 기록</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">진단계통별 SOAP 작성</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <EditorToolbarButton
+            active={activeEditor?.isActive("bold") ?? false}
+            disabled={!activeEditor}
+            label="굵게"
+            onClick={() => activeEditor?.chain().focus().toggleBold().run()}
+          >
+            <CdsContentBoldIcon className="size-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={activeEditor?.isActive("italic") ?? false}
+            disabled={!activeEditor}
+            label="기울임"
+            onClick={() => activeEditor?.chain().focus().toggleItalic().run()}
+          >
+            <CdsContentItalicIcon className="size-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={activeEditor?.isActive("underline") ?? false}
+            disabled={!activeEditor}
+            label="밑줄"
+            onClick={() => activeEditor?.chain().focus().toggleUnderline().run()}
+          >
+            U
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={activeEditor?.isActive("link") ?? false}
+            disabled={!activeEditor}
+            label="링크"
+            onClick={setLink}
+          >
+            <CdsContentLink2Icon className="size-4" />
+          </EditorToolbarButton>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="bg-card"
+            onClick={addAttachmentToActiveSection}
+          >
+            첨부
+          </Button>
+          <Button type="button" variant="outline" size="xs" className="bg-card" onClick={addSoapSection}>
+            SOAP 추가
+          </Button>
+          <Button size="sm">저장</Button>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 p-4">
-        {soapFields.map(([label, value]) => (
-          <div key={label} className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
-            <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-            <p className="mt-2 min-h-12 text-[13px] leading-5">{value ?? "미입력"}</p>
+      <div className="grid gap-3 p-4">
+        {soapSections.map((section) => (
+          <div key={section.id} className="overflow-hidden rounded-md border bg-card">
+            <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b bg-[var(--clair-color-background-surface)] px-3">
+              <span className="text-[13px] font-semibold">{section.title}</span>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="outline">{section.status ? getStatusLabel("soap", section.status) : "작성중"}</Badge>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  aria-label={`${section.title} 첨부 추가`}
+                  className="bg-card"
+                  onClick={() =>
+                    setAttachmentCounts((current) => ({
+                      ...current,
+                      [section.id]: (current[section.id] ?? 0) + 1,
+                    }))
+                  }
+                >
+                  첨부
+                </Button>
+              </div>
+            </div>
+            <SoapRichTextEditor
+              key={`${soapNote?.id ?? "empty"}-${section.id}`}
+              initialContent={section.initialContent}
+              label={section.title}
+              onFocusEditor={(editor) => {
+                setActiveSectionId(section.id);
+                setActiveEditor(editor);
+              }}
+            />
+            <div className="flex min-h-9 items-center justify-between border-t bg-[var(--clair-color-background-surface)] px-3 text-[12px] text-muted-foreground">
+              <span>첨부 자료</span>
+              <Badge variant="outline">{attachmentCounts[section.id] ? `${attachmentCounts[section.id]}개` : "없음"}</Badge>
+            </div>
           </div>
         ))}
       </div>
     </section>
+  );
+}
+
+function EditorToolbarButton({
+  active,
+  children,
+  disabled,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  disabled?: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label={label}
+      aria-pressed={active}
+      className={cn("bg-card aria-pressed:border-ring aria-pressed:bg-background", active && "ring-2 ring-ring/30")}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function SoapRichTextEditor({
+  initialContent,
+  label,
+  onFocusEditor,
+}: {
+  initialContent: string;
+  label: string;
+  onFocusEditor: (editor: Editor) => void;
+}) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-[var(--clair-color-primary-normal)] underline underline-offset-2",
+        },
+      }),
+      Placeholder.configure({
+        placeholder: "주관적\n: 여기에 입력하세요.\n객관적\n: 여기에 입력하세요.\n평가\n: 여기에 입력하세요.\n계획\n: 여기에 입력하세요.",
+      }),
+    ],
+    content: initialContent,
+    editorProps: {
+      attributes: {
+        "aria-label": `${label} 기록`,
+        class:
+          "min-h-36 px-3 py-2 text-[13px] leading-5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_p]:my-1.5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:whitespace-pre-line [&_p.is-editor-empty:first-child::before]:text-[var(--clair-color-label-assistive)]",
+      },
+    },
+    immediatelyRender: false,
+    onFocus: ({ editor: focusedEditor }) => onFocusEditor(focusedEditor),
+  });
+
+  return (
+    <EditorContent editor={editor} />
   );
 }
 
@@ -270,28 +614,85 @@ function AssessmentPanel({
   soapNote?: SoapNote;
 }) {
   return (
-    <section className="rounded-lg border bg-card p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold">Assessment</h2>
-        <Badge variant="secondary">{diagnoses.length}건</Badge>
+    <section className="rounded-lg border bg-card">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b px-4 py-2">
+        <div>
+          <h2 className="text-[16px] font-semibold">진단명</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">진단 목록 · 코멘트 · 계획</p>
+        </div>
+        <Button variant="outline" size="sm" className="bg-card">
+          분류검색
+        </Button>
       </div>
-      <div className="mt-3 flex flex-col gap-2">
-        {diagnoses.map((diagnosis) => (
-          <div key={diagnosis.id} className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
-            <div className="font-medium">{diagnosis.diagnosisText}</div>
-            <div className="mt-1 text-[12px] text-muted-foreground">{diagnosis.diagnosisType}</div>
+      <div className="grid gap-3 p-4">
+        <div className="flex gap-2">
+          <Input
+            readOnly
+            value="한글, 영문, 약자, 연관검색어로 진단명 검색"
+            className="h-9 bg-card text-[13px]"
+          />
+          <Button variant="outline" size="sm" className="bg-card">
+            검색
+          </Button>
+        </div>
+        <div className="overflow-hidden rounded-md border">
+          <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+            <span>계통분류</span>
+            <span>진단명</span>
+            <span>확진</span>
+            <span>중점</span>
+            <span>수의사</span>
           </div>
-        ))}
-        {!diagnoses.length ? (
-          <div className="rounded-md border border-dashed p-3 text-[13px] text-muted-foreground">
-            진단 입력 전입니다.
-          </div>
-        ) : null}
+          {diagnoses.map((diagnosis) => (
+            <div
+              key={diagnosis.id}
+              className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t px-3 py-3 text-[13px]"
+            >
+              <Badge variant="outline">{getDiagnosisSystemLabel(diagnosis)}</Badge>
+              <span className="truncate font-medium">{diagnosis.diagnosisText}</span>
+              <span>{diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}</span>
+              <span>{diagnosis.diagnosisType === "suspected" ? "-" : "✓"}</span>
+              <span className="truncate">{getChartStaffName(diagnosis.createdByUserId) ?? "미정"}</span>
+            </div>
+          ))}
+          {!diagnoses.length ? (
+            <div className="border-t px-3 py-6 text-center text-[13px] text-muted-foreground">
+              진단 입력 전입니다.
+            </div>
+          ) : null}
+        </div>
+        <AssessmentTextBox
+          key={`assessment-${soapNote?.id ?? "empty"}`}
+          label="진단 코멘트"
+          value={soapNote?.assessment ?? "평가 메모 없음"}
+        />
+        <AssessmentTextBox
+          key={`plan-${soapNote?.id ?? "empty"}`}
+          label="Plan"
+          value={soapNote?.plan ?? "계획 기록 대기"}
+        />
       </div>
-      <Separator className="my-4" />
-      <div className="text-[12px] font-medium text-muted-foreground">현재 평가 메모</div>
-      <p className="mt-2 text-[13px] leading-5">{soapNote?.assessment ?? "평가 메모 없음"}</p>
     </section>
+  );
+}
+
+function AssessmentTextBox({ label, value }: { label: string; value: string }) {
+  const [textValue, setTextValue] = useState(value);
+
+  return (
+    <div className="overflow-hidden rounded-md border">
+      <div className="flex h-8 items-center justify-between bg-[var(--clair-color-background-surface)] px-3 text-[12px] font-semibold text-muted-foreground">
+        <span>{label}</span>
+        <span>{textValue.length}/500자</span>
+      </div>
+      <Textarea
+        aria-label={label}
+        value={textValue}
+        maxLength={500}
+        className="min-h-24 resize-y rounded-none border-0 bg-card p-3 text-[13px] leading-5 shadow-none focus-visible:ring-0"
+        onChange={(event) => setTextValue(event.target.value)}
+      />
+    </div>
   );
 }
 
@@ -299,17 +700,15 @@ function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) 
   return (
     <section className="rounded-lg border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold">Assessment History</h2>
+        <h2 className="text-[14px] font-semibold">진단 이력</h2>
         <Badge variant="outline">{historyRows.length}</Badge>
       </div>
       <div className="flex flex-col gap-2">
         {historyRows.map((row) => (
           <div key={row.encounter.id} className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium">{row.encounter.encounterNo}</span>
-              <span className="text-[12px] text-muted-foreground">
-                {getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}
-              </span>
+              <span className="font-medium">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
+              <Badge variant="outline">{getStatusLabel("encounter", row.encounter.status)}</Badge>
             </div>
             <p className="mt-2 text-[13px] leading-5">
               {row.soapNote?.assessment ?? getDiagnosisLabel(row.diagnoses)}
@@ -321,133 +720,312 @@ function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) 
   );
 }
 
-function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
-  const orderCount = orderGroups.reduce((total, group) => total + group.orders.length, 0);
-  const orderedTypes = Array.from(
-    new Set(orderGroups.flatMap(({ orders }) => orders.map((order) => order.orderType)))
+function ChartRightPanel() {
+  const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const bundle = getSelectedBundle(selectedEncounterId);
+  const historyRows = useMemo(
+    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
+    [bundle]
   );
 
+  if (!bundle) return null;
+
   return (
-    <section className="rounded-lg border bg-card">
-      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-        <div>
-          <h2 className="text-[14px] font-semibold">Order</h2>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {orderedTypes.map((orderType) => (
-              <Badge key={orderType} variant="outline">
-                {orderTypeNarrative[orderType].label}
-              </Badge>
-            ))}
-            {orderCount ? <Badge variant="outline">수납 청구</Badge> : null}
-          </div>
-        </div>
-        <Badge variant="secondary">{orderCount}</Badge>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex h-12 flex-col justify-center border-b px-3">
+        <div className="text-sm font-semibold">환자 사이드 패널</div>
+        <div className="text-[11px] text-muted-foreground">환자 컨텍스트와 진단 이력</div>
       </div>
-      <div className="flex flex-col gap-3 p-4">
-        {orderGroups.map(({ group, orders }) => (
-          <div key={group?.id ?? "ungrouped-orders"} className="rounded-lg border bg-[var(--clair-color-background-surface)]">
-            <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
-              <div>
-                <div className="font-medium">{group?.title ?? "개별 오더"}</div>
-                <div className="text-[12px] text-muted-foreground">{group?.label ?? "그룹 미지정"}</div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-3 p-3">
+          <AssessmentHistory historyRows={historyRows} />
+          <section className="rounded-md border bg-card p-3">
+            <div className="font-semibold">보호자 메모</div>
+            <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+              {bundle.primaryGuardian?.memo ?? "물 섭취 후 재구토, 검사 비용 설명을 먼저 요청."}
+            </p>
+          </section>
+          <section className="rounded-md border bg-card p-3">
+            <div className="font-semibold">환자 메모</div>
+            <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+              {bundle.patient.specialNote ?? "진료대에서 긴장도가 높아 보호자 동석 권장."}
+            </p>
+          </section>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function ChartOrderTable({ orders }: { orders: EmrOrder[] }) {
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <div className="min-w-[860px]">
+        <div className="grid grid-cols-[76px_84px_minmax(180px,1fr)_minmax(220px,1fr)_80px_90px_92px_92px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+          <span>분류</span>
+          <span>상태</span>
+          <span>Order명</span>
+          <span>청구서명</span>
+          <span>수량</span>
+          <span>단가</span>
+          <span>청구금액</span>
+          <span>수의사</span>
+        </div>
+        {orders.map((order) => {
+          const invoiceLine = getChartInvoiceLineByOrderId(order.id);
+
+          return (
+            <div
+              key={order.id}
+              className="grid grid-cols-[76px_84px_minmax(180px,1fr)_minmax(220px,1fr)_80px_90px_92px_92px] items-center border-t px-3 py-2 text-[13px]"
+            >
+              <Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge>
+              <EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" />
+              <div className="min-w-0">
+                <div className="truncate font-medium">{order.displayName}</div>
+                <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? orderTypeMeta[order.orderType].handoff}</div>
               </div>
-              {group ? (
-                <Badge variant="outline">{getStatusLabel("orderGroup", group.status)}</Badge>
-              ) : null}
+              <span className="truncate">{invoiceLine?.description ?? order.displayName}</span>
+              <span>{invoiceLine?.quantity ?? 1}</span>
+              <span>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</span>
+              <span>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</span>
+              <span className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</span>
             </div>
-            <div className="divide-y">
-              {orders.map((order) => (
-                <div
-                  key={order.id}
-                  className="grid grid-cols-[minmax(0,1fr)_64px_80px_150px] gap-3 px-3 py-2 text-[13px]"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{order.displayName}</div>
-                    <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? "지시 없음"}</div>
-                  </div>
-                  <div>
-                    <Badge variant="outline">{orderTypeNarrative[order.orderType].label}</Badge>
-                  </div>
-                  <div>{getStatusLabel("order", order.status)}</div>
-                  <div className="text-[12px] text-muted-foreground">{orderTypeNarrative[order.orderType].handoff}</div>
-                </div>
-              ))}
-            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<Set<string>>(() => new Set());
+  const allOrders = orderGroups.flatMap(({ orders }) => orders);
+  const orderCountByType = allOrders.reduce<Record<EmrOrderType, number>>(
+    (counts, order) => ({
+      ...counts,
+      [order.orderType]: counts[order.orderType] + 1,
+    }),
+    { dispensing: 0, imaging: 0, lab: 0, treatment: 0 }
+  );
+  const filteredGroups = orderGroups
+    .map(({ group, orders }) => ({
+      group,
+      orders: orderFilter === "all" ? orders : orders.filter((order) => order.orderType === orderFilter),
+    }))
+    .filter(({ orders }) => orders.length > 0);
+  const totalAmount = allOrders.reduce((sum, order) => {
+    const line = getChartInvoiceLineByOrderId(order.id);
+
+    return sum + (line?.lineTotal ?? 0);
+  }, 0);
+  const confirmedOrderCount = allOrders.filter((order) => order.status !== "cancelled").length;
+  const pendingOrderCount = allOrders.length - confirmedOrderCount;
+  const tabItems = [
+    { value: "all" as const, label: "전체", count: allOrders.length },
+    { value: "dispensing" as const, label: "경구제", count: orderCountByType.dispensing },
+    { value: "lab" as const, label: "원내 검사", count: orderCountByType.lab },
+    { value: "imaging" as const, label: "영상", count: orderCountByType.imaging },
+    { value: "treatment" as const, label: "치료", count: orderCountByType.treatment },
+  ];
+  const toggleOrderGroup = (groupId: string) => {
+    setCollapsedOrderGroupIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+
+      return next;
+    });
+  };
+
+  return (
+    <section className="flex min-h-[520px] max-h-[680px] flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-4 py-2">
+        <div>
+          <h2 className="text-[16px] font-semibold">처방/오더</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">처방 · 처치 · 검사 · 영상 오더</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="bg-card">
+            Order 출력
+          </Button>
+          <Button size="sm">+ Order</Button>
+        </div>
+      </div>
+      <div className="shrink-0 px-4 pt-3">
+        <LineTabs
+          aria-label="차트 오더 필터"
+          className="w-full border-b border-[var(--clair-color-line-normal)]"
+          items={tabItems}
+          value={orderFilter}
+          onValueChange={setOrderFilter}
+        />
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="flex flex-col gap-4">
+          {filteredGroups.map(({ group, orders }) => {
+            const groupId = group?.id ?? "ungrouped-orders";
+            const collapsed = collapsedOrderGroupIds.has(groupId);
+            const completedCount = orders.filter((order) => order.workStatus === "completed").length;
+
+            return (
+              <EmrOrderGroupSection
+                key={groupId}
+                collapsed={collapsed}
+                count={orders.length}
+                label={group?.label ?? "기타 오더 그룹"}
+                title={group?.title ?? "개별 오더"}
+                meta={
+                  <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
+                    작업 완료 {completedCount}/{orders.length}
+                  </span>
+                }
+                actions={
+                  <>
+                    <Button variant="outline" size="xs" className="bg-card">
+                      수정이력조회
+                    </Button>
+                    {group ? <EmrStatusBadge label={getStatusLabel("orderGroup", group.status)} marker="none" /> : null}
+                  </>
+                }
+                onToggle={() => toggleOrderGroup(groupId)}
+              >
+                <ChartOrderTable orders={orders} />
+              </EmrOrderGroupSection>
+            );
+          })}
+        </div>
+      </div>
+      <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t-2 border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-atomic-sky-50)] px-4 py-3 text-[13px] shadow-[0_-12px_24px_rgba(15,23,42,0.14)]">
+        <div className="text-muted-foreground">
+          <div>미확정 오더 {pendingOrderCount}건 · 확정 오더 {confirmedOrderCount}건</div>
+          <div className="mt-1 font-semibold text-foreground">청구 총액: {totalAmount.toLocaleString()}</div>
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
+          <div className="text-right">
+            <div>선택 오더 합계: {totalAmount.toLocaleString()}</div>
+            <div className="mt-1">Order 별 할인/할증 합계: 0</div>
           </div>
-        ))}
+          <Input readOnly value="0%" className="h-9 bg-[var(--clair-color-atomic-gray-50)] text-right" />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" className="bg-card">
+            Order 청구
+          </Button>
+          <Button size="sm">Order 확정</Button>
+        </div>
       </div>
     </section>
   );
 }
 
-export function ChartContent() {
-  const searchParams = useSearchParams();
-  const lastAppliedQueryEncounterId = useRef<string | null>(null);
-  const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
-  const selectEncounter = useChartStore((state) => state.selectEncounter);
-  const scenario = getDemoScenarioFromParams(searchParams);
-  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
-  const queryEncounterBundle = queryEncounterId ? getChartEncounter(queryEncounterId) : null;
-  const hasValidQueryEncounter = queryEncounterId !== null && queryEncounterBundle !== null;
-  const bundle = getChartEncounter(selectedEncounterId) ?? getChartEncounter("encounter-coco-260501");
-  const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
-    [bundle]
+function ChartInstructionInfo({
+  bundle,
+  latestSoap,
+}: {
+  bundle: ChartBundle;
+  latestSoap?: SoapNote;
+}) {
+  const veterinarianName = getChartStaffName(bundle.encounter.primaryVeterinarianId) ?? "담당 미정";
+  const infoItems: Array<{ label: string; value: ReactNode }> = [
+    {
+      label: "접수 일시",
+      value: getShortDateTime(bundle.encounter.checkedInAt ?? bundle.encounter.createdAt),
+    },
+    {
+      label: "환자 정보",
+      value: `${bundle.patient.name}(${getPatientDisplayAge(bundle.patient)}) · ${bundle.patient.breed ?? getSpeciesLabel(bundle.patient)}`,
+    },
+    { label: "담당 수의사", value: veterinarianName },
+    {
+      label: "차트 상태",
+      value: (
+        <EmrStatusBadge
+          label={latestSoap ? getStatusLabel("soap", latestSoap.status) : "대기중"}
+          marker="none"
+        />
+      ),
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-4 rounded-lg border border-border bg-card px-4 py-3">
+      {infoItems.map(({ label, value }) => (
+        <div key={label} className="border-r border-border px-3 last:border-r-0">
+          <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
+          <div className="mt-1 flex min-h-6 items-center text-[13px] font-medium text-foreground">{value}</div>
+        </div>
+      ))}
+    </div>
   );
+}
+
+function EmptyChartState() {
+  return (
+    <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
+      진료 대기열에서 환자를 선택해 주세요.
+    </div>
+  );
+}
+
+export function ChartContent() {
+  useScenarioEncounterSync();
+
+  const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const bundle = getSelectedBundle(selectedEncounterId);
+  const latestSoap = bundle?.soapNotes.at(-1);
   const orderGroups = useMemo(
     () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
     [bundle]
   );
 
-  useEffect(() => {
-    if (!queryEncounterId || !hasValidQueryEncounter) return;
-    if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
-
-    lastAppliedQueryEncounterId.current = queryEncounterId;
-    if (selectedEncounterId !== queryEncounterId) {
-      selectEncounter(queryEncounterId);
-    }
-  }, [hasValidQueryEncounter, queryEncounterId, selectEncounter, selectedEncounterId]);
-
-  if (!bundle) {
-    return (
-      <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
-        진료 대기열에서 환자를 선택해 주세요.
-      </div>
-    );
-  }
-
-  const latestSoap = bundle.soapNotes.at(-1);
+  if (!bundle) return <EmptyChartState />;
 
   return (
-    <div className="flex h-full min-h-0 bg-[var(--clair-color-background-normal)]">
-      <HistoryList
-        historyRows={historyRows}
-        selectedEncounterId={bundle.encounter.id}
-        onSelectEncounter={selectEncounter}
+    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)] px-4 py-3">
+      <EmrInstructionHeaderStack
+        titleBar={
+          <EmrInstructionTitleBar
+            title="진료 차트"
+            icon={
+              <CdsFilesDocumentAltFillIcon
+                className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
+                aria-hidden="true"
+              />
+            }
+            badge={
+              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+                {bundle.encounter.encounterNo}
+              </Badge>
+            }
+            actions={
+              <>
+                <Button variant="outline" size="sm" className="bg-card">
+                  차트 공유
+                </Button>
+                <Button size="sm">차트 작성완료</Button>
+              </>
+            }
+          />
+        }
+        orderInfo={<ChartInstructionInfo bundle={bundle} latestSoap={latestSoap} />}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <PatientHeader
-          encounter={bundle.encounter}
-          patient={bundle.patient}
-          primaryGuardianName={bundle.primaryGuardian?.name}
-        />
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="grid gap-4 p-5">
-            <EncounterNarrative
-              encounter={bundle.encounter}
-              primaryGuardianName={bundle.primaryGuardian?.name}
-              soapNote={latestSoap}
-            />
-            <SoapPanel soapNote={latestSoap} />
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)] gap-4">
-              <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
-              <AssessmentHistory historyRows={historyRows} />
-            </div>
-            <OrderArea orderGroups={orderGroups} />
+      <ScrollArea data-slot="chart-scroll-area" className="min-h-0 flex-1">
+        <div data-slot="chart-scroll-content" className="grid gap-4 pb-10 pt-4">
+          <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] gap-4">
+            <SoapPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
+            <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
           </div>
-        </ScrollArea>
-      </div>
+          <OrderArea orderGroups={orderGroups} />
+        </div>
+      </ScrollArea>
     </div>
   );
 }
+
+export { ChartRightPanel };

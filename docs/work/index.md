@@ -13,6 +13,11 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DOCS-PR-005 | done | docs-restructure | P1 | PR 5 | `docs/work/docs-restructure/DOCS-PR-005-archive-and-link-checking.md` |
 | DOCS-PR-006 | done | docs-restructure | P0 | PR 6 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md` |
 | RECEPTION-PR-001 | done | reception | P0 | PR 1 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md` |
+| RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |
+| RECEPTION-PR-003 | done | reception | P1 | PR 3 | `docs/work/reception/RECEPTION-PR-003-registration-quality-ux.md` |
+| RECEPTION-PR-004 | done | reception | P1 | PR 4 | `docs/work/reception/RECEPTION-PR-004-unified-registration-entry.md` |
+| CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
+| LAB-PR-001 | done | lab | P1 | PR 1 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md` |
 
 ## Current Next Work
 

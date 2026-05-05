@@ -21,18 +21,18 @@ test("sales demo launcher carries the Kong scenario through the golden path", as
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await expectDemoContext(page);
-  await expect(page.getByText("콩이 · P-260501-0003").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /콩이 · 김하늘/ }).first()).toBeVisible();
 
   await page.getByRole("link", { name: /진료\(차트\)/ }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
   await expectDemoContext(page);
-  await expect(page.getByRole("heading", { name: "콩이" })).toBeVisible();
-  await expect(page.getByText("급성 위장관염 의심", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();
+  await expect(page.getByText("급성 위장관염 의심", { exact: true }).first()).toBeVisible();
 
   await page.getByRole("link", { name: "임상병리검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
   await expectDemoContext(page);
-  await expect(page.getByRole("textbox", { name: "WBC 결과값" })).toHaveValue("21.4");
+  await expect(page.getByRole("row", { name: /WBC 21\.4/ })).toBeVisible();
 
   await page.getByRole("link", { name: "영상검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/imaging/);
@@ -56,15 +56,15 @@ test("sales demo launcher carries the Kong scenario through the golden path", as
 
 test("golden scenario can be opened across chart, lab, imaging, and billing", async ({ page }) => {
   await page.goto(`/w/clair-demo/treatment?${scenarioQuery}&modulePanel=open&aside=closed`);
-  await expect(page.getByRole("heading", { name: "콩이" })).toBeVisible();
-  await expect(page.getByText("급성 위장관염 의심", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();
+  await expect(page.getByText("급성 위장관염 의심", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("구토 완화 처방")).toBeVisible();
   await expect(page).toHaveURL(/scenario=kong-vomit/);
 
   await page.goto(`/w/clair-demo/lab?${scenarioQuery}&labResultId=lab-result-kong-cbc&modulePanel=open&aside=closed`);
-  await expect(page.getByText("콩이 · P-260501-0003").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "결과 입력" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "WBC 결과값" })).toHaveValue("21.4");
+  await expect(page.getByRole("button", { name: /콩이 · 김하늘/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /WBC 21\.4/ })).toBeVisible();
   await expect(page).toHaveURL(/scenario=kong-vomit/);
 
   await page.goto(

@@ -26,10 +26,12 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import type {
   OrderQueueItem,
   OrderQueueStatusDefinition,
-  OrderQueueType,
 } from "@/types/emr";
 
-type OrderQueueFilter = "all" | OrderQueueType;
+type OrderQueueFilterItem = {
+  label: string;
+  value: string;
+};
 
 type EmrOrderQueueSidePanelProps = {
   items: OrderQueueItem[];
@@ -37,6 +39,10 @@ type EmrOrderQueueSidePanelProps = {
   title: string;
   className?: string;
   dateLabel?: string;
+  filterAriaLabel?: string;
+  filterItems?: OrderQueueFilterItem[];
+  getFilterValue?: (item: OrderQueueItem) => string;
+  listLabel?: string;
   onCollapse?: () => void;
   onSelectItem?: (itemId: string) => void;
   selectedItemId?: string;
@@ -83,7 +89,11 @@ function getStatusLabel(
 export function EmrOrderQueueSidePanel({
   className,
   dateLabel = "26.04.29 (수)",
+  filterAriaLabel = "오더 유형 필터",
+  filterItems = orderQueueFilterItems,
+  getFilterValue = (item) => item.orderTypeCategory,
   items,
+  listLabel = "전체 오더",
   onCollapse,
   onSelectItem,
   selectedItemId,
@@ -92,11 +102,11 @@ export function EmrOrderQueueSidePanel({
   todayLabel = "오늘",
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
-  const [filter, setFilter] = useState<OrderQueueFilter>("all");
+  const [filter, setFilter] = useState<string>("all");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
   const visibleItems = useMemo(
-    () => (filter === "all" ? items : items.filter((item) => item.orderTypeCategory === filter)),
-    [filter, items]
+    () => (filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter)),
+    [filter, getFilterValue, items]
   );
   const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
   const groupedItems = resolvedStatuses
@@ -126,9 +136,9 @@ export function EmrOrderQueueSidePanel({
         onCollapse={onCollapse}
         tabs={
           <SegmentedControl
-            aria-label="오더 유형 필터"
+            aria-label={filterAriaLabel}
             className="shrink-0"
-            items={orderQueueFilterItems}
+            items={filterItems}
             value={filter}
             variant="tabs"
             onValueChange={setFilter}
@@ -137,7 +147,7 @@ export function EmrOrderQueueSidePanel({
       />
       <EmrDateNavigator dateLabel={dateLabel} todayLabel={todayLabel} />
       <EmrListHeader
-        label="전체 오더"
+        label={listLabel}
         count={visibleItems.length}
         headerActions={
           <>

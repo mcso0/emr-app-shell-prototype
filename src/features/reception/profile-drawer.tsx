@@ -25,11 +25,15 @@ import {
   FieldGroup,
   FieldLabel,
   FieldLegend,
-  FieldSeparator,
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -39,13 +43,17 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   getGuardianDisplay,
   getPatientDisplayAge,
   getPatientSexLabel,
   getSpeciesLabel,
 } from "@/features/reception/data";
-import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
+import {
+  normalizeGuardianPhone,
+  usePatientProfileStore,
+} from "@/features/reception/patient-profile-store";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import {
@@ -59,6 +67,7 @@ import { useLayoutStore } from "@/stores/layout-store";
 import type {
   CsHistoryChannel,
   CsHistoryEntry,
+  Consent,
   EmrId,
   Encounter,
   Guardian,
@@ -82,6 +91,7 @@ type PatientProfileBundle = {
 };
 
 type GuardianProfileBundle = {
+  consents: Consent[];
   guardian: Guardian;
   patients: Patient[];
   patientGuardians: PatientGuardian[];
@@ -119,20 +129,241 @@ const getStaffDisplayName = (userId?: EmrId) =>
 const newPatientSpeciesOptions: Array<{ label: string; value: Species }> = [
   { label: "강아지", value: "dog" },
   { label: "고양이", value: "cat" },
+  { label: "토끼", value: "rabbit" },
+  { label: "페럿", value: "ferret" },
+  { label: "햄스터", value: "hamster" },
+  { label: "기니피그", value: "guinea_pig" },
+  { label: "고슴도치", value: "hedgehog" },
+  { label: "조류", value: "bird" },
+  { label: "파충류", value: "reptile" },
+  { label: "거북이", value: "turtle" },
   { label: "기타", value: "other" },
 ];
 
-const newPatientSexOptions: Array<{ label: string; value: PatientSex }> = [
+type NewPatientSexValue = PatientSex | "neutered_male" | "neutered_female";
+
+const newPatientSexOptions: Array<{ label: string; value: NewPatientSexValue }> = [
   { label: "미상", value: "unknown" },
   { label: "수컷", value: "male" },
   { label: "암컷", value: "female" },
+  { label: "중성화 수컷", value: "neutered_male" },
+  { label: "중성화 암컷", value: "neutered_female" },
 ];
+
+const breedOptionsBySpecies: Record<Species, string[]> = {
+  dog: [
+    "골든 리트리버",
+    "닥스훈트",
+    "말티즈",
+    "비숑 프리제",
+    "시바견",
+    "시츄",
+    "요크셔테리어",
+    "웰시코기",
+    "치와와",
+    "포메라니안",
+    "푸들",
+  ],
+  cat: [
+    "노르웨이숲",
+    "러시안블루",
+    "먼치킨",
+    "메인쿤",
+    "브리티시숏헤어",
+    "스코티시폴드",
+    "아메리칸숏헤어",
+    "코리안숏헤어",
+    "페르시안",
+  ],
+  rabbit: ["드워프", "라이언헤드", "롭이어", "렉스", "앙고라", "토끼"],
+  ferret: ["세이블", "알비노", "시나몬", "페럿"],
+  hamster: ["골든햄스터", "드워프햄스터", "로보로브스키", "정글리안"],
+  guinea_pig: ["기니피그", "아비시니안", "아메리칸", "페루비안"],
+  hedgehog: ["고슴도치", "피그미 고슴도치"],
+  bird: ["문조", "사랑앵무", "앵무새", "카나리아", "코뉴어"],
+  reptile: ["게코", "도마뱀", "뱀", "이구아나", "카멜레온"],
+  turtle: ["거북이", "반수생 거북", "육지거북"],
+  other: [
+    "기타",
+    "토끼",
+    "햄스터",
+  ],
+};
+
+const getBreedOptions = (species: Species) =>
+  [...breedOptionsBySpecies[species]].sort((a, b) => a.localeCompare(b, ["ko", "en"]));
 
 const getNewPatientSpeciesLabel = (species: Species) =>
   newPatientSpeciesOptions.find((option) => option.value === species)?.label ?? "종류 선택";
 
-const getNewPatientSexLabel = (sex: PatientSex) =>
+const getNewPatientSexLabel = (sex: NewPatientSexValue) =>
   newPatientSexOptions.find((option) => option.value === sex)?.label ?? "성별 선택";
+
+const getNewPatientSexPayload = (sex: NewPatientSexValue): { neutered: boolean; sex: PatientSex } => {
+  if (sex === "neutered_male") return { neutered: true, sex: "male" };
+  if (sex === "neutered_female") return { neutered: true, sex: "female" };
+
+  return { neutered: false, sex };
+};
+
+const getConsentLabel = (consent: Consent) => {
+  if (consent.consentType === "privacy") return "개인정보 수집";
+  if (consent.consentType === "marketing") return "마케팅 수신";
+  if (consent.consentType === "messaging") return "메시지 수신";
+  if (consent.consentType === "treatment") return "진료";
+  if (consent.consentType === "surgery") return "수술";
+  return "입원";
+};
+
+const getGuardianPatientCount = (guardianId: EmrId, links: PatientGuardian[]) =>
+  links.filter((link) => link.guardianId === guardianId).length;
+
+const REGISTRATION_BASE_DATE = new Date("2026-05-02T00:00:00+09:00");
+
+const getMixBreedSuggestion = (species: Species) => {
+  if (species === "dog") return "믹스견";
+  if (species === "cat") return "믹스묘";
+
+  return "";
+};
+
+const formatRegistrationDate = (date: Date) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+
+const formatKoreanPhoneNumber = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+
+  if (digits.startsWith("02")) {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+
+    return `${digits.slice(0, 2)}-${digits.slice(2, digits.length - 4)}-${digits.slice(-4)}`;
+  }
+
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+
+  const middleEnd = digits.length === 10 ? 6 : 7;
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, middleEnd)}-${digits.slice(middleEnd)}`;
+};
+
+const formatKoreanAddress = ({
+  detail,
+  postalCode,
+  road,
+}: {
+  detail: string;
+  postalCode: string;
+  road: string;
+}) =>
+  [
+    postalCode ? `(${postalCode})` : "",
+    road.trim(),
+    detail.trim(),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+const getBirthDateFromAge = ({ months, years }: { months: string; years: string }) => {
+  const yearCount = Number(years || 0);
+  const monthCount = Number(months || 0);
+
+  if (!yearCount && !monthCount) return "";
+  if (Number.isNaN(yearCount) || Number.isNaN(monthCount)) return "";
+
+  const birthDate = new Date(REGISTRATION_BASE_DATE);
+  birthDate.setFullYear(birthDate.getFullYear() - yearCount);
+  birthDate.setMonth(birthDate.getMonth() - monthCount);
+
+  return formatRegistrationDate(birthDate);
+};
+
+const getAgeTextFromBirthDate = (birthDateValue: string) => {
+  const birthDate = new Date(`${birthDateValue}T00:00:00+09:00`);
+
+  if (Number.isNaN(birthDate.getTime()) || birthDate > REGISTRATION_BASE_DATE) return "";
+
+  let years = REGISTRATION_BASE_DATE.getFullYear() - birthDate.getFullYear();
+  let months = REGISTRATION_BASE_DATE.getMonth() - birthDate.getMonth();
+
+  if (REGISTRATION_BASE_DATE.getDate() < birthDate.getDate()) months -= 1;
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  return [years ? `${years}년` : "", months ? `${months}개월` : ""].filter(Boolean).join(" ") || "0개월";
+};
+
+const isValidRegistrationBirthDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const date = new Date(`${value}T00:00:00+09:00`);
+  if (Number.isNaN(date.getTime()) || date > REGISTRATION_BASE_DATE) return false;
+
+  return formatRegistrationDate(date) === value;
+};
+
+type NewPatientDraft = {
+  additionalBreed: string;
+  ageDays: string;
+  ageMonths: string;
+  ageYears: string;
+  birthDate: string;
+  breed: string;
+  color: string;
+  estimatedAge: boolean;
+  existingGuardianId: string;
+  guardianMobilePhone: string;
+  guardianName: string;
+  isMixed: boolean;
+  microchipNo: string;
+  microchipStatus: string;
+  name: string;
+  patientRegistrationNo: string;
+  primaryVeterinarianId: string;
+  sex: NewPatientSexValue;
+  species: Species;
+  specialNote: string;
+  weight: string;
+};
+
+const createNewPatientDraft = ({
+  guardianId = "",
+  guardianMobilePhone = "",
+  guardianName = "",
+}: {
+  guardianId?: string;
+  guardianMobilePhone?: string;
+  guardianName?: string;
+} = {}): NewPatientDraft => ({
+  additionalBreed: "",
+  ageDays: "",
+  ageMonths: "",
+  ageYears: "",
+  birthDate: "",
+  breed: "",
+  color: "",
+  estimatedAge: false,
+  existingGuardianId: guardianId,
+  guardianMobilePhone,
+  guardianName,
+  isMixed: false,
+  microchipNo: "",
+  microchipStatus: "미선택",
+  name: "",
+  patientRegistrationNo: "",
+  primaryVeterinarianId: "",
+  sex: "unknown",
+  species: "dog",
+  specialNote: "",
+  weight: "",
+});
 
 const getPatientVisitReason = (bundle: PatientProfileBundle) =>
   bundle.activeEncounter?.chiefComplaint ??
@@ -200,7 +431,8 @@ const getGuardianProfileBundle = (
   guardianId: EmrId,
   patients: Patient[],
   guardians: Guardian[],
-  patientGuardians: PatientGuardian[]
+  patientGuardians: PatientGuardian[],
+  consents: Consent[]
 ): GuardianProfileBundle | null => {
   const guardian = guardians.find((item) => item.id === guardianId);
 
@@ -212,6 +444,7 @@ const getGuardianProfileBundle = (
   const linkedPatients = patients.filter((patient) => patientIds.has(patient.id));
 
   return {
+    consents: consents.filter((consent) => consent.guardianId === guardianId),
     guardian,
     patients: linkedPatients,
     patientGuardians: links,
@@ -293,14 +526,268 @@ function RegistrationFormSection({
 }) {
   return (
     <>
-      {separated ? <FieldSeparator className="my-0" /> : null}
+      {separated ? <div className="h-px w-full shrink-0 bg-border" /> : null}
       <FieldSet className={cn("gap-0", className)}>
         <FieldLegend className="mb-3 text-[13px] font-bold leading-5 text-[var(--clair-color-atomic-gray-400)]">
           {title}
         </FieldLegend>
-        <FieldGroup className="gap-5">{children}</FieldGroup>
+        <FieldGroup className="gap-6">{children}</FieldGroup>
       </FieldSet>
     </>
+  );
+}
+
+function KoreanAddressFields({
+  detail,
+  postalCode,
+  road,
+  onDetailChange,
+  onPostalCodeChange,
+  onRoadChange,
+}: {
+  detail: string;
+  postalCode: string;
+  road: string;
+  onDetailChange: (value: string) => void;
+  onPostalCodeChange: (value: string) => void;
+  onRoadChange: (value: string) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label="우편번호"
+          className="h-10 w-[148px] bg-card"
+          inputMode="numeric"
+          placeholder="우편번호"
+          value={postalCode}
+          onValueChange={(value) => onPostalCodeChange(value.replace(/\D/g, "").slice(0, 5))}
+        />
+        <Button type="button" variant="secondary" size="sm" className="h-8 px-2.5 text-[12px] font-semibold">
+          주소 검색
+        </Button>
+      </div>
+      <Input
+        aria-label="기본 주소"
+        className="h-10 bg-card"
+        placeholder="도로명 또는 지번 주소를 입력해주세요"
+        value={road}
+        onValueChange={onRoadChange}
+      />
+      <Input
+        aria-label="상세 주소"
+        className="h-10 bg-card"
+        placeholder="상세주소를 입력해주세요"
+        value={detail}
+        onValueChange={onDetailChange}
+      />
+    </div>
+  );
+}
+
+
+function BreedAutocomplete({
+  ariaLabel = "품종",
+  className,
+  placeholder,
+  readOnly,
+  species,
+  value,
+  onValueChange,
+}: {
+  ariaLabel?: string;
+  className?: string;
+  placeholder: string;
+  readOnly?: boolean;
+  species: Species;
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const options = useMemo(() => {
+    const query = value.trim().toLowerCase();
+    const breeds = getBreedOptions(species);
+
+    if (!query) return breeds;
+
+    return breeds.filter((breed) => breed.toLowerCase().includes(query));
+  }, [species, value]);
+
+  if (readOnly) {
+    return (
+      <Input
+        aria-label={ariaLabel}
+        value={value}
+        readOnly
+        className={className}
+      />
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        nativeButton={false}
+        render={<div className="relative" />}
+      >
+        <CdsActionsSearchIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+        />
+        <Input
+          aria-label={ariaLabel}
+          autoComplete="off"
+          className={cn(className, "pl-9")}
+          placeholder={placeholder}
+          value={value}
+          onFocus={() => setOpen(true)}
+          onValueChange={(breed) => {
+            onValueChange(breed);
+            setOpen(true);
+          }}
+        />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="max-h-56 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
+        initialFocus={false}
+      >
+        <div role="listbox" aria-label={`${ariaLabel} 추천`} className="grid gap-1">
+          {options.length ? (
+            options.map((breed) => (
+              <button
+                key={breed}
+                type="button"
+                role="option"
+                aria-selected={value === breed}
+                className={cn(
+                  "rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--clair-color-label-normal)] transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                  value === breed && "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                )}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onValueChange(breed);
+                  setOpen(false);
+                }}
+              >
+                {breed}
+              </button>
+            ))
+          ) : (
+            <div className="px-2.5 py-2 text-[12px] text-muted-foreground">
+              직접 입력한 품종으로 저장합니다.
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function GuardianSearchPopover({
+  error,
+  guardians,
+  patientGuardians,
+  phoneValue,
+  selectedGuardianId,
+  value,
+  onSearchChange,
+  onSelect,
+}: {
+  error?: string;
+  guardians: Guardian[];
+  patientGuardians: PatientGuardian[];
+  phoneValue: string;
+  selectedGuardianId?: EmrId;
+  value: string;
+  onSearchChange: (value: string) => void;
+  onSelect: (guardian: Guardian) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const guardianMatches = useMemo(() => {
+    const query = value.trim();
+    const normalizedPhone = normalizeGuardianPhone(phoneValue);
+
+    if (!query && !normalizedPhone) return guardians;
+
+    return guardians.filter((guardian) => {
+      const guardianPhone = normalizeGuardianPhone(guardian.mobilePhone);
+
+      return (
+        (query && guardian.name.includes(query)) ||
+        (normalizedPhone && guardianPhone.includes(normalizedPhone))
+      );
+    });
+  }, [guardians, phoneValue, value]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        nativeButton={false}
+        render={<div className="relative" />}
+      >
+        <CdsActionsSearchIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+        />
+        <Input
+          aria-label="보호자명"
+          aria-invalid={Boolean(error) || undefined}
+          autoComplete="off"
+          className="h-10 bg-card pl-9"
+          placeholder="보호자를 검색해주세요"
+          value={value}
+          onFocus={() => setOpen(true)}
+          onValueChange={(guardianName) => {
+            onSearchChange(guardianName);
+            setOpen(true);
+          }}
+        />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
+        initialFocus={false}
+      >
+        <div role="listbox" aria-label="등록된 보호자 목록" className="grid gap-1">
+          {guardianMatches.length ? (
+            guardianMatches.map((guardian) => (
+              <button
+                key={guardian.id}
+                type="button"
+                role="option"
+                aria-selected={selectedGuardianId === guardian.id}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                  selectedGuardianId === guardian.id &&
+                    "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                )}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onSelect(guardian);
+                  setOpen(false);
+                }}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px] font-semibold">{guardian.name}</span>
+                  <span className="mt-0.5 block truncate text-[12px] text-muted-foreground">
+                    {guardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
+                    {getGuardianPatientCount(guardian.id, patientGuardians)}마리
+                  </span>
+                </span>
+                <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
+                  {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
+                </Badge>
+              </button>
+            ))
+          ) : (
+            <div className="px-2.5 py-2 text-[12px] text-muted-foreground">
+              일치하는 보호자가 없습니다. 새 보호자로 등록합니다.
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -477,10 +964,12 @@ function PatientSummaryFields({
         <Input value={getSpeciesLabel(patient)} readOnly className="h-9 bg-card" />
       </Field>
       <Field label="품종">
-        <Input
+        <BreedAutocomplete
           value={draft.breed ?? ""}
           readOnly={!editing}
           className="h-9 bg-card"
+          placeholder="품종을 입력하거나 선택"
+          species={patient.species}
           onValueChange={(breed) => onDraftChange({ breed })}
         />
       </Field>
@@ -756,15 +1245,54 @@ function GuardianSummaryFields({
   );
 }
 
+function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
+  const sortedConsents = [...consents].sort((a, b) =>
+    getConsentLabel(a).localeCompare(getConsentLabel(b), ["ko", "en"])
+  );
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="text-[13px] font-semibold">동의 이력</div>
+      <div className="grid gap-2">
+        {sortedConsents.length ? (
+          sortedConsents.map((consent) => (
+            <div
+              key={consent.id}
+              className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3"
+            >
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                  {getConsentLabel(consent)}
+                </div>
+                <div className="mt-1 text-[12px] text-muted-foreground">
+                  {consent.signedAt ? `${getShortDateTime(consent.signedAt)} 서명` : "서명일 미기록"}
+                </div>
+              </div>
+              <Badge variant={consent.status === "granted" ? "default" : "outline"}>
+                {consent.status === "granted" ? "동의" : "철회"}
+              </Badge>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed bg-card p-3 text-[12px] text-muted-foreground">
+            등록된 동의 이력이 없습니다.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const consents = usePatientProfileStore((state) => state.consents);
   const updateGuardian = usePatientProfileStore((state) => state.updateGuardian);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const bundle = useMemo(
-    () => getGuardianProfileBundle(guardianId, patients, guardians, patientGuardians),
-    [guardianId, guardians, patientGuardians, patients]
+    () => getGuardianProfileBundle(guardianId, patients, guardians, patientGuardians, consents),
+    [consents, guardianId, guardians, patientGuardians, patients]
   );
   const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
   const [editing, setEditing] = useState(false);
@@ -838,6 +1366,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
                 editing={editing}
                 onDraftChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
               />
+              <GuardianConsentSummary consents={bundle.consents} />
               <section className="flex flex-col gap-2">
                 <div className="text-[13px] font-semibold">연결 환자</div>
                 {bundle.patients.map((patient) => {
@@ -880,83 +1409,96 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
 }
 
 export function NewPatientDialog({
+  initialGuardianId = "",
+  initialGuardianMobilePhone = "",
+  initialGuardianName = "",
+  onCreated,
   onOpenChange,
+  openPatientDrawerOnCreated = true,
   open,
 }: {
+  initialGuardianId?: string;
+  initialGuardianMobilePhone?: string;
+  initialGuardianName?: string;
+  onCreated?: (patientId: EmrId) => void;
   onOpenChange: (open: boolean) => void;
+  openPatientDrawerOnCreated?: boolean;
   open: boolean;
 }) {
   const addPatient = usePatientProfileStore((state) => state.addPatient);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const hasDuplicatePatientNameForGuardian = usePatientProfileStore(
+    (state) => state.hasDuplicatePatientNameForGuardian
+  );
+  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [error, setError] = useState("");
-  const [draft, setDraft] = useState({
-    additionalBreed: "",
-    ageDays: "",
-    ageMonths: "",
-    ageYears: "",
-    breed: "",
-    color: "",
-    estimatedAge: false,
-    guardianMobilePhone: "",
-    guardianName: "",
-    isMixed: false,
-    microchipNo: "",
-    microchipStatus: "미선택",
-    name: "",
-    patientRegistrationNo: "",
-    primaryVeterinarianId: "",
-    sex: "unknown" as PatientSex,
-    species: "dog" as Species,
-    specialNote: "",
-    weight: "",
-  });
+  const [draft, setDraft] = useState<NewPatientDraft>(() =>
+    createNewPatientDraft({
+      guardianId: initialGuardianId,
+      guardianMobilePhone: initialGuardianMobilePhone,
+      guardianName: initialGuardianName,
+    })
+  );
 
   const reset = () => {
-    setDraft({
-      additionalBreed: "",
-      ageDays: "",
-      ageMonths: "",
-      ageYears: "",
-      breed: "",
-      color: "",
-      estimatedAge: false,
-      guardianMobilePhone: "",
-      guardianName: "",
-      isMixed: false,
-      microchipNo: "",
-      microchipStatus: "미선택",
-      name: "",
-      patientRegistrationNo: "",
-      primaryVeterinarianId: "",
-      sex: "unknown",
-      species: "dog",
-      specialNote: "",
-      weight: "",
-    });
+    setDraft(
+      createNewPatientDraft({
+        guardianId: initialGuardianId,
+        guardianMobilePhone: initialGuardianMobilePhone,
+        guardianName: initialGuardianName,
+      })
+    );
     setError("");
   };
   const close = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
     if (!nextOpen) reset();
   };
+  const selectedGuardian = draft.existingGuardianId
+    ? guardians.find((guardian) => guardian.id === draft.existingGuardianId)
+    : undefined;
+  const duplicateGuardian =
+    !selectedGuardian && draft.guardianMobilePhone
+      ? guardians.find(
+          (guardian) =>
+            normalizeGuardianPhone(guardian.mobilePhone) ===
+            normalizeGuardianPhone(draft.guardianMobilePhone)
+	        )
+	      : undefined;
+	  const canSubmit = !duplicateGuardian;
+  const duplicatePatientName =
+    selectedGuardian && draft.name
+      ? hasDuplicatePatientNameForGuardian(selectedGuardian.id, draft.name)
+      : false;
   const save = () => {
+    const sexPayload = getNewPatientSexPayload(draft.sex);
     const ageParts = [
       draft.ageYears ? `${draft.ageYears}년` : "",
       draft.ageMonths ? `${draft.ageMonths}개월` : "",
       draft.ageDays ? `${draft.ageDays}일` : "",
     ].filter(Boolean);
+    const estimatedAgeText = ageParts.length
+      ? `${ageParts.join(" ")}${draft.estimatedAge ? " 추정" : ""}`
+      : draft.birthDate
+        ? getAgeTextFromBirthDate(draft.birthDate)
+        : undefined;
+    const breed = draft.isMixed
+      ? [draft.breed.trim() || getMixBreedSuggestion(draft.species), draft.additionalBreed.trim()]
+          .filter(Boolean)
+          .join(" · ")
+      : draft.breed;
     const result = addPatient({
-      breed: draft.isMixed && draft.additionalBreed
-        ? `${draft.breed.trim()} 믹스`
-        : draft.breed,
-      estimatedAgeText: ageParts.length
-        ? `${ageParts.join(" ")}${draft.estimatedAge ? " 추정" : ""}`
-        : undefined,
-      guardianMobilePhone: draft.guardianMobilePhone,
-      guardianName: draft.guardianName,
-      microchipNo: draft.microchipNo,
-      name: draft.name,
-      sex: draft.sex,
+      birthDate: draft.birthDate,
+      breed,
+      estimatedAgeText,
+	      existingGuardianId: selectedGuardian?.id,
+	      guardianMobilePhone: draft.guardianMobilePhone,
+	      guardianName: draft.guardianName,
+	      microchipNo: draft.microchipNo,
+	      name: draft.name,
+	      neutered: sexPayload.neutered,
+	      sex: sexPayload.sex,
       species: draft.species,
       specialNote: draft.specialNote,
     });
@@ -967,7 +1509,10 @@ export function NewPatientDialog({
     }
 
     if (result.patientId) {
-      setActiveDrawer({ type: "reception-patient", id: result.patientId });
+      if (openPatientDrawerOnCreated) {
+        setActiveDrawer({ type: "reception-patient", id: result.patientId });
+      }
+      onCreated?.(result.patientId);
     }
     close(false);
   };
@@ -986,45 +1531,76 @@ export function NewPatientDialog({
         <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
           <div className="flex flex-col gap-5 pb-6">
             <RegistrationFormSection separated={false} title="보호자 연결">
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                 <RegistrationFormField
                   error={error.includes("보호자명") ? error : undefined}
-                  label="보호자 검색"
-                  required
-                >
-                  <div className="relative">
-                    <CdsActionsSearchIcon
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
-                    />
-                    <Input
-                      aria-label="보호자명"
-                      aria-invalid={error.includes("보호자명") || undefined}
-                      className="h-10 bg-card pl-9"
-                      placeholder="보호자를 검색해주세요"
-                      value={draft.guardianName}
-                      onValueChange={(guardianName) =>
-                        setDraft((current) => ({ ...current, guardianName }))
-                      }
-                    />
-                  </div>
-                </RegistrationFormField>
+	                  label="보호자 검색"
+	                  required
+	                >
+	                  <GuardianSearchPopover
+	                    error={error.includes("보호자명") ? error : undefined}
+	                    guardians={guardians}
+	                    patientGuardians={patientGuardians}
+	                    phoneValue={draft.guardianMobilePhone}
+	                    selectedGuardianId={draft.existingGuardianId}
+	                    value={draft.guardianName}
+	                    onSearchChange={(guardianName) =>
+	                      setDraft((current) => ({
+	                        ...current,
+	                        existingGuardianId: "",
+	                        guardianName,
+	                      }))
+	                    }
+	                    onSelect={(guardian) =>
+	                      setDraft((current) => ({
+	                        ...current,
+	                        existingGuardianId: guardian.id,
+	                        guardianMobilePhone: guardian.mobilePhone ?? "",
+	                        guardianName: guardian.name,
+	                      }))
+	                    }
+	                  />
+	                </RegistrationFormField>
                 <RegistrationFormField label="보호자 휴대전화">
                   <Input
                     aria-label="보호자 휴대전화"
                     className="h-10 bg-card"
-                    placeholder="010-0000-0000"
-                    value={draft.guardianMobilePhone}
-                    onValueChange={(guardianMobilePhone) =>
-                      setDraft((current) => ({ ...current, guardianMobilePhone }))
-                    }
-                  />
-                </RegistrationFormField>
-              </div>
+		                    placeholder="010-0000-0000"
+		                    value={draft.guardianMobilePhone}
+		                    onValueChange={(guardianMobilePhone) =>
+		                      setDraft((current) => ({
+		                        ...current,
+		                        existingGuardianId: "",
+		                        guardianMobilePhone: formatKoreanPhoneNumber(guardianMobilePhone),
+		                      }))
+		                    }
+		                  />
+	                </RegistrationFormField>
+	                {duplicateGuardian ? (
+	                  <div className="col-span-2 rounded-lg border border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] p-3">
+	                    <div className="text-[13px] font-semibold text-[var(--clair-color-atomic-red-700)]">
+	                      이미 등록된 보호자입니다
+	                    </div>
+	                    <div className="mt-1 text-[12px] text-[var(--clair-color-atomic-red-600)]">
+	                      {duplicateGuardian.name} · {duplicateGuardian.mobilePhone} 보호자를 선택해 연결해 주세요.
+	                    </div>
+	                  </div>
+	                ) : null}
+                {error && !error.includes("환자명") && !error.includes("보호자명") ? (
+	                  <div className="col-span-2 text-[12px] font-medium text-[var(--clair-color-atomic-red-600)]">
+	                    {error}
+	                  </div>
+	                ) : null}
+                {duplicatePatientName ? (
+                  <div className="col-span-2 rounded-lg border border-[var(--clair-color-atomic-yellow-200)] bg-[var(--clair-color-atomic-yellow-50)] p-3 text-[12px] font-medium text-[var(--clair-color-atomic-yellow-800)]">
+                    동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
+                  </div>
+                ) : null}
+	              </div>
             </RegistrationFormSection>
 
             <RegistrationFormSection title="동물 정보">
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                 <RegistrationFormField
                   error={error.includes("환자명") ? error : undefined}
                   label="동물 이름"
@@ -1043,7 +1619,16 @@ export function NewPatientDialog({
                   <Select
                     value={draft.species}
                     onValueChange={(species) =>
-                      setDraft((current) => ({ ...current, species: species as Species }))
+                      setDraft((current) => {
+                        const nextSpecies = species as Species;
+                        const mixBreed = getMixBreedSuggestion(nextSpecies);
+
+                        return {
+                          ...current,
+                          breed: current.isMixed && mixBreed ? mixBreed : current.breed,
+                          species: nextSpecies,
+                        };
+                      })
                     }
                   >
                     <SelectTrigger aria-label="종" className="h-10 w-full bg-card">
@@ -1068,35 +1653,36 @@ export function NewPatientDialog({
                       <Switch
                         checked={draft.isMixed}
                         onCheckedChange={(isMixed) =>
-                          setDraft((current) => ({ ...current, isMixed }))
+                          setDraft((current) => ({
+                            ...current,
+                            breed: isMixed
+                              ? getMixBreedSuggestion(current.species) || current.breed
+                              : current.breed,
+                            isMixed,
+                          }))
                         }
                       />
                       믹스
                     </label>
                   }
-                >
-                  <div className="relative">
-                    <CdsActionsSearchIcon
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
-                    />
-                    <Input
-                      aria-label="품종"
-                      className="h-10 bg-card pl-9"
-                      placeholder="주 품종을 선택해주세요"
-                      value={draft.breed}
-                      onValueChange={(breed) => setDraft((current) => ({ ...current, breed }))}
-                    />
-                  </div>
-                </RegistrationFormField>
+	                >
+	                  <BreedAutocomplete
+	                    ariaLabel="품종"
+	                    className="h-10 bg-card"
+	                    placeholder="주 품종을 선택해주세요"
+	                    species={draft.species}
+	                    value={draft.breed}
+	                    onValueChange={(breed) => setDraft((current) => ({ ...current, breed }))}
+	                  />
+	                </RegistrationFormField>
                 <RegistrationFormField label="성별">
-                  <Select
-                    value={draft.sex}
-                    onValueChange={(sex) =>
-                      setDraft((current) => ({ ...current, sex: sex as PatientSex }))
-                    }
-                  >
-                    <SelectTrigger className="h-10 w-full bg-card">
+	                  <Select
+	                    value={draft.sex}
+	                    onValueChange={(sex) =>
+	                      setDraft((current) => ({ ...current, sex: sex as NewPatientSexValue }))
+	                    }
+	                  >
+	                    <SelectTrigger aria-label="성별" className="h-10 w-full bg-card">
                       <span className="flex flex-1 text-left">
                         {getNewPatientSexLabel(draft.sex)}
                       </span>
@@ -1110,47 +1696,53 @@ export function NewPatientDialog({
                     </SelectContent>
                   </Select>
                 </RegistrationFormField>
-                {draft.isMixed ? (
-                  <RegistrationFormField className="col-span-2" label="추가 품종">
-                    <div className="relative">
-                      <CdsActionsSearchIcon
-                        aria-hidden="true"
-                        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
-                      />
-                      <Input
-                        className="h-10 bg-card pl-9"
-                        placeholder="믹스의 경우 추가 품종을 선택해주세요"
-                        value={draft.additionalBreed}
-                        onValueChange={(additionalBreed) =>
-                          setDraft((current) => ({ ...current, additionalBreed }))
-                        }
-                      />
-                    </div>
-                  </RegistrationFormField>
-                ) : null}
+	                {draft.isMixed ? (
+	                  <RegistrationFormField className="col-span-2" label="추가 품종">
+	                    <BreedAutocomplete
+	                      ariaLabel="추가 품종"
+	                      className="h-10 bg-card"
+	                      placeholder="믹스의 경우 추가 품종을 선택해주세요"
+	                      species={draft.species}
+	                      value={draft.additionalBreed}
+	                      onValueChange={(additionalBreed) =>
+	                        setDraft((current) => ({ ...current, additionalBreed }))
+	                      }
+	                    />
+	                  </RegistrationFormField>
+	                ) : null}
               </div>
             </RegistrationFormSection>
 
             <RegistrationFormSection title="추가 정보">
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                 <RegistrationFormField label="동물 나이">
                   <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
                     <Input
                       className="h-10 bg-card"
+                      aria-label="나이 년"
                       inputMode="numeric"
                       placeholder="년"
                       value={draft.ageYears}
                       onValueChange={(ageYears) =>
-                        setDraft((current) => ({ ...current, ageYears }))
+                        setDraft((current) => ({
+                          ...current,
+                          ageYears,
+                          birthDate: getBirthDateFromAge({ months: current.ageMonths, years: ageYears }),
+                        }))
                       }
                     />
                     <Input
                       className="h-10 bg-card"
+                      aria-label="나이 개월"
                       inputMode="numeric"
                       placeholder="개월"
                       value={draft.ageMonths}
                       onValueChange={(ageMonths) =>
-                        setDraft((current) => ({ ...current, ageMonths }))
+                        setDraft((current) => ({
+                          ...current,
+                          ageMonths,
+                          birthDate: getBirthDateFromAge({ months: ageMonths, years: current.ageYears }),
+                        }))
                       }
                     />
                     <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
@@ -1164,6 +1756,32 @@ export function NewPatientDialog({
                       추정
                     </label>
                   </div>
+                  {draft.birthDate ? (
+                    <div className="mt-1 text-[12px] font-medium text-muted-foreground">
+                      생년월일 {draft.birthDate}
+                    </div>
+                  ) : null}
+                </RegistrationFormField>
+                <RegistrationFormField label="생년월일">
+                  <Input
+                    aria-label="생년월일"
+                    className="h-10 bg-card"
+                    placeholder="YYYY-MM-DD"
+                    value={draft.birthDate}
+                    onValueChange={(birthDate) =>
+                      setDraft((current) => ({
+                        ...current,
+                        ageMonths: "",
+                        ageYears: "",
+                        birthDate,
+                      }))
+                    }
+                  />
+                  {draft.birthDate ? (
+                    <div className="mt-1 text-[12px] font-medium text-muted-foreground">
+                      현재 나이 {getAgeTextFromBirthDate(draft.birthDate) || "계산 불가"}
+                    </div>
+                  ) : null}
                 </RegistrationFormField>
                 <RegistrationFormField
                   error={error.includes("마이크로칩") ? error : undefined}
@@ -1171,9 +1789,9 @@ export function NewPatientDialog({
                 >
                   <Input
                     aria-label="마이크로칩"
-                    className="h-10 bg-card"
-                    inputMode="numeric"
-                    placeholder="숫자만 입력해주세요"
+	                    className="h-10 bg-card"
+	                    inputMode="numeric"
+	                    placeholder="15자리 마이크로칩 번호"
                     value={draft.microchipNo}
                     onValueChange={(microchipNo) =>
                       setDraft((current) => ({ ...current, microchipNo }))
@@ -1203,18 +1821,18 @@ export function NewPatientDialog({
             </RegistrationFormSection>
           </div>
         </ScrollArea>
-        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
-          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
-            마이크로칩 중복은 현재 세션 데이터 기준으로만 확인합니다.
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button variant="ghost" className="px-4 font-semibold" onClick={() => close(false)}>
-              취소
-            </Button>
-            <Button className="px-5 font-semibold" onClick={save}>
-              등록
-            </Button>
-          </div>
+	        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+	          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
+	            품종/보호자 중복은 현재 세션 데이터 기준으로만 확인합니다.
+	          </div>
+	          <div className="flex shrink-0 items-center gap-2">
+	            <Button variant="ghost" className="px-4 font-semibold" onClick={() => close(false)}>
+	              취소
+	            </Button>
+	            <Button className="px-5 font-semibold" disabled={!canSubmit} onClick={save}>
+	              등록
+	            </Button>
+	          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1222,40 +1840,54 @@ export function NewPatientDialog({
 }
 
 function NewGuardianDialog({
+  initialMobilePhone = "",
+  initialName = "",
+  onCreated,
   onOpenChange,
+  openGuardianDrawerOnCreated = true,
   open,
 }: {
+  initialMobilePhone?: string;
+  initialName?: string;
+  onCreated?: (guardian: Guardian) => void;
   onOpenChange: (open: boolean) => void;
+  openGuardianDrawerOnCreated?: boolean;
   open: boolean;
 }) {
   const addGuardian = usePatientProfileStore((state) => state.addGuardian);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState({
-    address: "",
+    addressDetail: "",
+    addressPostalCode: "",
+    addressRoad: "",
     birthDate: "",
     email: "",
     memo: "",
-    mobilePhone: "",
-    name: "",
+    mobilePhone: initialMobilePhone,
+    name: initialName,
     phone: "",
     privacyConsent: false,
-    thirdPartyConsent: false,
     marketingConsent: false,
+    signatureStatus: "idle" as "idle" | "pending" | "completed",
   });
 
   const reset = () => {
     setDraft({
-      address: "",
+      addressDetail: "",
+      addressPostalCode: "",
+      addressRoad: "",
       birthDate: "",
       email: "",
       memo: "",
-      mobilePhone: "",
-      name: "",
+      mobilePhone: initialMobilePhone,
+      name: initialName,
       phone: "",
       privacyConsent: false,
-      thirdPartyConsent: false,
       marketingConsent: false,
+      signatureStatus: "idle",
     });
     setError("");
   };
@@ -1264,7 +1896,15 @@ function NewGuardianDialog({
     if (!nextOpen) reset();
   };
   const save = () => {
-    const result = addGuardian(draft);
+    const result = addGuardian({
+      ...draft,
+      address: formatKoreanAddress({
+        detail: draft.addressDetail,
+        postalCode: draft.addressPostalCode,
+        road: draft.addressRoad,
+      }),
+      privacyConsent: draft.privacyConsent && draft.signatureStatus === "completed",
+    });
 
     if (result.error) {
       setError(result.error);
@@ -1272,10 +1912,24 @@ function NewGuardianDialog({
     }
 
     if (result.guardianId) {
+      const createdGuardian = usePatientProfileStore
+        .getState()
+        .guardians.find((guardian) => guardian.id === result.guardianId);
+
+      if (createdGuardian) {
+        onCreated?.(createdGuardian);
+      }
+    }
+    if (result.guardianId && openGuardianDrawerOnCreated) {
       setActiveDrawer({ type: "reception-guardian", id: result.guardianId });
     }
     close(false);
   };
+  const duplicateGuardian = draft.mobilePhone
+    ? guardians.find(
+        (guardian) => normalizeGuardianPhone(guardian.mobilePhone) === normalizeGuardianPhone(draft.mobilePhone)
+      )
+    : undefined;
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -1291,7 +1945,7 @@ function NewGuardianDialog({
         <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
           <div className="flex flex-col gap-5 pb-6">
             <RegistrationFormSection separated={false} title="기본 정보">
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                 <RegistrationFormField
                   error={error.includes("보호자명") ? error : undefined}
                   label="이름"
@@ -1316,7 +1970,7 @@ function NewGuardianDialog({
                     }
                   />
                 </RegistrationFormField>
-                <RegistrationFormField className="col-span-2" label="휴대폰 번호">
+	                <RegistrationFormField className="col-span-2" label="휴대폰 번호">
                   <Input
                     aria-label="보호자 휴대전화"
                     className="h-10 bg-card"
@@ -1324,52 +1978,88 @@ function NewGuardianDialog({
                     placeholder="휴대폰 번호를 입력해주세요"
                     value={draft.mobilePhone}
                     onValueChange={(mobilePhone) =>
-                      setDraft((current) => ({ ...current, mobilePhone }))
+		                      setDraft((current) => ({
+                            ...current,
+                            mobilePhone: formatKoreanPhoneNumber(mobilePhone),
+                          }))
+		                    }
+                  />
+	                </RegistrationFormField>
+	                {duplicateGuardian ? (
+	                  <div className="col-span-2 rounded-lg border border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] p-3">
+	                    <div className="flex items-start justify-between gap-3">
+	                      <div>
+	                        <div className="text-[13px] font-semibold text-[var(--clair-color-atomic-red-700)]">
+	                          이미 등록된 보호자입니다
+	                        </div>
+	                        <div className="mt-1 text-[12px] text-[var(--clair-color-atomic-red-600)]">
+	                          {duplicateGuardian.name} · {duplicateGuardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
+	                          {getGuardianPatientCount(duplicateGuardian.id, patientGuardians)}마리
+	                        </div>
+	                      </div>
+	                      <Button
+	                        type="button"
+	                        variant="outline"
+	                        size="sm"
+	                        className="bg-white"
+	                        onClick={() => {
+	                          close(false);
+	                          setActiveDrawer({ type: "reception-guardian", id: duplicateGuardian.id });
+	                        }}
+	                      >
+	                        보호자 상세 보기
+	                      </Button>
+	                    </div>
+	                  </div>
+	                ) : null}
+	              </div>
+	            </RegistrationFormSection>
+
+            <RegistrationFormSection title="연락처 및 주소">
+              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
+                <RegistrationFormField label="추가 연락처">
+                  <Input
+                    className="h-10 bg-card"
+                    inputMode="numeric"
+                    placeholder="010-0000-0000"
+                    value={draft.phone}
+                    onValueChange={(phone) =>
+                      setDraft((current) => ({
+                        ...current,
+                        phone: formatKoreanPhoneNumber(phone),
+                      }))
+                    }
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField label="이메일">
+                  <Input
+                    className="h-10 bg-card"
+                    placeholder="example@email.com"
+                    value={draft.email}
+                    onValueChange={(email) => setDraft((current) => ({ ...current, email }))}
+                  />
+                </RegistrationFormField>
+                <RegistrationFormField className="col-span-2" label="주소">
+                  <KoreanAddressFields
+                    detail={draft.addressDetail}
+                    postalCode={draft.addressPostalCode}
+                    road={draft.addressRoad}
+                    onDetailChange={(addressDetail) =>
+                      setDraft((current) => ({ ...current, addressDetail }))
+                    }
+                    onPostalCodeChange={(addressPostalCode) =>
+                      setDraft((current) => ({ ...current, addressPostalCode }))
+                    }
+                    onRoadChange={(addressRoad) =>
+                      setDraft((current) => ({ ...current, addressRoad }))
                     }
                   />
                 </RegistrationFormField>
               </div>
             </RegistrationFormSection>
 
-            <RegistrationFormSection title="연락처 및 주소">
-              <div className="grid grid-cols-2 gap-5">
-                <RegistrationFormField label="추가 연락처">
-                  <Input
-                    className="h-10 bg-card"
-                    inputMode="numeric"
-                    placeholder="추가 연락처를 입력해주세요"
-                    value={draft.phone}
-                    onValueChange={(phone) => setDraft((current) => ({ ...current, phone }))}
-                  />
-                </RegistrationFormField>
-                <RegistrationFormField label="이메일">
-                  <Input
-                    className="h-10 bg-card"
-                    placeholder="이메일 주소를 입력해주세요"
-                    value={draft.email}
-                    onValueChange={(email) => setDraft((current) => ({ ...current, email }))}
-                  />
-                </RegistrationFormField>
-                <RegistrationFormField className="col-span-2" label="주소">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                    <Input
-                      className="h-10 bg-card"
-                      placeholder="주소를 입력해주세요"
-                      value={draft.address}
-                      onValueChange={(address) =>
-                        setDraft((current) => ({ ...current, address }))
-                      }
-                    />
-                    <Button variant="outline" className="h-10 px-3 font-semibold">
-                      주소검색
-                    </Button>
-                  </div>
-                </RegistrationFormField>
-              </div>
-            </RegistrationFormSection>
-
             <RegistrationFormSection title="메모 및 동의">
-              <div className="grid gap-5">
+              <div className="grid gap-6">
                 <RegistrationFormField label="메모">
                   <Textarea
                     className="min-h-[88px] resize-none bg-card"
@@ -1380,66 +2070,75 @@ function NewGuardianDialog({
                     }
                   />
                 </RegistrationFormField>
-                <FieldGroup className="gap-3">
-                  <FormField orientation="horizontal">
-                    <Checkbox
-                      checked={
-                        draft.privacyConsent &&
-                        draft.thirdPartyConsent &&
-                        draft.marketingConsent
-                      }
-                      onCheckedChange={(checked) =>
-                        setDraft((current) => ({
-                          ...current,
-                          privacyConsent: Boolean(checked),
-                          thirdPartyConsent: Boolean(checked),
-                          marketingConsent: Boolean(checked),
-                        }))
-                      }
-                    />
-                    <FieldLabel className="font-semibold">전체동의</FieldLabel>
-                  </FormField>
-                  <div className="grid grid-cols-3 gap-3">
-                    <FormField orientation="horizontal">
-                      <Checkbox
-                        checked={draft.privacyConsent}
-                        onCheckedChange={(privacyConsent) =>
-                          setDraft((current) => ({
-                            ...current,
-                            privacyConsent: Boolean(privacyConsent),
-                          }))
-                        }
-                      />
-                      <FieldLabel>개인정보 수집 동의</FieldLabel>
-                    </FormField>
-                    <FormField orientation="horizontal">
-                      <Checkbox
-                        checked={draft.thirdPartyConsent}
-                        onCheckedChange={(thirdPartyConsent) =>
-                          setDraft((current) => ({
-                            ...current,
-                            thirdPartyConsent: Boolean(thirdPartyConsent),
-                          }))
-                        }
-                      />
-                      <FieldLabel>3자 제공 동의</FieldLabel>
-                    </FormField>
-                    <FormField orientation="horizontal">
-                      <Checkbox
-                        checked={draft.marketingConsent}
-                        onCheckedChange={(marketingConsent) =>
-                          setDraft((current) => ({
-                            ...current,
-                            marketingConsent: Boolean(marketingConsent),
-                          }))
-                        }
-                      />
-                      <FieldLabel>광고 수신 동의</FieldLabel>
-                    </FormField>
-                  </div>
-                </FieldGroup>
-              </div>
-            </RegistrationFormSection>
+	                <div className="rounded-lg border bg-card p-3">
+	                  <div className="flex items-start justify-between gap-3">
+	                    <div>
+	                      <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+	                        전자서명
+	                      </div>
+	                      <div className="mt-1 text-[12px] text-muted-foreground">
+	                        개인정보 수집 동의는 태블릿 서명 완료 후 등록할 수 있습니다.
+	                      </div>
+	                    </div>
+	                    <Badge variant={draft.signatureStatus === "completed" ? "default" : "outline"}>
+	                      {draft.signatureStatus === "completed"
+	                        ? "서명 완료"
+	                        : draft.signatureStatus === "pending"
+	                          ? "서명 대기"
+	                          : "미요청"}
+	                    </Badge>
+	                  </div>
+	                  <div className="mt-3 flex flex-wrap items-center gap-2">
+	                    <Button
+	                      type="button"
+	                      variant="outline"
+	                      size="sm"
+	                      onClick={() =>
+	                        setDraft((current) => ({ ...current, signatureStatus: "pending" }))
+	                      }
+	                    >
+	                      태블릿 서명 요청
+	                    </Button>
+	                    <Button
+	                      type="button"
+	                      variant="secondary"
+	                      size="sm"
+	                      disabled={draft.signatureStatus !== "pending"}
+	                      onClick={() =>
+	                        setDraft((current) => ({
+	                          ...current,
+	                          privacyConsent: true,
+	                          signatureStatus: "completed",
+	                        }))
+	                      }
+	                    >
+	                      서명 완료 처리
+	                    </Button>
+	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+	                      <Checkbox checked={draft.privacyConsent} disabled />
+	                      개인정보 수집 동의
+	                    </label>
+	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+	                      <Checkbox
+	                        checked={draft.marketingConsent}
+	                        onCheckedChange={(marketingConsent) =>
+	                          setDraft((current) => ({
+	                            ...current,
+	                            marketingConsent: Boolean(marketingConsent),
+	                          }))
+	                        }
+	                      />
+	                      마케팅 수신 동의
+	                    </label>
+	                  </div>
+	                  {error && !error.includes("보호자명") ? (
+	                    <div className="mt-3 text-[12px] font-medium text-[var(--clair-color-atomic-red-600)]">
+	                      {error}
+	                    </div>
+	                  ) : null}
+	                </div>
+	              </div>
+	            </RegistrationFormSection>
           </div>
         </ScrollArea>
         <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
@@ -1447,18 +2146,1109 @@ function NewGuardianDialog({
             환자 연결은 보호자 상세에서 후속으로 관리합니다.
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button variant="ghost" className="px-4 font-semibold" onClick={() => close(false)}>
-              취소
-            </Button>
-            <Button className="px-5 font-semibold" onClick={save}>
-              등록
-            </Button>
+	            <Button variant="ghost" className="px-4 font-semibold" onClick={() => close(false)}>
+	              취소
+	            </Button>
+	            <Button className="px-5 font-semibold" disabled={Boolean(duplicateGuardian)} onClick={save}>
+	              등록
+	            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+type RegistrationMode = "existing_guardian_patient" | "new_guardian_patient";
+type RegistrationStep = "confirm" | "guardian" | "guardian_select" | "mode" | "patient";
+
+type GuardianRegistrationDraft = {
+  addressDetail: string;
+  addressPostalCode: string;
+  addressRoad: string;
+  birthDate: string;
+  email: string;
+  marketingConsent: boolean;
+  memo: string;
+  mobilePhone: string;
+  name: string;
+  phone: string;
+  privacyConsent: boolean;
+  signatureStatus: "completed" | "idle" | "pending";
+};
+
+type RegistrationErrors = Partial<Record<string, string>>;
+
+const createGuardianRegistrationDraft = (): GuardianRegistrationDraft => ({
+  addressDetail: "",
+  addressPostalCode: "",
+  addressRoad: "",
+  birthDate: "",
+  email: "",
+  marketingConsent: false,
+  memo: "",
+  mobilePhone: "",
+  name: "",
+  phone: "",
+  privacyConsent: false,
+  signatureStatus: "idle",
+});
+
+const getRegistrationStepBadge = ({
+  mode,
+  step,
+}: {
+  mode: RegistrationMode;
+  step: RegistrationStep;
+}) => {
+  if (step === "guardian") return "1/2 보호자";
+  if (step === "guardian_select") return "1/2 보호자 선택";
+  if (step === "patient") return "2/2 환자";
+  if (step === "confirm") {
+    return mode === "new_guardian_patient" ? "확인" : "2/2 확인";
+  }
+
+  return "";
+};
+
+const isGuardianDraftDirty = (draft: GuardianRegistrationDraft) =>
+  Boolean(
+    draft.addressDetail ||
+      draft.addressPostalCode ||
+      draft.addressRoad ||
+      draft.birthDate ||
+      draft.email ||
+      draft.marketingConsent ||
+      draft.memo ||
+      draft.mobilePhone ||
+      draft.name ||
+      draft.phone ||
+      draft.privacyConsent ||
+      draft.signatureStatus !== "idle"
+  );
+
+const isPatientDraftDirty = (draft: NewPatientDraft) =>
+  Boolean(
+    draft.additionalBreed ||
+      draft.ageDays ||
+      draft.ageMonths ||
+      draft.ageYears ||
+      draft.birthDate ||
+      draft.breed ||
+      draft.color ||
+      draft.estimatedAge ||
+      draft.guardianMobilePhone ||
+      draft.guardianName ||
+      draft.isMixed ||
+      draft.microchipNo ||
+      draft.name ||
+      draft.patientRegistrationNo ||
+      draft.primaryVeterinarianId ||
+      draft.sex !== "unknown" ||
+      draft.species !== "dog" ||
+      draft.specialNote ||
+      draft.weight
+  );
+
+function RegistrationModeCard({
+  checked,
+  description,
+  title,
+  onClick,
+}: {
+  checked: boolean;
+  description: string;
+  title: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
+        checked && "border-[var(--clair-color-label-strong)] bg-[var(--clair-color-atomic-sky-50)]"
+      )}
+      onClick={onClick}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-4 shrink-0 items-center justify-center rounded-full border",
+          checked
+            ? "border-[var(--clair-color-label-strong)]"
+            : "border-[var(--clair-color-atomic-gray-300)]"
+        )}
+      >
+        {checked ? (
+          <span className="size-2 rounded-full bg-[var(--clair-color-label-strong)]" />
+        ) : null}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[15px] font-bold text-[var(--clair-color-label-strong)]">
+          {title}
+        </span>
+        <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
+          {description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function PatientGuardianRegistrationButton({
+  onPatientReady,
+}: {
+  onPatientReady: (patientId: EmrId) => void;
+}) {
+  const addGuardian = usePatientProfileStore((state) => state.addGuardian);
+  const addPatient = usePatientProfileStore((state) => state.addPatient);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const hasDuplicatePatientNameForGuardian = usePatientProfileStore(
+    (state) => state.hasDuplicatePatientNameForGuardian
+  );
+  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const patients = usePatientProfileStore((state) => state.patients);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const [open, setOpen] = useState(false);
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [errors, setErrors] = useState<RegistrationErrors>({});
+  const [guardianDraft, setGuardianDraft] = useState(createGuardianRegistrationDraft);
+  const [guardianQuery, setGuardianQuery] = useState("");
+  const [mode, setMode] = useState<RegistrationMode>("new_guardian_patient");
+  const [patientDraft, setPatientDraft] = useState(() => createNewPatientDraft());
+  const [selectedGuardianId, setSelectedGuardianId] = useState("");
+  const [step, setStep] = useState<RegistrationStep>("mode");
+
+  const selectedGuardian = guardians.find((guardian) => guardian.id === selectedGuardianId);
+  const duplicateGuardian = guardianDraft.mobilePhone
+    ? guardians.find(
+        (guardian) =>
+          normalizeGuardianPhone(guardian.mobilePhone) ===
+          normalizeGuardianPhone(guardianDraft.mobilePhone)
+      )
+    : undefined;
+  const patientGuardianId =
+    mode === "new_guardian_patient" ? "draft-guardian" : selectedGuardianId;
+  const duplicatePatientName =
+    patientGuardianId && patientGuardianId !== "draft-guardian" && patientDraft.name
+      ? hasDuplicatePatientNameForGuardian(patientGuardianId, patientDraft.name)
+      : false;
+  const duplicateMicrochip =
+    patientDraft.microchipNo &&
+    patients.some((patient) => patient.microchipNo === patientDraft.microchipNo.trim());
+  const guardianMatches = useMemo(() => {
+    const query = guardianQuery.trim();
+    const normalizedQuery = normalizeGuardianPhone(query);
+
+    if (!query && !normalizedQuery) return guardians;
+
+    return guardians.filter((guardian) => {
+      const guardianPhone = normalizeGuardianPhone(guardian.mobilePhone);
+
+      return (
+        (query && guardian.name.includes(query)) ||
+        (normalizedQuery && guardianPhone.includes(normalizedQuery))
+      );
+    });
+  }, [guardianQuery, guardians]);
+  const dirty =
+    step !== "mode" ||
+    isGuardianDraftDirty(guardianDraft) ||
+    isPatientDraftDirty(patientDraft) ||
+    Boolean(guardianQuery || selectedGuardianId);
+
+  const reset = () => {
+    setErrors({});
+    setGuardianDraft(createGuardianRegistrationDraft());
+    setGuardianQuery("");
+    setMode("new_guardian_patient");
+    setPatientDraft(createNewPatientDraft());
+    setSelectedGuardianId("");
+    setStep("mode");
+  };
+  const requestClose = () => {
+    if (dirty) {
+      setConfirmCloseOpen(true);
+      return;
+    }
+
+    setOpen(false);
+    reset();
+  };
+  const closeWithoutSaving = () => {
+    setConfirmCloseOpen(false);
+    setOpen(false);
+    reset();
+  };
+  const setOpenSafely = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setOpen(true);
+      return;
+    }
+
+    requestClose();
+  };
+  const validateGuardianStep = () => {
+    const nextErrors: RegistrationErrors = {};
+    const normalizedPhone = normalizeGuardianPhone(guardianDraft.mobilePhone);
+
+    if (!guardianDraft.name.trim()) nextErrors.guardianName = "보호자명은 필수입니다.";
+    if (!guardianDraft.mobilePhone.trim()) {
+      nextErrors.guardianMobilePhone = "보호자 휴대전화는 필수입니다.";
+    } else if (normalizedPhone.length < 10) {
+      nextErrors.guardianMobilePhone = "휴대전화 번호를 10자리 이상 입력해 주세요.";
+    }
+    if (guardianDraft.birthDate && !isValidRegistrationBirthDate(guardianDraft.birthDate)) {
+      nextErrors.guardianBirthDate = "생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요.";
+    }
+    if (duplicateGuardian) nextErrors.guardianMobilePhone = "이미 등록된 보호자입니다.";
+    if (guardianDraft.signatureStatus !== "completed") {
+      nextErrors.privacyConsent = "개인정보 수집 동의가 필요합니다.";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+  const validatePatientStep = () => {
+    const nextErrors: RegistrationErrors = {};
+
+    if (mode === "existing_guardian_patient" && !selectedGuardian) {
+      nextErrors.selectedGuardianId = "기존 보호자를 선택해 주세요.";
+    }
+    if (!patientDraft.name.trim()) nextErrors.patientName = "환자명은 필수입니다.";
+    if (!patientDraft.breed.trim()) nextErrors.breed = "품종은 필수입니다.";
+    if (!patientDraft.birthDate && !patientDraft.ageYears && !patientDraft.ageMonths) {
+      nextErrors.age = "나이 또는 생년월일은 필수입니다.";
+    }
+    if (duplicateMicrochip) nextErrors.microchipNo = "이미 등록된 마이크로칩 번호입니다.";
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+  const getPatientPayload = (guardianId: EmrId) => {
+    const sexPayload = getNewPatientSexPayload(patientDraft.sex);
+    const ageParts = [
+      patientDraft.ageYears ? `${patientDraft.ageYears}년` : "",
+      patientDraft.ageMonths ? `${patientDraft.ageMonths}개월` : "",
+      patientDraft.ageDays ? `${patientDraft.ageDays}일` : "",
+    ].filter(Boolean);
+    const breed = patientDraft.isMixed
+      ? [
+          patientDraft.breed.trim() || getMixBreedSuggestion(patientDraft.species),
+          patientDraft.additionalBreed.trim(),
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : patientDraft.breed;
+
+    return {
+      birthDate: patientDraft.birthDate,
+      breed,
+      estimatedAgeText: ageParts.length
+        ? `${ageParts.join(" ")}${patientDraft.estimatedAge ? " 추정" : ""}`
+        : patientDraft.birthDate
+          ? getAgeTextFromBirthDate(patientDraft.birthDate)
+          : undefined,
+      existingGuardianId: guardianId,
+      guardianMobilePhone:
+        mode === "new_guardian_patient"
+          ? guardianDraft.mobilePhone
+          : selectedGuardian?.mobilePhone,
+      guardianName:
+        mode === "new_guardian_patient"
+          ? guardianDraft.name
+          : selectedGuardian?.name ?? "",
+      microchipNo: patientDraft.microchipNo,
+      name: patientDraft.name,
+      neutered: sexPayload.neutered,
+      sex: sexPayload.sex,
+      species: patientDraft.species,
+      specialNote: patientDraft.specialNote,
+    };
+  };
+  const showSuccessToast = (patientId: EmrId, message: string) => {
+    toast.success(message, {
+      action: {
+        label: "진료 접수",
+        onClick: () => onPatientReady(patientId),
+      },
+      cancel: {
+        label: "환자 상세 보기",
+        onClick: () => setActiveDrawer({ type: "reception-patient", id: patientId }),
+      },
+    });
+  };
+  const commitRegistration = () => {
+    if (!validatePatientStep()) {
+      setStep("patient");
+      return;
+    }
+
+    let guardianId = selectedGuardian?.id;
+
+    if (mode === "new_guardian_patient") {
+      if (!validateGuardianStep()) {
+        setStep("guardian");
+        return;
+      }
+
+      const guardianResult = addGuardian({
+        address: formatKoreanAddress({
+          detail: guardianDraft.addressDetail,
+          postalCode: guardianDraft.addressPostalCode,
+          road: guardianDraft.addressRoad,
+        }),
+        birthDate: guardianDraft.birthDate,
+        email: guardianDraft.email,
+        marketingConsent: guardianDraft.marketingConsent,
+        memo: guardianDraft.memo,
+        mobilePhone: guardianDraft.mobilePhone,
+        name: guardianDraft.name,
+        phone: guardianDraft.phone,
+        privacyConsent: guardianDraft.signatureStatus === "completed",
+      });
+
+      if (guardianResult.error || !guardianResult.guardianId) {
+        toast.error(guardianResult.error ?? "보호자 등록에 실패했습니다.");
+        return;
+      }
+
+      guardianId = guardianResult.guardianId;
+    }
+
+    if (!guardianId) {
+      toast.error("연결할 보호자를 찾을 수 없습니다.");
+      return;
+    }
+
+    const patientResult = addPatient(getPatientPayload(guardianId));
+
+    if (patientResult.error || !patientResult.patientId) {
+      toast.error(patientResult.error ?? "환자 등록에 실패했습니다.");
+      return;
+    }
+
+    setOpen(false);
+    reset();
+    showSuccessToast(
+      patientResult.patientId,
+      mode === "new_guardian_patient"
+        ? "환자/보호자 등록이 완료되었습니다."
+        : "환자 등록이 완료되었습니다."
+    );
+  };
+  const goNextFromMode = () => {
+    setErrors({});
+    setStep(mode === "new_guardian_patient" ? "guardian" : "guardian_select");
+  };
+  const goNextFromGuardianSelect = () => {
+    if (!selectedGuardian) {
+      setErrors({ selectedGuardianId: "기존 보호자를 선택해 주세요." });
+      return;
+    }
+
+    setErrors({});
+    setPatientDraft(
+      createNewPatientDraft({
+        guardianId: selectedGuardian.id,
+        guardianMobilePhone: selectedGuardian.mobilePhone ?? "",
+        guardianName: selectedGuardian.name,
+      })
+    );
+    setStep("patient");
+  };
+  const goNextFromGuardian = () => {
+    if (validateGuardianStep()) {
+      setPatientDraft(
+        createNewPatientDraft({
+          guardianMobilePhone: guardianDraft.mobilePhone,
+          guardianName: guardianDraft.name,
+        })
+      );
+      setStep("patient");
+    }
+  };
+  const goNextFromPatient = () => {
+    if (validatePatientStep()) setStep("confirm");
+  };
+  const selectedGuardianPatientCount = selectedGuardian
+    ? getGuardianPatientCount(selectedGuardian.id, patientGuardians)
+    : 0;
+  const stepBadge = getRegistrationStepBadge({ mode, step });
+
+  return (
+    <>
+      <Button
+        aria-label="환자/보호자 등록"
+        variant="outline"
+        size="sm"
+        className="bg-card px-3 font-semibold"
+        onClick={() => setOpen(true)}
+      >
+        <CdsActionsPlusIcon data-icon="inline-start" />
+        환자/보호자 등록
+      </Button>
+      <Dialog open={open} onOpenChange={setOpenSafely}>
+        <DialogContent className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[680px]">
+          <DialogHeader className="px-8 pb-4 pt-7">
+            <div className="flex min-w-0 items-center gap-2">
+              <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+                {step === "mode"
+                  ? "신규 등록"
+                  : step === "guardian"
+                    ? "신규 보호자 등록"
+                    : step === "guardian_select"
+                      ? "기존 보호자 선택"
+                      : step === "patient"
+                        ? "신규 환자 등록"
+                        : "등록 정보 확인"}
+              </DialogTitle>
+              {stepBadge ? (
+                <Badge variant="secondary" className="h-6 rounded-md px-2 text-[12px] font-semibold">
+                  {stepBadge}
+                </Badge>
+              ) : null}
+            </div>
+            <DialogDescription className="text-[13px] text-muted-foreground">
+              {step === "mode"
+                ? "등록할 케이스를 선택해 주세요."
+                : "입력한 정보는 최종 확인 후 등록됩니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
+            <div className="flex flex-col gap-6 pb-6">
+              {step === "mode" ? (
+                <div className="grid gap-4">
+                  <RegistrationModeCard
+                    checked={mode === "new_guardian_patient"}
+                    title="환자/보호자 모두 신규 등록"
+                    description="처음 내원한 보호자와 동물을 함께 등록합니다."
+                    onClick={() => setMode("new_guardian_patient")}
+                  />
+                  <RegistrationModeCard
+                    checked={mode === "existing_guardian_patient"}
+                    title="기존 보호자에 신규 환자 등록"
+                    description="이미 등록된 보호자에게 새 동물을 연결합니다."
+                    onClick={() => setMode("existing_guardian_patient")}
+                  />
+                </div>
+              ) : null}
+
+              {step === "guardian" ? (
+                <>
+                  <RegistrationFormSection separated={false} title="기본 정보">
+                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
+                      <RegistrationFormField
+                        error={errors.guardianName}
+                        label="이름"
+                        required
+                      >
+                        <Input
+                          aria-label="보호자명"
+                          className="h-10 bg-card"
+                          placeholder="이름을 입력해주세요"
+                          value={guardianDraft.name}
+                          onValueChange={(name) =>
+                            setGuardianDraft((current) => ({ ...current, name }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField error={errors.guardianBirthDate} label="생년월일">
+                        <Input
+                          aria-label="보호자 생년월일"
+                          className="h-10 bg-card"
+                          placeholder="YYYY-MM-DD"
+                          value={guardianDraft.birthDate}
+                          onValueChange={(birthDate) =>
+                            setGuardianDraft((current) => ({ ...current, birthDate }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField
+                        className="col-span-2"
+                        error={errors.guardianMobilePhone}
+                        label="휴대폰 번호"
+                        required
+                      >
+                        <Input
+                          aria-label="보호자 휴대전화"
+                          className="h-10 bg-card"
+                          inputMode="numeric"
+                          placeholder="휴대폰 번호를 입력해주세요"
+                          value={guardianDraft.mobilePhone}
+                          onValueChange={(mobilePhone) =>
+                            setGuardianDraft((current) => ({
+                              ...current,
+                              mobilePhone: formatKoreanPhoneNumber(mobilePhone),
+                            }))
+                          }
+                        />
+                      </RegistrationFormField>
+                    </div>
+                  </RegistrationFormSection>
+                  <RegistrationFormSection title="연락처 및 주소">
+                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
+                      <RegistrationFormField label="추가 연락처">
+                        <Input
+                          className="h-10 bg-card"
+                          inputMode="numeric"
+                          placeholder="010-0000-0000"
+                          value={guardianDraft.phone}
+                          onValueChange={(phone) =>
+                            setGuardianDraft((current) => ({
+                              ...current,
+                              phone: formatKoreanPhoneNumber(phone),
+                            }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField label="이메일">
+                        <Input
+                          className="h-10 bg-card"
+                          placeholder="example@email.com"
+                          value={guardianDraft.email}
+                          onValueChange={(email) =>
+                            setGuardianDraft((current) => ({ ...current, email }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField className="col-span-2" label="주소">
+                        <KoreanAddressFields
+                          detail={guardianDraft.addressDetail}
+                          postalCode={guardianDraft.addressPostalCode}
+                          road={guardianDraft.addressRoad}
+                          onDetailChange={(addressDetail) =>
+                            setGuardianDraft((current) => ({ ...current, addressDetail }))
+                          }
+                          onPostalCodeChange={(addressPostalCode) =>
+                            setGuardianDraft((current) => ({ ...current, addressPostalCode }))
+                          }
+                          onRoadChange={(addressRoad) =>
+                            setGuardianDraft((current) => ({ ...current, addressRoad }))
+                          }
+                        />
+                      </RegistrationFormField>
+                    </div>
+                  </RegistrationFormSection>
+                  <RegistrationFormSection title="메모 및 동의">
+                    <div className="grid gap-6">
+                      <RegistrationFormField label="메모">
+                        <Textarea
+                          className="min-h-[88px] resize-none bg-card"
+                          placeholder="특이사항이나 요청사항을 입력해주세요"
+                          value={guardianDraft.memo}
+                          onChange={(event) =>
+                            setGuardianDraft((current) => ({
+                              ...current,
+                              memo: event.target.value,
+                            }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <div className="rounded-lg border bg-card p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                              전자서명
+                            </div>
+                            <div className="mt-1 text-[12px] text-muted-foreground">
+                              개인정보 수집 동의는 태블릿 서명 완료 후 등록할 수 있습니다.
+                            </div>
+                          </div>
+                          <Badge
+                            variant={
+                              guardianDraft.signatureStatus === "completed"
+                                ? "default"
+                                : "outline"
+                            }
+                          >
+                            {guardianDraft.signatureStatus === "completed"
+                              ? "서명 완료"
+                              : guardianDraft.signatureStatus === "pending"
+                                ? "서명 대기"
+                                : "미요청"}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setGuardianDraft((current) => ({
+                                ...current,
+                                signatureStatus: "pending",
+                              }))
+                            }
+                          >
+                            태블릿 서명 요청
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={guardianDraft.signatureStatus !== "pending"}
+                            onClick={() =>
+                              setGuardianDraft((current) => ({
+                                ...current,
+                                privacyConsent: true,
+                                signatureStatus: "completed",
+                              }))
+                            }
+                          >
+                            서명 완료 처리
+                          </Button>
+                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+                            <Checkbox checked={guardianDraft.privacyConsent} disabled />
+                            개인정보 수집 동의
+                          </label>
+                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+                            <Checkbox
+                              checked={guardianDraft.marketingConsent}
+                              onCheckedChange={(marketingConsent) =>
+                                setGuardianDraft((current) => ({
+                                  ...current,
+                                  marketingConsent: Boolean(marketingConsent),
+                                }))
+                              }
+                            />
+                            마케팅 수신 동의
+                          </label>
+                        </div>
+                        {errors.privacyConsent ? (
+                          <div className="mt-3 text-[12px] font-medium text-[var(--clair-color-atomic-red-600)]">
+                            {errors.privacyConsent}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </RegistrationFormSection>
+                </>
+              ) : null}
+
+              {step === "guardian_select" ? (
+                <RegistrationFormSection separated={false} title="기존 보호자 선택">
+                  <div className="grid gap-3">
+                    <RegistrationFormField error={errors.selectedGuardianId} label="보호자 검색" required>
+                      <div className="relative">
+                        <CdsActionsSearchIcon
+                          aria-hidden="true"
+                          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                        />
+                        <Input
+                          aria-label="기존 보호자 검색"
+                          className="h-10 bg-card pl-9"
+                          placeholder="보호자명 또는 휴대전화 검색"
+                          value={guardianQuery}
+                          onValueChange={setGuardianQuery}
+                        />
+                      </div>
+                    </RegistrationFormField>
+                    <div className="grid gap-2" role="listbox" aria-label="기존 보호자 목록">
+                      {guardianMatches.map((guardian) => (
+                        <button
+                          key={guardian.id}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedGuardianId === guardian.id}
+                          className={cn(
+                            "flex items-start justify-between gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                            selectedGuardianId === guardian.id &&
+                              "border-[var(--clair-color-label-strong)] bg-[var(--clair-color-atomic-sky-50)]"
+                          )}
+                          onClick={() => {
+                            setSelectedGuardianId(guardian.id);
+                            setErrors((current) => ({ ...current, selectedGuardianId: undefined }));
+                          }}
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                              {guardian.name}
+                            </span>
+                            <span className="mt-1 block text-[12px] text-muted-foreground">
+                              {guardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
+                              {getGuardianPatientCount(guardian.id, patientGuardians)}마리
+                            </span>
+                          </span>
+                          <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
+                            {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </RegistrationFormSection>
+              ) : null}
+
+              {step === "patient" ? (
+                <>
+                  {mode === "existing_guardian_patient" && selectedGuardian ? (
+                    <section className="rounded-lg border bg-[var(--clair-color-background-surface)] p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                            연결 보호자
+                          </div>
+                          <div className="mt-1 text-[14px] font-bold text-[var(--clair-color-label-strong)]">
+                            {selectedGuardian.name}
+                          </div>
+                          <div className="mt-1 text-[12px] text-muted-foreground">
+                            {selectedGuardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
+                            {selectedGuardianPatientCount}마리
+                          </div>
+                        </div>
+                        <Badge variant="outline">기존 보호자</Badge>
+                      </div>
+                    </section>
+                  ) : null}
+                  <RegistrationFormSection separated={false} title="동물 정보">
+                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
+                      <RegistrationFormField error={errors.patientName} label="동물 이름" required>
+                        <Input
+                          aria-label="환자명"
+                          className="h-10 bg-card"
+                          placeholder="동물 이름을 입력해주세요"
+                          value={patientDraft.name}
+                          onValueChange={(name) =>
+                            setPatientDraft((current) => ({ ...current, name }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField label="동물 종류" required>
+                        <Select
+                          value={patientDraft.species}
+                          onValueChange={(species) =>
+                            setPatientDraft((current) => {
+                              const nextSpecies = species as Species;
+                              const mixBreed = getMixBreedSuggestion(nextSpecies);
+
+                              return {
+                                ...current,
+                                breed:
+                                  current.isMixed && mixBreed ? mixBreed : current.breed,
+                                species: nextSpecies,
+                              };
+                            })
+                          }
+                        >
+                          <SelectTrigger aria-label="종" className="h-10 w-full bg-card">
+                            <span className="flex flex-1 text-left">
+                              {getNewPatientSpeciesLabel(patientDraft.species)}
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newPatientSpeciesOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </RegistrationFormField>
+                      <RegistrationFormField
+                        error={errors.breed}
+                        label="주 품종"
+                        required
+                        actions={
+                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                            <Switch
+                              checked={patientDraft.isMixed}
+                              onCheckedChange={(isMixed) =>
+                                setPatientDraft((current) => ({
+                                  ...current,
+                                  breed: isMixed
+                                    ? getMixBreedSuggestion(current.species) || current.breed
+                                    : current.breed,
+                                  isMixed,
+                                }))
+                              }
+                            />
+                            믹스
+                          </label>
+                        }
+                      >
+                        <BreedAutocomplete
+                          ariaLabel="품종"
+                          className="h-10 bg-card"
+                          placeholder="주 품종을 선택해주세요"
+                          species={patientDraft.species}
+                          value={patientDraft.breed}
+                          onValueChange={(breed) =>
+                            setPatientDraft((current) => ({ ...current, breed }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField label="성별">
+                        <Select
+                          value={patientDraft.sex}
+                          onValueChange={(sex) =>
+                            setPatientDraft((current) => ({
+                              ...current,
+                              sex: sex as NewPatientSexValue,
+                            }))
+                          }
+                        >
+                          <SelectTrigger aria-label="성별" className="h-10 w-full bg-card">
+                            <span className="flex flex-1 text-left">
+                              {getNewPatientSexLabel(patientDraft.sex)}
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newPatientSexOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </RegistrationFormField>
+                      {patientDraft.isMixed ? (
+                        <RegistrationFormField className="col-span-2" label="추가 품종">
+                          <BreedAutocomplete
+                            ariaLabel="추가 품종"
+                            className="h-10 bg-card"
+                            placeholder="믹스의 경우 추가 품종을 선택해주세요"
+                            species={patientDraft.species}
+                            value={patientDraft.additionalBreed}
+                            onValueChange={(additionalBreed) =>
+                              setPatientDraft((current) => ({ ...current, additionalBreed }))
+                            }
+                          />
+                        </RegistrationFormField>
+                      ) : null}
+                    </div>
+                  </RegistrationFormSection>
+                  <RegistrationFormSection title="추가 정보">
+                    <div className="grid grid-cols-2 gap-x-7 gap-y-5">
+                      <RegistrationFormField error={errors.age} label="동물 나이" required>
+                        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                          <Input
+                            aria-label="나이 년"
+                            className="h-10 bg-card"
+                            inputMode="numeric"
+                            placeholder="년"
+                            value={patientDraft.ageYears}
+                            onValueChange={(ageYears) =>
+                              setPatientDraft((current) => ({
+                                ...current,
+                                ageYears,
+                                birthDate: getBirthDateFromAge({
+                                  months: current.ageMonths,
+                                  years: ageYears,
+                                }),
+                              }))
+                            }
+                          />
+                          <Input
+                            aria-label="나이 개월"
+                            className="h-10 bg-card"
+                            inputMode="numeric"
+                            placeholder="개월"
+                            value={patientDraft.ageMonths}
+                            onValueChange={(ageMonths) =>
+                              setPatientDraft((current) => ({
+                                ...current,
+                                ageMonths,
+                                birthDate: getBirthDateFromAge({
+                                  months: ageMonths,
+                                  years: current.ageYears,
+                                }),
+                              }))
+                            }
+                          />
+                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                            <Switch
+                              size="sm"
+                              checked={patientDraft.estimatedAge}
+                              onCheckedChange={(estimatedAge) =>
+                                setPatientDraft((current) => ({ ...current, estimatedAge }))
+                              }
+                            />
+                            추정
+                          </label>
+                        </div>
+                      </RegistrationFormField>
+                      <RegistrationFormField label="생년월일">
+                        <Input
+                          aria-label="생년월일"
+                          className="h-10 bg-card"
+                          placeholder="YYYY-MM-DD"
+                          value={patientDraft.birthDate}
+                          onValueChange={(birthDate) =>
+                            setPatientDraft((current) => ({
+                              ...current,
+                              ageMonths: "",
+                              ageYears: "",
+                              birthDate,
+                            }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField
+                        error={errors.microchipNo}
+                        label="마이크로칩"
+                      >
+                        <Input
+                          aria-label="마이크로칩"
+                          className="h-10 bg-card"
+                          inputMode="numeric"
+                          placeholder="15자리 마이크로칩 번호"
+                          value={patientDraft.microchipNo}
+                          onValueChange={(microchipNo) =>
+                            setPatientDraft((current) => ({ ...current, microchipNo }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField className="col-span-2" label="메모">
+                        <Textarea
+                          className="min-h-[88px] resize-none bg-card"
+                          placeholder="특이사항이나 요청사항을 입력해주세요"
+                          value={patientDraft.specialNote}
+                          onChange={(event) =>
+                            setPatientDraft((current) => ({
+                              ...current,
+                              specialNote: event.target.value,
+                            }))
+                          }
+                        />
+                      </RegistrationFormField>
+                    </div>
+                    {duplicatePatientName ? (
+                      <div className="rounded-lg border border-[var(--clair-color-atomic-yellow-200)] bg-[var(--clair-color-atomic-yellow-50)] p-3 text-[12px] font-medium text-[var(--clair-color-atomic-yellow-800)]">
+                        동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
+                      </div>
+                    ) : null}
+                  </RegistrationFormSection>
+                </>
+              ) : null}
+
+              {step === "confirm" ? (
+                <div className="grid gap-3">
+                  <section className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]">
+                      <UserIcon className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="text-[13px] font-semibold text-muted-foreground">보호자</span>
+                        <span className="truncate text-[16px] font-bold text-[var(--clair-color-label-strong)]">
+                          {mode === "new_guardian_patient"
+                            ? guardianDraft.name
+                            : selectedGuardian?.name}
+                        </span>
+                      </div>
+                      <div className="mt-1 truncate text-[12px] text-muted-foreground">
+                        {[
+                          mode === "new_guardian_patient"
+                            ? guardianDraft.mobilePhone
+                            : selectedGuardian?.mobilePhone ?? "연락처 미입력",
+                          mode === "new_guardian_patient"
+                            ? guardianDraft.birthDate || "생년월일 미입력"
+                            : selectedGuardianPatientCount
+                              ? `연결 환자 ${selectedGuardianPatientCount}마리`
+                              : "연결 환자 없음",
+                        ].join(" · ")}
+                      </div>
+                    </div>
+                  </section>
+                  <section className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]">
+                      <BoneIcon className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="text-[13px] font-semibold text-muted-foreground">환자</span>
+                        <span className="truncate text-[16px] font-bold text-[var(--clair-color-label-strong)]">
+                          {patientDraft.name}
+                        </span>
+                      </div>
+                      <div className="mt-1 truncate text-[12px] text-muted-foreground">
+                        {[
+                          getNewPatientSpeciesLabel(patientDraft.species),
+                          patientDraft.breed || "품종 미입력",
+                          patientDraft.birthDate
+                            ? getAgeTextFromBirthDate(patientDraft.birthDate)
+                            : [
+                                patientDraft.ageYears && `${patientDraft.ageYears}년`,
+                                patientDraft.ageMonths && `${patientDraft.ageMonths}개월`,
+                              ]
+                                .filter(Boolean)
+                                .join(" "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    </div>
+                  </section>
+                  <div className="rounded-lg border border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] p-3 text-[12px] font-medium text-[var(--clair-color-primary-normal)]">
+                    등록을 누르면 위 정보가 현재 session 데이터에 저장됩니다.
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+            <Button variant="ghost" className="px-4 font-semibold" onClick={requestClose}>
+              취소
+            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              {step !== "mode" ? (
+                <Button
+                  variant="outline"
+                  className="px-4 font-semibold"
+                  onClick={() => {
+                    setErrors({});
+                    if (step === "guardian") setStep("mode");
+                    if (step === "guardian_select") setStep("mode");
+                    if (step === "patient") {
+                      setStep(mode === "new_guardian_patient" ? "guardian" : "guardian_select");
+                    }
+                    if (step === "confirm") setStep("patient");
+                  }}
+                >
+                  이전
+                </Button>
+              ) : null}
+              <Button
+                className="px-5 font-semibold"
+                onClick={() => {
+                  if (step === "mode") goNextFromMode();
+                  if (step === "guardian") goNextFromGuardian();
+                  if (step === "guardian_select") goNextFromGuardianSelect();
+                  if (step === "patient") goNextFromPatient();
+                  if (step === "confirm") commitRegistration();
+                }}
+              >
+                {step === "confirm" ? "등록" : "다음"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+        <DialogContent className="p-0 sm:max-w-[420px]">
+          <DialogHeader className="px-6 pb-3 pt-6">
+            <DialogTitle className="text-[18px] font-bold">
+              입력을 취소할까요?
+            </DialogTitle>
+            <DialogDescription>
+              작성 중인 내용은 저장되지 않습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t px-6 py-4">
+            <Button variant="outline" onClick={() => setConfirmCloseOpen(false)}>
+              계속 작성
+            </Button>
+            <Button onClick={closeWithoutSaving}>취소하고 나가기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export const NewUnifiedRegistrationButton = PatientGuardianRegistrationButton;
 
 export function NewGuardianButton({
   label = "보호자 등록",
