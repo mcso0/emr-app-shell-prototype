@@ -42,4 +42,24 @@ updated: "2026-05-05"
 
 ## Handoff Notes
 
-Implemented. Preserve 영상검사 behavior. Treat equipment receipt actions as UI placeholders only. The lab receipt panel separates current-order linked results from all hospital equipment results and shows a confirm dialog before mock result paste. The result table now uses a compact normal-range bar instead of previous/equipment/memo columns, and lab attachments include add control plus PDF/image examples.
+Implemented. Preserve 영상검사 behavior. Treat equipment receipt actions as UI placeholders only. The lab receipt panel focuses the current-order linked result and shows a confirm dialog before mock result paste. The result table now reuses the shared `EmrOrderGroupSection` shell, follows the dispensing/treatment table density, removes the separate hematology subgroup row, and uses a compact value-positioned normal-range chart plus color-coded judgment badges instead of previous/equipment/memo columns. Lab attachments include add control plus PDF/image examples.
+
+2026-05-05 follow-up: the lab side panel title is `임상병리검사`, reuses the shared `EmrDateNavigator` date picker pattern below the title, and the queue can switch between `오더별` and `차트별`. `오더별` preserves the existing card list; `차트별` groups lab result work items by encounter so a patient chart with multiple clinical pathology orders appears as one chart card with order count, status, abnormal count, and latest time.
+
+2026-05-05 follow-up: the lab receipt right panel now reuses the shared `EmrDateNavigator` date picker pattern and list header actions from the order queue side panel without extra dividers. Receipt cards behave as Figma-aligned accordions and show a compact result preview table before mock paste actions. The receipt filter shortcut group was removed.
+
+2026-05-05 follow-up: lab queue status groups now match the dispensing/treatment side panel collapse control and motion. The equipment receipt list header label is `검사 결과`, and receipt preview accordions animate open/closed with the same motion pattern.
+
+2026-05-05 follow-up: the lab result paste confirmation now reuses the shared `EmrConfirmDialogContent` small confirm modal pattern extracted from the reception registration cancel confirmation.
+
+2026-05-05 follow-up: extracted the side-panel status group header, accent bar, count, chevron rotation, and height/opacity collapse motion into shared `EmrSidePanelCollapsibleGroup`. The dispensing/treatment `EmrOrderQueueSidePanel` and lab order queue status groups now use the same scaffold while keeping their domain-specific card rows.
+
+2026-05-05 follow-up: lab result inputs now derive the row judgment and normal-range marker from the current typed value, so editing a result immediately updates the color-coded badge and animates the marker to the matching position.
+
+2026-05-05 follow-up: lab result judgment rows now show the assigned staff next to the judgment badge. The result document header also mirrors the dispensing/treatment local assignment flow: `담당하기` assigns the current lab staff and changes the action to `검사중`, with completion/cancel options in the split dropdown.
+
+2026-05-05 follow-up: the lab 검사이력 content aside history groups now use the same height/opacity/y collapse motion and chevron rotation timing as the dispensing/treatment content-side history groups.
+
+2026-05-05 follow-up: collapsed lab equipment receipt cards now use balanced vertical padding while preserving the tighter expanded-header spacing above the preview content.
+
+2026-05-05 follow-up: lab/imaging short date-time display now uses `yy.mm.dd hh:mm` formatting across request, history, receipt, and imaging detail timestamps.

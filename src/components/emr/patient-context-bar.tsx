@@ -112,6 +112,7 @@ export function EmrPatientContextBar({
       behavior: "smooth",
     });
   }, []);
+  const shouldShowRightPanelToggle = Boolean(onToggleRightPanel);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -221,36 +222,40 @@ export function EmrPatientContextBar({
               <CdsNavigationChevronRightIcon />
             </PatientContextControlButton>
           </div>
-          <div className="h-[18px] w-px shrink-0 bg-border" />
-          {rightPanelToggleLabel ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
-              aria-label={`${rightPanelToggleLabel} ${rightPanelOpen ? "접기" : "열기"}`}
-              disabled={rightPanelDisabled}
-              onClick={onToggleRightPanel}
-            >
-              {rightPanelToggleLabel}
-              {rightPanelBadgeCount ? (
-                <span
-                  className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--clair-color-atomic-blue-500)] px-1 text-[10px] font-semibold leading-none text-white"
-                  aria-label={`새 장비결과 ${rightPanelBadgeCount}건`}
+          {shouldShowRightPanelToggle ? (
+            <>
+              <div className="h-[18px] w-px shrink-0 bg-border" />
+              {rightPanelToggleLabel ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
+                  aria-label={`${rightPanelToggleLabel} ${rightPanelOpen ? "접기" : "열기"}`}
+                  disabled={rightPanelDisabled}
+                  onClick={onToggleRightPanel}
                 >
-                  {rightPanelBadgeCount}
-                </span>
-              ) : null}
-            </Button>
-          ) : (
-            <PatientContextControlButton
-              aria-label={rightPanelOpen ? "환자 사이드 패널 접기" : "환자 사이드 패널 열기"}
-              disabled={rightPanelDisabled}
-              onClick={onToggleRightPanel}
-            >
-              <CdsFilesMenuIcon />
-            </PatientContextControlButton>
-          )}
+                  {rightPanelToggleLabel}
+                  {rightPanelBadgeCount ? (
+                    <span
+                      className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--clair-color-atomic-blue-500)] px-1 text-[10px] font-semibold leading-none text-white"
+                      aria-label={`새 장비결과 ${rightPanelBadgeCount}건`}
+                    >
+                      {rightPanelBadgeCount}
+                    </span>
+                  ) : null}
+                </Button>
+              ) : (
+                <PatientContextControlButton
+                  aria-label={rightPanelOpen ? "환자 사이드 패널 접기" : "환자 사이드 패널 열기"}
+                  disabled={rightPanelDisabled}
+                  onClick={onToggleRightPanel}
+                >
+                  <CdsFilesMenuIcon />
+                </PatientContextControlButton>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
     </div>

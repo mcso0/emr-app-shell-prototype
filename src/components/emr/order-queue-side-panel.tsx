@@ -1,8 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { ChevronDownIcon, ClockIcon } from "@/components/icons";
+import { ClockIcon } from "@/components/icons";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -22,6 +21,7 @@ import {
   EmrSidePanelMetaBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
+import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type {
   OrderQueueItem,
@@ -56,8 +56,6 @@ const orderQueueFilterItems = [
 ];
 
 const fallbackStatusColorToken = "--clair-color-atomic-gray-400";
-const ORDER_QUEUE_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
-const ORDER_QUEUE_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
 
 const createFallbackStatus = (statusId: string, index: number): OrderQueueStatusDefinition => ({
   id: statusId,
@@ -202,79 +200,25 @@ function OrderQueueGroup({
   status: OrderQueueStatusDefinition;
   statuses: OrderQueueStatusDefinition[];
 }) {
-  const reduceMotion = useReducedMotion();
-  const contentTransition = reduceMotion
-    ? { duration: 0 }
-    : {
-        height: { duration: 0.24, ease: ORDER_QUEUE_GROUP_EASE },
-        opacity: { duration: 0.14, ease: "easeOut" },
-        y: { duration: 0.2, ease: ORDER_QUEUE_GROUP_EASE },
-      };
-  const contentExitTransition = reduceMotion
-    ? { duration: 0 }
-    : {
-        height: { duration: 0.18, ease: ORDER_QUEUE_GROUP_EXIT_EASE },
-        opacity: { duration: 0.12, ease: "easeIn" },
-        y: { duration: 0.16, ease: ORDER_QUEUE_GROUP_EXIT_EASE },
-      };
-
   return (
-    <section className="flex flex-col gap-1" data-testid={`order-queue-status-${status.id}`}>
-      <button
-        type="button"
-        className="flex h-8 w-full items-center gap-3 rounded-[var(--clair-radius-atomic-6)] p-1 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-8)] focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-expanded={!collapsed}
-        aria-label={`${status.label} ${collapsed ? "펼치기" : "접기"}`}
-        onClick={onToggle}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span
-            className="h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)]"
-            style={{ backgroundColor: `var(${status.colorToken})` }}
-            aria-hidden="true"
-          />
-          <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px]">
-            <span className="truncate text-[var(--clair-color-atomic-gray-600)]">
-              {status.label}
-            </span>
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">
-              {items.length}
-            </span>
-          </span>
-        </div>
-        <motion.span
-          className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1"
-          animate={{ rotate: collapsed ? 180 : 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: ORDER_QUEUE_GROUP_EASE }}
-        >
-          <ChevronDownIcon
-            className="size-4 shrink-0 text-muted-foreground"
-            aria-hidden="true"
-          />
-        </motion.span>
-      </button>
-      <AnimatePresence initial={false}>
-        {collapsed ? null : (
-          <motion.div
-            key={`${status.id}-items`}
-            className="flex flex-col gap-1 overflow-hidden"
-            initial={{ height: 0, opacity: 0, y: -4 }}
-            animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
-            exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
-          >
-            {items.map((item) => (
-              <OrderQueueCard
-                key={item.id}
-                item={item}
-                onSelect={() => onSelectItem?.(item.id)}
-                selected={selectedItemId === item.id}
-                statusLabel={getStatusLabel(item.statusId, statuses)}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
+    <EmrSidePanelCollapsibleGroup
+      collapsed={collapsed}
+      count={items.length}
+      dataTestId={`order-queue-status-${status.id}`}
+      indicatorColorToken={status.colorToken}
+      label={status.label}
+      onToggle={onToggle}
+    >
+      {items.map((item) => (
+        <OrderQueueCard
+          key={item.id}
+          item={item}
+          onSelect={() => onSelectItem?.(item.id)}
+          selected={selectedItemId === item.id}
+          statusLabel={getStatusLabel(item.statusId, statuses)}
+        />
+      ))}
+    </EmrSidePanelCollapsibleGroup>
   );
 }
 

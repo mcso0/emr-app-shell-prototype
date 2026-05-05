@@ -1,7 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
+
+async function expectTopEdgeInViewport(page: Page, locator: Locator) {
+  const box = await locator.boundingBox();
+  const viewportHeight = page.viewportSize()?.height ?? (await page.evaluate(() => window.innerHeight));
+
+  expect(box).not.toBeNull();
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y).toBeLessThan(viewportHeight);
+}
 
 test("chart workspace renders queue, history, SOAP, assessment, and orders", async ({ page }) => {
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history&right=open");
@@ -12,13 +21,15 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("담당 수의사")).toBeVisible();
   await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
   await expect(page.getByText("소화기 SOAP")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "진단명", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /진단명/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "진단 이력" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "처방/오더", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /처방\/오더/ })).toBeVisible();
   await expect(page.getByText("급성 위장관염 의심", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("항구토제 세트")).toBeVisible();
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
-  await page.getByRole("button", { name: "첨부", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "오더 전체 선택" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" })).not.toBeChecked();
+  await page.getByRole("button", { name: "소화기 SOAP 첨부 추가" }).click();
   await expect(page.getByText("1개").first()).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
@@ -31,6 +42,90 @@ test("chart diagnosis comment and plan are editable text areas", async ({ page }
 
   await expect(page.getByLabel("진단 코멘트")).toHaveValue("보호자에게 탈수 징후 설명 완료.");
   await expect(page.getByLabel("Plan")).toHaveValue("수액 후 24시간 식욕과 구토 횟수 확인.");
+});
+
+test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const addSoapButton = page.getByRole("button", { name: "SOAP 추가", exact: true });
+
+  for (let count = 0; count < 4; count += 1) {
+    await addSoapButton.click();
+  }
+
+  await expect(page.getByText("추가 계통 SOAP 4")).toBeVisible();
+  await expectTopEdgeInViewport(page, page.getByRole("heading", { name: /처방\/오더/ }));
+  await expectTopEdgeInViewport(page, page.getByRole("button", { name: "Order 확정" }));
+});
+
+test("chart grab divider resizes the SOAP and order areas", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const divider = page.getByRole("separator", { name: "진료 기록과 처방/오더 영역 높이 조절" });
+  const orderHeading = page.getByRole("heading", { name: /처방\/오더/ });
+
+  await expect(divider).toBeVisible();
+  await expect(orderHeading).toBeVisible();
+
+  const beforeBox = await orderHeading.boundingBox();
+
+  await divider.press("ArrowDown");
+  await divider.press("ArrowDown");
+
+  const afterBox = await orderHeading.boundingBox();
+
+  expect(beforeBox).not.toBeNull();
+  expect(afterBox).not.toBeNull();
+  expect(afterBox!.y).toBeGreaterThan(beforeBox!.y);
+});
+
+test("chart grab divider stops resizing when pointer focus is lost", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const divider = page.getByRole("separator", { name: "진료 기록과 처방/오더 영역 높이 조절" });
+
+  await expect(divider).toBeVisible();
+
+  const dividerBox = await divider.boundingBox();
+
+  expect(dividerBox).not.toBeNull();
+
+  const pointerX = dividerBox!.x + dividerBox!.width / 2;
+  const pointerY = dividerBox!.y + dividerBox!.height / 2;
+
+  await page.mouse.move(pointerX, pointerY);
+  await page.mouse.down();
+  await page.mouse.move(pointerX, pointerY + 80);
+
+  const valueAfterDrag = await divider.getAttribute("aria-valuenow");
+
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await page.mouse.move(pointerX, pointerY - 120);
+  await page.mouse.up();
+
+  await expect(divider).toHaveAttribute("aria-valuenow", valueAfterDrag ?? "");
+});
+
+test("chart order checkboxes update the selected order total", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  await expect(page.getByText("선택 오더 0건")).toBeVisible();
+  await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
+
+  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+
+  await expect(page.getByText("선택 오더 1건")).toBeVisible();
+  await expect(page.getByText("선택 오더 합계: 4,500")).toBeVisible();
+
+  const selectAllOrders = page.getByRole("checkbox", { name: "오더 전체 선택" });
+
+  await selectAllOrders.check();
+  await expect(page.getByText("선택 오더 4건")).toBeVisible();
+
+  await selectAllOrders.uncheck();
+
+  await expect(page.getByText("선택 오더 0건")).toBeVisible();
+  await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
 });
 
 test("chart opens the Kong scenario as one SOAP, assessment, and order flow", async ({ page }) => {

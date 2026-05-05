@@ -2,9 +2,11 @@
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
+  CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsFilesDocumentAltFillIcon,
@@ -14,6 +16,7 @@ import {
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
+  CheckIcon,
   ChevronDownIcon,
   ClockIcon,
   DownloadIcon,
@@ -23,7 +26,9 @@ import {
   EmrInstructionHeaderStack,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
+import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
+  EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrListItem,
@@ -34,6 +39,11 @@ import {
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import {
+  EMR_SIDE_PANEL_COLLAPSE_EASE,
+  EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE,
+  EmrSidePanelCollapsibleGroup,
+} from "@/components/emr/side-panel-collapsible-group";
+import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
   EmrSidePanelMetaBadge,
@@ -41,16 +51,15 @@ import {
 } from "@/components/emr/side-panel-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -96,7 +105,7 @@ import type {
 } from "@/types/emr-domain";
 
 const formatShortDateTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
+  dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
 
 const formatFileSize = (bytes?: number) => {
   if (!bytes) return "-";
@@ -106,11 +115,29 @@ const formatFileSize = (bytes?: number) => {
 };
 
 const getVisitContext = (encounter: Encounter) => encounter.chiefComplaint ?? encounter.visitPurpose;
+const getReceptionTypeLabel = (encounter: Encounter) => encounter.appointmentId ? "예약" : "외래";
 
 const getActionableLabRows = (result: LabResult) =>
   result.rows.filter((row) => row.judgment !== "normal" && row.judgment !== "not_judged");
 
 type LabResultRow = LabResult["rows"][number];
+type LabJudgment = LabResultRow["judgment"];
+type LabAssignmentStatus = "requested" | "in_progress" | "completed";
+type LabHistoryGroup = {
+  count: number;
+  date: string;
+  items: Array<{
+    description: string;
+    title: string;
+  }>;
+};
+
+const currentLabAssignee = {
+  id: "user-tech-hayun",
+  name: getStaffName("user-tech-hayun") ?? "송하윤",
+};
+const LAB_HISTORY_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
+const LAB_HISTORY_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
 
 const parseReferenceRange = (referenceRange?: string) => {
   if (!referenceRange) return null;
@@ -126,37 +153,77 @@ const parseReferenceRange = (referenceRange?: string) => {
   return { min, max };
 };
 
-const getRangeMarkerPercent = (row: LabResultRow) => {
+const getRangeScale = (row: LabResultRow) => {
   const range = parseReferenceRange(row.referenceRange);
   const value = Number(row.value);
 
-  if (!range || !Number.isFinite(value)) return 50;
+  if (!range || !Number.isFinite(value)) {
+    return {
+      lowerStart: 0,
+      normalStart: 28,
+      normalEnd: 72,
+      upperEnd: 100,
+      valuePercent: 50,
+    };
+  }
 
   const span = range.max - range.min;
   const lowerBound = range.min - span * 0.35;
   const upperBound = range.max + span * 0.35;
-  const rawPercent = ((value - lowerBound) / (upperBound - lowerBound)) * 100;
+  const total = upperBound - lowerBound;
+  const toPercent = (numericValue: number) =>
+    Math.min(96, Math.max(4, ((numericValue - lowerBound) / total) * 100));
 
-  return Math.min(96, Math.max(4, rawPercent));
+  return {
+    lowerStart: 4,
+    normalStart: toPercent(range.min),
+    normalEnd: toPercent(range.max),
+    upperEnd: 96,
+    valuePercent: toPercent(value),
+  };
+};
+
+const getDerivedLabJudgment = (row: LabResultRow, value: string): LabJudgment => {
+  const range = parseReferenceRange(row.referenceRange);
+  const numericValue = Number(value);
+
+  if (!range || !Number.isFinite(numericValue)) return "not_judged";
+  if (numericValue < range.min) return "low";
+  if (numericValue > range.max) return "high";
+
+  return "normal";
 };
 
 const rangeStateByJudgment: Partial<Record<LabResultRow["judgment"], { label: string; markerClassName: string }>> = {
   critical: {
     label: "초과",
-    markerClassName: "border-[var(--clair-color-atomic-red-500)] bg-[var(--clair-color-atomic-red-500)]",
+    markerClassName: "bg-[var(--clair-color-atomic-red-500)] fill-[var(--clair-color-atomic-red-500)]",
   },
   high: {
     label: "초과",
-    markerClassName: "border-[var(--clair-color-atomic-orange-500)] bg-[var(--clair-color-atomic-orange-500)]",
+    markerClassName: "bg-[var(--clair-color-atomic-orange-500)] fill-[var(--clair-color-atomic-orange-500)]",
   },
   low: {
     label: "미달",
-    markerClassName: "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-500)]",
+    markerClassName: "bg-[var(--clair-color-atomic-blue-500)] fill-[var(--clair-color-atomic-blue-500)]",
   },
   normal: {
     label: "정상",
-    markerClassName: "border-[var(--clair-color-atomic-green-500)] bg-[var(--clair-color-atomic-green-500)]",
+    markerClassName: "bg-[var(--clair-color-atomic-green-500)] fill-[var(--clair-color-atomic-green-500)]",
   },
+};
+
+const judgmentBadgeClassName: Record<LabResultRow["judgment"], string> = {
+  critical:
+    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-700)]",
+  high:
+    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-700)]",
+  low:
+    "border-[var(--clair-color-atomic-blue-200)] bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]",
+  normal:
+    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+  not_judged:
+    "border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-600)]",
 };
 
 const labStatusOrder: LabResult["status"][] = ["pending", "received", "entered", "completed", "reviewed"];
@@ -170,7 +237,7 @@ const labStatusGroupLabel: Record<LabResult["status"], string> = {
 };
 
 type LabResultTab = "all" | "cbc" | "chemistry";
-type LabReceiptView = "linked" | "all";
+type LabQueueView = "order" | "chart";
 
 const labResultTabItems = [
   { value: "all" as const, label: "전체" },
@@ -178,9 +245,9 @@ const labResultTabItems = [
   { value: "chemistry" as const, label: "혈청화학" },
 ];
 
-const labReceiptViewItems = [
-  { value: "linked" as const, label: "오더 연결" },
-  { value: "all" as const, label: "전체 장비결과" },
+const labQueueViewItems = [
+  { value: "order" as const, label: "오더별" },
+  { value: "chart" as const, label: "차트별" },
 ];
 
 const fallbackLabHistoryGroups = [
@@ -244,7 +311,7 @@ function getLabDetailFromSearchParams(
   };
 }
 
-function getLabHistoryGroups(detail: LabDetail) {
+function getLabHistoryGroups(detail: LabDetail): LabHistoryGroup[] {
   const currentDate = formatShortDateTime(detail.result.enteredAt ?? detail.result.receivedAt)
     .slice(0, 8)
     .trim();
@@ -277,6 +344,82 @@ function QueueActions() {
   );
 }
 
+function LabQueueViewTabs({
+  onValueChange,
+  value,
+}: {
+  onValueChange: (value: LabQueueView) => void;
+  value: LabQueueView;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="임상병리검사 목록 보기"
+      className="grid grid-cols-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] p-0.5"
+    >
+      {labQueueViewItems.map((item) => {
+        const selected = item.value === value;
+
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            className={cn(
+              "h-7 min-w-12 rounded-[6px] px-2 text-[12px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              selected
+                ? "bg-card text-[var(--clair-color-atomic-gray-900)] shadow-xs"
+                : "text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-900)]"
+            )}
+            onClick={() => onValueChange(item.value)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function LabQueueGroup({
+  collapsed,
+  items,
+  onSelectItem,
+  onToggle,
+  selectedLabResultId,
+  status,
+}: {
+  collapsed: boolean;
+  items: LabWorkItem[];
+  onSelectItem: (itemId: string) => void;
+  onToggle: () => void;
+  selectedLabResultId?: string;
+  status: LabResult["status"];
+}) {
+  const label = labStatusGroupLabel[status];
+
+  return (
+    <EmrSidePanelCollapsibleGroup
+      collapsed={collapsed}
+      count={items.length}
+      dataTestId={`lab-queue-status-${status}`}
+      indicatorClassName="bg-[var(--clair-color-atomic-orange-400)]"
+      label={label}
+      onToggle={onToggle}
+    >
+      {items.map((item) => (
+        <LabQueueItem
+          key={item.result.id}
+          item={item}
+          selected={item.result.id === selectedLabResultId}
+          onSelect={() => onSelectItem(item.result.id)}
+        />
+      ))}
+    </EmrSidePanelCollapsibleGroup>
+  );
+}
+
 function LabQueueItem({
   item,
   selected,
@@ -287,6 +430,7 @@ function LabQueueItem({
   selected: boolean;
 }) {
   const statusLabel = getStatusLabel("labResult", item.result.status);
+  const receptionTypeLabel = getReceptionTypeLabel(item.encounter);
 
   return (
     <div data-testid={`lab-queue-item-${item.result.id}`}>
@@ -300,7 +444,7 @@ function LabQueueItem({
             <span className="truncate">{item.patient.name}</span>
             <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
             <span className="truncate">{item.primaryGuardian?.name ?? "보호자 미지정"}</span>
-            <EmrSidePanelTypeBadge label={statusLabel} />
+            <EmrSidePanelTypeBadge label={receptionTypeLabel} />
           </div>
           <EmrSidePanelCardAction
             ariaLabel={`${item.patient.name} ${item.result.resultName} 더보기`}
@@ -308,8 +452,6 @@ function LabQueueItem({
           />
         </div>
         <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
-          <span className="shrink-0 truncate">검사</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? item.result.resultName}</span>
         </div>
         <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
@@ -322,6 +464,108 @@ function LabQueueItem({
             <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
             <span>{formatShortDateTime(item.result.receivedAt ?? item.result.collectedAt).slice(9)}</span>
             <span>{statusLabel}</span>
+          </span>
+        </div>
+      </EmrSidePanelCard>
+    </div>
+  );
+}
+
+type LabChartGroup = {
+  encounter: Encounter;
+  items: LabWorkItem[];
+  patient: Patient;
+  primaryGuardianName?: string;
+};
+
+function getLabChartGroups(items: LabWorkItem[]) {
+  const groupsByEncounter = new Map<string, LabChartGroup>();
+
+  items.forEach((item) => {
+    const group = groupsByEncounter.get(item.encounter.id);
+
+    if (group) {
+      group.items.push(item);
+      return;
+    }
+
+    groupsByEncounter.set(item.encounter.id, {
+      encounter: item.encounter,
+      items: [item],
+      patient: item.patient,
+      primaryGuardianName: item.primaryGuardian?.name,
+    });
+  });
+
+  return Array.from(groupsByEncounter.values()).sort((a, b) => {
+    const aTime = a.items[0]?.result.receivedAt ?? a.items[0]?.result.collectedAt ?? "";
+    const bTime = b.items[0]?.result.receivedAt ?? b.items[0]?.result.collectedAt ?? "";
+
+    return bTime.localeCompare(aTime);
+  });
+}
+
+function LabChartQueueItem({
+  group,
+  onSelect,
+  selected,
+}: {
+  group: LabChartGroup;
+  onSelect: () => void;
+  selected: boolean;
+}) {
+  const latestItem = group.items[0];
+  const orderNames = group.items
+    .map((item) => item.order?.displayName ?? item.result.resultName)
+    .join(", ");
+  const abnormalCount = group.items.reduce(
+    (total, item) => total + getActionableLabRows(item.result).length,
+    0
+  );
+  const statusSummary = Array.from(
+    new Set(group.items.map((item) => getStatusLabel("labResult", item.result.status)))
+  ).join("/");
+
+  return (
+    <div data-testid={`lab-chart-group-${group.encounter.id}`}>
+      <EmrSidePanelCard
+        selected={selected}
+        onSelect={onSelect}
+        testId={`lab-chart-card-${group.encounter.id}`}
+      >
+        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
+            <span className="truncate">{group.patient.name}</span>
+            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
+            <span className="truncate">{group.primaryGuardianName ?? "보호자 미지정"}</span>
+            <EmrSidePanelTypeBadge label={`${group.items.length}건`} />
+          </div>
+          <EmrSidePanelCardAction
+            ariaLabel={`${group.patient.name} 임상병리검사 차트 더보기`}
+            testId={`lab-chart-item-action-${group.encounter.id}`}
+          />
+        </div>
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
+          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+          <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
+        </div>
+        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="flex min-h-5 min-w-0 items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-600)]">
+            {orderNames}
+          </span>
+          {abnormalCount > 0 ? (
+            <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-red-500)]">
+              비정상 {abnormalCount}
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-1 flex h-5 min-w-0 items-center justify-between gap-3 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="truncate">{statusSummary}</span>
+          <span className="flex shrink-0 items-center gap-1">
+            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
+            {formatShortDateTime(latestItem?.result.receivedAt ?? latestItem?.result.collectedAt).slice(9)}
           </span>
         </div>
       </EmrSidePanelCard>
@@ -359,11 +603,16 @@ function ImagingQueueItem({
   );
 }
 
-export function LabSidePanel({ moduleLabel }: ShellComponentProps) {
+export function LabSidePanel() {
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const [queueView, setQueueView] = useState<LabQueueView>("order");
+  const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<LabResult["status"]>>(() => new Set());
   const items = useMemo(() => getLabWorkItems(), []);
+  const latestLabDate = items[0]?.result.receivedAt ?? items[0]?.result.collectedAt;
+  const dateLabel = latestLabDate ? `${latestLabDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
+  const chartGroups = useMemo(() => getLabChartGroups(items), [items]);
   const groups = useMemo(
     () =>
       labStatusOrder
@@ -374,32 +623,61 @@ export function LabSidePanel({ moduleLabel }: ShellComponentProps) {
         .filter((group) => group.items.length > 0),
     [items]
   );
+  const toggleStatus = (status: LabResult["status"]) => {
+    setCollapsedStatusIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+
+      return next;
+    });
+  };
 
   return (
     <EmrSubpanel>
       <EmrSubpanelTitle
-        title={moduleLabel}
+        title="임상병리검사"
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
+        tabs={<LabQueueViewTabs value={queueView} onValueChange={setQueueView} />}
       />
-      <EmrListHeader label="검사 대기열" count={items.length} headerActions={<QueueActions />} />
+      <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
+      <EmrListHeader
+        label={queueView === "order" ? "검사 대기열" : "차트별 검사"}
+        count={queueView === "order" ? items.length : chartGroups.length}
+        headerActions={<QueueActions />}
+      />
       <EmrSubpanelBody>
-        {groups.map((group) => (
-          <section key={group.status} className="flex flex-col gap-2">
-            <div className="flex h-7 items-center justify-between border-l-2 border-[var(--clair-color-atomic-orange-400)] pl-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">
-              <span>{labStatusGroupLabel[group.status]}</span>
-              <span>{group.items.length}</span>
-            </div>
-            {group.items.map((item) => (
-              <LabQueueItem
-                key={item.result.id}
-                item={item}
-                selected={item.result.id === selectedLabResultId}
-                onSelect={() => selectLabResult(item.result.id)}
+        {queueView === "order"
+          ? groups.map((group) => (
+              <LabQueueGroup
+                key={group.status}
+                collapsed={collapsedStatusIds.has(group.status)}
+                items={group.items}
+                onSelectItem={selectLabResult}
+                onToggle={() => toggleStatus(group.status)}
+                selectedLabResultId={selectedLabResultId}
+                status={group.status}
+              />
+            ))
+          : chartGroups.map((group) => (
+              <LabChartQueueItem
+                key={group.encounter.id}
+                group={group}
+                selected={group.items.some((item) => item.result.id === selectedLabResultId)}
+                onSelect={() => {
+                  const firstResultId = group.items[0]?.result.id;
+
+                  if (firstResultId) {
+                    selectLabResult(firstResultId);
+                  }
+                }}
               />
             ))}
-          </section>
-        ))}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -543,14 +821,36 @@ function SummaryGrid({ items }: { items: Array<[string, string | undefined]> }) 
   );
 }
 
-function LabResultInputSection({ result }: { result: LabResult }) {
+function LabResultInputSection({ assigneeName, result }: { assigneeName: string; result: LabResult }) {
   const [collapsed, setCollapsed] = useState(false);
-  const abnormalRows = getActionableLabRows(result);
+  const initialRowValues = useMemo(
+    () => Object.fromEntries(result.rows.map((row) => [row.id, row.value ?? ""])),
+    [result.rows]
+  );
+  const [rowValueState, setRowValueState] = useState<{
+    resultId: string;
+    values: Record<string, string>;
+  }>(() => ({ resultId: result.id, values: initialRowValues }));
+  const rowValues = rowValueState.resultId === result.id ? rowValueState.values : initialRowValues;
+  const rows = useMemo(
+    () =>
+      result.rows.map((row) => {
+        const value = rowValues[row.id] ?? row.value ?? "";
+
+        return {
+          ...row,
+          judgment: getDerivedLabJudgment(row, value),
+          value,
+        };
+      }),
+    [result.rows, rowValues]
+  );
+  const abnormalRows = rows.filter((row) => row.judgment !== "normal" && row.judgment !== "not_judged");
 
   return (
     <EmrOrderGroupSection
       title={`${result.resultName} 세트`}
-      count={result.rows.length}
+      count={rows.length}
       meta={
         abnormalRows.length > 0 ? (
           <span className="text-[12px] font-medium text-[var(--clair-color-atomic-red-500)]">
@@ -573,34 +873,89 @@ function LabResultInputSection({ result }: { result: LabResult }) {
       collapsed={collapsed}
       onToggle={() => setCollapsed((current) => !current)}
     >
-      <Table>
+      <Table className="table-fixed text-[14px] leading-5 tracking-[0.014em]">
+        <colgroup>
+          <col className="w-[32%]" />
+          <col className="w-[14%]" />
+          <col className="w-[8%]" />
+          <col className="w-[26%]" />
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
+        </colgroup>
         <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
-          <TableRow>
-            <TableHead>항목</TableHead>
-            <TableHead>결과값</TableHead>
-            <TableHead>단위</TableHead>
-            <TableHead>정상범위</TableHead>
-            <TableHead>판정</TableHead>
+          <TableRow className="border-border hover:bg-transparent">
+            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+              <div className="flex h-6 min-w-0 items-center px-1">항목</div>
+            </TableHead>
+            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+              <div className="flex h-6 min-w-0 items-center px-1">결과값</div>
+            </TableHead>
+            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+              <div className="flex h-6 min-w-0 items-center px-1">단위</div>
+            </TableHead>
+            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+              <div className="flex h-6 min-w-0 items-center px-1">정상범위</div>
+            </TableHead>
+            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+              <div className="flex h-6 min-w-0 items-center px-1">판정</div>
+            </TableHead>
+            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+              <div className="flex h-6 min-w-0 items-center px-1">담당자</div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow className="bg-card">
-            <TableCell colSpan={5} className="h-9 font-semibold">
-              ■ 혈구 검사
-            </TableCell>
-          </TableRow>
-          {result.rows.map((row) => (
-            <TableRow key={row.id}>
-              <TableCell className="font-medium">{row.analyteName}</TableCell>
-              <TableCell>
-                <Input aria-label={`${row.analyteName} 결과값`} defaultValue={row.value} className="h-8 w-24" />
+          {rows.map((row) => (
+            <TableRow
+              key={row.id}
+              className="h-11 border-border bg-card text-[var(--clair-color-label-normal)] hover:!bg-[var(--clair-color-fill-alternative)]"
+            >
+              <TableCell className="h-11 px-1 py-2 font-medium whitespace-normal">
+                <div className="flex min-h-6 min-w-0 items-center px-1 leading-5">{row.analyteName}</div>
               </TableCell>
-              <TableCell>{row.unit ?? "-"}</TableCell>
-              <TableCell>
-                <NormalRangeCell row={row} />
+              <TableCell className="h-11 px-1 py-2 font-medium">
+                <div className="flex h-6 min-w-0 items-center px-1">
+                  <Input
+                    aria-label={`${row.analyteName} 결과값`}
+                    className="h-8 w-24"
+                    value={row.value}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+
+                      setRowValueState((current) => {
+                        const currentValues = current.resultId === result.id ? current.values : initialRowValues;
+
+                        return {
+                          resultId: result.id,
+                          values: {
+                            ...currentValues,
+                            [row.id]: nextValue,
+                          },
+                        };
+                      });
+                    }}
+                  />
+                </div>
               </TableCell>
-              <TableCell>
-                <Badge variant="outline">{getStatusLabel("labJudgment", row.judgment)}</Badge>
+              <TableCell className="h-11 px-1 py-2 font-medium">
+                <div className="flex h-6 min-w-0 items-center px-1">{row.unit ?? "-"}</div>
+              </TableCell>
+              <TableCell className="h-11 px-1 py-2 font-medium">
+                <div className="flex min-h-6 min-w-0 items-center px-1">
+                  <NormalRangeCell row={row} />
+                </div>
+              </TableCell>
+              <TableCell className="h-11 px-1 py-2 font-medium" aria-live="polite">
+                <div className="flex h-6 min-w-0 items-center px-1">
+                  <Badge variant="outline" className={judgmentBadgeClassName[row.judgment]}>
+                    {getStatusLabel("labJudgment", row.judgment)}
+                  </Badge>
+                </div>
+              </TableCell>
+              <TableCell className="h-11 px-1 py-2 font-medium" aria-live="polite">
+                <div className="flex h-6 min-w-0 items-center px-1">
+                  <span className="truncate text-[13px] text-[var(--clair-color-label-normal)]">{assigneeName}</span>
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -611,34 +966,96 @@ function LabResultInputSection({ result }: { result: LabResult }) {
 }
 
 function NormalRangeCell({ row }: { row: LabResultRow }) {
-  const markerPercent = getRangeMarkerPercent(row);
+  const range = parseReferenceRange(row.referenceRange);
+  const scale = getRangeScale(row);
   const rangeState = rangeStateByJudgment[row.judgment] ?? {
     label: "미판정",
-    markerClassName: "border-[var(--clair-color-atomic-gray-500)] bg-[var(--clair-color-atomic-gray-500)]",
+    markerClassName: "bg-[var(--clair-color-atomic-gray-500)] fill-[var(--clair-color-atomic-gray-500)]",
   };
 
   return (
     <div
-      className="min-w-[180px]"
+      className="w-full max-w-[300px]"
       aria-label={`${row.analyteName} 정상범위 ${row.referenceRange ?? "-"} 결과 ${row.value} ${rangeState.label}`}
     >
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[12px] font-medium text-foreground">{row.referenceRange ?? "-"}</span>
-        <span className="text-[11px] font-medium text-muted-foreground">{rangeState.label}</span>
-      </div>
-      <div className="relative h-3 rounded-full bg-[var(--clair-color-atomic-gray-100)]">
-        <div className="absolute inset-y-0 left-0 w-[28%] rounded-l-full bg-[var(--clair-color-atomic-blue-100)]" />
-        <div className="absolute inset-y-0 left-[28%] w-[44%] bg-[var(--clair-color-atomic-green-100)]" />
-        <div className="absolute inset-y-0 right-0 w-[28%] rounded-r-full bg-[var(--clair-color-atomic-orange-100)]" />
-        <span
-          className={cn(
-            "absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card shadow-sm",
-            rangeState.markerClassName
-          )}
-          style={{ left: `${markerPercent}%` }}
-          aria-hidden="true"
+      {range ? (
+        <div className="relative mb-1 h-4 text-[12px] font-medium text-foreground">
+          <span
+            className="absolute top-0 -translate-x-1/2 whitespace-nowrap"
+            style={{ left: `${scale.normalStart}%` }}
+          >
+            {range.min}
+          </span>
+          <span
+            className="absolute top-0 -translate-x-1/2 whitespace-nowrap"
+            style={{ left: `${scale.normalEnd}%` }}
+          >
+            {range.max}
+          </span>
+        </div>
+      ) : (
+        <div className="mb-1 h-4 text-[12px] font-medium text-foreground">-</div>
+      )}
+      <NormalRangeChart row={row} scale={scale} markerClassName={rangeState.markerClassName} />
+    </div>
+  );
+}
+
+function NormalRangeChart({
+  markerClassName,
+  row,
+  scale,
+}: {
+  markerClassName: string;
+  row: LabResultRow;
+  scale: ReturnType<typeof getRangeScale>;
+}) {
+  return (
+    <div
+      role="img"
+      aria-label={`${row.analyteName} 결과 위치 ${row.value}`}
+      className="relative h-3 w-full"
+    >
+      <svg
+        viewBox="0 0 100 12"
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full overflow-visible"
+        aria-hidden="true"
+      >
+        <line
+          x1={scale.lowerStart}
+          x2={scale.normalStart}
+          y1="6"
+          y2="6"
+          stroke="var(--clair-color-atomic-blue-100)"
+          strokeLinecap="round"
+          strokeWidth="3"
         />
-      </div>
+        <line
+          x1={scale.normalStart}
+          x2={scale.normalEnd}
+          y1="6"
+          y2="6"
+          stroke="var(--clair-color-atomic-green-100)"
+          strokeWidth="3"
+        />
+        <line
+          x1={scale.normalEnd}
+          x2={scale.upperEnd}
+          y1="6"
+          y2="6"
+          stroke="var(--clair-color-atomic-orange-100)"
+          strokeLinecap="round"
+          strokeWidth="3"
+        />
+      </svg>
+      <span
+        className={cn(
+          "absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card shadow-sm transition-[left,background-color,fill] duration-300 ease-out",
+          markerClassName
+        )}
+        style={{ left: `${scale.valuePercent}%` }}
+      />
     </div>
   );
 }
@@ -656,9 +1073,6 @@ function LabResultCommentSection({ result }: { result: LabResult }) {
           <h2 className="text-[14px] font-semibold">검사결과 종합소견</h2>
           <Badge variant="secondary">담당자 코멘트</Badge>
         </div>
-        <Button size="xs" variant="outline" className="bg-card">
-          코멘트 저장
-        </Button>
       </div>
       <div className="p-4">
         <Textarea
@@ -849,35 +1263,12 @@ export function LabContentAside() {
             const collapsed = collapsedHistoryGroups.has(group.date);
 
             return (
-              <section key={group.date} className="flex flex-col gap-1 rounded-[10px]" data-testid={`lab-history-group-${group.date}`}>
-                <button
-                  type="button"
-                  className="flex h-8 w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-8) focus-visible:ring-3 focus-visible:ring-ring/50"
-                  aria-expanded={!collapsed}
-                  onClick={() => toggleHistoryGroup(group.date)}
-                >
-                  <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
-                    <span className="truncate text-[var(--clair-color-label-alternative)]">{group.date}</span>
-                    <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{group.count}</span>
-                  </div>
-                  <ChevronDownIcon className="size-4 shrink-0 text-[var(--clair-color-label-alternative)]" />
-                </button>
-                <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
-                {collapsed ? null : (
-                  <div>
-                    {group.items.map((item) => (
-                      <div key={`${group.date}-${item.title}`} className="border-b border-[var(--clair-color-line-subtle)] py-2">
-                        <div className="truncate text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-                          {item.title}
-                        </div>
-                        <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-                          {item.description}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+              <LabHistoryGroup
+                key={group.date}
+                collapsed={collapsed}
+                group={group}
+                onToggle={() => toggleHistoryGroup(group.date)}
+              />
             );
           })}
         </div>
@@ -886,123 +1277,395 @@ export function LabContentAside() {
   );
 }
 
+function LabHistoryGroup({
+  collapsed,
+  group,
+  onToggle,
+}: {
+  collapsed: boolean;
+  group: LabHistoryGroup;
+  onToggle: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  const contentTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        height: { duration: 0.24, ease: LAB_HISTORY_GROUP_EASE },
+        opacity: { duration: 0.14, ease: "easeOut" },
+        y: { duration: 0.2, ease: LAB_HISTORY_GROUP_EASE },
+      };
+  const contentExitTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        height: { duration: 0.18, ease: LAB_HISTORY_GROUP_EXIT_EASE },
+        opacity: { duration: 0.12, ease: "easeIn" },
+        y: { duration: 0.16, ease: LAB_HISTORY_GROUP_EXIT_EASE },
+      };
+
+  return (
+    <section className="flex flex-col gap-1 rounded-[10px]" data-testid={`lab-history-group-${group.date}`}>
+      <button
+        type="button"
+        className="flex h-8 w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-8) focus-visible:ring-3 focus-visible:ring-ring/50"
+        aria-expanded={!collapsed}
+        onClick={onToggle}
+      >
+        <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
+          <span className="truncate text-[var(--clair-color-label-alternative)]">{group.date}</span>
+          <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{group.count}</span>
+        </div>
+        <motion.span
+          className="flex size-4 shrink-0 items-center justify-center text-[var(--clair-color-label-alternative)]"
+          animate={{ rotate: collapsed ? 180 : 0 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: LAB_HISTORY_GROUP_EASE }}
+        >
+          <ChevronDownIcon className="size-4 shrink-0 text-[var(--clair-color-label-alternative)]" />
+        </motion.span>
+      </button>
+      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+      <AnimatePresence initial={false}>
+        {collapsed ? null : (
+          <motion.div
+            key={`${group.date}-items`}
+            className="overflow-hidden"
+            initial={{ height: 0, opacity: 0, y: -4 }}
+            animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
+            exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
+          >
+            {group.items.map((item) => (
+              <div key={`${group.date}-${item.title}`} className="border-b border-[var(--clair-color-line-subtle)] py-2">
+                <div className="truncate text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
+                  {item.title}
+                </div>
+                <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+                  {item.description}
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 export function LabRightPanel() {
   const { detail } = useCurrentLabDetail();
-  const [receiptView, setReceiptView] = useState<LabReceiptView>("linked");
+  const [expandedReceiptIds, setExpandedReceiptIds] = useState<Set<string> | null>(null);
   const [receiptToPaste, setReceiptToPaste] = useState<EquipmentReceipt | null>(null);
+  const labWorkItems = useMemo(() => getLabWorkItems(), []);
+  const workItemByOrderId = useMemo(() => {
+    const map = new Map<string, LabWorkItem>();
+
+    labWorkItems.forEach((item) => {
+      if (item.order?.id) {
+        map.set(item.order.id, item);
+      }
+    });
+
+    return map;
+  }, [labWorkItems]);
   const linkedReceipts = useMemo(() => {
     if (!detail) return [];
 
     return detail.allEquipmentReceipts.filter((receipt) => receipt.orderId === detail.order?.id);
   }, [detail]);
-  const allReceipts = detail?.allEquipmentReceipts ?? [];
-  const visibleReceipts = receiptView === "linked" ? linkedReceipts : allReceipts;
+  const visibleReceipts = linkedReceipts;
   const hasEnteredRows = Boolean(detail?.result.rows.some((row) => row.value));
+  const latestReceiptDate = visibleReceipts[0]?.receivedAt ?? detail?.result.receivedAt;
+  const dateLabel = latestReceiptDate ? `${latestReceiptDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
+  const defaultExpandedReceiptId = visibleReceipts[0]?.id;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="lab-receipt-panel">
-      <div className="flex h-14 items-center border-b px-4">
-        <h2 className="text-sm font-semibold">검사결과 수신내역</h2>
+      <div className="flex h-14 items-center px-4">
+        <h2 className="min-w-0 truncate text-sm font-semibold">검사결과 수신내역</h2>
       </div>
-      <div className="border-b px-3 py-2">
-        <div className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1" role="tablist" aria-label="검사결과 수신내역 보기">
-          {labReceiptViewItems.map((item) => {
-            const selected = receiptView === item.value;
-            const count = item.value === "linked" ? linkedReceipts.length : allReceipts.length;
-
-            return (
-              <button
-                key={item.value}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                className={cn(
-                  "h-7 rounded-sm px-2 text-[12px] font-medium text-muted-foreground transition-colors",
-                  selected ? "bg-card text-foreground shadow-xs" : "hover:text-foreground"
-                )}
-                onClick={() => setReceiptView(item.value)}
-              >
-                {item.label} {count}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <EmrDateNavigator
+        className="px-3"
+        dateLabel={dateLabel}
+        todayLabel="오늘"
+      />
+      <EmrListHeader
+        className="mx-3"
+        count={visibleReceipts.length}
+        label="검사 결과"
+        headerActions={
+          <>
+            <EmrListHeaderIconButton ariaLabel="수신내역 정렬">
+              <CdsUtilitiesSortIcon className="size-4" />
+            </EmrListHeaderIconButton>
+            <EmrListHeaderIconButton ariaLabel="수신내역 필터">
+              <CdsActionsListFilterIcon className="size-4" />
+            </EmrListHeaderIconButton>
+            <EmrListHeaderIconButton ariaLabel="수신내역 검색">
+              <CdsActionsSearchIcon className="size-4" />
+            </EmrListHeaderIconButton>
+          </>
+        }
+      />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
-          {visibleReceipts.map((receipt) => (
-            <LabReceiptCard
-              key={receipt.id}
-              linkedToCurrentOrder={receipt.orderId === detail?.order?.id}
-              receipt={receipt}
-              onPaste={() => setReceiptToPaste(receipt)}
-            />
-          ))}
+          {visibleReceipts.map((receipt) => {
+            const receiptWorkItem = receipt.orderId ? workItemByOrderId.get(receipt.orderId) : undefined;
+            const previewRows = receiptWorkItem?.result.rows ?? [];
+            const expanded = expandedReceiptIds
+              ? expandedReceiptIds.has(receipt.id)
+              : receipt.id === defaultExpandedReceiptId;
+
+            return (
+              <LabReceiptCard
+                key={receipt.id}
+                expanded={expanded}
+                linkedToCurrentOrder={receipt.orderId === detail?.order?.id}
+                orderLabel={receiptWorkItem?.order?.displayName ?? receiptWorkItem?.result.resultName ?? "오더 미지정"}
+                patientLabel={receiptWorkItem?.patient.name ?? "환자 미지정"}
+                previewRows={previewRows}
+                primaryGuardianLabel={receiptWorkItem?.primaryGuardian?.name ?? "보호자 미지정"}
+                receipt={receipt}
+                onPaste={() => setReceiptToPaste(receipt)}
+                onToggle={() => {
+                  setExpandedReceiptIds((current) => {
+                    const next = new Set(
+                      current ?? (defaultExpandedReceiptId ? [defaultExpandedReceiptId] : [])
+                    );
+
+                    if (next.has(receipt.id)) {
+                      next.delete(receipt.id);
+                    } else {
+                      next.add(receipt.id);
+                    }
+
+                    return next;
+                  });
+                }}
+              />
+            );
+          })}
           {!visibleReceipts.length ? (
             <section className="rounded-md border border-dashed p-3 text-[13px] text-muted-foreground">
-              {receiptView === "linked" ? "현재 오더와 연결된 장비결과가 없습니다." : "수신내역 없음"}
+              현재 오더와 연결된 장비결과가 없습니다.
             </section>
           ) : null}
         </div>
       </ScrollArea>
       <Dialog open={Boolean(receiptToPaste)} onOpenChange={(open) => !open && setReceiptToPaste(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>검사결과를 붙여넣을까요?</DialogTitle>
-            <DialogDescription>
+        <EmrConfirmDialogContent
+          title="검사결과를 붙여넣을까요?"
+          description={
+            <>
               {receiptToPaste?.equipmentName} 수신값을 현재 검사결과지에 입력합니다.
               {hasEnteredRows ? " 이전에 입력된 수치가 있으면 장비 수신값으로 덮어씁니다." : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>취소</DialogClose>
-            <Button onClick={() => setReceiptToPaste(null)}>붙여넣기</Button>
-          </DialogFooter>
-        </DialogContent>
+            </>
+          }
+          cancelLabel="취소"
+          confirmLabel="붙여넣기"
+          closeAriaLabel="검사결과 붙여넣기 확인 닫기"
+          onCancel={() => setReceiptToPaste(null)}
+          onConfirm={() => setReceiptToPaste(null)}
+        />
       </Dialog>
     </div>
   );
 }
 
 function LabReceiptCard({
+  expanded,
   linkedToCurrentOrder,
   onPaste,
+  onToggle,
+  orderLabel,
+  patientLabel,
+  previewRows,
+  primaryGuardianLabel,
   receipt,
 }: {
+  expanded: boolean;
   linkedToCurrentOrder: boolean;
   onPaste: () => void;
+  onToggle: () => void;
+  orderLabel: string;
+  patientLabel: string;
+  previewRows: LabResultRow[];
+  primaryGuardianLabel: string;
   receipt: EquipmentReceipt;
 }) {
+  const reduceMotion = useReducedMotion();
+  const contentTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        height: { duration: 0.24, ease: EMR_SIDE_PANEL_COLLAPSE_EASE },
+        opacity: { duration: 0.14, ease: "easeOut" },
+        y: { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE },
+      };
+  const contentExitTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        height: { duration: 0.18, ease: EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE },
+        opacity: { duration: 0.12, ease: "easeIn" },
+        y: { duration: 0.16, ease: EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE },
+      };
   const actionLabel = linkedToCurrentOrder
-    ? "검사결과 붙여넣기"
+    ? "결과 붙여넣기"
     : receipt.status === "matched"
       ? "다른 오더 연결"
       : "수동 매칭 필요";
+  const receivedTime = formatShortDateTime(receipt.receivedAt).slice(9);
 
   return (
-    <section className="rounded-md border bg-card p-3" data-testid={`lab-receipt-${receipt.id}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="font-semibold">{receipt.equipmentName}</div>
-        <Badge variant="secondary" className="h-6 rounded-md px-2 text-[11px]">
-          {formatShortDateTime(receipt.receivedAt)}
-        </Badge>
-      </div>
-      <div className="mt-1 text-[12px] text-muted-foreground">{receipt.externalResultId}</div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <Badge variant="outline">{getStatusLabel("equipmentReceipt", receipt.status)}</Badge>
-        {linkedToCurrentOrder ? <Badge variant="secondary">현재 오더</Badge> : null}
-      </div>
-      <p className="mt-3 text-[12px] leading-5 text-muted-foreground">{receipt.payloadSummary}</p>
-      <Button
-        size="xs"
-        variant="outline"
-        className="mt-3 w-full bg-card"
-        disabled={!linkedToCurrentOrder}
-        onClick={onPaste}
+    <section className="overflow-hidden rounded-lg border bg-card" data-testid={`lab-receipt-${receipt.id}`}>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full items-start gap-3 px-4 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-ring/50",
+          expanded ? "pb-1 pt-3" : "py-3"
+        )}
+        aria-expanded={expanded}
+        aria-label={`${receipt.equipmentName} 수신결과 ${expanded ? "접기" : "펼치기"}`}
+        onClick={onToggle}
       >
-        {actionLabel}
-      </Button>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[14px] font-semibold leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-900)]">
+              {receipt.equipmentName}
+            </span>
+            <span className="shrink-0 rounded border border-[var(--clair-color-atomic-black-alpha-8)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-700)]">
+              {receivedTime} 수신
+            </span>
+          </div>
+          <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+            {patientLabel} · {primaryGuardianLabel} {orderLabel}
+          </div>
+        </div>
+        <motion.span
+          className="mt-1 flex shrink-0 items-center justify-center"
+          animate={{ rotate: expanded ? 180 : 0 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
+        >
+          <ChevronDownIcon className="size-4 text-foreground" aria-hidden="true" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {expanded ? (
+          <motion.div
+            key={`${receipt.id}-preview`}
+            className="overflow-hidden"
+            initial={{ height: 0, opacity: 0, y: -4 }}
+            animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
+            exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
+          >
+            <div className="px-4 pb-3 pt-2">
+              <div className="mb-2 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+              <div className="flex h-8 items-center justify-between gap-2">
+                <h3 className="text-[13px] font-semibold text-[var(--clair-color-atomic-gray-600)]">검사 결과</h3>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  className="bg-card"
+                  disabled={!linkedToCurrentOrder}
+                  onClick={onPaste}
+                >
+                  {actionLabel}
+                </Button>
+              </div>
+              {previewRows.length ? (
+                <div className="mt-2 overflow-hidden">
+                  <div className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] bg-[var(--clair-color-atomic-neutral-50)] px-2 py-2 text-[12px] font-medium text-[var(--clair-color-atomic-gray-700)]">
+                    <span>검사 항목명</span>
+                    <span>수치</span>
+                    <span>단위</span>
+                  </div>
+                  {previewRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] border-t px-2 py-2 text-[12px] leading-5"
+                    >
+                      <span className="truncate text-[var(--clair-color-atomic-gray-700)]">{row.analyteName}</span>
+                      <span className="text-foreground">{row.value}</span>
+                      <span className="truncate text-muted-foreground">{row.unit ?? "-"}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2 rounded-md border border-dashed p-3 text-[12px] text-muted-foreground">
+                  미리 볼 수 있는 검사 결과가 없습니다.
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
+  );
+}
+
+function LabStatusAction({
+  onCancelAssignment,
+  onComplete,
+  onStart,
+  status,
+}: {
+  onCancelAssignment: () => void;
+  onComplete: () => void;
+  onStart: () => void;
+  status: LabAssignmentStatus;
+}) {
+  if (status === "completed") {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled
+        className="border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]"
+      >
+        <CheckIcon data-icon="inline-start" />
+        검사완료
+      </Button>
+    );
+  }
+
+  if (status === "in_progress") {
+    return (
+      <div className="inline-flex items-center">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-r-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+        >
+          검사중
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="검사 상태 액션"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "icon-sm" }),
+              "-ml-px rounded-l-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+            )}
+          >
+            <ChevronDownIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onComplete}>
+              <CheckIcon className="size-3" />
+              검사완료
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onCancelAssignment}>
+              담당취소
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }
+
+  return (
+    <Button type="button" size="sm" onClick={onStart}>
+      담당하기
+      <ChevronDownIcon data-icon="inline-end" />
+    </Button>
   );
 }
 
@@ -1012,6 +1675,32 @@ export function LabContent() {
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(searchParams, selectedLabResultId);
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
+  const initialAssignment = {
+    assigneeName: detail?.technicianName ?? "미지정",
+    resultId: detail?.result.id ?? "",
+    status: "requested" as LabAssignmentStatus,
+  };
+  const [assignmentState, setAssignmentState] = useState(initialAssignment);
+  const assignment = assignmentState.resultId === initialAssignment.resultId ? assignmentState : initialAssignment;
+  const startAssignment = () =>
+    setAssignmentState({
+      assigneeName: currentLabAssignee.name,
+      resultId: initialAssignment.resultId,
+      status: "in_progress",
+    });
+  const completeAssignment = () =>
+    setAssignmentState((current) => ({
+      assigneeName:
+        current.resultId === initialAssignment.resultId ? current.assigneeName : currentLabAssignee.name,
+      resultId: initialAssignment.resultId,
+      status: "completed",
+    }));
+  const cancelAssignment = () =>
+    setAssignmentState({
+      assigneeName: "미지정",
+      resultId: initialAssignment.resultId,
+      status: "requested",
+    });
 
   useEffect(() => {
     if (queryLabResultId && queryLabResultId !== selectedLabResultId) {
@@ -1054,10 +1743,12 @@ export function LabContent() {
                   <PrinterIcon data-icon="inline-start" />
                   출력하기
                 </Button>
-                <Button size="sm">
-                  담당하기
-                  <ChevronDownIcon data-icon="inline-end" />
-                </Button>
+                <LabStatusAction
+                  status={assignment.status}
+                  onStart={startAssignment}
+                  onComplete={completeAssignment}
+                  onCancelAssignment={cancelAssignment}
+                />
               </>
             }
           />
@@ -1081,7 +1772,7 @@ export function LabContent() {
                 `${detail.patient.name}(${getPatientDisplayAge(detail.patient)}) · ${detail.patient.breed ?? getSpeciesLabel(detail.patient)}`,
               ],
               ["요청 수의사", getStaffName(detail.order?.requestedByUserId) ?? "이수지"],
-              ["검사 담당", detail.technicianName ?? "미지정"],
+              ["검사 담당", <span key="lab-assignee" aria-live="polite">{assignment.assigneeName}</span>],
               [
                 "수신 장비",
                 detail.equipmentReceipts.find((receipt) => receipt.status === "matched")?.equipmentName ?? "미수신",
@@ -1111,7 +1802,7 @@ export function LabContent() {
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 pb-10 pt-4">
-          <LabResultInputSection result={detail.result} />
+          <LabResultInputSection assigneeName={assignment.assigneeName} result={detail.result} />
           <LabResultCommentSection result={detail.result} />
           <AttachmentStrip attachments={detail.attachments} showImageExample />
         </div>

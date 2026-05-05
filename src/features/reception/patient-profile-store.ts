@@ -20,6 +20,7 @@ type NewPatientInput = {
   microchipNo?: string;
   name: string;
   neutered?: boolean;
+  patientRegistrationNo?: string;
   sex?: PatientSex;
   species: Patient["species"];
   specialNote?: string;
@@ -183,6 +184,7 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
       sex: input.sex ?? "unknown",
       neutered: input.neutered ?? false,
       microchipNo,
+      patientRegistrationNo: input.patientRegistrationNo?.trim() || undefined,
       specialNote: input.specialNote?.trim() || undefined,
       handlingCautionLocked: true,
       status: "active",

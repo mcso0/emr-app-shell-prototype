@@ -4,8 +4,12 @@ import { useMemo, useState } from "react";
 import {
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
+  CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation";
+import {
+  CdsNavigationChevronDownIcon,
+  CdsNavigationExternalLinkIcon,
+} from "@/components/cds-icons/navigation";
 import { BoneIcon, UserIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   Field as FormField,
   FieldDescription,
@@ -193,6 +198,14 @@ const breedOptionsBySpecies: Record<Species, string[]> = {
 const getBreedOptions = (species: Species) =>
   [...breedOptionsBySpecies[species]].sort((a, b) => a.localeCompare(b, ["ko", "en"]));
 
+const splitBreedList = (value: string) =>
+  value
+    .split(" · ")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const joinBreedList = (breeds: string[]) => breeds.join(" · ");
+
 const getNewPatientSpeciesLabel = (species: Species) =>
   newPatientSpeciesOptions.find((option) => option.value === species)?.label ?? "종류 선택";
 
@@ -217,6 +230,41 @@ const getConsentLabel = (consent: Consent) => {
 
 const getGuardianPatientCount = (guardianId: EmrId, links: PatientGuardian[]) =>
   links.filter((link) => link.guardianId === guardianId).length;
+
+const getGuardianPatientNames = (
+  guardianId: EmrId,
+  patients: Patient[],
+  links: PatientGuardian[]
+) => {
+  const patientIds = new Set(
+    links.filter((link) => link.guardianId === guardianId).map((link) => link.patientId)
+  );
+
+  return patients.filter((patient) => patientIds.has(patient.id)).map((patient) => patient.name);
+};
+
+const getGuardianPatientSummary = (
+  guardianId: EmrId,
+  patients: Patient[],
+  links: PatientGuardian[]
+) => {
+  const names = getGuardianPatientNames(guardianId, patients, links);
+
+  if (!names.length) return "연결 환자 없음";
+  if (names.length <= 2) return names.join(", ");
+
+  return `${names.slice(0, 2).join(", ")} 외 ${names.length - 2}`;
+};
+
+const getGuardianSearchDisplay = (
+  guardian: Guardian,
+  patients: Patient[],
+  links: PatientGuardian[]
+) =>
+  [
+    guardian.name,
+    `${guardian.mobilePhone ?? "연락처 미입력"} · ${getGuardianPatientSummary(guardian.id, patients, links)}`,
+  ].join(" ");
 
 const REGISTRATION_BASE_DATE = new Date("2026-05-02T00:00:00+09:00");
 
@@ -474,7 +522,7 @@ function Field({
   );
 }
 
-function RegistrationFormField({
+export function RegistrationFormField({
   actions,
   children,
   className,
@@ -495,10 +543,12 @@ function RegistrationFormField({
     <FormField className={className} data-invalid={Boolean(error) || undefined}>
       <div className="flex min-h-5 items-center justify-between gap-3">
         <FieldLabel className="text-[14px] font-bold leading-5 text-[var(--clair-color-label-strong)]">
-          {label}
-          {required ? (
-            <span className="ml-1 text-[var(--clair-color-primary-normal)]">*</span>
-          ) : null}
+          <span className="inline-flex items-baseline gap-0.5">
+            <span>{label}</span>
+            {required ? (
+              <span className="text-[var(--clair-color-primary-normal)]">*</span>
+            ) : null}
+          </span>
         </FieldLabel>
         {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
       </div>
@@ -513,7 +563,28 @@ function RegistrationFormField({
   );
 }
 
-function RegistrationFormSection({
+export function RegistrationDialogCloseButton({
+  ariaLabel,
+  onClick,
+}: {
+  ariaLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      className="size-8 shrink-0 rounded-md text-[var(--clair-color-atomic-gray-600)] hover:bg-[var(--clair-color-atomic-gray-50)]"
+      aria-label={ariaLabel}
+      onClick={onClick}
+    >
+      <CdsActionsXIcon className="size-4" />
+    </Button>
+  );
+}
+
+export function RegistrationFormSection({
   children,
   className,
   separated = true,
@@ -788,6 +859,132 @@ function GuardianSearchPopover({
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function BreedMultiSelect({
+  ariaLabel = "추가 품종",
+  className,
+  placeholder,
+  species,
+  value,
+  onValueChange,
+}: {
+  ariaLabel?: string;
+  className?: string;
+  placeholder: string;
+  species: Species;
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selectedBreeds = splitBreedList(value);
+  const options = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return getBreedOptions(species).filter(
+      (breed) =>
+        !selectedBreeds.includes(breed) &&
+        (!normalizedQuery || breed.toLowerCase().includes(normalizedQuery))
+    );
+  }, [query, selectedBreeds, species]);
+  const addBreed = (breed: string) => {
+    const nextBreed = breed.trim();
+
+    if (!nextBreed) return;
+    if (!selectedBreeds.includes(nextBreed)) {
+      onValueChange(joinBreedList([...selectedBreeds, nextBreed]));
+    }
+    setQuery("");
+    setOpen(false);
+  };
+  const removeBreed = (breed: string) => {
+    onValueChange(joinBreedList(selectedBreeds.filter((item) => item !== breed)));
+  };
+
+  return (
+    <div className={cn("rounded-md border bg-card p-1.5", className)}>
+      <div className="flex min-h-7 flex-wrap items-center gap-1.5">
+        {selectedBreeds.map((breed) => (
+          <span
+            key={breed}
+            className="inline-flex h-7 items-center gap-1 rounded-full border bg-[var(--clair-color-background-surface)] px-2 text-[12px] font-semibold text-[var(--clair-color-label-normal)]"
+          >
+            {breed}
+            <button
+              type="button"
+              className="text-[13px] leading-none text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-label-strong)]"
+              aria-label={`${breed} 제거`}
+              onClick={() => removeBreed(breed)}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            nativeButton={false}
+            render={<div className="relative min-w-[160px] flex-1" />}
+          >
+            <CdsActionsSearchIcon
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+            />
+            <Input
+              aria-label={ariaLabel}
+              autoComplete="off"
+              className="h-7 border-0 bg-transparent pl-8 shadow-none focus-visible:ring-0"
+              placeholder={selectedBreeds.length ? "품종 추가" : placeholder}
+              value={query}
+              onFocus={() => setOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addBreed(query);
+                }
+              }}
+              onValueChange={(nextQuery) => {
+                setQuery(nextQuery);
+                setOpen(true);
+              }}
+            />
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="max-h-56 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
+            initialFocus={false}
+          >
+            <div role="listbox" aria-label="품종 추천 목록" className="grid gap-1">
+              {options.length ? (
+                options.map((breed) => (
+                  <button
+                    key={breed}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className="rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--clair-color-label-normal)] transition-colors hover:bg-[var(--clair-color-background-surface)]"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => addBreed(breed)}
+                  >
+                    {breed}
+                  </button>
+                ))
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-md px-2.5 py-2 text-left text-[12px] text-muted-foreground hover:bg-[var(--clair-color-background-surface)]"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => addBreed(query)}
+                >
+                  직접 입력한 품종 추가
+                </button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
   );
 }
 
@@ -1484,7 +1681,7 @@ export function NewPatientDialog({
         ? getAgeTextFromBirthDate(draft.birthDate)
         : undefined;
     const breed = draft.isMixed
-      ? [draft.breed.trim() || getMixBreedSuggestion(draft.species), draft.additionalBreed.trim()]
+      ? [draft.breed.trim() || getMixBreedSuggestion(draft.species), ...splitBreedList(draft.additionalBreed)]
           .filter(Boolean)
           .join(" · ")
       : draft.breed;
@@ -1498,6 +1695,7 @@ export function NewPatientDialog({
 	      microchipNo: draft.microchipNo,
 	      name: draft.name,
 	      neutered: sexPayload.neutered,
+      patientRegistrationNo: draft.patientRegistrationNo,
 	      sex: sexPayload.sex,
       species: draft.species,
       specialNote: draft.specialNote,
@@ -1519,17 +1717,26 @@ export function NewPatientDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]">
+      <DialogContent
+        className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]"
+        showCloseButton={false}
+      >
         <DialogHeader className="px-8 pb-4 pt-7">
-          <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
-            신규 동물 등록
-          </DialogTitle>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+              신규 동물 등록
+            </DialogTitle>
+            <RegistrationDialogCloseButton
+              ariaLabel="신규 동물 창 닫기"
+              onClick={() => close(false)}
+            />
+          </div>
           <DialogDescription className="sr-only">
             새 동물 등록 양식입니다.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
-          <div className="flex flex-col gap-5 pb-6">
+        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
+          <div className="flex flex-col gap-5 px-1 pb-6 pt-3">
             <RegistrationFormSection separated={false} title="보호자 연결">
               <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                 <RegistrationFormField
@@ -1697,11 +1904,11 @@ export function NewPatientDialog({
                   </Select>
                 </RegistrationFormField>
 	                {draft.isMixed ? (
-	                  <RegistrationFormField className="col-span-2" label="추가 품종">
-	                    <BreedAutocomplete
-	                      ariaLabel="추가 품종"
-	                      className="h-10 bg-card"
-	                      placeholder="믹스의 경우 추가 품종을 선택해주세요"
+                  <RegistrationFormField className="col-span-2" label="추가 품종">
+                    <BreedMultiSelect
+                      ariaLabel="추가 품종"
+                      className="min-h-10 bg-card"
+                      placeholder="믹스의 경우 추가 품종을 선택해주세요"
 	                      species={draft.species}
 	                      value={draft.additionalBreed}
 	                      onValueChange={(additionalBreed) =>
@@ -1715,8 +1922,22 @@ export function NewPatientDialog({
 
             <RegistrationFormSection title="추가 정보">
               <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                <RegistrationFormField label="동물 나이">
-                  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                <RegistrationFormField
+                  label="동물 나이"
+                  actions={
+                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                      <Switch
+                        size="sm"
+                        checked={draft.estimatedAge}
+                        onCheckedChange={(estimatedAge) =>
+                          setDraft((current) => ({ ...current, estimatedAge }))
+                        }
+                      />
+                      추정
+                    </label>
+                  }
+                >
+                  <div className="grid grid-cols-2 gap-2">
                     <Input
                       className="h-10 bg-card"
                       aria-label="나이 년"
@@ -1745,16 +1966,6 @@ export function NewPatientDialog({
                         }))
                       }
                     />
-                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
-                      <Switch
-                        size="sm"
-                        checked={draft.estimatedAge}
-                        onCheckedChange={(estimatedAge) =>
-                          setDraft((current) => ({ ...current, estimatedAge }))
-                        }
-                      />
-                      추정
-                    </label>
                   </div>
                   {draft.birthDate ? (
                     <div className="mt-1 text-[12px] font-medium text-muted-foreground">
@@ -1933,17 +2144,26 @@ function NewGuardianDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]">
+      <DialogContent
+        className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]"
+        showCloseButton={false}
+      >
         <DialogHeader className="px-8 pb-4 pt-7">
-          <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
-            보호자 등록
-          </DialogTitle>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+              보호자 등록
+            </DialogTitle>
+            <RegistrationDialogCloseButton
+              ariaLabel="보호자 창 닫기"
+              onClick={() => close(false)}
+            />
+          </div>
           <DialogDescription className="sr-only">
             새 보호자 등록 양식입니다.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
-          <div className="flex flex-col gap-5 pb-6">
+        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
+          <div className="flex flex-col gap-5 px-1 pb-6 pt-3">
             <RegistrationFormSection separated={false} title="기본 정보">
               <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                 <RegistrationFormField
@@ -2160,7 +2380,7 @@ function NewGuardianDialog({
 }
 
 type RegistrationMode = "existing_guardian_patient" | "new_guardian_patient";
-type RegistrationStep = "confirm" | "guardian" | "guardian_select" | "mode" | "patient";
+type RegistrationStep = "confirm" | "guardian" | "mode" | "patient";
 
 type GuardianRegistrationDraft = {
   addressDetail: string;
@@ -2202,8 +2422,9 @@ const getRegistrationStepBadge = ({
   step: RegistrationStep;
 }) => {
   if (step === "guardian") return "1/2 보호자";
-  if (step === "guardian_select") return "1/2 보호자 선택";
-  if (step === "patient") return "2/2 환자";
+  if (step === "patient") {
+    return mode === "new_guardian_patient" ? "2/2 환자" : "1/2 보호자/환자";
+  }
   if (step === "confirm") {
     return mode === "new_guardian_patient" ? "확인" : "2/2 확인";
   }
@@ -2313,6 +2534,7 @@ function PatientGuardianRegistrationButton({
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [guardianDraft, setGuardianDraft] = useState(createGuardianRegistrationDraft);
+  const [guardianPopoverOpen, setGuardianPopoverOpen] = useState(false);
   const [guardianQuery, setGuardianQuery] = useState("");
   const [mode, setMode] = useState<RegistrationMode>("new_guardian_patient");
   const [patientDraft, setPatientDraft] = useState(() => createNewPatientDraft());
@@ -2344,13 +2566,42 @@ function PatientGuardianRegistrationButton({
 
     return guardians.filter((guardian) => {
       const guardianPhone = normalizeGuardianPhone(guardian.mobilePhone);
+      const guardianDisplay = getGuardianSearchDisplay(
+        guardian,
+        patients,
+        patientGuardians
+      );
 
       return (
         (query && guardian.name.includes(query)) ||
+        (query && guardianDisplay.includes(query)) ||
         (normalizedQuery && guardianPhone.includes(normalizedQuery))
       );
     });
-  }, [guardianQuery, guardians]);
+  }, [guardianQuery, guardians, patientGuardians, patients]);
+  const selectedGuardianPatients = useMemo(() => {
+    if (!selectedGuardian) return [];
+
+    const selectedPatientIds = new Set(
+      patientGuardians
+        .filter((link) => link.guardianId === selectedGuardian.id)
+        .map((link) => link.patientId)
+    );
+
+    return patients.filter((patient) => selectedPatientIds.has(patient.id));
+  }, [patientGuardians, patients, selectedGuardian]);
+  const selectedGuardianSearchDisplay = selectedGuardian
+    ? getGuardianSearchDisplay(selectedGuardian, patients, patientGuardians)
+    : "";
+  const hasRequiredPatientInfo = Boolean(
+    patientDraft.name.trim() &&
+      patientDraft.breed.trim() &&
+      (patientDraft.birthDate || patientDraft.ageYears || patientDraft.ageMonths)
+  );
+  const canGoNext =
+    step !== "patient" ||
+    mode !== "existing_guardian_patient" ||
+    Boolean(selectedGuardian && hasRequiredPatientInfo);
   const dirty =
     step !== "mode" ||
     isGuardianDraftDirty(guardianDraft) ||
@@ -2360,6 +2611,7 @@ function PatientGuardianRegistrationButton({
   const reset = () => {
     setErrors({});
     setGuardianDraft(createGuardianRegistrationDraft());
+    setGuardianPopoverOpen(false);
     setGuardianQuery("");
     setMode("new_guardian_patient");
     setPatientDraft(createNewPatientDraft());
@@ -2435,7 +2687,7 @@ function PatientGuardianRegistrationButton({
     const breed = patientDraft.isMixed
       ? [
           patientDraft.breed.trim() || getMixBreedSuggestion(patientDraft.species),
-          patientDraft.additionalBreed.trim(),
+          ...splitBreedList(patientDraft.additionalBreed),
         ]
           .filter(Boolean)
           .join(" · ")
@@ -2461,6 +2713,7 @@ function PatientGuardianRegistrationButton({
       microchipNo: patientDraft.microchipNo,
       name: patientDraft.name,
       neutered: sexPayload.neutered,
+      patientRegistrationNo: patientDraft.patientRegistrationNo,
       sex: sexPayload.sex,
       species: patientDraft.species,
       specialNote: patientDraft.specialNote,
@@ -2539,23 +2792,7 @@ function PatientGuardianRegistrationButton({
   };
   const goNextFromMode = () => {
     setErrors({});
-    setStep(mode === "new_guardian_patient" ? "guardian" : "guardian_select");
-  };
-  const goNextFromGuardianSelect = () => {
-    if (!selectedGuardian) {
-      setErrors({ selectedGuardianId: "기존 보호자를 선택해 주세요." });
-      return;
-    }
-
-    setErrors({});
-    setPatientDraft(
-      createNewPatientDraft({
-        guardianId: selectedGuardian.id,
-        guardianMobilePhone: selectedGuardian.mobilePhone ?? "",
-        guardianName: selectedGuardian.name,
-      })
-    );
-    setStep("patient");
+    setStep(mode === "new_guardian_patient" ? "guardian" : "patient");
   };
   const goNextFromGuardian = () => {
     if (validateGuardianStep()) {
@@ -2589,34 +2826,41 @@ function PatientGuardianRegistrationButton({
         환자/보호자 등록
       </Button>
       <Dialog open={open} onOpenChange={setOpenSafely}>
-        <DialogContent className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[680px]">
+        <DialogContent
+          className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[680px]"
+          showCloseButton={false}
+        >
           <DialogHeader className="px-8 pb-4 pt-7">
-            <div className="flex min-w-0 items-center gap-2">
-              <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
-                {step === "mode"
-                  ? "신규 등록"
-                  : step === "guardian"
-                    ? "신규 보호자 등록"
-                    : step === "guardian_select"
-                      ? "기존 보호자 선택"
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+                  {step === "mode"
+                    ? "신규 등록"
+                    : step === "guardian"
+                      ? "신규 보호자 등록"
                       : step === "patient"
-                        ? "신규 환자 등록"
+                        ? mode === "existing_guardian_patient"
+                          ? "기존 보호자에 신규 환자 등록"
+                          : "신규 환자 등록"
                         : "등록 정보 확인"}
-              </DialogTitle>
-              {stepBadge ? (
-                <Badge variant="secondary" className="h-6 rounded-md px-2 text-[12px] font-semibold">
-                  {stepBadge}
-                </Badge>
-              ) : null}
+                </DialogTitle>
+                {stepBadge ? (
+                  <Badge variant="secondary" className="h-6 rounded-md px-2 text-[12px] font-semibold">
+                    {stepBadge}
+                  </Badge>
+                ) : null}
+              </div>
+              <RegistrationDialogCloseButton
+                ariaLabel="환자/보호자 창 닫기"
+                onClick={requestClose}
+              />
             </div>
-            <DialogDescription className="text-[13px] text-muted-foreground">
-              {step === "mode"
-                ? "등록할 케이스를 선택해 주세요."
-                : "입력한 정보는 최종 확인 후 등록됩니다."}
+            <DialogDescription className="sr-only">
+              환자/보호자 등록 양식입니다.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-8">
-            <div className="flex flex-col gap-6 pb-6">
+          <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
+            <div className="flex flex-col gap-6 px-1 pb-6 pt-3">
               {step === "mode" ? (
                 <div className="grid gap-4">
                   <RegistrationModeCard
@@ -2826,82 +3070,160 @@ function PatientGuardianRegistrationButton({
                 </>
               ) : null}
 
-              {step === "guardian_select" ? (
-                <RegistrationFormSection separated={false} title="기존 보호자 선택">
-                  <div className="grid gap-3">
-                    <RegistrationFormField error={errors.selectedGuardianId} label="보호자 검색" required>
-                      <div className="relative">
-                        <CdsActionsSearchIcon
-                          aria-hidden="true"
-                          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
-                        />
-                        <Input
-                          aria-label="기존 보호자 검색"
-                          className="h-10 bg-card pl-9"
-                          placeholder="보호자명 또는 휴대전화 검색"
-                          value={guardianQuery}
-                          onValueChange={setGuardianQuery}
-                        />
-                      </div>
-                    </RegistrationFormField>
-                    <div className="grid gap-2" role="listbox" aria-label="기존 보호자 목록">
-                      {guardianMatches.map((guardian) => (
-                        <button
-                          key={guardian.id}
-                          type="button"
-                          role="option"
-                          aria-selected={selectedGuardianId === guardian.id}
-                          className={cn(
-                            "flex items-start justify-between gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
-                            selectedGuardianId === guardian.id &&
-                              "border-[var(--clair-color-label-strong)] bg-[var(--clair-color-atomic-sky-50)]"
-                          )}
-                          onClick={() => {
-                            setSelectedGuardianId(guardian.id);
-                            setErrors((current) => ({ ...current, selectedGuardianId: undefined }));
-                          }}
-                        >
-                          <span className="min-w-0">
-                            <span className="block text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
-                              {guardian.name}
-                            </span>
-                            <span className="mt-1 block text-[12px] text-muted-foreground">
-                              {guardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
-                              {getGuardianPatientCount(guardian.id, patientGuardians)}마리
-                            </span>
-                          </span>
-                          <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
-                            {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
-                          </Badge>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </RegistrationFormSection>
-              ) : null}
-
               {step === "patient" ? (
                 <>
-                  {mode === "existing_guardian_patient" && selectedGuardian ? (
-                    <section className="rounded-lg border bg-[var(--clair-color-background-surface)] p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
-                            연결 보호자
-                          </div>
-                          <div className="mt-1 text-[14px] font-bold text-[var(--clair-color-label-strong)]">
-                            {selectedGuardian.name}
-                          </div>
-                          <div className="mt-1 text-[12px] text-muted-foreground">
-                            {selectedGuardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
-                            {selectedGuardianPatientCount}마리
-                          </div>
-                        </div>
-                        <Badge variant="outline">기존 보호자</Badge>
+                  {mode === "existing_guardian_patient" ? (
+                    <RegistrationFormSection separated={false} title="보호자 선택">
+                      <div className="grid gap-3">
+                        <RegistrationFormField
+                          error={errors.selectedGuardianId}
+                          label="보호자 검색"
+                          required
+                        >
+                          <Popover open={guardianPopoverOpen} onOpenChange={setGuardianPopoverOpen}>
+                            <PopoverTrigger
+                              nativeButton={false}
+                              render={<div className="relative" />}
+                            >
+                              <CdsActionsSearchIcon
+                                aria-hidden="true"
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                              />
+                              <Input
+                                aria-label="기존 보호자 검색"
+                                className="h-10 bg-card pl-9"
+                                placeholder="보호자명 또는 휴대전화 검색"
+                                value={guardianQuery}
+                                onFocus={() => setGuardianPopoverOpen(true)}
+                                onValueChange={(query) => {
+                                  setGuardianQuery(query);
+                                  setGuardianPopoverOpen(true);
+                                  if (selectedGuardian && query !== selectedGuardianSearchDisplay) {
+                                    setSelectedGuardianId("");
+                                    setPatientDraft((current) => ({
+                                      ...current,
+                                      existingGuardianId: "",
+                                      guardianMobilePhone: "",
+                                      guardianName: "",
+                                    }));
+                                  }
+                                }}
+                              />
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="start"
+                              className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
+                              initialFocus={false}
+                            >
+                              <div role="listbox" aria-label="기존 보호자 목록" className="grid gap-1">
+                                {guardianMatches.length ? (
+                                  guardianMatches.map((guardian) => {
+                                    const guardianDisplay = getGuardianSearchDisplay(
+                                      guardian,
+                                      patients,
+                                      patientGuardians
+                                    );
+
+                                    return (
+                                      <button
+                                        key={guardian.id}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={selectedGuardianId === guardian.id}
+                                        className={cn(
+                                          "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                                          selectedGuardianId === guardian.id &&
+                                            "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                                        )}
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => {
+                                          setGuardianQuery(guardianDisplay);
+                                          setSelectedGuardianId(guardian.id);
+                                          setPatientDraft((current) => ({
+                                            ...current,
+                                            existingGuardianId: guardian.id,
+                                            guardianMobilePhone: guardian.mobilePhone ?? "",
+                                            guardianName: guardian.name,
+                                          }));
+                                          setErrors((current) => ({
+                                            ...current,
+                                            selectedGuardianId: undefined,
+                                          }));
+                                          setGuardianPopoverOpen(false);
+                                        }}
+                                      >
+                                        <span className="min-w-0 truncate">
+                                          <span className="text-[13px] font-semibold">
+                                            {guardian.name}
+                                          </span>
+                                          <span className="ml-1 text-[12px] text-muted-foreground">
+                                            {guardian.mobilePhone ?? "연락처 미입력"} ·{" "}
+                                            {getGuardianPatientSummary(guardian.id, patients, patientGuardians)}
+                                          </span>
+                                        </span>
+                                        <Badge variant={selectedGuardianId === guardian.id ? "default" : "outline"}>
+                                          {selectedGuardianId === guardian.id ? "선택됨" : "기존 보호자"}
+                                        </Badge>
+                                      </button>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="px-2.5 py-2 text-[12px] text-muted-foreground">
+                                    일치하는 보호자가 없습니다.
+                                  </div>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </RegistrationFormField>
+                        {selectedGuardian ? (
+                          <details className="group rounded-lg border bg-[var(--clair-color-background-surface)] p-3" open>
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                              <span className="flex min-w-0 items-center gap-2">
+                                <span className="truncate">
+                                  {selectedGuardian.name} 보호자의 동물
+                                </span>
+                                <Badge variant="outline" className="shrink-0">
+                                  {selectedGuardianPatients.length}마리
+                                </Badge>
+                              </span>
+                              <CdsNavigationChevronDownIcon
+                                className="size-4 shrink-0 text-[var(--clair-color-atomic-gray-500)] transition-transform group-open:rotate-180"
+                                aria-hidden="true"
+                              />
+                            </summary>
+                            <div className="mt-3 grid gap-2">
+                              {selectedGuardianPatients.length ? (
+                                selectedGuardianPatients.map((patient) => (
+                                  <div
+                                    key={patient.id}
+                                    className="flex min-w-0 items-center gap-2 rounded-md border bg-card px-3 py-2"
+                                  >
+                                    <span className="shrink-0 text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                                      {patient.name}
+                                    </span>
+                                    <span className="truncate text-[12px] text-muted-foreground">
+                                      {[patient.breed, getPatientSexLabel(patient), getPatientDisplayAge(patient)]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="rounded-md border bg-card px-3 py-2 text-[12px] text-muted-foreground">
+                                  연결된 동물이 없습니다.
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        ) : null}
                       </div>
-                    </section>
+                    </RegistrationFormSection>
                   ) : null}
-                  <RegistrationFormSection separated={false} title="동물 정보">
+                  <RegistrationFormSection
+                    separated={mode === "existing_guardian_patient"}
+                    title="동물 정보"
+                  >
                     <div className="grid grid-cols-2 gap-x-7 gap-y-5">
                       <RegistrationFormField error={errors.patientName} label="동물 이름" required>
                         <Input
@@ -3004,9 +3326,9 @@ function PatientGuardianRegistrationButton({
                       </RegistrationFormField>
                       {patientDraft.isMixed ? (
                         <RegistrationFormField className="col-span-2" label="추가 품종">
-                          <BreedAutocomplete
+                          <BreedMultiSelect
                             ariaLabel="추가 품종"
-                            className="h-10 bg-card"
+                            className="min-h-10 bg-card"
                             placeholder="믹스의 경우 추가 품종을 선택해주세요"
                             species={patientDraft.species}
                             value={patientDraft.additionalBreed}
@@ -3020,8 +3342,24 @@ function PatientGuardianRegistrationButton({
                   </RegistrationFormSection>
                   <RegistrationFormSection title="추가 정보">
                     <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                      <RegistrationFormField error={errors.age} label="동물 나이" required>
-                        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                      <RegistrationFormField
+                        error={errors.age}
+                        label="동물 나이"
+                        required
+                        actions={
+                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                            <Switch
+                              size="sm"
+                              checked={patientDraft.estimatedAge}
+                              onCheckedChange={(estimatedAge) =>
+                                setPatientDraft((current) => ({ ...current, estimatedAge }))
+                              }
+                            />
+                            추정
+                          </label>
+                        }
+                      >
+                        <div className="grid grid-cols-2 gap-2">
                           <Input
                             aria-label="나이 년"
                             className="h-10 bg-card"
@@ -3056,16 +3394,6 @@ function PatientGuardianRegistrationButton({
                               }))
                             }
                           />
-                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
-                            <Switch
-                              size="sm"
-                              checked={patientDraft.estimatedAge}
-                              onCheckedChange={(estimatedAge) =>
-                                setPatientDraft((current) => ({ ...current, estimatedAge }))
-                              }
-                            />
-                            추정
-                          </label>
                         </div>
                       </RegistrationFormField>
                       <RegistrationFormField label="생년월일">
@@ -3096,6 +3424,20 @@ function PatientGuardianRegistrationButton({
                           value={patientDraft.microchipNo}
                           onValueChange={(microchipNo) =>
                             setPatientDraft((current) => ({ ...current, microchipNo }))
+                          }
+                        />
+                      </RegistrationFormField>
+                      <RegistrationFormField label="동물등록번호">
+                        <Input
+                          aria-label="동물등록번호"
+                          className="h-10 bg-card"
+                          placeholder="동물등록번호"
+                          value={patientDraft.patientRegistrationNo}
+                          onValueChange={(patientRegistrationNo) =>
+                            setPatientDraft((current) => ({
+                              ...current,
+                              patientRegistrationNo,
+                            }))
                           }
                         />
                       </RegistrationFormField>
@@ -3199,9 +3541,8 @@ function PatientGuardianRegistrationButton({
                   onClick={() => {
                     setErrors({});
                     if (step === "guardian") setStep("mode");
-                    if (step === "guardian_select") setStep("mode");
                     if (step === "patient") {
-                      setStep(mode === "new_guardian_patient" ? "guardian" : "guardian_select");
+                      setStep(mode === "new_guardian_patient" ? "guardian" : "mode");
                     }
                     if (step === "confirm") setStep("patient");
                   }}
@@ -3211,10 +3552,10 @@ function PatientGuardianRegistrationButton({
               ) : null}
               <Button
                 className="px-5 font-semibold"
+                disabled={!canGoNext}
                 onClick={() => {
                   if (step === "mode") goNextFromMode();
                   if (step === "guardian") goNextFromGuardian();
-                  if (step === "guardian_select") goNextFromGuardianSelect();
                   if (step === "patient") goNextFromPatient();
                   if (step === "confirm") commitRegistration();
                 }}
@@ -3227,22 +3568,15 @@ function PatientGuardianRegistrationButton({
       </Dialog>
 
       <Dialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
-        <DialogContent className="p-0 sm:max-w-[420px]">
-          <DialogHeader className="px-6 pb-3 pt-6">
-            <DialogTitle className="text-[18px] font-bold">
-              입력을 취소할까요?
-            </DialogTitle>
-            <DialogDescription>
-              작성 중인 내용은 저장되지 않습니다.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="border-t px-6 py-4">
-            <Button variant="outline" onClick={() => setConfirmCloseOpen(false)}>
-              계속 작성
-            </Button>
-            <Button onClick={closeWithoutSaving}>취소하고 나가기</Button>
-          </DialogFooter>
-        </DialogContent>
+        <EmrConfirmDialogContent
+          title="입력을 취소할까요?"
+          description="작성 중인 내용은 저장되지 않습니다."
+          cancelLabel="계속 작성"
+          confirmLabel="취소하고 나가기"
+          closeAriaLabel="입력 취소 확인 닫기"
+          onCancel={() => setConfirmCloseOpen(false)}
+          onConfirm={closeWithoutSaving}
+        />
       </Dialog>
     </>
   );

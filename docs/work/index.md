@@ -17,6 +17,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | RECEPTION-PR-003 | done | reception | P1 | PR 3 | `docs/work/reception/RECEPTION-PR-003-registration-quality-ux.md` |
 | RECEPTION-PR-004 | done | reception | P1 | PR 4 | `docs/work/reception/RECEPTION-PR-004-unified-registration-entry.md` |
 | CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
+| CHART-PR-002 | done | chart | P1 | PR 2 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md` |
 | LAB-PR-001 | done | lab | P1 | PR 1 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md` |
 
 ## Current Next Work

@@ -115,13 +115,11 @@ export function DispensingSidePanel() {
   );
 }
 
-export function DispensingHeader({ hasRightPanel, moduleId }: ShellComponentProps) {
+export function DispensingHeader({ moduleId }: ShellComponentProps) {
   const {
     contentAsideOpen,
-    rightPanelOpen,
     selectedQueueItemIds,
     setContentAsideOpen,
-    setRightPanelOpen,
   } =
     useLayoutStore();
   const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
@@ -153,9 +151,6 @@ export function DispensingHeader({ hasRightPanel, moduleId }: ShellComponentProp
         { label: "환자메모" },
         { label: "수납메모", disabled: true },
       ]}
-      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      rightPanelDisabled={!hasRightPanel}
-      rightPanelOpen={rightPanelOpen}
     />
   );
 }
@@ -194,33 +189,6 @@ export function DispensingContentAside() {
               group={group}
               onToggle={() => toggleHistoryGroup(group.date)}
             />
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
-  );
-}
-
-export function DispensingRightPanel() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-12 flex-col justify-center border-b px-3">
-        <div className="text-sm font-semibold">환자 사이드 패널</div>
-        <div className="text-[11px] text-muted-foreground">환자 컨텍스트와 작업 참고 정보</div>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-3 p-3">
-          {[
-            ["조제 참고", "환자의 최근 조제 이력과 주의 메모를 확인하는 영역입니다."],
-            ["보호자 메모", "복약 안내 전 확인해야 하는 보호자 전달사항을 표시합니다."],
-            ["환자 메모", "처치와 조제 업무에서 함께 참고할 환자 특이사항을 표시합니다."],
-          ].map(([title, description]) => (
-            <section key={title} className="rounded-md border bg-card p-3">
-              <div className="font-semibold">{title}</div>
-              <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
-                {description}
-              </p>
-            </section>
           ))}
         </div>
       </ScrollArea>
@@ -481,6 +449,23 @@ function completeOrderGroup(group: OrderTableGroup) {
   };
 }
 
+function completeInstructionGroup(group: OrderTableGroup) {
+  const rows = group.rows.map((row) => ({
+    ...row,
+    status: "완료" as const,
+    workStatus: "완료" as const,
+    warningMessage: undefined,
+    diffs: undefined,
+  }));
+
+  return {
+    ...group,
+    workStatus: "완료" as const,
+    assigneeIds: getGroupAssigneeIds(rows),
+    rows,
+  };
+}
+
 function assignOrderInGroup(group: OrderTableGroup, rowId: string, technicianId: string) {
   const technician = findTechnician(technicianId);
   const rows = group.rows.map((row) =>
@@ -711,6 +696,9 @@ function DispensingContentBody({
   const completeGroup = (groupId: string) => {
     updateGroup(groupId, completeOrderGroup);
   };
+  const completeInstruction = () => {
+    setTableGroups((current) => current.map(completeInstructionGroup));
+  };
   const cancelGroupAssignment = (groupId: string) => {
     updateGroup(groupId, cancelOrderGroupAssignment);
   };
@@ -773,7 +761,7 @@ function DispensingContentBody({
                   completeLabel={completeLabel}
                   size="sm"
                   onStart={() => startGroup(primaryGroup.id)}
-                  onComplete={() => completeGroup(primaryGroup.id)}
+                  onComplete={completeInstruction}
                   onCancelAssignment={() => cancelGroupAssignment(primaryGroup.id)}
                 />
               ) : null}

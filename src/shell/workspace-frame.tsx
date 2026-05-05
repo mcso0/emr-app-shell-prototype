@@ -49,8 +49,6 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     activeDrawer?.subtitle ??
     (activeDrawer?.type === "reception-encounter" ? undefined : activeDrawer?.id);
   const drawerWidth = SHELL_LAYOUT.drawer.defaultWidth;
-  const shouldOffsetDrawerFromReceptionToolbar = activeDrawer?.type.startsWith("reception-");
-  const shouldOffsetDrawerFromToolbar = Boolean(Header) || shouldOffsetDrawerFromReceptionToolbar;
   const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
   const effectiveModuleSidePanelWidth = Math.max(
     moduleSidePanelWidth,
@@ -168,14 +166,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 480, opacity: 0 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className={cn(
-                "absolute bottom-0 right-0 border-l bg-card shadow-2xl",
-                shouldOffsetDrawerFromReceptionToolbar
-                  ? "top-[128px]"
-                  : shouldOffsetDrawerFromToolbar
-                    ? "top-[68px]"
-                    : "top-0"
-              )}
+              className="absolute bottom-0 right-0 top-0 border-l bg-card shadow-2xl"
               style={{
                 width: drawerWidth,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
