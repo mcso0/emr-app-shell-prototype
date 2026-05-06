@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Billing Workspace Wireframe</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --line: #d9e0e8;
+      --soft: #eef2f6;
+      --text: #17202a;
+      --muted: #667485;
+      --blue: #0ea5d7;
+      --blue-soft: #e5f7fd;
+      --green: #1f9d63;
+      --yellow: #fff5d6;
+      font-family: Inter, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #1f2328; color: var(--text); }
+    .app { width: 100vw; height: 100vh; padding: 18px; }
+    .shell {
+      display: grid;
+      grid-template-columns: 60px 320px minmax(520px, 1fr) 316px;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .rail { background: #06283a; color: white; padding: 12px 8px; }
+    .rail-logo { width: 36px; height: 36px; margin: 0 auto 22px; border-radius: 12px; background: var(--blue); }
+    .rail-item {
+      width: 42px; height: 42px; margin: 6px auto; border-radius: 8px;
+      display: grid; place-items: center; font-size: 11px; color: #b8c7d3;
+    }
+    .rail-item.active { background: #0b5f86; color: white; }
+
+    .side { display: flex; min-height: 0; flex-direction: column; border-right: 1px solid var(--line); background: var(--bg); }
+    .side-title { height: 64px; padding: 18px 16px; font-size: 18px; font-weight: 700; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 0 12px 10px; padding: 4px; border-radius: 8px; background: #e7edf3; }
+    .tab { border-radius: 6px; padding: 6px; text-align: center; font-size: 12px; color: var(--muted); }
+    .tab.active { background: white; color: var(--text); font-weight: 700; }
+    .list-head { display: flex; justify-content: space-between; margin: 0 16px; padding: 10px 0; border-block: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+    .queue { overflow: auto; padding: 10px 10px 18px; }
+    .queue-card { margin-bottom: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+    .queue-card.active { border-color: var(--blue); background: var(--blue-soft); }
+    .queue-title { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; }
+    .queue-sub { margin-top: 3px; font-size: 12px; color: var(--muted); }
+    .queue-foot { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--soft); font-size: 11px; color: var(--muted); }
+
+    .main { display: flex; min-width: 0; min-height: 0; flex-direction: column; background: var(--bg); }
+    .context {
+      display: flex; align-items: center; gap: 16px; min-height: 50px;
+      border-bottom: 1px solid var(--line); background: white; padding: 0 16px; font-size: 13px;
+    }
+    .context strong { margin-right: 4px; color: var(--muted); font-weight: 600; }
+    .workspace { min-height: 0; overflow: auto; padding: 16px; }
+    .titlebar {
+      display: flex; justify-content: space-between; gap: 18px; padding: 14px 16px;
+      border: 1px solid var(--line); border-radius: 8px; background: white;
+    }
+    h1 { margin: 0; font-size: 18px; }
+    .desc { margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .amount { text-align: right; font-size: 20px; font-weight: 800; }
+    .card { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; background: white; overflow: hidden; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 14px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 700; }
+    .guardian-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+    .guardian { padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+    .guardian.active { border-color: var(--blue); background: var(--blue-soft); }
+    .combine-row { display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--soft); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { height: 36px; padding: 0 10px; background: var(--soft); color: var(--muted); text-align: left; font-weight: 700; }
+    td { height: 42px; padding: 0 10px; border-top: 1px solid var(--soft); background: white; }
+    .pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--soft); font-size: 12px; font-weight: 700; color: var(--muted); }
+    .input { width: 64px; height: 28px; border: 1px solid var(--line); border-radius: 6px; background: #f9fbfd; text-align: right; padding-right: 8px; }
+    .note { margin: 12px; padding: 10px; border-radius: 8px; background: var(--yellow); color: #7a5a00; font-size: 12px; }
+
+    .right { display: flex; min-height: 0; flex-direction: column; border-left: 1px solid var(--line); background: white; }
+    .right-head { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--line); font-weight: 700; }
+    .right-body { overflow: auto; padding: 14px; }
+    .summary-line { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--soft); font-size: 13px; }
+    .summary-line strong { color: var(--blue); }
+    .section-title { margin: 18px 0 8px; font-size: 13px; font-weight: 800; }
+    .method { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 4px; border-radius: 8px; background: var(--soft); }
+    .method div { padding: 7px; border-radius: 6px; text-align: center; font-size: 12px; }
+    .method .active { background: white; font-weight: 700; }
+    .disabled { color: #9aa6b2; background: #f6f8fa; }
+    .right-actions { margin-top: auto; padding: 14px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn { height: 34px; border: 1px solid var(--line); border-radius: 7px; background: white; font-weight: 700; }
+    .btn.primary { border-color: #111827; background: #111827; color: white; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="shell">
+      <nav class="rail">
+        <div class="rail-logo"></div>
+        <div class="rail-item">홈</div>
+        <div class="rail-item">접수</div>
+        <div class="rail-item">진료</div>
+        <div class="rail-item">검사</div>
+        <div class="rail-item">조제</div>
+        <div class="rail-item active">수납</div>
+      </nav>
+
+      <aside class="side">
+        <div class="side-title">수납</div>
+        <div class="tabs"><div class="tab active">대기 2</div><div class="tab">미납 1</div><div class="tab">종료 1</div></div>
+        <div class="list-head"><span>대기 청구서</span><span>정렬 | 필터 | 검색</span></div>
+        <div class="queue">
+          <div class="queue-card active">
+            <div class="queue-title"><span>코코 · INV-260501-0001</span><span class="pill">수납대기</span></div>
+            <div class="queue-sub">이지은 · E-260501-0001</div>
+            <div class="queue-foot"><span>26.05.01 10:40</span><strong>121,500원</strong></div>
+          </div>
+          <div class="queue-card">
+            <div class="queue-title"><span>콩이 · INV-260501-0003</span><span class="pill">수납대기</span></div>
+            <div class="queue-sub">김하늘 · E-260501-0003</div>
+            <div class="queue-foot"><span>26.05.01 10:22</span><strong>156,500원</strong></div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="context">
+          <span><strong>환자</strong>코코</span>
+          <span><strong>보호자</strong>이지은</span>
+          <span><strong>품종</strong>코리안숏헤어</span>
+          <span><strong>나이</strong>3세</span>
+          <span><strong>청구서</strong>INV-260501-0001</span>
+          <span><strong>상태</strong>수납대기</span>
+        </div>
+        <div class="workspace">
+          <section class="titlebar">
+            <div>
+              <h1>수납</h1>
+              <div class="desc">INV-260501-0001 · 코코 · 이지은 · E-260501-0001</div>
+              <div class="desc">진료 / 검사 / 영상 / 조제 / 처치 항목을 보호자 이지은에게 안내합니다.</div>
+            </div>
+            <div>
+              <div class="amount">121,500원</div>
+              <div class="desc">미납 121,500원</div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><span>보호자 청구 묶음</span><span class="pill">3</span></div>
+            <div class="guardian-grid">
+              <div class="guardian active"><strong>이지은</strong><div class="desc">코코 · 1건</div><strong>121,500원</strong></div>
+              <div class="guardian"><strong>김하늘</strong><div class="desc">콩이 · 1건</div><strong>156,500원</strong></div>
+              <div class="guardian"><strong>정하린</strong><div class="desc">두부 · 1건</div><strong>28,000원</strong></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><span>합산/해제</span><span><button class="btn">합산</button> <button class="btn">합산 해제</button></span></div>
+            <div class="combine-row"><span>✓</span><strong>INV-260501-0001</strong><span>수납대기</span><strong>121,500원</strong></div>
+            <div class="desc" style="padding: 0 14px 12px;">합산 대상 1건 · 적용 0건</div>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><span>청구 항목 편집</span><span class="pill">5</span></div>
+            <div class="note">수의사 코멘트나 실제 할인 정책은 별도 연동 없이 현재 청구 항목만 session-only로 조정합니다.</div>
+            <table>
+              <thead><tr><th>업무</th><th>항목</th><th>단가</th><th>수량</th><th>할인</th><th>청구금액</th></tr></thead>
+              <tbody>
+                <tr><td><span class="pill">진료</span></td><td>일반 진료</td><td>22,000원</td><td><div class="input">1</div></td><td>0원</td><td><strong>22,000원</strong></td></tr>
+                <tr><td><span class="pill">검사</span></td><td>CBC 검사</td><td>35,000원</td><td><div class="input">1</div></td><td>0원</td><td><strong>35,000원</strong></td></tr>
+                <tr><td><span class="pill">처치</span></td><td>피하 수액 처치</td><td>18,000원</td><td><div class="input">1</div></td><td>0원</td><td><strong>18,000원</strong></td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </main>
+
+      <aside class="right">
+        <div class="right-head"><span>수납 요약</span><span class="pill">수납대기</span></div>
+        <div class="right-body">
+          <div class="summary-line"><span>청구액</span><strong>121,500원</strong></div>
+          <div class="summary-line"><span>수납액</span><strong>0원</strong></div>
+          <div class="summary-line"><span>미납액</span><strong>121,500원</strong></div>
+          <div class="summary-line"><span>할인</span><span>0원</span></div>
+          <div class="summary-line"><span>발행</span><span>-</span></div>
+          <div class="section-title">읽기 전용 수납 정보</div>
+          <div class="summary-line disabled"><span>영수증 금액</span><span>미연동</span></div>
+          <div class="summary-line disabled"><span>VAT 세부</span><span>0원</span></div>
+          <div class="summary-line disabled"><span>부분 결제 입력</span><span>미지원</span></div>
+          <div class="section-title">결제 수단</div>
+          <div class="method"><div class="active">카드</div><div>현금</div><div>계좌이체</div><div>기타</div></div>
+          <div class="section-title">수납 상태</div>
+          <div class="note">보호자 안내 후 데모 세션에서만 청구 확정과 수납 완료 상태를 변경합니다.</div>
+        </div>
+        <div class="right-actions">
+          <button class="btn">미납 처리</button>
+          <button class="btn">청구 확정</button>
+          <button class="btn primary" style="grid-column: 1 / -1;">수납 완료</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>
