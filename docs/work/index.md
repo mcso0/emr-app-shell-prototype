@@ -19,6 +19,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
 | CHART-PR-002 | done | chart | P1 | PR 2 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md` |
 | LAB-PR-001 | done | lab | P1 | PR 1 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md` |
+| HOSPITAL-ADMIN-PR-001 | done | hospital-admin | P1 | PR 1 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md` |
 
 ## Current Next Work
 
