@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병동 입원 화면 와이어프레임</title>
+    <style>
+      :root {
+        --bg: #f7fafc;
+        --panel: #ffffff;
+        --line: #e2e8f0;
+        --text: #171923;
+        --muted: #718096;
+        --blue: #1f99ff;
+        --blue-weak: #ebf8ff;
+        --green-weak: #f0fff4;
+        --orange-weak: #fffaf0;
+        --red-weak: #fff5f5;
+        --purple-weak: #faf5ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #edf2f7;
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 13px;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 60px 320px minmax(720px, 1fr) 340px;
+        gap: 10px;
+        min-height: 100vh;
+        padding: 10px;
+      }
+
+      .rail,
+      .side,
+      .main,
+      .right {
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .rail {
+        border-radius: 28px;
+        background: #002a4d;
+      }
+
+      .side,
+      .main,
+      .right {
+        min-height: 0;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .side,
+      .right {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .title {
+        display: flex;
+        height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .title strong {
+        font-size: 18px;
+      }
+
+      .date {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .segmented,
+      .chips,
+      .actions,
+      .kpis {
+        display: flex;
+        gap: 8px;
+      }
+
+      .segmented {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .segmented span,
+      .chip,
+      .badge {
+        display: inline-flex;
+        height: 26px;
+        align-items: center;
+        border-radius: 6px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        background: var(--bg);
+        font-weight: 600;
+      }
+
+      .segmented span:first-child,
+      .primary {
+        border-color: var(--blue);
+        background: var(--blue);
+        color: white;
+      }
+
+      .list {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 8px;
+        overflow: auto;
+        padding: 12px;
+        background: #fafafa;
+      }
+
+      .queue-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        padding: 11px;
+      }
+
+      .queue-card.active {
+        border-color: var(--blue);
+        background: var(--blue-weak);
+      }
+
+      .queue-card header,
+      .row-main,
+      .toolbar,
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .main {
+        display: flex;
+        flex-direction: column;
+        background: #fafafa;
+      }
+
+      .toolbar {
+        min-height: 58px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        background: white;
+      }
+
+      .search {
+        display: grid;
+        grid-template-columns: 120px minmax(220px, 1fr);
+        gap: 8px;
+        min-width: 360px;
+      }
+
+      .input {
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: white;
+        padding: 0 10px;
+        color: var(--muted);
+      }
+
+      .kpis {
+        padding: 12px 16px;
+      }
+
+      .kpi {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        padding: 12px;
+      }
+
+      .kpi strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 20px;
+      }
+
+      .table-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 0 16px 16px;
+      }
+
+      .section {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        overflow: hidden;
+      }
+
+      .section-head {
+        height: 42px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--line);
+        background: #f7fafc;
+      }
+
+      table {
+        width: 100%;
+        min-width: 1180px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        height: 42px;
+        border-bottom: 1px solid var(--line);
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: middle;
+        white-space: nowrap;
+      }
+
+      th {
+        background: #f7fafc;
+        color: #4a5568;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .patient {
+        font-weight: 700;
+      }
+
+      .danger {
+        background: var(--red-weak);
+        color: #c53030;
+      }
+
+      .care {
+        background: var(--green-weak);
+        color: #276749;
+      }
+
+      .notice {
+        background: var(--orange-weak);
+        color: #c05621;
+      }
+
+      .purple {
+        background: var(--purple-weak);
+        color: #6b46c1;
+      }
+
+      .right .body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 12px;
+        overflow: auto;
+        padding: 12px;
+        background: #fafafa;
+      }
+
+      .detail-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        padding: 12px;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="rail" aria-label="전역 메뉴"></aside>
+
+      <aside class="side">
+        <div class="title">
+          <strong>병동</strong>
+          <span class="muted">접기</span>
+        </div>
+        <div class="date">
+          <button>&lt;</button>
+          <strong>26.05.06 (수)</strong>
+          <button>&gt;</button>
+        </div>
+        <div class="segmented">
+          <span>전체 7</span>
+          <span>입원중 5</span>
+          <span>퇴실준비 2</span>
+        </div>
+        <div class="list">
+          <article class="queue-card active">
+            <header>
+              <strong>코코 · 201호</strong>
+              <span class="badge danger">산소</span>
+            </header>
+            <p class="muted">이지은 · 코리안숏헤어 · 2일차</p>
+            <div class="chips">
+              <span class="chip notice">금식</span>
+              <span class="chip purple">면회제한</span>
+            </div>
+          </article>
+          <article class="queue-card">
+            <header>
+              <strong>콩이 · ICU-01</strong>
+              <span class="badge danger">집중</span>
+            </header>
+            <p class="muted">김하늘 · 푸들 · 1일차</p>
+            <div class="chips">
+              <span class="chip care">수액</span>
+              <span class="chip notice">구토관찰</span>
+            </div>
+          </article>
+          <article class="queue-card">
+            <header>
+              <strong>두부 · 203호</strong>
+              <span class="badge">퇴실준비</span>
+            </header>
+            <p class="muted">정하린 · 포메라니안 · 3일차</p>
+          </article>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="toolbar">
+          <div class="actions">
+            <button class="primary">+ 입실 추가</button>
+            <button>입원실 관리</button>
+          </div>
+          <div class="search">
+            <div class="input">검색조건</div>
+            <div class="input">동물명, 보호자명, 입원실 검색</div>
+          </div>
+        </div>
+
+        <section class="kpis" aria-label="병동 현황">
+          <div class="kpi"><span class="muted">입원중</span><strong>5</strong></div>
+          <div class="kpi"><span class="muted">주의 태그</span><strong>9</strong></div>
+          <div class="kpi"><span class="muted">퇴실 준비</span><strong>2</strong></div>
+          <div class="kpi"><span class="muted">오늘 입실</span><strong>1</strong></div>
+        </section>
+
+        <div class="table-wrap">
+          <section class="section">
+            <div class="section-head">
+              <strong>강아지 4</strong>
+              <span class="muted">입원실/담당/퇴실 상태 중심</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>입원실</th>
+                  <th>환자</th>
+                  <th>보호자</th>
+                  <th>차트</th>
+                  <th>유의사항</th>
+                  <th>진단명</th>
+                  <th>입실 메모</th>
+                  <th>입실시점</th>
+                  <th>기간</th>
+                  <th>진료과</th>
+                  <th>주치의</th>
+                  <th>담당자</th>
+                  <th>퇴실</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>ICU-01</td>
+                  <td><span class="patient">콩이</span> · 푸들</td>
+                  <td>김하늘</td>
+                  <td><button>차트</button></td>
+                  <td><span class="badge care">수액</span> <span class="badge notice">구토관찰</span></td>
+                  <td>급성 위장관염 의심</td>
+                  <td>탈수 여부 재평가</td>
+                  <td>05.06 09:20</td>
+                  <td>1일차</td>
+                  <td>내과</td>
+                  <td>이수지</td>
+                  <td>송하윤</td>
+                  <td><button>대기</button></td>
+                </tr>
+                <tr>
+                  <td>203호</td>
+                  <td><span class="patient">두부</span> · 포메라니안</td>
+                  <td>정하린</td>
+                  <td><button>차트</button></td>
+                  <td><span class="badge purple">재활주의</span></td>
+                  <td>슬개골 수술 후 회복</td>
+                  <td>보행 영상 확인</td>
+                  <td>05.04 14:10</td>
+                  <td>3일차</td>
+                  <td>정형외과</td>
+                  <td>김도윤</td>
+                  <td>송하윤</td>
+                  <td><button>퇴실</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </main>
+
+      <aside class="right">
+        <div class="title">
+          <strong>입원 상세</strong>
+          <span class="muted">우측 패널</span>
+        </div>
+        <div class="body">
+          <section class="detail-card">
+            <div class="row-main">
+              <strong>콩이 · ICU-01</strong>
+              <span class="badge danger">집중</span>
+            </div>
+            <p class="muted">김하늘 · 푸들 · 1일차 · 이수지 주치의</p>
+          </section>
+          <section class="detail-card">
+            <strong>오늘 케어 포인트</strong>
+            <p>구토 횟수, 수액 반응, 식욕 회복 여부를 교대 시 인계한다.</p>
+          </section>
+          <section class="detail-card">
+            <strong>퇴실 체크리스트</strong>
+            <div class="check"><input type="checkbox" /> 주치의 퇴실 승인</div>
+            <div class="check"><input type="checkbox" /> 보호자 안내</div>
+            <div class="check"><input type="checkbox" /> 수납 인계</div>
+          </section>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>

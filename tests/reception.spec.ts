@@ -15,9 +15,13 @@ test("reception renders the first-path workspace instead of the placeholder", as
   const sideTabs = sidePanel.getByRole("group", { name: "접수 목록 유형" });
   await expect(sideTabs).toBeVisible();
   await expect(sidePanel.getByText("접수 작업")).toHaveCount(0);
-  await expect(sideTabs.getByRole("button", { name: "대기", exact: true })).toBeVisible();
-  await expect(sideTabs.getByRole("button", { name: "전체", exact: true })).toBeVisible();
-  await expect(sideTabs.getByRole("button", { name: "예약", exact: true })).toBeVisible();
+  await expect
+    .poll(() =>
+      sideTabs
+        .getByRole("button")
+        .evaluateAll((buttons) => buttons.map((button) => button.textContent?.trim()))
+    )
+    .toEqual(["전체", "대기", "예약"]);
   await expect(sidePanel.getByText("대기", { exact: true })).toHaveCount(2);
   await expect
     .poll(() =>
@@ -124,6 +128,35 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   await expect(kongAppointment.getByTestId("appointment-accent-appointment-kong-260501")).toHaveClass(/atomic-sky-500/);
   await expect(kongAppointment).toContainText("콩이");
   await expect(kongAppointment).toContainText("구토 및 복부");
+
+  const timeAxisAlignment = await calendar.evaluate((calendarElement) => {
+    const timeAxis = calendarElement.querySelector('[data-testid="day-time-axis"]');
+    const hourRow = calendarElement.querySelector('[data-testid="day-hour-row-9"]');
+    const timeLabel = Array.from(timeAxis?.querySelectorAll("div") ?? []).find(
+      (element) => element.textContent?.trim() === "09:00"
+    );
+
+    if (!timeAxis || !hourRow || !timeLabel) return null;
+
+    const textRange = document.createRange();
+    textRange.selectNodeContents(timeLabel);
+    const textBox = textRange.getBoundingClientRect();
+    textRange.detach();
+
+    const timeAxisBox = timeAxis.getBoundingClientRect();
+    const hourRowBox = hourRow.getBoundingClientRect();
+
+    return {
+      gapToAxisRight: timeAxisBox.right - textBox.right,
+      textCenterOffsetFromRowLine: Math.abs((textBox.top + textBox.bottom) / 2 - hourRowBox.top),
+    };
+  });
+
+  if (!timeAxisAlignment) throw new Error("Expected day calendar time axis alignment data");
+
+  expect(timeAxisAlignment.gapToAxisRight).toBeGreaterThanOrEqual(6);
+  expect(timeAxisAlignment.gapToAxisRight).toBeLessThanOrEqual(10);
+  expect(timeAxisAlignment.textCenterOffsetFromRowLine).toBeLessThanOrEqual(1);
 
   const nabiAppointment = page.getByTestId("appointment-card-appointment-nabi-260501");
   await expect(nabiAppointment.getByTestId("appointment-purpose-appointment-nabi-260501")).toContainText("피부");

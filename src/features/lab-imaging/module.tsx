@@ -894,7 +894,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
               <div className="flex h-6 min-w-0 items-center px-1">단위</div>
             </TableHead>
             <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
-              <div className="flex h-6 min-w-0 items-center px-1">정상범위</div>
+              <div className="flex h-6 min-w-0 items-center justify-center px-1 text-center">정상범위</div>
             </TableHead>
             <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
               <div className="flex h-6 min-w-0 items-center px-1">판정</div>

@@ -2,8 +2,12 @@
 
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
+import {
+  CdsActionsListFilterIcon,
+  CdsActionsSearchIcon,
+} from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -12,6 +16,7 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,12 +36,19 @@ import {
   getBillingFilterForInvoice,
   getBillingGuardianGroups,
   getBillingQueueRows,
+  type BillingDetail,
   type BillingGuardianGroup,
   type BillingQueueRow,
 } from "@/features/billing/data";
 import { useBillingStore, type BillingFilter } from "@/features/billing/store";
-import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import {
+  getPatientDisplayAge,
+  getPatientSexLabel,
+  getSpeciesLabel,
+} from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type { InvoiceLine, InvoiceStatus, Payment, PaymentMethod } from "@/types/emr-domain";
@@ -56,7 +68,7 @@ const paymentMethodItems: Array<{ label: string; value: PaymentMethod }> = [
 
 const formatAmount = (amount: number) => `${amount.toLocaleString()}원`;
 const formatShortDateTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
+  dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   draft: "수납대기",
@@ -114,6 +126,36 @@ const getBillingFlowLabel = (lines: InvoiceLine[]) => {
   return categories.length ? categories.join(" / ") : "청구 항목";
 };
 
+function useBillingWorkspaceData() {
+  const searchParams = useSearchParams();
+  const invoiceLines = useBillingStore((state) => state.invoiceLines);
+  const invoices = useBillingStore((state) => state.invoices);
+  const payments = useBillingStore((state) => state.payments);
+  const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
+  const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
+  const detail =
+    getBillingDetail(effectiveInvoiceId, invoices, invoiceLines, payments) ??
+    getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
+  const groups = useMemo(
+    () => getBillingGuardianGroups(invoices, invoiceLines, payments),
+    [invoiceLines, invoices, payments]
+  );
+
+  return {
+    detail,
+    groups,
+    invoices,
+    queryInvoiceId,
+    selectedInvoiceId,
+  };
+}
+
+function getBillingBalance(detail: BillingDetail) {
+  return Math.max(0, detail.invoice.totalAmount - detail.paidAmount);
+}
+
 function QueueItem({
   onSelect,
   row,
@@ -132,8 +174,8 @@ function QueueItem({
         variant="outline"
         title={`${row.patient?.name ?? "환자 미상"} · ${row.invoice.invoiceNo}`}
         subtitle={`${row.guardian?.name ?? "보호자 미지정"} · ${row.encounter.encounterNo}`}
-        meta={formatAmount(balance)}
-        itemBadge={<Badge variant="outline">{getInvoiceStatusLabel(row.invoice.status)}</Badge>}
+        meta={balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
+        itemBadge={<EmrStatusBadge label={getInvoiceStatusLabel(row.invoice.status)} marker="none" />}
         footer={
           <>
             <span>{formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}</span>
@@ -177,7 +219,7 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
       />
-      <div className="border-b px-3 py-2">
+      <div className="border-b px-3 pb-3">
         <SegmentedControl
           aria-label="수납 목록 필터"
           value={filter}
@@ -189,7 +231,7 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
         />
       </div>
       <EmrListHeader
-        label={filterItems.find((item) => item.value === filter)?.label ?? "수납"}
+        label={`${filterItems.find((item) => item.value === filter)?.label ?? "수납"} 청구서`}
         count={rows.length}
         headerActions={
           <>
@@ -198,6 +240,9 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
             </EmrListHeaderIconButton>
             <EmrListHeaderIconButton ariaLabel="필터">
               <CdsActionsListFilterIcon className="size-4" />
+            </EmrListHeaderIconButton>
+            <EmrListHeaderIconButton ariaLabel="검색">
+              <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
@@ -216,18 +261,67 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+export function BillingHeader({ hasRightPanel }: ShellComponentProps) {
+  const { detail } = useBillingWorkspaceData();
+  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+
+  if (!detail) return null;
+
   return (
-    <div className="rounded-md border bg-card p-3">
-      <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-      <div className="mt-2 truncate text-[16px] font-semibold">{value}</div>
-    </div>
+    <EmrPatientContextBar
+      patientItems={[
+        { label: "환자", value: detail.patient?.name ?? "환자 미상" },
+        { label: "보호자", value: detail.guardian?.name ?? "보호자 미지정" },
+        { label: "품종", value: detail.patient ? detail.patient.breed ?? getSpeciesLabel(detail.patient) : "-" },
+        { label: "나이", value: detail.patient ? getPatientDisplayAge(detail.patient) : "-" },
+        { label: "성별", value: detail.patient ? getPatientSexLabel(detail.patient) : "-" },
+      ]}
+      memoActions={[
+        { label: "방문목적" },
+        { label: "보호자메모", locked: true },
+        { label: "수납메모" },
+      ]}
+      trailingItems={[
+        { label: "청구서", value: detail.invoice.invoiceNo },
+        { label: "상태", value: getInvoiceStatusLabel(detail.invoice.status) },
+      ]}
+      rightPanelToggleLabel="수납 요약"
+      rightPanelDisabled={!hasRightPanel}
+      rightPanelOpen={rightPanelOpen}
+      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+    />
+  );
+}
+
+function BillingTitleCard({ detail }: { detail: BillingDetail }) {
+  const balance = getBillingBalance(detail);
+  const flowLabel = getBillingFlowLabel(detail.invoiceLines);
+
+  return (
+    <section className="rounded-lg border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[18px] font-semibold leading-[26px]">수납</h1>
+            <EmrStatusBadge label={getInvoiceStatusLabel(detail.invoice.status)} marker="none" />
+          </div>
+          <div className="mt-1 text-[13px] text-muted-foreground">
+            {detail.invoice.invoiceNo} · {detail.patient?.name ?? "환자 미상"} ·{" "}
+            {detail.guardian?.name ?? "보호자 미지정"} · {detail.encounter.encounterNo}
+          </div>
+          <div className="mt-2 text-[13px] font-medium text-[var(--clair-color-label-strong)]">
+            {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게 안내합니다.
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[20px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
+          <div className="text-[12px] text-muted-foreground">
+            {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -245,26 +339,28 @@ function GuardianGroups({
         <Badge variant="secondary">{groups.length}</Badge>
       </div>
       <div className="grid gap-3 p-4 md:grid-cols-3">
-        {groups.map((group) => (
-          <div
-            key={group.guardian.id}
-            className={[
-              "rounded-md border bg-[var(--clair-color-background-surface)] p-3",
-              group.guardian.id === selectedGuardianId
-                ? "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
-                : "",
-            ].join(" ")}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-medium">{group.guardian.name}</div>
-              <Badge variant="outline">{group.invoices.length}건</Badge>
+        {groups.map((group) => {
+          const active = group.guardian.id === selectedGuardianId;
+
+          return (
+            <div
+              key={group.guardian.id}
+              className={cn(
+                "rounded-md border bg-[var(--clair-color-background-surface)] p-3",
+                active && "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
+              )}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="font-medium">{group.guardian.name}</div>
+                <Badge variant="outline">{group.invoices.length}건</Badge>
+              </div>
+              <div className="mt-2 truncate text-[12px] text-muted-foreground">
+                {group.patients.map((patient) => patient.name).join(", ")}
+              </div>
+              <div className="mt-3 text-[15px] font-semibold">{formatAmount(group.totalDueAmount)}</div>
             </div>
-            <div className="mt-2 truncate text-[12px] text-muted-foreground">
-              {group.patients.map((patient) => patient.name).join(", ")}
-            </div>
-            <div className="mt-3 text-[15px] font-semibold">{formatAmount(group.totalDueAmount)}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -344,14 +440,18 @@ function InvoiceLinesTable({
         </div>
         <Badge variant="secondary">{sortedLines.length}</Badge>
       </div>
-      <Table>
+      <div className="border-b bg-[var(--clair-color-status-warning-background)] px-4 py-2 text-[12px] text-[var(--clair-color-status-warning-foreground)]">
+        실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량만 session-only로 조정합니다.
+      </div>
+      <Table className="table-fixed text-[13px]">
         <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
           <TableRow>
-            <TableHead>업무</TableHead>
+            <TableHead className="w-[88px]">업무</TableHead>
             <TableHead>항목</TableHead>
-            <TableHead>수량</TableHead>
-            <TableHead>단가</TableHead>
-            <TableHead>금액</TableHead>
+            <TableHead className="w-[104px] text-right">단가</TableHead>
+            <TableHead className="w-[86px] text-center">수량</TableHead>
+            <TableHead className="w-[96px] text-right">할인</TableHead>
+            <TableHead className="w-[116px] text-right">청구금액</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -361,18 +461,19 @@ function InvoiceLinesTable({
                 <Badge variant="outline">{getBillingLineCategory(line)}</Badge>
               </TableCell>
               <TableCell className="font-medium">{line.description}</TableCell>
+              <TableCell className="text-right">{formatAmount(line.unitPrice)}</TableCell>
               <TableCell>
                 <Input
                   aria-label={`${line.description} 수량`}
-                  className="h-8 w-20"
+                  className="mx-auto h-8 w-16 text-right"
                   inputMode="numeric"
                   type="number"
                   value={line.quantity}
                   onChange={(event) => onUpdateQuantity(line.id, Number(event.target.value))}
                 />
               </TableCell>
-              <TableCell>{formatAmount(line.unitPrice)}</TableCell>
-              <TableCell className="font-semibold">{formatAmount(line.lineTotal)}</TableCell>
+              <TableCell className="text-right text-muted-foreground">0원</TableCell>
+              <TableCell className="text-right font-semibold">{formatAmount(line.lineTotal)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -381,95 +482,16 @@ function InvoiceLinesTable({
   );
 }
 
-function PaymentPanel({
-  balance,
-  invoiceStatus,
-  paidAmount,
-  payments,
-  paymentMethod,
-  onIssue,
-  onMarkPaid,
-  onMarkUnpaid,
-  onPaymentMethodChange,
-}: {
-  balance: number;
-  invoiceStatus: InvoiceStatus;
-  onIssue: () => void;
-  onMarkPaid: () => void;
-  onMarkUnpaid: () => void;
-  onPaymentMethodChange: (paymentMethod: PaymentMethod) => void;
-  paidAmount: number;
-  payments: Payment[];
-  paymentMethod: PaymentMethod;
-}) {
-  const approvedPayment = payments.find((payment) => payment.status === "approved");
-  const approvedPaymentLabel = approvedPayment ? getStatusLabel("payment", approvedPayment.status) : "승인";
-  const isPaid = invoiceStatus === "paid" || balance === 0;
-
-  return (
-    <section className="rounded-lg border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[14px] font-semibold">수납 처리</h2>
-          <div className="mt-1 text-[12px] text-muted-foreground">
-            {isPaid ? "정산 완료" : `미납액 ${formatAmount(balance)}`}
-          </div>
-        </div>
-        <SegmentedControl
-          aria-label="결제 수단 선택"
-          value={paymentMethod}
-          items={paymentMethodItems}
-          variant="tabs"
-          onValueChange={onPaymentMethodChange}
-        />
-      </div>
-      <div className="mt-4 rounded-md border bg-[var(--clair-color-background-surface)] px-3 py-2">
-        <div className="text-[13px] font-semibold">
-          {isPaid ? "세션 내 수납 완료" : "보호자 안내 후 수납 완료 처리"}
-        </div>
-        <div className="mt-1 text-[12px] text-muted-foreground">
-          {isPaid
-            ? `${formatAmount(paidAmount)} ${approvedPaymentLabel} 상태로 기록되었습니다.`
-            : "실제 PG, 현금영수증, 영수증 출력 연동 없이 데모 세션에서만 상태를 변경합니다."}
-        </div>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={onIssue}>청구 확정</Button>
-        <Button size="sm" variant="outline" onClick={onMarkUnpaid}>미납 처리</Button>
-        <Button size="sm" onClick={onMarkPaid}>수납 완료</Button>
-      </div>
-    </section>
-  );
-}
-
 export function BillingContent() {
-  const searchParams = useSearchParams();
+  const { detail, groups, invoices, queryInvoiceId, selectedInvoiceId } = useBillingWorkspaceData();
   const combinedInvoiceIds = useBillingStore((state) => state.combinedInvoiceIds);
-  const invoiceLines = useBillingStore((state) => state.invoiceLines);
-  const invoices = useBillingStore((state) => state.invoices);
-  const paymentMethod = useBillingStore((state) => state.paymentMethod);
-  const payments = useBillingStore((state) => state.payments);
-  const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const selectedInvoiceIds = useBillingStore((state) => state.selectedInvoiceIds);
   const clearCombinedInvoices = useBillingStore((state) => state.clearCombinedInvoices);
-  const issueSelectedInvoice = useBillingStore((state) => state.issueSelectedInvoice);
-  const markSelectedInvoicePaid = useBillingStore((state) => state.markSelectedInvoicePaid);
-  const markSelectedInvoiceUnpaid = useBillingStore((state) => state.markSelectedInvoiceUnpaid);
+  const selectInvoice = useBillingStore((state) => state.selectInvoice);
   const setCombinedInvoices = useBillingStore((state) => state.setCombinedInvoices);
-  const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
+  const setFilter = useBillingStore((state) => state.setFilter);
   const toggleInvoiceSelection = useBillingStore((state) => state.toggleInvoiceSelection);
   const updateInvoiceLineQuantity = useBillingStore((state) => state.updateInvoiceLineQuantity);
-  const selectInvoice = useBillingStore((state) => state.selectInvoice);
-  const setFilter = useBillingStore((state) => state.setFilter);
-  const scenario = getDemoScenarioFromParams(searchParams);
-  const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
-  const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
-  const detail = getBillingDetail(effectiveInvoiceId, invoices, invoiceLines, payments)
-    ?? getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
-  const groups = useMemo(
-    () => getBillingGuardianGroups(invoices, invoiceLines, payments),
-    [invoiceLines, invoices, payments]
-  );
 
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
@@ -489,56 +511,11 @@ export function BillingContent() {
     );
   }
 
-  const balance = Math.max(0, detail.invoice.totalAmount - detail.paidAmount);
-  const flowLabel = getBillingFlowLabel(detail.invoiceLines);
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
-      <section className="border-b bg-card px-5 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[20px] font-semibold leading-7">수납</h1>
-              <Badge>{getInvoiceStatusLabel(detail.invoice.status)}</Badge>
-            </div>
-            <div className="mt-1 text-[13px] text-muted-foreground">
-              {detail.invoice.invoiceNo} · {detail.patient?.name ?? "환자 미상"} ·{" "}
-              {detail.guardian?.name ?? "보호자 미지정"} · {detail.encounter.encounterNo}
-            </div>
-            <div className="mt-2 text-[13px] font-medium text-[var(--clair-color-label-strong)]">
-              {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게 안내합니다.
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[20px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
-            <div className="text-[12px] text-muted-foreground">
-              {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
-            </div>
-          </div>
-        </div>
-      </section>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="grid gap-4 p-5">
-          <div className="grid gap-3 md:grid-cols-4">
-            <SummaryCard label="청구액" value={formatAmount(detail.invoice.totalAmount)} />
-            <SummaryCard label="수납액" value={formatAmount(detail.paidAmount)} />
-            <SummaryCard label="할인" value={formatAmount(detail.invoice.discountAmount)} />
-            <SummaryCard label="발행" value={formatShortDateTime(detail.invoice.issuedAt)} />
-          </div>
-          <section className="rounded-lg border bg-card px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-[14px] font-semibold">오늘 수납 상태</h2>
-                <div className="mt-1 text-[12px] text-muted-foreground">
-                  {getInvoiceStatusDescription(detail.invoice.status, balance)}
-                </div>
-              </div>
-              <div className="text-right">
-                <Badge variant="outline">{getInvoiceStatusLabel(detail.invoice.status)}</Badge>
-                <div className="mt-1 text-[12px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
-              </div>
-            </div>
-          </section>
+        <div className="grid gap-4 p-4">
+          <BillingTitleCard detail={detail} />
           <GuardianGroups groups={groups} selectedGuardianId={detail.guardian?.id} />
           <CombinePanel
             group={detail.guardianGroup}
@@ -553,19 +530,155 @@ export function BillingContent() {
             totalAmount={detail.invoice.totalAmount}
             onUpdateQuantity={updateInvoiceLineQuantity}
           />
-          <PaymentPanel
-            balance={balance}
-            invoiceStatus={detail.invoice.status}
-            paidAmount={detail.paidAmount}
-            payments={detail.payments}
-            paymentMethod={paymentMethod}
-            onIssue={issueSelectedInvoice}
-            onMarkUnpaid={markSelectedInvoiceUnpaid}
-            onMarkPaid={markSelectedInvoicePaid}
-            onPaymentMethodChange={setPaymentMethod}
-          />
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function SummaryLine({
+  label,
+  value,
+  emphasis = false,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--clair-color-line-subtle)] text-[13px]">
+      <span className={muted ? "text-muted-foreground" : "text-[var(--clair-color-label-normal)]"}>
+        {label}
+      </span>
+      <span
+        className={cn(
+          "text-right font-medium",
+          emphasis && "text-[var(--clair-color-primary-normal)]",
+          muted && "text-muted-foreground"
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function PaymentMethodControl({
+  paymentMethod,
+  onPaymentMethodChange,
+}: {
+  onPaymentMethodChange: (paymentMethod: PaymentMethod) => void;
+  paymentMethod: PaymentMethod;
+}) {
+  return (
+    <SegmentedControl
+      aria-label="결제 수단 선택"
+      value={paymentMethod}
+      items={paymentMethodItems}
+      variant="tabs"
+      className="grid w-full grid-cols-2"
+      itemClassName="w-full"
+      onValueChange={onPaymentMethodChange}
+    />
+  );
+}
+
+function PaymentStatusNote({
+  balance,
+  invoiceStatus,
+  paidAmount,
+  payments,
+}: {
+  balance: number;
+  invoiceStatus: InvoiceStatus;
+  paidAmount: number;
+  payments: Payment[];
+}) {
+  const approvedPayment = payments.find((payment) => payment.status === "approved");
+  const approvedPaymentLabel = approvedPayment ? getStatusLabel("payment", approvedPayment.status) : "승인";
+  const isPaid = invoiceStatus === "paid" || balance === 0;
+
+  return (
+    <div className="rounded-md border bg-[var(--clair-color-background-surface)] px-3 py-2">
+      <div className="text-[13px] font-semibold">
+        {isPaid ? "세션 내 수납 완료" : "보호자 안내 후 수납 완료 처리"}
+      </div>
+      <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
+        {isPaid
+          ? `${formatAmount(paidAmount)} ${approvedPaymentLabel} 상태로 기록되었습니다.`
+          : "실제 PG, 현금영수증, 영수증 출력 연동 없이 데모 세션에서만 상태를 변경합니다."}
+      </div>
+    </div>
+  );
+}
+
+export function BillingRightPanel() {
+  const { detail } = useBillingWorkspaceData();
+  const paymentMethod = useBillingStore((state) => state.paymentMethod);
+  const issueSelectedInvoice = useBillingStore((state) => state.issueSelectedInvoice);
+  const markSelectedInvoicePaid = useBillingStore((state) => state.markSelectedInvoicePaid);
+  const markSelectedInvoiceUnpaid = useBillingStore((state) => state.markSelectedInvoiceUnpaid);
+  const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
+
+  if (!detail) return null;
+
+  const balance = getBillingBalance(detail);
+  const statusLabel = getInvoiceStatusLabel(detail.invoice.status);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-card">
+      <div className="flex h-[50px] shrink-0 items-center justify-between border-b px-4">
+        <h2 className="text-[14px] font-semibold">수납 요약</h2>
+        <EmrStatusBadge label={statusLabel} marker="none" />
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="px-4 py-3">
+          <div className="text-[12px] text-muted-foreground">{detail.invoice.invoiceNo}</div>
+          <div className="mt-1 text-[18px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
+          <div className="mt-1 text-[12px] text-muted-foreground">
+            {getInvoiceStatusDescription(detail.invoice.status, balance)}
+          </div>
+
+          <div className="mt-4">
+            <SummaryLine label="청구액" value={formatAmount(detail.invoice.totalAmount)} emphasis />
+            <SummaryLine label="수납액" value={formatAmount(detail.paidAmount)} emphasis={detail.paidAmount > 0} />
+            <SummaryLine label="미납액" value={formatAmount(balance)} emphasis={balance > 0} />
+            <SummaryLine label="할인" value={formatAmount(detail.invoice.discountAmount)} />
+            <SummaryLine label="발행" value={formatShortDateTime(detail.invoice.issuedAt)} />
+          </div>
+
+          <div className="mt-5 text-[13px] font-semibold">읽기 전용 수납 정보</div>
+          <div className="mt-2 rounded-md border bg-[var(--clair-color-background-surface)] px-3">
+            <SummaryLine label="영수증 금액" value="미연동" muted />
+            <SummaryLine label="VAT 세부" value={formatAmount(detail.invoice.taxAmount)} muted />
+            <SummaryLine label="부분 결제 입력" value="미지원" muted />
+          </div>
+
+          <div className="mt-5 text-[13px] font-semibold">결제 수단</div>
+          <div className="mt-2">
+            <PaymentMethodControl
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+            />
+          </div>
+
+          <div className="mt-4">
+            <PaymentStatusNote
+              balance={balance}
+              invoiceStatus={detail.invoice.status}
+              paidAmount={detail.paidAmount}
+              payments={detail.payments}
+            />
+          </div>
+        </div>
+      </ScrollArea>
+      <div className="grid shrink-0 grid-cols-2 gap-2 border-t p-4">
+        <Button size="sm" variant="outline" onClick={markSelectedInvoiceUnpaid}>미납 처리</Button>
+        <Button size="sm" variant="outline" onClick={issueSelectedInvoice}>청구 확정</Button>
+        <Button className="col-span-2" size="sm" onClick={markSelectedInvoicePaid}>수납 완료</Button>
+      </div>
     </div>
   );
 }

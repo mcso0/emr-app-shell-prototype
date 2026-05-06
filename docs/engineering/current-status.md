@@ -40,6 +40,8 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-05 기준 임상병리검사 화면은 조제/처치형 shell 구조를 사용한다. 검사 대기열, 환자 정보 인포바, 기본 열림 검사이력 aside, 값 기반 정상범위 chart와 색상 판정 badge가 있는 임상병리 검사결과지, 검사결과 종합소견 입력, 우측 장비결과내역 패널로 구성되며 영상검사는 기존 구조를 유지한다. 임상병리검사 side panel은 조제/처치 side panel의 날짜 네비게이터 패턴과 오더별/차트별 목록 전환, 접힘 가능한 상태 그룹을 제공하며, 차트별은 같은 환자 차트에 내려진 임상병리검사 오더를 encounter 단위 카드로 묶어 보여준다. 검사결과 수신내역 right panel은 같은 날짜 네비게이터 패턴과 리스트 header action을 재사용하고, 현재 오더 연결 수신 카드 안에서 애니메이션 검사결과 미리보기 아코디언을 제공한다.
 - 2026-05-05 기준 진료(차트)는 조제/처치 workspace 슬롯 구조를 재사용하도록 재구성되었다. 진료 대기열은 공통 order queue side panel 패턴을 사용하고, patient context bar 아래 차트 이력 aside와 우측 진단 이력 환자 패널을 제공한다. SOAP는 Tiptap 기반 진단계통별 편집기로 동작하며, 진단 코멘트/Plan은 textarea로 입력 가능하다. 처방/오더 하단에는 오더 현황/금액/action 고정 footer가 있다.
 - 2026-05-05 기준 진료(차트)는 SOAP가 여러 개로 늘어나도 처방/오더 영역이 화면 밖으로 밀리지 않도록 SOAP/진단 패널 내부 스크롤과 하단 처방/오더 영역을 분리했다. 차트 정보/SOAP 경계 divider와 SOAP/진단-오더 사이 grab divider를 추가했고, grab divider는 상하 영역 최소 높이를 지키면서 진료 기록/진단명 묶음과 처방/오더 영역 높이를 조절한다. Grab divider는 pointerup/cancel/blur 종료 경로를 처리해 포인터 포커스가 끊겨도 resize 상태가 남지 않는다. 처방/오더 본문은 gray-50 workspace 안에서 그룹 카드 대신 기본 미선택 checkbox를 지원하는 compact table로 표시하고, table header는 gray-50, body는 common white로 구분한다. 진료 기록/진단명/처방오더 header는 gray-400 subtitle을 곁들인 한 줄 title로 압축했고, order action footer는 파란 배경 없이 낮은 레벨의 그림자와 상단 구분선을 사용한다. SOAP 카드 자동저장 상태는 버튼형 badge가 아니라 비상호작용 text로 표시하며, SOAP 첨부 자료 footer는 별도 fill 없이 카드 배경을 이어받는다. 차트이력 aside item은 공통 `EmrListItem` 선택 표현을 사용한다.
+- 2026-05-06 기준 수납 화면은 차트/검사와 같은 App Shell 슬롯 구조로 재정렬되었다. 환자 컨텍스트 header, 중앙 청구서 workspace, 우측 수납 요약/right panel을 제공하며 대기/미납/종료 목록, 보호자 청구 묶음, 합산/해제, 청구 항목 수량 편집, 결제 수단, 청구 확정/미납/수납 완료 session-only 동작은 유지한다. 레퍼런스 기반 와이어프레임은 `docs/reference/billing/billing-workspace-wireframe.html`에 있다.
+- 2026-05-06 기준 입원 화면은 placeholder에서 session-only 병동 workspace로 교체되었다. 입원 목록 side panel, 입원 상태/검색 toolbar, 병동 KPI, 강아지/고양이/집중 치료실 grouped table, 주의 tag, 차트/퇴실 action, 우측 입원 상세/퇴실 체크리스트 패널을 제공한다. 공급된 채팅 reference image는 구조/정보 우선순위 참고로만 사용했고, pixel-level alignment 기준 asset은 아직 저장하지 않았다.
 - 2026-05-06 기준 병원관리 Order 관리 화면은 placeholder에서 session-only 오더 카탈로그 workspace로 교체되었다. `대분류 > 세부 분류 > 오더 목록` 구조를 shell side panel, content aside, dense table로 구성하고, 단일 오더 선택 시 넓은 오른쪽 drawer에서 조회/수정/삭제/저장할 수 있다. Order 세트는 별도 화면/후속 범위로 분리한다.
 - membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
@@ -77,6 +79,7 @@ Sales Demo Prototype 작업은 spine-first 방식으로 진행되었고, Wave 2�
 - 영상검사
 - 조제/처치 기존 화면 보존
 - 수납
+- 입원 1차 화면
 - `김하늘 / 콩이 / 구토 내원` sales demo golden path
 - `/w/clair-demo/home` demo launcher와 역할/모듈 quick start
 - 주요 화면의 demo query context preservation
@@ -120,7 +123,8 @@ MVP 목표:
 | 임상병리/계통 검사 | 구현됨 | 조제/처치형 검사 대기열, 환자 인포바, 기본 열림 검사이력, 값 기반 정상범위 chart와 색상 판정 badge 검사결과지, 검사결과 종합소견, 우측 장비결과내역 아코디언, 첨부자료 |
 | 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
 | 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
-| 수납 | 구현됨 | 대기/미납/종료 목록, 보호자 청구 묶음, 청구 항목 편집, 합산/해제, 결제 수단, 수납 액션 |
+| 수납 | 구현됨 | 대기/미납/종료 목록, 환자 컨텍스트 header, 보호자 청구 묶음, 중앙 청구 항목 편집, 합산/해제, 우측 수납 요약/right panel, 결제 수단, 수납 액션 |
+| 입원 | 1차 구현됨 | 입원 환자 side panel, 상태/검색 toolbar, 병동 KPI, 강아지/고양이/집중 치료실 grouped table, 주의 tag, 우측 입원 상세와 퇴실 체크리스트 |
 | 병원관리 | Order 관리 1차 구현됨 | session-only 오더 카탈로그, 대분류/세부 분류/오더 목록, 검색/필터/선택, 오더 상세 drawer 조회/수정/삭제/저장 |
 | 로그인/auth provider | adapter 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, auth client boundary, login pending/error UI, logout utility, shell 역할 표시, permission helper, Supabase provider adapter와 env 기반 fallback |
 
@@ -191,7 +195,7 @@ MVP 목표:
 - 작업 시작 전 이 문서를 먼저 읽는다.
 - Next.js application code를 쓰기 전에는 `node_modules/next/dist/docs/`의 관련 문서를 확인한다.
 - 조제/처치 화면의 현재 디자인과 동작은 명시 요청 없이는 수정하지 않는다.
-- 입원 화면은 현재 PR 1-6 범위 밖이었다.
+- 입원 화면은 2026-05-06에 1차 session-only workspace가 추가되었다.
 - 병원관리 전체 화면은 아직 범위 밖이지만, Order 관리는 2026-05-06에 1차 session-only catalog workspace가 추가되었다. Order 세트는 별도 후속 범위다.
 - 로그인은 기본 local demo 환경에서 mock session 기반으로 app shell 진입을 보호하고, Supabase env/auth mode가 준비되면 provider session adapter를 사용할 수 있다. 아직 DB/API session과 서버 권한 enforcement는 연결하지 않았다.
 - Supabase provider adapter는 추가되었지만 env 미설정 기본값은 mock/local demo fallback이다. live project 검증과 서버 권한 enforcement는 완료된 것으로 보지 않는다.

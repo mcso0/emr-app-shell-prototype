@@ -135,9 +135,9 @@ const calendarViewItems = [
   { value: "month" as const, label: "월" },
 ];
 const receptionQueueTabItems = [
+  { value: "all" as const, label: "전체" },
   { value: "reception" as const, label: "대기" },
   { value: "appointment" as const, label: "예약" },
-  { value: "all" as const, label: "전체" },
 ];
 const dayScheduleStartHour = 8;
 const dayScheduleEndHour = 20;
@@ -1240,18 +1240,16 @@ function DayScheduleBoard({
           )
         )}
         <div
+          data-testid="day-time-axis"
           className="relative z-10 border-r"
           style={{ minHeight: dayScheduleHeight }}
         >
           {dayScheduleHourLabels.map((hour, index) => (
             <div
               key={hour}
-              className="absolute left-0 right-0 flex justify-center text-[11px] text-muted-foreground"
+              className="absolute left-0 right-0 flex -translate-y-1/2 justify-end pr-2 text-[11px] text-muted-foreground"
               style={{
-                top:
-                  index === dayScheduleHourLabels.length - 1
-                    ? index * dayScheduleHourRowHeight - 14
-                    : index * dayScheduleHourRowHeight + 8,
+                top: index * dayScheduleHourRowHeight,
               }}
             >
               {getScheduleHourLabel(hour)}
@@ -1270,6 +1268,7 @@ function DayScheduleBoard({
             return (
               <div
                 key={hour}
+                data-testid={`day-hour-row-${hour}`}
                 className="grid border-b"
                 style={{
                   gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,

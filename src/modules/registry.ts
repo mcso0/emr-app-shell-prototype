@@ -19,6 +19,8 @@ import {
 } from "@/features/chart/module";
 import {
   BillingContent,
+  BillingHeader,
+  BillingRightPanel,
   BillingSidePanel,
 } from "@/features/billing/module";
 import {
@@ -38,6 +40,11 @@ import {
   LabSidePanel,
 } from "@/features/lab-imaging/module";
 import {
+  InpatientContent,
+  InpatientRightPanel,
+  InpatientSidePanel,
+} from "@/features/inpatient/module";
+import {
   HospitalAdminContent,
   HospitalAdminContentAside,
   HospitalAdminDrawer,
@@ -45,7 +52,6 @@ import {
 } from "@/features/hospital-admin/module";
 import {
   PlaceholderContent,
-  PlaceholderRightPanel,
   PlaceholderSidePanel,
 } from "@/features/placeholders/module";
 import {
@@ -125,15 +131,19 @@ export const modules: ModuleDefinition[] = [
     label: "수납",
     icon: CreditCardIcon,
     sidePanel: BillingSidePanel,
+    contentHeader: BillingHeader,
     content: BillingContent,
+    rightPanel: BillingRightPanel,
+    defaultRightPanelOpen: true,
   },
   {
     id: "inpatient",
-    label: "병동",
+    label: "입원",
     icon: BedIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
-    rightPanel: PlaceholderRightPanel,
+    sidePanel: InpatientSidePanel,
+    content: InpatientContent,
+    rightPanel: InpatientRightPanel,
+    defaultRightPanelOpen: true,
   },
 ];
 
