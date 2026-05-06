@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
+import type { CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
 import type { ModuleDefinition } from "@/types/emr";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const drawerSubtitle =
     activeDrawer?.subtitle ??
     (activeDrawer?.type === "reception-encounter" ? undefined : activeDrawer?.id);
-  const drawerWidth = SHELL_LAYOUT.drawer.defaultWidth;
+  const drawerWidth =
+    activeDrawer?.type === "hospital-order"
+      ? SHELL_LAYOUT.drawer.largeWidth
+      : SHELL_LAYOUT.drawer.defaultWidth;
+  const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
   const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
   const effectiveModuleSidePanelWidth = Math.max(
     moduleSidePanelWidth,
@@ -78,9 +83,9 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-input bg-card transition-[grid-template-columns]"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-input bg-card transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
       style={{
-        gridTemplateColumns: `${
+        "--clair-workspace-frame-columns": `${
           modulePanelOpen && SidePanel ? `${effectiveModuleSidePanelWidth}px` : "0px"
         } minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
@@ -93,11 +98,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
         transitionTimingFunction: modulePanelOpen
           ? "var(--clair-motion-easing-panel-enter)"
           : "var(--clair-motion-easing-panel-exit)",
-      }}
+      } as CSSProperties}
     >
       <aside
         className={cn(
-          "min-h-0 min-w-0 overflow-hidden bg-white",
+          "min-h-0 min-w-0 overflow-hidden bg-white max-md:hidden",
           shouldShowModuleSidePanel && "border-r border-input"
         )}
       >
@@ -128,16 +133,16 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       <section className="relative flex min-h-0 min-w-0 flex-col bg-card">
         {Header ? <Header {...slotProps} /> : null}
         <div
-          className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200"
+          className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
           style={{
-            gridTemplateColumns: `${
+            "--clair-workspace-content-columns": `${
               ContentAside && contentAsideOpen ? `${effectiveContentAsideWidth}px` : "0px"
             } minmax(0, 1fr)`,
-          }}
+          } as CSSProperties}
         >
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden bg-card",
+              "min-h-0 min-w-0 overflow-hidden bg-card max-md:hidden",
               ContentAside && contentAsideOpen && "border-r"
             )}
           >
@@ -168,30 +173,32 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="absolute bottom-0 right-0 top-0 border-l bg-card shadow-2xl"
               style={{
-                width: drawerWidth,
+                width: `min(100%, ${drawerWidth}px)`,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
               }}
             >
-              <div className="flex h-12 items-center justify-between border-b px-4">
-                <div>
-                  <div className="flex min-w-0 items-baseline gap-2">
-                    <span className="text-sm font-semibold">{drawerTitle}</span>
-                    {drawerSubtitle ? (
-                      <span className="truncate text-[11px] text-muted-foreground">
-                        {drawerSubtitle}
-                      </span>
-                    ) : null}
+              {shouldShowShellDrawerHeader ? (
+                <div className="flex h-12 items-center justify-between border-b px-4">
+                  <div>
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="text-sm font-semibold">{drawerTitle}</span>
+                      {drawerSubtitle ? (
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          {drawerSubtitle}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="상세 닫기"
+                    onClick={() => setActiveDrawer(null)}
+                  >
+                    <CloseIcon />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="상세 닫기"
-                  onClick={() => setActiveDrawer(null)}
-                >
-                  <CloseIcon />
-                </Button>
-              </div>
+              ) : null}
               <Drawer {...slotProps} />
             </motion.aside>
           ) : null}
@@ -200,7 +207,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 min-w-0 overflow-hidden bg-card transition-opacity duration-150",
+          "min-h-0 min-w-0 overflow-hidden bg-card transition-opacity duration-150 max-md:hidden",
           RightPanel && rightPanelOpen && "border-l",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}

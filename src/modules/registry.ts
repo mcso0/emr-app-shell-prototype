@@ -38,6 +38,12 @@ import {
   LabSidePanel,
 } from "@/features/lab-imaging/module";
 import {
+  HospitalAdminContent,
+  HospitalAdminContentAside,
+  HospitalAdminDrawer,
+  HospitalAdminSidePanel,
+} from "@/features/hospital-admin/module";
+import {
   PlaceholderContent,
   PlaceholderRightPanel,
   PlaceholderSidePanel,
@@ -106,11 +112,13 @@ export const modules: ModuleDefinition[] = [
   },
   {
     id: "orders",
-    label: "오더",
+    label: "병원관리",
     icon: ClipboardListIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
-    rightPanel: PlaceholderRightPanel,
+    sidePanel: HospitalAdminSidePanel,
+    contentAside: HospitalAdminContentAside,
+    content: HospitalAdminContent,
+    defaultContentAsideOpen: true,
+    drawer: HospitalAdminDrawer,
   },
   {
     id: "billing",
