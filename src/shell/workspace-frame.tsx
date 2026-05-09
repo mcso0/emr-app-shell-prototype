@@ -4,6 +4,10 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
 import type { CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
+import {
+  GuardianProfileDrawer,
+  PatientProfileDrawer,
+} from "@/features/reception/profile-drawer";
 import type { ModuleDefinition } from "@/types/emr";
 import { Button } from "@/components/ui/button";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -35,22 +39,31 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
   const ContentAside = moduleDefinition.contentAside;
   const Content = moduleDefinition.content;
   const RightPanel = moduleDefinition.rightPanel;
-  const Drawer = moduleDefinition.drawer;
+  const ModuleDrawer = moduleDefinition.drawer;
+  const isPatientDrawer = activeDrawer?.type === "patient" || activeDrawer?.type === "reception-patient";
+  const isGuardianDrawer = activeDrawer?.type === "guardian" || activeDrawer?.type === "reception-guardian";
+  const CommonProfileDrawer = isPatientDrawer
+    ? PatientProfileDrawer
+    : isGuardianDrawer
+      ? GuardianProfileDrawer
+      : undefined;
   const drawerTitle =
-    activeDrawer?.type === "reception-patient"
-      ? "환자 정보"
-      : activeDrawer?.type === "reception-guardian"
-        ? "보호자 정보"
-        : activeDrawer?.type === "reception-appointment"
-          ? "예약 상세"
-          : activeDrawer?.type === "reception-encounter"
-            ? "접수 정보"
-            : "상세 정보";
+    isPatientDrawer
+        ? "환자 정보"
+        : isGuardianDrawer
+          ? "보호자 정보"
+          : activeDrawer?.type === "inpatient-admission"
+            ? "입원 상세"
+            : activeDrawer?.type === "reception-appointment"
+              ? "예약 상세"
+              : activeDrawer?.type === "reception-encounter"
+                ? "접수 정보"
+                : "상세 정보";
   const drawerSubtitle =
     activeDrawer?.subtitle ??
     (activeDrawer?.type === "reception-encounter" ? undefined : activeDrawer?.id);
   const drawerWidth =
-    activeDrawer?.type === "hospital-order"
+    activeDrawer?.type === "hospital-order" || CommonProfileDrawer
       ? SHELL_LAYOUT.drawer.largeWidth
       : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
@@ -164,7 +177,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
         </div>
 
         <AnimatePresence>
-          {activeDrawer && Drawer ? (
+          {activeDrawer && (CommonProfileDrawer || ModuleDrawer) ? (
             <motion.aside
               key={`${activeDrawer.type}-${activeDrawer.id}`}
               initial={{ x: 480, opacity: 0 }}
@@ -199,7 +212,15 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
                   </Button>
                 </div>
               ) : null}
-              <Drawer {...slotProps} />
+              {CommonProfileDrawer && activeDrawer ? (
+                isPatientDrawer ? (
+                  <PatientProfileDrawer patientId={activeDrawer.id} />
+                ) : (
+                  <GuardianProfileDrawer guardianId={activeDrawer.id} />
+                )
+              ) : ModuleDrawer ? (
+                <ModuleDrawer {...slotProps} />
+              ) : null}
             </motion.aside>
           ) : null}
         </AnimatePresence>

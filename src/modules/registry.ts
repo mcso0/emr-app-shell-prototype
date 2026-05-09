@@ -1,5 +1,6 @@
 import {
   BedIcon,
+  BoneIcon,
   BuildingIcon,
   ClipboardListIcon,
   CreditCardIcon,
@@ -31,8 +32,11 @@ import {
   DispensingSidePanel,
 } from "@/features/dispensing/module";
 import {
+  ImagingContentAside,
   LabContentAside,
   ImagingContent,
+  ImagingHeader,
+  ImagingRightPanel,
   ImagingSidePanel,
   LabContent,
   LabHeader,
@@ -41,19 +45,18 @@ import {
 } from "@/features/lab-imaging/module";
 import {
   InpatientContent,
-  InpatientRightPanel,
-  InpatientSidePanel,
+  InpatientDrawer,
 } from "@/features/inpatient/module";
 import {
+  CustomerContent,
+  CustomerSidePanel,
+} from "@/features/customer/module";
+import {
   HospitalAdminContent,
-  HospitalAdminContentAside,
   HospitalAdminDrawer,
   HospitalAdminSidePanel,
 } from "@/features/hospital-admin/module";
-import {
-  PlaceholderContent,
-  PlaceholderSidePanel,
-} from "@/features/placeholders/module";
+import { HomeContent } from "@/features/home/module";
 import {
   ReceptionContent,
   ReceptionDrawer,
@@ -65,8 +68,7 @@ export const modules: ModuleDefinition[] = [
     id: "home",
     label: "홈",
     icon: HomeIcon,
-    sidePanel: PlaceholderSidePanel,
-    content: PlaceholderContent,
+    content: HomeContent,
   },
   {
     id: "reception",
@@ -104,7 +106,12 @@ export const modules: ModuleDefinition[] = [
     label: "영상",
     icon: ImagesIcon,
     sidePanel: ImagingSidePanel,
+    contentHeader: ImagingHeader,
+    contentAside: ImagingContentAside,
     content: ImagingContent,
+    rightPanel: ImagingRightPanel,
+    defaultContentAsideOpen: true,
+    defaultRightPanelOpen: true,
   },
   {
     id: "dispensing",
@@ -121,9 +128,7 @@ export const modules: ModuleDefinition[] = [
     label: "병원관리",
     icon: ClipboardListIcon,
     sidePanel: HospitalAdminSidePanel,
-    contentAside: HospitalAdminContentAside,
     content: HospitalAdminContent,
-    defaultContentAsideOpen: true,
     drawer: HospitalAdminDrawer,
   },
   {
@@ -140,10 +145,15 @@ export const modules: ModuleDefinition[] = [
     id: "inpatient",
     label: "입원",
     icon: BedIcon,
-    sidePanel: InpatientSidePanel,
     content: InpatientContent,
-    rightPanel: InpatientRightPanel,
-    defaultRightPanelOpen: true,
+    drawer: InpatientDrawer,
+  },
+  {
+    id: "customer",
+    label: "고객관리",
+    icon: BoneIcon,
+    sidePanel: CustomerSidePanel,
+    content: CustomerContent,
   },
 ];
 

@@ -279,7 +279,7 @@ test("patient drawer supports editing and guardian navigation", async ({ page })
 
   await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
 
-  await expect(page.getByText("보호자 정보")).toBeVisible();
+  await expect(page.getByText("보호자 정보").first()).toBeVisible();
   await expect(page.getByText("연결 환자").last()).toBeVisible();
   await expect(page.getByText("하루", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("두부", { exact: true }).last()).toBeVisible();
@@ -461,7 +461,10 @@ test("nav rail maps menu labels to the intended modules", async ({ page }) => {
     "href",
     "/w/clair-demo/inpatient"
   );
-  await expect(page.getByRole("button", { name: "고객관리" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "고객관리" })).toHaveAttribute(
+    "href",
+    "/w/clair-demo/customer"
+  );
   await expect(page.getByRole("link", { name: "병원관리" })).toHaveAttribute(
     "href",
     "/w/clair-demo/orders"
@@ -502,6 +505,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   const sidePanel = page.locator("aside").first();
   await sidePanel.getByTestId("patient-card-patient-dubu").click();
   await expect(page.getByText("접수 정보")).toBeVisible();
+  await page.getByRole("button", { name: "상세 닫기" }).click();
   await page.getByTestId("schedule-check-in-button").click();
   await expect(page).not.toHaveURL(/drawer=/);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
@@ -558,6 +562,7 @@ test("reception walk-in keeps selected veterinarian and form details", async ({ 
   await sidePanel.getByTestId("patient-card-patient-haru").click();
   await expect(page.getByText("접수 정보")).toBeVisible();
 
+  await page.getByRole("button", { name: "상세 닫기" }).click();
   await page.getByTestId("schedule-check-in-button").click();
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await expect(walkInForm.getByText("동물명 또는 보호자명으로 검색")).toBeVisible();

@@ -13,6 +13,12 @@ Use this file when the user gives a natural-language instruction in chat.
 7. Preserve meaningful history with status changes instead of deleting it.
 8. After completing work, provide the result review defined in `docs/_meta/result-review-rules.md`.
 
+## Language Contract
+
+Use concise English for durable agent-facing guidance, work plans, search notes, and handoff summaries. Keep final user-facing reviews in Korean unless the user asks otherwise. Preserve Korean product terms, screen labels, and domain wording when they carry product meaning.
+
+Treat requests such as "앞으로 이렇게 하자", "규칙으로 만들자", or "항상 유지해줘" as durable guidance changes. Route them to the smallest canonical source doc or operating rule that future chats will read.
+
 ## Routing Table
 
 | User instruction sounds like | Route to |
@@ -24,6 +30,7 @@ Use this file when the user gives a natural-language instruction in chat.
 | "이 화면/흐름을 바꾸자" | `docs/design/flows/`, `docs/design/screens/`, or relevant product feature |
 | "이걸 개발하자" | Existing or new PR-sized item in `docs/work/` |
 | "이 방향으로 결정하자" | Relevant `decisions/` folder |
+| "앞으로 이렇게 하자", "항상 유지해줘", "규칙으로 만들자" | Smallest relevant canonical doc or operating rule |
 | "완료됐어", "결과 정리해줘" | `docs/completed/` closeout |
 | "이전 문서는 더 이상 기준 아냐" | Mark `superseded` or `deprecated`; move to `docs/archive/` only when no longer active |
 

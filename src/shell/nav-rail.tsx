@@ -48,6 +48,7 @@ const moduleIconById: Record<string, { icon: GnbIcon; iconClassName: string }> =
   dispensing: { icon: PillGnbIcon, iconClassName: "h-[18.397px] w-[17.533px]" },
   billing: { icon: PayGnbIcon, iconClassName: "size-[19.5px]" },
   inpatient: { icon: HotelGnbIcon, iconClassName: "h-[14.5px] w-[18.5px]" },
+  customer: { icon: PetGnbIcon, iconClassName: "h-[18.359px] w-[19.5px]" },
   orders: { icon: HospitalGnbIcon, iconClassName: "size-[19px]" },
 };
 
@@ -57,13 +58,14 @@ const moduleNavLabelById: Partial<Record<string, string>> = {
   imaging: "영상검사",
   dispensing: "조제/처치",
   inpatient: "입원",
+  customer: "고객관리",
   orders: "병원관리",
 };
 
 const moduleSections = [
   ["home"],
   ["reception", "treatment", "lab", "imaging", "dispensing", "billing", "inpatient"],
-  ["orders"],
+  ["customer", "orders"],
 ] as const;
 
 const RAIL_LAYOUT_TRANSITION: Transition = {
@@ -175,12 +177,6 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           workspaceId={workspaceId}
         />
         <NavDivider transition={railLayoutTransition} />
-        <RailActionItem
-          icon={PetGnbIcon}
-          iconClassName="h-[18.359px] w-[19.5px]"
-          label="고객관리"
-          transition={railLayoutTransition}
-        />
         <NavSection
           activeModuleId={activeModuleId}
           items={sections[2]}

@@ -57,7 +57,7 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - Supabase 실제 연결 전 package 설치, env 연결, API 호출을 하지 않는다.
 - DB migration, RLS policy, server permission enforcement를 앞당겨 구현하지 않는다.
 - password 검증, OAuth callback, MFA, refresh token, email verification을 직접 구현하지 않는다.
-- auth 작업 명목으로 조제/처치, 접수, 차트, 검사/영상, 수납 업무 화면을 수정하지 않는다.
+- auth 작업 명목으로 관련 없는 업무 화면을 수정하지 않는다.
 
 ## 최근 검증
 

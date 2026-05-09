@@ -1,25 +1,29 @@
 import { expect, test } from "@playwright/test";
 
 test("hospital admin order management opens with category and subcategory navigation", async ({ page }) => {
-  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  await page.goto("/w/clair-demo/orders?modulePanel=open&aside=history");
 
   await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "병원관리");
-  await expect(page.getByRole("heading", { name: "Order 관리" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
+  await expect(page.locator("#hospital-admin-content-aside")).toHaveCount(0);
   await expect(page.getByTestId("hospital-admin-menu-order-management")).toContainText("Order 관리");
+  await expect(page.locator('[data-testid^="hospital-admin-category-"]')).toHaveCount(0);
+  await expect(page.locator('[data-selected="true"]')).toHaveCount(1);
   await expect(page.getByTestId("order-set-placeholder")).toContainText("후속");
-  await expect(page.getByTestId("hospital-admin-category-lab")).toHaveAttribute("data-selected", "true");
-  await expect(page.getByTestId("hospital-admin-subcategory-clinical-pathology")).toHaveAttribute("data-selected", "true");
+  await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /임상병리 검사/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("group", { name: "임상병리 검사 하위 타입" }).getByRole("button", { name: "전체" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("hospital-order-row-hospital-order-cbc")).toBeVisible();
 
-  await page.getByTestId("hospital-admin-category-dispensing").click();
-  await expect(page.getByTestId("hospital-admin-subcategory-oral-medication")).toHaveAttribute("data-selected", "true");
+  await page.getByRole("button", { name: /처방/ }).click();
+  await expect(page.getByRole("heading", { name: "처방" })).toBeVisible();
   await expect(page.getByTestId("hospital-order-row-hospital-order-maropitant")).toBeVisible();
 });
 
 test("hospital admin order drawer edits and saves a selected order", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
-  await page.getByTestId("hospital-admin-category-dispensing").click();
+  await page.getByRole("button", { name: /처방/ }).click();
   await page.getByTestId("hospital-order-row-hospital-order-maropitant").click();
 
   const drawer = page.getByTestId("hospital-order-drawer");
@@ -38,16 +42,15 @@ test("hospital admin order drawer edits and saves a selected order", async ({ pa
 test("hospital admin order drawer deletes an order after confirmation", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
-  await page.getByTestId("hospital-admin-category-imaging").click();
-  await page.getByTestId("hospital-admin-subcategory-ultrasound").click();
-  await page.getByTestId("hospital-order-row-hospital-order-abdomen-us").click();
+  await page.getByRole("button", { name: /영상검사/ }).click();
+  await page.getByTestId("hospital-order-row-hospital-order-radiography").click();
 
-  await expect(page.getByTestId("hospital-order-drawer")).toContainText("복부 초음파");
+  await expect(page.getByTestId("hospital-order-drawer")).toContainText("흉부 방사선");
   await page.getByRole("button", { name: "삭제" }).click();
   await page.getByRole("button", { name: "삭제" }).last().click();
 
   await expect(page.getByTestId("hospital-order-drawer")).toBeHidden();
-  await expect(page.getByTestId("hospital-order-row-hospital-order-abdomen-us")).toHaveCount(0);
+  await expect(page.getByTestId("hospital-order-row-hospital-order-radiography")).toHaveCount(0);
 });
 
 test("hospital admin table selection drives bulk action instead of opening drawer", async ({ page }) => {

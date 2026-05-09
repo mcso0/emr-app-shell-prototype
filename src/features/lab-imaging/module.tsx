@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -29,6 +29,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   EmrDateNavigator,
+  EmrListGroup,
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrListItem,
@@ -63,7 +64,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -99,6 +99,7 @@ import type {
   EmrAttachment,
   Encounter,
   EquipmentReceipt,
+  ImagingStudyStatus,
   ImagingStudy,
   LabResult,
   Patient,
@@ -238,6 +239,8 @@ const labStatusGroupLabel: Record<LabResult["status"], string> = {
 
 type LabResultTab = "all" | "cbc" | "chemistry";
 type LabQueueView = "order" | "chart";
+type ImagingQueueView = "order" | "chart";
+type ImagingReadingStatus = "requested" | "reading" | "completed";
 
 const labResultTabItems = [
   { value: "all" as const, label: "전체" },
@@ -249,6 +252,21 @@ const labQueueViewItems = [
   { value: "order" as const, label: "오더별" },
   { value: "chart" as const, label: "차트별" },
 ];
+
+const imagingQueueViewItems = [
+  { value: "order" as const, label: "오더별" },
+  { value: "chart" as const, label: "차트별" },
+];
+
+const imagingStatusOrder: ImagingStudyStatus[] = ["requested", "captured", "reading", "read", "reviewed"];
+
+const imagingStatusGroupLabel: Record<ImagingStudyStatus, string> = {
+  requested: "촬영대기",
+  captured: "촬영완료",
+  reading: "판독중",
+  read: "판독완료",
+  reviewed: "확인",
+};
 
 const fallbackLabHistoryGroups = [
   {
@@ -308,6 +326,20 @@ function getLabDetailFromSearchParams(
   return {
     detail: getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc"),
     queryLabResultId,
+  };
+}
+
+function getImagingDetailFromSearchParams(
+  searchParams: { get: (name: string) => string | null },
+  selectedImagingStudyId: string
+) {
+  const scenario = getDemoScenarioFromParams(searchParams);
+  const queryImagingStudyId = searchParams.get("imagingStudyId") ?? scenario?.imagingStudyId;
+  const effectiveImagingStudyId = queryImagingStudyId ?? selectedImagingStudyId;
+
+  return {
+    detail: getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax"),
+    queryImagingStudyId,
   };
 }
 
@@ -582,23 +614,216 @@ function ImagingQueueItem({
   onSelect: () => void;
   selected: boolean;
 }) {
+  const statusLabel = getStatusLabel("imagingStudy", item.study.status);
+  const receptionTypeLabel = getReceptionTypeLabel(item.encounter);
+
   return (
     <div data-testid={`imaging-queue-item-${item.study.id}`}>
-      <EmrListItem
+      <EmrSidePanelCard
         selected={selected}
-        variant="outline"
-        title={`${item.patient.name} · ${item.patient.patientNo}`}
-        subtitle={`${item.primaryGuardian?.name ?? "보호자 미지정"} · ${item.order?.displayName ?? item.study.modality}`}
-        meta={`${item.study.modality} · ${item.study.bodyPart}`}
-        itemBadge={<Badge variant="outline">{getStatusLabel("imagingStudy", item.study.status)}</Badge>}
-        footer={
-          <>
-            <span>{formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt)}</span>
-            <span>{item.radiologistName ?? "판독 미지정"}</span>
-          </>
-        }
         onSelect={onSelect}
-      />
+        testId={`imaging-queue-card-${item.study.id}`}
+      >
+        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
+            <span className="truncate">{item.patient.name}</span>
+            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
+            <span className="truncate">{item.primaryGuardian?.name ?? "보호자 미지정"}</span>
+            <EmrSidePanelTypeBadge label={receptionTypeLabel} />
+          </div>
+          <EmrSidePanelCardAction
+            ariaLabel={`${item.patient.name} ${item.order?.displayName ?? item.study.modality} 더보기`}
+            testId={`imaging-queue-item-action-${item.study.id}`}
+          />
+        </div>
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`}</span>
+          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+          <span className="shrink-0">{item.study.modality}</span>
+        </div>
+        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="flex h-5 min-w-0 items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+            <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
+            <EmrSidePanelMetaBadge label="담당" value={item.radiologistName ?? "미지정"} />
+          </div>
+          <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
+            <span>{formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt).slice(9)}</span>
+            <span>{statusLabel}</span>
+          </span>
+        </div>
+      </EmrSidePanelCard>
+    </div>
+  );
+}
+
+function ImagingQueueViewTabs({
+  onValueChange,
+  value,
+}: {
+  onValueChange: (value: ImagingQueueView) => void;
+  value: ImagingQueueView;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="영상검사 목록 보기"
+      className="grid grid-cols-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] p-0.5"
+    >
+      {imagingQueueViewItems.map((item) => {
+        const selected = item.value === value;
+
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            className={cn(
+              "h-7 min-w-12 rounded-[6px] px-2 text-[12px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              selected
+                ? "bg-card text-[var(--clair-color-atomic-gray-900)] shadow-xs"
+                : "text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-900)]"
+            )}
+            onClick={() => onValueChange(item.value)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ImagingQueueGroup({
+  collapsed,
+  items,
+  onSelectItem,
+  onToggle,
+  selectedImagingStudyId,
+  status,
+}: {
+  collapsed: boolean;
+  items: ImagingWorkItem[];
+  onSelectItem: (itemId: string) => void;
+  onToggle: () => void;
+  selectedImagingStudyId?: string;
+  status: ImagingStudyStatus;
+}) {
+  return (
+    <EmrSidePanelCollapsibleGroup
+      collapsed={collapsed}
+      count={items.length}
+      dataTestId={`imaging-queue-status-${status}`}
+      indicatorClassName="bg-[var(--clair-color-atomic-sky-400)]"
+      label={imagingStatusGroupLabel[status]}
+      onToggle={onToggle}
+    >
+      {items.map((item) => (
+        <ImagingQueueItem
+          key={item.study.id}
+          item={item}
+          selected={item.study.id === selectedImagingStudyId}
+          onSelect={() => onSelectItem(item.study.id)}
+        />
+      ))}
+    </EmrSidePanelCollapsibleGroup>
+  );
+}
+
+type ImagingChartGroup = {
+  encounter: Encounter;
+  items: ImagingWorkItem[];
+  patient: Patient;
+  primaryGuardianName?: string;
+};
+
+function getImagingChartGroups(items: ImagingWorkItem[]) {
+  const groupsByEncounter = new Map<string, ImagingChartGroup>();
+
+  items.forEach((item) => {
+    const group = groupsByEncounter.get(item.encounter.id);
+
+    if (group) {
+      group.items.push(item);
+      return;
+    }
+
+    groupsByEncounter.set(item.encounter.id, {
+      encounter: item.encounter,
+      items: [item],
+      patient: item.patient,
+      primaryGuardianName: item.primaryGuardian?.name,
+    });
+  });
+
+  return Array.from(groupsByEncounter.values()).sort((a, b) => {
+    const aTime = a.items[0]?.study.capturedAt ?? a.items[0]?.study.requestedAt ?? "";
+    const bTime = b.items[0]?.study.capturedAt ?? b.items[0]?.study.requestedAt ?? "";
+
+    return bTime.localeCompare(aTime);
+  });
+}
+
+function ImagingChartQueueItem({
+  group,
+  onSelect,
+  selected,
+}: {
+  group: ImagingChartGroup;
+  onSelect: () => void;
+  selected: boolean;
+}) {
+  const latestItem = group.items[0];
+  const orderNames = group.items
+    .map((item) => item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`)
+    .join(", ");
+  const statusSummary = Array.from(
+    new Set(group.items.map((item) => getStatusLabel("imagingStudy", item.study.status)))
+  ).join("/");
+
+  return (
+    <div data-testid={`imaging-chart-group-${group.encounter.id}`}>
+      <EmrSidePanelCard
+        selected={selected}
+        onSelect={onSelect}
+        testId={`imaging-chart-card-${group.encounter.id}`}
+      >
+        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
+            <span className="truncate">{group.patient.name}</span>
+            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
+            <span className="truncate">{group.primaryGuardianName ?? "보호자 미지정"}</span>
+            <EmrSidePanelTypeBadge label={`${group.items.length}건`} />
+          </div>
+          <EmrSidePanelCardAction
+            ariaLabel={`${group.patient.name} 영상검사 차트 더보기`}
+            testId={`imaging-chart-item-action-${group.encounter.id}`}
+          />
+        </div>
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
+          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+          <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
+        </div>
+        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="flex min-h-5 min-w-0 items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-600)]">
+            {orderNames}
+          </span>
+          <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+            {statusSummary}
+          </span>
+        </div>
+        <div className="mt-1 flex h-5 min-w-0 items-center justify-between gap-3 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="truncate">{latestItem?.study.modality ?? "영상"}</span>
+          <span className="flex shrink-0 items-center gap-1">
+            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
+            {formatShortDateTime(latestItem?.study.capturedAt ?? latestItem?.study.requestedAt).slice(9)}
+          </span>
+        </div>
+      </EmrSidePanelCard>
     </div>
   );
 }
@@ -683,141 +908,83 @@ export function LabSidePanel() {
   );
 }
 
-export function ImagingSidePanel({ moduleLabel }: ShellComponentProps) {
+export function ImagingSidePanel() {
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const [queueView, setQueueView] = useState<ImagingQueueView>("order");
+  const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<ImagingStudyStatus>>(() => new Set());
   const items = useMemo(() => getImagingWorkItems(), []);
+  const latestImagingDate = items[0]?.study.capturedAt ?? items[0]?.study.requestedAt;
+  const dateLabel = latestImagingDate ? `${latestImagingDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
+  const chartGroups = useMemo(() => getImagingChartGroups(items), [items]);
+  const groups = useMemo(
+    () =>
+      imagingStatusOrder
+        .map((status) => ({
+          status,
+          items: items.filter((item) => item.study.status === status),
+        }))
+        .filter((group) => group.items.length > 0),
+    [items]
+  );
+  const toggleStatus = (status: ImagingStudyStatus) => {
+    setCollapsedStatusIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+
+      return next;
+    });
+  };
 
   return (
     <EmrSubpanel>
       <EmrSubpanelTitle
-        title={moduleLabel}
+        title="영상검사"
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
+        tabs={<ImagingQueueViewTabs value={queueView} onValueChange={setQueueView} />}
       />
-      <EmrListHeader label="영상 대기열" count={items.length} headerActions={<QueueActions />} />
+      <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
+      <EmrListHeader
+        label={queueView === "order" ? "영상 대기열" : "차트별 영상"}
+        count={queueView === "order" ? items.length : chartGroups.length}
+        headerActions={<QueueActions />}
+      />
       <EmrSubpanelBody>
-        {items.map((item) => (
-          <ImagingQueueItem
-            key={item.study.id}
-            item={item}
-            selected={item.study.id === selectedImagingStudyId}
-            onSelect={() => selectImagingStudy(item.study.id)}
-          />
-        ))}
+        {queueView === "order"
+          ? groups.map((group) => (
+              <ImagingQueueGroup
+                key={group.status}
+                collapsed={collapsedStatusIds.has(group.status)}
+                items={group.items}
+                onSelectItem={selectImagingStudy}
+                onToggle={() => toggleStatus(group.status)}
+                selectedImagingStudyId={selectedImagingStudyId}
+                status={group.status}
+              />
+            ))
+          : chartGroups.map((group) => (
+              <ImagingChartQueueItem
+                key={group.encounter.id}
+                group={group}
+                selected={group.items.some((item) => item.study.id === selectedImagingStudyId)}
+                onSelect={() => {
+                  const firstStudyId = group.items[0]?.study.id;
+
+                  if (firstStudyId) {
+                    selectImagingStudy(firstStudyId);
+                  }
+                }}
+              />
+            ))}
       </EmrSubpanelBody>
     </EmrSubpanel>
-  );
-}
-
-function PatientHeader({
-  encounter,
-  patient,
-  primaryGuardianName,
-  statusLabel,
-  title,
-}: {
-  encounter: Encounter;
-  patient: Patient;
-  primaryGuardianName?: string;
-  statusLabel: string;
-  title: string;
-}) {
-  return (
-    <section className="border-b bg-card px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[20px] font-semibold leading-7">{title}</h1>
-            <Badge>{statusLabel}</Badge>
-          </div>
-          <div className="mt-1 text-[13px] text-muted-foreground">
-            {patient.name} · {patient.patientNo} · {getSpeciesLabel(patient)} ·{" "}
-            {patient.breed ?? "품종 미상"} · {getPatientDisplayAge(patient)} ·{" "}
-            {getPatientSexLabel(patient)}
-          </div>
-          {getVisitContext(encounter) ? (
-            <div className="mt-2 text-[13px] font-medium text-foreground">
-              내원 사유: {getVisitContext(encounter)}
-            </div>
-          ) : null}
-        </div>
-        <div className="text-right text-[13px] text-muted-foreground">
-          <div>{primaryGuardianName ?? "보호자 미지정"}</div>
-          <div>{encounter.encounterNo}</div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ResultFlowPanel({
-  children,
-  steps,
-}: {
-  children?: ReactNode;
-  steps: Array<[string, string]>;
-}) {
-  return (
-    <section className="rounded-lg border bg-card">
-      <div className="border-b px-4 py-3">
-        <h2 className="text-[14px] font-semibold">데모 결과 흐름</h2>
-        <p className="mt-1 text-[12px] text-muted-foreground">
-          검사/영상 담당자가 결과를 확인한 뒤 진료 판단과 수납 항목으로 이어지는 연결 상태입니다.
-        </p>
-      </div>
-      <div className="grid gap-3 p-4 md:grid-cols-3">
-        {steps.map(([label, value], index) => (
-          <div key={label} className="min-w-0">
-            <div className="text-[12px] font-medium text-muted-foreground">
-              {index + 1}. {label}
-            </div>
-            <div className="mt-1 text-[13px] font-semibold leading-5">{value}</div>
-          </div>
-        ))}
-      </div>
-      {children ? <div className="border-t px-4 py-3">{children}</div> : null}
-    </section>
-  );
-}
-
-function ImagingResultFlowPanel({ detail }: { detail: ImagingDetail }) {
-  return (
-    <ResultFlowPanel
-      steps={[
-        [
-          "차트 오더",
-          `${detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}`} · ${getVisitContext(detail.encounter) ?? detail.encounter.encounterNo}`,
-        ],
-        ["판독 확인", `${detail.study.modality} ${detail.study.bodyPart} · ${getStatusLabel("imagingStudy", detail.study.status)}`],
-        ["수의사/수납 연결", "종합소견 확인 후 영상 항목 청구 확인"],
-      ]}
-    >
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="min-w-0">
-          <div className="text-[12px] font-medium text-muted-foreground">판독 요약</div>
-          <p className="mt-1 text-[13px] leading-5">{detail.study.reading ?? "-"}</p>
-        </div>
-        <div className="min-w-0">
-          <div className="text-[12px] font-medium text-muted-foreground">종합소견</div>
-          <p className="mt-1 text-[13px] leading-5">{detail.study.impression ?? "-"}</p>
-        </div>
-      </div>
-    </ResultFlowPanel>
-  );
-}
-
-function SummaryGrid({ items }: { items: Array<[string, string | undefined]> }) {
-  return (
-    <div className="grid grid-cols-4 gap-3">
-      {items.map(([label, value]) => (
-        <div key={label} className="rounded-md border bg-card p-3">
-          <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-          <div className="mt-2 truncate text-[14px] font-semibold">{value ?? "-"}</div>
-        </div>
-      ))}
-    </div>
   );
 }
 
@@ -1811,30 +1978,341 @@ export function LabContent() {
   );
 }
 
-function ImagingReadingPanel({ study }: { study: ImagingStudy }) {
+function useCurrentImagingDetail() {
+  const searchParams = useSearchParams();
+  const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
+
+  return getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId);
+}
+
+export function ImagingHeader({ hasRightPanel }: ShellComponentProps) {
+  const { detail } = useCurrentImagingDetail();
+  const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
+  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
+  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+
+  if (!detail) return null;
+
+  return (
+    <EmrPatientContextBar
+      historyButton={{
+        controls: "imaging-content-aside",
+        expanded: contentAsideOpen,
+        label: "영상이력",
+        onClick: () => setContentAsideOpen(!contentAsideOpen),
+      }}
+      patientItems={[
+        { label: "환자", value: detail.patient.name },
+        { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
+        { label: "품종", value: detail.patient.breed ?? getSpeciesLabel(detail.patient) },
+        { label: "나이", value: getPatientDisplayAge(detail.patient) },
+        { label: "성별", value: getPatientSexLabel(detail.patient) },
+      ]}
+      vitalItems={[
+        { label: "체중", value: "5.96 kg" },
+        { label: "체온", value: "39.3°C" },
+        { label: "호흡", value: "20 rpm" },
+        { label: "혈압", value: "170 bpm" },
+      ]}
+      memoActions={[
+        { label: "방문목적" },
+        { label: "보호자메모", locked: true },
+        { label: "환자메모" },
+        { label: "수납메모", disabled: true },
+      ]}
+      trailingItems={[
+        { label: "영상", value: detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}` },
+        { label: "상태", value: getStatusLabel("imagingStudy", detail.study.status) },
+      ]}
+      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+      rightPanelBadgeCount={detail.attachments.length}
+      rightPanelDisabled={!hasRightPanel}
+      rightPanelOpen={rightPanelOpen}
+      rightPanelToggleLabel="종합소견"
+    />
+  );
+}
+
+type ImagingHistoryGroup = {
+  count: number;
+  date: string;
+  items: ImagingWorkItem[];
+};
+
+function getImagingHistoryGroups(detail: ImagingDetail, allItems: ImagingWorkItem[]): ImagingHistoryGroup[] {
+  const patientItems = allItems.filter((item) => item.patient.id === detail.patient.id);
+  const groupsByDate = new Map<string, ImagingWorkItem[]>();
+
+  patientItems.forEach((item) => {
+    const date = formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt).slice(0, 8).trim() || "오늘";
+    const groupItems = groupsByDate.get(date) ?? [];
+
+    groupItems.push(item);
+    groupsByDate.set(date, groupItems);
+  });
+
+  return Array.from(groupsByDate.entries()).map(([date, items]) => ({
+    count: items.length,
+    date,
+    items,
+  }));
+}
+
+export function ImagingContentAside() {
+  const { detail } = useCurrentImagingDetail();
+  const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
+  const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
+  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
+  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
+  const allItems = useMemo(() => getImagingWorkItems(), []);
+  const groups = detail ? getImagingHistoryGroups(detail, allItems) : [];
+  const totalHistoryCount = groups.reduce((total, group) => total + group.count, 0);
+  const toggleHistoryGroup = (date: string) => {
+    setCollapsedHistoryGroups((current) => {
+      const next = new Set(current);
+
+      if (next.has(date)) {
+        next.delete(date);
+      } else {
+        next.add(date);
+      }
+
+      return next;
+    });
+  };
+
+  return (
+    <div
+      id="imaging-content-aside"
+      className="flex h-full w-full flex-col gap-2 bg-[var(--clair-color-atomic-neutral-50)] px-4 pt-4"
+    >
+      <EmrListHeader
+        className="mx-0 h-6 border-y-0"
+        count={totalHistoryCount}
+        label="영상/차트 이력"
+        leadingAction={
+          <EmrListHeaderIconButton ariaLabel="영상이력 패널 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
+            <CdsNavigationChevronsLeftIcon className="size-4" />
+          </EmrListHeaderIconButton>
+        }
+        headerActions={<QueueActions />}
+      />
+      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-1">
+          {groups.map((group) => (
+            <EmrListGroup
+              key={group.date}
+              count={group.count}
+              label={group.date}
+              collapsed={collapsedHistoryGroups.has(group.date)}
+              onToggle={() => toggleHistoryGroup(group.date)}
+            >
+              {group.items.map((item) => (
+                <EmrListItem
+                  key={item.study.id}
+                  selected={item.study.id === selectedImagingStudyId}
+                  testId={`imaging-history-item-${item.study.id}`}
+                  title={`${item.study.modality} · ${item.study.bodyPart}`}
+                  subtitle={item.order?.displayName ?? getStatusLabel("imagingStudy", item.study.status)}
+                  meta={`${item.radiologistName ?? "판독 미지정"} · ${formatShortDateTime(
+                    item.study.capturedAt ?? item.study.requestedAt
+                  )}`}
+                  onSelect={() => selectImagingStudy(item.study.id)}
+                />
+              ))}
+            </EmrListGroup>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function getImagingDocumentId(study: ImagingStudy) {
+  const suffix = study.id.replace("imaging-", "").toUpperCase();
+
+  return `IMG-${suffix}`;
+}
+
+function ImagingStatusAction({
+  onCancelAssignment,
+  onComplete,
+  onStart,
+  status,
+}: {
+  onCancelAssignment: () => void;
+  onComplete: () => void;
+  onStart: () => void;
+  status: ImagingReadingStatus;
+}) {
+  if (status === "completed") {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled
+        className="border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]"
+      >
+        <CheckIcon data-icon="inline-start" />
+        판독완료
+      </Button>
+    );
+  }
+
+  if (status === "reading") {
+    return (
+      <div className="inline-flex items-center">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-r-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+        >
+          판독중
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="판독 상태 액션"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "icon-sm" }),
+              "-ml-px rounded-l-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+            )}
+          >
+            <ChevronDownIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onComplete}>
+              <CheckIcon className="size-3" />
+              판독완료
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onCancelAssignment}>
+              담당취소
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }
+
+  return (
+    <Button type="button" size="sm" onClick={onStart}>
+      담당하기
+      <ChevronDownIcon data-icon="inline-end" />
+    </Button>
+  );
+}
+
+function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
+  return (
+    <EmrOrderGroupSection
+      title="Order 상세정보"
+      count={1}
+      meta={<span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">같은 차트 기준</span>}
+      actions={
+        <Button size="xs" variant="outline" className="bg-card">
+          PACS
+        </Button>
+      }
+    >
+      <div className="overflow-x-auto">
+        <Table className="min-w-[720px] table-fixed text-[13px] leading-5">
+          <colgroup>
+            <col className="w-[13%]" />
+            <col className="w-[25%]" />
+            <col className="w-[18%]" />
+            <col className="w-[17%]" />
+            <col className="w-[14%]" />
+            <col className="w-[13%]" />
+          </colgroup>
+          <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사분류</TableHead>
+              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사명</TableHead>
+              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사명(영문)</TableHead>
+              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">요청자</TableHead>
+              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">요청 일시</TableHead>
+              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사 담당자</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell className="h-11 px-2 font-medium">
+                <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
+                  {detail.study.modality === "X-ray" ? "XR" : "US"}
+                </Badge>
+              </TableCell>
+              <TableCell className="h-11 px-2 font-medium">{detail.order?.displayName ?? detail.study.bodyPart}</TableCell>
+              <TableCell className="h-11 px-2 text-muted-foreground">{detail.study.modality} {detail.study.bodyPart}</TableCell>
+              <TableCell className="h-11 px-2">{getStaffName(detail.order?.requestedByUserId) ?? "이수지"}</TableCell>
+              <TableCell className="h-11 px-2">{formatShortDateTime(detail.study.requestedAt)}</TableCell>
+              <TableCell className="h-11 px-2">{detail.radiologistName ?? "미지정"}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </EmrOrderGroupSection>
+  );
+}
+
+function ImagingReadingSections({ study }: { study: ImagingStudy }) {
   return (
     <section className="rounded-lg border bg-card">
-      <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="text-[14px] font-semibold">영상 판독</h2>
-        <Button size="sm" variant="outline">판독 저장</Button>
+      <div className="flex min-h-11 items-center justify-between gap-3 border-b px-4">
+        <h2 className="text-[14px] font-semibold">스터디 판독의견</h2>
+        <div className="flex h-8 items-center gap-1 rounded-lg bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-semibold text-muted-foreground">
+          <span>B</span>
+          <span className="italic">I</span>
+          <span>T</span>
+          <span>link</span>
+          <span>list</span>
+        </div>
       </div>
-      <div className="grid gap-4 p-4">
+      <div className="grid gap-3 p-4">
         <div>
-          <div className="text-[12px] font-medium text-muted-foreground">판독 내용</div>
-          <textarea
+          <div className="text-[12px] font-medium text-muted-foreground">Findings</div>
+          <Textarea
             aria-label="영상 판독 내용"
-            className="mt-2 min-h-24 w-full rounded-md border bg-background p-3 text-[13px] leading-5 outline-none focus:ring-3 focus:ring-ring/50"
+            className="mt-2 min-h-32 resize-none bg-background text-[13px] leading-5"
             defaultValue={study.reading}
           />
         </div>
-        <Separator />
-        <div>
-          <div className="text-[12px] font-medium text-muted-foreground">종합소견</div>
-          <textarea
-            aria-label="영상 종합소견"
-            className="mt-2 min-h-20 w-full rounded-md border bg-background p-3 text-[13px] leading-5 outline-none focus:ring-3 focus:ring-ring/50"
-            defaultValue={study.impression}
-          />
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <div className="text-[12px] font-medium text-muted-foreground">Imaging Dx</div>
+            <Textarea
+              aria-label="Imaging Dx"
+              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              defaultValue={study.impression ? `${study.bodyPart} 영상상 위장관염 가능성` : ""}
+            />
+          </div>
+          <div>
+            <div className="text-[12px] font-medium text-muted-foreground">DDx</div>
+            <Textarea
+              aria-label="DDx"
+              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              defaultValue="이물, 급성 위장관염, 식이성 구토"
+            />
+          </div>
+          <div>
+            <div className="text-[12px] font-medium text-muted-foreground">Impression</div>
+            <Textarea
+              aria-label="영상 종합소견"
+              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              defaultValue={study.impression}
+            />
+          </div>
+          <div>
+            <div className="text-[12px] font-medium text-muted-foreground">Recommendation</div>
+            <Textarea
+              aria-label="Recommendation"
+              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              defaultValue="CBC 결과와 임상 증상을 종합해 추적 관찰합니다."
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -1845,10 +2323,33 @@ export function ImagingContent() {
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
-  const scenario = getDemoScenarioFromParams(searchParams);
-  const queryImagingStudyId = searchParams.get("imagingStudyId") ?? scenario?.imagingStudyId;
-  const effectiveImagingStudyId = queryImagingStudyId ?? selectedImagingStudyId;
-  const detail = getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax");
+  const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId);
+  const initialAssignment = {
+    assigneeName: detail?.radiologistName ?? "미지정",
+    status: "requested" as ImagingReadingStatus,
+    studyId: detail?.study.id ?? "",
+  };
+  const [assignmentState, setAssignmentState] = useState(initialAssignment);
+  const assignment = assignmentState.studyId === initialAssignment.studyId ? assignmentState : initialAssignment;
+  const startAssignment = () =>
+    setAssignmentState({
+      assigneeName: currentLabAssignee.name,
+      status: "reading",
+      studyId: initialAssignment.studyId,
+    });
+  const completeAssignment = () =>
+    setAssignmentState((current) => ({
+      assigneeName:
+        current.studyId === initialAssignment.studyId ? current.assigneeName : currentLabAssignee.name,
+      status: "completed",
+      studyId: initialAssignment.studyId,
+    }));
+  const cancelAssignment = () =>
+    setAssignmentState({
+      assigneeName: "미지정",
+      status: "requested",
+      studyId: initialAssignment.studyId,
+    });
 
   useEffect(() => {
     if (queryImagingStudyId && queryImagingStudyId !== selectedImagingStudyId) {
@@ -1865,29 +2366,205 @@ export function ImagingContent() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
-      <PatientHeader
-        encounter={detail.encounter}
-        patient={detail.patient}
-        primaryGuardianName={detail.primaryGuardian?.name}
-        statusLabel={getStatusLabel("imagingStudy", detail.study.status)}
-        title="영상검사"
-      />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="grid gap-4 p-5">
-          <SummaryGrid
-            items={[
-              ["검사", detail.order?.displayName],
-              ["촬영 부위", detail.study.bodyPart],
-              ["촬영", formatShortDateTime(detail.study.capturedAt)],
-              ["판독", detail.radiologistName ?? "판독 미지정"],
-            ]}
+    <div className="flex h-full min-h-0 flex-col px-4 py-3">
+      <EmrInstructionHeaderStack
+        titleBar={
+          <EmrInstructionTitleBar
+            title="영상 검사 Order 상세"
+            className="h-auto min-h-9 flex-wrap gap-2"
+            icon={
+              <CdsFilesImageIcon
+                className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
+                aria-hidden="true"
+              />
+            }
+            badge={
+              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+                {getImagingDocumentId(detail.study)}
+              </Badge>
+            }
+            actions={
+              <>
+                <Button variant="outline" size="sm" className="bg-card">
+                  PACS
+                </Button>
+                <ImagingStatusAction
+                  status={assignment.status}
+                  onStart={startAssignment}
+                  onComplete={completeAssignment}
+                  onCancelAssignment={cancelAssignment}
+                />
+              </>
+            }
           />
-          <ImagingResultFlowPanel detail={detail} />
-          <ImagingReadingPanel study={detail.study} />
+        }
+        orderInfo={
+          <div className="grid [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
+            {[
+              [
+                "요청 일시",
+                <span key="requested-at" className="flex flex-wrap items-center gap-1.5">
+                  <span>{formatShortDateTime(detail.study.requestedAt)}</span>
+                  <EmrStatusBadge
+                    label={getStatusLabel("imagingStudy", detail.study.status)}
+                    marker="none"
+                    testId="imaging-study-status-label"
+                  />
+                </span>,
+              ],
+              ["검사", detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}`],
+              ["Modality", detail.study.modality],
+              ["촬영 부위", detail.study.bodyPart],
+              ["요청 수의사", getStaffName(detail.order?.requestedByUserId) ?? "이수지"],
+              ["검사 담당", <span key="imaging-assignee" aria-live="polite">{assignment.assigneeName}</span>],
+            ].map(([label, value]) => (
+              <div key={label as string} className="min-w-0 border-r border-border px-3 last:border-r-0">
+                <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
+                <div className="mt-1 flex min-h-6 min-w-0 items-center text-[13px] font-medium text-foreground">{value}</div>
+              </div>
+            ))}
+          </div>
+        }
+      />
+      <ScrollArea data-slot="imaging-result-scroll-area" className="min-h-0 flex-1">
+        <div className="flex flex-col gap-4 pb-10 pt-4">
+          <section className="rounded-lg bg-[var(--clair-color-atomic-yellow-50)] px-4 py-3 text-[13px] font-medium leading-5 text-[var(--clair-color-atomic-yellow-800)]">
+            병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
+          </section>
+          <ImagingOrderDetailTable detail={detail} />
+          <ImagingReadingSections study={detail.study} />
           <AttachmentStrip attachments={detail.attachments} />
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
+  const mediaAttachments = attachments.filter((attachment) => attachment.mimeType.startsWith("image/"));
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {mediaAttachments.map((attachment) => (
+        <div key={attachment.id} className="w-[92px] shrink-0 overflow-hidden rounded-md border bg-card">
+          <div className="flex h-16 items-center justify-center bg-[linear-gradient(135deg,var(--clair-color-atomic-gray-900),var(--clair-color-atomic-gray-600))] text-[12px] font-semibold text-white">
+            {attachment.mimeType.includes("png") ? "IMG" : "FILE"}
+          </div>
+          <div className="truncate px-2 py-1.5 text-[11px] text-muted-foreground">{attachment.fileName}</div>
+        </div>
+      ))}
+      {!mediaAttachments.length ? (
+        <div className="rounded-md border border-dashed p-3 text-[12px] text-muted-foreground">
+          미디어 첨부 없음
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ImagingRightPanel() {
+  const { detail } = useCurrentImagingDetail();
+  const labItems = useMemo(() => getLabWorkItems(), []);
+  const imagingItems = useMemo(() => getImagingWorkItems(), []);
+
+  if (!detail) {
+    return (
+      <div className="flex h-full items-center justify-center p-4 text-[13px] text-muted-foreground">
+        영상 대기열에서 항목을 선택해 주세요.
+      </div>
+    );
+  }
+
+  const sameEncounterLabItems = labItems.filter((item) => item.encounter.id === detail.encounter.id);
+  const sameEncounterImagingItems = imagingItems.filter((item) => item.encounter.id === detail.encounter.id);
+  const sameEncounterOrderCount = sameEncounterLabItems.length + sameEncounterImagingItems.length;
+  const fileAttachments = detail.attachments.filter((attachment) => !attachment.mimeType.startsWith("image/"));
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="imaging-summary-panel">
+      <div className="flex h-14 items-center justify-between px-4">
+        <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
+        <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+          {sameEncounterOrderCount}
+        </Badge>
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-4 p-3">
+          <section className="overflow-hidden rounded-lg border bg-card">
+            <div className="flex h-10 items-center justify-between border-b px-3">
+              <h3 className="text-[13px] font-semibold">같은 차트 내 Order</h3>
+              <Badge variant="outline" className="h-5 rounded-md px-1.5 text-[11px]">
+                {sameEncounterOrderCount}
+              </Badge>
+            </div>
+            <Table className="table-fixed text-[12px]">
+              <TableBody>
+                {sameEncounterLabItems.map((item) => (
+                  <TableRow key={item.result.id}>
+                    <TableCell className="h-9 w-14 px-3 text-muted-foreground">검사</TableCell>
+                    <TableCell className="h-9 px-3 font-medium">{item.order?.displayName ?? item.result.resultName}</TableCell>
+                  </TableRow>
+                ))}
+                {sameEncounterImagingItems.map((item) => (
+                  <TableRow key={item.study.id}>
+                    <TableCell className="h-9 w-14 px-3 text-muted-foreground">영상</TableCell>
+                    <TableCell className="h-9 px-3 font-medium">{item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </section>
+
+          <section>
+            <div className="text-[13px] font-semibold">보호자 공유용 종합 코멘트</div>
+            <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--clair-color-atomic-neutral-50)] px-3 text-[13px] font-semibold text-muted-foreground">
+              <span>B</span>
+              <span className="italic">I</span>
+              <span>T</span>
+              <span>link</span>
+              <span>list</span>
+            </div>
+            <Textarea
+              aria-label="영상 종합 코멘트"
+              className="mt-2 min-h-28 resize-none bg-background text-[13px] leading-5"
+              defaultValue={`- ${detail.study.impression ?? "종합소견 text"}\n- 보호자에게 CBC 결과와 함께 안내`}
+            />
+          </section>
+
+          <section>
+            <div className="mb-2 text-[13px] font-semibold">미디어</div>
+            <ImagingMediaStrip attachments={detail.attachments} />
+          </section>
+
+          <section>
+            <div className="mb-2 text-[13px] font-semibold">첨부 파일</div>
+            <div className="flex flex-col gap-2">
+              {fileAttachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="flex h-9 items-center justify-between gap-2 rounded-md bg-[var(--clair-color-atomic-neutral-50)] px-3 text-[12px]"
+                >
+                  <span className="truncate text-[var(--clair-color-primary-normal)]">{attachment.fileName}</span>
+                  <Button variant="ghost" size="icon-xs" aria-label={`${attachment.fileName} 삭제`}>
+                    <CdsFilesFileIcon className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              ))}
+              {!fileAttachments.length ? (
+                <div className="rounded-md border border-dashed p-3 text-[12px] text-muted-foreground">
+                  첨부 파일 없음
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      </ScrollArea>
+      <div className="grid grid-cols-2 gap-2 border-t p-3">
+        <Button variant="outline" size="sm" className="bg-card">
+          취소
+        </Button>
+        <Button size="sm">저장</Button>
+      </div>
     </div>
   );
 }

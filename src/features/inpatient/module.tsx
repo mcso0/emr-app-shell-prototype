@@ -1,25 +1,33 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
-  CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { CdsAlertsAlertTriangleIcon } from "@/components/cds-icons/alerts-and-status";
 import {
-  EmrDateNavigator,
-  EmrListHeader,
-  EmrListHeaderIconButton,
-  EmrListItem,
-  EmrSubpanel,
-  EmrSubpanelBody,
-  EmrSubpanelTitle,
-} from "@/components/emr/subpanel";
+  CdsFilesCalendarIcon,
+  CdsFilesClockIcon,
+  CdsFilesDocumentAltFillIcon,
+} from "@/components/cds-icons/files-and-layout";
+import {
+  CdsMedicalBedIcon,
+  CdsMedicalClipboardCheckIcon,
+} from "@/components/cds-icons/medical-and-domain";
+import {
+  EmrInstructionHeaderStack,
+  EmrInstructionTitleBar,
+} from "@/components/emr/instruction-header-stack";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -46,15 +54,13 @@ import {
   inpatientFilterItems,
   inpatientSearchFieldItems,
   inpatientWardGroups,
-  mockInpatientAdmissions,
   type InpatientAdmission,
   type InpatientCautionTag,
   type InpatientSearchField,
 } from "@/features/inpatient/data";
 import { useInpatientStore } from "@/features/inpatient/store";
-import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { ShellComponentProps } from "@/types/emr";
+import { cn } from "@/lib/utils";
 
 const statusBadgeClassName: Record<InpatientAdmission["status"], string> = {
   admitted:
@@ -76,6 +82,21 @@ const cautionTagClassName: Record<InpatientCautionTag["tone"], string> = {
     "border-[var(--clair-color-atomic-purple-200)] bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-700)]",
 };
 
+const inpatientWeekdayLabels = ["일", "월", "화", "수", "목", "금", "토"] as const;
+const inpatientTodayDate = "2026-05-06";
+
+function formatInpatientDateLabel(dateValue: string) {
+  const date = new Date(`${dateValue}T00:00:00+09:00`);
+
+  if (Number.isNaN(date.getTime())) return dateValue;
+
+  const year = String(date.getFullYear()).slice(2);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}.${month}.${day} (${inpatientWeekdayLabels[date.getDay()]})`;
+}
+
 function CautionTag({ tag }: { tag: InpatientCautionTag }) {
   return (
     <Badge variant="outline" className={cn("h-5 rounded-md px-1.5", cautionTagClassName[tag.tone])}>
@@ -92,106 +113,131 @@ function StatusBadge({ status }: { status: InpatientAdmission["status"] }) {
   );
 }
 
-function InpatientQueueItem({
-  admission,
-  selected,
+function InpatientDatePicker({
+  dateValue,
+  onDateChange,
 }: {
-  admission: InpatientAdmission;
-  selected: boolean;
+  dateValue: string;
+  onDateChange: (dateValue: string) => void;
 }) {
-  const selectAdmission = useInpatientStore((state) => state.selectAdmission);
+  const [open, setOpen] = useState(false);
+  const dateLabel = formatInpatientDateLabel(dateValue);
 
   return (
-    <div data-testid={`inpatient-queue-item-${admission.id}`}>
-      <EmrListItem
-        selected={selected}
-        variant="outline"
-        title={`${admission.patientName} · ${admission.room}`}
-        subtitle={`${admission.guardianName} · ${admission.breed} · ${admission.stayDayLabel}`}
-        meta={admission.admittedAt.slice(9)}
-        itemBadge={<StatusBadge status={admission.status} />}
-        footer={
-          <>
-            <span>{admission.department}</span>
-            <span>{admission.primaryNurse}</span>
-          </>
-        }
-        onSelect={() => selectAdmission(admission.id)}
-      />
-    </div>
-  );
-}
-
-export function InpatientSidePanel({ moduleLabel }: ShellComponentProps) {
-  const filter = useInpatientStore((state) => state.filter);
-  const selectedAdmissionId = useInpatientStore((state) => state.selectedAdmissionId);
-  const setFilter = useInpatientStore((state) => state.setFilter);
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const counts = useMemo(() => getInpatientCounts(), []);
-  const rows = useMemo(
-    () => mockInpatientAdmissions.filter((admission) => filter === "all" || admission.status === filter),
-    [filter]
-  );
-
-  return (
-    <EmrSubpanel>
-      <EmrSubpanelTitle
-        title={moduleLabel}
-        collapseLabel="사이드 패널 접기"
-        onCollapse={() => setModulePanelOpen(false)}
-      />
-      <EmrDateNavigator dateLabel="26.05.06 (수)" todayLabel="오늘" />
-      <div className="border-b px-3 py-2">
-        <SegmentedControl
-          aria-label="입원 목록 상태"
-          value={filter}
-          items={inpatientFilterItems.map((item) => ({ ...item, count: counts[item.value] }))}
-          variant="tabs"
-          className="w-full"
-          itemClassName="flex-1"
-          onValueChange={setFilter}
-        />
-      </div>
-      <EmrListHeader
-        label="입원 환자"
-        count={rows.length}
-        headerActions={
-          <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="필터">
-              <CdsActionsListFilterIcon className="size-4" />
-            </EmrListHeaderIconButton>
-          </>
-        }
-      />
-      <EmrSubpanelBody>
-        {rows.map((admission) => (
-          <InpatientQueueItem
-            key={admission.id}
-            admission={admission}
-            selected={admission.id === selectedAdmissionId}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-md bg-card px-2 text-[12px] font-medium text-muted-foreground"
+            aria-label={`${dateLabel} 입원 기준일 선택`}
           />
-        ))}
-      </EmrSubpanelBody>
-    </EmrSubpanel>
+        }
+      >
+        <CdsFilesCalendarIcon aria-hidden="true" className="size-3.5" />
+        {dateLabel}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 gap-3 p-3" initialFocus={false}>
+        <div className="grid gap-1.5">
+          <label htmlFor="inpatient-date-picker" className="text-[12px] font-medium text-muted-foreground">
+            입원 기준일
+          </label>
+          <Input
+            id="inpatient-date-picker"
+            aria-label="입원 기준일"
+            type="date"
+            className="h-9 bg-card"
+            value={dateValue}
+            onChange={(event) => onDateChange(event.target.value)}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="bg-card"
+            onClick={() => onDateChange(inpatientTodayDate)}
+          >
+            오늘
+          </Button>
+          <Button type="button" size="sm" onClick={() => setOpen(false)}>
+            적용
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+const summaryCardToneClassName = {
+  blue: {
+    accent: "bg-[var(--clair-color-atomic-blue-500)]",
+    icon: "bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]",
+  },
+  orange: {
+    accent: "bg-[var(--clair-color-atomic-orange-500)]",
+    icon: "bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-700)]",
+  },
+  green: {
+    accent: "bg-[var(--clair-color-atomic-green-500)]",
+    icon: "bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+  },
+  purple: {
+    accent: "bg-[var(--clair-color-atomic-purple-500)]",
+    icon: "bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-700)]",
+  },
+};
+
+type SummaryCardTone = keyof typeof summaryCardToneClassName;
+
+function SummaryCard({
+  description,
+  icon,
+  label,
+  tone,
+  value,
+}: {
+  description: string;
+  icon: ReactNode;
+  label: string;
+  tone: SummaryCardTone;
+  value: string;
+}) {
+  const toneClassName = summaryCardToneClassName[tone];
+
   return (
-    <div className="rounded-md border bg-card p-3">
-      <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-      <div className="mt-2 truncate text-[18px] font-semibold">{value}</div>
-    </div>
+    <section className="relative min-h-[104px] overflow-hidden rounded-lg border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className={cn("absolute inset-x-0 top-0 h-0.5", toneClassName.accent)} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
+          <div className="mt-2 text-[24px] font-semibold leading-7 text-foreground">{value}</div>
+        </div>
+        <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-md", toneClassName.icon)}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-3 truncate text-[12px] text-muted-foreground">{description}</div>
+    </section>
   );
 }
 
 function InpatientTableRow({ admission }: { admission: InpatientAdmission }) {
   const selectedAdmissionId = useInpatientStore((state) => state.selectedAdmissionId);
   const selectAdmission = useInpatientStore((state) => state.selectAdmission);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const selected = selectedAdmissionId === admission.id;
+  const openAdmissionDrawer = () => {
+    selectAdmission(admission.id);
+    setActiveDrawer({
+      type: "inpatient-admission",
+      id: admission.id,
+      subtitle: `${admission.room} · ${admission.patientName} · ${admission.guardianName}`,
+    });
+  };
 
   return (
     <TableRow
@@ -201,7 +247,7 @@ function InpatientTableRow({ admission }: { admission: InpatientAdmission }) {
         "cursor-pointer",
         selected && "bg-[var(--clair-color-atomic-sky-50)] hover:bg-[var(--clair-color-atomic-sky-50)]"
       )}
-      onClick={() => selectAdmission(admission.id)}
+      onClick={openAdmissionDrawer}
     >
       <TableCell className="w-20 font-semibold">{admission.room}</TableCell>
       <TableCell className="min-w-36">
@@ -299,6 +345,7 @@ function InpatientWardSection({
 }
 
 export function InpatientContent() {
+  const [selectedDate, setSelectedDate] = useState(inpatientTodayDate);
   const filter = useInpatientStore((state) => state.filter);
   const searchField = useInpatientStore((state) => state.searchField);
   const searchQuery = useInpatientStore((state) => state.searchQuery);
@@ -317,59 +364,106 @@ export function InpatientContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
-      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm">
-            <CdsActionsPlusIcon data-icon="inline-start" className="size-3" />
-            입실 추가
-          </Button>
-          <Button variant="outline" size="sm" className="bg-card">
-            입원실 관리
-          </Button>
-          <SegmentedControl
-            aria-label="입원 상태 필터"
-            value={filter}
-            items={inpatientFilterItems.map((item) => ({ ...item, count: counts[item.value] }))}
-            variant="pill"
-            onValueChange={setFilter}
-          />
-        </div>
-        <div className="flex min-w-[360px] max-w-xl flex-1 justify-end gap-2">
-          <Select value={searchField} onValueChange={(value) => setSearchField(value as InpatientSearchField)}>
-            <SelectTrigger aria-label="입원 검색조건" className="h-8 w-[128px] bg-card">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {inpatientSearchFieldItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <div className="relative min-w-0 flex-1">
-            <CdsActionsSearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="입원 검색"
-              className="h-8 bg-card pl-8"
-              placeholder="동물명, 보호자명, 입원실 검색"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+      <div className="shrink-0 border-b bg-card px-4 py-3">
+        <EmrInstructionHeaderStack
+          titleBar={
+            <EmrInstructionTitleBar
+              title="입원 현황"
+              icon={
+                <CdsFilesDocumentAltFillIcon
+                  className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
+                  aria-hidden="true"
+                />
+              }
+              badge={
+                <InpatientDatePicker dateValue={selectedDate} onDateChange={setSelectedDate} />
+              }
+              actions={
+                <>
+                  <Button size="sm">
+                    <CdsActionsPlusIcon data-icon="inline-start" className="size-3" />
+                    입실 추가
+                  </Button>
+                  <Button variant="outline" size="sm" className="bg-card">
+                    입원실 관리
+                  </Button>
+                </>
+              }
             />
-          </div>
-        </div>
+          }
+          orderInfo={
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <SummaryCard
+                label="입원중"
+                value={`${counts.admitted + counts.critical}마리`}
+                description="현재 병동/ICU 재원"
+                tone="blue"
+                icon={<CdsMedicalBedIcon aria-hidden="true" className="size-4" />}
+              />
+              <SummaryCard
+                label="주의 태그"
+                value={`${counts.cautionTags}개`}
+                description="산소·금식·면회 등"
+                tone="orange"
+                icon={<CdsAlertsAlertTriangleIcon aria-hidden="true" className="size-4" />}
+              />
+              <SummaryCard
+                label="퇴실 준비"
+                value={`${counts.discharge_ready}마리`}
+                description="승인/안내 대기"
+                tone="green"
+                icon={<CdsMedicalClipboardCheckIcon aria-hidden="true" className="size-4" />}
+              />
+              <SummaryCard
+                label="오늘 입실"
+                value={`${counts.todayAdmissions}마리`}
+                description="금일 신규 입실"
+                tone="purple"
+                icon={<CdsFilesClockIcon aria-hidden="true" className="size-4" />}
+              />
+            </div>
+          }
+          filters={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SegmentedControl
+                aria-label="입원실 그룹 필터"
+                value={filter}
+                items={inpatientFilterItems.map((item) => ({ ...item, count: counts[item.value] }))}
+                variant="pill"
+                onValueChange={setFilter}
+              />
+              <div className="flex min-w-[360px] max-w-xl flex-1 justify-end gap-2">
+                <Select value={searchField} onValueChange={(value) => setSearchField(value as InpatientSearchField)}>
+                  <SelectTrigger aria-label="입원 검색조건" className="h-8 w-[128px] bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {inpatientSearchFieldItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <div className="relative min-w-0 flex-1">
+                  <CdsActionsSearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    aria-label="입원 검색"
+                    className="h-8 bg-card pl-8"
+                    placeholder="동물명, 보호자명, 입원실 검색"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          }
+        />
       </div>
 
-      <div className="grid shrink-0 gap-3 p-4 md:grid-cols-4">
-        <SummaryCard label="입원중" value={`${counts.admitted + counts.critical}마리`} />
-        <SummaryCard label="주의 태그" value={`${counts.cautionTags}개`} />
-        <SummaryCard label="퇴실 준비" value={`${counts.discharge_ready}마리`} />
-        <SummaryCard label="오늘 입실" value={`${counts.todayAdmissions}마리`} />
-      </div>
-
-      <ScrollArea className="min-h-0 flex-1 px-4 pb-4">
+      <ScrollArea className="min-h-0 flex-1 px-4 pb-4 pt-4">
         <div className="flex flex-col gap-3 pb-4" data-testid="inpatient-workspace">
           {groupedAdmissions.map((group) => (
             <InpatientWardSection
@@ -389,22 +483,16 @@ export function InpatientContent() {
   );
 }
 
-export function InpatientRightPanel() {
+export function InpatientDrawer() {
+  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const selectedAdmissionId = useInpatientStore((state) => state.selectedAdmissionId);
-  const admission = getInpatientAdmission(selectedAdmissionId);
+  const admission = getInpatientAdmission(
+    activeDrawer?.type === "inpatient-admission" ? activeDrawer.id : selectedAdmissionId
+  );
   const checklistDoneCount = admission.dischargeChecklist.filter((item) => item.done).length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-12 flex-col justify-center border-b px-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 truncate text-sm font-semibold">입원 상세</div>
-          <StatusBadge status={admission.status} />
-        </div>
-        <div className="truncate text-[11px] text-muted-foreground">
-          {admission.room} · {admission.patientName} · {admission.guardianName}
-        </div>
-      </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
           <section className="rounded-md border bg-card p-3">
@@ -415,9 +503,12 @@ export function InpatientRightPanel() {
                   {admission.patientNo} · {admission.speciesLabel} · {admission.breed}
                 </div>
               </div>
-              <Badge variant="outline" className="rounded-md bg-card">
-                {admission.stayDayLabel}
-              </Badge>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <StatusBadge status={admission.status} />
+                <Badge variant="outline" className="rounded-md bg-card">
+                  {admission.stayDayLabel}
+                </Badge>
+              </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
               <div>

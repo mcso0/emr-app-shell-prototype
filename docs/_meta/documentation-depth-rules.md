@@ -4,6 +4,10 @@ Use these rules after routing a chat instruction with `docs/_meta/intake-rules.m
 
 The goal is to keep durable knowledge discoverable without turning every small implementation detail into repo documentation.
 
+## Language Contract
+
+Use concise English for durable agent-facing guidance, work plans, and handoff notes. Keep user-facing result reviews in Korean unless the user asks otherwise. Product names, screen labels, and Korean domain terms may stay in Korean when they are clearer than translation.
+
 ## Depth Levels
 
 | Level | Name | Use when | Record in docs? |
@@ -84,7 +88,7 @@ When GitHub is used:
 - `docs/` is the primary surface for current guidance, durable decisions, agent handoff, and archive-worthy context.
 - If a PR or issue can absorb a Level 1 or Level 2 record, do not duplicate it in docs.
 - If a change must remain true after the PR is closed, promote it to Level 3 or Level 4 docs.
-- If the user says "기록해줘", "규칙으로 만들자", or "앞으로 이렇게 하자", do not leave it only in GitHub.
+- If the user says "기록해줘", "규칙으로 만들자", "앞으로 이렇게 하자", or "항상 유지해줘", do not leave it only in GitHub.
 
 ## Escalation Rules
 
@@ -92,4 +96,3 @@ When GitHub is used:
 - A repeated small change that becomes a reusable rule becomes Level 4.
 - One-off changes stay low-depth.
 - Product, design, engineering, or business source-of-truth changes never stop at PR description only.
-

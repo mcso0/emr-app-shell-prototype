@@ -2,6 +2,8 @@
 
 After completing work, the agent must give the user a concise result review.
 
+Default language: Korean, unless the user asks otherwise. Keep any supporting agent-facing handoff notes in concise English.
+
 ## Default Review Shape
 
 Include:

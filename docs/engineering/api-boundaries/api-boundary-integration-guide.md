@@ -35,7 +35,7 @@ When API/DB work begins, implement `EmrReadRepository` with a real data source o
 ## Guardrails
 
 - Do not refactor multiple feature modules in one PR.
-- Do not change 조제/처치 design or behavior while adopting this boundary.
+- Keep UI behavior changes out of scope while adopting this boundary unless the work item explicitly includes them.
 - Do not wire auth, audit logging, or service catalog lookup into this helper layer.
 - Do not create Next.js API routes as part of read selector adoption.
 - Do not add DB clients or migrations until the backend plan is explicit.

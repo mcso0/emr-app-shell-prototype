@@ -100,7 +100,6 @@ Start with `docs/engineering/current-status.md` for the current MVP state. This 
 
 - 입원과 병원관리 전체 화면은 이번 PR 1-6 범위에서 제외한다.
 - 병원관리 Order 관리 / Order 세트는 도메인과 공통 패턴 참고로만 사용한다.
-- 조제/처치 화면은 현재 디자인과 동작을 보존한다.
 
 ### PR별 남은 갭
 
@@ -115,8 +114,7 @@ Start with `docs/engineering/current-status.md` for the current MVP state. This 
 
 ### Regression Guard
 
-- 조제/처치 관련 파일은 필요한 경우가 아니면 수정하지 않는다.
-- 조제/처치 관련 파일을 건드리면 shell/nav와 해당 화면 회귀 테스트를 추가로 실행한다.
+- 업무 화면 파일을 건드리면 shell/nav와 해당 화면 회귀 테스트를 추가로 실행한다.
 
 ---
 

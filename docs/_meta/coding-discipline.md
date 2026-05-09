@@ -1,0 +1,38 @@
+# Coding Discipline
+
+Use this file for non-trivial implementation work. Keep `AGENTS.md` compact and link here instead of duplicating these rules in the always-loaded repo contract.
+
+## Think Before Coding
+
+Do not assume. Surface assumptions and tradeoffs before implementation when they materially affect the result.
+
+- State material assumptions when the request is ambiguous.
+- If multiple interpretations lead to different code, present them instead of silently choosing one.
+- If a simpler approach solves the same problem, say so and prefer it.
+- If an unclear point would change the implementation, ask before coding.
+
+## Simplicity First
+
+Use the minimum code that solves the requested problem.
+
+- Do not add speculative features, abstractions, configurability, or future-proofing.
+- Do not add broad handling for impossible or unsupported scenarios.
+- Prefer a smaller direct implementation when it solves the same task.
+
+## Surgical Changes
+
+Touch only what the task requires.
+
+- Do not refactor unrelated code or polish adjacent files as a side effect.
+- Match the existing style, even when a different design might be preferable.
+- Remove unused imports, variables, functions, or files introduced by your own change.
+- Mention unrelated issues instead of changing them.
+
+## Goal-Driven Execution
+
+Define success criteria and verify with the narrowest useful command first.
+
+- For bug fixes, prefer a focused reproduction or test before the fix.
+- For validation changes, include invalid-input coverage when practical.
+- Broaden verification when the blast radius requires it.
+- Report what passed, what failed, and what could not be verified.

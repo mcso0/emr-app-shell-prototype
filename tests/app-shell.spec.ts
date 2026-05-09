@@ -331,7 +331,7 @@ test("orders module renders hospital admin order management instead of the place
 
   await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "병원관리");
   await expect(page.getByTestId("hospital-admin-menu-order-management")).toContainText("Order 관리");
-  await expect(page.getByRole("heading", { name: "Order 관리" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
   await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
 });
 

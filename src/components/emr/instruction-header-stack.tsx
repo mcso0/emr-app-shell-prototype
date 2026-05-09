@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { EmrPageHeader } from "@/components/emr/page-header";
 import { cn } from "@/lib/utils";
 
 type EmrInstructionHeaderStackProps = {
@@ -27,18 +28,13 @@ export function EmrInstructionTitleBar({
   title,
 }: EmrInstructionTitleBarProps) {
   return (
-    <div className={cn("flex h-9 items-center justify-between", className)}>
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {icon}
-          <h1 className="truncate text-[18px] font-semibold leading-[26px] tracking-[-0.002em] text-foreground">
-            {title}
-          </h1>
-        </div>
-        {badge}
-      </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-    </div>
+    <EmrPageHeader
+      actions={actions}
+      badge={badge}
+      className={className}
+      icon={icon}
+      title={title}
+    />
   );
 }
 

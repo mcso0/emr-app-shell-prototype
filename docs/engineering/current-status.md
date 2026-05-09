@@ -1,8 +1,17 @@
 # MVP Current Status
 
-Updated: 2026-05-05
+Updated: 2026-05-09
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
+
+## Agent Compact Summary
+
+- Current target: Product MVP.
+- This is a session-only frontend prototype for veterinary EMR workflows from reception through billing.
+- Live DB/API persistence, live Supabase validation, migrations, RLS, and server-side permission enforcement are not complete.
+- Client-only permission gating is not complete security.
+- Recommended next work: approve one permission resolver, migration/RLS, or API/server enforcement unit.
+- Use concise English for agent-facing plans and handoff notes. Keep user-facing result reviews in Korean unless requested otherwise.
 
 ## Current Working Target
 
@@ -37,12 +46,16 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-05 기준 접수/예약 toolbar의 `환자 등록`/`보호자 등록`은 `환자/보호자 등록`으로 통합되었고, 케이스 선택 후 신규 보호자+환자 또는 기존 보호자+신규 환자를 등록하는 branch-first session-only flow를 제공한다. 등록 완료 후 자동 접수로 이동하지 않고 toast action으로 환자 상세 또는 진료 접수를 선택한다. 진료 접수 dialog는 환자 prefill, 재진 자동 체크, 방문 목적 chip, 카카오톡 발송 simulation을 포함한다.
 - 2026-05-05 기준 작은 확인 modal은 `EmrConfirmDialogContent` 공통 컴포넌트를 사용한다. 접수/예약의 등록 취소 확인과 임상병리검사의 검사결과 붙여넣기 확인이 이 패턴을 공유한다.
 - 2026-05-05 기준 side panel의 접힘 가능한 status group scaffold는 `EmrSidePanelCollapsibleGroup` 공통 컴포넌트를 사용한다. 조제/처치 order queue와 임상병리검사 order queue가 같은 header, accent bar, count, chevron rotation, collapse motion을 공유한다.
-- 2026-05-05 기준 임상병리검사 화면은 조제/처치형 shell 구조를 사용한다. 검사 대기열, 환자 정보 인포바, 기본 열림 검사이력 aside, 값 기반 정상범위 chart와 색상 판정 badge가 있는 임상병리 검사결과지, 검사결과 종합소견 입력, 우측 장비결과내역 패널로 구성되며 영상검사는 기존 구조를 유지한다. 임상병리검사 side panel은 조제/처치 side panel의 날짜 네비게이터 패턴과 오더별/차트별 목록 전환, 접힘 가능한 상태 그룹을 제공하며, 차트별은 같은 환자 차트에 내려진 임상병리검사 오더를 encounter 단위 카드로 묶어 보여준다. 검사결과 수신내역 right panel은 같은 날짜 네비게이터 패턴과 리스트 header action을 재사용하고, 현재 오더 연결 수신 카드 안에서 애니메이션 검사결과 미리보기 아코디언을 제공한다.
+- 2026-05-05 기준 임상병리검사 화면은 조제/처치형 shell 구조를 사용한다. 검사 대기열, 환자 정보 인포바, 기본 열림 검사이력 aside, 값 기반 정상범위 chart와 색상 판정 badge가 있는 임상병리 검사결과지, 검사결과 종합소견 입력, 우측 장비결과내역 패널로 구성된다. 임상병리검사 side panel은 조제/처치 side panel의 날짜 네비게이터 패턴과 오더별/차트별 목록 전환, 접힘 가능한 상태 그룹을 제공하며, 차트별은 같은 환자 차트에 내려진 임상병리검사 오더를 encounter 단위 카드로 묶어 보여준다. 검사결과 수신내역 right panel은 같은 날짜 네비게이터 패턴과 리스트 header action을 재사용하고, 현재 오더 연결 수신 카드 안에서 애니메이션 검사결과 미리보기 아코디언을 제공한다.
+- 2026-05-06 기준 영상검사 화면은 차트/검사와 같은 App Shell 슬롯 구조로 재정렬되었다. 영상 대기열 side panel은 날짜 네비게이터, 오더별/차트별 전환, 접힘 가능한 상태 그룹을 제공하고, 중앙에는 환자 컨텍스트 header, 기본 열림 영상/차트 이력 aside, Order 상세정보 table, PACS mock action, 스터디 판독의견, Imaging Dx/DDx/Impression/Recommendation, 첨부자료가 배치된다. 우측 종합소견 panel은 같은 차트 내 검사/영상 오더, 보호자 공유용 종합 코멘트, 미디어 thumbnail, 첨부 파일 목록, 저장/취소 footer를 제공한다. 레퍼런스 기반 와이어프레임은 `docs/reference/imaging/imaging-workspace-wireframe.html`에 있다.
 - 2026-05-05 기준 진료(차트)는 조제/처치 workspace 슬롯 구조를 재사용하도록 재구성되었다. 진료 대기열은 공통 order queue side panel 패턴을 사용하고, patient context bar 아래 차트 이력 aside와 우측 진단 이력 환자 패널을 제공한다. SOAP는 Tiptap 기반 진단계통별 편집기로 동작하며, 진단 코멘트/Plan은 textarea로 입력 가능하다. 처방/오더 하단에는 오더 현황/금액/action 고정 footer가 있다.
 - 2026-05-05 기준 진료(차트)는 SOAP가 여러 개로 늘어나도 처방/오더 영역이 화면 밖으로 밀리지 않도록 SOAP/진단 패널 내부 스크롤과 하단 처방/오더 영역을 분리했다. 차트 정보/SOAP 경계 divider와 SOAP/진단-오더 사이 grab divider를 추가했고, grab divider는 상하 영역 최소 높이를 지키면서 진료 기록/진단명 묶음과 처방/오더 영역 높이를 조절한다. Grab divider는 pointerup/cancel/blur 종료 경로를 처리해 포인터 포커스가 끊겨도 resize 상태가 남지 않는다. 처방/오더 본문은 gray-50 workspace 안에서 그룹 카드 대신 기본 미선택 checkbox를 지원하는 compact table로 표시하고, table header는 gray-50, body는 common white로 구분한다. 진료 기록/진단명/처방오더 header는 gray-400 subtitle을 곁들인 한 줄 title로 압축했고, order action footer는 파란 배경 없이 낮은 레벨의 그림자와 상단 구분선을 사용한다. SOAP 카드 자동저장 상태는 버튼형 badge가 아니라 비상호작용 text로 표시하며, SOAP 첨부 자료 footer는 별도 fill 없이 카드 배경을 이어받는다. 차트이력 aside item은 공통 `EmrListItem` 선택 표현을 사용한다.
+- 2026-05-07 기준 진료(차트)는 MVP 안전 UX 보강으로 환자 컨텍스트와 차트 정보에 차트번호/보호자 맥락을 더 명확히 표시하고, SOAP 자동저장 시각을 노출하며, 차트 작성완료와 Order 청구/확정은 현재 환자/차트번호/선택 오더를 확인하는 dialog를 거치도록 했다. 실제 저장, 청구, 오더 확정 상태 변경은 여전히 session-only prototype 범위 밖이다.
 - 2026-05-06 기준 수납 화면은 차트/검사와 같은 App Shell 슬롯 구조로 재정렬되었다. 환자 컨텍스트 header, 중앙 청구서 workspace, 우측 수납 요약/right panel을 제공하며 대기/미납/종료 목록, 보호자 청구 묶음, 합산/해제, 청구 항목 수량 편집, 결제 수단, 청구 확정/미납/수납 완료 session-only 동작은 유지한다. 레퍼런스 기반 와이어프레임은 `docs/reference/billing/billing-workspace-wireframe.html`에 있다.
-- 2026-05-06 기준 입원 화면은 placeholder에서 session-only 병동 workspace로 교체되었다. 입원 목록 side panel, 입원 상태/검색 toolbar, 병동 KPI, 강아지/고양이/집중 치료실 grouped table, 주의 tag, 차트/퇴실 action, 우측 입원 상세/퇴실 체크리스트 패널을 제공한다. 공급된 채팅 reference image는 구조/정보 우선순위 참고로만 사용했고, pixel-level alignment 기준 asset은 아직 저장하지 않았다.
-- 2026-05-06 기준 병원관리 Order 관리 화면은 placeholder에서 session-only 오더 카탈로그 workspace로 교체되었다. `대분류 > 세부 분류 > 오더 목록` 구조를 shell side panel, content aside, dense table로 구성하고, 단일 오더 선택 시 넓은 오른쪽 drawer에서 조회/수정/삭제/저장할 수 있다. Order 세트는 별도 화면/후속 범위로 분리한다.
+- 2026-05-06 기준 입원 화면은 placeholder에서 session-only 병동 workspace로 교체되었다. 입원 메뉴는 별도 side panel 없이 중앙 업무판과 우측 상세 패널로 구성하며, 입원 상태/검색 toolbar, 병동 KPI, 강아지/고양이/집중 치료실 grouped table, 주의 tag, 차트/퇴실 action, 우측 입원 상세/퇴실 체크리스트 패널을 제공한다. 공급된 채팅 reference image는 구조/정보 우선순위 참고로만 사용했고, pixel-level alignment 기준 asset은 아직 저장하지 않았다.
+- 2026-05-06 기준 병원관리 Order 관리 화면은 placeholder에서 session-only 오더 카탈로그 workspace로 교체되었다. 좌측 module panel은 고객관리와 같은 텍스트 계층 side panel을 재사용하며, `Hospital` 라벨 없이 병원관리 메뉴와 펼쳐진 `Order 관리` 하위 leaf를 보여준다. 선택 leaf(`임상병리 검사`, `처방`, `영상검사` 등)가 본문 page header가 되고, header 탭은 그 leaf 내부의 다음 단계 타입에만 사용한다. 본문은 별도 content aside 없이 dense table로 이어지며, 단일 오더 선택 시 넓은 오른쪽 drawer에서 조회/수정/삭제/저장할 수 있다. Order 세트는 별도 화면/후속 범위로 분리한다.
+- 2026-05-06 기준 고객관리 화면은 nav-only action에서 session-only 보호자/동물 master data workspace로 교체되었다. shadcn식 텍스트 side panel, 현재 선택 항목(`동물`/`보호자`) 기준 page header, dense table, 검색, 환자/보호자 등록 진입점, 공통 `patient`/`guardian` drawer type을 제공하며 기존 `reception-patient`/`reception-guardian` drawer URL도 호환한다. 스케줄/발송/서류/CS/진료의뢰는 후속 범위로 side panel 구조만 노출한다. 레퍼런스 기반 와이어프레임은 `docs/reference/customer/customer-management-wireframe.html`에 있다.
+- 2026-05-09 기준 홈 기본 화면은 역할별 3-column command dashboard에서 `내 업무` 중심 work-entry surface로 전환되었다. 기본 질문은 `오늘/지금 내가 뭘 해야 하지?`이며, quick status chips, 업무/영역 필터, 요청/배정 업무 카드, 미배정 역할 큐 표시, desk empty launcher, compact flow summary를 제공한다. 기본 홈에서는 병원관리 KPI, 대형 알림 패널, 역할별 위젯 grid를 노출하지 않고, Sales Demo launcher는 `/w/clair-demo/home?view=demo`로 보존한다.
 - membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
 - Auth 후속 작업은 `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.
@@ -77,11 +90,13 @@ Sales Demo Prototype 작업은 spine-first 방식으로 진행되었고, Wave 2�
 - 진료(차트)
 - 임상병리/계통 검사
 - 영상검사
-- 조제/처치 기존 화면 보존
+- 조제/처치
 - 수납
 - 입원 1차 화면
+- 고객관리 1차 화면
+- 역할별 업무 관제 홈 1차 foundation
 - `김하늘 / 콩이 / 구토 내원` sales demo golden path
-- `/w/clair-demo/home` demo launcher와 역할/모듈 quick start
+- `/w/clair-demo/home?view=demo` demo launcher와 역할/모듈 quick start
 - 주요 화면의 demo query context preservation
 - 연결형 EMR mock domain, status label mapper, Playwright 회귀 테스트
 - Service catalog, role seed, permission seed foundation
@@ -117,15 +132,17 @@ MVP 목표:
 
 | 메뉴 | 상태 | 주요 내용 |
 |---|---|---|
+| 홈 | v1 구현됨 | 기존 `/home` route에서 `내 업무` 중심 work-entry surface 제공, mock auth role 기반 preset, quick status, 업무/영역 필터, 요청/배정 업무 카드, 미배정 역할 큐, desk empty launcher, compact flow summary 제공. 기본 홈에서 병원관리 KPI/대형 알림 패널/역할별 widget grid는 제외하고 Sales Demo launcher는 `?view=demo`로 보존 |
 | 접수/예약 | 구현됨 | 캘린더, 대기 중심 접수/예약 목록, 상세 드로어, check-in, 신규 진료 접수 dialog, 환자/보호자 등록 branch-first flow, 현장 접수 form 입력값 반영과 진료대기 표시 |
-| 환자/보호자 | 구현됨 | 환자/보호자 read/edit 드로어, 관계 관리, CS 이력, 최신내역, 신규 동물/보호자 등록 품질 UX |
+| 고객관리 | 1차 구현됨 | 보호자/동물 master data 목록, shadcn식 텍스트 side panel, 검색, 신규 환자/보호자 등록 진입, 공통 환자/보호자 drawer |
+| 환자/보호자 | 구현됨 | 공통 환자/보호자 read/edit 드로어, 관계 관리, CS 이력, 최신내역, 신규 동물/보호자 등록 품질 UX |
 | 진료(차트) | 구현됨 | 진료 대기열, 과거 진료 이력, SOAP, Assessment, Assessment History, Order |
 | 임상병리/계통 검사 | 구현됨 | 조제/처치형 검사 대기열, 환자 인포바, 기본 열림 검사이력, 값 기반 정상범위 chart와 색상 판정 badge 검사결과지, 검사결과 종합소견, 우측 장비결과내역 아코디언, 첨부자료 |
-| 영상검사 | 구현됨 | 영상 대기열, 판독 내용, 종합소견, 첨부자료 |
-| 조제/처치 | 기존 구현 보존 | 기존 화면 디자인과 동작을 유지 |
+| 영상검사 | 구현됨 | 조제/처치형 영상 대기열, 환자 인포바, 기본 열림 영상/차트 이력, 영상 Order 상세정보, 판독의견/진단/권고 입력, 우측 종합소견, 미디어/첨부자료 |
+| 조제/처치 | 구현됨 | 조제/처치 업무 화면, 오더 그룹, 우측 패널, drawer, content aside 제공 |
 | 수납 | 구현됨 | 대기/미납/종료 목록, 환자 컨텍스트 header, 보호자 청구 묶음, 중앙 청구 항목 편집, 합산/해제, 우측 수납 요약/right panel, 결제 수단, 수납 액션 |
-| 입원 | 1차 구현됨 | 입원 환자 side panel, 상태/검색 toolbar, 병동 KPI, 강아지/고양이/집중 치료실 grouped table, 주의 tag, 우측 입원 상세와 퇴실 체크리스트 |
-| 병원관리 | Order 관리 1차 구현됨 | session-only 오더 카탈로그, 대분류/세부 분류/오더 목록, 검색/필터/선택, 오더 상세 drawer 조회/수정/삭제/저장 |
+| 입원 | 1차 구현됨 | side panel 없는 중앙 업무판, 상태/검색 toolbar, 병동 KPI, 강아지/고양이/집중 치료실 grouped table, 주의 tag, 우측 입원 상세와 퇴실 체크리스트 |
+| 병원관리 | Order 관리 1차 구현됨 | 고객관리형 텍스트 side panel, Order 관리 하위 leaf navigation, leaf 내부 header tabs, session-only 오더 카탈로그, 검색/필터/선택, 오더 상세 drawer 조회/수정/삭제/저장 |
 | 로그인/auth provider | adapter 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, auth client boundary, login pending/error UI, logout utility, shell 역할 표시, permission helper, Supabase provider adapter와 env 기반 fallback |
 
 주요 구현 파일은 기능별 `src/features/*`에 있다. 새 작업자는 개별 파일을 보기 전에 이 문서와 관련 implementation 문서를 먼저 확인한다.
@@ -188,13 +205,12 @@ MVP 목표:
 - `npx playwright test tests/auth.spec.ts --reporter=line` (`9 passed`)
 - `npx playwright test tests/app-shell.spec.ts tests/reception.spec.ts tests/billing.spec.ts tests/chart.spec.ts tests/lab-imaging.spec.ts tests/sales-demo-flow.spec.ts --reporter=line` (`44 passed`)
 
-화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 조제/처치 관련 파일을 건드리면 `tests/app-shell.spec.ts`의 조제 회귀를 반드시 다시 확인한다.
+화면 작업 시 기본적으로 관련 Playwright test를 추가하거나 갱신한다. 업무 화면 파일을 건드리면 해당 화면의 회귀 테스트를 함께 확인한다.
 
 ## 작업 시 주의사항
 
 - 작업 시작 전 이 문서를 먼저 읽는다.
 - Next.js application code를 쓰기 전에는 `node_modules/next/dist/docs/`의 관련 문서를 확인한다.
-- 조제/처치 화면의 현재 디자인과 동작은 명시 요청 없이는 수정하지 않는다.
 - 입원 화면은 2026-05-06에 1차 session-only workspace가 추가되었다.
 - 병원관리 전체 화면은 아직 범위 밖이지만, Order 관리는 2026-05-06에 1차 session-only catalog workspace가 추가되었다. Order 세트는 별도 후속 범위다.
 - 로그인은 기본 local demo 환경에서 mock session 기반으로 app shell 진입을 보호하고, Supabase env/auth mode가 준비되면 provider session adapter를 사용할 수 있다. 아직 DB/API session과 서버 권한 enforcement는 연결하지 않았다.

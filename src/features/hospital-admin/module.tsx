@@ -1,15 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
 import {
-  EmrListHeader,
-  EmrListItem,
-  EmrSubpanel,
-  EmrSubpanelBody,
-  EmrSubpanelTitle,
-} from "@/components/emr/subpanel";
+  CdsActionsCopyIcon,
+  CdsActionsSettingsIcon,
+} from "@/components/cds-icons/actions-and-controls";
+import {
+  CdsFilesCalendarIcon,
+  CdsFilesFileTextIcon,
+  CdsFilesGridIcon,
+  CdsFilesLayersIcon,
+} from "@/components/cds-icons/files-and-layout";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrSubpanelTitle } from "@/components/emr/subpanel";
+import {
+  EmrTextSideNavButton,
+  EmrTextSideNavSection,
+} from "@/components/emr/text-side-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,21 +54,22 @@ import {
   formatHospitalOrderAmount,
   getHospitalOrderCategory,
   getHospitalOrderSubcategory,
-  getSubcategoriesForCategory,
-  hospitalOrderCategories,
   roundRuleLabels,
   saleUnitLabels,
   serviceItemTypeLabels,
   targetLabels,
   type HospitalOrderBillingFilter,
   type HospitalOrderCatalogItem,
+  type HospitalOrderCategoryId,
   type HospitalOrderDraft,
   type HospitalOrderStatusFilter,
+  type HospitalOrderSubcategoryId,
   type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import type { ShellComponentProps } from "@/types/emr";
 
 const orderSetPlaceholderId = "order-set-placeholder";
 
@@ -91,6 +99,111 @@ const drawerTabs = [
 ] as const;
 
 type DrawerTab = (typeof drawerTabs)[number]["value"];
+
+type OrderMenuChild = {
+  label: string;
+  categoryId?: HospitalOrderCategoryId;
+  disabled?: boolean;
+  subcategoryId?: HospitalOrderSubcategoryId;
+};
+
+type OrderMenuGroup = {
+  children: OrderMenuChild[];
+  id: string;
+  label: string;
+};
+
+const hospitalAdminMenuItems = [
+  { label: "병원기본설정", icon: CdsActionsSettingsIcon },
+  { label: "병원구성원 관리", icon: CdsFilesFileTextIcon },
+  { label: "근무표", icon: CdsFilesCalendarIcon },
+  { label: "역할별 업무 관리", icon: CdsFilesGridIcon },
+  { label: "공간/시간 관리", icon: CdsFilesGridIcon },
+  { label: "진료과 분리운영", icon: CdsFilesLayersIcon },
+  { label: "바이탈 관리", icon: CdsFilesFileTextIcon },
+  { label: "차트 템플릿", icon: CdsFilesFileTextIcon },
+  { label: "장비 관리", icon: CdsFilesGridIcon },
+  { label: "마약류 관리", icon: CdsFilesFileTextIcon },
+];
+
+const orderMenuGroups: OrderMenuGroup[] = [
+  {
+    id: "general",
+    label: "전체",
+    children: [{ label: "전체", disabled: true }],
+  },
+  {
+    id: "care",
+    label: "진료",
+    children: [{ label: "기본 진료비", disabled: true }, { label: "기타 진료비", disabled: true }],
+  },
+  {
+    id: "prevention",
+    label: "예방",
+    children: [{ label: "예방", disabled: true }],
+  },
+  {
+    id: "lab",
+    label: "검사",
+    children: [
+      { label: "영상검사", categoryId: "imaging" as const, subcategoryId: "radiography" as const },
+      { label: "임상병리 검사", categoryId: "lab" as const, subcategoryId: "clinical-pathology" as const },
+      { label: "계통 검사", categoryId: "lab" as const, subcategoryId: "blood-chemistry" as const },
+      { label: "의뢰 검사", categoryId: "lab" as const, subcategoryId: "external-lab" as const },
+    ],
+  },
+  {
+    id: "procedure",
+    label: "처치",
+    children: [{ label: "처치", categoryId: "treatment" as const, subcategoryId: "basic-treatment" as const }],
+  },
+  {
+    id: "surgery",
+    label: "수술",
+    children: [{ label: "마취", disabled: true }, { label: "수술", disabled: true }],
+  },
+  {
+    id: "inpatient",
+    label: "입원",
+    children: [{ label: "입원", disabled: true }],
+  },
+  {
+    id: "therapy",
+    label: "치료",
+    children: [{ label: "치료", disabled: true }],
+  },
+  {
+    id: "inventory",
+    label: "처방/조제/의료물품",
+    children: [
+      { label: "처방", categoryId: "dispensing" as const, subcategoryId: "oral-medication" as const },
+      { label: "조제", categoryId: "dispensing" as const, subcategoryId: "injection" as const },
+      { label: "의료물품", disabled: true },
+    ],
+  },
+];
+
+const orderTypeTabsBySubcategory: Partial<Record<HospitalOrderSubcategoryId, Array<{ label: string; value: string }>>> = {
+  "clinical-pathology": [
+    { label: "전체", value: "all" },
+    { label: "원내 혈액 검사", value: "in-house-blood" },
+    { label: "임상 미생물 검사", value: "microbiology" },
+    { label: "전해질검사/동맥혈", value: "electrolyte-abg" },
+    { label: "혈액화학검사", value: "chemistry" },
+    { label: "CBC검사", value: "cbc" },
+    { label: "CSF검사", value: "csf" },
+    { label: "세포 검사", value: "cell" },
+    { label: "체액 검사", value: "fluid" },
+    { label: "요검사", value: "urinalysis" },
+    { label: "기타 병리 검사", value: "etc" },
+  ],
+};
+
+const defaultOrderTypeTabs = [
+  { label: "전체", value: "all" },
+  { label: "원내 항목", value: "in-house" },
+  { label: "외부 항목", value: "external" },
+];
 
 function getVisibleOrders(
   orders: HospitalOrderCatalogItem[],
@@ -141,110 +254,123 @@ function getVisibleOrders(
     .sort((left, right) => left.standardName.localeCompare(right.standardName));
 }
 
-function getCategoryCount(orders: HospitalOrderCatalogItem[], categoryId: string) {
-  return orders.filter((order) => order.categoryId === categoryId).length;
-}
-
 function getSubcategoryCount(orders: HospitalOrderCatalogItem[], subcategoryId: string) {
   return orders.filter((order) => order.subcategoryId === subcategoryId).length;
 }
 
-export function HospitalAdminSidePanel() {
-  const orders = useHospitalAdminStore((state) => state.orders);
-  const selectedCategoryId = useHospitalAdminStore((state) => state.selectedCategoryId);
-  const setSelectedCategoryId = useHospitalAdminStore((state) => state.setSelectedCategoryId);
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-
-  return (
-    <EmrSubpanel>
-      <EmrSubpanelTitle
-        title="병원관리"
-        collapseLabel="병원관리 사이드 패널 접기"
-        onCollapse={() => setModulePanelOpen(false)}
-      />
-      <EmrListHeader label="업무 설정" count={2} />
-      <div className="flex flex-col gap-2 px-4 py-2">
-        <EmrListItem
-          selected
-          variant="outline"
-          title="Order 관리"
-          subtitle="처방오더 검색 카탈로그"
-          itemBadge={<Badge>{orders.length}</Badge>}
-          testId="hospital-admin-menu-order-management"
-        />
-        <EmrListItem
-          variant="outline"
-          title="Order 세트"
-          subtitle="별도 화면으로 분리 예정"
-          itemBadge={<Badge variant="outline">후속</Badge>}
-          testId={orderSetPlaceholderId}
-        />
-      </div>
-      <EmrListHeader label="대분류" count={hospitalOrderCategories.length} topDividerVisible />
-      <EmrSubpanelBody>
-        {hospitalOrderCategories.map((category) => (
-          <EmrListItem
-            key={category.id}
-            selected={category.id === selectedCategoryId}
-            variant="outline"
-            title={category.label}
-            subtitle={category.description}
-            itemBadge={<Badge variant="secondary">{getCategoryCount(orders, category.id)}</Badge>}
-            testId={`hospital-admin-category-${category.id}`}
-            onSelect={() => setSelectedCategoryId(category.id)}
-          />
-        ))}
-      </EmrSubpanelBody>
-    </EmrSubpanel>
-  );
-}
-
-export function HospitalAdminContentAside() {
+export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   const orders = useHospitalAdminStore((state) => state.orders);
   const selectedCategoryId = useHospitalAdminStore((state) => state.selectedCategoryId);
   const selectedSubcategoryId = useHospitalAdminStore((state) => state.selectedSubcategoryId);
+  const setSelectedCategoryId = useHospitalAdminStore((state) => state.setSelectedCategoryId);
   const setSelectedSubcategoryId = useHospitalAdminStore((state) => state.setSelectedSubcategoryId);
-  const category = getHospitalOrderCategory(selectedCategoryId);
-  const subcategories = getSubcategoriesForCategory(selectedCategoryId);
+  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["orders"]));
+  const toggleSection = (sectionId: string) => {
+    setOpenSections((current) => {
+      const next = new Set(current);
+
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+
+      return next;
+    });
+  };
 
   return (
-    <div
-      id="hospital-admin-content-aside"
-      className="flex h-full w-full flex-col bg-[var(--clair-color-atomic-neutral-50)]"
-    >
-      <div className="flex h-16 shrink-0 flex-col justify-center border-b px-4">
-        <div className="text-[15px] font-semibold">세부 분류</div>
-        <div className="truncate text-[12px] text-muted-foreground">
-          {category?.label ?? "분류"} 안에서 오더를 나눕니다.
-        </div>
-      </div>
-      <div className="border-b p-3">
-        <div className="flex h-8 items-center rounded-lg border bg-card px-2.5">
-          <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="ml-2 text-[12px] text-muted-foreground">세부 분류 검색</span>
-        </div>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 p-3">
-          {subcategories.map((subcategory) => (
-            <EmrListItem
-              key={subcategory.id}
-              selected={subcategory.id === selectedSubcategoryId}
-              variant="outline"
-              title={subcategory.label}
-              subtitle={subcategory.description}
-              itemBadge={
-                <Badge variant="secondary">
-                  {getSubcategoryCount(orders, subcategory.id)}
-                </Badge>
-              }
-              testId={`hospital-admin-subcategory-${subcategory.id}`}
-              onSelect={() => setSelectedSubcategoryId(subcategory.id)}
-            />
-          ))}
+    <aside className="flex h-full min-h-0 w-full min-w-[320px] max-w-[320px] flex-col bg-card">
+      <EmrSubpanelTitle
+        title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
+        collapseLabel="병원관리 사이드 패널 접기"
+        onCollapse={() => setModulePanelOpen(false)}
+      />
+      <ScrollArea className="min-h-0 flex-1 px-3 pb-4">
+        <div className="grid gap-1 pt-1">
+          {hospitalAdminMenuItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <EmrTextSideNavButton
+                key={item.label}
+                disabled
+                icon={<Icon className="size-4 shrink-0" />}
+              >
+                {item.label}
+              </EmrTextSideNavButton>
+            );
+          })}
+          <EmrTextSideNavSection
+            title="Order 관리"
+            icon={<CdsFilesFileTextIcon className="size-4 shrink-0" />}
+            open={openSections.has("orders")}
+            testId="hospital-admin-menu-order-management"
+            onToggle={() => toggleSection("orders")}
+          >
+            <div className="ml-4 border-l py-1 pl-3">
+              {orderMenuGroups.map((group) => (
+                <div key={group.id} className="py-1">
+                  <div className="flex h-8 items-center rounded-md px-2 text-[14px] font-semibold text-[var(--clair-color-label-normal)]">
+                    {group.label}
+                  </div>
+                  <div className="grid gap-1">
+                    {group.children.map((item) => {
+                      const active =
+                        item.categoryId === selectedCategoryId &&
+                        item.subcategoryId === selectedSubcategoryId;
+
+                      return (
+                        <EmrTextSideNavButton
+                          key={`${group.id}-${item.label}`}
+                          active={active}
+                          className="pl-4"
+                          count={
+                            item.subcategoryId ? (
+                              <Badge variant="secondary" className="h-5 min-w-5 rounded-md px-1 text-[11px]">
+                                {getSubcategoryCount(orders, item.subcategoryId)}
+                              </Badge>
+                            ) : undefined
+                          }
+                          disabled={item.disabled}
+                          onClick={() => {
+                            if (!item.categoryId || !item.subcategoryId) return;
+
+                            setSelectedCategoryId(item.categoryId);
+                            setSelectedSubcategoryId(item.subcategoryId);
+                          }}
+                        >
+                          {item.label}
+                        </EmrTextSideNavButton>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </EmrTextSideNavSection>
+          <EmrTextSideNavButton
+            disabled
+            count={
+              <Badge variant="outline" className="h-5 rounded-md px-1.5 text-[11px]">
+                후속
+              </Badge>
+            }
+            icon={<CdsFilesFileTextIcon className="size-4 shrink-0" />}
+            testId={orderSetPlaceholderId}
+          >
+            Order 세트
+          </EmrTextSideNavButton>
+          <EmrTextSideNavButton disabled icon={<CdsActionsSettingsIcon className="size-4 shrink-0" />}>
+            프린터 설정
+          </EmrTextSideNavButton>
+          <EmrTextSideNavButton disabled icon={<CdsFilesGridIcon className="size-4 shrink-0" />}>
+            데이터랩
+          </EmrTextSideNavButton>
         </div>
       </ScrollArea>
-    </div>
+    </aside>
   );
 }
 
@@ -269,8 +395,18 @@ export function HospitalAdminContent() {
     (state) => state.toggleVisibleOrderSelection
   );
   const workTypeFilter = useHospitalAdminStore((state) => state.workTypeFilter);
-  const selectedCategory = getHospitalOrderCategory(selectedCategoryId);
   const selectedSubcategory = getHospitalOrderSubcategory(selectedSubcategoryId);
+  const orderTypeTabs = orderTypeTabsBySubcategory[selectedSubcategoryId] ?? defaultOrderTypeTabs;
+  const selectedLeafLabel =
+    orderMenuGroups
+      .flatMap((group) => group.children)
+      .find(
+        (item) =>
+          item.categoryId === selectedCategoryId &&
+          item.subcategoryId === selectedSubcategoryId
+      )?.label ??
+    selectedSubcategory?.label ??
+    "Order 관리";
   const visibleOrders = useMemo(
     () =>
       getVisibleOrders(orders, {
@@ -333,15 +469,23 @@ export function HospitalAdminContent() {
     <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
       <section className="border-b bg-card px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[20px] font-semibold leading-7">Order 관리</h1>
-              <Badge variant="outline">{selectedCategory?.label}</Badge>
-              <Badge variant="secondary">{selectedSubcategory?.label}</Badge>
+              <h1 className="text-[20px] font-semibold leading-7">{selectedLeafLabel}</h1>
+              <Badge variant="secondary">{visibleOrders.length}</Badge>
             </div>
             <div className="mt-1 max-w-2xl text-[13px] leading-5 text-muted-foreground">
-              차트 처방오더에서 검색되는 병원 오더 카탈로그를 조회하고 세션 안에서 수정합니다.
+              병원관리 / Order 관리 / {selectedLeafLabel}
             </div>
+            <LineTabs
+              aria-label={`${selectedLeafLabel} 하위 타입`}
+              className="mt-3 max-w-full overflow-x-auto"
+              value="all"
+              items={orderTypeTabs}
+              itemClassName="text-[14px]"
+              onValueChange={() => undefined}
+              size="default"
+            />
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" disabled={selectedOrderIds.length !== 1} onClick={handleDuplicateFirstSelected}>
