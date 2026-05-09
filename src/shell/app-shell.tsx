@@ -118,7 +118,13 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     }
     if (drawer) {
       const [type, id] = drawer.split(":");
-      if (type && id) setActiveDrawer({ type, id });
+      if (type && id) {
+        const nextDrawer =
+          currentLayoutState.activeDrawer?.type === type && currentLayoutState.activeDrawer.id === id
+            ? currentLayoutState.activeDrawer
+            : { type, id };
+        setActiveDrawer(nextDrawer);
+      }
     }
     pendingUrlStateRef.current = pendingUrlState;
     const syncReadyTimer = window.setTimeout(() => {

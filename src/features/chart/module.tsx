@@ -20,6 +20,7 @@ import { CdsFilesDocumentAltFillIcon } from "@/components/cds-icons/files-and-la
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrInstructionHeaderStack, EmrInstructionTitleBar } from "@/components/emr/instruction-header-stack";
+import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -31,6 +32,7 @@ import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,10 +100,27 @@ const orderStatusLabel: Record<EmrOrderStatus, string> = {
 const getShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
 
+const getShortClockTime = (dateTime?: string) => (dateTime ? dateTime.slice(11, 16) : "-");
+
 const clampNumber = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const getDiagnosisLabel = (diagnoses: Diagnosis[]) =>
   diagnoses.length ? diagnoses.map((diagnosis) => diagnosis.diagnosisText).join(", ") : "진단 미입력";
+
+const getSoapSectionStatusText = (status?: SoapNote["status"], statusAt?: string) => {
+  if (!status) return "작성중";
+  const statusLabel =
+    status === "autosaved"
+      ? "자동저장됨"
+      : status === "draft"
+        ? "초안 작성중"
+        : getStatusLabel("soap", status);
+
+  return statusAt ? `${statusLabel} · ${getShortClockTime(statusAt)}` : statusLabel;
+};
+
+const getSoapStatusText = (soapNote?: SoapNote) =>
+  soapNote ? getSoapSectionStatusText(soapNote.status, soapNote.signedAt ?? soapNote.updatedAt) : "차트 대기";
 
 const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
   const text = diagnosis.diagnosisText;
@@ -201,14 +220,17 @@ export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
         onClick: () => setContentAsideOpen(!contentAsideOpen),
       }}
       patientItems={[
-        { label: "환자", value: bundle.patient.name },
-        { label: "보호자", value: bundle.primaryGuardian?.name ?? "보호자 미지정" },
+        { label: "차트번호", value: bundle.encounter.encounterNo },
+        {
+          label: "환자",
+          value: `${bundle.patient.name} · 보호자 ${bundle.primaryGuardian?.name ?? "미지정"}`,
+        },
         { label: "품종", value: bundle.patient.breed ?? getSpeciesLabel(bundle.patient) },
         { label: "나이", value: getPatientDisplayAge(bundle.patient) },
         { label: "성별", value: getPatientSexLabel(bundle.patient) },
       ]}
       vitalItems={getChartVitals(bundle)}
-  memoActions={[
+      memoActions={[
         { label: "방문목적" },
         { label: "보호자메모", locked: true },
         { label: "수납메모", disabled: true },
@@ -408,12 +430,14 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
       id: `diagnosis-${title}`,
       initialContent: buildSoapEditorContent(index === 0 ? soapNote : undefined),
       status: soapNote?.status,
+      statusAt: soapNote?.signedAt ?? soapNote?.updatedAt,
       title: `${title} SOAP`,
     })),
     ...extraSections.map((section) => ({
       id: section.id,
       initialContent: buildSoapEditorContent(),
       status: "draft" as const,
+      statusAt: undefined,
       title: section.title,
     })),
   ];
@@ -500,7 +524,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
           <Button type="button" variant="outline" size="sm" className="bg-card" onClick={addSoapSection}>
             SOAP 추가
           </Button>
-          <Button size="sm">저장</Button>
+          <Button size="sm">초안 저장</Button>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -511,7 +535,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
                 <span className="text-[13px] font-semibold">{section.title}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
-                    {section.status ? getStatusLabel("soap", section.status) : "작성중"}
+                    {getSoapSectionStatusText(section.status, section.statusAt)}
                   </span>
                   <Button
                     type="button"
@@ -863,10 +887,13 @@ function ChartOrderTable({
   );
 }
 
-function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
+type OrderActionDialogType = "bill" | "confirm";
+
+function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: ChartOrderGroup[] }) {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const allOrders = useMemo(() => orderGroups.flatMap(({ orders }) => orders), [orderGroups]);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(() => new Set());
+  const [orderActionDialog, setOrderActionDialog] = useState<OrderActionDialogType | null>(null);
   const orderCountByType = allOrders.reduce<Record<EmrOrderType, number>>(
     (counts, order) => ({
       ...counts,
@@ -894,8 +921,10 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
 
     return sum + (line?.lineTotal ?? 0);
   }, 0);
-  const confirmedOrderCount = allOrders.filter((order) => order.status !== "cancelled").length;
-  const pendingOrderCount = allOrders.length - confirmedOrderCount;
+  const selectedOrders = allOrders.filter((order) => selectedOrderIds.has(order.id));
+  const recheckOrderCount = allOrders.filter((order) => order.status === "re_requested").length;
+  const selectedRecheckOrderCount = selectedOrders.filter((order) => order.status === "re_requested").length;
+  const actionableSelectedOrderCount = selectedOrders.filter((order) => order.status !== "cancelled").length;
   const visibleOrderIds = filteredOrderRows.map(({ order }) => order.id);
   const selectedVisibleOrderCount = visibleOrderIds.filter((orderId) => selectedOrderIds.has(orderId)).length;
   const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleOrderCount === visibleOrderIds.length;
@@ -935,6 +964,9 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
       return next;
     });
   };
+  const hasSelectedOrders = selectedOrderIds.size > 0;
+  const orderActionLabel = orderActionDialog === "bill" ? "Order 청구" : "Order 확정";
+  const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
@@ -969,8 +1001,8 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
       </div>
       <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t border-[var(--clair-color-line-normal)] bg-card px-4 py-3 text-[13px] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
         <div className="text-muted-foreground">
-          <div>선택 오더 {selectedOrderIds.size}건 · 미확정 오더 {pendingOrderCount}건 · 확정 오더 {confirmedOrderCount}건</div>
-          <div className="mt-1 font-semibold text-foreground">청구 총액: {totalAmount.toLocaleString()}</div>
+          <div>선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건</div>
+          <div className="mt-1 font-semibold text-foreground">청구 예상 총액: {totalAmount.toLocaleString()}</div>
         </div>
         <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
           <div className="text-right">
@@ -980,12 +1012,42 @@ function OrderArea({ orderGroups }: { orderGroups: ChartOrderGroup[] }) {
           <Input readOnly value="0%" className="h-9 bg-[var(--clair-color-atomic-gray-50)] text-right" />
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" className="bg-card">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-card"
+            disabled={!hasSelectedOrders}
+            onClick={() => setOrderActionDialog("bill")}
+          >
             Order 청구
           </Button>
-          <Button size="sm">Order 확정</Button>
+          <Button size="sm" disabled={!hasSelectedOrders} onClick={() => setOrderActionDialog("confirm")}>
+            Order 확정
+          </Button>
         </div>
       </div>
+      <Dialog open={orderActionDialog !== null} onOpenChange={(open) => !open && setOrderActionDialog(null)}>
+        <EmrConfirmDialogContent
+          title={`${orderActionLabel} 확인`}
+          description={
+            <span className="grid gap-3">
+              <span>
+                현재 환자와 선택 오더를 확인한 뒤 진행합니다. 이 prototype에서는 실제 청구/확정 상태를 변경하지 않습니다.
+              </span>
+              <span className="grid gap-1 rounded-md border bg-[var(--clair-color-atomic-gray-50)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+                <span>환자: {bundle.patient.name} · 보호자 {guardianName}</span>
+                <span>차트번호: {bundle.encounter.encounterNo}</span>
+                <span>선택 오더: {selectedOrderIds.size}건 · 선택 금액 {selectedAmount.toLocaleString()}</span>
+                <span>재요청 포함: {selectedRecheckOrderCount ? `${selectedRecheckOrderCount}건` : "없음"}</span>
+              </span>
+            </span>
+          }
+          cancelLabel="다시 확인"
+          confirmLabel={orderActionLabel}
+          onCancel={() => setOrderActionDialog(null)}
+          onConfirm={() => setOrderActionDialog(null)}
+        />
+      </Dialog>
     </section>
   );
 }
@@ -1005,16 +1067,15 @@ function ChartInstructionInfo({
     },
     {
       label: "환자 정보",
-      value: `${bundle.patient.name}(${getPatientDisplayAge(bundle.patient)}) · ${bundle.patient.breed ?? getSpeciesLabel(bundle.patient)}`,
+      value: `${bundle.patient.name}(${getPatientDisplayAge(bundle.patient)}) · 보호자 ${bundle.primaryGuardian?.name ?? "미지정"} · ${bundle.patient.breed ?? getSpeciesLabel(bundle.patient)}`,
     },
     { label: "담당 수의사", value: veterinarianName },
     {
       label: "차트 상태",
       value: (
-        <EmrStatusBadge
-          label={latestSoap ? getStatusLabel("soap", latestSoap.status) : "대기중"}
-          marker="none"
-        />
+        <span data-testid="chart-soap-status" className="text-[13px] font-semibold text-[var(--clair-color-primary-normal)]">
+          {getSoapStatusText(latestSoap)}
+        </span>
       ),
     },
   ];
@@ -1049,10 +1110,12 @@ export function ChartContent() {
   const latestSoap = bundle?.soapNotes.at(-1);
   const [chartTopPercent, setChartTopPercent] = useState(CHART_TOP_DEFAULT_PERCENT);
   const [isChartResizing, setIsChartResizing] = useState(false);
+  const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
   const orderGroups = useMemo(
     () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
     [bundle]
   );
+  const allOrders = useMemo(() => orderGroups.flatMap(({ orders }) => orders), [orderGroups]);
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
     const availableHeight = workspace
@@ -1179,13 +1242,37 @@ export function ChartContent() {
                 <Button variant="outline" size="sm" className="bg-card">
                   차트 공유
                 </Button>
-                <Button size="sm">차트 작성완료</Button>
+                <Button size="sm" onClick={() => setChartCompleteDialogOpen(true)}>
+                  차트 작성완료
+                </Button>
               </>
             }
           />
         }
         orderInfo={<ChartInstructionInfo bundle={bundle} latestSoap={latestSoap} />}
       />
+      <Dialog open={chartCompleteDialogOpen} onOpenChange={setChartCompleteDialogOpen}>
+        <EmrConfirmDialogContent
+          title="차트 작성완료 확인"
+          description={
+            <span className="grid gap-3">
+              <span>
+                진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인합니다. 이 prototype에서는 실제 차트 상태를 변경하지 않습니다.
+              </span>
+              <span className="grid gap-1 rounded-md border bg-[var(--clair-color-atomic-gray-50)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+                <span>환자: {bundle.patient.name} · 보호자 {bundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
+                <span>차트번호: {bundle.encounter.encounterNo}</span>
+                <span>진단명: {bundle.diagnoses.length}건 · 오더: {allOrders.length}건</span>
+                <span>차트 상태: {getSoapStatusText(latestSoap)}</span>
+              </span>
+            </span>
+          }
+          cancelLabel="계속 작성"
+          confirmLabel="작성완료 확인"
+          onCancel={() => setChartCompleteDialogOpen(false)}
+          onConfirm={() => setChartCompleteDialogOpen(false)}
+        />
+      </Dialog>
       <div
         ref={chartWorkspaceRef}
         data-slot="chart-workspace"
@@ -1225,7 +1312,7 @@ export function ChartContent() {
           <span className="relative h-1.5 w-10 rounded-full bg-[var(--clair-color-atomic-gray-300)] transition-colors group-hover:bg-[var(--clair-color-atomic-gray-500)]" />
         </button>
         <div className="min-h-0">
-          <OrderArea key={bundle.encounter.id} orderGroups={orderGroups} />
+          <OrderArea key={bundle.encounter.id} bundle={bundle} orderGroups={orderGroups} />
         </div>
       </div>
     </div>

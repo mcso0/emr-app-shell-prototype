@@ -115,4 +115,3 @@ Defines the product's category and target environment. User roles are linked to 
 - 제공된 레퍼런스 화면은 정보 구조와 업무 흐름 참고용이다.
 - 구현은 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
 - 없는 패턴은 shadcn, shadcn + 기존 컴포넌트, 또는 기존 컴포넌트 기반 신규 컴포넌트로 만든다.
-- 조제/처치 화면의 현재 디자인과 동작은 보존한다.

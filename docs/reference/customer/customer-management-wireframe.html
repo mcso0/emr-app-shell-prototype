@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>고객관리 화면 와이어프레임</title>
+    <style>
+      :root {
+        --bg: #f7fafc;
+        --panel: #ffffff;
+        --line: #d9e2ec;
+        --soft: #eef2f7;
+        --text: #17202a;
+        --muted: #667485;
+        --blue: #0b84c6;
+        --blue-soft: #e7f5fc;
+        --green: #1d9a63;
+        --purple: #7c3fb1;
+        --orange: #c58a16;
+        font-family: Inter, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #1f2328; color: var(--text); }
+      .app { width: 100vw; height: 100vh; padding: 18px; }
+      .shell {
+        display: grid;
+        grid-template-columns: 60px 320px minmax(720px, 1fr);
+        height: 100%;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .rail { background: #06283a; color: white; padding: 12px 8px; }
+      .rail-logo { width: 36px; height: 36px; margin: 0 auto 22px; border-radius: 12px; background: #07a9dd; }
+      .rail-item {
+        width: 42px; height: 42px; margin: 6px auto; border-radius: 8px;
+        display: grid; place-items: center; font-size: 11px; color: #b8c7d3;
+      }
+      .rail-item.active { background: #0b5f86; color: white; }
+
+      .side {
+        min-height: 0;
+        border-right: 1px solid var(--line);
+        background: #fff;
+        padding: 18px 12px;
+      }
+      .side h1 { margin: 0 0 22px 4px; font-size: 20px; }
+      .section-label {
+        margin: 20px 8px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .nav-row {
+        display: grid;
+        grid-template-columns: 24px 1fr 18px;
+        align-items: center;
+        gap: 10px;
+        height: 40px;
+        border-radius: 8px;
+        padding: 0 10px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .nav-row .icon { width: 18px; height: 18px; border: 2px solid currentColor; border-radius: 4px; }
+      .subnav {
+        margin: 4px 0 14px 21px;
+        border-left: 1px solid var(--line);
+        padding: 6px 0 6px 15px;
+      }
+      .subnav div {
+        display: flex;
+        height: 34px;
+        align-items: center;
+        border-radius: 7px;
+        padding: 0 10px;
+        color: var(--text);
+        font-size: 14px;
+      }
+      .subnav .active {
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-weight: 800;
+      }
+      .nav-row.disabled, .subnav .disabled { color: #9aa6b2; }
+
+      .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--bg); }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 64px;
+        border-bottom: 1px solid var(--line);
+        background: white;
+        padding: 0 18px;
+      }
+      .tabs { display: inline-flex; gap: 22px; align-items: center; font-size: 14px; font-weight: 700; }
+      .tabs span { color: var(--muted); }
+      .tabs .active { color: var(--blue); border-bottom: 2px solid var(--blue); padding-bottom: 19px; }
+      .search { flex: 1; height: 34px; border: 1px solid var(--line); border-radius: 7px; padding: 0 12px; color: var(--muted); }
+      .workspace { min-height: 0; overflow: auto; padding: 16px; }
+      .table-card { border: 1px solid var(--line); border-radius: 8px; background: white; overflow: hidden; }
+      .table-headline {
+        display: flex; justify-content: space-between; align-items: center;
+        min-height: 56px; padding: 0 16px; border-bottom: 1px solid var(--line);
+      }
+      .table-headline strong { font-size: 18px; }
+      .btn { height: 32px; border: 1px solid var(--line); border-radius: 18px; background: white; padding: 0 13px; font-weight: 700; }
+      .btn.primary { border-color: #0ea5d7; background: #0ea5d7; color: white; }
+      table { width: 100%; min-width: 1260px; border-collapse: collapse; font-size: 13px; }
+      th { height: 36px; padding: 0 10px; background: var(--soft); color: var(--muted); text-align: left; white-space: nowrap; }
+      td { height: 42px; padding: 0 10px; border-top: 1px solid var(--soft); white-space: nowrap; }
+      tr.selected td { background: var(--blue-soft); }
+      .pill { display: inline-flex; height: 21px; align-items: center; border-radius: 5px; padding: 0 6px; color: white; font-size: 11px; font-weight: 800; }
+      .green { background: var(--green); }
+      .blue { background: #3478f6; }
+      .purple { background: var(--purple); }
+      .orange { background: var(--orange); }
+
+      .drawer {
+        position: absolute;
+        top: 18px; right: 18px; bottom: 18px;
+        width: 708px;
+        border-left: 1px solid var(--line);
+        background: white;
+        box-shadow: -18px 0 34px rgba(15, 23, 42, .18);
+        display: flex;
+        flex-direction: column;
+      }
+      .drawer-head { display: flex; align-items: center; justify-content: space-between; min-height: 86px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+      .avatar { width: 46px; height: 46px; border-radius: 50%; background: #77d3eb; }
+      .drawer-title { display: flex; align-items: center; gap: 14px; }
+      .drawer-title h2 { margin: 0; font-size: 22px; }
+      .drawer-title p { margin: 4px 0 0; color: var(--muted); }
+      .drawer-actions { display: flex; gap: 8px; }
+      .drawer-tabs { display: flex; gap: 26px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+      .drawer-tabs span { padding: 15px 0 12px; color: var(--muted); font-weight: 800; }
+      .drawer-tabs .active { color: var(--blue); border-bottom: 2px solid var(--blue); }
+      .form { overflow: auto; padding: 22px 24px; background: var(--bg); }
+      .form-card { border: 1px solid var(--line); border-radius: 8px; background: white; padding: 18px; }
+      .grid { display: grid; grid-template-columns: 150px 1fr 120px 1fr; gap: 14px; align-items: center; }
+      .label { font-weight: 800; }
+      .input { height: 34px; border: 1px solid var(--line); border-radius: 6px; background: #fbfdff; padding: 0 10px; color: #314155; }
+      .memo { grid-column: span 3; height: 70px; padding-top: 10px; }
+      .drawer-foot { display: flex; justify-content: space-between; padding: 16px 24px; border-top: 1px solid var(--line); }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="shell">
+        <nav class="rail">
+          <div class="rail-logo"></div>
+          <div class="rail-item">홈</div>
+          <div class="rail-item">접수</div>
+          <div class="rail-item">진료</div>
+          <div class="rail-item">수납</div>
+          <div class="rail-item active">고객</div>
+        </nav>
+
+        <aside class="side">
+          <h1>고객관리</h1>
+          <div class="section-label">Customer</div>
+          <div class="nav-row"><span class="icon"></span><span>보호자/동물 관리</span><span>⌄</span></div>
+          <div class="subnav">
+            <div class="active">동물</div>
+            <div>보호자</div>
+            <div>삭제된 보호자/동물</div>
+          </div>
+          <div class="nav-row disabled"><span class="icon"></span><span>스케줄 관리</span><span>›</span></div>
+          <div class="nav-row disabled"><span class="icon"></span><span>발송 관리</span><span>›</span></div>
+          <div class="nav-row disabled"><span class="icon"></span><span>서류 관리</span><span>›</span></div>
+          <div class="nav-row disabled"><span class="icon"></span><span>CS내역</span><span>›</span></div>
+          <div class="nav-row disabled"><span class="icon"></span><span>진료의뢰수신</span><span>›</span></div>
+        </aside>
+
+        <main class="main">
+          <div class="toolbar">
+            <div class="tabs"><span class="active">보호자/동물 관리</span><span>스케줄 관리</span><span>발송 관리</span><span>서류 관리</span><span>CS내역</span><span>진료의뢰수신</span></div>
+            <input class="search" value="동물명 또는 보호자명으로 검색" />
+          </div>
+          <div class="workspace">
+            <section class="table-card">
+              <div class="table-headline">
+                <strong>동물 (60)</strong>
+                <div><button class="btn primary">+ 동물 등록</button> <button class="btn">상세 검색</button></div>
+              </div>
+              <table>
+                <thead>
+                  <tr><th>환자코드</th><th>동물명</th><th>품종</th><th>성별</th><th>나이(생년월일)</th><th>상태</th><th>보호자명</th><th>전화번호</th><th>수신 여부</th><th>등록일시</th></tr>
+                </thead>
+                <tbody>
+                  <tr class="selected"><td>P-260501-0002</td><td>두부</td><td>포메라니안</td><td>수컷</td><td>6세 추정</td><td><span class="pill green">예약</span> <span class="pill blue">진료중</span></td><td>정하린, 강서윤</td><td>010-4922-8821</td><td>동의</td><td>26.04.02 15:05</td></tr>
+                  <tr><td>P-260501-0003</td><td>콩이</td><td>푸들</td><td>중성화 수컷</td><td>3세</td><td><span class="pill orange">검사중</span> <span class="pill purple">입원 예정</span></td><td>김하늘</td><td>010-6201-7742</td><td>동의</td><td>26.05.01 09:15</td></tr>
+                  <tr><td>P-260414-0008</td><td>코코</td><td>코리안숏헤어</td><td>중성화 암컷</td><td>8세</td><td><span class="pill green">예약</span> <span class="pill blue">수납대기</span></td><td>이지은</td><td>010-3245-1188</td><td>동의</td><td>26.03.12 09:05</td></tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+        </main>
+      </div>
+
+      <aside class="drawer">
+        <div class="drawer-head">
+          <div class="drawer-title"><div class="avatar"></div><div><h2>두부 <span style="color: var(--muted)">포메라니안</span></h2><p>주 보호자: 정하린 · 환자코드 P-260501-0002</p></div></div>
+          <div class="drawer-actions"><button class="btn">접수</button><button class="btn">예약</button><button class="btn">차트 보러가기</button></div>
+        </div>
+        <div class="drawer-tabs"><span class="active">동물 정보</span><span>보호자 정보</span><span>CS 이력</span><span>최신내역</span></div>
+        <div class="form">
+          <div class="form-card">
+            <div class="grid">
+              <div class="label">이름 *</div><div class="input">두부</div>
+              <div class="label">성별</div><div class="input">수컷</div>
+              <div class="label">종류 *</div><div class="input">강아지</div>
+              <div class="label">주 품종 *</div><div class="input">포메라니안</div>
+              <div class="label">나이</div><div class="input">6세 추정</div>
+              <div class="label">마이크로칩</div><div class="input">410098765432109</div>
+              <div class="label">메모</div><div class="input memo">슬개골 수술 후 재활 상담</div>
+            </div>
+          </div>
+        </div>
+        <div class="drawer-foot"><button class="btn">삭제</button><div><button class="btn">닫기</button> <button class="btn primary">카카오톡 발송</button></div></div>
+      </aside>
+    </div>
+  </body>
+</html>

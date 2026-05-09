@@ -44,6 +44,41 @@ test("chart diagnosis comment and plan are editable text areas", async ({ page }
   await expect(page.getByLabel("Plan")).toHaveValue("수액 후 24시간 식욕과 구토 횟수 확인.");
 });
 
+test("chart safety context and confirmation dialogs identify the active patient", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const patientContext = page.getByLabel("환자 컨텍스트 정보");
+  await expect(patientContext.getByText("콩이 · 보호자 김하늘")).toBeVisible();
+  await expect(patientContext.getByText("차트번호")).toBeVisible();
+  await expect(patientContext.getByText("E-260501-0003")).toBeVisible();
+  await expect(page.getByText("콩이(4세) · 보호자 김하늘 · 푸들")).toBeVisible();
+  await expect(page.getByTestId("chart-soap-status")).toHaveText("자동저장됨 · 10:16");
+  await expect(page.getByText("자동저장됨 · 10:16").first()).toBeVisible();
+
+  await expect(page.getByRole("button", { name: "Order 청구" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Order 확정" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "차트 작성완료" }).click();
+  const chartCompleteDialog = page.getByRole("dialog");
+  await expect(chartCompleteDialog.getByText("차트 작성완료 확인")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("환자: 콩이 · 보호자 김하늘")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("차트번호: E-260501-0003")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("진단명: 1건 · 오더: 4건")).toBeVisible();
+  await chartCompleteDialog.getByRole("button", { name: "계속 작성" }).click();
+
+  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await expect(page.getByRole("button", { name: "Order 청구" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Order 확정" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "Order 확정" }).click();
+  const orderConfirmDialog = page.getByRole("dialog");
+  await expect(orderConfirmDialog.getByText("Order 확정 확인")).toBeVisible();
+  await expect(orderConfirmDialog.getByText("환자: 콩이 · 보호자 김하늘")).toBeVisible();
+  await expect(orderConfirmDialog.getByText("차트번호: E-260501-0003")).toBeVisible();
+  await expect(orderConfirmDialog.getByText("선택 오더: 1건 · 선택 금액 4,500")).toBeVisible();
+  await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
+});
+
 test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 

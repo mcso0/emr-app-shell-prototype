@@ -85,7 +85,6 @@ npx playwright test tests/auth.spec.ts --reporter=line
 ## 건드리지 말아야 할 파일/영역
 
 - 업무 화면은 권한 enforcement 검증에 필요한 최소 변경 외에는 수정하지 않는다.
-- 조제/처치 화면은 명시 요청 없이 수정하지 않는다.
 - sales demo fixture와 golden path는 auth 회귀 보정 목적 외에는 수정하지 않는다.
 
 ## 작업 완료 시 해야 할 일

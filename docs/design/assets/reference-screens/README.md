@@ -13,4 +13,4 @@ Recommended PR7 flow:
 3. Update the index notes if the Figma screen name or purpose differs.
 4. Compare implementation screens against the reference intent, not as a pixel-perfect copy target.
 
-These assets are reference material only. Implementation should follow project foundation, tokens, and components. The existing 조제/처치 UI must be preserved.
+These assets are reference material only. Implementation should follow project foundation, tokens, and components.

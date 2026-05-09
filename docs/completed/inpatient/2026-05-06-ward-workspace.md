@@ -17,20 +17,19 @@ The 병동 placeholder was replaced with a session-only 입원 workspace based o
 ## What Changed
 
 - Added inpatient mock admissions, filter/search state, and screen components under `src/features/inpatient/`.
-- Wired the `inpatient` registry entry to `InpatientSidePanel`, `InpatientContent`, and `InpatientRightPanel`.
+- Wired the `inpatient` registry entry to `InpatientContent` and `InpatientDrawer` without a separate side panel or always-visible right panel.
 - Added a generated HTML wireframe at `docs/reference/inpatient/inpatient-workspace-wireframe.html`.
 - Added focused Playwright coverage in `tests/inpatient.spec.ts`.
 
 ## Product/UI Result
 
-- Left side panel: date navigator, 입원 상태 tabs, admission queue cards.
-- Main workspace: 입실 추가, 입원실 관리, status filters, search condition, KPI strip, and grouped ward tables.
-- Right panel: selected admission summary, caution tags, care point, and discharge checklist.
+- Main workspace: 입실 추가, 입원실 관리, inpatient basis date picker, dashboard-style KPI cards, ward group filters, search condition, and grouped ward tables.
+- Admission detail drawer: opens from a selected ward table row and shows the admission summary, caution tags, care point, and discharge checklist.
 
 ## Verification
 
 - `npx tsc --noEmit`
-- `npm run lint`
+- `npx eslint src/features/inpatient/module.tsx src/features/inpatient/data.ts src/modules/registry.ts src/shell/workspace-frame.tsx src/shell/app-shell.tsx tests/inpatient.spec.ts`
 - `npx playwright test tests/inpatient.spec.ts --reporter=line`
 - Browser check on `http://localhost:3000/w/clair-demo/inpatient?modulePanel=open&right=open`
 

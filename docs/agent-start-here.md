@@ -1,6 +1,14 @@
 # Agent Start Here
 
-Use this file as the short routing guide for new chats, sub-agents, and future Codex sessions.
+Use this file as the compact routing guide for new chats, sub-agents, and future Codex sessions.
+
+## Agent Compact Summary
+
+- Current target: Product MVP.
+- The app is a session-only frontend prototype for veterinary EMR workflows from reception through billing.
+- Live DB/API persistence, live Supabase validation, migrations, RLS, and server-side permission enforcement are not complete.
+- Use concise English for agent-facing plans, searches, and handoff notes. Reply to the user in Korean unless they ask otherwise.
+- Read only the smallest relevant source-doc sections needed for the task.
 
 ## Current Required Reading
 
@@ -24,7 +32,6 @@ The active target is Product MVP. The prototype already covers the outpatient fl
 
 ## Current Guardrails
 
-- Preserve the current 조제/처치 screen unless the user explicitly asks to change it.
 - Do not treat client-only permission gating as complete security.
 - Do not implement live Supabase project validation, migrations, RLS, or server enforcement unless a work item explicitly scopes it.
 - For screen work, check the reference screen index and actual image existence before claiming pixel-level alignment.

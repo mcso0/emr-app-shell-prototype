@@ -1,425 +1,595 @@
 <!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>병원관리 Order 관리 Wireframe</title>
-  <style>
-    :root {
-      --bg: #f4f7fb;
-      --panel: #ffffff;
-      --line: #d9e1ea;
-      --line-strong: #b9c5d1;
-      --text: #1f2933;
-      --muted: #6b7a8c;
-      --blue: #0284c7;
-      --blue-soft: #e0f2fe;
-      --green: #16a34a;
-      --red: #dc2626;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 13px;
-    }
-    .shell {
-      display: grid;
-      grid-template-columns: 60px 300px 260px minmax(760px, 1fr);
-      min-height: 100vh;
-      gap: 10px;
-      padding: 10px;
-    }
-    .rail {
-      border-radius: 10px;
-      background: #172033;
-      color: #d6e0eb;
-      padding: 12px 8px;
-    }
-    .rail .icon {
-      height: 40px;
-      display: grid;
-      place-items: center;
-      border-radius: 8px;
-      margin-bottom: 6px;
-    }
-    .rail .active { background: rgba(255,255,255,0.16); color: #fff; }
-    .side,
-    .aside,
-    .main {
-      min-height: calc(100vh - 20px);
-      overflow: hidden;
-      border: 1px solid var(--line);
-      background: var(--panel);
-    }
-    .side { border-radius: 10px 0 0 10px; }
-    .main { border-radius: 0 10px 10px 0; position: relative; }
-    .title {
-      height: 54px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      border-bottom: 1px solid var(--line);
-      font-weight: 700;
-      font-size: 16px;
-    }
-    .nav-item,
-    .list-item {
-      margin: 8px;
-      padding: 10px;
-      border-radius: 8px;
-      cursor: default;
-    }
-    .nav-item.active,
-    .list-item.active {
-      background: var(--blue-soft);
-      color: #075985;
-      font-weight: 700;
-    }
-    .section-label {
-      padding: 18px 16px 6px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: center;
-      min-height: 70px;
-      border-bottom: 1px solid var(--line);
-      padding: 12px 16px;
-    }
-    .search {
-      height: 34px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 0 12px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      background: #fff;
-    }
-    .button {
-      height: 32px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      padding: 0 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 700;
-    }
-    .button.primary {
-      background: #111827;
-      border-color: #111827;
-      color: #fff;
-    }
-    .filters {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--line);
-      background: #f8fafc;
-    }
-    .chip {
-      padding: 5px 9px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #fff;
-      color: var(--muted);
-      font-weight: 700;
-      font-size: 12px;
-    }
-    .chip.active {
-      border-color: #0ea5e9;
-      background: var(--blue-soft);
-      color: #075985;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-    }
-    th, td {
-      height: 40px;
-      border-bottom: 1px solid #e6edf5;
-      padding: 0 8px;
-      text-align: left;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    th {
-      background: #f8fafc;
-      color: #5d6b7a;
-      font-size: 12px;
-    }
-    tr.selected td {
-      background: #eef8ff;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      height: 22px;
-      border-radius: 6px;
-      padding: 0 7px;
-      background: #eef2f7;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .drawer {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 620px;
-      height: 100%;
-      border-left: 1px solid var(--line-strong);
-      background: #fff;
-      box-shadow: -16px 0 30px rgba(15,23,42,0.12);
-      display: flex;
-      flex-direction: column;
-    }
-    .drawer-header {
-      min-height: 72px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 1px solid var(--line);
-      padding: 0 18px;
-    }
-    .drawer-header h2 {
-      margin: 0;
-      font-size: 20px;
-      flex: 1;
-    }
-    .switch {
-      width: 34px;
-      height: 19px;
-      border-radius: 999px;
-      background: #0ea5e9;
-      position: relative;
-    }
-    .switch::after {
-      content: "";
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 15px;
-      height: 15px;
-      border-radius: 999px;
-      background: #fff;
-    }
-    .drawer-body {
-      flex: 1;
-      overflow: auto;
-      padding: 20px 28px 90px;
-    }
-    .field {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      gap: 18px;
-      align-items: start;
-      margin-bottom: 18px;
-    }
-    .label {
-      font-weight: 800;
-      font-size: 15px;
-      padding-top: 8px;
-    }
-    .input,
-    .textarea,
-    .select {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
-      min-height: 36px;
-      padding: 8px 10px;
-      font-weight: 600;
-    }
-    .textarea { min-height: 86px; color: var(--muted); }
-    .hint {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .inline-row {
-      display: grid;
-      grid-template-columns: 100px 1fr 90px 1fr 90px 1fr;
-      gap: 10px;
-      align-items: center;
-    }
-    .tabs {
-      display: flex;
-      gap: 22px;
-      border-bottom: 1px solid var(--line);
-      margin-top: 16px;
-    }
-    .tab {
-      padding: 12px 0 10px;
-      font-weight: 800;
-      color: var(--muted);
-      border-bottom: 2px solid transparent;
-    }
-    .tab.active {
-      color: #075985;
-      border-color: #075985;
-    }
-    .drawer-footer {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 16px 24px;
-      border-top: 1px solid var(--line);
-      background: rgba(255,255,255,0.96);
-    }
-    .danger { color: var(--red); border-color: #fecaca; }
-    @media (max-width: 1100px) {
-      .shell { grid-template-columns: 56px 240px minmax(700px, 1fr); }
-      .aside { display: none; }
-      .drawer { width: min(620px, calc(100vw - 72px)); }
-    }
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <aside class="rail">
-      <div class="icon">홈</div>
-      <div class="icon">진료</div>
-      <div class="icon">수납</div>
-      <div class="icon active">관리</div>
-    </aside>
-    <aside class="side">
-      <div class="title">병원관리 <span>접기</span></div>
-      <div class="section-label">업무 설정</div>
-      <div class="nav-item active">Order 관리 <strong>24</strong></div>
-      <div class="nav-item">Order 세트 <span class="badge">별도</span></div>
-      <div class="section-label">대분류</div>
-      <div class="list-item active">검사 <strong>9</strong></div>
-      <div class="list-item">처방/조제 <strong>6</strong></div>
-      <div class="list-item">처치 <strong>5</strong></div>
-      <div class="list-item">영상 <strong>4</strong></div>
-    </aside>
-    <aside class="aside">
-      <div class="title">세부 분류 <span>+ 추가</span></div>
-      <div class="search" style="margin: 12px;">세부 분류 검색</div>
-      <div class="list-item active">임상병리 <strong>4</strong></div>
-      <div class="list-item">혈액화학 <strong>2</strong></div>
-      <div class="list-item">영상판독 <strong>3</strong></div>
-      <div class="list-item">기타 병리 <strong>1</strong></div>
-    </aside>
-    <main class="main">
-      <section class="toolbar">
-        <div>
-          <h1 style="margin: 0 0 4px; font-size: 20px;">Order 관리</h1>
-          <div style="color: var(--muted);">차트 처방오더에서 검색되는 병원 오더 카탈로그를 관리합니다.</div>
-        </div>
-        <div>
-          <button class="button">컬럼</button>
-          <button class="button">복제</button>
-          <button class="button primary">+ Order</button>
-        </div>
-      </section>
-      <section class="filters">
-        <div class="search" style="width: 320px;">오더명, 별칭, 청구서명 검색</div>
-        <span class="chip active">전체 24</span>
-        <span class="chip">사용 21</span>
-        <span class="chip">중지 3</span>
-        <span class="chip">청구 가능</span>
-      </section>
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 42px;">□</th>
-            <th style="width: 82px;">유형</th>
-            <th>표준 Order명</th>
-            <th>원내 Order명</th>
-            <th>청구서명</th>
-            <th style="width: 90px;">사용</th>
-            <th style="width: 120px;">판매금액</th>
-            <th style="width: 90px;">대상</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="selected">
-            <td>□</td>
-            <td><span class="badge">개별</span></td>
-            <td>[심전도 검사] 기록 및 판독</td>
-            <td>카도살주</td>
-            <td>비타민 주사</td>
-            <td><span style="color: var(--green); font-weight: 800;">사용</span></td>
-            <td>8,000원</td>
-            <td>개, 고양이</td>
-          </tr>
-          <tr>
-            <td>□</td>
-            <td><span class="badge">개별</span></td>
-            <td>CBC 검사</td>
-            <td>CBC</td>
-            <td>CBC 검사</td>
-            <td>사용</td>
-            <td>35,000원</td>
-            <td>전체</td>
-          </tr>
-          <tr>
-            <td>□</td>
-            <td><span class="badge">개별</span></td>
-            <td>피하 수액 처치</td>
-            <td>SC 수액</td>
-            <td>수액 처치</td>
-            <td>사용</td>
-            <td>18,000원</td>
-            <td>전체</td>
-          </tr>
-        </tbody>
-      </table>
-      <aside class="drawer">
-        <header class="drawer-header">
-          <span class="badge">개별</span>
-          <h2>[심전도 검사] 기록 및 판독</h2>
-          <span>사용여부</span>
-          <span class="switch"></span>
-          <span style="font-size: 28px; color: var(--muted);">×</span>
-        </header>
-        <div class="drawer-body">
-          <div class="field"><div class="label">분류</div><div class="input">검사 / 임상병리</div></div>
-          <div class="field"><div class="label">표준 Order명</div><div class="input">[심전도 검사] 기록 및 판독</div></div>
-          <div class="field"><div class="label">원내 Order명 *</div><div><div class="input">카도살주</div><div class="hint">진료항목을 원내에서 사용하는 이름으로 변경할 수 있습니다.</div></div></div>
-          <div class="field"><div class="label">청구서명 *</div><div><div class="input">비타민 주사</div><div class="hint">보호자에게 표시하는 청구서명을 별도로 지정할 수 있습니다.</div></div></div>
-          <div class="field"><div class="label">별칭</div><div><div class="input">비타민주, vitamin-in, vita-in</div><div class="hint">검색을 위한 별칭입니다. 쉼표로 여러 개 입력합니다.</div></div></div>
-          <div class="field"><div class="label">일감전달여부 *</div><div class="select">전달</div></div>
-          <div class="field"><div class="label">대상 *</div><div class="select">개, 고양이, 기타</div></div>
-          <div class="field"><div class="label">케어가이드</div><div class="textarea">내용을 입력해주세요</div></div>
-          <div class="field"><div class="label">원내 지시사항</div><div class="textarea">내용을 입력해주세요</div></div>
-          <div class="field"><div class="label">메모</div><div class="textarea">내용을 입력해주세요</div></div>
-          <div class="field"><div class="label">금액 *</div><div class="inline-row"><b>판매 단위</b><div class="select">개당</div><b>판매 금액</b><div class="input">8,000</div><b>과세</b><div>✓</div></div></div>
-          <div class="field"><div class="label">변경 이력</div><div class="input">2022년 9월 21일 오전 09:00:32 박민수</div></div>
-          <div class="tabs"><div class="tab active">부가정보</div><div class="tab">참조값</div></div>
-          <table>
-            <tr><td>표준 검사코드</td><td>#(더미 코드)ABCD-EF</td></tr>
-            <tr><td>검사 장비명</td><td>(더미) 검사 장비명</td></tr>
-            <tr><td>표준 검사단위</td><td>K/µL</td></tr>
-          </table>
-        </div>
-        <footer class="drawer-footer">
-          <button class="button danger">삭제</button>
-          <div>
-            <button class="button">취소</button>
-            <button class="button primary">저장</button>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>병원관리 Order 관리 고객관리형 와이어프레임</title>
+    <style>
+      :root {
+        --bg: #f5f8fb;
+        --panel: #ffffff;
+        --line: #dce5ee;
+        --soft: #f0f4f8;
+        --sky: #eaf6ff;
+        --blue: #1688ff;
+        --nav: #111827;
+        --text: #17202d;
+        --muted: #6b7788;
+        --green: #168a55;
+        font-family: Inter, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: #e7edf4;
+        color: var(--text);
+      }
+
+      .app {
+        width: 100vw;
+        height: 100vh;
+        padding: 12px;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 64px 320px minmax(760px, 1fr);
+        height: 100%;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .rail {
+        background: var(--nav);
+        color: #d4dfeb;
+        padding: 10px 8px;
+      }
+
+      .rail-mark {
+        width: 38px;
+        height: 38px;
+        margin: 0 auto 18px;
+        border-radius: 12px;
+        background: #11a8df;
+      }
+
+      .rail-item {
+        display: grid;
+        width: 46px;
+        min-height: 48px;
+        margin: 4px auto;
+        place-items: center;
+        border-radius: 8px;
+        color: #aebdcd;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .rail-item.active {
+        background: rgba(255, 255, 255, .14);
+        color: #fff;
+      }
+
+      .side {
+        min-height: 0;
+        overflow: hidden;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .side-head {
+        display: flex;
+        height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 18px;
+      }
+
+      .side-head h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .side-scroll {
+        height: calc(100% - 64px);
+        overflow: auto;
+        padding: 0 12px 26px;
+      }
+
+      .section-label {
+        padding: 8px 4px 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .nav-row {
+        display: grid;
+        grid-template-columns: 22px 1fr 18px;
+        align-items: center;
+        gap: 8px;
+        min-height: 40px;
+        border-radius: 7px;
+        padding: 0 8px;
+        color: #273445;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .nav-row.disabled {
+        color: #738195;
+      }
+
+      .nav-row.expanded {
+        color: var(--text);
+      }
+
+      .icon {
+        width: 17px;
+        height: 17px;
+        border: 2px solid currentColor;
+        border-radius: 4px;
+      }
+
+      .subtree {
+        margin: 2px 0 12px 18px;
+        border-left: 1px solid var(--line);
+        padding: 4px 0 4px 12px;
+      }
+
+      .subgroup {
+        margin-top: 8px;
+      }
+
+      .subgroup-label {
+        min-height: 30px;
+        padding: 6px 10px;
+        color: #263445;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .sub-row {
+        display: flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border-radius: 7px;
+        padding: 0 10px;
+        color: #2f3d4e;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .sub-row.active {
+        background: var(--sky);
+        color: var(--blue);
+        font-weight: 900;
+      }
+
+      .sub-row.muted {
+        color: var(--muted);
+      }
+
+      .count {
+        display: inline-flex;
+        min-width: 22px;
+        height: 22px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: var(--soft);
+        color: #3d4a5d;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .main {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        min-height: 0;
+        min-width: 0;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      .page-head {
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+        padding: 18px 24px 14px;
+      }
+
+      .page-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .page-title-left {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .page-title h2 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 30px;
+      }
+
+      .page-icon {
+        width: 22px;
+        height: 22px;
+        border: 2px solid #c9d6e3;
+        border-radius: 6px;
+      }
+
+      .breadcrumb {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .button {
+        display: inline-flex;
+        height: 34px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        padding: 0 13px;
+        color: #223044;
+        font-weight: 900;
+      }
+
+      .button.primary {
+        border-color: var(--nav);
+        background: var(--nav);
+        color: #fff;
+      }
+
+      .level-3 {
+        display: flex;
+        max-width: 100%;
+        gap: 20px;
+        overflow-x: auto;
+        margin-top: 16px;
+      }
+
+      .tab {
+        display: inline-flex;
+        height: 34px;
+        align-items: center;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .tab.active {
+        border-color: var(--text);
+        color: var(--text);
+      }
+
+      .toolbar {
+        display: flex;
+        min-height: 56px;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+        padding: 10px 24px;
+      }
+
+      .search {
+        display: flex;
+        height: 36px;
+        min-width: 280px;
+        flex: 1;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        padding: 0 12px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .select {
+        display: flex;
+        height: 36px;
+        min-width: 126px;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        padding: 0 10px;
+        color: #344255;
+        font-weight: 800;
+      }
+
+      .workspace {
+        min-height: 0;
+        overflow: auto;
+        padding: 18px 24px;
+      }
+
+      .table-card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+      }
+
+      .table-headline {
+        display: flex;
+        min-height: 56px;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 18px;
+      }
+
+      .table-headline strong {
+        font-size: 18px;
+      }
+
+      table {
+        width: 100%;
+        min-width: 1320px;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        height: 42px;
+        border-bottom: 1px solid #e8eef5;
+        padding: 0 10px;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      th {
+        background: #f5f7fa;
+        color: #5d6b7d;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .badge {
+        display: inline-flex;
+        height: 22px;
+        align-items: center;
+        border-radius: 6px;
+        background: #718092;
+        padding: 0 7px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .status {
+        color: var(--green);
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="shell">
+        <nav class="rail" aria-label="전역 메뉴">
+          <div class="rail-mark"></div>
+          <div class="rail-item">홈</div>
+          <div class="rail-item">접수</div>
+          <div class="rail-item">진료</div>
+          <div class="rail-item">검사</div>
+          <div class="rail-item">고객</div>
+          <div class="rail-item active">병원</div>
+        </nav>
+
+        <aside class="side" aria-label="병원관리 사이드패널">
+          <div class="side-head">
+            <h1>병원관리</h1>
+            <span style="color: var(--muted); font-size: 20px;">‹</span>
           </div>
-        </footer>
-      </aside>
-    </main>
-  </div>
-</body>
+
+          <div class="side-scroll">
+            <div class="section-label">Hospital</div>
+
+            <div class="nav-row disabled"><span class="icon"></span><span>병원기본설정</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>병원구성원 관리</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>근무표</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>역할별 업무 관리</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>공간/시간 관리</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>진료과 분리운영</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>바이탈 관리</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>차트 템플릿</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>장비 관리</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>마약류 관리</span><span>›</span></div>
+
+            <div class="nav-row expanded"><span class="icon"></span><span>Order 관리</span><span>⌄</span></div>
+            <div class="subtree">
+              <div class="sub-row muted">전체</div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">진료</div>
+                <div class="sub-row">기본 진료비</div>
+                <div class="sub-row">기타 진료비</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">예방</div>
+                <div class="sub-row">예방</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">검사</div>
+                <div class="sub-row">영상검사</div>
+                <div class="sub-row active">임상병리 검사 <span class="count">18</span></div>
+                <div class="sub-row">계통 검사</div>
+                <div class="sub-row">의뢰 검사</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">처치</div>
+                <div class="sub-row">처치</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">수술</div>
+                <div class="sub-row">마취</div>
+                <div class="sub-row">수술</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">입원</div>
+                <div class="sub-row">입원</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">치료</div>
+                <div class="sub-row">치료</div>
+              </div>
+
+              <div class="subgroup">
+                <div class="subgroup-label">처방/조제/의료물품</div>
+                <div class="sub-row">처방</div>
+                <div class="sub-row">조제</div>
+                <div class="sub-row">의료물품</div>
+              </div>
+            </div>
+
+            <div class="nav-row disabled"><span class="icon"></span><span>Order 세트</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>프린터 설정</span><span>›</span></div>
+            <div class="nav-row disabled"><span class="icon"></span><span>데이터랩</span><span>›</span></div>
+          </div>
+        </aside>
+
+        <main class="main" aria-label="임상병리 검사 Order 목록">
+          <section class="page-head">
+            <div class="page-title">
+              <div>
+                <div class="page-title-left">
+                  <span class="page-icon"></span>
+                  <h2>임상병리 검사</h2>
+                  <span class="count">18</span>
+                </div>
+                <div class="breadcrumb">병원관리 / Order 관리 / 검사 / 임상병리 검사</div>
+              </div>
+              <div class="actions">
+                <button class="button">복제</button>
+                <button class="button primary">+ Order</button>
+              </div>
+            </div>
+
+            <nav class="level-3" aria-label="임상병리 검사 하위 탭">
+              <div class="tab active">전체</div>
+              <div class="tab">원내 혈액 검사</div>
+              <div class="tab">임상 미생물 검사</div>
+              <div class="tab">전해질검사/동맥혈</div>
+              <div class="tab">혈액화학검사</div>
+              <div class="tab">CBC검사</div>
+              <div class="tab">CSF검사</div>
+              <div class="tab">세포 검사</div>
+              <div class="tab">체액 검사</div>
+              <div class="tab">요검사</div>
+              <div class="tab">기타 병리 검사</div>
+            </nav>
+          </section>
+
+          <section class="toolbar">
+            <div class="search">오더명, 원내 Order명, 청구서명 검색</div>
+            <div class="select">사용여부 ▾</div>
+            <div class="select">판매단위 ▾</div>
+            <button class="button">상세 조건</button>
+          </section>
+
+          <section class="workspace">
+            <div class="table-card">
+              <div class="table-headline">
+                <strong>임상병리 검사</strong>
+                <span class="count">18</span>
+                <span style="color: var(--muted); font-weight: 800;">0 / 18 선택</span>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 44px;">□</th>
+                    <th style="width: 90px;">Order</th>
+                    <th style="width: 170px;">분류</th>
+                    <th style="width: 260px;">표준 Order명</th>
+                    <th style="width: 260px;">원내 Order명</th>
+                    <th style="width: 260px;">청구서명</th>
+                    <th style="width: 110px;">사용여부</th>
+                    <th style="width: 130px;">판매가격</th>
+                    <th style="width: 120px;">판매단위</th>
+                    <th style="width: 140px;">대상</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>□</td>
+                    <td><span class="badge">개별</span></td>
+                    <td>원내 혈액 검사</td>
+                    <td>[CBC 검사] #BASO</td>
+                    <td>[CBC 검사] #BASO</td>
+                    <td>[CBC 검사] #BASO</td>
+                    <td><span class="status">사용</span></td>
+                    <td>12.24원</td>
+                    <td>개당</td>
+                    <td>개, 고양이</td>
+                  </tr>
+                  <tr>
+                    <td>□</td>
+                    <td><span class="badge">개별</span></td>
+                    <td>혈액화학검사</td>
+                    <td>CBC 검사</td>
+                    <td>CBC</td>
+                    <td>CBC 검사</td>
+                    <td><span class="status">사용</span></td>
+                    <td>35,000원</td>
+                    <td>회당</td>
+                    <td>전체</td>
+                  </tr>
+                  <tr>
+                    <td>□</td>
+                    <td><span class="badge">묶음</span></td>
+                    <td>CBC검사</td>
+                    <td>CBC검사 세트</td>
+                    <td>CBC 패널</td>
+                    <td>CBC 패널</td>
+                    <td><span class="status">사용</span></td>
+                    <td>55,000원</td>
+                    <td>세트</td>
+                    <td>전체</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
 </html>

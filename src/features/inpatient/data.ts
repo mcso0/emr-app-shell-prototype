@@ -1,6 +1,6 @@
 export type InpatientStatus = "admitted" | "critical" | "discharge_ready";
-export type InpatientFilter = "all" | InpatientStatus;
 export type InpatientWardGroup = "dog" | "cat" | "icu";
+export type InpatientFilter = "all" | InpatientWardGroup;
 export type InpatientSearchField = "all" | "patient" | "guardian" | "room";
 
 export type InpatientCautionTag = {
@@ -39,9 +39,9 @@ export type InpatientAdmission = {
 
 export const inpatientFilterItems: Array<{ label: string; value: InpatientFilter }> = [
   { label: "전체", value: "all" },
-  { label: "입원중", value: "admitted" },
-  { label: "집중관리", value: "critical" },
-  { label: "퇴실준비", value: "discharge_ready" },
+  { label: "강아지", value: "dog" },
+  { label: "고양이", value: "cat" },
+  { label: "집중 치료실", value: "icu" },
 ];
 
 export const inpatientSearchFieldItems: Array<{ label: string; value: InpatientSearchField }> = [
@@ -52,8 +52,8 @@ export const inpatientSearchFieldItems: Array<{ label: string; value: InpatientS
 ];
 
 export const inpatientWardGroups: Array<{ id: InpatientWardGroup; label: string }> = [
-  { id: "dog", label: "강아지" },
-  { id: "cat", label: "고양이" },
+  { id: "dog", label: "강아지 입원실" },
+  { id: "cat", label: "고양이 입원실" },
   { id: "icu", label: "집중 치료실" },
 ];
 
@@ -232,7 +232,7 @@ export const getFilteredInpatientAdmissions = ({
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   return mockInpatientAdmissions.filter((admission) => {
-    const matchesFilter = filter === "all" || admission.status === filter;
+    const matchesFilter = filter === "all" || admission.wardGroup === filter;
 
     if (!matchesFilter) return false;
     if (!normalizedQuery) return true;
@@ -258,6 +258,9 @@ export const getFilteredInpatientAdmissions = ({
 
 export const getInpatientCounts = () => ({
   all: mockInpatientAdmissions.length,
+  dog: mockInpatientAdmissions.filter((admission) => admission.wardGroup === "dog").length,
+  cat: mockInpatientAdmissions.filter((admission) => admission.wardGroup === "cat").length,
+  icu: mockInpatientAdmissions.filter((admission) => admission.wardGroup === "icu").length,
   admitted: mockInpatientAdmissions.filter((admission) => admission.status === "admitted").length,
   critical: mockInpatientAdmissions.filter((admission) => admission.status === "critical").length,
   discharge_ready: mockInpatientAdmissions.filter((admission) => admission.status === "discharge_ready").length,

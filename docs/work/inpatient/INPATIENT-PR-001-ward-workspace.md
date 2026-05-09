@@ -46,12 +46,13 @@ The supplied admission reference is a dense table workspace with these functiona
 
 ## Develop Points Reflected In Wireframe
 
-- Keep the table density, but move coarse operational status to a left side queue so the central table is not the only navigation surface.
-- Add a top KPI strip for occupied rooms, critical flags, discharge-ready cases, and today admissions.
+- Keep the table density, but keep ward group/search in the central toolbar so the inpatient menu does not need a separate side panel.
+- Add a dashboard-style KPI card group for occupied rooms, critical flags, discharge-ready cases, and today admissions.
+- Use a clickable inpatient basis date picker in the page header instead of a static date badge.
 - Preserve species/ward grouping, but use tabs and badges instead of repeating large table sections for every group.
 - Promote risk/care tags into compact color-coded badges that match existing token usage.
-- Add a right patient/bed detail panel for selected admission summary, care plan, and discharge checklist.
-- Use existing shell slots: `sidePanel`, `content`, and `rightPanel`.
+- Open selected admission summary, care plan, and discharge checklist in a drawer from table row click.
+- Use existing shell slots: `content` and `drawer`; do not use separate inpatient `sidePanel` or `rightPanel`.
 - Use shadcn UI primitives already in the repo: Button, Input, Badge, Table, ScrollArea, SegmentedControl, Select, Checkbox, Textarea where needed.
 
 ## Scope
@@ -59,7 +60,7 @@ The supplied admission reference is a dense table workspace with these functiona
 - Add `src/features/inpatient/*` for mock data, store, and module components.
 - Wire the `inpatient` registry entry to the new screen.
 - Add `docs/reference/inpatient/inpatient-workspace-wireframe.html`.
-- Add a focused Playwright spec that verifies the new 병동 workspace renders and core filters/actions are present.
+- Add a focused Playwright spec that verifies the new 병동 workspace renders, row click opens the admission detail drawer, and core filters/actions are present.
 - Update work index/current status/closeout after implementation.
 
 ## Out Of Scope
@@ -73,8 +74,8 @@ The supplied admission reference is a dense table workspace with these functiona
 
 - 병동 route renders an inpatient workspace instead of the placeholder.
 - The screen includes admission functions listed above and the developed wireframe structure.
-- Search/status filtering changes the visible admission rows.
-- Right panel displays selected patient/room detail and discharge readiness.
+- Search/ward group filtering changes the visible admission rows.
+- Admission detail drawer opens from table row click and displays selected patient/room detail and discharge readiness.
 - Verification commands pass or any failure is recorded.
 
 ## Verification

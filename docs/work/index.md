@@ -12,16 +12,21 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DOCS-PR-004 | done | docs-restructure | P0 | PR 4 | `docs/work/docs-restructure/DOCS-PR-004-engineering-design-migration.md` |
 | DOCS-PR-005 | done | docs-restructure | P1 | PR 5 | `docs/work/docs-restructure/DOCS-PR-005-archive-and-link-checking.md` |
 | DOCS-PR-006 | done | docs-restructure | P0 | PR 6 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md` |
+| HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
+| HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | RECEPTION-PR-001 | done | reception | P0 | PR 1 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md` |
 | RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |
 | RECEPTION-PR-003 | done | reception | P1 | PR 3 | `docs/work/reception/RECEPTION-PR-003-registration-quality-ux.md` |
 | RECEPTION-PR-004 | done | reception | P1 | PR 4 | `docs/work/reception/RECEPTION-PR-004-unified-registration-entry.md` |
 | CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
 | CHART-PR-002 | done | chart | P1 | PR 2 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md` |
+| CHART-PR-003 | done | chart | P1 | PR 3 | `docs/work/chart/CHART-PR-003-chart-safety-mvp-ux.md` |
 | LAB-PR-001 | done | lab | P1 | PR 1 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md` |
+| IMAGING-PR-001 | done | imaging | P1 | PR 1 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md` |
 | HOSPITAL-ADMIN-PR-001 | done | hospital-admin | P1 | PR 1 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md` |
 | BILLING-PR-001 | done | billing | P1 | PR 1 | `docs/work/billing/BILLING-PR-001-billing-workspace-restructure.md` |
 | INPATIENT-PR-001 | done | inpatient | P1 | PR 1 | `docs/work/inpatient/INPATIENT-PR-001-ward-workspace.md` |
+| CUSTOMER-PR-001 | done | customer | P1 | PR 1 | `docs/work/customer/CUSTOMER-PR-001-customer-management-workspace.md` |
 
 ## Current Next Work
 

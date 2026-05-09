@@ -11,6 +11,8 @@ updated: ""
 
 # Work Item Title
 
+Write agent-facing fields in concise English by default. Keep Korean product terms, screen labels, and domain wording when they are clearer than translation.
+
 ## Goal
 
 One sentence describing what this PR-sized work item should accomplish.

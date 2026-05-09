@@ -12,7 +12,7 @@ async function expectDemoContext(page: Page) {
 }
 
 test("sales demo launcher carries the Kong scenario through the golden path", async ({ page }) => {
-  await page.goto("/w/clair-demo/home?modulePanel=open&aside=closed");
+  await page.goto("/w/clair-demo/home?view=demo&modulePanel=open&aside=closed");
 
   await expect(page.getByRole("heading", { name: "콩이 구토 내원" })).toBeVisible();
   await expect(page.getByText("김하늘 보호자 · 푸들 · 반복 구토")).toBeVisible();
@@ -37,7 +37,7 @@ test("sales demo launcher carries the Kong scenario through the golden path", as
   await page.getByRole("link", { name: "영상검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/imaging/);
   await expectDemoContext(page);
-  await expect(page.getByText("복부 초음파", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("imaging-queue-item-imaging-kong-abdomen")).toContainText("복부 초음파");
   await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText(
     "급성 위장관염 가능성이 높으며"
   );
@@ -70,8 +70,8 @@ test("golden scenario can be opened across chart, lab, imaging, and billing", as
   await page.goto(
     `/w/clair-demo/imaging?${scenarioQuery}&imagingStudyId=imaging-kong-abdomen&modulePanel=open&aside=closed`
   );
-  await expect(page.getByText("콩이 · P-260501-0003").first()).toBeVisible();
-  await expect(page.getByText("복부 초음파", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();
+  await expect(page.getByTestId("imaging-queue-item-imaging-kong-abdomen")).toContainText("복부 초음파");
   await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText(
     "급성 위장관염 가능성이 높으며"
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
@@ -104,8 +104,14 @@ type GuardianProfileBundle = {
   latestWorkShortcuts: LatestWorkShortcut[];
 };
 
-const profileTabs = [
-  { value: "summary" as const, label: "기본" },
+const patientProfileTabs = [
+  { value: "summary" as const, label: "동물 정보" },
+  { value: "cs" as const, label: "CS 이력" },
+  { value: "latest" as const, label: "최신내역" },
+];
+
+const guardianProfileTabs = [
+  { value: "summary" as const, label: "보호자 정보" },
   { value: "cs" as const, label: "CS 이력" },
   { value: "latest" as const, label: "최신내역" },
 ];
@@ -115,7 +121,7 @@ const csTabs = [
   { value: "kakao" as const, label: "KakaoTalk" },
 ];
 
-type ProfileTab = (typeof profileTabs)[number]["value"];
+type ProfileTab = (typeof patientProfileTabs)[number]["value"];
 type CsTab = (typeof csTabs)[number]["value"];
 
 const getShortDateTime = (dateTime?: string) =>
@@ -993,7 +999,9 @@ function ProfileHeader({
   title,
   onEdit,
   editing,
+  actions,
 }: {
+  actions?: ReactNode;
   editing: boolean;
   meta: string;
   title: string;
@@ -1010,7 +1018,22 @@ function ProfileHeader({
           {editing ? "취소" : "수정"}
         </Button>
       </div>
+      {actions ? <div className="mt-3 flex flex-wrap gap-2">{actions}</div> : null}
     </section>
+  );
+}
+
+function ProfileHeaderAction({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <Button size="sm" variant="outline" className="bg-card" onClick={onClick}>
+      {children}
+    </Button>
   );
 }
 
@@ -1248,7 +1271,7 @@ function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
                 aria-label={`보호자 ${guardian.name} 보기`}
                 size="sm"
                 variant="ghost"
-                onClick={() => setActiveDrawer({ type: "reception-guardian", id: guardian.id })}
+                onClick={() => setActiveDrawer({ type: "guardian", id: guardian.id })}
               >
                 보기
               </Button>
@@ -1326,6 +1349,9 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
     });
     setEditing(false);
   };
+  const showMockAction = (label: string) => {
+    toast.info(`${bundle.patient.name} ${label}은 mock 동작입니다.`);
+  };
 
   return (
     <div className="flex h-[calc(100%-48px)] flex-col">
@@ -1336,11 +1362,19 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
             title={bundle.patient.name}
             meta={`${bundle.patient.patientNo} · ${getSpeciesLabel(bundle.patient)} · ${getPatientDisplayAge(bundle.patient)}`}
             onEdit={editing ? cancelEdit : beginEdit}
+            actions={
+              <>
+                <ProfileHeaderAction onClick={() => showMockAction("접수")}>접수</ProfileHeaderAction>
+                <ProfileHeaderAction onClick={() => showMockAction("예약")}>예약</ProfileHeaderAction>
+                <ProfileHeaderAction onClick={() => showMockAction("차트 보기")}>차트 보러가기</ProfileHeaderAction>
+                <ProfileHeaderAction onClick={() => showMockAction("카카오톡 발송")}>카카오톡 발송</ProfileHeaderAction>
+              </>
+            }
           />
           <LineTabs
             aria-label="환자 정보 탭"
             value={activeTab}
-            items={profileTabs}
+            items={patientProfileTabs}
             itemClassName="text-[13px]"
             onValueChange={setActiveTab}
           />
@@ -1531,6 +1565,9 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     });
     setEditing(false);
   };
+  const showMockAction = (label: string) => {
+    toast.info(`${bundle.guardian.name} 보호자 ${label}은 mock 동작입니다.`);
+  };
 
   return (
     <div className="flex h-[calc(100%-48px)] flex-col">
@@ -1541,11 +1578,19 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
             title={bundle.guardian.name}
             meta={bundle.guardian.mobilePhone ?? "연락처 미입력"}
             onEdit={editing ? cancelEdit : beginEdit}
+            actions={
+              <>
+                <ProfileHeaderAction onClick={() => showMockAction("접수")}>접수</ProfileHeaderAction>
+                <ProfileHeaderAction onClick={() => showMockAction("예약")}>예약</ProfileHeaderAction>
+                <ProfileHeaderAction onClick={() => showMockAction("차트 보기")}>차트 보러가기</ProfileHeaderAction>
+                <ProfileHeaderAction onClick={() => showMockAction("카카오톡 발송")}>카카오톡 발송</ProfileHeaderAction>
+              </>
+            }
           />
           <LineTabs
             aria-label="보호자 정보 탭"
             value={activeTab}
-            items={profileTabs}
+            items={guardianProfileTabs}
             itemClassName="text-[13px]"
             onValueChange={setActiveTab}
           />
@@ -1574,7 +1619,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
                       key={patient.id}
                       type="button"
                       className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]"
-                      onClick={() => setActiveDrawer({ type: "reception-patient", id: patient.id })}
+                      onClick={() => setActiveDrawer({ type: "patient", id: patient.id })}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{patient.name}</span>
@@ -1708,7 +1753,7 @@ export function NewPatientDialog({
 
     if (result.patientId) {
       if (openPatientDrawerOnCreated) {
-        setActiveDrawer({ type: "reception-patient", id: result.patientId });
+        setActiveDrawer({ type: "patient", id: result.patientId });
       }
       onCreated?.(result.patientId);
     }
@@ -2132,7 +2177,7 @@ function NewGuardianDialog({
       }
     }
     if (result.guardianId && openGuardianDrawerOnCreated) {
-      setActiveDrawer({ type: "reception-guardian", id: result.guardianId });
+      setActiveDrawer({ type: "guardian", id: result.guardianId });
     }
     close(false);
   };
@@ -2224,7 +2269,7 @@ function NewGuardianDialog({
 	                        className="bg-white"
 	                        onClick={() => {
 	                          close(false);
-	                          setActiveDrawer({ type: "reception-guardian", id: duplicateGuardian.id });
+	                          setActiveDrawer({ type: "guardian", id: duplicateGuardian.id });
 	                        }}
 	                      >
 	                        보호자 상세 보기
@@ -2727,7 +2772,7 @@ function PatientGuardianRegistrationButton({
       },
       cancel: {
         label: "환자 상세 보기",
-        onClick: () => setActiveDrawer({ type: "reception-patient", id: patientId }),
+        onClick: () => setActiveDrawer({ type: "patient", id: patientId }),
       },
     });
   };

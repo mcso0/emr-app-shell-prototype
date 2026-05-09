@@ -107,37 +107,66 @@ test("lab workspace prioritizes Kong CBC result from demo query", async ({ page 
 });
 
 test("imaging workspace renders reading, impression, and attachment flow", async ({ page }) => {
-  await page.goto("/w/clair-demo/imaging?modulePanel=open&aside=closed");
+  await page.goto("/w/clair-demo/imaging?modulePanel=open");
 
   const sidePanel = page.locator("aside").first();
+  await expect(sidePanel.getByText("영상검사")).toBeVisible();
+  await expect(sidePanel.getByRole("tab", { name: "오더별" })).toHaveAttribute("aria-selected", "true");
+  await expect(sidePanel.getByRole("tab", { name: "차트별" })).toBeVisible();
+  await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
+  await expect(sidePanel.getByRole("button", { name: "판독중 접기" })).toHaveAttribute("aria-expanded", "true");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
-  await expect(page.getByRole("heading", { name: "영상검사" })).toBeVisible();
+  await sidePanel.getByRole("button", { name: "판독중 접기" }).click();
+  await expect(sidePanel.getByRole("button", { name: "판독중 펼치기" })).toHaveAttribute("aria-expanded", "false");
+  await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
+  await sidePanel.getByRole("button", { name: "판독중 펼치기" }).click();
+  await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
+  await sidePanel.getByRole("tab", { name: "차트별" }).click();
+  await expect(sidePanel.getByText("차트별 영상")).toBeVisible();
+  await expect(sidePanel.getByTestId("imaging-chart-group-encounter-coco-260501")).toContainText("코코");
+  await sidePanel.getByRole("tab", { name: "오더별" }).click();
+  await expect(page.getByRole("button", { name: "영상이력", exact: true })).toBeVisible();
+  await expect(page.getByTestId("imaging-history-item-imaging-coco-thorax")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "영상 검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("흉부 방사선").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "영상 판독" })).toBeVisible();
+  await expect(page.getByTestId("imaging-study-status-label")).toHaveText("판독중");
+  await expect(page.getByText("Order 상세정보")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "스터디 판독의견" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "영상 판독 내용" })).toContainText("복부 가스 음영 증가");
   await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText("위장관염 가능성");
-  await expect(page.getByText("coco-thorax-lateral.png")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Imaging Dx" })).toBeVisible();
+  await page.getByRole("button", { name: "담당하기", exact: true }).click();
+  await expect(page.getByRole("button", { name: "판독중", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "판독 상태 액션" }).click();
+  await page.getByRole("menuitem", { name: "판독완료" }).click();
+  await expect(page.getByRole("button", { name: "판독완료", exact: true })).toBeVisible();
+  const summaryPanel = page.getByTestId("imaging-summary-panel");
+  await expect(summaryPanel.getByText("coco-thorax-lateral.png")).toBeVisible();
+  await expect(summaryPanel.getByRole("heading", { name: "종합소견" })).toBeVisible();
+  await expect(summaryPanel.getByRole("heading", { name: "같은 차트 내 Order" })).toBeVisible();
+  await expect(summaryPanel.getByRole("textbox", { name: "영상 종합 코멘트" })).toBeVisible();
+  await expect(summaryPanel.getByText("coco-thorax-lateral.png")).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
 test("imaging workspace prioritizes Kong abdomen study from demo query", async ({ page }) => {
   await page.goto(
-    "/w/clair-demo/imaging?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&imagingStudyId=imaging-kong-abdomen&modulePanel=open&aside=closed"
+    "/w/clair-demo/imaging?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&imagingStudyId=imaging-kong-abdomen&modulePanel=open&aside=closed&right=open"
   );
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-kong-abdomen")).toContainText("콩이");
-  await expect(page.getByRole("heading", { name: "영상검사" })).toBeVisible();
-  await expect(page.getByText(/콩이 · P-260501-0003 · 강아지/)).toBeVisible();
-  await expect(page.getByText("내원 사유: 반복 구토와 식욕 저하")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "데모 결과 흐름" })).toBeVisible();
-  await expect(page.getByText("판독 요약")).toBeVisible();
-  await expect(
-    page.locator("p").filter({ hasText: "위 내 소량 액체 저류. 장관 확장이나 명확한 이물 음영은 보이지 않음." })
-  ).toBeVisible();
-  await expect(
-    page.locator("p").filter({ hasText: "급성 위장관염 가능성이 높으며, CBC 결과와 임상 증상 추적 권장." })
-  ).toBeVisible();
-  await expect(page.getByText("kong-abdomen-ultrasound.png")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "영상 검사 Order 상세" })).toBeVisible();
+  await expect(page.getByText("환자").first()).toBeVisible();
+  await expect(page.getByText("콩이").first()).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "영상 판독 내용" })).toContainText(
+    "위 내 소량 액체 저류. 장관 확장이나 명확한 이물 음영은 보이지 않음."
+  );
+  await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText(
+    "급성 위장관염 가능성이 높으며, CBC 결과와 임상 증상 추적 권장."
+  );
+  await expect(page.getByTestId("imaging-summary-panel")).toContainText("CBC 검사");
+  await expect(page.getByTestId("imaging-summary-panel")).toContainText("복부 초음파");
+  await expect(page.getByTestId("imaging-summary-panel").getByText("kong-abdomen-ultrasound.png")).toBeVisible();
 });
