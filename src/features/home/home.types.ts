@@ -32,7 +32,7 @@ export type HomeKanbanColumnId =
   | "treatment"
   | "billing";
 
-export type HomeWorkspaceView = "hospital" | "mine";
+export type HomeWorkspaceView = "home" | "hospital";
 
 export type HomeTaskAssignment = "assigned" | "roleQueue";
 

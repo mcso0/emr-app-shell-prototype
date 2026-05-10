@@ -234,7 +234,8 @@ test("home normalizes a collapsed module panel before navigating back to modules
   await expect(page).toHaveURL(/modulePanel=open/);
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toHaveCount(0);
   await expect(page.getByTestId("module-side-panel-title")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "지금 볼 업무" })).toBeVisible();
+  await expect(page.getByTestId("home-dashboard")).toBeVisible();
+  await expect(page.getByText("오늘 워크플로우")).toBeVisible();
 
   await page.getByRole("link", { name: "조제/처치" }).click();
 
