@@ -35,7 +35,7 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <header className="relative z-20 flex h-[52px] items-center border-b border-[var(--clair-color-line-subtle)] bg-[#E9ECF2] px-2.5 shadow-[0_1px_0_rgba(26,32,44,0.03)]">
+    <header className="relative z-20 flex h-[52px] items-center bg-[var(--clair-color-service-background,#FBFCFD)] px-2.5">
       <Button
         variant="outline"
         size="sm"

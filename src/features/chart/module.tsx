@@ -35,8 +35,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getChartEncounter,
@@ -820,75 +828,87 @@ function ChartOrderTable({
   someVisibleSelected: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
-      <div className="min-w-[1080px]">
-        <div className="grid grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] bg-[var(--clair-color-atomic-gray-50)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
-          <Checkbox
-            aria-label="오더 전체 선택"
-            checked={allVisibleSelected}
-            indeterminate={someVisibleSelected}
-            onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
-          />
-          <span>그룹</span>
-          <span>분류</span>
-          <span>상태</span>
-          <span>Order명</span>
-          <span>청구서명</span>
-          <span>수량</span>
-          <span>단가</span>
-          <span>청구금액</span>
-          <span>수의사</span>
-          <span className="text-right">작업</span>
-        </div>
+    <Table className="min-w-[1080px] table-fixed bg-[var(--clair-color-atomic-common-100)] text-[13px]">
+      <TableHeader className="bg-[var(--clair-color-atomic-gray-50)]">
+        <TableRow className="border-[var(--clair-color-atomic-gray-300)] hover:bg-transparent">
+          <TableHead className="w-10 px-3 text-muted-foreground">
+            <Checkbox
+              aria-label="오더 전체 선택"
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected}
+              onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
+            />
+          </TableHead>
+          <TableHead className="w-[140px] text-[12px] text-muted-foreground">그룹</TableHead>
+          <TableHead className="w-[68px] text-[12px] text-muted-foreground">분류</TableHead>
+          <TableHead className="w-[72px] text-[12px] text-muted-foreground">상태</TableHead>
+          <TableHead className="w-[240px] text-[12px] text-muted-foreground">Order명</TableHead>
+          <TableHead className="w-[190px] text-[12px] text-muted-foreground">청구서명</TableHead>
+          <TableHead className="w-16 text-[12px] text-muted-foreground">수량</TableHead>
+          <TableHead className="w-20 text-[12px] text-muted-foreground">단가</TableHead>
+          <TableHead className="w-[88px] text-[12px] text-muted-foreground">청구금액</TableHead>
+          <TableHead className="w-20 text-[12px] text-muted-foreground">수의사</TableHead>
+          <TableHead className="w-[116px] text-right text-[12px] text-muted-foreground">작업</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {rows.map(({ groupTitle, order }) => {
           const invoiceLine = getChartInvoiceLineByOrderId(order.id);
 
           return (
-            <div
+            <TableRow
               key={order.id}
-              className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 text-[13px]"
+              className="h-10 border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] hover:bg-[var(--clair-color-atomic-common-100)]"
             >
-              <Checkbox
-                aria-label={`${order.displayName} 선택`}
-                checked={selectedOrderIds.has(order.id)}
-                onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
-              />
-              <span className="truncate text-[12px] font-medium text-muted-foreground">{groupTitle}</span>
-              <Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge>
-              <EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" />
-              <div className="min-w-0">
+              <TableCell className="px-3">
+                <Checkbox
+                  aria-label={`${order.displayName} 선택`}
+                  checked={selectedOrderIds.has(order.id)}
+                  onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
+                />
+              </TableCell>
+              <TableCell className="truncate text-[12px] font-medium text-muted-foreground">{groupTitle}</TableCell>
+              <TableCell><Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge></TableCell>
+              <TableCell><EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" /></TableCell>
+              <TableCell className="min-w-0">
                 <div className="truncate font-medium">{order.displayName}</div>
                 <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? orderTypeMeta[order.orderType].handoff}</div>
-              </div>
-              <span className="truncate">{invoiceLine?.description ?? order.displayName}</span>
-              <span>{invoiceLine?.quantity ?? 1}</span>
-              <span>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</span>
-              <span>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</span>
-              <span className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</span>
-              <div className="flex justify-end gap-1.5">
-                <Button variant="outline" size="xs" className="bg-card">
-                  이력
-                </Button>
-                <Button variant="outline" size="xs" className="bg-card">
-                  요청
-                </Button>
-              </div>
-            </div>
+              </TableCell>
+              <TableCell className="truncate">{invoiceLine?.description ?? order.displayName}</TableCell>
+              <TableCell>{invoiceLine?.quantity ?? 1}</TableCell>
+              <TableCell>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</TableCell>
+              <TableCell>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</TableCell>
+              <TableCell className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</TableCell>
+              <TableCell>
+                <div className="flex justify-end gap-1.5">
+                  <Button variant="outline" size="xs" className="bg-card">
+                    이력
+                  </Button>
+                  <Button variant="outline" size="xs" className="bg-card">
+                    요청
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
           );
         })}
         {!rows.length ? (
-          <div className="border-t border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-3 py-8 text-center text-[13px] text-muted-foreground">
-            표시할 오더가 없습니다.
-          </div>
+          <TableRow className="border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] hover:bg-[var(--clair-color-atomic-common-100)]">
+            <TableCell colSpan={11} className="h-24 text-center text-[13px] text-muted-foreground">
+              표시할 오더가 없습니다.
+            </TableCell>
+          </TableRow>
         ) : null}
-        <div className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5">
-          <span aria-hidden="true" />
-          <Button variant="ghost" size="sm" className="col-span-10 w-fit justify-start">
-            + Order 추가하기
-          </Button>
-        </div>
-      </div>
-    </div>
+        <TableRow className="h-10 border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] hover:bg-[var(--clair-color-atomic-common-100)]">
+          <TableCell />
+          <TableCell colSpan={10}>
+            <Button variant="ghost" size="sm" className="w-fit justify-start">
+              + Order 추가하기
+            </Button>
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -984,17 +1004,18 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           <Button size="sm">+ Order</Button>
         </div>
       </div>
-      <div className="shrink-0 px-4 pt-3">
-        <LineTabs
+      <div className="flex min-h-9 shrink-0 items-center px-4">
+        <SegmentedControl
           aria-label="차트 오더 필터"
-          className="w-full"
           items={tabItems}
-          size="default"
+          variant="pill"
           value={orderFilter}
+          className="w-fit gap-1.5"
+          itemClassName="h-6 min-h-6 rounded-full px-2 text-[12px] font-semibold leading-4"
           onValueChange={setOrderFilter}
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--clair-color-atomic-gray-50)] p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--clair-color-atomic-common-100)] px-4">
         <ChartOrderTable
           allVisibleSelected={allVisibleSelected}
           onToggleAll={toggleAllVisibleOrders}
@@ -1282,7 +1303,7 @@ export function ChartContent() {
         ref={chartWorkspaceRef}
         data-slot="chart-workspace"
         className={cn(
-          "mt-4 grid min-h-0 flex-1 pt-4",
+          "mt-4 grid min-h-0 flex-1 border-t border-[var(--clair-color-atomic-gray-300)] pt-4",
           isChartResizing && "select-none"
         )}
         style={{
