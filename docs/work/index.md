@@ -14,6 +14,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DOCS-PR-006 | done | docs-restructure | P0 | PR 6 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md` |
 | HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
+| HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |
 | PWA-PR-001 | done | pwa | P1 | PR 1 | `docs/work/pwa/PWA-PR-001-installable-app-shell.md` |
 | RECEPTION-PR-001 | done | reception | P0 | PR 1 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md` |
 | RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |
