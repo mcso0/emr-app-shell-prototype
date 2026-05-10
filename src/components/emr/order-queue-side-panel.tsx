@@ -18,10 +18,13 @@ import {
 import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
+  EmrSidePanelIdentityLine,
   EmrSidePanelMetaBadge,
+  EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
+import { getEmrSidePanelStatusTitle } from "@/components/emr/side-panel-status-title";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type {
   OrderQueueItem,
@@ -200,13 +203,17 @@ function OrderQueueGroup({
   status: OrderQueueStatusDefinition;
   statuses: OrderQueueStatusDefinition[];
 }) {
+  const groupTitle = getEmrSidePanelStatusTitle({ id: status.id, label: status.label });
+
   return (
     <EmrSidePanelCollapsibleGroup
       collapsed={collapsed}
       count={items.length}
+      countBadgeColorToken={status.colorToken}
       dataTestId={`order-queue-status-${status.id}`}
       indicatorColorToken={status.colorToken}
-      label={status.label}
+      indicatorVisible={false}
+      label={groupTitle}
       onToggle={onToggle}
     >
       {items.map((item) => (
@@ -220,6 +227,32 @@ function OrderQueueGroup({
       ))}
     </EmrSidePanelCollapsibleGroup>
   );
+}
+
+function getQueueTimeLabel(item: OrderQueueItem, statusLabel: string) {
+  if (item.statusId === "in_progress" || item.statusId === "inProgress" || statusLabel === "진료중") {
+    return `${item.time} 시작`;
+  }
+
+  if (item.statusId === "waiting" || statusLabel.includes("대기")) {
+    return item.waitMinutes !== undefined
+      ? `${item.time}(${item.waitMinutes}분 대기)`
+      : `${item.time} 대기`;
+  }
+
+  if (item.statusId === "completed" || statusLabel === "완료") {
+    return `${item.time} 완료`;
+  }
+
+  if (item.statusId === "reRequested" || statusLabel === "재요청") {
+    return `${item.time} 재요청`;
+  }
+
+  if (item.statusId === "canceled" || item.statusId === "cancelled" || statusLabel === "취소") {
+    return `${item.time} 취소`;
+  }
+
+  return `${item.time} ${statusLabel}`;
 }
 
 function OrderQueueCard({
@@ -239,34 +272,29 @@ function OrderQueueCard({
       testId={`order-queue-item-${item.id}`}
       onSelect={onSelect}
     >
-      <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-          <span className="truncate">{item.patientName}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
-          <span className="truncate">{item.guardianName}</span>
-          <EmrSidePanelTypeBadge label={item.receptionType} />
-        </div>
-        <EmrSidePanelCardAction
-          ariaLabel={`${item.patientName} ${item.orderName} 더보기`}
-          testId={`order-queue-item-action-${item.id}`}
-        />
-      </div>
+      <EmrSidePanelIdentityLine
+        patientName={item.patientName}
+        guardianName={item.guardianName}
+        typeBadge={<EmrSidePanelTypeBadge label={item.receptionType} />}
+        action={
+          <EmrSidePanelCardAction
+            ariaLabel={`${item.patientName} ${item.orderName} 더보기`}
+            testId={`order-queue-item-action-${item.id}`}
+          />
+        }
+      />
       <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
         <span className="shrink-0 truncate">{item.orderType}</span>
         <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
         <span className="min-w-0 flex-1 truncate">{item.orderName}</span>
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
-      <div className="flex h-5 min-w-0 items-center gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-          <EmrSidePanelMetaBadge label="요청" value={item.requesterName} />
-          {item.assigneeName ? <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} /> : null}
-        </div>
-        <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-          <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
-          <span>{item.time}</span>
-          <span>{statusLabel}</span>
-        </span>
+      <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1.5">
+        <EmrSidePanelMetaBadge label="요청" value={item.requesterName} />
+        {item.assigneeName ? <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} /> : null}
+        <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
+          {getQueueTimeLabel(item, statusLabel)}
+        </EmrSidePanelStatusBadge>
       </div>
     </EmrSidePanelCard>
   );

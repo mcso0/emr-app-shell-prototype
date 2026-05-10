@@ -15,8 +15,11 @@ type EmrSidePanelCollapsibleGroupProps = {
   className?: string;
   contentClassName?: string;
   dataTestId?: string;
+  countBadgeColorToken?: string;
+  countBadgeClassName?: string;
   indicatorClassName?: string;
   indicatorColorToken?: string;
+  indicatorVisible?: boolean;
 };
 
 export const EMR_SIDE_PANEL_COLLAPSE_EASE = [0.16, 1, 0.3, 1] as const;
@@ -26,6 +29,21 @@ function getAccessibleLabel(label: ReactNode, accessibleLabel?: string) {
   return accessibleLabel ?? (typeof label === "string" ? label : "목록 그룹");
 }
 
+function getCountBadgeTokens(colorToken?: string) {
+  if (!colorToken) return undefined;
+
+  if (colorToken.includes("orange")) return { background: "--clair-color-atomic-orange-50", foreground: "--clair-color-atomic-orange-500" };
+  if (colorToken.includes("green")) return { background: "--clair-color-atomic-green-50", foreground: "--clair-color-atomic-green-500" };
+  if (colorToken.includes("red")) return { background: "--clair-color-atomic-red-50", foreground: "--clair-color-atomic-red-500" };
+  if (colorToken.includes("mint")) return { background: "--clair-color-atomic-mint-50", foreground: "--clair-color-atomic-mint-500" };
+  if (colorToken.includes("gray")) return { background: "--clair-color-atomic-gray-50", foreground: "--clair-color-atomic-gray-500" };
+  if (colorToken.includes("blue") || colorToken.includes("sky") || colorToken.includes("primary")) {
+    return { background: "--clair-color-atomic-blue-50", foreground: "--clair-color-atomic-blue-500" };
+  }
+
+  return { background: "--clair-color-atomic-gray-50", foreground: "--clair-color-atomic-gray-500" };
+}
+
 export function EmrSidePanelCollapsibleGroup({
   accessibleLabel,
   children,
@@ -33,9 +51,12 @@ export function EmrSidePanelCollapsibleGroup({
   collapsed,
   contentClassName,
   count,
+  countBadgeClassName,
+  countBadgeColorToken,
   dataTestId,
   indicatorClassName,
   indicatorColorToken,
+  indicatorVisible = true,
   label,
   onToggle,
 }: EmrSidePanelCollapsibleGroupProps) {
@@ -55,6 +76,14 @@ export function EmrSidePanelCollapsibleGroup({
         opacity: { duration: 0.12, ease: "easeIn" },
         y: { duration: 0.16, ease: EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE },
       };
+  const countBadgeTokens = getCountBadgeTokens(countBadgeColorToken);
+  const countBadgeStyle = countBadgeTokens
+    ? {
+        backgroundColor: `var(${countBadgeTokens.background})`,
+        borderColor: `var(${countBadgeTokens.background})`,
+        color: `var(${countBadgeTokens.foreground})`,
+      }
+    : undefined;
 
   return (
     <section className={cn("flex flex-col gap-1", className)} data-testid={dataTestId}>
@@ -66,17 +95,28 @@ export function EmrSidePanelCollapsibleGroup({
         onClick={onToggle}
       >
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span
-            className={cn(
-              "h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--clair-color-atomic-gray-400)]",
-              indicatorClassName
-            )}
-            style={indicatorColorToken ? { backgroundColor: `var(${indicatorColorToken})` } : undefined}
-            aria-hidden="true"
-          />
+          {indicatorVisible ? (
+            <span
+              className={cn(
+                "h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--clair-color-atomic-gray-400)]",
+                indicatorClassName
+              )}
+              style={indicatorColorToken ? { backgroundColor: `var(${indicatorColorToken})` } : undefined}
+              aria-hidden="true"
+            />
+          ) : null}
           <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px]">
             <span className="truncate text-[var(--clair-color-atomic-gray-600)]">{label}</span>
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{count}</span>
+            <span
+              data-testid={dataTestId ? `${dataTestId}-count` : undefined}
+              className={cn(
+                "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] px-1.5 text-[12px] font-semibold leading-4 tracking-normal text-[var(--clair-color-atomic-gray-600)]",
+                countBadgeClassName
+              )}
+              style={countBadgeStyle}
+            >
+              {count}
+            </span>
           </span>
         </div>
         <motion.span

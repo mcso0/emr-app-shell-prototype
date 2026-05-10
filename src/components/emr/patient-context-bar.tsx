@@ -132,7 +132,7 @@ export function EmrPatientContextBar({
   }, [updateScrollState]);
 
   return (
-    <div className={cn("border-b border-border bg-card", className)}>
+    <div className={cn("border-b border-[var(--clair-color-atomic-gray-300)] bg-card", className)}>
       <div className="flex h-[50px] items-center gap-3 px-4">
         {historyButton ? (
           <>

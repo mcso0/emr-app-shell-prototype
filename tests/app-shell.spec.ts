@@ -299,11 +299,16 @@ test("order queue side panel renders status groups with design token colors", as
   await expect(sidePanel.getByTestId("order-queue-status-completed")).toContainText("완료");
   await expect(sidePanel.getByTestId("order-queue-status-canceled")).toContainText("취소");
 
-  await expect(sidePanel.getByTestId("order-queue-status-reRequested").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(237, 137, 54)");
-  await expect(sidePanel.getByTestId("order-queue-status-inProgress").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(66, 153, 225)");
-  await expect(sidePanel.getByTestId("order-queue-status-waiting").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(160, 174, 192)");
-  await expect(sidePanel.getByTestId("order-queue-status-completed").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(72, 187, 120)");
-  await expect(sidePanel.getByTestId("order-queue-status-canceled").locator("[aria-hidden='true']").first()).toHaveCSS("background-color", "rgb(245, 101, 101)");
+  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("background-color", "rgb(255, 250, 240)");
+  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("color", "rgb(221, 107, 32)");
+  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("background-color", "rgb(235, 248, 255)");
+  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("color", "rgb(49, 130, 206)");
+  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("background-color", "rgb(247, 250, 252)");
+  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("color", "rgb(113, 128, 150)");
+  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("background-color", "rgb(240, 255, 244)");
+  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("color", "rgb(56, 161, 105)");
+  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("background-color", "rgb(255, 245, 245)");
+  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("color", "rgb(229, 62, 62)");
 });
 
 test("order queue status groups can collapse and expand", async ({ page }) => {
@@ -386,6 +391,8 @@ test("treatment module renders the chart queue instead of the order queue placeh
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
+  await expect(sidePanel.getByRole("button", { name: "진행중 접기" })).toBeVisible();
+  await expect(sidePanel.getByRole("button", { name: "대기중 접기" })).toBeVisible();
   await expect(sidePanel.getByText("코코")).toBeVisible();
   await expect(page.getByRole("button", { name: "차트이력" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
@@ -412,4 +419,46 @@ test("dispensing does not render the patient side panel or trigger", async ({ pa
   await expect(page.getByText("환자 사이드 패널")).toBeHidden();
   await expect(page.getByRole("button", { name: /환자 사이드 패널/ })).toHaveCount(0);
   await expect(page).not.toHaveURL(/right=/);
+});
+
+test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
+  const response = await request.get("/manifest.webmanifest");
+
+  expect(response.ok()).toBeTruthy();
+  expect(response.headers()["content-type"]).toContain("application/manifest+json");
+
+  const manifest = await response.json();
+
+  expect(manifest).toMatchObject({
+    name: "CLAiR EMR",
+    short_name: "CLAiR",
+    start_url: "/login",
+    scope: "/",
+    display: "standalone",
+    background_color: "#E9ECF2",
+    theme_color: "#E9ECF2",
+  });
+  expect(manifest.icons).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: "/pwa-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      }),
+      expect.objectContaining({
+        src: "/pwa-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      }),
+      expect.objectContaining({
+        src: "/pwa-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      }),
+    ]),
+  );
+
+  await page.goto(manifest.start_url);
+  await expect(page.getByRole("heading", { name: "CLAiR EMR" })).toBeVisible();
 });

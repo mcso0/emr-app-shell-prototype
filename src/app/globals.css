@@ -68,6 +68,7 @@
   --sidebar-ring: var(--clair-color-atomic-sky-500);
   --selection: var(--clair-color-fill-alternative);
   --selection-border: var(--clair-color-line-strong);
+  --clair-color-service-background: #FBFCFD;
 }
 
 .dark {
@@ -102,6 +103,7 @@
 
   body {
     @apply bg-background text-foreground;
+    background-color: var(--clair-color-service-background);
     font-size: 13px;
     letter-spacing: 0;
   }

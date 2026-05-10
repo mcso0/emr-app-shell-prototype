@@ -27,12 +27,12 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import {
   EmrDateNavigator,
-  EmrListGroup,
   EmrListHeader,
   EmrListHeaderIconButton,
-  EmrListItem,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -47,7 +47,9 @@ import {
 import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
+  EmrSidePanelIdentityLine,
   EmrSidePanelMetaBadge,
+  EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
@@ -137,8 +139,6 @@ const currentLabAssignee = {
   id: "user-tech-hayun",
   name: getStaffName("user-tech-hayun") ?? "송하윤",
 };
-const LAB_HISTORY_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
-const LAB_HISTORY_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
 
 const parseReferenceRange = (referenceRange?: string) => {
   if (!referenceRange) return null;
@@ -237,6 +237,14 @@ const labStatusGroupLabel: Record<LabResult["status"], string> = {
   reviewed: "확인",
 };
 
+const labStatusGroupColorToken: Record<LabResult["status"], string> = {
+  pending: "--clair-color-atomic-gray-400",
+  received: "--clair-color-atomic-blue-400",
+  entered: "--clair-color-atomic-orange-400",
+  completed: "--clair-color-atomic-green-400",
+  reviewed: "--clair-color-atomic-mint-400",
+};
+
 type LabResultTab = "all" | "cbc" | "chemistry";
 type LabQueueView = "order" | "chart";
 type ImagingQueueView = "order" | "chart";
@@ -266,6 +274,14 @@ const imagingStatusGroupLabel: Record<ImagingStudyStatus, string> = {
   reading: "판독중",
   read: "판독완료",
   reviewed: "확인",
+};
+
+const imagingStatusGroupColorToken: Record<ImagingStudyStatus, string> = {
+  requested: "--clair-color-atomic-gray-400",
+  captured: "--clair-color-atomic-blue-400",
+  reading: "--clair-color-atomic-orange-400",
+  read: "--clair-color-atomic-green-400",
+  reviewed: "--clair-color-atomic-mint-400",
 };
 
 const fallbackLabHistoryGroups = [
@@ -435,8 +451,10 @@ function LabQueueGroup({
     <EmrSidePanelCollapsibleGroup
       collapsed={collapsed}
       count={items.length}
+      countBadgeColorToken={labStatusGroupColorToken[status]}
       dataTestId={`lab-queue-status-${status}`}
-      indicatorClassName="bg-[var(--clair-color-atomic-orange-400)]"
+      indicatorColorToken={labStatusGroupColorToken[status]}
+      indicatorVisible={false}
       label={label}
       onToggle={onToggle}
     >
@@ -471,18 +489,17 @@ function LabQueueItem({
         onSelect={onSelect}
         testId={`lab-queue-card-${item.result.id}`}
       >
-        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-            <span className="truncate">{item.patient.name}</span>
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
-            <span className="truncate">{item.primaryGuardian?.name ?? "보호자 미지정"}</span>
-            <EmrSidePanelTypeBadge label={receptionTypeLabel} />
-          </div>
-          <EmrSidePanelCardAction
-            ariaLabel={`${item.patient.name} ${item.result.resultName} 더보기`}
-            testId={`lab-queue-item-action-${item.result.id}`}
-          />
-        </div>
+        <EmrSidePanelIdentityLine
+          patientName={item.patient.name}
+          guardianName={item.primaryGuardian?.name ?? "보호자 미지정"}
+          typeBadge={<EmrSidePanelTypeBadge label={receptionTypeLabel} />}
+          action={
+            <EmrSidePanelCardAction
+              ariaLabel={`${item.patient.name} ${item.result.resultName} 더보기`}
+              testId={`lab-queue-item-action-${item.result.id}`}
+            />
+          }
+        />
         <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? item.result.resultName}</span>
         </div>
@@ -492,11 +509,9 @@ function LabQueueItem({
             <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
             {item.technicianName ? <EmrSidePanelMetaBadge label="담당" value={item.technicianName} /> : null}
           </div>
-          <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
-            <span>{formatShortDateTime(item.result.receivedAt ?? item.result.collectedAt).slice(9)}</span>
-            <span>{statusLabel}</span>
-          </span>
+          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
+            {formatShortDateTime(item.result.receivedAt ?? item.result.collectedAt).slice(9)} {statusLabel}
+          </EmrSidePanelStatusBadge>
         </div>
       </EmrSidePanelCard>
     </div>
@@ -565,18 +580,17 @@ function LabChartQueueItem({
         onSelect={onSelect}
         testId={`lab-chart-card-${group.encounter.id}`}
       >
-        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-            <span className="truncate">{group.patient.name}</span>
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
-            <span className="truncate">{group.primaryGuardianName ?? "보호자 미지정"}</span>
-            <EmrSidePanelTypeBadge label={`${group.items.length}건`} />
-          </div>
-          <EmrSidePanelCardAction
-            ariaLabel={`${group.patient.name} 임상병리검사 차트 더보기`}
-            testId={`lab-chart-item-action-${group.encounter.id}`}
-          />
-        </div>
+        <EmrSidePanelIdentityLine
+          patientName={group.patient.name}
+          guardianName={group.primaryGuardianName ?? "보호자 미지정"}
+          typeBadge={<EmrSidePanelTypeBadge label={`${group.items.length}건`} />}
+          action={
+            <EmrSidePanelCardAction
+              ariaLabel={`${group.patient.name} 임상병리검사 차트 더보기`}
+              testId={`lab-chart-item-action-${group.encounter.id}`}
+            />
+          }
+        />
         <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
           <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
           <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
@@ -595,10 +609,9 @@ function LabChartQueueItem({
         </div>
         <div className="mt-1 flex h-5 min-w-0 items-center justify-between gap-3 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
           <span className="truncate">{statusSummary}</span>
-          <span className="flex shrink-0 items-center gap-1">
-            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
+          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.result.receivedAt ?? latestItem?.result.collectedAt).slice(9)}
-          </span>
+          </EmrSidePanelStatusBadge>
         </div>
       </EmrSidePanelCard>
     </div>
@@ -624,18 +637,17 @@ function ImagingQueueItem({
         onSelect={onSelect}
         testId={`imaging-queue-card-${item.study.id}`}
       >
-        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-            <span className="truncate">{item.patient.name}</span>
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
-            <span className="truncate">{item.primaryGuardian?.name ?? "보호자 미지정"}</span>
-            <EmrSidePanelTypeBadge label={receptionTypeLabel} />
-          </div>
-          <EmrSidePanelCardAction
-            ariaLabel={`${item.patient.name} ${item.order?.displayName ?? item.study.modality} 더보기`}
-            testId={`imaging-queue-item-action-${item.study.id}`}
-          />
-        </div>
+        <EmrSidePanelIdentityLine
+          patientName={item.patient.name}
+          guardianName={item.primaryGuardian?.name ?? "보호자 미지정"}
+          typeBadge={<EmrSidePanelTypeBadge label={receptionTypeLabel} />}
+          action={
+            <EmrSidePanelCardAction
+              ariaLabel={`${item.patient.name} ${item.order?.displayName ?? item.study.modality} 더보기`}
+              testId={`imaging-queue-item-action-${item.study.id}`}
+            />
+          }
+        />
         <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`}</span>
           <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
@@ -647,11 +659,9 @@ function ImagingQueueItem({
             <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
             <EmrSidePanelMetaBadge label="담당" value={item.radiologistName ?? "미지정"} />
           </div>
-          <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
-            <span>{formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt).slice(9)}</span>
-            <span>{statusLabel}</span>
-          </span>
+          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
+            {formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt).slice(9)} {statusLabel}
+          </EmrSidePanelStatusBadge>
         </div>
       </EmrSidePanelCard>
     </div>
@@ -715,8 +725,10 @@ function ImagingQueueGroup({
     <EmrSidePanelCollapsibleGroup
       collapsed={collapsed}
       count={items.length}
+      countBadgeColorToken={imagingStatusGroupColorToken[status]}
       dataTestId={`imaging-queue-status-${status}`}
-      indicatorClassName="bg-[var(--clair-color-atomic-sky-400)]"
+      indicatorColorToken={imagingStatusGroupColorToken[status]}
+      indicatorVisible={false}
       label={imagingStatusGroupLabel[status]}
       onToggle={onToggle}
     >
@@ -790,18 +802,17 @@ function ImagingChartQueueItem({
         onSelect={onSelect}
         testId={`imaging-chart-card-${group.encounter.id}`}
       >
-        <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-            <span className="truncate">{group.patient.name}</span>
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
-            <span className="truncate">{group.primaryGuardianName ?? "보호자 미지정"}</span>
-            <EmrSidePanelTypeBadge label={`${group.items.length}건`} />
-          </div>
-          <EmrSidePanelCardAction
-            ariaLabel={`${group.patient.name} 영상검사 차트 더보기`}
-            testId={`imaging-chart-item-action-${group.encounter.id}`}
-          />
-        </div>
+        <EmrSidePanelIdentityLine
+          patientName={group.patient.name}
+          guardianName={group.primaryGuardianName ?? "보호자 미지정"}
+          typeBadge={<EmrSidePanelTypeBadge label={`${group.items.length}건`} />}
+          action={
+            <EmrSidePanelCardAction
+              ariaLabel={`${group.patient.name} 영상검사 차트 더보기`}
+              testId={`imaging-chart-item-action-${group.encounter.id}`}
+            />
+          }
+        />
         <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
           <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
           <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
@@ -818,10 +829,9 @@ function ImagingChartQueueItem({
         </div>
         <div className="mt-1 flex h-5 min-w-0 items-center justify-between gap-3 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
           <span className="truncate">{latestItem?.study.modality ?? "영상"}</span>
-          <span className="flex shrink-0 items-center gap-1">
-            <ClockIcon className="size-3.5 text-[var(--clair-color-atomic-gray-400)]" aria-hidden="true" />
+          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.study.capturedAt ?? latestItem?.study.requestedAt).slice(9)}
-          </span>
+          </EmrSidePanelStatusBadge>
         </div>
       </EmrSidePanelCard>
     </div>
@@ -1408,10 +1418,7 @@ export function LabContentAside() {
   };
 
   return (
-    <div
-      id="lab-content-aside"
-      className="flex h-full w-full flex-col gap-2 bg-[var(--clair-color-atomic-neutral-50)] px-4 pt-4"
-    >
+    <EmrContentAsidePanel id="lab-content-aside">
       <EmrListHeader
         className="mx-0 h-6 border-y-0"
         count={totalHistoryCount}
@@ -1426,93 +1433,27 @@ export function LabContentAside() {
       <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
-          {groups.map((group) => {
-            const collapsed = collapsedHistoryGroups.has(group.date);
-
-            return (
-              <LabHistoryGroup
-                key={group.date}
-                collapsed={collapsed}
-                group={group}
-                onToggle={() => toggleHistoryGroup(group.date)}
-              />
-            );
-          })}
+          {groups.map((group) => (
+            <EmrContentHistoryGroup
+              key={group.date}
+              collapsed={collapsedHistoryGroups.has(group.date)}
+              count={group.count}
+              dataTestId={`lab-history-group-${group.date}`}
+              label={group.date}
+              onToggle={() => toggleHistoryGroup(group.date)}
+            >
+              {group.items.map((item) => (
+                <EmrContentHistoryItem
+                  key={`${group.date}-${item.title}`}
+                  title={item.title}
+                  subtitle={item.description}
+                />
+              ))}
+            </EmrContentHistoryGroup>
+          ))}
         </div>
       </ScrollArea>
-    </div>
-  );
-}
-
-function LabHistoryGroup({
-  collapsed,
-  group,
-  onToggle,
-}: {
-  collapsed: boolean;
-  group: LabHistoryGroup;
-  onToggle: () => void;
-}) {
-  const reduceMotion = useReducedMotion();
-  const contentTransition = reduceMotion
-    ? { duration: 0 }
-    : {
-        height: { duration: 0.24, ease: LAB_HISTORY_GROUP_EASE },
-        opacity: { duration: 0.14, ease: "easeOut" },
-        y: { duration: 0.2, ease: LAB_HISTORY_GROUP_EASE },
-      };
-  const contentExitTransition = reduceMotion
-    ? { duration: 0 }
-    : {
-        height: { duration: 0.18, ease: LAB_HISTORY_GROUP_EXIT_EASE },
-        opacity: { duration: 0.12, ease: "easeIn" },
-        y: { duration: 0.16, ease: LAB_HISTORY_GROUP_EXIT_EASE },
-      };
-
-  return (
-    <section className="flex flex-col gap-1 rounded-[10px]" data-testid={`lab-history-group-${group.date}`}>
-      <button
-        type="button"
-        className="flex h-8 w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-8) focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-expanded={!collapsed}
-        onClick={onToggle}
-      >
-        <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
-          <span className="truncate text-[var(--clair-color-label-alternative)]">{group.date}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{group.count}</span>
-        </div>
-        <motion.span
-          className="flex size-4 shrink-0 items-center justify-center text-[var(--clair-color-label-alternative)]"
-          animate={{ rotate: collapsed ? 180 : 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: LAB_HISTORY_GROUP_EASE }}
-        >
-          <ChevronDownIcon className="size-4 shrink-0 text-[var(--clair-color-label-alternative)]" />
-        </motion.span>
-      </button>
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
-      <AnimatePresence initial={false}>
-        {collapsed ? null : (
-          <motion.div
-            key={`${group.date}-items`}
-            className="overflow-hidden"
-            initial={{ height: 0, opacity: 0, y: -4 }}
-            animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
-            exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
-          >
-            {group.items.map((item) => (
-              <div key={`${group.date}-${item.title}`} className="border-b border-[var(--clair-color-line-subtle)] py-2">
-                <div className="truncate text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-                  {item.title}
-                </div>
-                <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-                  {item.description}
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
+    </EmrContentAsidePanel>
   );
 }
 
@@ -2083,10 +2024,7 @@ export function ImagingContentAside() {
   };
 
   return (
-    <div
-      id="imaging-content-aside"
-      className="flex h-full w-full flex-col gap-2 bg-[var(--clair-color-atomic-neutral-50)] px-4 pt-4"
-    >
+    <EmrContentAsidePanel id="imaging-content-aside">
       <EmrListHeader
         className="mx-0 h-6 border-y-0"
         count={totalHistoryCount}
@@ -2102,15 +2040,16 @@ export function ImagingContentAside() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {groups.map((group) => (
-            <EmrListGroup
+            <EmrContentHistoryGroup
               key={group.date}
               count={group.count}
+              dataTestId={`imaging-history-group-${group.date}`}
               label={group.date}
               collapsed={collapsedHistoryGroups.has(group.date)}
               onToggle={() => toggleHistoryGroup(group.date)}
             >
               {group.items.map((item) => (
-                <EmrListItem
+                <EmrContentHistoryItem
                   key={item.study.id}
                   selected={item.study.id === selectedImagingStudyId}
                   testId={`imaging-history-item-${item.study.id}`}
@@ -2122,11 +2061,11 @@ export function ImagingContentAside() {
                   onSelect={() => selectImagingStudy(item.study.id)}
                 />
               ))}
-            </EmrListGroup>
+            </EmrContentHistoryGroup>
           ))}
         </div>
       </ScrollArea>
-    </div>
+    </EmrContentAsidePanel>
   );
 }
 

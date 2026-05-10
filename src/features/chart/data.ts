@@ -61,11 +61,23 @@ const chartQueueStatuses: OrderQueueStatusDefinition[] = [
 ];
 
 const activeEncounterStatuses = ["waiting", "in_consultation", "ordered"] as const;
+const chartQueueReferenceAt = "2026-05-01T10:32:00+09:00";
 
 export const getChartStaffName = (userId?: EmrId) =>
   userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
 
 const getShortTime = (dateTime?: string) => (dateTime ? dateTime.slice(11, 16) : "-");
+
+const getWaitMinutes = (enteredAt?: string) => {
+  if (!enteredAt || enteredAt.slice(0, 10) !== chartQueueReferenceAt.slice(0, 10)) {
+    return undefined;
+  }
+
+  return Math.max(
+    0,
+    Math.round((new Date(chartQueueReferenceAt).getTime() - new Date(enteredAt).getTime()) / 60000)
+  );
+};
 
 export const getChartQueueRows = (): ChartQueueRow[] => {
   const consultationQueue = mockWaitingQueueEntries.filter(
@@ -120,6 +132,7 @@ export const getChartQueueItems = (): OrderQueueItem[] =>
     startedAt: encounter.startedAt ? getShortTime(encounter.startedAt) : undefined,
     time: getShortTime(queueEntry.enteredAt),
     statusId: queueEntry.status,
+    waitMinutes: queueEntry.status === "waiting" ? getWaitMinutes(queueEntry.enteredAt) : undefined,
   }));
 
 export const getChartHistoryRows = (patientId: EmrId): ChartHistoryRow[] => {

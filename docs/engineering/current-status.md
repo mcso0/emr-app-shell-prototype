@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-09
+Updated: 2026-05-10
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
@@ -56,6 +56,7 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-06 기준 병원관리 Order 관리 화면은 placeholder에서 session-only 오더 카탈로그 workspace로 교체되었다. 좌측 module panel은 고객관리와 같은 텍스트 계층 side panel을 재사용하며, `Hospital` 라벨 없이 병원관리 메뉴와 펼쳐진 `Order 관리` 하위 leaf를 보여준다. 선택 leaf(`임상병리 검사`, `처방`, `영상검사` 등)가 본문 page header가 되고, header 탭은 그 leaf 내부의 다음 단계 타입에만 사용한다. 본문은 별도 content aside 없이 dense table로 이어지며, 단일 오더 선택 시 넓은 오른쪽 drawer에서 조회/수정/삭제/저장할 수 있다. Order 세트는 별도 화면/후속 범위로 분리한다.
 - 2026-05-06 기준 고객관리 화면은 nav-only action에서 session-only 보호자/동물 master data workspace로 교체되었다. shadcn식 텍스트 side panel, 현재 선택 항목(`동물`/`보호자`) 기준 page header, dense table, 검색, 환자/보호자 등록 진입점, 공통 `patient`/`guardian` drawer type을 제공하며 기존 `reception-patient`/`reception-guardian` drawer URL도 호환한다. 스케줄/발송/서류/CS/진료의뢰는 후속 범위로 side panel 구조만 노출한다. 레퍼런스 기반 와이어프레임은 `docs/reference/customer/customer-management-wireframe.html`에 있다.
 - 2026-05-09 기준 홈 기본 화면은 역할별 3-column command dashboard에서 `내 업무` 중심 work-entry surface로 전환되었다. 기본 질문은 `오늘/지금 내가 뭘 해야 하지?`이며, quick status chips, 업무/영역 필터, 요청/배정 업무 카드, 미배정 역할 큐 표시, desk empty launcher, compact flow summary를 제공한다. 기본 홈에서는 병원관리 KPI, 대형 알림 패널, 역할별 위젯 grid를 노출하지 않고, Sales Demo launcher는 `/w/clair-demo/home?view=demo`로 보존한다.
+- 2026-05-10 기준 PWA install shell이 추가되었다. App Router manifest, install icons, Apple web app metadata, `#E9ECF2` app chrome theme color를 제공하지만 service worker, offline EMR data cache, push notification, background sync는 지원하지 않는다.
 - membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.
 - Auth 후속 작업은 `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`를 기준으로 진행한다.
@@ -157,6 +158,7 @@ MVP 목표:
 | Catalog lookup helper | foundation 추가 | service item/category/current price/role permission lookup, order/invoice consistency report |
 | Audit log foundation | foundation 추가 | status transition, profile edit, SOAP save, order status change, billing action seed와 deterministic append/build helper |
 | Auth provider foundation | adapter 추가 | `/login` 역할 선택, sessionStorage/localStorage mock session, `useAuthClient()` boundary, Supabase SSR/browser/server/proxy helper, logout utility, shell 역할 표시, permission helper |
+| PWA install shell | 추가됨 | `src/app/manifest.ts`, root app metadata, install icons를 제공한다. Service worker와 offline EMR data support는 포함하지 않는다. |
 
 이 foundation들은 아직 feature module에 통합되지 않았다. 실제 API route, DB client, migration, auth/audit/service catalog 연동, 실제 권한 enforcement도 포함하지 않는다.
 

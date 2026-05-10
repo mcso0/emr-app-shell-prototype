@@ -19,12 +19,13 @@ import {
 import { CdsFilesDocumentAltFillIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import { EmrInstructionHeaderStack, EmrInstructionTitleBar } from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
-  EmrListItem,
 } from "@/components/emr/subpanel";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
@@ -73,7 +74,7 @@ type OrderFilter = "all" | EmrOrderType;
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
-const CHART_RESIZER_HEIGHT_PX = 18;
+const CHART_RESIZER_HEIGHT_PX = 10;
 const CHART_RESIZER_STEP_PERCENT = 5;
 
 const chartQueueFilterItems = [
@@ -248,6 +249,7 @@ export function ChartContentAside() {
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
+  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
   const bundle = getSelectedBundle(selectedEncounterId);
   const historyRows = useMemo(
     () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
@@ -269,12 +271,22 @@ export function ChartContentAside() {
       }, []),
     [historyRows]
   );
+  const toggleHistoryGroup = (date: string) => {
+    setCollapsedHistoryGroups((current) => {
+      const next = new Set(current);
+
+      if (next.has(date)) {
+        next.delete(date);
+      } else {
+        next.add(date);
+      }
+
+      return next;
+    });
+  };
 
   return (
-    <div
-      id="chart-content-aside"
-      className="flex h-full w-full flex-col gap-2 bg-[var(--clair-color-atomic-neutral-50)] px-4 pt-4"
-    >
+    <EmrContentAsidePanel id="chart-content-aside">
       <EmrListHeader
         className="mx-0 h-6 border-y-0"
         count={historyRows.length}
@@ -302,18 +314,14 @@ export function ChartContentAside() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1 pb-3">
           {historyGroups.map((group) => (
-            <section key={group.date} className="flex flex-col gap-1 rounded-[10px]">
-              <button
-                type="button"
-                className="flex h-8 w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-8)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                aria-expanded="true"
-              >
-                <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
-                  <span className="truncate text-[var(--clair-color-label-alternative)]">{group.date}</span>
-                  <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{group.rows.length}</span>
-                </div>
-              </button>
-              <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+            <EmrContentHistoryGroup
+              key={group.date}
+              collapsed={collapsedHistoryGroups.has(group.date)}
+              count={group.rows.length}
+              dataTestId={`chart-history-group-${group.date}`}
+              label={group.date}
+              onToggle={() => toggleHistoryGroup(group.date)}
+            >
               {group.rows.map((row) => (
                 <ChartHistoryItem
                   key={row.encounter.id}
@@ -322,17 +330,17 @@ export function ChartContentAside() {
                   onSelect={() => selectEncounter(row.encounter.id)}
                 />
               ))}
-            </section>
+            </EmrContentHistoryGroup>
           ))}
         </div>
       </ScrollArea>
-      <div className="flex shrink-0 gap-2 border-t bg-[var(--clair-color-atomic-neutral-50)] py-3">
+      <div className="flex shrink-0 gap-2 border-t bg-[#FBFCFE] py-3">
         <Button variant="outline" size="sm" className="bg-card">
           수술 차트
         </Button>
         <Button size="sm">외래 차트 추가</Button>
       </div>
-    </div>
+    </EmrContentAsidePanel>
   );
 }
 
@@ -351,33 +359,30 @@ function ChartHistoryItem({
   const statusLabel = getStatusLabel("encounter", row.encounter.status);
 
   return (
-    <>
-      <EmrListItem
-        selected={selected}
-        testId={`chart-history-item-${row.encounter.id}`}
-        title={primaryDiagnosis ?? row.encounter.encounterNo}
-        itemBadge={
-          <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 text-[11px]">
-            {statusLabel}
-          </Badge>
-        }
-        subtitle={
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="shrink-0">{category}</span>
-            <span className="truncate">{summary}</span>
-          </span>
-        }
-        meta={
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate">담당 {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}</span>
-            <span className="truncate">{row.encounter.encounterNo}</span>
-            <span className="shrink-0">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
-          </span>
-        }
-        onSelect={onSelect}
-      />
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
-    </>
+    <EmrContentHistoryItem
+      selected={selected}
+      testId={`chart-history-item-${row.encounter.id}`}
+      title={primaryDiagnosis ?? row.encounter.encounterNo}
+      badge={
+        <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 text-[11px]">
+          {statusLabel}
+        </Badge>
+      }
+      subtitle={
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0">{category}</span>
+          <span className="truncate">{summary}</span>
+        </span>
+      }
+      meta={
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate">담당 {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}</span>
+          <span className="truncate">{row.encounter.encounterNo}</span>
+          <span className="shrink-0">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
+        </span>
+      }
+      onSelect={onSelect}
+    />
   );
 }
 
@@ -476,8 +481,8 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
-      <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b bg-card px-4 py-2">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
+      <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-4 py-2">
         <ChartSectionTitle title="진료 기록" subtitle="진단계통별 SOAP 작성" />
         <div className="flex items-center gap-1.5">
           <EditorToolbarButton
@@ -530,8 +535,8 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="grid gap-3">
           {soapSections.map((section) => (
-            <div key={section.id} className="overflow-hidden rounded-md border bg-card">
-              <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b bg-[var(--clair-color-background-surface)] px-3">
+            <div key={section.id} className="overflow-hidden rounded-md border border-[var(--clair-color-atomic-gray-300)] bg-card">
+              <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-background-surface)] px-3">
                 <span className="text-[13px] font-semibold">{section.title}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
@@ -563,7 +568,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
                   setActiveEditor(editor);
                 }}
               />
-              <div className="flex min-h-9 items-center justify-between border-t px-3 text-[12px] text-muted-foreground">
+              <div className="flex min-h-9 items-center justify-between border-t border-[var(--clair-color-atomic-gray-300)] px-3 text-[12px] text-muted-foreground">
                 <span>첨부 자료</span>
                 <Badge variant="outline">{attachmentCounts[section.id] ? `${attachmentCounts[section.id]}개` : "없음"}</Badge>
               </div>
@@ -652,8 +657,8 @@ function AssessmentPanel({
   soapNote?: SoapNote;
 }) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-4 py-2">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--clair-color-atomic-gray-300)] px-4 py-2">
         <ChartSectionTitle title="진단명" subtitle="진단 목록 · 코멘트 · 계획" />
         <Button variant="outline" size="sm" className="bg-card">
           분류검색
@@ -671,7 +676,7 @@ function AssessmentPanel({
               검색
             </Button>
           </div>
-          <div className="overflow-hidden rounded-md border">
+          <div className="overflow-hidden rounded-md border border-[var(--clair-color-atomic-gray-300)]">
             <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
               <span>계통분류</span>
               <span>진단명</span>
@@ -682,7 +687,7 @@ function AssessmentPanel({
             {diagnoses.map((diagnosis) => (
               <div
                 key={diagnosis.id}
-                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t px-3 py-3 text-[13px]"
+                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--clair-color-atomic-gray-300)] px-3 py-3 text-[13px]"
               >
                 <Badge variant="outline">{getDiagnosisSystemLabel(diagnosis)}</Badge>
                 <span className="truncate font-medium">{diagnosis.diagnosisText}</span>
@@ -692,7 +697,7 @@ function AssessmentPanel({
               </div>
             ))}
             {!diagnoses.length ? (
-              <div className="border-t px-3 py-6 text-center text-[13px] text-muted-foreground">
+              <div className="border-t border-[var(--clair-color-atomic-gray-300)] px-3 py-6 text-center text-[13px] text-muted-foreground">
                 진단 입력 전입니다.
               </div>
             ) : null}
@@ -717,7 +722,7 @@ function AssessmentTextBox({ label, value }: { label: string; value: string }) {
   const [textValue, setTextValue] = useState(value);
 
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div className="overflow-hidden rounded-md border border-[var(--clair-color-atomic-gray-300)]">
       <div className="flex h-8 items-center justify-between bg-[var(--clair-color-background-surface)] px-3 text-[12px] font-semibold text-muted-foreground">
         <span>{label}</span>
         <span>{textValue.length}/500자</span>
@@ -815,7 +820,7 @@ function ChartOrderTable({
   someVisibleSelected: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border bg-[var(--clair-color-atomic-common-100)]">
+    <div className="overflow-x-auto rounded-md border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
       <div className="min-w-[1080px]">
         <div className="grid grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] bg-[var(--clair-color-atomic-gray-50)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
           <Checkbox
@@ -841,7 +846,7 @@ function ChartOrderTable({
           return (
             <div
               key={order.id}
-              className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 text-[13px]"
+              className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5 text-[13px]"
             >
               <Checkbox
                 aria-label={`${order.displayName} 선택`}
@@ -872,11 +877,11 @@ function ChartOrderTable({
           );
         })}
         {!rows.length ? (
-          <div className="border-t bg-[var(--clair-color-atomic-common-100)] px-3 py-8 text-center text-[13px] text-muted-foreground">
+          <div className="border-t border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-3 py-8 text-center text-[13px] text-muted-foreground">
             표시할 오더가 없습니다.
           </div>
         ) : null}
-        <div className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5">
+        <div className="grid min-h-10 grid-cols-[32px_minmax(120px,0.8fr)_68px_72px_minmax(200px,1.4fr)_minmax(180px,1fr)_64px_80px_88px_80px_116px] items-center border-t border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-3 py-1.5">
           <span aria-hidden="true" />
           <Button variant="ghost" size="sm" className="col-span-10 w-fit justify-start">
             + Order 추가하기
@@ -969,7 +974,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
       <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 px-4 py-2">
         <ChartSectionTitle title="처방/오더" subtitle="처방 · 처치 · 검사 · 영상 오더" />
         <div className="flex gap-2">
@@ -999,7 +1004,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           someVisibleSelected={someVisibleSelected}
         />
       </div>
-      <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t border-[var(--clair-color-line-normal)] bg-card px-4 py-3 text-[13px] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
+      <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t border-[var(--clair-color-atomic-gray-300)] bg-card px-4 py-3 text-[13px] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
         <div className="text-muted-foreground">
           <div>선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건</div>
           <div className="mt-1 font-semibold text-foreground">청구 예상 총액: {totalAmount.toLocaleString()}</div>
@@ -1081,9 +1086,9 @@ function ChartInstructionInfo({
   ];
 
   return (
-    <div className="grid grid-cols-4 rounded-lg border border-border bg-card px-4 py-3">
+    <div className="grid grid-cols-4 rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-4 py-3">
       {infoItems.map(({ label, value }) => (
-        <div key={label} className="border-r border-border px-3 last:border-r-0">
+        <div key={label} className="border-r border-[var(--clair-color-atomic-gray-300)] px-3 last:border-r-0">
           <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
           <div className="mt-1 flex min-h-6 items-center text-[13px] font-medium text-foreground">{value}</div>
         </div>
@@ -1221,7 +1226,7 @@ export function ChartContent() {
   if (!bundle) return <EmptyChartState />;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[#FBFCFE] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar
@@ -1277,7 +1282,7 @@ export function ChartContent() {
         ref={chartWorkspaceRef}
         data-slot="chart-workspace"
         className={cn(
-          "mt-4 grid min-h-0 flex-1 border-t border-[var(--clair-color-line-normal)] pt-4",
+          "mt-4 grid min-h-0 flex-1 pt-4",
           isChartResizing && "select-none"
         )}
         style={{

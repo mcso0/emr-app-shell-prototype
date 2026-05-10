@@ -96,7 +96,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-input bg-card transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-card transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
       style={{
         "--clair-workspace-frame-columns": `${
           modulePanelOpen && SidePanel ? `${effectiveModuleSidePanelWidth}px` : "0px"
@@ -116,7 +116,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       <aside
         className={cn(
           "min-h-0 min-w-0 overflow-hidden bg-white max-md:hidden",
-          shouldShowModuleSidePanel && "border-r border-input"
+          shouldShowModuleSidePanel && "border-r border-[var(--clair-color-atomic-gray-300)]"
         )}
       >
         <div
@@ -156,7 +156,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
           <aside
             className={cn(
               "min-h-0 min-w-0 overflow-hidden bg-card max-md:hidden",
-              ContentAside && contentAsideOpen && "border-r"
+              ContentAside && contentAsideOpen && "border-r border-[var(--clair-color-atomic-gray-300)]"
             )}
           >
             <div
@@ -184,7 +184,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 480, opacity: 0 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute bottom-0 right-0 top-0 border-l bg-card shadow-2xl"
+              className="absolute bottom-0 right-0 top-0 border-l border-[var(--clair-color-atomic-gray-300)] bg-card shadow-2xl"
               style={{
                 width: `min(100%, ${drawerWidth}px)`,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,
@@ -229,7 +229,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       <aside
         className={cn(
           "min-h-0 min-w-0 overflow-hidden bg-card transition-opacity duration-150 max-md:hidden",
-          RightPanel && rightPanelOpen && "border-l",
+          RightPanel && rightPanelOpen && "border-l border-[var(--clair-color-atomic-gray-300)]",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}
       >

@@ -166,6 +166,7 @@ const buildModuleQueueItems = (moduleId: string): OrderQueueItem[] => {
         requesterName: "이수지",
         statusId: "waiting",
         time: "10:47",
+        waitMinutes: 8,
       }),
       createItem(moduleId, 3, {
         instructionId: "RX-260414-0009",
@@ -176,6 +177,7 @@ const buildModuleQueueItems = (moduleId: string): OrderQueueItem[] => {
         requesterName: "김도윤",
         statusId: "waiting",
         time: "10:55",
+        waitMinutes: 3,
       }),
       createItem(moduleId, 4, {
         assigneeName: "박준호",
@@ -236,6 +238,7 @@ const buildModuleQueueItems = (moduleId: string): OrderQueueItem[] => {
       requesterName: "박서연",
       statusId: "waiting",
       time: "10:05",
+      waitMinutes: 18,
     }),
     createItem(moduleId, 3, {
       assigneeName: "이다은",
