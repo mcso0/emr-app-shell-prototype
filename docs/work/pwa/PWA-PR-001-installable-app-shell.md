@@ -68,5 +68,5 @@ Completed on 2026-05-10.
 
 - Added the App Router manifest route for CLAiR EMR.
 - Added generated install icons using the existing CLAiR logo mark and primary blue.
-- Added root metadata, Apple web app metadata, and a `#E9ECF2` viewport theme color to match the top app bar.
+- Added root metadata, Apple web app metadata, and a `#E9ECF2` viewport theme color for standalone browser chrome.
 - Kept service worker, offline data support, push notifications, and background sync out of scope.
