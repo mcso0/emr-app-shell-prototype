@@ -31,6 +31,7 @@ PR7 has started capturing binary reference images under `docs/design/assets/refe
 
 | Area | Reference file | Notes |
 |---|---|---|
+| 홈 | `docs/reference/home/home-kanban-workspace-wireframe.html` | Generated HTML wireframe from the chat-provided Home kanban direction. Chat screenshot is not stored as a binary asset, so this is not a pixel-level reference. |
 | 접수/예약 | `docs/design/assets/reference-screens/reception/reception-calendar-day.png` | Reference missing. Day calendar layout reference. |
 | 접수/예약 | `docs/design/assets/reference-screens/reception/reception-calendar-week.png` | Reference missing. Week calendar density reference. |
 | 접수/예약 | `docs/design/assets/reference-screens/reception/reception-calendar-month.png` | Reference missing. Month summary reference. |

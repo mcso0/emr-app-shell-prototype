@@ -22,6 +22,18 @@ export type HomeTaskDomain =
   | "billing"
   | "inpatient";
 
+export type HomeKanbanColumnId =
+  | "waiting"
+  | "reservation"
+  | "chart"
+  | "lab"
+  | "imaging"
+  | "dispensing"
+  | "treatment"
+  | "billing";
+
+export type HomeWorkspaceView = "hospital" | "mine";
+
 export type HomeTaskAssignment = "assigned" | "roleQueue";
 
 export type HomeWorkFilter =
@@ -36,12 +48,15 @@ export type HomeDomainFilter = "all" | HomeTaskDomain;
 export interface HomeTask {
   id: string;
   title: string;
+  kanbanColumn: HomeKanbanColumnId;
   patientId?: string;
   patientName?: string;
   clientName?: string;
   encounterLabel?: string;
+  receptionType?: "예약" | "접수";
   sourceLabel: string;
   requestedBy?: string;
+  assigneeName?: string;
   requestedAt: string;
   dueAt?: string;
   status: HomeTaskStatus;
@@ -52,6 +67,21 @@ export interface HomeTask {
   recommendedAction: string;
   actionHref: string;
   actionLabel: string;
+}
+
+export interface HomeKanbanColumn {
+  id: HomeKanbanColumnId;
+  label: string;
+  description: string;
+}
+
+export interface HomeNotification {
+  id: string;
+  title: string;
+  message: string;
+  sourceLabel: string;
+  createdAt: string;
+  tone: "urgent" | "warning" | "info" | "success";
 }
 
 export interface HomeQuickStatus {
@@ -82,7 +112,10 @@ export interface HomeDashboardData {
   userName: string;
   hospitalName: string;
   todayLabel: string;
+  columns: HomeKanbanColumn[];
   tasks: HomeTask[];
+  hospitalTasks: HomeTask[];
+  notifications: HomeNotification[];
   quickStatus: HomeQuickStatus[];
   emptyLaunchers: HomeLauncherAction[];
   flowSummary: HomeFlowSummaryItem[];

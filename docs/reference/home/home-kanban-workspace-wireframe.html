@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home Kanban Workspace Wireframe</title>
+    <style>
+      :root {
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --line: #dce5f2;
+        --line-strong: #c9d5e6;
+        --text: #111827;
+        --muted: #6b7280;
+        --subtle: #8b98aa;
+        --nav: #111827;
+        --blue: #1784ff;
+        --blue-weak: #eaf4ff;
+        --amber: #f59e0b;
+        --amber-weak: #fff7e6;
+        --red: #ef4444;
+        --red-weak: #fff1f2;
+        --green: #16a34a;
+        --green-weak: #ecfdf3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, "Pretendard", "Apple SD Gothic Neo", BlinkMacSystemFont,
+          system-ui, sans-serif;
+        font-size: 14px;
+      }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 72px 1fr;
+      }
+
+      .rail {
+        background: var(--nav);
+        padding: 12px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .rail-button {
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        color: #cbd5e1;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+      }
+
+      .rail-button.active {
+        background: rgba(255, 255, 255, 0.16);
+        color: #ffffff;
+      }
+
+      .workspace {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: 52px 1fr;
+      }
+
+      .topbar {
+        height: 52px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: 260px minmax(300px, 640px) 1fr auto;
+        align-items: center;
+        gap: 18px;
+        padding: 0 16px;
+      }
+
+      .clinic-select {
+        height: 34px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        font-weight: 700;
+        background: #fff;
+      }
+
+      .clinic-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--blue);
+      }
+
+      .search {
+        height: 34px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        color: var(--muted);
+        background: #fff;
+      }
+
+      .top-actions {
+        justify-self: end;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: #475569;
+      }
+
+      .role-pill {
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8fbff;
+        font-weight: 700;
+      }
+
+      .main-shell {
+        padding: 0 10px 10px;
+        min-height: 0;
+      }
+
+      .surface {
+        height: calc(100vh - 62px);
+        min-height: 720px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: grid;
+        grid-template-rows: 1fr;
+        overflow: hidden;
+      }
+
+      .page-tabs {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+
+      .page-tab {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        min-width: 0;
+        color: #64748b;
+        font: inherit;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: 0;
+        cursor: pointer;
+      }
+
+      .page-tab:hover {
+        color: var(--text);
+      }
+
+      .page-tab.active {
+        color: var(--text);
+      }
+
+      .tab-meta {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .content-grid {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+      }
+
+      .board-area {
+        min-width: 0;
+        min-height: 0;
+        padding: 16px 16px 18px;
+        border-right: 1px solid var(--line);
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        gap: 12px;
+      }
+
+      .board-toolbar {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 16px;
+      }
+
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: start;
+      }
+
+      .chip {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 999px;
+        padding: 7px 10px;
+        color: #334155;
+        font-weight: 700;
+        font-size: 12px;
+      }
+
+      .kanban {
+        min-height: 0;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(236px, 1fr);
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+      }
+
+      .column {
+        min-height: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdff;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .column-header {
+        min-height: 58px;
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .column-header h2 {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      .column-header p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .count {
+        min-width: 28px;
+        height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        padding: 0 8px;
+        background: #fff;
+        font-weight: 800;
+      }
+
+      .task-list {
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .task-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 8px 12px 10px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        cursor: pointer;
+        transition:
+          background-color 140ms ease,
+          border-color 140ms ease;
+      }
+
+      .task-card:hover {
+        background: rgba(17, 24, 39, 0.04);
+      }
+
+      .task-card.mine {
+        border-color: #a7d4ff;
+        background: linear-gradient(0deg, #ffffff, #f8fcff);
+      }
+
+      .task-top {
+        display: flex;
+        min-height: 24px;
+        align-items: center;
+        gap: 6px;
+        overflow: hidden;
+      }
+
+      .task-person {
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        overflow: hidden;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0;
+        line-height: 20px;
+      }
+
+      .task-person span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .task-dot {
+        flex: 0 0 auto;
+        color: #9ca3af;
+      }
+
+      .task-type {
+        flex: 0 0 auto;
+        height: 20px;
+        border-radius: 6px;
+        padding: 2px 6px;
+        background: #f3f6fb;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px;
+      }
+
+      .task-type.reservation {
+        background: var(--blue-weak);
+        color: #075aa5;
+      }
+
+      .task-order {
+        margin-top: 2px;
+        min-height: 18px;
+        overflow: hidden;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0;
+        line-height: 18px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .tag {
+        flex: 0 0 auto;
+        border-radius: 6px;
+        padding: 3px 6px;
+        font-size: 11px;
+        font-weight: 800;
+        border: 1px solid transparent;
+      }
+
+      .tag.blue {
+        color: #075aa5;
+        border-color: #b9dcff;
+        background: var(--blue-weak);
+      }
+
+      .tag.amber {
+        color: #92400e;
+        border-color: #f8d794;
+        background: var(--amber-weak);
+      }
+
+      .tag.red {
+        color: #b91c1c;
+        border-color: #fecdd3;
+        background: var(--red-weak);
+      }
+
+      .tag.green {
+        color: #166534;
+        border-color: #bbf7d0;
+        background: var(--green-weak);
+      }
+
+      .task-meta {
+        min-height: 20px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow: hidden;
+      }
+
+      .task-divider {
+        height: 1px;
+        width: 100%;
+        margin: 8px 0;
+        background: #edf1f7;
+      }
+
+      .meta-badges {
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow: hidden;
+      }
+
+      .meta-badge {
+        min-width: 0;
+        max-width: 92px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        border-radius: 4px;
+        background: #fff;
+        padding: 2px 6px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px;
+      }
+
+      .meta-badge em {
+        flex: 0 0 auto;
+        color: #6b7280;
+        font-style: normal;
+      }
+
+      .meta-badge strong {
+        min-width: 0;
+        overflow: hidden;
+        color: #374151;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .task-time {
+        flex: 0 0 auto;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px;
+      }
+
+      .task-action {
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        margin: 0;
+        opacity: 0;
+        border-radius: 6px;
+        border: 1px solid var(--line-strong);
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        color: #374151;
+        font-weight: 800;
+        font-size: 16px;
+        line-height: 1;
+        transition: opacity 140ms ease;
+      }
+
+      .task-card:hover .task-action,
+      .task-card:focus-within .task-action {
+        opacity: 1;
+      }
+
+      .empty-slot {
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        padding: 16px 12px;
+        color: var(--muted);
+        text-align: center;
+        background: #fff;
+      }
+
+      .notifications {
+        min-height: 0;
+        padding: 18px 16px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 14px;
+      }
+
+      .notification-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .notification-header h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .notification-header p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .updated {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 5px 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .notification-list {
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .notice {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+      }
+
+      .notice strong {
+        display: block;
+        margin-bottom: 5px;
+        line-height: 1.35;
+      }
+
+      .notice p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .notice .time {
+        margin-top: 8px;
+        color: var(--subtle);
+        font-size: 11px;
+      }
+
+      @media (max-width: 1100px) {
+        .app {
+          grid-template-columns: 56px 1fr;
+        }
+
+        .topbar {
+          grid-template-columns: 220px 1fr auto;
+        }
+
+        .search {
+          display: none;
+        }
+
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .notifications {
+          border-top: 1px solid var(--line);
+          min-height: 280px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page-tabs {
+          gap: 16px;
+        }
+
+        .page-tab {
+          font-size: 20px;
+        }
+
+        .tab-meta {
+          display: none;
+        }
+
+        .board-toolbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .chips {
+          justify-content: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <nav class="rail" aria-label="주 메뉴">
+        <div class="rail-button active">⌂</div>
+        <div class="rail-button">⌁</div>
+        <div class="rail-button">□</div>
+        <div class="rail-button">♢</div>
+        <div class="rail-button">⌕</div>
+        <div class="rail-button">＋</div>
+      </nav>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="clinic-select">
+            <span class="clinic-dot"></span>
+            VIP 동물의료센터 청담점
+          </div>
+          <div class="search">동물명 또는 보호자명으로 검색</div>
+          <div></div>
+          <div class="top-actions">
+            <span>알림</span>
+            <span>설정</span>
+            <span class="role-pill">프론트 데스크</span>
+            <span>로그아웃</span>
+          </div>
+        </header>
+
+        <main class="main-shell">
+          <section class="surface" aria-label="홈 칸반 업무 화면">
+            <div class="content-grid">
+              <section class="board-area">
+                <div class="page-tabs" role="tablist" aria-label="홈 보기">
+                  <button class="page-tab active" type="button" data-view="hospital">
+                    병원 현황
+                  </button>
+                  <button class="page-tab" type="button" data-view="mine">
+                    내 업무
+                  </button>
+                  <div class="tab-meta" id="tab-meta">
+                    전체 업무 리스트와 미배정 큐까지 표시
+                  </div>
+                </div>
+
+                <div class="board-toolbar">
+                  <div class="chips" aria-label="상태 요약">
+                    <span class="chip" id="chip-count">내 업무 14</span>
+                    <span class="chip">긴급 2</span>
+                    <span class="chip">오늘 마감 9</span>
+                    <span class="chip">미배정 큐 3</span>
+                  </div>
+                </div>
+
+                <div class="kanban" id="kanban" aria-label="업무 칸반"></div>
+              </section>
+
+              <aside class="notifications" aria-label="알림 리스트">
+                <div class="notification-header">
+                  <div>
+                    <h2>알림</h2>
+                    <p>내 업무와 병원 현황을 보조하는 알림입니다.</p>
+                  </div>
+                  <span class="updated">09:42 갱신</span>
+                </div>
+
+                <div class="notification-list">
+                  <article class="notice">
+                    <span class="tag red">긴급</span>
+                    <strong>콩이 CBC 결과가 수의사 확인 대기입니다.</strong>
+                    <p>임상병리검사 담당자가 결과 입력을 완료했습니다.</p>
+                    <div class="time">2분 전 · 임상병리검사</div>
+                  </article>
+                  <article class="notice">
+                    <span class="tag amber">지연</span>
+                    <strong>토리 진료 대기 시간이 45분을 넘었습니다.</strong>
+                    <p>데스크 안내 또는 담당의 순서 조정이 필요할 수 있습니다.</p>
+                    <div class="time">8분 전 · 대기</div>
+                  </article>
+                  <article class="notice">
+                    <span class="tag blue">요청</span>
+                    <strong>마루 입원 중간 정산 요청이 생성되었습니다.</strong>
+                    <p>수납 담당 큐에 미배정 상태로 표시됩니다.</p>
+                    <div class="time">17분 전 · 수납</div>
+                  </article>
+                  <article class="notice">
+                    <span class="tag green">완료</span>
+                    <strong>보리 영상 촬영이 완료되었습니다.</strong>
+                    <p>판독의견 입력 후 담당 수의사에게 확인 업무가 생성됩니다.</p>
+                    <div class="time">23분 전 · 영상검사</div>
+                  </article>
+                </div>
+              </aside>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const columns = [
+        {
+          id: "waiting",
+          title: "대기",
+          subtitle: "대기실/지연 대응",
+          mine: [
+            ["토리 대기 안내", "이도윤 보호자 · 대기 45분", "지연", "red", "접수 화면 열기"],
+            ["모찌 재호출", "박서연 보호자 · 진료실 앞 대기", "요청", "blue", "대기열 열기"],
+          ],
+          hospital: [
+            ["토리 대기 안내", "이도윤 보호자 · 대기 45분", "지연", "red", "접수 화면 열기"],
+            ["루루 보호자 문진표 확인", "신규 접수 · 서류 미완료", "확인", "amber", "접수 화면 열기"],
+            ["모찌 재호출", "박서연 보호자 · 진료실 앞 대기", "요청", "blue", "대기열 열기"],
+          ],
+        },
+        {
+          id: "reservation",
+          title: "예약",
+          subtitle: "도착 확인/예약 변경",
+          mine: [
+            ["10:30 예약 도착 확인", "나나 · 예방접종", "오늘", "blue", "예약 열기"],
+          ],
+          hospital: [
+            ["10:30 예약 도착 확인", "나나 · 예방접종", "오늘", "blue", "예약 열기"],
+            ["11:00 예약 변경 요청", "구름 · 피부 상담", "요청", "amber", "예약 열기"],
+            ["미도착 예약 확인", "초코 · 09:40 예약", "지연", "red", "예약 열기"],
+          ],
+        },
+        {
+          id: "chart",
+          title: "진료",
+          subtitle: "예약/차트 업무",
+          mine: [
+            ["콩이 CBC 결과 확인", "김하늘 보호자 · 구토 재진", "긴급", "red", "차트 열기"],
+            ["코코 차트 작성 마무리", "이지은 보호자 · SOAP 미완료", "진행", "amber", "차트 열기"],
+          ],
+          hospital: [
+            ["콩이 CBC 결과 확인", "김하늘 보호자 · 구토 재진", "긴급", "red", "차트 열기"],
+            ["토리 진료 대기", "이도윤 보호자 · 담당의 지정", "대기", "blue", "차트 열기"],
+            ["코코 차트 작성 마무리", "이지은 보호자 · SOAP 미완료", "진행", "amber", "차트 열기"],
+          ],
+        },
+        {
+          id: "lab",
+          title: "임상병리검사",
+          subtitle: "검사 요청/결과 입력",
+          mine: [
+            ["망고 혈액 샘플 채취", "윤채원 보호자 · 미배정 큐", "요청", "blue", "검사 큐 열기"],
+          ],
+          hospital: [
+            ["망고 혈액 샘플 채취", "윤채원 보호자 · 미배정 큐", "요청", "blue", "검사 큐 열기"],
+            ["콩이 CBC 결과 입력 완료", "담당 수의사 확인 필요", "완료", "green", "결과 열기"],
+            ["보리 재검 요청", "수의사 재확인 요청", "긴급", "red", "검사 큐 열기"],
+          ],
+        },
+        {
+          id: "imaging",
+          title: "영상검사",
+          subtitle: "촬영/판독/첨부",
+          mine: [],
+          hospital: [
+            ["보리 복부 영상 판독", "촬영 완료 · 판독의견 필요", "요청", "blue", "영상검사 열기"],
+            ["마루 흉부 촬영 준비", "입원 환자 · 이동 필요", "오늘", "amber", "영상검사 열기"],
+          ],
+        },
+        {
+          id: "dispensing",
+          title: "조제",
+          subtitle: "처방 확인/조제",
+          mine: [
+            ["코코 내복약 조제", "처방 변경 확인 필요", "요청", "amber", "조제 열기"],
+          ],
+          hospital: [
+            ["코코 내복약 조제", "처방 변경 확인 필요", "요청", "amber", "조제 열기"],
+            ["콩이 항구토제 조제", "진료 완료 후 보호자 안내", "오늘", "blue", "조제 열기"],
+          ],
+        },
+        {
+          id: "treatment",
+          title: "처치",
+          subtitle: "처치 큐/재요청",
+          mine: [
+            ["코코 수액 처치 확인", "이수지 수의사 요청", "지연", "red", "처치 열기"],
+            ["보리 바이탈 체크", "입원 케어 예정", "오늘", "blue", "처치 열기"],
+          ],
+          hospital: [
+            ["코코 수액 처치 확인", "이수지 수의사 요청", "지연", "red", "처치 열기"],
+            ["보리 바이탈 체크", "입원 케어 예정", "오늘", "blue", "처치 열기"],
+            ["마루 퇴원 전 처치 확인", "퇴원 체크리스트", "확인", "amber", "처치 열기"],
+          ],
+        },
+        {
+          id: "billing",
+          title: "수납",
+          subtitle: "수납 대기/미수/정산",
+          mine: [
+            ["코코 수납 요청 확인", "진료 완료 후 수납 요청", "요청", "blue", "수납 열기"],
+            ["마루 입원 중간 정산", "입원 담당 요청", "오늘", "amber", "수납 열기"],
+          ],
+          hospital: [
+            ["코코 수납 요청 확인", "진료 완료 후 수납 요청", "요청", "blue", "수납 열기"],
+            ["마루 입원 중간 정산", "입원 담당 요청", "오늘", "amber", "수납 열기"],
+            ["해피 미수 안내", "결제 보류 · 보호자 재연락", "지연", "red", "미수 목록 열기"],
+          ],
+        },
+      ];
+
+      const kanban = document.querySelector("#kanban");
+      const tabs = Array.from(document.querySelectorAll(".page-tab"));
+      const meta = document.querySelector("#tab-meta");
+      const chipCount = document.querySelector("#chip-count");
+
+      function render(view) {
+        const label = view === "mine" ? "내 업무" : "전체 업무";
+        const total = columns.reduce((sum, column) => sum + column[view].length, 0);
+        meta.textContent =
+          view === "mine"
+            ? "내가 담당자이거나 나에게 요청된 업무만 표시"
+            : "전체 업무 리스트와 미배정 큐까지 표시";
+        chipCount.textContent = `${label} ${total}`;
+
+        kanban.innerHTML = columns
+          .map((column) => {
+            const tasks = column[view];
+            const cards = tasks.length
+              ? tasks
+                  .map(
+                    ([taskTitle, taskContext, tagLabel, tagTone, action], index) => {
+                      const [primaryContext, secondaryContext = "보호자 미지정"] = taskContext.split(" · ");
+                      const receptionType =
+                        column.id === "reservation" || taskTitle.includes("예약") ? "예약" : "접수";
+                      const requester =
+                        view === "mine" ? "내 업무" : column.id === "lab" || column.id === "imaging" ? "수의사" : "데스크";
+                      const assignee =
+                        view === "mine" ? "나" : taskContext.includes("미배정") ? "미지정" : "담당자";
+                      const time = index === 0 ? "09:42" : index === 1 ? "09:35" : "09:18";
+
+                      return `
+                      <article class="task-card ${view === "mine" ? "mine" : ""}">
+                        <div class="task-top">
+                          <div class="task-person">
+                            <span>${primaryContext}</span>
+                            <span class="task-dot">·</span>
+                            <span>${secondaryContext}</span>
+                            <span class="task-type ${receptionType === "예약" ? "reservation" : ""}">${receptionType}</span>
+                          </div>
+                          <button class="task-action" type="button" aria-label="${taskTitle} 더보기">⋯</button>
+                        </div>
+                        <div class="task-order">${taskTitle}</div>
+                        <div class="task-divider"></div>
+                        <div class="task-meta">
+                          <div class="meta-badges">
+                            <span class="meta-badge"><em>요청</em><strong>${requester}</strong></span>
+                            <span class="meta-badge"><em>담당</em><strong>${assignee}</strong></span>
+                          </div>
+                          <span class="task-time">${time} ${tagLabel}</span>
+                        </div>
+                      </article>
+                    `;
+                    }
+                  )
+                  .join("")
+              : `<div class="empty-slot">현재 표시할 업무가 없습니다.</div>`;
+
+            return `
+              <section class="column" aria-label="${column.title}">
+                <header class="column-header">
+                  <div>
+                    <h2>${column.title}</h2>
+                    <p>${column.subtitle}</p>
+                  </div>
+                  <span class="count">${tasks.length}</span>
+                </header>
+                <div class="task-list">${cards}</div>
+              </section>
+            `;
+          })
+          .join("");
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((item) => item.classList.remove("active"));
+          tab.classList.add("active");
+          render(tab.dataset.view);
+        });
+      });
+
+      render("hospital");
+    </script>
+  </body>
+</html>

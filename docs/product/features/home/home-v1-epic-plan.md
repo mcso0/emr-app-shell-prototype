@@ -8,6 +8,8 @@ related_docs:
   - "docs/product/features/home/home-work-generation-rules-v0.md"
 related_work:
   - "docs/work/home/HOME-PR-001-role-command-home-foundation.md"
+  - "docs/work/home/HOME-PR-002-home-work-entry-v1.md"
+  - "docs/work/home/HOME-PR-003-home-kanban-workspace.md"
 last_updated: "2026-05-09"
 ---
 
@@ -138,13 +140,13 @@ last_updated: "2026-05-09"
 ### User Stories
 
 - As a staff member, I can quickly see how many tasks require my attention.
-- As a staff member, I can see urgent, overdue, or due-today counts without reading a full dashboard.
+- As a staff member, I can see urgent, overdue, or unassigned counts without reading a full dashboard.
 - As a staff member, I can see a compact hospital flow summary when it affects my work.
 
 ### Acceptance Criteria
 
 - Top quick status uses compact chips rather than long summary paragraphs.
-- Quick status prioritizes work-start signals such as `내 업무`, `긴급`, `오늘 마감`, `지연`, or role queue count.
+- Quick status prioritizes work-start signals such as `내 업무`, `긴급`, `지연`, or role queue count.
 - Hospital flow is compressed into a compact summary or separate lens.
 - Flow summary does not expand into full hospital operations dashboard by default.
 - Hospital management metrics such as revenue, visitor count, staff operations, and inventory report are excluded from the default Home.
@@ -179,6 +181,12 @@ last_updated: "2026-05-09"
 - Finalizing workflow actions from Home
 - Drag/drop personalization
 
+## Implementation Notes
+
+- 2026-05-09 HOME-PR-003 changed the default Home presentation to a kanban-style work board with `병원 현황` and `내 업무` tabs.
+- The kanban presentation preserves the Home v1 principle that Home routes users into source workflows and does not claim, complete, cancel, finalize, or settle work directly.
+- The right-side Home support panel is now `지금 볼 업무`, which avoids repeating filter counts and instead recommends urgent, delayed, and unassigned work groups to check next. Recommended groups use white accordion rows with `긴급 업무 2` style titles and are expanded by default. Focus task hover/focus reveals `보러가기` for source workflow entry. The top workstream filter supports checkbox-based multi-select; full global Notification Center remains out of scope.
+
 ## Verification Direction
 
 Implementation should be checked against this epic plan and the supporting rules document.
@@ -192,4 +200,3 @@ Minimum verification themes:
 - Home action surface limited to entry actions
 - No hospital management KPI cards in default Home
 - Clinical abnormal values not auto-converted into Home critical tasks
-

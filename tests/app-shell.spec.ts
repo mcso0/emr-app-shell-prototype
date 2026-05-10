@@ -224,6 +224,25 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
 });
 
+test("home normalizes a collapsed module panel before navigating back to modules", async ({ page }) => {
+  await page.goto("/w/clair-demo/dispensing?modulePanel=closed&aside=closed");
+  await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
+
+  await page.getByRole("link", { name: "홈" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expect(page).toHaveURL(/modulePanel=open/);
+  await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toHaveCount(0);
+  await expect(page.getByTestId("module-side-panel-title")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "지금 볼 업무" })).toBeVisible();
+
+  await page.getByRole("link", { name: "조제/처치" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+  await expect(page).toHaveURL(/modulePanel=open/);
+  await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
+});
+
 test("shell navigation keeps demo query context across modules", async ({ page }) => {
   await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();

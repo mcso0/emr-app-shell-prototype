@@ -82,9 +82,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const drawer = urlParams.get("drawer");
     const pendingUrlState: PendingUrlState = { search };
     const currentLayoutState = useLayoutStore.getState();
+    const moduleHasSidePanel = Boolean(moduleDefinition.sidePanel);
 
-    if (modulePanel) {
-      const nextModulePanelOpen = modulePanel === "open";
+    if (modulePanel || !moduleHasSidePanel) {
+      const nextModulePanelOpen = moduleHasSidePanel ? modulePanel === "open" : true;
       if (currentLayoutState.modulePanelOpen !== nextModulePanelOpen) {
         pendingUrlState.modulePanelOpen = nextModulePanelOpen;
       }
@@ -144,6 +145,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     moduleDefinition.defaultContentAsideOpen,
     moduleDefinition.defaultRightPanelOpen,
     moduleDefinition.contentAside,
+    moduleDefinition.sidePanel,
     moduleDefinition.rightPanel,
   ]);
 
