@@ -77,7 +77,7 @@ export function EmrSubpanel({ children, className }: EmrSubpanelProps) {
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 w-full min-w-[320px] max-w-[320px] flex-col bg-[var(--clair-color-background-normal)]",
+        "flex h-full min-h-0 w-full min-w-[320px] max-w-[320px] flex-col bg-[var(--emr-surface-panel)]",
         className
       )}
     >
@@ -133,7 +133,7 @@ export function EmrDateNavigator({
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-8 rounded-[var(--clair-radius-md)] bg-card"
+        className="size-8 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
         aria-label={previousLabel}
         onClick={onPrevious}
       >
@@ -151,7 +151,7 @@ export function EmrDateNavigator({
         />
         <span className="truncate">{dateLabel}</span>
         {todayLabel ? (
-          <Badge variant="outline" className="h-5 rounded-md bg-card px-1.5 text-[11px]">
+          <Badge variant="outline" className="h-5 rounded-md bg-[var(--emr-surface-panel)] px-1.5 text-[11px]">
             {todayLabel}
           </Badge>
         ) : null}
@@ -159,7 +159,7 @@ export function EmrDateNavigator({
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-8 rounded-[var(--clair-radius-md)] bg-card"
+        className="size-8 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
         aria-label={nextLabel}
         onClick={onNext}
       >
@@ -181,7 +181,7 @@ export function EmrListHeader({
   return (
     <div
       className={cn(
-        "mx-4 flex h-10 shrink-0 items-center border-y border-border",
+        "mx-4 flex h-10 shrink-0 items-center border-y border-[var(--emr-line-hairline)]",
         !topDividerVisible && "border-t-transparent",
         className
       )}
@@ -191,7 +191,7 @@ export function EmrListHeader({
         {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
         <span className="truncate">{label}</span>
         {count !== undefined ? (
-          <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--clair-color-atomic-gray-50)] px-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)]">
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)]">
             {count}
           </Badge>
         ) : null}
@@ -260,7 +260,7 @@ export function EmrListGroup({
       {onToggle ? (
         <button
           type="button"
-          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-8) focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-[var(--emr-surface-muted)] focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-expanded={!collapsed}
           onClick={onToggle}
         >
@@ -307,7 +307,7 @@ export function EmrListItem({
       </div>
       {meta ? <div className="mt-1 min-w-0 truncate text-[12px] leading-4 text-muted-foreground">{meta}</div> : null}
       {footer ? (
-        <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--clair-color-line-subtle)] pt-1.5 text-[11px] text-muted-foreground">
+        <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 text-[11px] text-muted-foreground">
           {footer}
         </div>
       ) : null}
@@ -320,15 +320,15 @@ export function EmrListItem({
       : "rounded-[var(--clair-radius-sm)] px-1 py-1",
     selected
       ? variant === "outline"
-        ? "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
+        ? "border-[var(--emr-accent)] bg-[var(--emr-surface-selected)]"
         : usesTransparentSurface
-          ? "border-transparent bg-transparent hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
-          : "border-transparent bg-[var(--clair-color-atomic-black-alpha-6)]"
+          ? "border-transparent bg-transparent hover:bg-[var(--emr-surface-muted)]"
+          : "border-transparent bg-[var(--emr-accent-subtle)]"
       : variant === "outline"
-        ? "border-[var(--clair-color-atomic-gray-200)] bg-card hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
+        ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-muted)]"
         : usesTransparentSurface
-          ? "border-transparent bg-transparent hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
-          : "border-transparent bg-transparent hover:border-border hover:bg-card",
+          ? "border-transparent bg-transparent hover:bg-[var(--emr-surface-muted)]"
+          : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-surface-panel)]",
     className
   );
 

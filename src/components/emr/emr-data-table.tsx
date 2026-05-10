@@ -109,7 +109,7 @@ function AssigneeAvatar({ order }: { order: Order }) {
         "inline-flex size-6 items-center justify-center rounded-full text-[9px] font-medium",
         assigned
           ? "bg-[var(--clair-color-atomic-gray-200)] text-[var(--clair-color-atomic-gray-900)]"
-          : "border border-dashed border-[var(--clair-color-line-normal)] bg-card text-[var(--clair-color-label-assistive)]"
+          : "border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--clair-color-label-assistive)]"
       )}
       title={order.assignee}
     >
@@ -155,7 +155,7 @@ function AssigneeCell({
       data-row-interactive="true"
       aria-label={`${order.name} 담당 변경`}
       value={order.assigneeId ?? ""}
-      className="h-7 max-w-24 rounded-md border border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--clair-color-label-normal)] outline-none hover:bg-selection focus:border-ring focus:bg-card focus:ring-3 focus:ring-ring/50"
+      className="h-7 max-w-24 rounded-md border border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--clair-color-label-normal)] outline-none hover:bg-[var(--emr-surface-muted)] focus:border-ring focus:bg-[var(--emr-surface-panel)] focus:ring-3 focus:ring-ring/50"
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
       onInput={(event) => {
@@ -193,7 +193,7 @@ function WorkStatusButton({
       variant="outline"
       size="xs"
       className={cn(
-        "h-6 gap-1 rounded-md bg-card px-2 text-[12px]",
+        "h-6 gap-1 rounded-md bg-[var(--emr-surface-panel)] px-2 text-[12px]",
         completed &&
           "border-[var(--clair-color-atomic-sky-100)] text-[var(--clair-color-primary-normal)]"
       )}
@@ -482,9 +482,9 @@ export function EmrDataTable({
         className="table-fixed text-[14px] leading-5 tracking-[0.014em]"
         style={{ width: table.getTotalSize() }}
       >
-        <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
+        <TableHeader className="bg-[var(--emr-surface-muted)]">
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
+            <TableRow key={headerGroup.id} className="border-[var(--emr-line-hairline)] hover:bg-transparent">
               {headerGroup.headers.map((header) => {
                 const align = getCellAlign(header.column.columnDef);
 
@@ -492,7 +492,7 @@ export function EmrDataTable({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "relative h-10 select-none bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]",
+                      "relative h-10 select-none bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]",
                       align === "right" && "text-right",
                       align === "center" && "text-center"
                     )}
@@ -515,8 +515,8 @@ export function EmrDataTable({
                         type="button"
                         aria-label={`${header.column.id} 컬럼 너비 조절`}
                         className={cn(
-                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-gray-200)] hover:bg-selection focus-visible:ring-3 focus-visible:ring-ring/50",
-                          header.column.getIsResizing() && "bg-selection"
+                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-line-hairline)] hover:bg-[var(--emr-accent-subtle)] focus-visible:ring-3 focus-visible:ring-ring/50",
+                          header.column.getIsResizing() && "bg-[var(--emr-accent-subtle)]"
                         )}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={header.getResizeHandler()}
@@ -535,7 +535,7 @@ export function EmrDataTable({
               <TableRow
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 data-testid={`order-row-${sectionId}-${row.original.id}`}
-                className="group/order-row h-11 cursor-pointer border-border bg-card text-[var(--clair-color-label-normal)] hover:!bg-[var(--clair-color-fill-alternative)] data-[state=selected]:!bg-[var(--clair-color-fill-normal)]"
+                className="group/order-row h-11 cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--clair-color-label-normal)] hover:!bg-[var(--emr-surface-muted)] data-[state=selected]:!bg-[var(--emr-surface-selected)]"
                 onClick={(event) => {
                   const target = event.target as HTMLElement;
 
@@ -576,7 +576,7 @@ export function EmrDataTable({
               {row.original.warningMessage ? (
                 <TableRow
                   key={`${row.id}-warning`}
-                  className="h-8 border-border bg-[var(--clair-color-atomic-orange-50)] hover:bg-[var(--clair-color-atomic-orange-50)]"
+                  className="h-8 border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-orange-50)] hover:bg-[var(--clair-color-atomic-orange-50)]"
                 >
                   <TableCell colSpan={row.getVisibleCells().length} className="px-8 py-1">
                     <div className="flex h-6 items-center gap-2 text-[14px] font-medium text-[var(--clair-color-atomic-orange-700)]">
@@ -592,7 +592,7 @@ export function EmrDataTable({
       </Table>
       {selectedRows.length ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-3 flex justify-center">
-          <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-[var(--clair-color-line-normal)] bg-card px-3 shadow-lg">
+          <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 shadow-lg">
             <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
               선택한 오더 {selectedRows.length}개
             </span>

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "../styles/tokens/shadcn.css";
+@import "../styles/tokens/emr-foundation.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -103,7 +104,7 @@
 
   body {
     @apply bg-background text-foreground;
-    background-color: var(--clair-color-service-background);
+    background-color: var(--emr-surface-app);
     font-size: 13px;
     letter-spacing: 0;
   }
@@ -111,10 +112,16 @@
 
 @layer utilities {
   .emr-panel {
-    @apply border-border bg-card;
+    border-color: var(--emr-line-hairline);
+    background-color: var(--emr-surface-panel);
   }
 
   .emr-hairline {
-    @apply border-border;
+    border-color: var(--emr-line-hairline);
+  }
+
+  .emr-selected-surface {
+    border-color: var(--emr-accent);
+    background-color: var(--emr-surface-selected);
   }
 }
