@@ -9,3 +9,4 @@ Use this file for small design-planning changes that do not need a standalone de
 ## 2026-05-10
 
 - `added`: Added Light Operational Foundation guidance and the first EMR token alias layer for shared panel, list, side-panel card, and table surfaces.
+- `added`: Added canonical CLAiR EMR `DESIGN.md` for the bright operational design direction.

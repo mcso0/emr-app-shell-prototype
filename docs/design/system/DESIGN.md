@@ -1,0 +1,137 @@
+---
+version: "alpha"
+name: "CLAiR EMR"
+status: "active"
+updated: "2026-05-10"
+source_docs:
+  - "docs/design/references/linear-app/DESIGN.md"
+  - "docs/design/system/light-operational-foundation.md"
+  - "docs/engineering/current-status.md"
+---
+
+# CLAiR EMR Design
+
+CLAiR EMR is a bright operational workspace for veterinary outpatient work. The interface should feel quiet, precise, and durable across long clinical sessions. It is not a marketing canvas, a dark-mode concept, or a decorative dashboard.
+
+## Product Stance
+
+The product is organized around real hospital work: reception, charting, lab, imaging, dispensing, treatment, billing, inpatient care, customer management, and hospital administration. Design decisions should make these workflows easier to scan, compare, and continue.
+
+Keep the screen useful before it is expressive:
+
+- show the patient, guardian, encounter, owner, assignee, status, amount, and due time near the action they affect
+- use compact layouts that preserve context instead of forcing navigation
+- keep status and medical semantic colors stable
+- prefer product data, tables, queues, and forms over explanation text
+- make the selected item obvious without making every card visually loud
+
+## Foundation
+
+The first visual foundation is the Light Operational Foundation.
+
+CLAiR keeps the generated Clair token output as the base layer and adds a small EMR alias layer above it:
+
+- `--emr-surface-app`: app canvas
+- `--emr-surface-panel`: primary panel surface
+- `--emr-surface-muted`: low-emphasis headers and nested surfaces
+- `--emr-surface-selected`: selected list, card, and row surface
+- `--emr-line-hairline`: quiet dividers and panel borders
+- `--emr-line-strong`: stronger structural separators
+- `--emr-accent`: sparse selected, focus, and priority accent
+- `--emr-accent-subtle`: subtle accent fill
+- `--emr-radius-control`: compact controls
+- `--emr-radius-panel`: panels and repeated cards
+
+Generated files such as `src/styles/tokens/clair.css` should not be edited by hand.
+
+## Color
+
+CLAiR uses a bright clinical surface ladder:
+
+- app canvas: near-white operational background
+- panel: white or Clair normal background
+- muted surface: low-contrast header, table, and nested surface
+- selected surface: pale accent-tinted fill
+- hairline: blue-gray structural divider
+- accent: sparse Linear-inspired lavender-blue for selection and focus only
+
+Do not collapse the product into one brand color. Medical, billing, warning, danger, success, pending, and completed states keep their semantic colors.
+
+## Typography
+
+The app shell uses the self-hosted Pretendard variable font package as the primary sans stack. This improves Korean UI rhythm while keeping system fallbacks available.
+
+Use typography for scanning, not drama:
+
+- compact panel titles: 14-16px, semibold
+- dense table and list body: 12-13px
+- page-level titles: restrained, usually 18-24px
+- no negative letter spacing
+- no viewport-based font scaling
+
+## Shape
+
+Most EMR surfaces should be compact:
+
+- controls: 8px radius
+- panels and repeated cards: 8-12px radius
+- large decorative rounding is avoided
+- pills are reserved for status, segmented filters, and short chips
+
+Cards should not be nested inside other decorative cards. Use panels for layout and cards only for repeated work items, dashboard metrics, or modal content.
+
+## Layout
+
+CLAiR screens favor operational density:
+
+- persistent nav rail and top menu
+- module side panels for queues and grouped navigation
+- patient context bars near clinical work
+- central workspaces for forms, tables, charting, and result entry
+- right panels for summary, history, or focused auxiliary work
+
+The first viewport should show real product state. Avoid landing-page composition inside application routes.
+
+## Components
+
+Shared primitives should carry the visual system:
+
+- `EmrSubpanel`: module panels and compact side surfaces
+- `EmrListItem`: selected history and queue rows
+- `EmrSidePanelCard`: order and work queue cards
+- `EmrDataTable` and `Table`: dense operational tables
+- `SegmentedControl`: compact filters and mode switching
+- `StatusBadge`: stable semantic state labels
+
+New shared primitives should be added only when a repeated pattern is stable across screens.
+
+## Interaction
+
+Interaction should be predictable and low-friction:
+
+- hover can reveal secondary actions
+- selected state must be visible without hover
+- destructive or workflow-final actions require confirmation
+- filters should keep context visible where possible
+- charts, orders, and billing actions remain session-only until explicitly connected to live persistence
+
+## Accessibility And QA
+
+Every screen should pass a practical operational check:
+
+- text does not overlap or clip in desktop and mobile viewports
+- keyboard focus is visible on controls
+- selected and hover states are distinguishable
+- status colors remain legible and semantically consistent
+- dense tables preserve headers, row alignment, and action affordances
+
+Use Playwright screenshots for visual sanity checks after substantial UI changes.
+
+## Non-Goals
+
+- dark mode
+- marketing hero treatment inside the app shell
+- decorative gradient/orb backgrounds
+- replacing semantic status colors with a single accent
+- claiming live DB, auth, billing, or server permission behavior from session-only UI
+

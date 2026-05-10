@@ -15,6 +15,7 @@ Planned subareas:
 
 Current canonical files:
 
+- `docs/design/system/DESIGN.md`
 - `docs/design/reference-screen-index.md`
 - `docs/design/assets/reference-screens/`
 - `docs/design/changelog.md`
