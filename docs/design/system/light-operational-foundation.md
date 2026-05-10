@@ -63,4 +63,4 @@ Buttons, status badges, semantic status colors, and screen-specific layouts shou
 
 ## Design.md Timing
 
-CLAiR's own `DESIGN.md` should be written after the first foundation pass is visually checked in the app. That file should document the implemented light operational system rather than speculate ahead of implementation.
+CLAiR's own `DESIGN.md` now lives at `docs/design/system/DESIGN.md`. It documents the implemented light operational system after the first foundation pass rather than speculating ahead of implementation.
