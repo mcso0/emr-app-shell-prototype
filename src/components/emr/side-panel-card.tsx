@@ -33,9 +33,10 @@ export function EmrSidePanelCard({
       role="button"
       tabIndex={0}
       className={cn(
-        "group/emr-side-panel-card w-full rounded-[var(--clair-radius-atomic-8)] border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 pb-2.5 pt-2 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 pb-2.5 pt-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
         selected &&
-          "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]",
+          "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)] pl-3.5 focus-visible:ring-[var(--clair-color-atomic-sky-200)]",
+        !selected && "hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
         className
       )}
       data-testid={testId}
@@ -44,7 +45,37 @@ export function EmrSidePanelCard({
       onClick={onSelect}
       onKeyDown={handleKeyDown}
     >
+      {selected ? (
+        <span
+          className="absolute inset-y-0 left-0 w-1 bg-[var(--clair-color-atomic-blue-500)]"
+          aria-hidden="true"
+        />
+      ) : null}
       {children}
+    </div>
+  );
+}
+
+export function EmrSidePanelIdentityLine({
+  action,
+  guardianName,
+  patientName,
+  typeBadge,
+}: {
+  action?: ReactNode;
+  guardianName: ReactNode;
+  patientName: ReactNode;
+  typeBadge?: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-semibold leading-5 tracking-normal text-[var(--clair-color-label-strong)]">
+        <span className="truncate">{patientName}</span>
+        <span className="shrink-0 font-medium text-[var(--clair-color-atomic-gray-500)]">·</span>
+        <span className="truncate">{guardianName}</span>
+        {typeBadge}
+      </div>
+      {action}
     </div>
   );
 }
@@ -108,6 +139,32 @@ export function EmrSidePanelMetaBadge({
     >
       <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{label}</span>
       <span className="truncate text-[var(--clair-color-atomic-gray-700)]">{value}</span>
+    </span>
+  );
+}
+
+export function EmrSidePanelStatusBadge({
+  children,
+  icon,
+  maxWidthClassName = "max-w-[112px]",
+}: {
+  children: ReactNode;
+  icon?: ReactNode;
+  maxWidthClassName?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 shrink-0 items-center gap-1 rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-black-alpha-8)] bg-card px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-600)]",
+        maxWidthClassName
+      )}
+    >
+      {icon ? (
+        <span className="flex size-3.5 shrink-0 items-center justify-center text-[var(--clair-color-atomic-gray-400)]">
+          {icon}
+        </span>
+      ) : null}
+      <span className="min-w-0 truncate">{children}</span>
     </span>
   );
 }

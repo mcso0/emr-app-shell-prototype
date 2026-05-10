@@ -67,6 +67,7 @@ export type OrderQueueItem = {
   startedAt?: string;
   time: string;
   statusId: string;
+  waitMinutes?: number;
 };
 
 export type TechnicianUser = {

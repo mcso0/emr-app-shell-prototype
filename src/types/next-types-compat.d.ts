@@ -1,5 +1,9 @@
 declare module "next" {
-  export type { Metadata } from "next/dist/lib/metadata/types/metadata-interface";
+  export type {
+    Metadata,
+    MetadataRoute,
+    Viewport,
+  } from "next/dist/lib/metadata/types/metadata-interface";
 }
 
 declare module "next/types.js" {

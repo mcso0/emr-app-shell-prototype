@@ -30,7 +30,9 @@ import {
 import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
+  EmrSidePanelIdentityLine,
   EmrSidePanelMetaBadge,
+  EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
 import { CircleCloseFillIcon, ExcelFileIcon } from "@/components/icons";
@@ -598,15 +600,12 @@ function PatientCard({
       testId={`patient-card-${summary.patient.id}`}
       onSelect={onSelect}
     >
-      <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-          <span className="truncate">{summary.patient.name}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
-          <span className="truncate">{guardianName}</span>
-          <EmrSidePanelTypeBadge label={receptionType} />
-        </div>
-        <EmrSidePanelCardAction ariaLabel={`${summary.patient.name} 더보기`} />
-      </div>
+      <EmrSidePanelIdentityLine
+        patientName={summary.patient.name}
+        guardianName={guardianName}
+        typeBadge={<EmrSidePanelTypeBadge label={receptionType} />}
+        action={<EmrSidePanelCardAction ariaLabel={`${summary.patient.name} 더보기`} />}
+      />
       <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
         <span className="min-w-0 flex-1 truncate">{visitText}</span>
       </div>
@@ -619,13 +618,9 @@ function PatientCard({
             value={veterinarianName}
           />
         </div>
-        <span className="flex shrink-0 items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-          <CdsFilesClockIcon
-            className="size-3.5 text-[var(--clair-color-atomic-gray-400)]"
-            aria-hidden="true"
-          />
+        <EmrSidePanelStatusBadge icon={<CdsFilesClockIcon className="size-3.5" aria-hidden="true" />}>
           {timeContent}
-        </span>
+        </EmrSidePanelStatusBadge>
       </div>
     </EmrSidePanelCard>
   );

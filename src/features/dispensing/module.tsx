@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState, type ReactNode } from "react";
 import {
   CheckIcon,
@@ -18,6 +17,8 @@ import {
 } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
@@ -68,9 +69,6 @@ type DispensingContentBodyProps = Pick<
 > & {
   selectedQueueItem: OrderQueueItem | null;
 };
-
-const HISTORY_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
-const HISTORY_GROUP_EXIT_EASE = [0.32, 0, 0.67, 0] as const;
 
 function splitHistoryItem(item: string) {
   const [category, ...rest] = item.split(" ");
@@ -174,25 +172,29 @@ export function DispensingContentAside() {
   };
 
   return (
-    <div
-      id="dispensing-content-aside"
-      className="flex h-full w-full flex-col gap-2 bg-[var(--clair-color-atomic-neutral-50)] px-4 pt-4"
-    >
+    <EmrContentAsidePanel id="dispensing-content-aside">
       <HistoryListHeader count={totalHistoryCount} onCollapse={() => setContentAsideOpen(false)} />
       <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {historyGroups.map((group) => (
-            <HistoryGroup
+            <EmrContentHistoryGroup
               key={group.date}
               collapsed={collapsedHistoryGroups.has(group.date)}
-              group={group}
+              count={group.count}
+              dataTestId={`history-group-${group.date}`}
+              label={group.date}
               onToggle={() => toggleHistoryGroup(group.date)}
-            />
+              toggleTestId={`history-group-toggle-${group.date}`}
+            >
+              {group.items.map((item) => (
+                <HistoryItem key={item} item={item} />
+              ))}
+            </EmrContentHistoryGroup>
           ))}
         </div>
       </ScrollArea>
-    </div>
+    </EmrContentAsidePanel>
   );
 }
 
@@ -224,98 +226,28 @@ function HistoryListHeader({ count, onCollapse }: { count: number; onCollapse: (
   );
 }
 
-function HistoryGroup({
-  collapsed,
-  group,
-  onToggle,
-}: {
-  collapsed: boolean;
-  group: (typeof historyGroups)[number];
-  onToggle: () => void;
-}) {
-  const reduceMotion = useReducedMotion();
-  const contentTransition = reduceMotion
-    ? { duration: 0 }
-    : {
-        height: { duration: 0.24, ease: HISTORY_GROUP_EASE },
-        opacity: { duration: 0.14, ease: "easeOut" },
-        y: { duration: 0.2, ease: HISTORY_GROUP_EASE },
-      };
-  const contentExitTransition = reduceMotion
-    ? { duration: 0 }
-    : {
-        height: { duration: 0.18, ease: HISTORY_GROUP_EXIT_EASE },
-        opacity: { duration: 0.12, ease: "easeIn" },
-        y: { duration: 0.16, ease: HISTORY_GROUP_EXIT_EASE },
-      };
-
-  return (
-    <section className="flex flex-col gap-1 rounded-[10px]" data-testid={`history-group-${group.date}`}>
-      <button
-        type="button"
-        className="flex h-8 w-full items-center justify-between rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-8) focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-expanded={!collapsed}
-        data-testid={`history-group-toggle-${group.date}`}
-        onClick={onToggle}
-      >
-        <div className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
-          <span className="truncate text-[var(--clair-color-label-alternative)]">{group.date}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{group.count}</span>
-        </div>
-        <motion.span
-          className="flex size-4 shrink-0 items-center justify-center text-[var(--clair-color-label-alternative)]"
-          animate={{ rotate: collapsed ? 180 : 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: HISTORY_GROUP_EASE }}
-        >
-          <ChevronDownIcon className="size-4 shrink-0 text-[var(--clair-color-label-alternative)]" />
-        </motion.span>
-      </button>
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
-      <AnimatePresence initial={false}>
-        {collapsed ? null : (
-          <motion.div
-            key={`${group.date}-items`}
-            className="overflow-hidden"
-            initial={{ height: 0, opacity: 0, y: -4 }}
-            animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
-            exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
-          >
-            {group.items.map((item) => (
-              <HistoryItem key={item} item={item} />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
-
 function HistoryItem({ item }: { item: string }) {
   const { title, category, description } = splitHistoryItem(item);
 
   return (
-    <>
-      <div
-        className="flex min-h-[58px] flex-col gap-1.5 rounded-[var(--clair-radius-sm)] px-1 py-1 outline-none transition-colors hover:bg-(--clair-color-atomic-black-alpha-4) focus-visible:bg-(--clair-color-atomic-black-alpha-4) focus-visible:ring-3 focus-visible:ring-ring/50"
-        tabIndex={0}
-      >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="truncate text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
-            {title}
-          </div>
-          <div className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+    <EmrContentHistoryItem
+      title={title}
+      subtitle={
+        category || description ? (
+          <span className="flex min-w-0 items-center gap-1.5">
             {category ? <span className="shrink-0">{category}</span> : null}
-            {description ? <span className="truncate text-[var(--clair-color-atomic-gray-500)]">{description}</span> : null}
-          </div>
-        </div>
-        <div className="flex min-w-0 items-center gap-2 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+            {description ? <span className="truncate">{description}</span> : null}
+          </span>
+        ) : null
+      }
+      meta={
+        <>
           <span className="truncate">담당자명</span>
           <span className="truncate">담당자명</span>
           <span className="shrink-0">10:30 요청</span>
-        </div>
-      </div>
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
-    </>
+        </>
+      }
+    />
   );
 }
 

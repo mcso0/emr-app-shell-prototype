@@ -67,6 +67,7 @@ type EmrListItemProps = {
   meta?: ReactNode;
   onSelect?: () => void;
   selected?: boolean;
+  surface?: "default" | "transparent";
   subtitle?: ReactNode;
   testId?: string;
   variant?: "default" | "outline";
@@ -281,10 +282,12 @@ export function EmrListItem({
   meta,
   onSelect,
   selected = false,
+  surface = "default",
   subtitle,
   testId,
   variant = "default",
 }: EmrListItemProps) {
+  const usesTransparentSurface = surface === "transparent";
   const content = (
     <>
       <div className="flex min-h-6 items-start justify-between gap-2">
@@ -318,10 +321,14 @@ export function EmrListItem({
     selected
       ? variant === "outline"
         ? "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
-        : "border-transparent bg-[var(--clair-color-atomic-black-alpha-6)]"
+        : usesTransparentSurface
+          ? "border-transparent bg-transparent hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
+          : "border-transparent bg-[var(--clair-color-atomic-black-alpha-6)]"
       : variant === "outline"
         ? "border-[var(--clair-color-atomic-gray-200)] bg-card hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
-        : "border-transparent bg-transparent hover:border-border hover:bg-card",
+        : usesTransparentSurface
+          ? "border-transparent bg-transparent hover:bg-[var(--clair-color-atomic-black-alpha-4)]"
+          : "border-transparent bg-transparent hover:border-border hover:bg-card",
     className
   );
 

@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { LoginForm } from "@/features/auth/login-form";
 
 export const metadata: Metadata = {
-  title: "Login | CLAiR EMR",
+  title: "Login",
   description: "Role-based MVP login entry for the CLAiR EMR prototype.",
 };
 
