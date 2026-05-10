@@ -3,7 +3,17 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronDownIcon, ClockIcon, UserIcon, WarningIcon } from "@/components/icons";
+import {
+  BedIcon,
+  CalendarIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  InfoIcon,
+  UserIcon,
+  WarningIcon,
+  type AppIcon,
+} from "@/components/icons";
 import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
@@ -16,6 +26,14 @@ import {
   EmrSidePanelCollapsibleGroup,
 } from "@/components/emr/side-panel-collapsible-group";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   SegmentedControl,
   type SegmentedControlItem,
@@ -34,6 +52,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type {
   HomeDashboardData,
@@ -55,8 +74,8 @@ const allFilterLabel = "전체";
 const unassignedFilterLabel = "미지정";
 
 const viewLabels: Record<HomeWorkspaceView, string> = {
-  hospital: "병원 현황",
-  mine: "내 업무",
+  home: "홈",
+  hospital: "업무 현황",
 };
 
 const statusLabel: Record<HomeTaskStatus, string> = {
@@ -119,7 +138,7 @@ function matchesAssigneeFilter(task: HomeTask, filter: HomeAssigneeFilter) {
 }
 
 function getViewMeta(view: HomeWorkspaceView) {
-  if (view === "mine") return "내가 담당자이거나 나에게 요청된 업무만 표시";
+  if (view === "home") return "오늘 운영과 내 담당 업무를 한 화면에서 표시";
 
   return "전체 업무 리스트와 미배정 큐까지 표시";
 }
@@ -139,11 +158,11 @@ function getAssigneeLabel(task: HomeTask) {
 }
 
 export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
-  const [view, setView] = useState<HomeWorkspaceView>("hospital");
+  const [view, setView] = useState<HomeWorkspaceView>("home");
   const [activeStatusFilter, setActiveStatusFilter] = useState<HomeStatusFilter>("all");
   const [activeAssigneeFilter, setActiveAssigneeFilter] = useState<HomeAssigneeFilter>(allFilterLabel);
   const [activeWorkstreamFilters, setActiveWorkstreamFilters] = useState<HomeWorkstreamFilter[]>([]);
-  const tasks = view === "mine" ? data.tasks : data.hospitalTasks;
+  const tasks = data.hospitalTasks;
   const activeWorkstreamColumns = data.columns.filter((column) => activeWorkstreamFilters.includes(column.label));
   const scopedTasks = tasks.filter(
     (task) =>
@@ -198,21 +217,31 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
   }, [data.hospitalTasks]);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(300px,340px)] overflow-hidden bg-white max-xl:grid-cols-1 max-xl:overflow-y-auto">
+    <div
+      className={cn(
+        "h-full min-h-0 overflow-hidden bg-white",
+        view === "hospital" && "max-xl:overflow-y-auto"
+      )}
+    >
       <section
         data-testid="home-kanban-board"
-        className="grid min-h-0 min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-y-5 border-r border-border p-4 max-xl:min-h-[620px] max-xl:border-r-0"
+        className={cn(
+          "grid h-full min-h-0 min-w-0 gap-y-5 p-4",
+          view === "hospital"
+            ? "grid-rows-[auto_auto_minmax(0,1fr)] max-xl:min-h-[620px]"
+            : "grid-rows-[auto_minmax(0,1fr)]"
+        )}
       >
         <div className="flex min-h-9 items-center justify-between gap-4 max-sm:flex-col max-sm:items-start">
           <div className="flex items-center gap-6" role="tablist" aria-label="홈 보기">
-            {(["hospital", "mine"] as const).map((item) => (
+            {(["home", "hospital"] as const).map((item) => (
               <button
                 key={item}
                 type="button"
                 role="tab"
                 aria-selected={view === item}
                 className={cn(
-                  "whitespace-nowrap text-[24px] font-bold leading-8 tracking-normal text-[var(--clair-color-label-assistive)] transition-colors hover:text-[var(--clair-color-label-strong)]",
+                  "whitespace-nowrap text-[18px] font-bold leading-7 tracking-normal text-[var(--clair-color-label-assistive)] transition-colors hover:text-[var(--clair-color-label-strong)]",
                   view === item && "text-[var(--clair-color-label-strong)]"
                 )}
                 onClick={() => {
@@ -229,51 +258,396 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
           <p className="text-[12px] leading-4 text-muted-foreground">{getViewMeta(view)}</p>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <SegmentedControl
-            value={activeStatusFilter}
-            items={statusItems}
-            aria-label="홈 업무 상태 필터"
-            variant="pill"
-            className="w-fit gap-2"
-            itemClassName="h-8 min-h-8 rounded-full px-4 text-[13px] font-semibold leading-5"
-            onValueChange={setActiveStatusFilter}
-          />
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            {view === "hospital" ? (
-              <HomeFilterSelect
-                label="담당자"
-                ariaLabel="담당자 필터"
-                value={activeAssigneeFilter}
-                items={assigneeFilterItems}
-                onValueChange={(value) => setActiveAssigneeFilter(value as HomeAssigneeFilter)}
+        {view === "home" ? (
+          <HomeDashboard data={data} onOpenHospitalView={() => setView("hospital")} />
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <SegmentedControl
+                value={activeStatusFilter}
+                items={statusItems}
+                aria-label="홈 업무 상태 필터"
+                variant="pill"
+                className="w-fit gap-2"
+                itemClassName="h-8 min-h-8 rounded-full px-4 text-[13px] font-semibold leading-5"
+                onValueChange={setActiveStatusFilter}
               />
-            ) : null}
-            <HomeWorkstreamMultiSelect
-              label="업무"
-              columns={data.columns}
-              tasks={scopedTasks}
-              selectedFilters={activeWorkstreamFilters}
-              onSelectedFiltersChange={setActiveWorkstreamFilters}
-            />
-          </div>
-        </div>
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                <HomeFilterSelect
+                  label="담당자"
+                  ariaLabel="담당자 필터"
+                  value={activeAssigneeFilter}
+                  items={assigneeFilterItems}
+                  onValueChange={(value) => setActiveAssigneeFilter(value as HomeAssigneeFilter)}
+                />
+                <HomeWorkstreamMultiSelect
+                  label="업무"
+                  columns={data.columns}
+                  tasks={scopedTasks}
+                  selectedFilters={activeWorkstreamFilters}
+                  onSelectedFiltersChange={setActiveWorkstreamFilters}
+                />
+              </div>
+            </div>
 
-        <div className="min-h-0 overflow-x-auto pb-2">
-          <div className="grid h-full min-h-[560px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
-            {visibleColumns.map((column) => (
-              <HomeKanbanColumn key={column.id} column={column} tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)} />
-            ))}
-          </div>
-        </div>
+            <div className="min-h-0 overflow-x-auto pb-2">
+              <div className="grid h-full min-h-[560px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
+                {visibleColumns.map((column) => (
+                  <HomeKanbanColumn key={column.id} column={column} tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)} />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
-      <HomeWorkSummaryPanel
-        columns={data.columns}
-        tasks={scopedTasks}
-      />
     </div>
   );
+}
+
+function HomeDashboard({
+  data,
+  onOpenHospitalView,
+}: {
+  data: HomeDashboardData;
+  onOpenHospitalView: () => void;
+}) {
+  const urgentTasks = data.hospitalTasks.filter((task) => task.priority === "urgent" || task.priority === "high");
+  const overdueTasks = data.hospitalTasks.filter((task) => task.status === "overdue");
+  const waitingTasks = data.hospitalTasks.filter((task) => task.kanbanColumn === "waiting" || task.kanbanColumn === "chart");
+  const inpatientTasks = data.hospitalTasks.filter((task) => task.domain === "inpatient");
+  const receptionCount = data.flowSummary.find((item) => item.id === "reception")?.count ?? 0;
+  const bottleneck = [...data.flowSummary].sort((first, second) => second.count - first.count)[0];
+  const outlineTasks = [...data.tasks, ...data.hospitalTasks]
+    .filter((task, index, tasks) => tasks.findIndex((item) => item.id === task.id) === index)
+    .slice(0, 9);
+  const metricCards = [
+    {
+      Icon: CalendarIcon,
+      caption: "접수/예약 기준",
+      label: "오늘 일정",
+      trend: "진행률 +12.5%",
+      unit: "건",
+      value: receptionCount,
+    },
+    {
+      Icon: UserIcon,
+      caption: "진료 대기 및 차트",
+      label: "대기 환자",
+      trend: "주의 필요 2건",
+      unit: "건",
+      value: waitingTasks.length,
+    },
+    {
+      Icon: BedIcon,
+      caption: "병동 모니터링",
+      label: "입원 환자",
+      trend: "안정권 유지",
+      unit: "마리",
+      value: Math.max(12, inpatientTasks.length),
+    },
+    {
+      Icon: WarningIcon,
+      caption: overdueTasks[0]?.title ?? urgentTasks[0]?.title ?? "우선 확인 업무",
+      label: "긴급 알림",
+      tone: "danger" as const,
+      trend: "즉시 확인",
+      unit: "건",
+      value: urgentTasks.length,
+    },
+  ];
+
+  return (
+    <div data-testid="home-dashboard" className="min-h-0 overflow-y-auto pb-2">
+      <div className="grid min-h-full content-start gap-4">
+        <div className="grid grid-cols-4 gap-3 max-2xl:grid-cols-2 max-lg:grid-cols-1">
+          {metricCards.map((metric) => (
+            <DashboardMetricCard key={metric.label} {...metric} />
+          ))}
+        </div>
+
+        <Card className="rounded-[var(--clair-radius-md)]" data-testid="home-dashboard-flow">
+          <CardHeader className="items-start">
+            <div>
+              <CardTitle>오늘 워크플로우</CardTitle>
+              <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
+                접수부터 수납까지 현재 업무량과 병목을 한 화면에서 확인합니다.
+              </p>
+            </div>
+            <CardAction className="flex items-center gap-2">
+              {["오늘", "최근 7일", "최근 30일"].map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={cn(
+                    "h-7 rounded-[var(--clair-radius-atomic-8)] border border-border px-3 text-[12px] font-semibold leading-4 transition-colors hover:bg-muted",
+                    index === 0 ? "bg-foreground text-background hover:bg-foreground" : "bg-card text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <DashboardFlowChart flowSummary={data.flowSummary} bottleneckId={bottleneck?.id} />
+          </CardContent>
+        </Card>
+
+        <DashboardOutlineTable
+          tasks={outlineTasks}
+          urgentCount={urgentTasks.length}
+          waitingCount={waitingTasks.length}
+          onOpenHospitalView={onOpenHospitalView}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DashboardMetricCard({
+  Icon,
+  caption,
+  label,
+  tone = "normal",
+  trend,
+  unit,
+  value,
+}: {
+  caption: string;
+  Icon: AppIcon;
+  label: string;
+  tone?: "danger" | "normal";
+  trend: string;
+  unit: string;
+  value: number;
+}) {
+  return (
+    <Card className="min-h-[144px] rounded-[var(--clair-radius-md)]">
+      <CardContent className="grid h-full content-between gap-5 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-[12px] font-medium leading-4 text-muted-foreground">{label}</p>
+            <p className="mt-2 truncate text-[28px] font-bold leading-8 text-[var(--clair-color-label-strong)]">
+              {value}
+              <span className="ml-1 text-[14px] font-semibold leading-5">{unit}</span>
+            </p>
+          </div>
+          <span
+            className={cn(
+              "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold leading-4",
+              tone === "danger"
+                ? "border-[var(--clair-color-status-negative-background)] bg-[var(--clair-color-status-negative-background)] text-[var(--clair-color-status-negative-foreground)]"
+                : "border-border bg-background text-muted-foreground"
+            )}
+          >
+            <Icon className="size-3.5" aria-hidden="true" />
+            {trend}
+          </span>
+        </div>
+        <p className="truncate text-[12px] leading-4 text-muted-foreground">{caption}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DashboardFlowChart({
+  bottleneckId,
+  flowSummary,
+}: {
+  bottleneckId?: string;
+  flowSummary: HomeDashboardData["flowSummary"];
+}) {
+  const router = useRouter();
+  const maxCount = Math.max(...flowSummary.map((item) => item.count), 1);
+  const areaPath =
+    "M0 126 C46 92 75 150 118 102 C158 58 178 128 218 88 C256 54 292 142 336 82 C386 28 420 118 462 76 C506 42 548 136 592 86 C638 44 678 124 724 70 C770 22 806 132 852 78 C900 46 948 126 990 88 C1030 52 1068 118 1110 72 C1150 36 1190 112 1230 62 L1230 170 L0 170 Z";
+  const linePath =
+    "M0 126 C46 92 75 150 118 102 C158 58 178 128 218 88 C256 54 292 142 336 82 C386 28 420 118 462 76 C506 42 548 136 592 86 C638 44 678 124 724 70 C770 22 806 132 852 78 C900 46 948 126 990 88 C1030 52 1068 118 1110 72 C1150 36 1190 112 1230 62";
+
+  return (
+    <div className="grid gap-5">
+      <div className="relative h-[236px] overflow-hidden rounded-[var(--clair-radius-md)] border border-border bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] px-6 py-5">
+        <svg className="h-full w-full" viewBox="0 0 1230 180" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="home-flow-area" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#1A202C" stopOpacity="0.36" />
+              <stop offset="100%" stopColor="#1A202C" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {[40, 80, 120, 160].map((y) => (
+            <line key={y} x1="0" x2="1230" y1={y} y2={y} stroke="#E2E8F0" strokeWidth="1" />
+          ))}
+          <path d={areaPath} fill="url(#home-flow-area)" />
+          <path d={linePath} fill="none" stroke="#171923" strokeWidth="1.6" />
+        </svg>
+      </div>
+      <div className="grid grid-cols-6 gap-3 max-xl:grid-cols-3 max-md:grid-cols-2">
+        {flowSummary.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={cn(
+              "grid min-h-[86px] content-between rounded-[var(--clair-radius-atomic-8)] border border-border bg-background px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              item.id === bottleneckId && "border-[var(--clair-color-status-warning-background)] bg-[var(--clair-color-status-warning-background)]"
+            )}
+            onClick={() => router.push(item.href)}
+          >
+            <span className="truncate text-[12px] font-semibold leading-4 text-muted-foreground">{item.label}</span>
+            <span className="text-[24px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+              {item.count}
+              <span className="ml-1 text-[12px] font-semibold">건</span>
+            </span>
+            <span
+              className="h-1.5 rounded-full bg-[var(--clair-color-atomic-gray-200)]"
+              style={{ width: `${Math.max(16, (item.count / maxCount) * 100)}%` }}
+            />
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] bg-muted/50 px-3 py-2">
+        <InfoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+        <span className="truncate text-[12px] leading-4 text-muted-foreground">
+          현재 병목은 {flowSummary.find((item) => item.id === bottleneckId)?.label ?? "대기열"} 단계입니다.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function DashboardOutlineTable({
+  onOpenHospitalView,
+  tasks,
+  urgentCount,
+  waitingCount,
+}: {
+  onOpenHospitalView: () => void;
+  tasks: HomeTask[];
+  urgentCount: number;
+  waitingCount: number;
+}) {
+  const router = useRouter();
+  const tabs = [
+    { count: tasks.length, label: "전체 업무" },
+    { count: waitingCount, label: "대기 환자" },
+    { count: urgentCount, label: "긴급 확인" },
+    { count: tasks.filter((task) => task.assignment === "roleQueue").length, label: "공용 큐" },
+  ];
+
+  return (
+    <Card className="rounded-[var(--clair-radius-md)]" data-testid="home-dashboard-outline">
+      <CardHeader className="gap-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle>오늘 업무 아웃라인</CardTitle>
+            <p className="mt-1 text-[12px] leading-4 text-muted-foreground">환자 흐름과 담당 업무를 표 형태로 스캔합니다.</p>
+          </div>
+          <CardAction className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onOpenHospitalView}>
+              업무 현황
+              <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
+            </Button>
+          </CardAction>
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {tabs.map((tab, index) => (
+            <button
+              key={tab.label}
+              type="button"
+              className={cn(
+                "h-7 rounded-[var(--clair-radius-atomic-8)] px-3 text-[12px] font-semibold leading-4 transition-colors hover:bg-muted",
+                index === 0 ? "bg-foreground text-background hover:bg-foreground" : "bg-muted text-muted-foreground"
+              )}
+            >
+              {tab.label}
+              <span className="ml-1 opacity-70">{tab.count}</span>
+            </button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent className="px-0 pb-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="w-10 pl-5">
+                <Checkbox aria-label="전체 업무 선택" />
+              </TableHead>
+              <TableHead>업무</TableHead>
+              <TableHead className="w-[132px]">구분</TableHead>
+              <TableHead className="w-[118px]">상태</TableHead>
+              <TableHead className="w-[170px]">환자/보호자</TableHead>
+              <TableHead className="w-[132px]">담당</TableHead>
+              <TableHead className="w-[86px] text-right">기한</TableHead>
+              <TableHead className="w-[92px] pr-5 text-right">이동</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((task) => (
+              <TableRow key={task.id} data-testid={`home-dashboard-task-${task.id}`}>
+                <TableCell className="pl-5">
+                  <Checkbox aria-label={`${task.title} 선택`} />
+                </TableCell>
+                <TableCell className="min-w-[260px]">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold leading-5">{task.title}</p>
+                    <p className="truncate text-[12px] leading-4 text-muted-foreground">{task.recommendedAction}</p>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-card">{getTaskTypeLabel(task)}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={task.status === "overdue" || task.priority === "urgent" ? "destructive" : task.status === "inProgress" ? "default" : "secondary"}>
+                    {getStatusDisplayLabel(task)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-medium leading-5">{task.patientName ?? "환자 미지정"}</p>
+                    <p className="truncate text-[12px] leading-4 text-muted-foreground">{task.clientName ?? "보호자 미지정"}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="text-[13px]">{getAssigneeLabel(task)}</TableCell>
+                <TableCell className="text-right text-[12px] text-muted-foreground">{getShortTime(task.dueAt ?? task.requestedAt)}</TableCell>
+                <TableCell className="pr-5 text-right">
+                  <Button variant="ghost" size="sm" onClick={() => router.push(task.actionHref)}>
+                    열기
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {tasks.length === 0 ? (
+              <TableRow>
+                <TableCell className="py-8 text-center text-[13px] text-muted-foreground" colSpan={8}>
+                  오늘 표시할 업무가 없습니다.
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function getTaskTypeLabel(task: HomeTask) {
+  if (task.kanbanColumn === "reservation") return "예약";
+  if (task.kanbanColumn === "lab") return "임상병리";
+  if (task.kanbanColumn === "imaging") return "영상검사";
+  if (task.kanbanColumn === "dispensing") return "조제";
+  if (task.kanbanColumn === "treatment") return "처치";
+  if (task.kanbanColumn === "billing") return "수납";
+
+  return "진료";
+}
+
+function getStatusDisplayLabel(task: HomeTask) {
+  if (task.priority === "urgent") return "긴급";
+  if (task.status === "overdue") return "지연";
+  if (task.status === "inProgress") return "진행";
+  if (task.status === "assigned") return "배정";
+
+  return "요청";
 }
 
 function HomeWorkstreamMultiSelect({
@@ -564,152 +938,5 @@ function HomeKanbanTaskCard({ task }: { task: HomeTask }) {
         </span>
       </div>
     </EmrSidePanelCard>
-  );
-}
-
-function HomeWorkSummaryPanel({
-  columns,
-  tasks,
-}: {
-  columns: HomeKanbanColumn[];
-  tasks: HomeTask[];
-}) {
-  const router = useRouter();
-  const columnIndexById = new Map(columns.map((column, index) => [column.id, index]));
-  const getTopColumnGroup = (signalTasks: HomeTask[]) => {
-    const groups = signalTasks.reduce<Map<HomeKanbanColumn["id"], HomeTask[]>>((items, task) => {
-      items.set(task.kanbanColumn, [...(items.get(task.kanbanColumn) ?? []), task]);
-      return items;
-    }, new Map());
-
-    const [columnId, columnTasks] =
-      Array.from(groups.entries()).sort(
-        ([firstColumnId, firstTasks], [secondColumnId, secondTasks]) =>
-          secondTasks.length - firstTasks.length ||
-          (columnIndexById.get(firstColumnId) ?? 0) - (columnIndexById.get(secondColumnId) ?? 0)
-      )[0] ?? [];
-    const column = columns.find((item) => item.id === columnId);
-
-    if (!column || !columnTasks) return null;
-
-    return { column, tasks: columnTasks };
-  };
-  const focusSignals = [
-    {
-      id: "urgent",
-      Icon: WarningIcon,
-      iconClassName: "text-[var(--clair-color-atomic-red-500)]",
-      label: "긴급",
-      title: "긴급 업무",
-      reason: "먼저 확인이 필요한 업무가 몰려 있습니다.",
-      filter: "urgent" as const,
-      tasks: tasks.filter((task) => task.priority === "urgent" || task.priority === "high"),
-    },
-    {
-      id: "overdue",
-      Icon: ClockIcon,
-      iconClassName: "text-[var(--clair-color-atomic-orange-500)]",
-      label: "지연",
-      title: "지연 업무",
-      reason: "기준 시간을 넘겨 흐름이 멈출 수 있습니다.",
-      filter: "overdue" as const,
-      tasks: tasks.filter((task) => task.status === "overdue"),
-    },
-    {
-      id: "roleQueue",
-      Icon: UserIcon,
-      iconClassName: "text-[var(--clair-color-label-assistive)]",
-      label: "미지정",
-      title: "미지정 업무",
-      reason: "담당자 배정 전이라 다음 처리자가 필요합니다.",
-      filter: "roleQueue" as const,
-      tasks: tasks.filter((task) => task.assignment === "roleQueue"),
-    },
-  ]
-    .map((signal) => {
-      const group = getTopColumnGroup(signal.tasks);
-
-      if (!group) return null;
-
-      return {
-        ...signal,
-        column: group.column,
-        count: group.tasks.length,
-        focusTasks: group.tasks,
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
-
-  return (
-    <aside
-      data-testid="home-work-summary-panel"
-      className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 bg-white p-4 max-xl:min-h-[320px] max-xl:border-t max-xl:border-border"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold leading-5">지금 볼 업무</h2>
-          <p className="mt-1 text-[12px] leading-4 text-muted-foreground">현재 보기에서 먼저 확인할 업무를 추렸습니다.</p>
-        </div>
-      </div>
-
-      <div className="grid content-start gap-3 overflow-y-auto">
-        <section className="grid gap-2">
-          {focusSignals.length > 0 ? (
-            focusSignals.map((item) => (
-                <details
-                  open
-                  key={item.id}
-                  className="group rounded-[var(--clair-radius-md)] border border-border bg-card px-3 py-3 transition-colors hover:bg-selection"
-                >
-                  <summary className="grid cursor-pointer list-none gap-2 marker:hidden focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
-                        <item.Icon className={cn("size-4 shrink-0", item.iconClassName)} aria-hidden="true" />
-                        <span className="min-w-0 truncate">
-                          {item.title} <span className="text-[var(--clair-color-label-assistive)]">{item.count}</span>
-                        </span>
-                      </span>
-                      <ChevronDownIcon
-                        className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
-                        aria-hidden="true"
-                      />
-                    </span>
-                    <span className="text-[12px] leading-4 text-muted-foreground">{item.reason}</span>
-                  </summary>
-                  <div className="mt-2 grid gap-1.5">
-                    {item.focusTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="group/focus-task relative rounded-[var(--clair-radius-atomic-8)] border border-border bg-white transition-colors hover:bg-selection focus-within:bg-selection"
-                        data-testid={`home-focus-task-${task.id}`}
-                      >
-                        <div className="grid w-full gap-1 rounded-[var(--clair-radius-atomic-8)] px-2.5 py-2 pr-[72px] text-left">
-                          <span className="truncate text-[12px] font-semibold leading-4">
-                            {task.patientName ?? "환자 미지정"} · {task.clientName ?? "보호자 미지정"}
-                          </span>
-                          <span className="truncate text-[12px] leading-4 text-muted-foreground">{task.title}</span>
-                        </div>
-                        <button
-                          type="button"
-                          aria-label={`${task.patientName ?? task.title} 업무 화면 보러가기`}
-                          className="absolute right-2 top-1/2 h-6 -translate-y-1/2 rounded-[var(--clair-radius-atomic-6)] border border-border bg-card px-2 text-[11px] font-semibold leading-4 text-[var(--clair-color-label-strong)] opacity-0 shadow-sm transition-opacity hover:bg-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/focus-task:opacity-100 group-focus-within/focus-task:opacity-100"
-                          data-testid={`home-focus-task-action-${task.id}`}
-                          onClick={() => router.push(task.actionHref)}
-                        >
-                          보러가기
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              ))
-          ) : (
-            <div className="rounded-[var(--clair-radius-md)] border border-dashed border-border bg-card px-3 py-3 text-[12px] leading-5 text-muted-foreground">
-              현재 바로 볼 업무가 없습니다.
-            </div>
-          )}
-        </section>
-      </div>
-    </aside>
   );
 }
