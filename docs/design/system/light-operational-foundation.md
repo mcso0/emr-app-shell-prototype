@@ -1,0 +1,66 @@
+---
+status: "approved"
+area: "design-system"
+updated: "2026-05-10"
+source_docs:
+  - "docs/design/references/linear-app/DESIGN.md"
+  - "docs/engineering/current-status.md"
+---
+
+# Light Operational Foundation
+
+This document translates the Linear `DESIGN.md` reference into a CLAiR EMR design-system direction.
+
+## Intent
+
+CLAiR EMR should remain a bright, long-session operational workspace. The Linear reference is useful for its precision, restrained hierarchy, and product-first density, not for its dark marketing canvas.
+
+The first foundation pass should make shared EMR surfaces quieter and more consistent:
+
+- use a small surface ladder for app background, panels, muted headers, selected rows, and hover states
+- prefer hairline borders over heavy shadow
+- keep compact control and panel radii, mostly 8px and 12px
+- use accent color sparingly for focus, selection, and primary emphasis
+- let real product screens and dense workflow data carry the interface
+
+## Explicit Non-Goals
+
+- Do not introduce dark mode in this pass.
+- Do not restyle every feature screen independently.
+- Do not replace medical, billing, warning, danger, success, or status colors with a single brand accent.
+- Do not edit generated Clair token output directly.
+
+## Token Direction
+
+`src/styles/tokens/clair.css` remains the generated token source. EMR-specific operational aliases live above it as a thin layer in `src/styles/tokens/emr-foundation.css`.
+
+The public alias set for the first pass is:
+
+- `--emr-surface-app`
+- `--emr-surface-panel`
+- `--emr-surface-muted`
+- `--emr-surface-selected`
+- `--emr-line-hairline`
+- `--emr-line-strong`
+- `--emr-accent`
+- `--emr-accent-subtle`
+- `--emr-radius-control`
+- `--emr-radius-panel`
+
+These aliases are intentionally small. They should cover shared panel, list, table, and selected-surface behavior before any screen-level visual expansion.
+
+## Component Application
+
+The first implementation pass applies the aliases only to common EMR primitives:
+
+- side panels and subpanel bodies
+- list cards and selected list rows
+- side-panel queue cards
+- dense table header, row, hover, and selected surfaces
+- common `.emr-panel`, `.emr-hairline`, and `.emr-selected-surface` utilities
+
+Buttons, status badges, semantic status colors, and screen-specific layouts should stay visually compatible unless a future work item explicitly scopes them.
+
+## Design.md Timing
+
+CLAiR's own `DESIGN.md` should be written after the first foundation pass is visually checked in the app. That file should document the implemented light operational system rather than speculate ahead of implementation.

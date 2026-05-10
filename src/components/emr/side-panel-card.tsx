@@ -33,10 +33,10 @@ export function EmrSidePanelCard({
       role="button"
       tabIndex={0}
       className={cn(
-        "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--clair-color-atomic-gray-200)] bg-card px-3 pb-2.5 pt-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 pb-2.5 pt-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
         selected &&
-          "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)] pl-3.5 focus-visible:ring-[var(--clair-color-atomic-sky-200)]",
-        !selected && "hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
+          "border-[var(--emr-accent)] bg-[var(--emr-surface-selected)] pl-3.5 focus-visible:ring-[var(--emr-accent-subtle)]",
+        !selected && "hover:bg-[var(--emr-surface-muted)]",
         className
       )}
       data-testid={testId}
@@ -47,7 +47,7 @@ export function EmrSidePanelCard({
     >
       {selected ? (
         <span
-          className="absolute inset-y-0 left-0 w-1 bg-[var(--clair-color-atomic-blue-500)]"
+          className="absolute inset-y-0 left-0 w-1 bg-[var(--emr-accent)]"
           aria-hidden="true"
         />
       ) : null}
@@ -92,7 +92,7 @@ export function EmrSidePanelCardAction({
       type="button"
       variant="outline"
       size="icon-xs"
-      className="size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-card p-0 text-[var(--clair-color-label-normal)] opacity-0 transition-opacity hover:bg-[var(--clair-color-background-surface)] focus-visible:opacity-100 group-hover/emr-side-panel-card:opacity-100 group-focus-within/emr-side-panel-card:opacity-100 group-data-[selected=true]/emr-side-panel-card:opacity-100 [&_svg]:size-4"
+      className="size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-panel)] p-0 text-[var(--clair-color-label-normal)] opacity-0 transition-opacity hover:bg-[var(--emr-surface-muted)] focus-visible:opacity-100 group-hover/emr-side-panel-card:opacity-100 group-focus-within/emr-side-panel-card:opacity-100 group-data-[selected=true]/emr-side-panel-card:opacity-100 [&_svg]:size-4"
       aria-label={ariaLabel}
       data-testid={testId}
       onClick={(event) => event.stopPropagation()}
@@ -133,7 +133,7 @@ export function EmrSidePanelMetaBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--clair-color-atomic-black-alpha-8)] bg-card px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
+        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
         maxWidthClassName
       )}
     >
@@ -155,7 +155,7 @@ export function EmrSidePanelStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-1 rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-black-alpha-8)] bg-card px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-600)]",
+        "inline-flex h-5 shrink-0 items-center gap-1 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-600)]",
         maxWidthClassName
       )}
     >

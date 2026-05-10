@@ -45,3 +45,6 @@ next-env.d.ts
 # Figma local secrets and captures
 figma/figma_token.md
 figma/figma-captures/
+
+# Local brainstorming artifacts
+.superpowers/

@@ -12,6 +12,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DOCS-PR-004 | done | docs-restructure | P0 | PR 4 | `docs/work/docs-restructure/DOCS-PR-004-engineering-design-migration.md` |
 | DOCS-PR-005 | done | docs-restructure | P1 | PR 5 | `docs/work/docs-restructure/DOCS-PR-005-archive-and-link-checking.md` |
 | DOCS-PR-006 | done | docs-restructure | P0 | PR 6 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md` |
+| DESIGN-SYSTEM-PR-001 | done | design-system | P1 | PR 1 | `docs/work/design-system/DESIGN-SYSTEM-PR-001-light-operational-foundation.md` |
 | HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |
