@@ -318,7 +318,7 @@ export function ChartContentAside() {
           </>
         }
       />
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-line-hairline)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1 pb-3">
           {historyGroups.map((group) => (
@@ -342,7 +342,7 @@ export function ChartContentAside() {
           ))}
         </div>
       </ScrollArea>
-      <div className="flex shrink-0 gap-2 border-t bg-[#FBFCFE] py-3">
+      <div className="flex shrink-0 gap-2 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-app)] py-3">
         <Button variant="outline" size="sm" className="bg-card">
           수술 차트
         </Button>
@@ -410,10 +410,10 @@ const escapeHtml = (value: string) =>
 
 function ChartSectionTitle({ subtitle, title }: { subtitle: string; title: string }) {
   return (
-    <h2 className="flex min-w-0 items-baseline gap-2.5">
-      <span className="shrink-0 text-[16px] font-semibold text-foreground">{title}</span>
+    <div className="flex min-w-0 items-baseline gap-2.5">
+      <h2 className="shrink-0 text-[16px] font-semibold text-foreground">{title}</h2>
       <span className="min-w-0 truncate text-[13px] font-medium text-[var(--clair-color-atomic-gray-400)]">{subtitle}</span>
-    </h2>
+    </div>
   );
 }
 
@@ -489,8 +489,8 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
-      <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-4 py-2">
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="진료 기록" subtitle="진단계통별 SOAP 작성" />
         <div className="flex items-center gap-1.5">
           <EditorToolbarButton
@@ -540,11 +540,11 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
           <Button size="sm">초안 저장</Button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
         <div className="grid gap-3">
           {soapSections.map((section) => (
-            <div key={section.id} className="overflow-hidden rounded-md border border-[var(--clair-color-atomic-gray-300)] bg-card">
-              <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-background-surface)] px-3">
+            <div key={section.id} className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+              <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3">
                 <span className="text-[13px] font-semibold">{section.title}</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
@@ -576,7 +576,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
                   setActiveEditor(editor);
                 }}
               />
-              <div className="flex min-h-9 items-center justify-between border-t border-[var(--clair-color-atomic-gray-300)] px-3 text-[12px] text-muted-foreground">
+              <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 text-[12px] text-muted-foreground">
                 <span>첨부 자료</span>
                 <Badge variant="outline">{attachmentCounts[section.id] ? `${attachmentCounts[section.id]}개` : "없음"}</Badge>
               </div>
@@ -665,27 +665,27 @@ function AssessmentPanel({
   soapNote?: SoapNote;
 }) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--clair-color-atomic-gray-300)] px-4 py-2">
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="진단명" subtitle="진단 목록 · 코멘트 · 계획" />
         <Button variant="outline" size="sm" className="bg-card">
           분류검색
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
         <div className="grid gap-3">
           <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-2">
             <Input
               readOnly
               value="한글, 영문, 약자, 연관검색어로 진단명 검색"
-              className="h-9 bg-card text-[13px]"
+              className="h-9 bg-[var(--emr-surface-panel)] text-[13px]"
             />
             <Button variant="outline" size="sm" className="h-9 bg-card px-0">
               검색
             </Button>
           </div>
-          <div className="overflow-hidden rounded-md border border-[var(--clair-color-atomic-gray-300)]">
-            <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--clair-color-background-surface)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+          <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+            <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--emr-surface-muted)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
               <span>계통분류</span>
               <span>진단명</span>
               <span>확진</span>
@@ -695,7 +695,7 @@ function AssessmentPanel({
             {diagnoses.map((diagnosis) => (
               <div
                 key={diagnosis.id}
-                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--clair-color-atomic-gray-300)] px-3 py-3 text-[13px]"
+                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-3 text-[13px]"
               >
                 <Badge variant="outline">{getDiagnosisSystemLabel(diagnosis)}</Badge>
                 <span className="truncate font-medium">{diagnosis.diagnosisText}</span>
@@ -705,7 +705,7 @@ function AssessmentPanel({
               </div>
             ))}
             {!diagnoses.length ? (
-              <div className="border-t border-[var(--clair-color-atomic-gray-300)] px-3 py-6 text-center text-[13px] text-muted-foreground">
+              <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6 text-center text-[13px] text-muted-foreground">
                 진단 입력 전입니다.
               </div>
             ) : null}
@@ -730,8 +730,8 @@ function AssessmentTextBox({ label, value }: { label: string; value: string }) {
   const [textValue, setTextValue] = useState(value);
 
   return (
-    <div className="overflow-hidden rounded-md border border-[var(--clair-color-atomic-gray-300)]">
-      <div className="flex h-8 items-center justify-between bg-[var(--clair-color-background-surface)] px-3 text-[12px] font-semibold text-muted-foreground">
+    <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <div className="flex h-8 items-center justify-between bg-[var(--emr-surface-muted)] px-3 text-[12px] font-semibold text-muted-foreground">
         <span>{label}</span>
         <span>{textValue.length}/500자</span>
       </div>
@@ -739,7 +739,7 @@ function AssessmentTextBox({ label, value }: { label: string; value: string }) {
         aria-label={label}
         value={textValue}
         maxLength={500}
-        className="min-h-24 resize-y rounded-none border-0 bg-card p-3 text-[13px] leading-5 shadow-none focus-visible:ring-0"
+        className="min-h-24 resize-y rounded-none border-0 bg-[var(--emr-surface-panel)] p-3 text-[13px] leading-5 shadow-none focus-visible:ring-0"
         onChange={(event) => setTextValue(event.target.value)}
       />
     </div>
@@ -748,14 +748,14 @@ function AssessmentTextBox({ label, value }: { label: string; value: string }) {
 
 function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) {
   return (
-    <section className="rounded-lg border bg-card p-4">
+    <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-[14px] font-semibold">진단 이력</h2>
         <Badge variant="outline">{historyRows.length}</Badge>
       </div>
       <div className="flex flex-col gap-2">
         {historyRows.map((row) => (
-          <div key={row.encounter.id} className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
+          <div key={row.encounter.id} className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
               <Badge variant="outline">{getStatusLabel("encounter", row.encounter.status)}</Badge>
@@ -782,20 +782,20 @@ function ChartRightPanel() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-12 flex-col justify-center border-b px-3">
+      <div className="flex h-12 flex-col justify-center border-b border-[var(--emr-line-hairline)] px-3">
         <div className="text-sm font-semibold">환자 사이드 패널</div>
         <div className="text-[11px] text-muted-foreground">환자 컨텍스트와 진단 이력</div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
           <AssessmentHistory historyRows={historyRows} />
-          <section className="rounded-md border bg-card p-3">
+          <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
             <div className="font-semibold">보호자 메모</div>
             <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
               {bundle.primaryGuardian?.memo ?? "물 섭취 후 재구토, 검사 비용 설명을 먼저 요청."}
             </p>
           </section>
-          <section className="rounded-md border bg-card p-3">
+          <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
             <div className="font-semibold">환자 메모</div>
             <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
               {bundle.patient.specialNote ?? "진료대에서 긴장도가 높아 보호자 동석 권장."}
@@ -828,87 +828,89 @@ function ChartOrderTable({
   someVisibleSelected: boolean;
 }) {
   return (
-    <Table className="min-w-[1080px] table-fixed bg-[var(--clair-color-atomic-common-100)] text-[13px]">
-      <TableHeader className="bg-[var(--clair-color-atomic-gray-50)]">
-        <TableRow className="border-[var(--clair-color-atomic-gray-300)] hover:bg-transparent">
-          <TableHead className="w-10 px-3 text-muted-foreground">
-            <Checkbox
-              aria-label="오더 전체 선택"
-              checked={allVisibleSelected}
-              indeterminate={someVisibleSelected}
-              onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
-            />
-          </TableHead>
-          <TableHead className="w-[140px] text-[12px] text-muted-foreground">그룹</TableHead>
-          <TableHead className="w-[68px] text-[12px] text-muted-foreground">분류</TableHead>
-          <TableHead className="w-[72px] text-[12px] text-muted-foreground">상태</TableHead>
-          <TableHead className="w-[240px] text-[12px] text-muted-foreground">Order명</TableHead>
-          <TableHead className="w-[190px] text-[12px] text-muted-foreground">청구서명</TableHead>
-          <TableHead className="w-16 text-[12px] text-muted-foreground">수량</TableHead>
-          <TableHead className="w-20 text-[12px] text-muted-foreground">단가</TableHead>
-          <TableHead className="w-[88px] text-[12px] text-muted-foreground">청구금액</TableHead>
-          <TableHead className="w-20 text-[12px] text-muted-foreground">수의사</TableHead>
-          <TableHead className="w-[116px] text-right text-[12px] text-muted-foreground">작업</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map(({ groupTitle, order }) => {
-          const invoiceLine = getChartInvoiceLineByOrderId(order.id);
+    <div className="overflow-x-auto rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <Table className="min-w-[1080px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
+        <TableHeader className="bg-[var(--emr-surface-muted)]">
+          <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
+            <TableHead className="w-10 px-3 text-muted-foreground">
+              <Checkbox
+                aria-label="오더 전체 선택"
+                checked={allVisibleSelected}
+                indeterminate={someVisibleSelected}
+                onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
+              />
+            </TableHead>
+            <TableHead className="w-[140px] text-[12px] text-muted-foreground">그룹</TableHead>
+            <TableHead className="w-[68px] text-[12px] text-muted-foreground">분류</TableHead>
+            <TableHead className="w-[72px] text-[12px] text-muted-foreground">상태</TableHead>
+            <TableHead className="w-[240px] text-[12px] text-muted-foreground">Order명</TableHead>
+            <TableHead className="w-[190px] text-[12px] text-muted-foreground">청구서명</TableHead>
+            <TableHead className="w-16 text-[12px] text-muted-foreground">수량</TableHead>
+            <TableHead className="w-20 text-[12px] text-muted-foreground">단가</TableHead>
+            <TableHead className="w-[88px] text-[12px] text-muted-foreground">청구금액</TableHead>
+            <TableHead className="w-20 text-[12px] text-muted-foreground">수의사</TableHead>
+            <TableHead className="w-[116px] text-right text-[12px] text-muted-foreground">작업</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(({ groupTitle, order }) => {
+            const invoiceLine = getChartInvoiceLineByOrderId(order.id);
 
-          return (
-            <TableRow
-              key={order.id}
-              className="h-10 border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] hover:bg-[var(--clair-color-atomic-common-100)]"
-            >
-              <TableCell className="px-3">
-                <Checkbox
-                  aria-label={`${order.displayName} 선택`}
-                  checked={selectedOrderIds.has(order.id)}
-                  onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
-                />
-              </TableCell>
-              <TableCell className="truncate text-[12px] font-medium text-muted-foreground">{groupTitle}</TableCell>
-              <TableCell><Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge></TableCell>
-              <TableCell><EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" /></TableCell>
-              <TableCell className="min-w-0">
-                <div className="truncate font-medium">{order.displayName}</div>
-                <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? orderTypeMeta[order.orderType].handoff}</div>
-              </TableCell>
-              <TableCell className="truncate">{invoiceLine?.description ?? order.displayName}</TableCell>
-              <TableCell>{invoiceLine?.quantity ?? 1}</TableCell>
-              <TableCell>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</TableCell>
-              <TableCell>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</TableCell>
-              <TableCell className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</TableCell>
-              <TableCell>
-                <div className="flex justify-end gap-1.5">
-                  <Button variant="outline" size="xs" className="bg-card">
-                    이력
-                  </Button>
-                  <Button variant="outline" size="xs" className="bg-card">
-                    요청
-                  </Button>
-                </div>
+            return (
+              <TableRow
+                key={order.id}
+                className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]"
+              >
+                <TableCell className="px-3">
+                  <Checkbox
+                    aria-label={`${order.displayName} 선택`}
+                    checked={selectedOrderIds.has(order.id)}
+                    onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
+                  />
+                </TableCell>
+                <TableCell className="truncate text-[12px] font-medium text-muted-foreground">{groupTitle}</TableCell>
+                <TableCell><Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge></TableCell>
+                <TableCell><EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" /></TableCell>
+                <TableCell className="min-w-0">
+                  <div className="truncate font-medium">{order.displayName}</div>
+                  <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? orderTypeMeta[order.orderType].handoff}</div>
+                </TableCell>
+                <TableCell className="truncate">{invoiceLine?.description ?? order.displayName}</TableCell>
+                <TableCell>{invoiceLine?.quantity ?? 1}</TableCell>
+                <TableCell>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</TableCell>
+                <TableCell>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</TableCell>
+                <TableCell className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-1.5">
+                    <Button variant="outline" size="xs" className="bg-card">
+                      이력
+                    </Button>
+                    <Button variant="outline" size="xs" className="bg-card">
+                      요청
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {!rows.length ? (
+            <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
+              <TableCell colSpan={11} className="h-24 text-center text-[13px] text-muted-foreground">
+                표시할 오더가 없습니다.
               </TableCell>
             </TableRow>
-          );
-        })}
-        {!rows.length ? (
-          <TableRow className="border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] hover:bg-[var(--clair-color-atomic-common-100)]">
-            <TableCell colSpan={11} className="h-24 text-center text-[13px] text-muted-foreground">
-              표시할 오더가 없습니다.
+          ) : null}
+          <TableRow className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
+            <TableCell />
+            <TableCell colSpan={10}>
+              <Button variant="ghost" size="sm" className="w-fit justify-start">
+                + Order 추가하기
+              </Button>
             </TableCell>
           </TableRow>
-        ) : null}
-        <TableRow className="h-10 border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] hover:bg-[var(--clair-color-atomic-common-100)]">
-          <TableCell />
-          <TableCell colSpan={10}>
-            <Button variant="ghost" size="sm" className="w-fit justify-start">
-              + Order 추가하기
-            </Button>
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -994,8 +996,8 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)]">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 px-4 py-2">
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="처방/오더" subtitle="처방 · 처치 · 검사 · 영상 오더" />
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="bg-card">
@@ -1004,7 +1006,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           <Button size="sm">+ Order</Button>
         </div>
       </div>
-      <div className="flex min-h-9 shrink-0 items-center px-4">
+      <div className="flex min-h-10 shrink-0 items-center border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
         <SegmentedControl
           aria-label="차트 오더 필터"
           items={tabItems}
@@ -1015,7 +1017,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           onValueChange={setOrderFilter}
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--clair-color-atomic-common-100)] px-4">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-3">
         <ChartOrderTable
           allVisibleSelected={allVisibleSelected}
           onToggleAll={toggleAllVisibleOrders}
@@ -1025,19 +1027,19 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           someVisibleSelected={someVisibleSelected}
         />
       </div>
-      <div className="grid min-h-16 shrink-0 grid-cols-[minmax(220px,1fr)_minmax(360px,1.5fr)_auto] items-center gap-4 border-t border-[var(--clair-color-atomic-gray-300)] bg-card px-4 py-3 text-[13px] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
-        <div className="text-muted-foreground">
+      <div className="flex min-h-16 shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-3 text-[13px]">
+        <div className="min-w-[240px] flex-1 text-muted-foreground">
           <div>선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건</div>
           <div className="mt-1 font-semibold text-foreground">청구 예상 총액: {totalAmount.toLocaleString()}</div>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
+        <div className="grid min-w-[280px] flex-[1_1_320px] grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
           <div className="text-right">
             <div>선택 오더 합계: {selectedAmount.toLocaleString()}</div>
             <div className="mt-1">Order 별 할인/할증 합계: 0</div>
           </div>
-          <Input readOnly value="0%" className="h-9 bg-[var(--clair-color-atomic-gray-50)] text-right" />
+          <Input readOnly value="0%" className="h-9 bg-[var(--emr-surface-panel)] text-right" />
         </div>
-        <div className="flex justify-end gap-2">
+        <div className="ml-auto flex shrink-0 justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -1060,7 +1062,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
               <span>
                 현재 환자와 선택 오더를 확인한 뒤 진행합니다. 이 prototype에서는 실제 청구/확정 상태를 변경하지 않습니다.
               </span>
-              <span className="grid gap-1 rounded-md border bg-[var(--clair-color-atomic-gray-50)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
                 <span>환자: {bundle.patient.name} · 보호자 {guardianName}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
                 <span>선택 오더: {selectedOrderIds.size}건 · 선택 금액 {selectedAmount.toLocaleString()}</span>
@@ -1107,9 +1109,9 @@ function ChartInstructionInfo({
   ];
 
   return (
-    <div className="grid grid-cols-4 rounded-lg border border-[var(--clair-color-atomic-gray-300)] bg-[var(--clair-color-atomic-common-100)] px-4 py-3">
+    <div className="grid grid-cols-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3">
       {infoItems.map(({ label, value }) => (
-        <div key={label} className="border-r border-[var(--clair-color-atomic-gray-300)] px-3 last:border-r-0">
+        <div key={label} className="border-r border-[var(--emr-line-hairline)] px-3 last:border-r-0">
           <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
           <div className="mt-1 flex min-h-6 items-center text-[13px] font-medium text-foreground">{value}</div>
         </div>
@@ -1247,7 +1249,7 @@ export function ChartContent() {
   if (!bundle) return <EmptyChartState />;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#FBFCFE] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar
@@ -1285,7 +1287,7 @@ export function ChartContent() {
               <span>
                 진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인합니다. 이 prototype에서는 실제 차트 상태를 변경하지 않습니다.
               </span>
-              <span className="grid gap-1 rounded-md border bg-[var(--clair-color-atomic-gray-50)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
                 <span>환자: {bundle.patient.name} · 보호자 {bundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
                 <span>진단명: {bundle.diagnoses.length}건 · 오더: {allOrders.length}건</span>
@@ -1303,14 +1305,14 @@ export function ChartContent() {
         ref={chartWorkspaceRef}
         data-slot="chart-workspace"
         className={cn(
-          "mt-4 grid min-h-0 flex-1 border-t border-[var(--clair-color-atomic-gray-300)] pt-4",
+          "mt-4 grid min-h-0 flex-1 border-t border-[var(--emr-line-hairline)] pt-4",
           isChartResizing && "select-none"
         )}
         style={{
           gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
         }}
       >
-        <div className="grid min-h-0 grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-4">
+        <div className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-4 [&>*]:min-w-0">
           <SoapPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
           <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
         </div>
@@ -1334,10 +1336,10 @@ export function ChartContent() {
           onPointerMove={handleChartResizePointerMove}
           onPointerUp={stopChartResize}
         >
-          <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--clair-color-line-normal)]" />
-          <span className="relative h-1.5 w-10 rounded-full bg-[var(--clair-color-atomic-gray-300)] transition-colors group-hover:bg-[var(--clair-color-atomic-gray-500)]" />
+          <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--emr-line-hairline)]" />
+          <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--clair-color-atomic-gray-500)]" />
         </button>
-        <div className="min-h-0">
+        <div className="min-h-0 min-w-0">
           <OrderArea key={bundle.encounter.id} bundle={bundle} orderGroups={orderGroups} />
         </div>
       </div>
