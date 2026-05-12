@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR 조제/처치 개선 시안</title>
+    <style>
+      :root {
+        --chrome: #eef2f7;
+        --nav: #151a24;
+        --panel: #ffffff;
+        --panel-2: #f7f9fc;
+        --line: #d9e2ee;
+        --line-soft: #edf1f6;
+        --text: #172033;
+        --muted: #66748a;
+        --blue: #2563eb;
+        --blue-soft: #eaf2ff;
+        --orange: #d85f1f;
+        --orange-soft: #fff6e9;
+        --green: #16834a;
+        --green-soft: #eaf8ef;
+        --red: #db2f2f;
+        --shadow: 0 14px 32px rgba(32, 45, 64, 0.08);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--chrome);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+      button, input { font: inherit; }
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: 52px 1fr;
+      }
+      .top {
+        display: grid;
+        grid-template-columns: 220px 1fr auto;
+        align-items: center;
+        gap: 16px;
+        padding: 0 12px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--line);
+      }
+      .workspace {
+        display: flex;
+        gap: 0;
+        min-height: 0;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .search {
+        width: min(560px, 100%);
+        justify-self: center;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .avatar {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #fff;
+        border: 1px solid var(--line);
+        color: var(--blue);
+        font-weight: 800;
+      }
+      .rail {
+        width: 70px;
+        padding: 10px 10px;
+        background: var(--nav);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .rail button {
+        width: 48px;
+        height: 42px;
+        border: 0;
+        border-radius: 8px;
+        color: #9fb0c7;
+        background: transparent;
+        font-size: 18px;
+      }
+      .rail button.active { background: #2c3342; color: #fff; }
+      .queue {
+        width: 320px;
+        padding: 16px;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        overflow: auto;
+      }
+      .history {
+        width: 280px;
+        padding: 16px;
+        border-right: 1px solid var(--line);
+        background: #fbfcfe;
+        overflow: auto;
+      }
+      .main {
+        flex: 1;
+        min-width: 780px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: #f8fafc;
+      }
+      .module-head,
+      .patient-bar,
+      .content-head {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      .module-head {
+        height: 52px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 18px;
+      }
+      .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 17px; }
+      h2 { font-size: 15px; }
+      h3 { font-size: 14px; }
+      .seg, .priority {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 8px;
+        background: #f0f4f8;
+      }
+      .seg button,
+      .priority button {
+        border: 0;
+        border-radius: 6px;
+        padding: 6px 10px;
+        background: transparent;
+        color: #344256;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .seg button.active,
+      .priority button.active {
+        background: #fff;
+        color: #111827;
+        box-shadow: 0 1px 2px rgba(20, 32, 48, 0.12);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 24px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .pill.blue { border-color: #bfd7ff; background: var(--blue-soft); color: #1d4ed8; }
+      .pill.orange { border-color: #fed7aa; background: var(--orange-soft); color: #9a3412; }
+      .pill.green { border-color: #bfe9cd; background: var(--green-soft); color: var(--green); }
+      .pill.dark { background: #111827; color: #fff; border-color: #111827; }
+      .date-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        color: #516176;
+      }
+      .group-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 18px 0 8px;
+        color: #344256;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .group-meta { color: var(--muted); font-size: 12px; font-weight: 700; }
+      .card {
+        position: relative;
+        padding: 12px 12px 10px;
+        margin-bottom: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+      .card.active {
+        border-color: #8fb5ff;
+        background: #f4f8ff;
+        box-shadow: inset 3px 0 0 var(--blue);
+      }
+      .card-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .card-sub {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .card-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .history-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .history-item strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+      .history-item span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .patient-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 18px;
+        overflow: hidden;
+      }
+      .content-head {
+        padding: 16px 18px;
+      }
+      .content-head-top,
+      .toolbar,
+      .order-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .instruction {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .info {
+        min-height: 62px;
+        padding: 10px 12px;
+        background: #fff;
+        border-right: 1px solid var(--line);
+      }
+      .info:last-child { border-right: 0; }
+      .info span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+      .info strong { font-size: 13px; }
+      .workbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+        padding: 14px 18px;
+        background: #fff;
+        border-bottom: 1px solid var(--line);
+      }
+      .priority {
+        background: #f5f7fb;
+        border: 1px solid var(--line);
+      }
+      .content-scroll {
+        padding: 16px 18px 28px;
+        overflow: auto;
+      }
+      .order-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        margin-bottom: 18px;
+      }
+      .order-head {
+        padding: 12px 14px;
+        background: #fbfcfe;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .order-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 900;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      th {
+        height: 42px;
+        padding: 0 10px;
+        background: #f7f9fc;
+        border-bottom: 1px solid var(--line);
+        color: #5b6a80;
+        font-size: 12px;
+        text-align: left;
+      }
+      td {
+        padding: 10px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: top;
+        font-size: 13px;
+      }
+      tr.focus { background: #fffdf8; }
+      .order-name { font-weight: 800; }
+      .order-detail {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .change-card {
+        margin: 2px 10px 12px 58px;
+        padding: 12px;
+        border: 1px solid #fed7aa;
+        border-radius: 8px;
+        background: var(--orange-soft);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+      }
+      .change-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #9a3412;
+      }
+      .change-card p {
+        color: #7c3d12;
+        font-size: 12px;
+      }
+      .actions {
+        display: inline-flex;
+        gap: 6px;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        color: #253248;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .btn.primary { background: #111827; border-color: #111827; color: #fff; }
+      .btn.warn { color: #9a3412; border-color: #fdba74; background: #fffaf3; }
+      @media (max-width: 1200px) {
+        .history { display: none; }
+        .queue { width: 300px; }
+        .instruction { grid-template-columns: repeat(2, 1fr); }
+        .main { min-width: 720px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div class="brand">↺ VIP 동물의료센터 청담점</div>
+        <div class="search">⌕ 동물명 또는 보호자명으로 검색 <span style="margin-left:auto">⌘ K</span></div>
+        <div class="user"><span>알림 · 도움말 · 설정</span><span class="avatar">간</span><span>간호사<br />nurse</span></div>
+      </header>
+
+      <div class="workspace">
+        <nav class="rail" aria-label="module nav">
+          <button>⌂</button><button>⌁</button><button>▣</button><button>♁</button><button class="active">☍</button><button>⌘</button><button>＋</button>
+        </nav>
+
+        <aside class="queue">
+          <div class="title-row">
+            <h1>조제/처치</h1>
+            <div class="seg"><button class="active">전체</button><button>조제</button><button>처치</button></div>
+          </div>
+          <div class="date-nav"><button class="icon-btn">‹</button><strong>26.04.29 (수)</strong><button class="icon-btn">›</button></div>
+
+          <div class="group-head">
+            <span>재요청 <span class="pill orange">1</span></span>
+            <span class="group-meta">최장 8분</span>
+          </div>
+          <article class="card active">
+            <div class="card-title"><span>코코 · 이지은</span><span class="pill blue">예약</span></div>
+            <p class="card-sub">경구제 · 항생제 세트 A</p>
+            <div class="card-tags"><span class="pill orange">재요청</span><span class="pill">미지정</span><span class="pill">10:30</span></div>
+          </article>
+
+          <div class="group-head">
+            <span>진행중 <span class="pill blue">1</span></span>
+            <span class="group-meta">최장 3분</span>
+          </div>
+          <article class="card">
+            <div class="card-title"><span>나비 · 오세아</span><span>외래</span></div>
+            <p class="card-sub">주사제 · 수액 처치</p>
+            <div class="card-tags"><span class="pill green">담당 송하윤</span><span class="pill">10:42 시작</span></div>
+          </article>
+
+          <div class="group-head">
+            <span>대기중 <span class="pill">2</span></span>
+            <span class="group-meta">미지정 2</span>
+          </div>
+          <article class="card">
+            <div class="card-title"><span>코코 · 이지은</span><span>외래</span></div>
+            <p class="card-sub">경구제 · 소염제 세트</p>
+            <div class="card-tags"><span class="pill">미지정</span><span class="pill">대기 8분</span></div>
+          </article>
+          <article class="card">
+            <div class="card-title"><span>나비 · 오세아</span><span>외래</span></div>
+            <p class="card-sub">조제-기타 · 위장약 세트</p>
+            <div class="card-tags"><span class="pill">미지정</span><span class="pill">대기 3분</span></div>
+          </article>
+        </aside>
+
+        <aside class="history">
+          <div class="title-row"><h2>조제이력</h2><span class="pill">5</span></div>
+          <div class="history-item"><strong>26.04.11 · CBC 검사 세트</strong><span>10:30 요청 · 담당자명</span></div>
+          <div class="history-item"><strong>Atorvastatin 20mg</strong><span>경구/기타 · 9:00 AM</span></div>
+          <div class="history-item"><strong>26.03.10 · 접종 및 기본 처치</strong><span>예방 접종 · 기본 처치</span></div>
+        </aside>
+
+        <main class="main">
+          <section class="patient-bar">
+            <span class="pill blue">조제이력</span><span class="pill">환자 코코</span><span class="pill">보호자 이지은</span><span class="pill">코리안숏헤어</span><span class="pill">8세</span><span class="pill">5.96 kg</span><span class="pill orange">체온 39.3°C</span><span class="pill">호흡 20 rpm</span><span class="pill">혈압 170 bpm</span>
+          </section>
+
+          <section class="content-head">
+            <div class="content-head-top">
+              <h1>조제 지시서 <span class="pill">RX-260414-0006</span></h1>
+              <div class="actions"><button class="btn">PDF 다운로드</button><button class="btn">출력하기</button><button class="btn primary">담당하기</button></div>
+            </div>
+            <div class="instruction">
+              <div class="info"><span>요청 일시</span><strong>2026.04.14 10:30</strong></div>
+              <div class="info"><span>환자 정보</span><strong>코코(8세) · 코리안숏헤어</strong></div>
+              <div class="info"><span>요청 수의사</span><strong>이수지</strong></div>
+              <div class="info"><span>조제 담당</span><strong>미지정</strong></div>
+              <div class="info"><span>조제 시작</span><strong>10:34</strong></div>
+            </div>
+          </section>
+
+          <section class="workbar">
+            <div class="priority" aria-label="priority filters">
+              <button class="active">전체 12</button>
+              <button>재요청 1</button>
+              <button>미지정 8</button>
+              <button>내 담당 2</button>
+              <button>변경 있음 2</button>
+            </div>
+            <div class="search" style="width: 270px; justify-self:auto">⌕ 오더명, 약품명 검색</div>
+          </section>
+
+          <div class="content-scroll">
+            <section class="order-card">
+              <div class="order-head">
+                <div class="order-title">⌄ 항생제 세트 A <span class="pill">6</span><span class="pill green">작업 완료 2/6</span></div>
+                <div class="actions"><button class="btn">변경만</button><button class="btn">미지정</button><button class="btn primary">담당하기</button></div>
+              </div>
+              <table>
+                <colgroup>
+                  <col style="width: 34%" /><col style="width: 10%" /><col style="width: 18%" /><col style="width: 20%" /><col style="width: 9%" /><col style="width: 9%" />
+                </colgroup>
+                <thead>
+                  <tr><th>오더명</th><th>상태</th><th>변경/주의</th><th>처방 요약</th><th>담당</th><th>액션</th></tr>
+                </thead>
+                <tbody>
+                  <tr class="focus">
+                    <td><div class="order-name">Amoxicillin 500(mg) C head 1mg</div><div class="order-detail">경구제 · 항생제 · 식전 투약</div></td>
+                    <td><span class="pill orange">재요청</span></td>
+                    <td><span class="pill orange">용량 +0.1 T</span><div class="order-detail">0.4 T → 0.5 T</div></td>
+                    <td><div class="summary"><span class="pill">3일</span><span class="pill">sid</span><span class="pill">회분 8</span><span class="pill">실온보관</span></div></td>
+                    <td><span class="pill">미지정</span></td>
+                    <td><button class="btn warn">검수</button></td>
+                  </tr>
+                  <tr>
+                    <td colspan="6">
+                      <div class="change-card">
+                        <div>
+                          <strong>변경 검수 필요 · 요청 이수지 10:30</strong>
+                          <p>체중 재확인 후 항생제 용량이 0.4 T에서 0.5 T로 변경되었습니다. 조제 전 변경값을 확인하세요.</p>
+                        </div>
+                        <div class="actions"><button class="btn primary">확인 완료</button><button class="btn">문의</button></div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><div class="order-name">Amoxicillin 500(mg) C head 1mg</div><div class="order-detail">경구제 · 항생제</div></td>
+                    <td><span class="pill">요청</span></td>
+                    <td><span class="pill">주의 없음</span></td>
+                    <td><div class="summary"><span class="pill">3일</span><span class="pill">sid</span><span class="pill">88.8 T</span><span class="pill">식전무관</span></div></td>
+                    <td><span class="pill">미지정</span></td>
+                    <td><button class="btn">처리</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="order-name">Amoxicillin 500(mg) C head 1mg</div><div class="order-detail">경구제 · 항생제</div></td>
+                    <td><span class="pill green">완료</span></td>
+                    <td><span class="pill">확인됨</span></td>
+                    <td><div class="summary"><span class="pill">3일</span><span class="pill">sid</span><span class="pill">88.8 T</span><span class="pill">실온보관</span></div></td>
+                    <td><span class="pill green">김미래</span></td>
+                    <td><button class="btn">보기</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section class="order-card">
+              <div class="order-head">
+                <div class="order-title">⌄ 기타 오더 그룹 <span class="pill">6</span><span class="pill green">작업 완료 2/6</span></div>
+                <div class="actions"><button class="btn">변경만</button><button class="btn">미지정</button><button class="btn primary">담당하기</button></div>
+              </div>
+              <table>
+                <colgroup>
+                  <col style="width: 34%" /><col style="width: 10%" /><col style="width: 18%" /><col style="width: 20%" /><col style="width: 9%" /><col style="width: 9%" />
+                </colgroup>
+                <thead>
+                  <tr><th>오더명</th><th>상태</th><th>변경/주의</th><th>처방 요약</th><th>담당</th><th>액션</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><div class="order-name">복약 안내 메시지</div><div class="order-detail">보호자 전달 · 식전무관</div></td>
+                    <td><span class="pill">요청</span></td>
+                    <td><span class="pill">주의 없음</span></td>
+                    <td><div class="summary"><span class="pill">퇴원 시</span><span class="pill">카카오톡</span><span class="pill">확인 필요</span></div></td>
+                    <td><span class="pill">미지정</span></td>
+                    <td><button class="btn">처리</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

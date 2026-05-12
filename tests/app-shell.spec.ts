@@ -28,6 +28,22 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
   await expect(page.getByText("상세 정보")).toBeHidden();
 });
 
+test("global command palette searches and opens patient context", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  await page.getByRole("button", { name: "전역 통합 검색 열기" }).click();
+  await expect(page.getByRole("dialog", { name: "통합 검색과 빠른 실행" })).toBeVisible();
+  await expect(page.getByText("빠른 실행", { exact: true })).toBeVisible();
+
+  await page.getByRole("textbox", { name: "통합 검색" }).fill("콩이");
+  const patientResult = page.getByRole("button", { name: /콩이.*환자/ });
+  await expect(patientResult).toBeVisible();
+  await patientResult.click();
+
+  await expect(page).toHaveURL(/drawer=reception-patient%3Apatient-kong/);
+  await expect(page.getByText("환자 정보")).toBeVisible();
+});
+
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
 
@@ -421,7 +437,7 @@ test("treatment module renders the chart queue instead of the order queue placeh
 
 test("right panel can be collapsed on a module that owns it", async ({ page }) => {
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=open");
-  await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료(차트)");
+  await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
   await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
   await expect(page.getByText("환자 사이드 패널")).toBeVisible();
   await expect(page).toHaveURL(/right=open/);

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Design Improvement: 임상병리 검사결과지</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #dbe4ef;
+      --soft: #f6f9fc;
+      --blue: #2563eb;
+      --blue-soft: #eaf3ff;
+      --green: #138a5b;
+      --orange: #d97706;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #f8fafc;
+      line-height: 1.65;
+    }
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+      background: #fff;
+      min-height: 100vh;
+    }
+    h1, h2, h3 { line-height: 1.22; margin: 0; }
+    h1 { font-size: 34px; letter-spacing: 0; }
+    h2 { font-size: 24px; margin-top: 44px; padding-top: 8px; }
+    h3 { font-size: 19px; margin-top: 34px; }
+    p { margin: 10px 0 0; }
+    a { color: var(--blue); }
+    .meta { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .callout {
+      margin: 24px 0 28px;
+      padding: 18px 20px;
+      border: 1px solid #bfdbfe;
+      background: var(--blue-soft);
+      border-radius: 8px;
+    }
+    .callout strong { color: #1d4ed8; }
+    figure { margin: 18px 0 24px; }
+    img {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+      background: #fff;
+    }
+    figcaption { margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .idea {
+      margin-top: 22px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .idea h3 { margin-top: 0; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eef6ff;
+      color: #1d4ed8;
+      vertical-align: 2px;
+    }
+    pre {
+      overflow: auto;
+      padding: 16px;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--soft); }
+    ul { padding-left: 20px; }
+    li { margin: 7px 0; }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 7px;
+      border: 1px solid #bfdbfe;
+      background: #fff;
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .button.primary { background: #111827; border-color: #111827; color: #fff; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Design Improvement: 임상병리 검사결과지 Workspace</h1>
+    <p class="meta">Generated 2026-05-11 · CLAiR EMR lab workspace</p>
+
+    <div class="callout">
+      <strong>TL;DR</strong>
+      <p>가장 큰 기회는 검사결과지를 입력 화면에서 이상치 판독과 장비값 대조가 먼저 보이는 검토 화면으로 끌어올리는 것입니다. 현재의 조용한 운영형 톤은 유지하고, 이상치 요약, row-level 강조, 우측 reconciliation, 하단 판독 액션을 강화하세요.</p>
+    </div>
+
+    <div class="actions">
+      <a class="button primary" href="improved-mockup.html">개선 적용 HTML 시안 열기</a>
+      <a class="button" href="report.md">Markdown report</a>
+    </div>
+
+    <h2>Current State</h2>
+    <figure>
+      <img src="references/current.png" alt="Current CLAiR EMR lab result workspace" />
+      <figcaption>좌측 오더 대기열, 검사이력 aside, 중앙 검사결과지, 우측 장비결과 수신내역으로 구성된 desktop EMR workspace.</figcaption>
+    </figure>
+
+    <section class="idea">
+      <h3>1. 검사결과지 상단에 판독 요약 스트립 추가 <span class="badge">Highest impact</span></h3>
+      <p>결과지 제목 아래에 이상 2, 정상 1, 장비값 대조 완료, 소견 필요 같은 compact summary를 넣고 주요 이상 항목을 한 줄로 먼저 노출합니다.</p>
+      <figure>
+        <img src="references/lazyweb-charta-health-quality-score.png" alt="Charta clinical quality dashboard" />
+        <figcaption>Charta는 여러 임상 지표를 색상 막대로 먼저 요약해 사용자가 어디를 봐야 하는지 정합니다. [Lazyweb]</figcaption>
+      </figure>
+      <pre>┌ 임상병리 검사결과지   LAB-COCO-CBC                         [담당하기] ┐
+│ 코코 · CBC 검사   26.05.01 10:42   ProCyte Dx                         │
+├───────────────────────────────────────────────────────────────────────┤
+│ 이상 2  정상 1  장비값 일치 3/3  소견 필요                            │
+│ HCT 27 낮음 · PLT 620 높음                                             │
+└───────────────────────────────────────────────────────────────────────┘</pre>
+    </section>
+
+    <section class="idea">
+      <h3>2. 이상치 row를 badge보다 먼저 보이게 만들기</h3>
+      <p>이상 row에는 왼쪽 status rail, 결과값 강조, 이전값/장비값 delta chip을 추가해 어떤 값이 왜 위험한지 한 번에 보이게 합니다.</p>
+      <figure>
+        <img src="references/lazyweb-commure-wbc-results.png" alt="Commure WBC analyzer result workflow" />
+        <figcaption>Commure/Athelas는 검사 결과를 actionable metric과 workflow로 연결합니다. [Lazyweb]</figcaption>
+      </figure>
+      <pre>┌ CBC 검사 세트                    비정상 2                 [저장] ┐
+│ 항목     결과값        기준범위             장비값      판정       │
+│ WBC      18.2          5.5 ───── 19.5       일치       정상       │
+│▌HCT      27 ↓          30 ───── 45          일치       낮음       │
+│▌PLT      620 ↑         175 ───── 500        일치       높음       │
+└──────────────────────────────────────────────────────────────────┘</pre>
+    </section>
+
+    <section class="idea">
+      <h3>3. 우측 수신내역을 장비값 대조 패널로 승격</h3>
+      <p>선택된 장비 수신값을 중앙 결과지와 1:1로 비교하고, 각 행에 일치, 차이, 미입력 상태를 붙입니다. 붙여넣기 전에 변경 범위를 확인하게 만드는 안전 UX입니다.</p>
+      <figure>
+        <img src="references/web-cloudscape-split-view.png" alt="Cloudscape split view pattern" />
+        <figcaption>Cloudscape split view는 선택한 리소스의 상세 정보를 우측 패널에 두어 테이블 맥락을 잃지 않게 합니다. [Web]</figcaption>
+      </figure>
+      <pre>┌ 장비값 대조: ProCyte Dx 10:49 수신 ┐
+│ WBC  현재 18.2   장비 18.2   일치  │
+│ HCT  현재 27     장비 27     일치  │
+│ PLT  현재 620    장비 620    일치  │
+│                                      │
+│ [차이만 적용] [전체 붙여넣기]       │
+└──────────────────────────────────────┘</pre>
+    </section>
+
+    <section class="idea">
+      <h3>4. 소견/첨부 영역을 판독 완료 체크포인트로 정리</h3>
+      <p>소견 입력 위에 필수 확인, 보호자 공유 가능, 진료 재평가 권장 같은 체크포인트를 두고, 첨부자료는 작은 evidence strip으로 압축합니다.</p>
+      <figure>
+        <img src="references/web-pencil-data-table-patterns.png" alt="Enterprise data table design pattern article capture" />
+        <figcaption>Pencil & Paper는 grouping, color, icons, units를 조합해 복잡한 데이터를 스캔 가능하게 만드는 원칙을 설명합니다. [Web]</figcaption>
+      </figure>
+      <pre>┌ 판독 체크포인트 ─────────────────────────────┐
+│ [x] HCT/PLT 재평가 필요  [ ] 보호자 공유 가능 │
+│ [ ] 응급 알림 필요                           │
+├ 종합소견                                      │
+│ HCT, PLT 항목이 참고치 밖입니다...            │
+├ 첨부 evidence                                  │
+│ coco-cbc.pdf  smear-preview.png               │
+└───────────────────────────────────────────────┘</pre>
+    </section>
+
+    <h2>What's Working</h2>
+    <ul>
+      <li>4-column shell이 명확합니다. 업무 큐, 이력, 결과지, 수신내역의 역할이 이미 나뉘어 있습니다.</li>
+      <li>색상 사용이 과하지 않아 의료 업무 화면답게 차분합니다.</li>
+      <li>환자 context chip과 정상범위 visual range가 있어 단순 표보다 임상 맥락이 좋습니다.</li>
+      <li>장비 수신내역을 우측에 둔 방향은 맞습니다. 이제 대조 역할만 더 선명히 하면 됩니다.</li>
+    </ul>
+
+    <h2>All References</h2>
+    <table>
+      <thead><tr><th>Reference</th><th>Source</th><th>Why Used</th></tr></thead>
+      <tbody>
+        <tr><td>Charta clinical quality score</td><td>Lazyweb</td><td>임상 지표를 상단에서 색상 막대로 요약하는 패턴</td></tr>
+        <tr><td>Commure/Athelas WBC results</td><td>Lazyweb</td><td>검사 결과를 actionable metric과 workflow로 연결하는 패턴</td></tr>
+        <tr><td>Cloudscape split view</td><td>Web</td><td>선택 항목 상세/비교 정보를 우측 패널에 유지하는 패턴</td></tr>
+        <tr><td>Pencil & Paper enterprise data tables</td><td>Web</td><td>복잡한 테이블을 스캔 가능하게 만드는 원칙</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

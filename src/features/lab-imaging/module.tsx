@@ -26,6 +26,7 @@ import {
   EmrInstructionHeaderStack,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
+import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
@@ -64,8 +65,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -392,44 +393,6 @@ function QueueActions() {
   );
 }
 
-function LabQueueViewTabs({
-  onValueChange,
-  value,
-}: {
-  onValueChange: (value: LabQueueView) => void;
-  value: LabQueueView;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="임상병리검사 목록 보기"
-      className="grid grid-cols-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] p-0.5"
-    >
-      {labQueueViewItems.map((item) => {
-        const selected = item.value === value;
-
-        return (
-          <button
-            key={item.value}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            className={cn(
-              "h-7 min-w-12 rounded-[6px] px-2 text-[12px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-              selected
-                ? "bg-card text-[var(--clair-color-atomic-gray-900)] shadow-xs"
-                : "text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-900)]"
-            )}
-            onClick={() => onValueChange(item.value)}
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function LabQueueGroup({
   collapsed,
   items,
@@ -668,44 +631,6 @@ function ImagingQueueItem({
   );
 }
 
-function ImagingQueueViewTabs({
-  onValueChange,
-  value,
-}: {
-  onValueChange: (value: ImagingQueueView) => void;
-  value: ImagingQueueView;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="영상검사 목록 보기"
-      className="grid grid-cols-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] p-0.5"
-    >
-      {imagingQueueViewItems.map((item) => {
-        const selected = item.value === value;
-
-        return (
-          <button
-            key={item.value}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            className={cn(
-              "h-7 min-w-12 rounded-[6px] px-2 text-[12px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-              selected
-                ? "bg-card text-[var(--clair-color-atomic-gray-900)] shadow-xs"
-                : "text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-900)]"
-            )}
-            onClick={() => onValueChange(item.value)}
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function ImagingQueueGroup({
   collapsed,
   items,
@@ -878,7 +803,17 @@ export function LabSidePanel() {
         title="임상병리검사"
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
-        tabs={<LabQueueViewTabs value={queueView} onValueChange={setQueueView} />}
+        tabsClassName="ml-2.5"
+        tabs={
+          <SegmentedControl
+            aria-label="임상병리검사 목록 보기"
+            className="shrink-0"
+            items={labQueueViewItems}
+            value={queueView}
+            variant="tabs"
+            onValueChange={setQueueView}
+          />
+        }
       />
       <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
       <EmrListHeader
@@ -958,7 +893,16 @@ export function ImagingSidePanel() {
         title="영상검사"
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
-        tabs={<ImagingQueueViewTabs value={queueView} onValueChange={setQueueView} />}
+        tabs={
+          <SegmentedControl
+            aria-label="영상검사 목록 보기"
+            className="shrink-0"
+            items={imagingQueueViewItems}
+            value={queueView}
+            variant="tabs"
+            onValueChange={setQueueView}
+          />
+        }
       />
       <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
       <EmrListHeader
@@ -1027,6 +971,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
   return (
     <EmrOrderGroupSection
       title={`${result.resultName} 세트`}
+      titleClassName="text-[14px] leading-5"
       count={rows.length}
       meta={
         abnormalRows.length > 0 ? (
@@ -1830,6 +1775,7 @@ export function LabContent() {
         titleBar={
           <EmrInstructionTitleBar
             title="임상병리 검사결과지"
+            titleClassName="text-[16px] leading-6"
             icon={
               <CdsFilesDocumentAltFillIcon
                 className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
@@ -1894,9 +1840,8 @@ export function LabContent() {
           </div>
         }
         filters={
-          <LineTabs
+          <EmrInstructionFilterTabs
             aria-label="검사 결과 필터"
-            className="w-full border-b border-[var(--clair-color-line-normal)]"
             value={resultTab}
             items={labResultTabItems.map((item) => ({
               ...item,

@@ -11,6 +11,7 @@ const storageKey = "clair.mockAuth.session.v1";
 const authUiFiles = [
   "src/features/auth/login-form.tsx",
   "src/features/auth/auth-gate.tsx",
+  "src/shell/auth-profile-menu.tsx",
   "src/shell/top-menu.tsx",
 ];
 
@@ -91,7 +92,9 @@ test("logout clears mock session from both browser stores", async ({ page }) => 
   await page.getByRole("button", { name: "로그인" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
-  await page.getByRole("button", { name: "로그아웃" }).click();
+  await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
+  await page.getByTestId("top-menu-mock-user").click();
+  await page.getByRole("menuitem", { name: "로그아웃" }).click();
   await expect(page).toHaveURL(/\/login/);
 
   await page.goto("/login");
@@ -133,8 +136,12 @@ test("app shell displays the selected mock role after login", async ({ page }) =
   await page.getByRole("button", { name: "로그인" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
-  await expect(page.getByTestId("top-menu-mock-user")).toContainText("간호사");
-  await expect(page.getByTestId("top-menu-mock-user")).toContainText("nurse");
+  await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
+  await page.getByTestId("top-menu-mock-user").click();
+  await expect(page.getByRole("menu")).toContainText("송하윤");
+  await expect(page.getByRole("menu")).toContainText("간호사");
+  await expect(page.getByRole("menu")).toContainText("활동중");
+  await expect(page.getByRole("menu")).toContainText("접수/예약");
 });
 
 test("auth UI components use the auth client boundary", () => {

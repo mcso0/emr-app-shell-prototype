@@ -17,6 +17,7 @@ type EmrOrderGroupSectionProps = {
   label?: ReactNode;
   meta?: ReactNode;
   onToggle?: () => void;
+  titleClassName?: string;
 };
 
 const ORDER_GROUP_EASE = [0.16, 1, 0.3, 1] as const;
@@ -36,6 +37,7 @@ export function EmrOrderGroupSection({
   label,
   meta,
   onToggle,
+  titleClassName,
 }: EmrOrderGroupSectionProps) {
   const accessibleTitle = getAccessibleTitle(title);
   const reduceMotion = useReducedMotion();
@@ -83,7 +85,12 @@ export function EmrOrderGroupSection({
               </motion.span>
             </EmrIconButton>
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="truncate text-[16px] font-semibold leading-6 text-[var(--clair-color-label-normal)]">
+              <span
+                className={cn(
+                  "truncate text-[14px] font-semibold leading-5 text-[var(--clair-color-label-normal)]",
+                  titleClassName
+                )}
+              >
                 {title}
               </span>
               {count !== undefined ? (

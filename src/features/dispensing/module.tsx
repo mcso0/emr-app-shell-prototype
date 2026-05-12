@@ -30,6 +30,7 @@ import {
   EmrInstructionHeaderStack,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
+import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -41,7 +42,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { cn } from "@/lib/utils";
@@ -712,9 +712,8 @@ function DispensingContentBody({
           </div>
         }
         filters={
-          <LineTabs
+          <EmrInstructionFilterTabs
             aria-label="오더 그룹 필터"
-            className="w-full border-b border-[var(--clair-color-line-normal)]"
             value={orderGroupFilter}
             items={orderGroupFilterItems}
             onValueChange={setOrderGroupFilter}

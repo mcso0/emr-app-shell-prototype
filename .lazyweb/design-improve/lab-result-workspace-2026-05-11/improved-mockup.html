@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLAiR EMR Lab Result Improved Mockup</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --soft: #f8fafc;
+      --line: #d9e2ee;
+      --line-strong: #c6d3e2;
+      --ink: #172033;
+      --muted: #64748b;
+      --faint: #94a3b8;
+      --blue: #2563eb;
+      --blue-soft: #eaf3ff;
+      --green: #16a35b;
+      --green-soft: #eaf8ef;
+      --orange: #e07922;
+      --orange-soft: #fff3e4;
+      --red: #dc2626;
+      --red-soft: #fff0f0;
+      --nav: #111827;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 1280px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Pretendard, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+    button, input, textarea { font: inherit; }
+    .app {
+      height: 100vh;
+      min-height: 900px;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      overflow: hidden;
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: 280px 1fr 380px;
+      align-items: center;
+      gap: 18px;
+      padding: 0 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--line);
+    }
+    .workspace-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      font-weight: 700;
+      max-width: 260px;
+    }
+    .logo-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, #1d7df2, #52b7ff);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .search {
+      justify-self: center;
+      width: min(560px, 70%);
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+      box-shadow: var(--shadow);
+    }
+    .top-actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 700;
+    }
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 11px;
+    }
+    .body {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 70px 322px 280px minmax(680px, 1fr) 318px;
+      gap: 0;
+      padding: 0 10px 10px 10px;
+    }
+    .rail {
+      margin-top: 0;
+      background: var(--nav);
+      border-radius: 0 0 8px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 0 12px;
+      gap: 16px;
+      color: #aeb9ca;
+    }
+    .rail-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      color: #bdc7d8;
+      font-size: 17px;
+    }
+    .rail-icon.active {
+      background: #334155;
+      color: #fff;
+    }
+    .rail-sep { width: 34px; height: 1px; background: #2b3444; }
+    .rail-spacer { flex: 1; }
+    .initial {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #364154;
+      border-radius: 50%;
+      color: #fff;
+      font-weight: 800;
+    }
+    .module, .history, .receipt {
+      min-height: 0;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .module {
+      margin-left: 10px;
+      border-left: 1px solid var(--line);
+      border-radius: 0 0 0 8px;
+    }
+    .module-header, .history-header, .receipt-header {
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .module-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .segmented {
+      display: inline-flex;
+      padding: 3px;
+      gap: 2px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+    }
+    .segmented span {
+      min-width: 44px;
+      height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .segmented .on {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+    }
+    .date-row {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+    .icon-button {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+    }
+    .date-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+    }
+    .queue-section {
+      padding: 0 16px 12px;
+    }
+    .section-head {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+    }
+    .count {
+      display: inline-flex;
+      min-width: 22px;
+      height: 22px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .queue-card {
+      position: relative;
+      margin-top: 12px;
+      padding: 12px 12px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .queue-card.active {
+      border-color: #8ebcff;
+      background: #f4f8ff;
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+    .queue-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 900;
+      line-height: 1.4;
+    }
+    .queue-sub { margin-top: 6px; color: #52647d; font-size: 13px; }
+    .queue-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 22px;
+      padding: 0 7px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: #52647d;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mini-pill.blue { border: 0; background: var(--blue-soft); color: var(--blue); }
+    .history {
+      background: #f9fbfd;
+    }
+    .history-header { background: #f9fbfd; }
+    .history-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 16px;
+    }
+    .history-list { padding: 0 16px 24px; overflow: auto; height: calc(100% - 62px); }
+    .history-group {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .history-date {
+      display: flex;
+      justify-content: space-between;
+      color: #475569;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .history-item {
+      padding: 8px 0;
+      color: #52647d;
+      line-height: 1.42;
+    }
+    .history-item strong { display: block; color: #1f2a3d; }
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 50px 1fr;
+      background: #fff;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .patient-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      overflow: hidden;
+    }
+    .context-chip {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border-radius: 7px;
+      background: var(--soft);
+      color: #405169;
+      font-size: 13px;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+    .context-chip.critical {
+      background: var(--red-soft);
+      color: #b91c1c;
+    }
+    .context-chip.ok {
+      background: var(--green-soft);
+      color: #047857;
+    }
+    .plus {
+      width: 26px;
+      height: 26px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--soft);
+      color: var(--muted);
+      font-weight: 900;
+    }
+    .main-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 16px 28px;
+      background: #fff;
+    }
+    .result-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .result-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 19px;
+      font-weight: 950;
+    }
+    .doc-icon {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      background: #edf4ff;
+      color: var(--blue);
+    }
+    .lab-code {
+      height: 24px;
+      padding: 0 8px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #52647d;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: #1f2a3d;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .btn.dark { background: #111827; border-color: #111827; color: #fff; }
+    .btn.blue { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .summary-card {
+      margin-top: 14px;
+      border: 1px solid #b8cef4;
+      background: linear-gradient(180deg, #f8fbff, #fff);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr 1fr 1fr 1fr;
+      border-bottom: 1px solid var(--line);
+    }
+    .summary-cell {
+      padding: 12px 14px;
+      border-right: 1px solid var(--line);
+      min-width: 0;
+    }
+    .summary-cell:last-child { border-right: 0; }
+    .label { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .value { margin-top: 4px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .review-strip {
+      display: grid;
+      grid-template-columns: 150px 120px 1fr 120px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+    }
+    .review-meter {
+      height: 10px;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--green-soft);
+    }
+    .review-meter span:first-child { background: var(--orange); }
+    .review-meter span:last-child { background: #8de0ad; }
+    .alert-text { color: #9a3412; font-weight: 900; }
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      height: 50px;
+      border-bottom: 1px solid var(--line);
+      margin-top: 12px;
+    }
+    .tab {
+      height: 50px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-weight: 850;
+      position: relative;
+    }
+    .tab.active { color: var(--ink); }
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 2px;
+      background: #111827;
+    }
+    .result-card, .comment-card, .attachments {
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .card-head {
+      min-height: 54px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: #fbfdff;
+      border-bottom: 1px solid var(--line);
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 950;
+    }
+    .status-badge {
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .status-badge.red { background: var(--red-soft); color: var(--red); }
+    .status-badge.green { background: var(--green-soft); color: var(--green); }
+    .status-badge.orange { background: var(--orange-soft); color: var(--orange); }
+    .lab-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .lab-table th {
+      height: 40px;
+      padding: 0 10px;
+      background: #f7f9fc;
+      border-bottom: 1px solid var(--line);
+      color: #52647d;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .lab-table td {
+      height: 52px;
+      padding: 0 10px;
+      border-bottom: 1px solid #edf1f6;
+      vertical-align: middle;
+    }
+    .lab-table tr:last-child td { border-bottom: 0; }
+    .lab-table tr.abnormal { background: #fffdf9; }
+    .rail-cell {
+      width: 8px;
+      padding: 0 !important;
+    }
+    .rail-mark {
+      width: 3px;
+      height: 38px;
+      border-radius: 0 4px 4px 0;
+      background: transparent;
+    }
+    .abnormal .rail-mark { background: var(--orange); }
+    .item-name { font-weight: 900; }
+    .result-input {
+      width: 96px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 0 10px;
+      background: #fff;
+      font-weight: 850;
+      color: var(--ink);
+    }
+    .abnormal .result-input {
+      border-color: #fdba74;
+      background: #fffaf3;
+      color: #9a3412;
+    }
+    .range {
+      display: grid;
+      grid-template-columns: 36px 1fr 36px;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .range-line {
+      position: relative;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #bfdbfe 0 22%, #bbf7d0 22% 78%, #fed7aa 78%);
+    }
+    .dot {
+      position: absolute;
+      top: 50%;
+      width: 9px;
+      height: 9px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--green);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+    }
+    .dot.low { left: 18%; background: #3b9ddd; }
+    .dot.high { left: 92%; background: var(--orange); }
+    .dot.normal { left: 74%; }
+    .compare-chip {
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: #047857;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .checkpoints {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdff;
+    }
+    .check {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 850;
+      color: #405169;
+    }
+    .check.on {
+      border-color: #fed7aa;
+      background: var(--orange-soft);
+      color: #9a3412;
+    }
+    textarea {
+      width: calc(100% - 32px);
+      height: 82px;
+      margin: 14px 16px 16px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .evidence {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 14px 16px 16px;
+    }
+    .file {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--soft);
+    }
+    .file-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: #fff;
+      color: #4f6d95;
+      border: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+    .file strong { display: block; font-size: 13px; }
+    .file span { color: var(--muted); font-size: 12px; }
+    .receipt {
+      border-radius: 0 0 8px 0;
+      display: grid;
+      grid-template-rows: 62px 58px 1fr;
+    }
+    .receipt-title {
+      font-size: 16px;
+      font-weight: 950;
+    }
+    .receipt-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 0 12px 18px;
+    }
+    .receipt-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .receipt-card-head {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdff;
+    }
+    .device-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      font-weight: 950;
+    }
+    .receipt-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .reconcile-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .rec-stat {
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 1px solid var(--line);
+    }
+    .rec-stat:last-child { border-right: 0; }
+    .rec-stat strong { display: block; font-size: 18px; }
+    .rec-stat span { color: var(--muted); font-size: 11px; font-weight: 800; }
+    .rec-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .rec-table th, .rec-table td {
+      height: 38px;
+      padding: 0 8px;
+      border-bottom: 1px solid #edf1f6;
+      text-align: left;
+      font-size: 12px;
+    }
+    .rec-table th { background: #f7f9fc; color: var(--muted); font-weight: 900; }
+    .rec-table tr:last-child td { border-bottom: 0; }
+    .receipt-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: #fbfdff;
+    }
+    .note {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #fed7aa;
+      background: #fffbeb;
+      border-radius: 8px;
+      color: #92400e;
+      font-size: 12px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="workspace-select"><span class="logo-dot">C</span> VIP 동물의료센터 청담점</div>
+      <div class="search">⌕ 동물명 또는 보호자명으로 검색 <span style="margin-left:auto;">⌘ K</span></div>
+      <div class="top-actions">
+        <span>⌂</span><span>?</span><span>⚙</span>
+        <div class="user-pill"><span class="user-avatar">병</span><span>병원 관리자</span></div>
+        <span>로그아웃</span>
+      </div>
+    </header>
+
+    <div class="body">
+      <nav class="rail" aria-label="전역 메뉴">
+        <div class="rail-icon">⌂</div>
+        <div class="rail-icon">♢</div>
+        <div class="rail-sep"></div>
+        <div class="rail-icon">▣</div>
+        <div class="rail-icon">♧</div>
+        <div class="rail-icon active">◒</div>
+        <div class="rail-icon">▧</div>
+        <div class="rail-icon">◌</div>
+        <div class="rail-icon">⌁</div>
+        <div class="rail-sep"></div>
+        <div class="rail-icon">□</div>
+        <div class="rail-icon">✚</div>
+        <div class="rail-spacer"></div>
+        <div class="initial">N</div>
+      </nav>
+
+      <aside class="module">
+        <div class="module-header">
+          <div class="module-title">‹‹ 임상병리검사</div>
+          <div class="segmented"><span class="on">오더별</span><span>차트별</span></div>
+        </div>
+        <div class="date-row">
+          <button class="icon-button">‹</button>
+          <div class="date-label">▣ 26.05.01 (금) <span class="mini-pill">오늘</span></div>
+          <button class="icon-button">›</button>
+        </div>
+        <div class="queue-section">
+          <div class="section-head"><strong>검사 대기열 <span class="count">2</span></strong><span>↕  ⋯</span></div>
+          <div class="section-head"><strong>결과입력 <span class="count" style="color:#e07922;">2</span></strong><span>⌄</span></div>
+          <article class="queue-card active">
+            <div class="queue-title"><span>코코 · 이지은 <span class="mini-pill blue">예약</span></span><span>⋯</span></div>
+            <div class="queue-sub">CBC 검사</div>
+            <div class="queue-meta">
+              <span class="mini-pill">요청 이수지</span>
+              <span class="mini-pill">담당 송하윤</span>
+              <span class="mini-pill">◷ 10:49 입력</span>
+            </div>
+          </article>
+          <article class="queue-card">
+            <div class="queue-title"><span>콩이 · 김하늘 <span class="mini-pill blue">예약</span></span></div>
+            <div class="queue-sub">CBC 검사</div>
+            <div class="queue-meta">
+              <span class="mini-pill">요청 이수지</span>
+              <span class="mini-pill">담당 송하윤</span>
+              <span class="mini-pill">◷ 10:28 입력</span>
+            </div>
+          </article>
+        </div>
+      </aside>
+
+      <aside class="history">
+        <div class="history-header">
+          <div class="history-title">‹ 검사이력 <span class="count">6</span></div>
+          <div>↕ ≡</div>
+        </div>
+        <div class="history-list">
+          <section class="history-group">
+            <div class="history-date"><span>26.05.01 <span class="count">1</span></span><span>⌄</span></div>
+            <div class="history-item"><strong>[CBC] CBC 검사</strong>송하윤 · 26.05.01 10:49 수신</div>
+          </section>
+          <section class="history-group">
+            <div class="history-date"><span>26.04.11 <span class="count">2</span></span><span>⌄</span></div>
+            <div class="history-item"><strong>[CBC] CBC 검사 세트</strong>담당지명 · 담당지명 · 10:30 요청</div>
+            <div class="history-item"><strong>[CHEM] 혈청화학 검사</strong>ALT/BUN 결과 확인 · 10:42 완료</div>
+          </section>
+          <section class="history-group">
+            <div class="history-date"><span>26.03.12 <span class="count">2</span></span><span>⌄</span></div>
+            <div class="history-item"><strong>[CBC] CBC 검사 세트</strong>이전 결과 추적 · 10:30 요청</div>
+            <div class="history-item"><strong>요검사</strong>보호자 요청 검사 · 11:15 완료</div>
+          </section>
+          <section class="history-group">
+            <div class="history-date"><span>26.03.10 <span class="count">1</span></span><span>⌄</span></div>
+            <div class="history-item"><strong>심장사상충 키트</strong>예방 검사 · 09:40 완료</div>
+          </section>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <div class="patient-strip">
+          <span class="context-chip">◷ 검사이력</span>
+          <span class="context-chip">🐾 환자 코코</span>
+          <span class="context-chip">보호자 이지은</span>
+          <span class="context-chip">품종 코리안숏헤어</span>
+          <span class="context-chip">나이 8세</span>
+          <span class="context-chip critical">이상치 2</span>
+          <span class="context-chip ok">장비값 일치 3/3</span>
+          <button class="plus">+</button>
+        </div>
+
+        <div class="main-scroll">
+          <div class="result-top">
+            <div>
+              <div class="result-title"><span class="doc-icon">▤</span> 임상병리 검사결과지 <span class="lab-code">LAB-COCO-CBC</span></div>
+            </div>
+            <div class="actions">
+              <button class="btn">⇩ PDF 다운로드</button>
+              <button class="btn">⎙ 출력하기</button>
+              <button class="btn dark">담당하기 ▾</button>
+            </div>
+          </div>
+
+          <section class="summary-card" aria-label="판독 요약">
+            <div class="summary-grid">
+              <div class="summary-cell"><div class="label">요청 일시</div><div class="value">26.05.01 10:42 · 입력</div></div>
+              <div class="summary-cell"><div class="label">환자 정보</div><div class="value">코코(8세) · 코리안숏헤어</div></div>
+              <div class="summary-cell"><div class="label">요청 수의사</div><div class="value">이수지</div></div>
+              <div class="summary-cell"><div class="label">검사 담당</div><div class="value">송하윤</div></div>
+              <div class="summary-cell"><div class="label">수신 장비</div><div class="value">ProCyte Dx</div></div>
+            </div>
+            <div class="review-strip">
+              <span class="status-badge red">비정상 2</span>
+              <span class="status-badge green">정상 1</span>
+              <div class="review-meter"><span></span><span></span></div>
+              <span class="alert-text">HCT ↓ · PLT ↑</span>
+            </div>
+          </section>
+
+          <div class="tabs">
+            <div class="tab active">전체 <span class="count">3</span></div>
+            <div class="tab">CBC <span class="count">3</span></div>
+            <div class="tab">활성화학 <span class="count">0</span></div>
+          </div>
+
+          <section class="result-card">
+            <div class="card-head">
+              <div class="card-title">⌄ CBC 검사 세트 <span class="count">3</span> <span class="status-badge red">비정상 2</span></div>
+              <div class="actions"><button class="btn">판정적용</button><button class="btn dark">저장</button></div>
+            </div>
+            <table class="lab-table" aria-label="CBC 검사 결과">
+              <colgroup>
+                <col style="width:8px" />
+                <col style="width:16%" />
+                <col style="width:16%" />
+                <col style="width:9%" />
+                <col style="width:28%" />
+                <col style="width:13%" />
+                <col style="width:10%" />
+                <col style="width:8%" />
+              </colgroup>
+              <thead>
+                <tr><th></th><th>항목</th><th>결과값</th><th>단위</th><th>정상범위</th><th>장비값</th><th>판정</th><th>담당자</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="rail-cell"><div class="rail-mark"></div></td>
+                  <td><span class="item-name">WBC</span></td>
+                  <td><input class="result-input" value="18.2" /></td>
+                  <td>K/uL</td>
+                  <td><div class="range"><span>5.5</span><div class="range-line"><i class="dot normal"></i></div><span>19.5</span></div></td>
+                  <td><span class="compare-chip">일치 18.2</span></td>
+                  <td><span class="status-badge green">정상</span></td>
+                  <td>송하윤</td>
+                </tr>
+                <tr class="abnormal">
+                  <td class="rail-cell"><div class="rail-mark"></div></td>
+                  <td><span class="item-name">HCT</span></td>
+                  <td><input class="result-input" value="27 ↓" /></td>
+                  <td>%</td>
+                  <td><div class="range"><span>30</span><div class="range-line"><i class="dot low"></i></div><span>45</span></div></td>
+                  <td><span class="compare-chip">일치 27</span></td>
+                  <td><span class="status-badge orange">낮음</span></td>
+                  <td>송하윤</td>
+                </tr>
+                <tr class="abnormal">
+                  <td class="rail-cell"><div class="rail-mark"></div></td>
+                  <td><span class="item-name">PLT</span></td>
+                  <td><input class="result-input" value="620 ↑" /></td>
+                  <td>K/uL</td>
+                  <td><div class="range"><span>175</span><div class="range-line"><i class="dot high"></i></div><span>500</span></div></td>
+                  <td><span class="compare-chip">일치 620</span></td>
+                  <td><span class="status-badge orange">높음</span></td>
+                  <td>송하윤</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="comment-card">
+            <div class="card-head">
+              <div class="card-title">검사결과 종합소견 <span class="lab-code">판독 체크포인트</span></div>
+            </div>
+            <div class="checkpoints">
+              <span class="check on">✓ HCT/PLT 재평가 필요</span>
+              <span class="check">보호자 공유 가능</span>
+              <span class="check">응급 알림 필요 없음</span>
+              <span class="check on">✓ 진료 재확인 권장</span>
+            </div>
+            <textarea>HCT, PLT 항목이 참고치 밖입니다. 임상 증상과 함께 재평가가 필요합니다.</textarea>
+          </section>
+
+          <section class="attachments">
+            <div class="card-head">
+              <div class="card-title">첨부 evidence <span class="count">2</span></div>
+              <button class="btn">+ 추가</button>
+            </div>
+            <div class="evidence">
+              <div class="file"><span class="file-icon">□</span><div><strong>coco-cbc-260501.pdf</strong><span>application/pdf · 180KB</span></div></div>
+              <div class="file"><span class="file-icon">▧</span><div><strong>cbc-smear-preview.png</strong><span>image/png · 432KB</span></div></div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <aside class="receipt">
+        <div class="receipt-header">
+          <div class="receipt-title">장비값 대조</div>
+          <span class="status-badge green">일치 3/3</span>
+        </div>
+        <div class="date-row">
+          <button class="icon-button">‹</button>
+          <div class="date-label">▣ 26.05.01 (금)</div>
+          <button class="icon-button">›</button>
+        </div>
+        <div class="receipt-scroll">
+          <article class="receipt-card">
+            <div class="receipt-card-head">
+              <div class="device-line"><span>ProCyte Dx</span><span class="mini-pill">10:49 수신</span></div>
+              <div class="receipt-sub">코코 · 이지은 CBC 검사</div>
+            </div>
+            <div class="reconcile-summary">
+              <div class="rec-stat"><strong>3</strong><span>수신값</span></div>
+              <div class="rec-stat"><strong>3</strong><span>일치</span></div>
+              <div class="rec-stat"><strong>0</strong><span>차이</span></div>
+            </div>
+            <table class="rec-table">
+              <thead><tr><th>항목</th><th>현재</th><th>장비</th><th>상태</th></tr></thead>
+              <tbody>
+                <tr><td>WBC</td><td>18.2</td><td>18.2</td><td><span class="compare-chip">일치</span></td></tr>
+                <tr><td>HCT</td><td>27</td><td>27</td><td><span class="compare-chip">일치</span></td></tr>
+                <tr><td>PLT</td><td>620</td><td>620</td><td><span class="compare-chip">일치</span></td></tr>
+              </tbody>
+            </table>
+            <div class="receipt-actions">
+              <button class="btn">차이만 적용</button>
+              <button class="btn blue">전체 붙여넣기</button>
+            </div>
+          </article>
+          <div class="note">붙여넣기 전 현재 결과지와 장비값의 차이를 확인합니다. 차이가 있는 항목만 선택 적용할 수 있도록 설계한 개선 시안입니다.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>

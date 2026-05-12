@@ -2,7 +2,6 @@
 @import "tw-animate-css";
 @import "pretendard/dist/web/variable/pretendardvariable.css";
 @import "../styles/tokens/shadcn.css";
-@import "../styles/tokens/emr-foundation.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -71,6 +70,16 @@
   --selection: var(--clair-color-fill-alternative);
   --selection-border: var(--clair-color-line-strong);
   --clair-color-service-background: #FBFCFD;
+  --emr-surface-app: #FBFCFD;
+  --emr-surface-panel: var(--clair-color-background-normal);
+  --emr-surface-muted: var(--clair-color-background-surface);
+  --emr-surface-selected: #F4F6FF;
+  --emr-line-hairline: #DFE5ED;
+  --emr-line-strong: var(--clair-color-line-strong);
+  --emr-accent: #5E6AD2;
+  --emr-accent-subtle: #EEF0FF;
+  --emr-radius-control: var(--clair-radius-md);
+  --emr-radius-panel: var(--clair-radius-lg);
 }
 
 .dark {

@@ -281,7 +281,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   };
 
   return (
-    <aside className="flex h-full min-h-0 w-full min-w-[320px] max-w-[320px] flex-col bg-card">
+    <aside className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-card">
       <EmrSubpanelTitle
         title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
         collapseLabel="병원관리 사이드 패널 접기"

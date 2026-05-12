@@ -207,7 +207,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--clair-color-service-background,#FBFCFD)] text-foreground">
       <TopMenu workspaceId={workspaceId} />
-      <div className="grid h-[calc(100vh-52px)] grid-cols-[60px_1fr] gap-2.5 px-2.5 pb-2.5">
+      <div className="grid h-[calc(100vh-52px)] grid-cols-[48px_1fr] gap-2.5 px-2.5 pb-2.5">
         <NavRail
           activeModuleId={moduleDefinition.id}
           navigationSearch={navigationSearch}

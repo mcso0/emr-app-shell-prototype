@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLAiR EMR Billing Improved Mockup</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --chrome: #111827;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --line: #d9e1ec;
+      --line-soft: #e8edf4;
+      --text: #172033;
+      --muted: #64748b;
+      --faint: #8a98aa;
+      --blue: #2563eb;
+      --blue-soft: #eaf2ff;
+      --teal: #0f766e;
+      --teal-soft: #e7f5f2;
+      --amber: #b45309;
+      --amber-soft: #fff7e6;
+      --danger: #b42318;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .app {
+      min-width: 1440px;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 300px 1fr 330px;
+      align-items: center;
+      gap: 20px;
+      padding: 0 14px;
+      background: #fbfcfe;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .workspace {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .brand-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--blue);
+      font-size: 12px;
+    }
+
+    .search {
+      justify-self: center;
+      width: min(560px, 100%);
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      background: #fff;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .top-actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .role {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 5px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .role-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .body {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 68px 320px minmax(760px, 1fr) 318px;
+    }
+
+    .rail {
+      background: #121722;
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rail-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #aeb8c8;
+      font-size: 18px;
+    }
+
+    .rail-btn.active {
+      background: #2a3040;
+      color: #fff;
+    }
+
+    .module-panel {
+      background: #fbfcfe;
+      border-right: 1px solid var(--line);
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .side-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      padding: 3px;
+      margin-bottom: 18px;
+      border-radius: 8px;
+      background: #e9eff6;
+    }
+
+    .tab {
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      color: #374151;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tab.active {
+      background: #fff;
+      color: #111827;
+      box-shadow: var(--shadow);
+    }
+
+    .queue-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .queue-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .queue-card.active {
+      border-color: var(--blue);
+      background: #f1f6ff;
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .queue-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .queue-title {
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.blue {
+      border-color: #bfdbfe;
+      background: var(--blue-soft);
+      color: #1d4ed8;
+    }
+
+    .pill.teal {
+      border-color: #a7f3d0;
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .pill.amber {
+      border-color: #fde68a;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .muted { color: var(--muted); }
+    .faint { color: var(--faint); }
+    .strong { font-weight: 800; }
+
+    .content {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 50px 1fr;
+      background: #fff;
+    }
+
+    .context {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .context .spacer { flex: 1; }
+
+    .content-scroll {
+      overflow: auto;
+      padding: 16px 18px 26px;
+      background: linear-gradient(#fff, #fff 60%, #fbfcfe);
+    }
+
+    .work-header {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .work-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+      font-size: 16px;
+      font-weight: 850;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .header-amount {
+      text-align: right;
+    }
+
+    .header-amount .value {
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .header-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #263244;
+      font-weight: 750;
+      font-size: 12px;
+    }
+
+    .btn.primary {
+      background: #141821;
+      border-color: #141821;
+      color: #fff;
+    }
+
+    .btn.blue {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .btn.danger-soft {
+      border-color: #fecaca;
+      background: #fff7f7;
+      color: var(--danger);
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .section-head {
+      min-height: 42px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line-soft);
+      font-weight: 850;
+    }
+
+    .guardian-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 14px 16px 8px;
+    }
+
+    .guardian-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 12px;
+      min-height: 86px;
+    }
+
+    .guardian-card.active {
+      border-color: var(--blue);
+      background: #f2f8ff;
+    }
+
+    .guardian-name {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 850;
+    }
+
+    .selection-bar {
+      margin: 8px 16px 14px;
+      border: 1px solid #bfdbfe;
+      background: var(--blue-soft);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .selection-bar .spacer { flex: 1; }
+
+    .subtotal-rail {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .subtotal {
+      border: 1px solid var(--line-soft);
+      border-radius: 7px;
+      background: #fff;
+      padding: 8px 10px;
+    }
+
+    .subtotal .label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .subtotal .amount {
+      margin-top: 3px;
+      font-weight: 900;
+    }
+
+    .warning {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #fdecc8;
+      background: var(--amber-soft);
+      color: #8a4b05;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+    }
+
+    th {
+      height: 38px;
+      padding: 0 10px;
+      text-align: left;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 850;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    td {
+      height: 46px;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--line-soft);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .qty {
+      width: 60px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      background: #fff;
+      font-weight: 700;
+    }
+
+    .right {
+      background: #fbfcfe;
+      border-left: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 0;
+    }
+
+    .right-head {
+      height: 50px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      font-weight: 900;
+    }
+
+    .right-scroll {
+      overflow: auto;
+      padding: 14px 16px;
+    }
+
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      margin-bottom: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-title {
+      padding: 12px;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 850;
+    }
+
+    .checklist {
+      padding: 10px 12px 12px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .check {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .check-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--teal-soft);
+      color: var(--teal);
+      font-weight: 900;
+    }
+
+    .check-icon.warn {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .amount-lines {
+      padding: 8px 12px 12px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .amount-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 12px;
+    }
+
+    .amount-line:last-child { border-bottom: 0; }
+
+    .amount-line .money {
+      font-weight: 900;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .amount-line .money.blue { color: var(--blue); }
+
+    .pay-methods {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      padding: 12px;
+    }
+
+    .pay-method {
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      color: #334155;
+      font-weight: 750;
+      font-size: 12px;
+    }
+
+    .pay-method.active {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+      color: #1d4ed8;
+    }
+
+    .steps {
+      padding: 10px 12px 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #eef2f7;
+      color: #475569;
+      font-weight: 900;
+    }
+
+    .step.done .step-num {
+      background: var(--teal-soft);
+      color: var(--teal);
+    }
+
+    .right-footer {
+      border-top: 1px solid var(--line);
+      background: #fff;
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .right-footer .btn.primary {
+      grid-column: 1 / -1;
+      height: 34px;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="workspace"><span class="brand-dot">C</span> VIP 동물의료센터 청담점</div>
+      <div class="search">⌕ 동물명 또는 보호자명으로 검색 <span class="faint" style="margin-left:auto;">⌘ K</span></div>
+      <div class="top-actions">
+        <span>⌂</span><span>?</span><span>⚙</span>
+        <span class="role"><span class="role-icon">수</span> 수납 관리자</span>
+        <span>로그아웃</span>
+      </div>
+    </header>
+
+    <section class="body">
+      <nav class="rail">
+        <div class="rail-btn">⌂</div>
+        <div class="rail-btn">◌</div>
+        <div class="rail-btn">□</div>
+        <div class="rail-btn">♧</div>
+        <div class="rail-btn">△</div>
+        <div class="rail-btn active">₩</div>
+        <div class="rail-btn">▱</div>
+      </nav>
+
+      <aside class="module-panel">
+        <div class="side-title">‹‹ 수납</div>
+        <div class="tabs">
+          <div class="tab active">대기 2</div>
+          <div class="tab">미납 1</div>
+          <div class="tab">종료 1</div>
+        </div>
+        <div class="queue-head">
+          <span>대기 청구서 <span class="pill">2</span></span>
+          <span>↕  ≡  ⌕</span>
+        </div>
+
+        <article class="queue-card active">
+          <div class="queue-row">
+            <div>
+              <div class="queue-title">코코 · INV-260501-0001</div>
+              <div class="muted">이지은 · E-260501-0001</div>
+            </div>
+            <span class="pill">수납대기</span>
+          </div>
+          <div class="queue-row" style="margin-top:10px;">
+            <span class="muted">26.05.01 10:40</span>
+            <strong>121,500원</strong>
+          </div>
+        </article>
+
+        <article class="queue-card">
+          <div class="queue-row">
+            <div>
+              <div class="queue-title">콩이 · INV-260501-0003</div>
+              <div class="muted">김하늘 · E-260501-0003</div>
+            </div>
+            <span class="pill">수납대기</span>
+          </div>
+          <div class="queue-row" style="margin-top:10px;">
+            <span class="muted">26.05.01 10:22</span>
+            <strong>156,500원</strong>
+          </div>
+        </article>
+      </aside>
+
+      <section class="content">
+        <div class="context">
+          <span class="pill blue">환자 코코</span>
+          <span class="pill">보호자 이지은</span>
+          <span class="pill">품종 코리안숏헤어</span>
+          <span class="pill">나이 8세</span>
+          <span class="pill">방문목적</span>
+          <span class="pill">청구서 INV-260501-0001</span>
+          <span class="pill blue">상태 수납대기</span>
+          <span class="spacer"></span>
+          <button class="btn">‹</button>
+          <button class="btn">›</button>
+          <button class="btn">수납 요약</button>
+        </div>
+
+        <div class="content-scroll">
+          <article class="work-header">
+            <div>
+              <div class="work-title">
+                INV-260501-0001 · 코코 / 이지은
+                <span class="pill blue">수납대기</span>
+              </div>
+              <div class="meta">
+                <span>5개 청구 항목</span>
+                <span>·</span>
+                <span>보호자 안내 필요</span>
+                <span>·</span>
+                <span>session-only 결제 처리</span>
+              </div>
+            </div>
+            <div class="header-amount">
+              <div class="value">121,500원</div>
+              <div class="muted">미납 121,500원</div>
+              <div class="header-actions">
+                <button class="btn">수납메모</button>
+                <button class="btn">보호자 안내</button>
+                <button class="btn">청구서 보기</button>
+              </div>
+            </div>
+          </article>
+
+          <section class="section">
+            <div class="section-head">
+              <span>보호자 청구 묶음</span>
+              <span class="pill">4</span>
+            </div>
+            <div class="guardian-grid">
+              <div class="guardian-card active">
+                <div class="guardian-name"><span>이지은</span><span class="pill">1건</span></div>
+                <div class="muted">코코</div>
+                <div class="strong" style="margin-top:10px;">121,500원</div>
+              </div>
+              <div class="guardian-card">
+                <div class="guardian-name"><span>오세아</span><span class="pill">1건</span></div>
+                <div class="muted">나비</div>
+                <div class="strong" style="margin-top:10px;">0원</div>
+              </div>
+              <div class="guardian-card">
+                <div class="guardian-name"><span>정하린</span><span class="pill">1건</span></div>
+                <div class="muted">두부</div>
+                <div class="strong" style="margin-top:10px;">28,000원</div>
+              </div>
+            </div>
+            <div class="selection-bar">
+              <span class="pill blue">선택 1건</span>
+              <span class="strong">INV-260501-0001</span>
+              <span class="muted">적용 0건 · 합산 대상 금액 121,500원</span>
+              <span class="spacer"></span>
+              <button class="btn">합산</button>
+              <button class="btn">합산 해제</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <span>청구 항목 편집</span>
+              <span><span class="pill">5</span> <span class="pill blue">합계 121,500원</span></span>
+            </div>
+            <div class="subtotal-rail">
+              <div class="subtotal"><div class="label">진료</div><div class="amount">22,000원</div></div>
+              <div class="subtotal"><div class="label">검사</div><div class="amount">35,000원</div></div>
+              <div class="subtotal"><div class="label">영상</div><div class="amount">42,000원</div></div>
+              <div class="subtotal"><div class="label">조제</div><div class="amount">4,500원</div></div>
+              <div class="subtotal"><div class="label">처치</div><div class="amount">18,000원</div></div>
+            </div>
+            <div class="warning">
+              <span>! 실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량만 session-only로 조정합니다.</span>
+              <span>연동 상태 보기</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:88px;">업무</th>
+                  <th>항목</th>
+                  <th class="num" style="width:130px;">단가</th>
+                  <th class="num" style="width:92px;">수량</th>
+                  <th class="num" style="width:110px;">할인</th>
+                  <th class="num" style="width:130px;">청구금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="pill">진료</span></td><td>일반 진료</td><td class="num">22,000원</td><td class="num"><span class="qty">1</span></td><td class="num">0원</td><td class="num strong">22,000원</td></tr>
+                <tr><td><span class="pill">검사</span></td><td>CBC 검사</td><td class="num">35,000원</td><td class="num"><span class="qty">1</span></td><td class="num">0원</td><td class="num strong">35,000원</td></tr>
+                <tr><td><span class="pill">영상</span></td><td>흉부 방사선</td><td class="num">42,000원</td><td class="num"><span class="qty">1</span></td><td class="num">0원</td><td class="num strong">42,000원</td></tr>
+                <tr><td><span class="pill">조제</span></td><td>Maropitant 16mg T</td><td class="num">4,500원</td><td class="num"><span class="qty">1</span></td><td class="num">0원</td><td class="num strong">4,500원</td></tr>
+                <tr><td><span class="pill">처치</span></td><td>피하 수액 처치</td><td class="num">18,000원</td><td class="num"><span class="qty">1</span></td><td class="num">0원</td><td class="num strong">18,000원</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </section>
+
+      <aside class="right">
+        <div class="right-head">
+          <span>수납 요약</span>
+          <span class="pill blue">수납대기</span>
+        </div>
+        <div class="right-scroll">
+          <section class="summary-card">
+            <div class="summary-title">
+              <span>준비 상태</span>
+              <span class="pill teal">3/4 확인</span>
+            </div>
+            <div class="checklist">
+              <div class="check"><span class="check-icon">✓</span><span>청구 항목 5개 확인</span><span class="faint">완료</span></div>
+              <div class="check"><span class="check-icon">✓</span><span>보호자 이지은 안내 대상</span><span class="faint">완료</span></div>
+              <div class="check"><span class="check-icon warn">!</span><span>영수증/VAT/부분결제 미연동</span><span class="pill amber">주의</span></div>
+              <div class="check"><span class="check-icon">✓</span><span>결제 수단 카드 선택</span><span class="faint">준비</span></div>
+            </div>
+          </section>
+
+          <section class="summary-card">
+            <div class="summary-title">금액</div>
+            <div class="amount-lines">
+              <div class="amount-line"><span>청구액</span><span class="money blue">121,500원</span></div>
+              <div class="amount-line"><span>수납액</span><span class="money">0원</span></div>
+              <div class="amount-line"><span>미납액</span><span class="money blue">121,500원</span></div>
+              <div class="amount-line"><span>할인</span><span class="money">0원</span></div>
+              <div class="amount-line"><span>발행</span><span class="money">-</span></div>
+            </div>
+          </section>
+
+          <section class="summary-card">
+            <div class="summary-title">결제 수단</div>
+            <div class="pay-methods">
+              <div class="pay-method active">카드</div>
+              <div class="pay-method">현금</div>
+              <div class="pay-method">계좌이체</div>
+              <div class="pay-method">기타</div>
+            </div>
+          </section>
+
+          <section class="summary-card">
+            <div class="summary-title">진행 단계</div>
+            <div class="steps">
+              <div class="step done"><span class="step-num">1</span><span>청구 항목 확인</span><span class="faint">완료</span></div>
+              <div class="step done"><span class="step-num">2</span><span>보호자 안내</span><span class="faint">준비</span></div>
+              <div class="step"><span class="step-num">3</span><span>청구 확정</span><span class="faint">대기</span></div>
+              <div class="step"><span class="step-num">4</span><span>수납 완료 처리</span><span class="faint">대기</span></div>
+            </div>
+          </section>
+
+          <section class="summary-card">
+            <div class="summary-title">읽기 전용 수납 정보</div>
+            <div class="amount-lines">
+              <div class="amount-line"><span>영수증 금액</span><span>미연동</span></div>
+              <div class="amount-line"><span>VAT 세부</span><span>0원</span></div>
+              <div class="amount-line"><span>부분 결제 입력</span><span>미지원</span></div>
+            </div>
+          </section>
+        </div>
+        <div class="right-footer">
+          <button class="btn danger-soft">미납 처리</button>
+          <button class="btn">청구 확정</button>
+          <button class="btn primary">수납 완료</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Design Improvement: CLAiR EMR Billing Workspace</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #dbe3ee;
+      --blue: #2563eb;
+      --blue-soft: #eaf2ff;
+      --amber-soft: #fff8e7;
+      --amber: #a15c07;
+      font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    h1, h2, h3 { line-height: 1.2; margin: 0 0 14px; }
+    h1 { font-size: 34px; letter-spacing: 0; }
+    h2 { margin-top: 38px; font-size: 22px; }
+    h3 { margin-top: 28px; font-size: 18px; }
+    p { margin: 0 0 16px; }
+    a { color: var(--blue); text-decoration: none; }
+    .lead {
+      color: var(--muted);
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .callout {
+      margin: 26px 0;
+      padding: 18px 20px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: var(--blue-soft);
+    }
+    .idea {
+      margin-top: 22px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    figure {
+      margin: 18px 0;
+    }
+    img {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      background: #fff;
+    }
+    figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    pre {
+      overflow: auto;
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .note {
+      padding: 14px 16px;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      background: var(--amber-soft);
+      color: var(--amber);
+      font-size: 14px;
+    }
+    ul { padding-left: 20px; }
+    li { margin: 6px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 750;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .mockup-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-weight: 750;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Design Improvement: CLAiR EMR Billing Workspace</h1>
+    <p class="lead">수납 화면의 현재 상태를 기준으로, 참고 사례와 함께 바로 적용 가능한 개선 방향을 정리했습니다.</p>
+
+    <section class="callout">
+      <strong>TL;DR</strong>
+      <p>가장 큰 기회는 우측 <strong>수납 요약</strong>을 단순 금액 패널에서 “다음 행동을 판단하는 결제 준비 패널”로 바꾸는 것입니다. 보호자 안내, 청구 확정, 결제 수단 선택, 미납 처리의 순서가 한눈에 보이면 수납 담당자의 실수 가능성을 줄일 수 있습니다.</p>
+    </section>
+
+    <h2>Current State</h2>
+    <figure>
+      <img src="references/current.png" alt="Current CLAiR EMR billing screen" />
+      <figcaption>현재 수납 화면: 좌측 queue, 중앙 청구 항목, 우측 수납 요약 구조는 안정적이지만 결제 readiness와 action 순서가 더 명확해질 수 있습니다.</figcaption>
+    </figure>
+
+    <h2>Improvement Ideas</h2>
+
+    <article class="idea">
+      <h3>1. 결제 준비 상태를 우측 패널 상단에 고정하기 ⭐</h3>
+      <p>우측 패널을 금액 list보다 “수납 준비 체크”로 시작하도록 바꿉니다. 청구 항목 확인, 보호자 안내, 결제 수단, 미지원 연동 정보, 미납 여부를 compact checklist로 표시합니다.</p>
+      <figure>
+        <img src="references/healthie-billing-dashboard.png" alt="Healthie billing dashboard reference" />
+        <figcaption>Healthie billing page - status tabs and dense billing table pattern. [Lazyweb]</figcaption>
+      </figure>
+      <p><strong>Why this works:</strong> billing table 앞에 status segmentation을 두면 “몇 건이 어떤 상태인가”를 빠르게 판단할 수 있습니다. CLAiR에서는 이 패턴을 우측 panel에 압축하는 편이 더 직접적입니다.</p>
+<pre><code>┌ 수납 요약 ────────────── 수납대기 ┐
+│ 준비 상태                         │
+│ ✓ 청구 항목 5개 확인              │
+│ ✓ 보호자 안내 대상 이지은          │
+│ ! 영수증/VAT/부분결제 미연동       │
+│ ○ 결제 수단 카드 선택             │
+└ [청구 확정] [수납 완료] ─────────┘</code></pre>
+    </article>
+
+    <article class="idea">
+      <h3>2. 중앙 상단을 “수납 작업 헤더”로 압축하기</h3>
+      <p>큰 청구서 카드의 설명 문장을 줄이고, 청구서 번호, 환자/보호자, 미납액, 상태, 주요 action을 한 줄 작업 헤더로 정리합니다.</p>
+      <figure>
+        <img src="references/varis-ap-dashboard-page.png" alt="Varis AP dashboard page reference" />
+        <figcaption>Varis Accounts Payable Dashboard - consolidated invoice hub and action model. [Web]</figcaption>
+      </figure>
+      <p><strong>Why this works:</strong> invoice 관련 정보와 action을 consolidated panel에 두면 첫 화면에서 판단 시간이 줄어듭니다.</p>
+    </article>
+
+    <article class="idea">
+      <h3>3. 청구 항목 table에 category subtotal과 inline risk cue 추가하기</h3>
+      <p>진료/검사/영상/조제/처치별 소계를 table 상단에 노출하고, session-only나 미연동 같은 주의 정보는 table 근처에 붙입니다.</p>
+      <figure>
+        <img src="references/patient-billing-dashboard-doc.png" alt="Patient billing dashboard documentation reference" />
+        <figcaption>Patient Billing Dashboard documentation - balance, sold items, invoices, payments, receipts separation. [Web]</figcaption>
+      </figure>
+      <p><strong>Why this works:</strong> 보호자에게 항목을 설명할 때 category별 합계를 바로 말할 수 있고, 담당자는 금액 검토 부담을 덜 수 있습니다.</p>
+    </article>
+
+    <article class="idea">
+      <h3>4. 합산/해제 영역을 “선택 작업”으로 더 작게 만들기</h3>
+      <p>별도 큰 카드 대신 보호자 청구 묶음 아래 compact selection toolbar로 붙입니다. batch action은 유지하면서 화면 세로 공간을 아낍니다.</p>
+      <figure>
+        <img src="references/partnerstack-payout-status.png" alt="PartnerStack payout status reference" />
+        <figcaption>PartnerStack commission page - payout table and status chips for review state and amount comparison. [Lazyweb]</figcaption>
+      </figure>
+    </article>
+
+    <article class="idea">
+      <h3>5. 수납 완료 CTA를 “확정 → 결제 → 완료” 흐름으로 분리하기</h3>
+      <p>우측 하단 action을 stepper 흐름과 연결합니다. 미납 처리는 exception action으로 분리하고, 수납 완료는 최종 primary CTA로 유지합니다.</p>
+      <figure>
+        <img src="references/drumroll-order-summary.png" alt="Drumroll order summary reference" />
+        <figcaption>Drumroll order confirmation - right-side order summary and checkout review structure. [Lazyweb]</figcaption>
+      </figure>
+    </article>
+
+    <h2>Applied HTML Draft</h2>
+    <p>개선 포인트가 적용된 HTML 시안도 함께 생성했습니다.</p>
+    <p><a class="mockup-link" href="billing-improved-mockup.html">Open billing-improved-mockup.html</a></p>
+    <div class="note">시안은 실제 앱 코드를 변경하지 않는 standalone HTML입니다. 구현 시에는 기존 EMR token과 shared component 패턴에 맞춰 이 구조를 옮기면 됩니다.</div>
+
+    <h2>What's Working</h2>
+    <ul>
+      <li>좌측 queue, 중앙 workspace, 우측 summary의 3분할 구조는 수납 업무에 잘 맞습니다.</li>
+      <li>현재 선택 invoice의 시각적 강조와 좌측 queue tab은 충분히 명확합니다.</li>
+      <li>청구 항목 table은 density가 좋고 column 구성이 안정적입니다.</li>
+      <li>session-only/prototype boundary를 amber 안내로 노출한 점은 안전합니다.</li>
+    </ul>
+
+    <h2>All References</h2>
+    <table>
+      <thead>
+        <tr><th>Reference</th><th>Source</th><th>Why Used</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Healthie billing dashboard</td><td><a href="https://www.gethealthie.com/billing">Lazyweb / Healthie</a></td><td>Billing status tabs and dense billing table pattern</td></tr>
+        <tr><td>Varis AP Dashboard</td><td><a href="https://support.buyerquest.com/hc/en-us/articles/37087121641747-Accounts-Payable-Dashboard">Web / Varis Help Center</a></td><td>Consolidated invoice hub and action model</td></tr>
+        <tr><td>Patient Billing Dashboard</td><td><a href="https://www.ehr-medical-software.com/Documentation/patient-billing-dashboard.html">Web / Vertikal Systems docs</a></td><td>Patient-level billing overview separation</td></tr>
+        <tr><td>PartnerStack commission page</td><td><a href="https://partnerstack.com/platform/partner-commissions">Lazyweb / PartnerStack</a></td><td>Review status, amount, and payout table pattern</td></tr>
+        <tr><td>Drumroll order summary</td><td><a href="https://trydrumroll.com/order-confirmation">Lazyweb / Drumroll</a></td><td>Right-side order summary and checkout review structure</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

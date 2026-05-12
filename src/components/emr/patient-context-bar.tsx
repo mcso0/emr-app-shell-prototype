@@ -133,7 +133,7 @@ export function EmrPatientContextBar({
 
   return (
     <div className={cn("border-b border-[var(--clair-color-atomic-gray-300)] bg-card", className)}>
-      <div className="flex h-[50px] items-center gap-3 px-4">
+      <div className="flex h-12 items-center gap-3 px-4">
         {historyButton ? (
           <>
             <Button

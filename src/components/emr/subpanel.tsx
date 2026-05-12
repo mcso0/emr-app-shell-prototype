@@ -25,6 +25,7 @@ type EmrSubpanelTitleProps = {
   collapseLabel?: string;
   onCollapse?: () => void;
   tabs?: ReactNode;
+  tabsClassName?: string;
   titleActions?: ReactNode;
 };
 
@@ -77,7 +78,7 @@ export function EmrSubpanel({ children, className }: EmrSubpanelProps) {
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 w-full min-w-[320px] max-w-[320px] flex-col bg-[var(--emr-surface-panel)]",
+        "group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-[var(--emr-surface-panel)]",
         className
       )}
     >
@@ -92,28 +93,33 @@ export function EmrSubpanelTitle({
   collapseLabel = "사이드 패널 접기",
   onCollapse,
   tabs,
+  tabsClassName,
   titleActions,
 }: EmrSubpanelTitleProps) {
   return (
-    <div className={cn("flex h-16 shrink-0 items-start px-4 py-4", className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        {onCollapse ? (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="rounded bg-transparent text-[var(--clair-color-label-alternative)] hover:bg-muted hover:text-[var(--clair-color-label-strong)]"
-            aria-label={collapseLabel}
-            onClick={onCollapse}
-          >
-            <CollapseGnbIcon aria-hidden="true" />
-          </Button>
-        ) : null}
-        <div className="min-w-0 truncate text-[18px] font-semibold leading-[26px] tracking-normal text-[var(--clair-color-label-strong)]">
-          {title}
+    <div className={cn("flex h-12 shrink-0 items-center px-4 py-3", className)}>
+      <div className="flex min-w-0 flex-1 items-center">
+        <div className="relative flex min-w-0 max-w-full items-center">
+          <div className="min-w-0 truncate text-[16px] font-semibold leading-6 tracking-normal text-[var(--clair-color-label-strong)]">
+            {title}
+          </div>
+          {onCollapse ? (
+            <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-7 shrink-0 opacity-0 group-hover/emr-subpanel:opacity-100">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-500)]"
+                aria-label={collapseLabel}
+                onClick={onCollapse}
+              >
+                <CollapseGnbIcon aria-hidden="true" />
+              </Button>
+            </span>
+          ) : null}
         </div>
       </div>
-      {tabs ? <div className="ml-3 shrink-0">{tabs}</div> : null}
-      {titleActions ? <div className="ml-2 shrink-0">{titleActions}</div> : null}
+      {tabs ? <div className={cn("ml-3 flex shrink-0 items-center", tabsClassName)}>{tabs}</div> : null}
+      {titleActions ? <div className="ml-2 flex shrink-0 items-center">{titleActions}</div> : null}
     </div>
   );
 }
@@ -133,7 +139,7 @@ export function EmrDateNavigator({
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-8 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
+        className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
         aria-label={previousLabel}
         onClick={onPrevious}
       >
@@ -141,17 +147,17 @@ export function EmrDateNavigator({
       </Button>
       <button
         type="button"
-        className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-[14px] font-medium leading-5 tracking-[0.196px] text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium leading-[18px] tracking-[0.019em] text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         onClick={onOpenDatePicker}
         aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
       >
         <CalendarIcon
-          className="size-4 shrink-0 text-[var(--clair-color-atomic-gray-400)]"
+          className="size-3.5 shrink-0 text-[var(--clair-color-atomic-gray-400)]"
           aria-hidden="true"
         />
         <span className="truncate">{dateLabel}</span>
         {todayLabel ? (
-          <Badge variant="outline" className="h-5 rounded-md bg-[var(--emr-surface-panel)] px-1.5 text-[11px]">
+          <Badge variant="outline" className="h-[18px] rounded-md bg-[var(--emr-surface-panel)] px-1.5 text-[10px] leading-4">
             {todayLabel}
           </Badge>
         ) : null}
@@ -159,7 +165,7 @@ export function EmrDateNavigator({
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-8 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
+        className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
         aria-label={nextLabel}
         onClick={onNext}
       >

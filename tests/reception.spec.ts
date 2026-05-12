@@ -8,7 +8,72 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await expect(page.getByText("접수 워크스페이스")).toHaveCount(0);
   await expect(page.getByText("예약 3건")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
+  const dateControl = page.getByTestId("reception-date-control");
+  const calendarViewTabs = page.getByRole("group", { name: "접수 캘린더 보기" });
+  await expect
+    .poll(() =>
+      dateControl
+        .getByRole("button")
+        .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))
+    )
+    .toEqual(["이전 날짜", "다음 날짜", "26.05.01 (금) 날짜 선택", "오늘 일자로 이동"]);
+  await dateControl.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }).click();
+  await expect(page.getByText("2026년 5월")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await calendarViewTabs.getByRole("button", { name: "주" }).click();
+  await expect(page.getByRole("button", { name: "26.04.27 - 26.05.03 주 선택" })).toBeVisible();
+  await expect
+    .poll(() =>
+      dateControl
+        .getByRole("button")
+        .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))
+    )
+    .toEqual(["이전 주", "다음 주", "26.04.27 - 26.05.03 주 선택", "오늘 일자로 이동"]);
+  await dateControl.getByRole("button", { name: "26.04.27 - 26.05.03 주 선택" }).click();
+  await expect(page.getByText("2026년 4월 - 5월")).toBeVisible();
+  await expect(page.getByRole("button", { name: "26.04.27 - 26.05.03 선택됨" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await calendarViewTabs.getByRole("button", { name: "월" }).click();
+  await expect(page.getByRole("button", { name: "26.05 월 선택" })).toBeVisible();
+  await expect
+    .poll(() =>
+      dateControl
+        .getByRole("button")
+        .evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")))
+    )
+    .toEqual(["이전 월", "다음 월", "26.05 월 선택", "오늘 일자로 이동"]);
+  await dateControl.getByRole("button", { name: "26.05 월 선택" }).click();
+  await expect(page.getByText("2026년", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "26.05 선택됨" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await calendarViewTabs.getByRole("button", { name: "일" }).click();
   await expect(page.getByText("영업시간 09:00-19:00")).toBeVisible();
+  await expect
+    .poll(async () => {
+      const box = await page.getByTestId("schedule-toolbar").boundingBox();
+      return Math.round(box?.height ?? 0);
+    })
+    .toBe(48);
+  const calendarFrameAlignment = await page
+    .getByTestId("reception-calendar-frame")
+    .evaluate((frameElement) => {
+      const toolbar = document.querySelector('[data-testid="schedule-toolbar"]');
+
+      if (!toolbar) return null;
+
+      const frameBox = frameElement.getBoundingClientRect();
+      const toolbarBox = toolbar.getBoundingClientRect();
+
+      return {
+        leftGap: Math.abs(frameBox.left - toolbarBox.left),
+        rightGap: Math.abs(frameBox.right - toolbarBox.right),
+      };
+    });
+
+  if (!calendarFrameAlignment) throw new Error("Expected reception calendar frame alignment data");
+
+  expect(calendarFrameAlignment.leftGap).toBeLessThanOrEqual(1);
+  expect(calendarFrameAlignment.rightGap).toBeLessThanOrEqual(1);
   await expect(page.getByText("08:00")).toBeVisible();
   await expect(page.getByText("20:00")).toBeVisible();
   await expect(page.getByText("reception workspace")).toHaveCount(0);
@@ -132,12 +197,19 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   const timeAxisAlignment = await calendar.evaluate((calendarElement) => {
     const timeAxis = calendarElement.querySelector('[data-testid="day-time-axis"]');
     const hourRow = calendarElement.querySelector('[data-testid="day-hour-row-9"]');
+    const firstTimeLabel = Array.from(timeAxis?.querySelectorAll("div") ?? []).find(
+      (element) => element.textContent?.trim() === "08:00"
+    );
     const timeLabel = Array.from(timeAxis?.querySelectorAll("div") ?? []).find(
       (element) => element.textContent?.trim() === "09:00"
     );
 
-    if (!timeAxis || !hourRow || !timeLabel) return null;
+    if (!timeAxis || !hourRow || !firstTimeLabel || !timeLabel) return null;
 
+    const firstTextRange = document.createRange();
+    firstTextRange.selectNodeContents(firstTimeLabel);
+    const firstTextBox = firstTextRange.getBoundingClientRect();
+    firstTextRange.detach();
     const textRange = document.createRange();
     textRange.selectNodeContents(timeLabel);
     const textBox = textRange.getBoundingClientRect();
@@ -147,6 +219,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     const hourRowBox = hourRow.getBoundingClientRect();
 
     return {
+      firstLabelInsetFromAxisTop: firstTextBox.top - timeAxisBox.top,
       gapToAxisRight: timeAxisBox.right - textBox.right,
       textCenterOffsetFromRowLine: Math.abs((textBox.top + textBox.bottom) / 2 - hourRowBox.top),
     };
@@ -154,6 +227,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   if (!timeAxisAlignment) throw new Error("Expected day calendar time axis alignment data");
 
+  expect(timeAxisAlignment.firstLabelInsetFromAxisTop).toBeGreaterThanOrEqual(0);
   expect(timeAxisAlignment.gapToAxisRight).toBeGreaterThanOrEqual(6);
   expect(timeAxisAlignment.gapToAxisRight).toBeLessThanOrEqual(10);
   expect(timeAxisAlignment.textCenterOffsetFromRowLine).toBeLessThanOrEqual(1);
@@ -437,7 +511,7 @@ test("nav rail maps menu labels to the intended modules", async ({ page }) => {
     "href",
     "/w/clair-demo/reception"
   );
-  await expect(page.getByRole("link", { name: "진료(차트)" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "진료/차트" })).toHaveAttribute(
     "href",
     "/w/clair-demo/treatment"
   );

@@ -104,7 +104,7 @@ function DemoLauncher() {
   ] as const;
   const spine = [
     "접수/예약",
-    "진료(차트)",
+    "진료/차트",
     "검사/영상",
     "조제/처치",
     "수납",
