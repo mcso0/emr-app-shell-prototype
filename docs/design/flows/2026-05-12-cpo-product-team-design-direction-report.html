@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLAiR EMR · CPO & Product Team Design Direction Report</title>
+  <style>
+    :root {
+      --blue: #2563eb;
+      --blue-strong: #1d4ed8;
+      --blue-soft: #eff6ff;
+      --blue-line: #bfdbfe;
+      --bg: #f7f8fb;
+      --surface: #ffffff;
+      --surface-soft: #fafbfe;
+      --text: #121826;
+      --muted: #5d6878;
+      --subtle: #8792a2;
+      --line: #e3e8f0;
+      --line-strong: #cbd5e1;
+      --shadow: 0 18px 48px rgba(18, 24, 38, 0.08);
+      --shadow-soft: 0 1px 2px rgba(18, 24, 38, 0.05);
+      --radius-24: 24px;
+      --radius-16: 16px;
+      --radius-12: 12px;
+      --radius-8: 8px;
+      --radius-4: 4px;
+      --radius-2: 2px;
+      --radius-1: 1px;
+      --left-width: 264px;
+      --right-width: 280px;
+      --content-width: 920px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      line-height: 1.62;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .report-shell {
+      display: grid;
+      grid-template-columns: var(--left-width) minmax(0, var(--content-width)) var(--right-width);
+      gap: 28px;
+      max-width: 1560px;
+      margin: 0 auto;
+      padding: 28px 28px 80px;
+    }
+
+    .left-nav,
+    .right-toc {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+    }
+
+    .nav-card,
+    .toc-card {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-24);
+      box-shadow: var(--shadow-soft);
+      padding: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: var(--radius-8);
+      background: var(--blue);
+      box-shadow: 0 0 0 5px var(--blue-soft);
+    }
+
+    .brand-text {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 850;
+      line-height: 1.3;
+    }
+
+    .brand-text span {
+      display: block;
+      color: var(--subtle);
+      font-size: 11px;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .nav-title,
+    .toc-title {
+      color: var(--subtle);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 18px 0 10px;
+    }
+
+    .nav-list,
+    .toc-list {
+      list-style: none;
+      display: grid;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-list a,
+    .toc-list a {
+      display: block;
+      border-radius: var(--radius-8);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      padding: 9px 10px;
+    }
+
+    .nav-list a:hover,
+    .toc-list a:hover {
+      background: var(--blue-soft);
+      color: var(--blue-strong);
+    }
+
+    .toc-list a.is-active {
+      color: #000000;
+      font-weight: 900;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .nav-note,
+    .toc-note {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 14px;
+      margin-top: 18px;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-24);
+      background: linear-gradient(135deg, #ffffff 0%, #f7faff 62%, #eef5ff 100%);
+      box-shadow: var(--shadow);
+      padding: 48px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--blue-line);
+      border-radius: var(--radius-24);
+      background: var(--blue-soft);
+      color: var(--blue-strong);
+      font-size: 12px;
+      font-weight: 850;
+      padding: 6px 10px;
+      margin-bottom: 20px;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      margin: 0;
+      color: var(--text);
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: clamp(36px, 5vw, 62px);
+      max-width: 840px;
+      margin-bottom: 18px;
+    }
+
+    .hero-subtitle {
+      max-width: 790px;
+      color: var(--muted);
+      font-size: 18px;
+      margin: 0 0 28px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-24);
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 780;
+      padding: 7px 10px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .hero-point {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      background: rgba(255, 255, 255, 0.84);
+      min-height: 150px;
+      padding: 18px;
+    }
+
+    .hero-point strong {
+      display: block;
+      color: var(--blue-strong);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .hero-point p {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+    }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-24);
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+      padding: 36px;
+      margin-bottom: 22px;
+      scroll-margin-top: 30px;
+    }
+
+    .section-kicker {
+      color: var(--blue-strong);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    section > h2 {
+      font-size: 30px;
+      margin-bottom: 12px;
+    }
+
+    .lead {
+      max-width: 780px;
+      color: var(--muted);
+      font-size: 16px;
+      margin: 0 0 24px;
+    }
+
+    .callout,
+    .blue-callout {
+      border-radius: var(--radius-16);
+      padding: 22px;
+      margin: 22px 0;
+    }
+
+    .callout {
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+
+    .blue-callout {
+      border: 1px solid var(--blue-line);
+      background: var(--blue-soft);
+    }
+
+    .callout h3,
+    .blue-callout h3 {
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    .callout p,
+    .blue-callout p {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .two-col,
+    .three-col {
+      display: grid;
+      gap: 16px;
+    }
+
+    .two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      background: var(--surface-soft);
+      padding: 22px;
+    }
+
+    .card h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .label {
+      display: inline-flex;
+      color: var(--subtle);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      background: var(--surface-soft);
+      padding: 18px;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--text);
+      font-size: 26px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .priority-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .priority-card {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      background: var(--surface-soft);
+      padding: 22px;
+    }
+
+    .priority-rank {
+      width: 68px;
+      height: 68px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--blue-line);
+      border-radius: var(--radius-16);
+      background: var(--blue-soft);
+      color: var(--blue-strong);
+      font-size: 20px;
+      font-weight: 950;
+    }
+
+    .priority-card h3 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .priority-card p {
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-24);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      padding: 7px 10px;
+    }
+
+    .check-list,
+    .number-list {
+      display: grid;
+      gap: 10px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .check-list li,
+    .number-list li {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 14px;
+      padding: 13px 14px 13px 40px;
+    }
+
+    .check-list li::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 19px;
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-4);
+      background: var(--blue);
+    }
+
+    .number-list {
+      counter-reset: step;
+    }
+
+    .number-list li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 13px;
+      top: 12px;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--blue-line);
+      border-radius: var(--radius-8);
+      background: var(--blue-soft);
+      color: var(--blue-strong);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      overflow: hidden;
+      background: var(--surface);
+      margin-top: 18px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--surface-soft);
+      color: var(--text);
+      font-weight: 880;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-16);
+      background: var(--surface-soft);
+      padding: 20px;
+    }
+
+    .timeline-date {
+      color: var(--blue-strong);
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .timeline-item h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .timeline-item p {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .decision {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-12);
+      background: var(--surface);
+      padding: 16px;
+    }
+
+    .decision h4 {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .decision p {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .footer-note {
+      color: var(--subtle);
+      text-align: center;
+      font-size: 13px;
+      padding: 24px 0 0;
+    }
+
+    @media (max-width: 1280px) {
+      .report-shell {
+        grid-template-columns: 230px minmax(0, 1fr);
+      }
+
+      .right-toc {
+        display: none;
+      }
+    }
+
+    @media (max-width: 880px) {
+      .report-shell {
+        display: block;
+        padding: 16px;
+      }
+
+      .left-nav {
+        position: static;
+        max-height: none;
+        margin-bottom: 16px;
+      }
+
+      .hero,
+      section {
+        padding: 24px;
+      }
+
+      .hero-grid,
+      .metric-strip,
+      .two-col,
+      .three-col,
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .priority-card,
+      .timeline-item {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-shell">
+    <aside class="left-nav" aria-label="보고서 전체 목차">
+      <nav class="nav-card">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <div class="brand-text">
+            CLAiR EMR
+            <span>CPO / Product Report</span>
+          </div>
+        </div>
+
+        <div class="nav-title">Report Sections</div>
+        <ul class="nav-list">
+          <li><a href="#summary">Executive Brief</a></li>
+          <li><a href="#product-thesis">Product Thesis</a></li>
+          <li><a href="#why-now">Why Now</a></li>
+          <li><a href="#product-team-mandate">Product Team Mandate</a></li>
+          <li><a href="#opportunity-map">Opportunity Map</a></li>
+          <li><a href="#priorities">Priority Bets</a></li>
+          <li><a href="#discovery">Discovery Plan</a></li>
+          <li><a href="#shaping">PRD & Shaping Rules</a></li>
+          <li><a href="#metrics">Product Metrics</a></li>
+          <li><a href="#decisions">CPO Decisions</a></li>
+        </ul>
+
+        <div class="nav-note">
+          이 문서는 CPO와 프로덕트 팀이 다음 discovery, PRD, 디자인/개발 shaping을 정렬하기 위한 보고서입니다. 현재 제품은 session-only 프로토타입이며 live DB/API, RLS, 서버 권한 강제는 완료 범위가 아닙니다.
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="hero">
+        <div class="eyebrow">Product Direction Report · Draft</div>
+        <h1>CPO & Product Team Design Direction Report</h1>
+        <p class="hero-subtitle">
+          CLAiR EMR이 화면 중심 MVP에서 운영 성과 중심 Product MVP로 넘어가기 위해, CPO와 프로덕트 팀이 앞으로 무엇을 우선해야 하는지 정리한 보고서입니다. 핵심은 더 많은 기능이 아니라, 병원 직원이 다음 행동과 책임, 근거, 차단 요소를 더 빠르고 안전하게 판단하도록 만드는 것입니다.
+        </p>
+
+        <div class="meta-row" aria-label="보고서 메타 정보">
+          <span class="badge">Audience · CPO / Product Team</span>
+          <span class="badge">Area · Product Strategy + Design</span>
+          <span class="badge">Source · Senior Product Design Points</span>
+          <span class="badge">Date · 2026-05-12</span>
+        </div>
+
+        <div class="hero-grid">
+          <article class="hero-point">
+            <strong>Product Question</strong>
+            <p>우리는 어떤 화면을 더 만들 것인가가 아니라, 어떤 병원 운영 문제를 반복적으로 해결할 것인가를 정해야 합니다.</p>
+          </article>
+          <article class="hero-point">
+            <strong>Team Focus</strong>
+            <p>next action, encounter continuity, handoff safety, billing explanation을 제품 언어와 PRD 기준으로 올려야 합니다.</p>
+          </article>
+          <article class="hero-point">
+            <strong>Business Reason</strong>
+            <p>구매자는 “기능이 많다”보다 “우리 병원의 하루가 덜 꼬인다”는 확신에 반응합니다.</p>
+          </article>
+        </div>
+      </header>
+
+      <section id="summary" class="spy-section">
+        <div class="section-kicker">Executive Brief</div>
+        <h2>프로덕트 팀의 다음 과제는 운영 문제를 제품 언어로 고정하는 것입니다</h2>
+        <p class="lead">
+          CLAiR EMR은 이미 외래 주요 흐름을 보여줄 수 있습니다. 이제 CPO와 프로덕트 팀은 화면 확장보다 “어떤 업무 결과를 더 낫게 만들 것인가”를 기준으로 우선순위를 재정렬해야 합니다. 디자인 팀의 결과물도 화면 시안이 아니라 제품 판단 기준, discovery 질문, PRD scope, 검증 지표로 이어져야 합니다.
+        </p>
+
+        <div class="blue-callout">
+          <h3>핵심 결론</h3>
+          <p>
+            다음 90일의 제품 방향은 P0: Role-Based Next Action + Encounter Timeline입니다. 이 베팅을 중심으로 chart evidence, billing explanation, handoff safety, operational design system을 연결하면 세일즈 데모, MVP 검증, 구현 우선순위가 같은 언어로 정렬됩니다.
+          </p>
+        </div>
+
+        <div class="metric-strip">
+          <div class="metric">
+            <strong>P0</strong>
+            <span>내원 상태와 역할별 다음 행동을 제품 핵심 모델로 정의</span>
+          </div>
+          <div class="metric">
+            <strong>P1</strong>
+            <span>임상 근거와 수납 설명 레이어를 대표 시나리오에 연결</span>
+          </div>
+          <div class="metric">
+            <strong>P2</strong>
+            <span>고위험 행동 안전 UX와 운영형 디자인 시스템 정리</span>
+          </div>
+          <div class="metric">
+            <strong>90d</strong>
+            <span>사용자 시나리오 테스트로 제품 가설 검증</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="product-thesis" class="spy-section">
+        <div class="section-kicker">Product Thesis</div>
+        <h2>CLAiR EMR은 “기록 도구”가 아니라 “운영 판단 도구”가 되어야 합니다</h2>
+        <p class="lead">
+          많은 EMR은 데이터를 입력하고 보관하는 데 초점이 맞춰져 있습니다. CLAiR이 차별화되려면 병원 직원이 지금 무엇을 해야 하는지, 왜 이 행동이 필요한지, 이 행동이 지연되면 어떤 후속 업무가 막히는지를 알려주는 운영형 제품 경험으로 발전해야 합니다.
+        </p>
+
+        <div class="three-col">
+          <article class="card">
+            <div class="label">From</div>
+            <h3>모듈별 화면 모음</h3>
+            <p>접수, 차트, 검사, 영상, 수납 화면이 각각 존재하지만 사용자가 직접 맥락을 연결해야 합니다.</p>
+          </article>
+          <article class="card">
+            <div class="label">To</div>
+            <h3>내원 중심 운영 흐름</h3>
+            <p>환자 방문이 하나의 흐름으로 유지되고, 역할별 책임과 다음 행동이 화면 전환 후에도 이어집니다.</p>
+          </article>
+          <article class="card">
+            <div class="label">Differentiator</div>
+            <h3>안전한 다음 행동</h3>
+            <p>제품이 단순히 정보를 보여주는 것을 넘어, 안전한 결정과 핸드오프를 돕는 파트너가 됩니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="why-now" class="spy-section">
+        <div class="section-kicker">Why Now</div>
+        <h2>지금 제품 방향을 정렬하지 않으면 기능은 늘고 학습은 느려집니다</h2>
+        <p class="lead">
+          현재 프로토타입은 넓은 외래 흐름을 갖췄습니다. 이 시점에서 제품 팀이 해야 할 일은 더 넓히는 것이 아니라, 어떤 흐름이 실제 구매와 유지에 가장 중요한지 검증하는 것입니다. 지금 제품 언어를 고정하면 이후 DB/API, 권한, 감사 로그, 서비스 카탈로그 설계도 덜 흔들립니다.
+        </p>
+
+        <div class="callout">
+          <h3>비즈니스 관점의 이유</h3>
+          <p>
+            병원은 EMR을 새로 도입할 때 전환 비용과 직원 적응 리스크를 감수합니다. 따라서 제품은 “기능이 있다”보다 “실제 하루 운영이 덜 꼬이고, 실수가 줄고, 보호자 응대가 쉬워진다”는 증거를 줘야 합니다. 디자인 방향은 이 증거를 만들기 위한 제품 전략입니다.
+          </p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Risk If Delayed</th>
+              <th>Product Consequence</th>
+              <th>Business Consequence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>화면별 임시 UX 증가</td>
+              <td>상태, 액션, 확인 패턴이 모듈마다 달라짐</td>
+              <td>데모는 좋아 보여도 도입 후 학습 비용이 커짐</td>
+            </tr>
+            <tr>
+              <td>사용자 문제 정의 부족</td>
+              <td>기능 요청은 쌓이지만 핵심 outcome이 흐려짐</td>
+              <td>세일즈 메시지와 로드맵 우선순위가 흔들림</td>
+            </tr>
+            <tr>
+              <td>session-only와 live guarantee 혼동</td>
+              <td>UX가 실제 보안/영속성 경계를 암시할 수 있음</td>
+              <td>고객 신뢰와 구현 예측 가능성이 낮아짐</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="product-team-mandate" class="spy-section">
+        <div class="section-kicker">Product Team Mandate</div>
+        <h2>프로덕트 팀은 다섯 가지 산출물을 만들어야 합니다</h2>
+        <p class="lead">
+          이 산출물은 디자인 파일보다 더 오래 남아야 합니다. PM, 디자이너, 엔지니어, 세일즈가 같은 기준으로 기능을 판단하도록 만드는 제품 운영 자산입니다.
+        </p>
+
+        <div class="priority-stack">
+          <article class="priority-card">
+            <div class="priority-rank">01</div>
+            <div>
+              <h3>Role-Based Next Action Contract</h3>
+              <p>업무 제목, 담당 역할, 환자/보호자 맥락, 표시 이유, 긴급도, 원본 워크플로우, safe-entry route를 가진 공통 next-action 모델을 정의합니다.</p>
+              <div class="tag-row">
+                <span class="tag">PM</span>
+                <span class="tag">Design</span>
+                <span class="tag">Home</span>
+                <span class="tag">Queue</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="priority-card">
+            <div class="priority-rank">02</div>
+            <div>
+              <h3>Encounter Continuity Map</h3>
+              <p>접수, 차트, 오더, 검사, 영상, 조제/처치, 수납이 어떤 상태와 ID로 이어지는지 제품 관점에서 정리합니다.</p>
+              <div class="tag-row">
+                <span class="tag">Encounter</span>
+                <span class="tag">Patient Context</span>
+                <span class="tag">Order</span>
+                <span class="tag">Billing</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="priority-card">
+            <div class="priority-rank">03</div>
+            <div>
+              <h3>Handoff Failure Mode List</h3>
+              <p>누가 소유하는지 모름, 준비 안 됨, 결과 미확인, 청구 누락, 잘못된 환자 연결 같은 실패 모드를 시나리오별로 기록합니다.</p>
+              <div class="tag-row">
+                <span class="tag">Safety</span>
+                <span class="tag">Discovery</span>
+                <span class="tag">PRD Risk</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="priority-card">
+            <div class="priority-rank">04</div>
+            <div>
+              <h3>Billing Explanation Model</h3>
+              <p>청구 항목이 어떤 임상 업무에서 왔고 완료 상태가 어떤지 보호자에게 설명 가능한 구조로 정의합니다.</p>
+              <div class="tag-row">
+                <span class="tag">Revenue</span>
+                <span class="tag">Trust</span>
+                <span class="tag">Guardian</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="priority-card">
+            <div class="priority-rank">05</div>
+            <div>
+              <h3>Operational UI Rules</h3>
+              <p>장시간 사용하는 EMR에 맞게 타이포그래피, 밀도, 테이블, 패널, confirmation, 상태 표현 기준을 정리합니다.</p>
+              <div class="tag-row">
+                <span class="tag">Design System</span>
+                <span class="tag">QA</span>
+                <span class="tag">Implementation</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="opportunity-map" class="spy-section">
+        <div class="section-kicker">Opportunity Map</div>
+        <h2>목표 outcome은 “내원 업무의 다음 책임 행동을 안전하게 완료한다”입니다</h2>
+        <p class="lead">
+          프로덕트 팀은 기능 목록보다 opportunity map을 먼저 유지해야 합니다. 아래 기회 영역은 향후 PRD와 discovery 질문의 기준점입니다.
+        </p>
+
+        <div class="three-col">
+          <article class="card">
+            <h3>Role Clarity</h3>
+            <p>이 업무가 내 것인지, 미배정인지, 다른 사람이 소유했는지 명확해야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Encounter Continuity</h3>
+            <p>환자, 보호자, 차트, 오더, 결과, 청구 맥락이 화면 이동 후에도 유지되어야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Evidence Visibility</h3>
+            <p>추천, 우선순위, 경고는 사용자가 납득할 수 있는 이유와 출처를 가져야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Handoff Confidence</h3>
+            <p>후속 역할은 업무가 준비됐는지, 무엇이 막혔는지, 누가 담당자인지 알아야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Error Prevention</h3>
+            <p>잘못된 환자, 차트, 오더, 청구를 막는 확인과 복구 경로가 필요합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Operational Density</h3>
+            <p>반복 화면은 오래 보아도 피로하지 않고 빠르게 스캔 가능해야 합니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="priorities" class="spy-section">
+        <div class="section-kicker">Priority Bets</div>
+        <h2>우선순위는 P0 하나, P1 두 개, P2 두 개로 제한합니다</h2>
+        <p class="lead">
+          모든 화면을 동시에 개선하지 않습니다. 대표 외래 시나리오 하나를 중심으로 제품 가설을 검증하고, 그 과정에서 재사용 가능한 모델을 뽑아내야 합니다.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Priority</th>
+              <th>Bet</th>
+              <th>Product Hypothesis</th>
+              <th>First Validation Signal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>P0</td>
+              <td>Encounter Timeline + Role Next Action</td>
+              <td>방문 상태, 담당자, blocker, 다음 행동이 보이면 사용자는 더 빠르게 안전한 업무를 선택한다.</td>
+              <td>역할별 사용자가 5초 안에 다음 행동과 이유를 말할 수 있음</td>
+            </tr>
+            <tr>
+              <td>P1</td>
+              <td>Chart / Lab / Imaging Evidence Surface</td>
+              <td>임상 근거가 연결되면 수의사는 덜 훑어보고 더 자신 있게 결정한다.</td>
+              <td>진단/오더 이유와 이상 결과를 설명할 수 있음</td>
+            </tr>
+            <tr>
+              <td>P1</td>
+              <td>Billing Explanation Layer</td>
+              <td>청구 출처와 완료 상태가 보이면 보호자 응대와 청구 신뢰가 좋아진다.</td>
+              <td>수납 담당자가 청구 항목의 임상 출처를 설명할 수 있음</td>
+            </tr>
+            <tr>
+              <td>P2</td>
+              <td>High-Risk Action Safety UX</td>
+              <td>고위험 액션의 확인·영향·복구 패턴이 일관되면 실수 경로가 줄어든다.</td>
+              <td>확인 전 환자/차트/오더/청구 맥락이 식별됨</td>
+            </tr>
+            <tr>
+              <td>P2</td>
+              <td>Operational Design Language</td>
+              <td>동일한 제품 의미가 동일한 UI 언어로 반복되면 학습 비용과 구현 불일치가 줄어든다.</td>
+              <td>동일 의도의 UI variant가 감소함</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="discovery" class="spy-section">
+        <div class="section-kicker">Discovery Plan</div>
+        <h2>사용자 리서치는 기능 요청보다 우회 행동을 관찰해야 합니다</h2>
+        <p class="lead">
+          프로덕트 팀은 “어떤 기능이 필요하세요?”보다 “EMR 밖에서 무엇을 다시 확인하나요?”를 물어야 합니다. 종이 메모, 채팅, 구두 전달, 엑셀, 기존 EMR 단축 사용법은 실제 제품 기회가 숨어 있는 곳입니다.
+        </p>
+
+        <div class="two-col">
+          <article class="card">
+            <h3>Weekly Discovery Loop</h3>
+            <ol class="number-list">
+              <li>대표 시나리오 하나를 고른다.</li>
+              <li>역할별 사용자 1-3명에게 walkthrough를 진행한다.</li>
+              <li>다음 행동, 담당자, blocker, 근거를 어디서 찾는지 관찰한다.</li>
+              <li>반복되거나 고위험인 발견만 PRD 후보로 승격한다.</li>
+            </ol>
+          </article>
+
+          <article class="card">
+            <h3>Interview Prompts</h3>
+            <ul class="check-list">
+              <li>이 환자를 다음 사람에게 넘기기 전에 무엇을 확인하나요?</li>
+              <li>어떤 정보는 시스템 밖에서 다시 확인하나요?</li>
+              <li>잘못되면 비용이 큰 실수는 무엇인가요?</li>
+              <li>피크 시간대에 계속 열어두는 화면은 무엇인가요?</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="shaping" class="spy-section">
+        <div class="section-kicker">PRD & Shaping Rules</div>
+        <h2>모든 PRD는 outcome, scope, boundary, validation을 가져야 합니다</h2>
+        <p class="lead">
+          이 방향은 바로 큰 구현 프로젝트가 아닙니다. 프로덕트 팀은 각 bet을 작고 검증 가능한 PR-sized 단위로 쪼개야 합니다. 특히 현재 프로토타입이 session-only라는 점을 PRD에 반복해서 명시해야 합니다.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>PRD Section</th>
+              <th>Required Question</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Goal</td>
+              <td>사용자의 어떤 불확실성을 줄이는가?</td>
+              <td>수의사가 대기 환자의 다음 차트 행동을 5초 안에 파악한다.</td>
+            </tr>
+            <tr>
+              <td>Scope</td>
+              <td>어떤 화면과 상태만 다루는가?</td>
+              <td>Home role card와 chart queue의 next-action display만 포함한다.</td>
+            </tr>
+            <tr>
+              <td>Out of Scope</td>
+              <td>아직 live guarantee로 만들지 않을 것은 무엇인가?</td>
+              <td>실시간 배정, DB persistence, RLS, audit-backed mutation은 제외한다.</td>
+            </tr>
+            <tr>
+              <td>Validation</td>
+              <td>무엇을 보면 이 방향이 맞다고 볼 수 있는가?</td>
+              <td>사용자가 next action의 이유와 원본 workflow를 설명할 수 있다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="metrics" class="spy-section">
+        <div class="section-kicker">Product Metrics</div>
+        <h2>제품 성공은 “보기에 좋다”가 아니라 “행동이 좋아졌다”로 측정합니다</h2>
+        <p class="lead">
+          프로덕트 팀은 디자인 개선을 시각 만족도로만 평가하면 안 됩니다. 병원 운영 제품에서는 판단 속도, 핸드오프 신뢰, 오류 예방, 설명 가능성이 더 중요한 지표입니다.
+        </p>
+
+        <div class="three-col">
+          <article class="card">
+            <h3>Next Action Time</h3>
+            <p>사용자가 지금 해야 할 일과 이유를 말하는 데 걸리는 시간.</p>
+          </article>
+          <article class="card">
+            <h3>Handoff Confidence</h3>
+            <p>후속 역할이 업무 준비 여부, 담당자, blocker를 설명할 수 있는 정도.</p>
+          </article>
+          <article class="card">
+            <h3>Billing Explainability</h3>
+            <p>청구 항목의 임상 출처와 완료 상태를 보호자 언어로 설명할 수 있는 정도.</p>
+          </article>
+          <article class="card">
+            <h3>Error Interception</h3>
+            <p>잘못된 환자, 차트, 오더, 청구로 진행하기 전 UI가 멈춰 세우는 순간.</p>
+          </article>
+          <article class="card">
+            <h3>Workaround Reduction</h3>
+            <p>종이, 채팅, 기억, 엑셀 같은 시스템 밖 확인 행동이 줄어드는지.</p>
+          </article>
+          <article class="card">
+            <h3>PRD Reuse</h3>
+            <p>next-action, continuity, handoff 모델이 여러 모듈 PRD에서 재사용되는지.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="decisions" class="spy-section">
+        <div class="section-kicker">CPO Decisions</div>
+        <h2>CPO와 프로덕트 팀이 지금 결정해야 할 것</h2>
+        <p class="lead">
+          방향이 너무 넓어지지 않으려면 첫 검증 대상, 첫 outcome, 첫 PR-sized bet을 명확히 정해야 합니다. 아래 결정은 디자인 팀과 개발 팀의 작업 방향을 바로 바꿉니다.
+        </p>
+
+        <div class="decision-grid">
+          <div class="decision">
+            <h4>Decision 1 · First Role</h4>
+            <p>첫 buyer-critical user를 수의사, 데스크, 수납 담당자, 병원장 중 누구로 둘 것인가?</p>
+          </div>
+          <div class="decision">
+            <h4>Decision 2 · First Outcome</h4>
+            <p>next-action identification time, handoff confidence, billing explainability 중 무엇을 먼저 측정할 것인가?</p>
+          </div>
+          <div class="decision">
+            <h4>Decision 3 · First PRD</h4>
+            <p>Home next-action model과 encounter state spine 중 무엇을 첫 shaped bet으로 승인할 것인가?</p>
+          </div>
+        </div>
+
+        <div class="blue-callout">
+          <h3>Recommended Next Move</h3>
+          <p>
+            첫 30일은 `Encounter Timeline + Role Next Action`을 CPO 승인 product bet으로 고정하고, PM/디자인/엔지니어가 같은 contract로 PRD를 작성하는 것을 추천합니다. 구현은 session-only boundary를 유지하되, 향후 live DB/API와 권한으로 교체될 상태 이름을 먼저 정리해야 합니다.
+          </p>
+        </div>
+      </section>
+
+      <div class="footer-note">
+        CLAiR EMR · CPO & Product Team Design Direction Report · Draft for product shaping
+      </div>
+    </main>
+
+    <aside class="right-toc" aria-label="핵심 포인트 목차">
+      <nav class="toc-card">
+        <div class="toc-title">Key Points</div>
+        <ul class="toc-list">
+          <li><a class="spy-link" href="#summary">운영 문제를 제품 언어로 고정</a></li>
+          <li><a class="spy-link" href="#product-thesis">기록 도구에서 운영 판단 도구로</a></li>
+          <li><a class="spy-link" href="#why-now">지금 정렬하지 않으면 학습이 느려짐</a></li>
+          <li><a class="spy-link" href="#product-team-mandate">프로덕트 팀의 다섯 산출물</a></li>
+          <li><a class="spy-link" href="#opportunity-map">목표 outcome과 기회 영역</a></li>
+          <li><a class="spy-link" href="#priorities">P0/P1/P2 priority bets</a></li>
+          <li><a class="spy-link" href="#discovery">우회 행동 중심 discovery</a></li>
+          <li><a class="spy-link" href="#shaping">PRD shaping rules</a></li>
+          <li><a class="spy-link" href="#metrics">행동 변화 기반 지표</a></li>
+          <li><a class="spy-link" href="#decisions">CPO 결정 사항</a></li>
+        </ul>
+        <div class="toc-note">
+          스크롤 위치에 따라 현재 섹션이 검정색과 볼드로 표시됩니다.
+        </div>
+      </nav>
+    </aside>
+  </div>
+
+  <script>
+    const sections = Array.from(document.querySelectorAll(".spy-section"));
+    const links = Array.from(document.querySelectorAll(".spy-link"));
+    const linkById = new Map(links.map((link) => [link.getAttribute("href").slice(1), link]));
+
+    function setActive(id) {
+      links.forEach((link) => link.classList.remove("is-active"));
+      const activeLink = linkById.get(id);
+      if (activeLink) {
+        activeLink.classList.add("is-active");
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (visible) {
+          setActive(visible.target.id);
+        }
+      },
+      {
+        root: null,
+        rootMargin: "-18% 0px -58% 0px",
+        threshold: [0.12, 0.28, 0.48, 0.72],
+      }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    if (sections[0]) {
+      setActive(sections[0].id);
+    }
+  </script>
+</body>
+</html>

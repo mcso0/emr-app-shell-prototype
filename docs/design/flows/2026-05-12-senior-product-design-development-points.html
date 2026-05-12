@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLAiR EMR · Senior Product Design Development Points</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-soft: #f9fafc;
+      --surface-blue: #f3f7ff;
+      --surface-warning: #fff8ed;
+      --surface-danger: #fff5f5;
+      --text: #172033;
+      --text-muted: #5f6b7a;
+      --text-subtle: #8993a3;
+      --line: #e2e8f0;
+      --line-strong: #cbd5e1;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --blue-soft: #dbeafe;
+      --green: #0f766e;
+      --green-soft: #ccfbf1;
+      --orange: #c2410c;
+      --orange-soft: #ffedd5;
+      --red: #b91c1c;
+      --red-soft: #fee2e2;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 12px 32px rgba(15, 23, 42, 0.08);
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --content-width: 880px;
+      --sidebar-width: 260px;
+      --toc-width: 240px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      line-height: 1.65;
+      letter-spacing: -0.015em;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .docs-shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, var(--content-width)) var(--toc-width);
+      gap: 32px;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 28px 28px 72px;
+    }
+
+    .sidebar,
+    .toc {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+    }
+
+    .sidebar-card,
+    .toc-card {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 18px;
+    }
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 760;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--primary);
+      display: inline-block;
+    }
+
+    .nav-list,
+    .toc-list {
+      display: grid;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .nav-list a,
+    .toc-list a {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .nav-list a:hover,
+    .toc-list a:hover {
+      background: var(--surface-blue);
+      color: var(--primary-dark);
+    }
+
+    .toc-title {
+      font-size: 12px;
+      font-weight: 740;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .doc-hero {
+      background: linear-gradient(135deg, #ffffff 0%, #f3f7ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 44px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 760;
+      margin-bottom: 18px;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      line-height: 1.25;
+      letter-spacing: -0.035em;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(34px, 5vw, 56px);
+      max-width: 780px;
+      margin-bottom: 18px;
+    }
+
+    .hero-subtitle {
+      color: var(--text-muted);
+      font-size: 18px;
+      max-width: 760px;
+      margin: 0 0 28px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--text-muted);
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .hero-question {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      min-height: 136px;
+    }
+
+    .hero-question strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--primary-dark);
+    }
+
+    .hero-question p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 34px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      scroll-margin-top: 28px;
+    }
+
+    section > h2 {
+      font-size: 28px;
+      margin-bottom: 14px;
+    }
+
+    section > .lead {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 760px;
+      margin: 0 0 24px;
+    }
+
+    .callout {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+      padding: 22px;
+      margin: 22px 0;
+    }
+
+    .callout.blue {
+      background: var(--surface-blue);
+      border-color: #bfdbfe;
+    }
+
+    .callout.warning {
+      background: var(--surface-warning);
+      border-color: #fed7aa;
+    }
+
+    .callout.danger {
+      background: var(--surface-danger);
+      border-color: #fecaca;
+    }
+
+    .callout h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .callout p {
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+      padding: 22px;
+    }
+
+    .card h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 780;
+      color: var(--text-subtle);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .from-to {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px;
+      align-items: stretch;
+      margin-top: 20px;
+    }
+
+    .from-card,
+    .to-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      background: var(--surface-soft);
+    }
+
+    .to-card {
+      background: var(--surface-blue);
+      border-color: #bfdbfe;
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 22px;
+    }
+
+    .quote {
+      border-left: 4px solid var(--primary);
+      padding: 16px 18px;
+      background: var(--surface-blue);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      color: var(--text);
+      font-weight: 680;
+      margin: 22px 0;
+    }
+
+    .check-list,
+    .number-list {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .check-list li,
+    .number-list li {
+      position: relative;
+      padding: 13px 14px 13px 42px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface-soft);
+      color: var(--text-muted);
+    }
+
+    .check-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 14px;
+      top: 13px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .number-list {
+      counter-reset: steps;
+    }
+
+    .number-list li::before {
+      counter-increment: steps;
+      content: counter(steps);
+      position: absolute;
+      left: 14px;
+      top: 13px;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--blue-soft);
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .principle-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .principle {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 16px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+    }
+
+    .principle-number {
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: var(--blue-soft);
+      color: var(--primary-dark);
+      font-weight: 880;
+    }
+
+    .principle h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .principle p {
+      color: var(--text-muted);
+      margin: 0 0 10px;
+    }
+
+    .mini-note {
+      color: var(--text-subtle);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+      overflow: hidden;
+    }
+
+    details + details {
+      margin-top: 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 18px 20px;
+      font-weight: 820;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::after {
+      content: "+";
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--primary-dark);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      font-weight: 900;
+    }
+
+    details[open] summary::after {
+      content: "−";
+    }
+
+    .details-body {
+      border-top: 1px solid var(--line);
+      padding: 0 20px 20px;
+      color: var(--text-muted);
+    }
+
+    .details-body h4 {
+      color: var(--text);
+      font-size: 15px;
+      margin: 18px 0 8px;
+    }
+
+    .details-body ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+
+    .details-body li {
+      margin: 6px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--surface);
+      margin-top: 18px;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--surface-soft);
+      color: var(--text);
+      font-weight: 780;
+    }
+
+    td {
+      color: var(--text-muted);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .role-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .role-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+      padding: 22px;
+    }
+
+    .role-card h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .role-card p {
+      color: var(--text-muted);
+      margin: 0 0 14px;
+    }
+
+    .focus-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .bet-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .bet-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      background: var(--surface-soft);
+      min-height: 220px;
+    }
+
+    .bet-card.p0 {
+      grid-column: 1 / -1;
+      background: var(--surface-blue);
+      border-color: #bfdbfe;
+    }
+
+    .priority {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 880;
+      margin-bottom: 12px;
+      background: var(--blue-soft);
+      color: var(--primary-dark);
+    }
+
+    .priority.p1 {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .priority.p2 {
+      background: var(--orange-soft);
+      color: var(--orange);
+    }
+
+    .bet-card h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .bet-card p {
+      color: var(--text-muted);
+      margin: 0 0 14px;
+    }
+
+    .bet-card h4 {
+      font-size: 14px;
+      margin: 16px 0 8px;
+    }
+
+    .bet-card ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .pr-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+
+    .pr-card h3 {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .split-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .included,
+    .excluded {
+      border-radius: var(--radius-md);
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+
+    .included h4,
+    .excluded h4 {
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .included h4 {
+      color: var(--green);
+    }
+
+    .excluded h4 {
+      color: var(--red);
+    }
+
+    .included ul,
+    .excluded ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .reference-list {
+      columns: 2;
+      column-gap: 28px;
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .footer-note {
+      color: var(--text-subtle);
+      font-size: 13px;
+      text-align: center;
+      padding: 28px 0 0;
+    }
+
+    @media (max-width: 1180px) {
+      .docs-shell {
+        grid-template-columns: 220px minmax(0, 1fr);
+      }
+
+      .toc {
+        display: none;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .docs-shell {
+        display: block;
+        padding: 16px;
+      }
+
+      .sidebar {
+        position: static;
+        max-height: none;
+        margin-bottom: 16px;
+      }
+
+      .doc-hero,
+      section {
+        padding: 24px;
+        border-radius: 20px;
+      }
+
+      .hero-grid,
+      .two-col,
+      .three-col,
+      .card-grid,
+      .from-to,
+      .bet-grid,
+      .split-list {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+      }
+
+      .reference-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="docs-shell">
+    <aside class="sidebar" aria-label="문서 섹션 내비게이션">
+      <div class="sidebar-card">
+        <div class="sidebar-title"><span class="dot"></span> CLAiR EMR Docs</div>
+        <ul class="nav-list">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#direction">Product Direction</a></li>
+          <li><a href="#problem-framing">Problem Framing</a></li>
+          <li><a href="#opportunity-map">Opportunity Map</a></li>
+          <li><a href="#principles">Design Principles</a></li>
+          <li><a href="#development-points">Development Points</a></li>
+          <li><a href="#service-blueprint">Service Blueprint</a></li>
+          <li><a href="#job-stories">Role Job Stories</a></li>
+          <li><a href="#priority-bets">Priority Bets</a></li>
+          <li><a href="#validation">Validation Plan</a></li>
+          <li><a href="#candidate-prs">Candidate PRs</a></li>
+          <li><a href="#guardrails">Guardrails</a></li>
+          <li><a href="#open-questions">Open Questions</a></li>
+          <li><a href="#references">References</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="doc-hero">
+        <div class="eyebrow">Design Direction · Draft</div>
+        <h1>Senior Product Design Development Points</h1>
+        <p class="hero-subtitle">
+          CLAiR EMR을 화면 중심의 세션 기반 MVP에서, 병원 직원이 오늘의 진료를 더 안전하고 연속적으로 끝낼 수 있도록 돕는 운영형 제품 경험으로 발전시키기 위한 디자인 방향 문서입니다.
+        </p>
+
+        <div class="meta-row" aria-label="문서 메타 정보">
+          <span class="badge">Status · Draft</span>
+          <span class="badge">Area · Design</span>
+          <span class="badge">Doc Type · Flow</span>
+          <span class="badge">Created · 2026-05-12</span>
+          <span class="badge">Updated · 2026-05-12</span>
+        </div>
+
+        <div class="hero-grid">
+          <article class="hero-question">
+            <strong>1. Next Action</strong>
+            <p>각 역할은 지금 가장 안전한 다음 행동이 무엇인지 몇 초 안에 알 수 있어야 합니다.</p>
+          </article>
+          <article class="hero-question">
+            <strong>2. Evidence</strong>
+            <p>그 행동이 왜 준비되었는지, 어떤 맥락과 근거가 있는지 화면에서 확인할 수 있어야 합니다.</p>
+          </article>
+          <article class="hero-question">
+            <strong>3. Downstream Impact</strong>
+            <p>행동이 지연되거나 잘못되었을 때 어떤 후속 업무가 막히는지 보여줘야 합니다.</p>
+          </article>
+        </div>
+      </header>
+
+      <section id="overview">
+        <h2>Overview</h2>
+        <p class="lead">
+          이 문서는 구현 티켓이 아니라, 향후 Home, workflow, chart, reception, billing, design-system 작업을 구체화하기 전에 제품 방향과 판단 기준을 정리하는 입력 문서입니다. 따라서 코드 변경보다 먼저 “무엇을 왜 만들어야 하는가”를 선명하게 만드는 데 목적이 있습니다.
+        </p>
+
+        <div class="callout blue">
+          <h3>핵심 요약</h3>
+          <p>
+            CLAiR EMR의 다음 단계는 더 많은 화면을 추가하는 것이 아니라, 환자 방문이 접수에서 진료, 검사, 처치, 수납으로 넘어가는 과정에서 각 역할이 다음 행동과 책임, 차단 요소를 명확히 이해하도록 만드는 것입니다.
+          </p>
+        </div>
+
+        <div class="three-col">
+          <article class="card">
+            <div class="label">Why</div>
+            <h3>화면은 충분히 많아졌다</h3>
+            <p>현재 프로토타입은 외래 흐름의 넓은 범위를 이미 보여줍니다. 이제 중요한 것은 화면 수가 아니라 흐름의 명확성입니다.</p>
+          </article>
+          <article class="card">
+            <div class="label">Focus</div>
+            <h3>운영 의사결정</h3>
+            <p>데스크, 수의사, 테크니션, 수납 담당자가 각자 지금 무엇을 해야 하는지 빠르게 판단하게 해야 합니다.</p>
+          </article>
+          <article class="card">
+            <div class="label">Outcome</div>
+            <h3>안전한 진료 완료</h3>
+            <p>병원이 오늘의 진료를 끊김 없이 끝내고, 잘못된 환자·차트·오더·청구를 줄이는 것이 목표입니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="direction">
+        <h2>Product Direction</h2>
+        <p class="lead">
+          이 문서의 가장 큰 전환은 CLAiR EMR을 “유용한 작업 공간이 많은 EMR”에서 “오늘의 병원 운영을 안전하게 끝내도록 돕는 시스템”으로 바라보는 것입니다. 이 관점에서는 화면의 완성도보다 역할 간 연결, 상태의 신뢰성, 다음 행동의 명확성이 더 중요해집니다.
+        </p>
+
+        <div class="from-to">
+          <article class="from-card">
+            <div class="label">From</div>
+            <h3>화면 중심 MVP</h3>
+            <p>접수, 차트, 검사, 영상, 처치, 수납 등 각각의 화면이 존재하고, 사용자는 화면을 이동하며 필요한 정보를 찾아야 합니다.</p>
+          </article>
+          <div class="arrow">→</div>
+          <article class="to-card">
+            <div class="label">To</div>
+            <h3>운영형 제품 경험</h3>
+            <p>방문 상태, 담당자, 준비 여부, 차단 요소, 후속 영향을 연결해 사용자가 다음 행동을 안전하게 선택하도록 돕습니다.</p>
+          </article>
+        </div>
+
+        <div class="quote">
+          제품은 “많은 기능을 가진 EMR”을 넘어서, “병원이 오늘의 진료를 안전하고 연속적으로 마무리하도록 돕는 운영 시스템”으로 발전해야 합니다.
+        </div>
+      </section>
+
+      <section id="problem-framing">
+        <h2>Problem Framing</h2>
+        <p class="lead">
+          시니어 프로덕트 디자이너라면 “다음에 어떤 화면을 추가할까?”보다 먼저, 실제 병원 업무에서 어떤 순간이 불확실하고 위험한지 묻습니다. 이 문서는 특히 환자 방문이 한 역할에서 다른 역할로 넘어가는 순간을 핵심 문제로 봅니다.
+        </p>
+
+        <ul class="check-list">
+          <li>데스크, 수의사, 간호/테크니션, 수납 담당자가 몇 초 안에 다음 행동을 결정할 수 있는가?</li>
+          <li>환자, 보호자, 내원, 오더, 결과, 청구 맥락이 화면 전환 후에도 유지되는가?</li>
+          <li>위험한 행동은 예방되거나 명확하게 되돌릴 수 있는가?</li>
+          <li>현재 mock workflow가 향후 live DB/API, 권한, 감사 로그, 서비스 카탈로그와 연결될 수 있는가?</li>
+          <li>반복되는 테이블, 패널, 버튼, 상태 신호가 하나의 제품 언어처럼 읽히는가?</li>
+        </ul>
+
+        <div class="callout">
+          <h3>중요한 해석</h3>
+          <p>
+            CLAiR의 핵심 디자인 문제는 단일 모듈 하나가 아닙니다. 환자의 방문이 데스크에서 수의사로, 수의사에서 검사/영상/처치로, 다시 차트와 수납으로 넘어갈 때 맥락과 책임이 끊기는 순간입니다.
+          </p>
+        </div>
+      </section>
+
+      <section id="opportunity-map">
+        <h2>Opportunity Map</h2>
+        <p class="lead">
+          목표 결과는 명확합니다. 직원이 내원 건에 대해 다음으로 가장 안전한 행동을 몇 초 안에 식별하고 완료할 수 있어야 합니다. 아래 기회 영역은 이 목표를 제품 구조로 풀기 위한 핵심 방향입니다.
+        </p>
+
+        <div class="callout blue">
+          <h3>Target Outcome</h3>
+          <p>직원은 내원 맥락을 잃지 않고 외래 방문에서 다음 책임 행동을 식별하고 안전하게 완료할 수 있다.</p>
+        </div>
+
+        <div class="card-grid">
+          <article class="card">
+            <h3>Role Clarity</h3>
+            <p>이 업무가 내 것인지, 미배정인지, 이미 누군가 소유했는지, 또는 차단된 상태인지 명확해야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Encounter Continuity</h3>
+            <p>환자, 보호자, 차트, 오더, 결과, 청구 맥락은 모듈을 이동해도 계속 유지되어야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Evidence Visibility</h3>
+            <p>추천, 경고, 우선순위는 불투명한 자동화가 아니라 사용자가 납득할 수 있는 이유를 가져야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Handoff Confidence</h3>
+            <p>후속 역할은 업무가 준비되었는지, 무엇이 누락되었는지, 누가 담당자인지 알아야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Error Prevention</h3>
+            <p>잘못된 환자, 차트, 오더, 청구를 막기 위해 확인 순간에 식별자와 영향을 보여줘야 합니다.</p>
+          </article>
+          <article class="card">
+            <h3>Operational Density</h3>
+            <p>EMR은 장시간 사용하는 고밀도 업무 도구이므로, 반복 화면은 빠르게 스캔 가능한 위계가 필요합니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="principles">
+        <h2>Design Principles</h2>
+        <p class="lead">
+          아래 원칙은 향후 화면 설계, PRD 작성, 디자인 시스템 정리, 사용성 테스트 기준으로 재사용할 수 있습니다. 특히 “다음 행동”, “내원 연속성”, “근거”, “핸드오프”는 이 문서 전체를 관통하는 제품 언어입니다.
+        </p>
+
+        <div class="principle-list">
+          <article class="principle">
+            <div class="principle-number">01</div>
+            <div>
+              <h3>Make Next Action Obvious</h3>
+              <p>모든 운영 화면은 사용자가 전체 시스템을 훑지 않아도 지금 무엇을 해야 하는지, 왜 해야 하는지, 어디에서 안전하게 행동해야 하는지 알려줘야 합니다.</p>
+              <div class="mini-note">예: Home의 다음 행동 카드, 대기열 아이템, 우측 패널 CTA가 같은 next-action object를 공유합니다.</div>
+            </div>
+          </article>
+
+          <article class="principle">
+            <div class="principle-number">02</div>
+            <div>
+              <h3>Preserve Encounter Continuity</h3>
+              <p>제품은 분리된 화면 모음이 아니라 하나의 방문을 중심으로 작동해야 합니다. 접수, 진료, 오더, 검사, 영상, 처치, 수납은 하나의 내원 흐름으로 연결되어야 합니다.</p>
+              <div class="mini-note">예: 환자/보호자/내원/오더/결과/청구 맥락이 화면 전환 후에도 유지됩니다.</div>
+            </div>
+          </article>
+
+          <article class="principle">
+            <div class="principle-number">03</div>
+            <div>
+              <h3>Reduce Clinical Cognitive Load</h3>
+              <p>차트, 검사, 영상 화면은 데이터를 많이 보여주는 것보다 해석과 다음 행동을 쉽게 만드는 데 집중해야 합니다. 더 많은 데이터가 항상 더 좋은 EMR을 의미하지는 않습니다.</p>
+              <div class="mini-note">예: 주호소, 관련 과거 병력, 이상 결과, 대기 오더, 보호자 설명 상태를 우선 노출합니다.</div>
+            </div>
+          </article>
+
+          <article class="principle">
+            <div class="principle-number">04</div>
+            <div>
+              <h3>Show Evidence Before Automation</h3>
+              <p>AI나 자동화는 먼저 보이는 근거와 사용자가 통제할 수 있는 제안으로 나타나야 합니다. 임상 워크플로우에서 숨은 자동화는 신뢰와 감사 가능성 문제를 만들 수 있습니다.</p>
+              <div class="mini-note">예: 추천 진단에는 추천 이유, 사용된 출처, 수락/수정/무시 액션이 함께 있어야 합니다.</div>
+            </div>
+          </article>
+
+          <article class="principle">
+            <div class="principle-number">05</div>
+            <div>
+              <h3>Design For Safe Handoffs</h3>
+              <p>책임이 이전되는 모든 순간에 UI는 누가 만들었고, 지금 누가 소유하며, 무엇이 준비되었고, 무엇이 막혀 있는지 보여줘야 합니다.</p>
+              <div class="mini-note">예: queue card, patient context bar, confirmation dialog가 같은 핸드오프 계약을 표현합니다.</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="development-points">
+        <h2>Development Points</h2>
+        <p class="lead">
+          이 섹션은 실제 작업 후보를 만들기 위한 디자인 방향입니다. 각 항목은 화면 아이디어가 아니라 제품 패턴이나 워크플로우 원칙에 가깝습니다. 따라서 바로 구현하기보다 먼저 scope, out-of-scope, success signal을 정리한 뒤 PR 단위로 쪼개야 합니다.
+        </p>
+
+        <details open>
+          <summary>1. Promote Role-Based Next Action To A Product Principle</summary>
+          <div class="details-body">
+            <p>Home의 역할 기반 다음 행동은 단순 대시보드 위젯이 아니라 전 제품에 걸친 의사결정 패턴이 되어야 합니다. 각 추천 행동은 업무 제목, 환자/보호자 맥락, 출처 워크플로우, 긴급도, 표시 이유, 안전한 이동 경로를 가져야 합니다.</p>
+            <h4>Design Shape</h4>
+            <ul>
+              <li>대시보드 위젯을 늘리기 전에 reusable next-action schema를 정의합니다.</li>
+              <li>Home과 최소 하나의 원본 queue에서 같은 action item 패턴을 사용합니다.</li>
+              <li>예: 담당의 없음, 대기 30분 초과, 검사 결과 미확인, 청구 미반영.</li>
+              <li>클릭 시 정확한 원본 레코드로 이동하고 내원 맥락을 보존합니다.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>2. Model Handoffs With A Service Blueprint</summary>
+          <div class="details-body">
+            <p>중요한 디자인 객체는 queue card만이 아닙니다. 진짜 중요한 것은 책임 이전입니다. 접수에서 진료로, 진료에서 검사/영상/처치로, 다시 차트와 수납으로 넘어갈 때 누가 무엇을 소유하는지 명확해야 합니다.</p>
+            <h4>Handoff Contract</h4>
+            <ul>
+              <li>누가 업무를 만들었는가?</li>
+              <li>지금 누가 소유하고 있는가?</li>
+              <li>어떤 상태가 준비 완료를 증명하는가?</li>
+              <li>무엇이 후속 역할을 막고 있는가?</li>
+              <li>어떤 행동이 위험을 만드는가?</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>3. Evolve Chart Into A Clinical Decision Cockpit</summary>
+          <div class="details-body">
+            <p>차트는 SOAP 입력과 오더 생성 화면을 넘어, 임상 의사결정에 필요한 근거를 연결하는 공간이 되어야 합니다. 수의사가 오늘의 방문 사유, 관련 과거 맥락, 검사/영상 결과, 진단 후보, 오더와 수납 영향을 한 흐름 안에서 이해할 수 있어야 합니다.</p>
+            <h4>Candidate MVP Slices</h4>
+            <ul>
+              <li>차트 맥락 안에 compact evidence strip을 추가합니다.</li>
+              <li>진단 추천에는 SOAP, recent history, mock catalog 같은 출처를 표시합니다.</li>
+              <li>오더가 검사, 영상, 조제/처치, 수납에 미치는 영향을 보여줍니다.</li>
+              <li>차트 완료 dialog는 누락된 임상/운영 산출물을 설명해야 합니다.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>4. Treat Error Prevention As A Differentiator</summary>
+          <div class="details-body">
+            <p>EMR에서 오류 예방은 단순 사용성 개선이 아니라 제품 신뢰의 핵심입니다. 잘못된 환자, 잘못된 차트, 잘못된 오더, 누락 청구는 실제 병원 운영에서 큰 비용을 만듭니다.</p>
+            <h4>Patterns</h4>
+            <ul>
+              <li>고영향 액션은 환자, 보호자, 차트 번호, 오더 ID, 청구 ID를 함께 확인합니다.</li>
+              <li>모달보다 먼저 inline blocked reason을 보여줍니다.</li>
+              <li>선택된 환자와 현재 내원이 맞지 않는 mismatch 상태를 명확히 표시합니다.</li>
+              <li>최종 전환 전 취소, 수정, 검토 경로를 제공합니다.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>5. Add Encounter Timeline As A Cross-Workflow Spine</summary>
+          <div class="details-body">
+            <p>CLAiR에는 이미 여러 모듈이 있습니다. 다음 디자인 과제는 이 모듈들이 하나의 외래 방문처럼 느껴지게 만드는 것입니다. 접수, 진료, 오더, 검사, 영상, 조제/처치, 수납을 하나의 spine으로 연결합니다.</p>
+            <h4>First Pass</h4>
+            <ul>
+              <li>코드 전에 디자인 문서에서 timeline state를 정의합니다.</li>
+              <li>각 단계의 상태 라벨, 담당 역할, blocker, delay 상태를 정의합니다.</li>
+              <li>현재는 session-only mock data에 매핑합니다.</li>
+              <li>live persistence와 audit은 승인 전까지 scope 밖에 둡니다.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>6. Reframe Billing As Explanation And Trust</summary>
+          <div class="details-body">
+            <p>수납은 단순 계산 화면이 아니라 보호자와 마주하는 설명의 순간입니다. 수납 담당자는 “왜 이 금액이 나왔는지” 설명해야 하므로, 청구 항목은 임상 출처와 연결되어야 합니다.</p>
+            <h4>Potential Improvements</h4>
+            <ul>
+              <li>진료, 검사, 영상, 처치, 약, 할인, 미수금으로 청구 항목을 그룹화합니다.</li>
+              <li>각 청구 항목에 출처 오더나 내원 맥락을 보여줍니다.</li>
+              <li>내부 편집 모드와 보호자 대상 설명 모드를 분리합니다.</li>
+              <li>미완료, 취소, 미확정 임상 업무가 포함되면 경고합니다.</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>7. Continue Foundation-First UI Work</summary>
+          <div class="details-body">
+            <p>개별 화면을 예쁘게 다듬기 전에 디자인 시스템 foundation을 안정화해야 합니다. EMR은 장시간 사용하는 고밀도 운영 제품이므로, 시각적 polish보다 일관된 읽기 구조가 우선입니다.</p>
+            <h4>Recommended Sequence</h4>
+            <ul>
+              <li>Typography roles</li>
+              <li>Spacing and density scale</li>
+              <li>Action hierarchy and button usage</li>
+              <li>Surface and elevation policy</li>
+              <li>Table, panel, header, footer patterns</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>8. Research Workarounds, Not Only Feature Requests</summary>
+          <div class="details-body">
+            <p>사용자가 요청하는 기능만 보면 실제 문제가 흐려질 수 있습니다. 종이 메모, 카카오톡, 구두 전달, 엑셀, 기존 EMR 단축 사용법처럼 직원이 시스템 밖에서 사용하는 우회 행동을 관찰해야 합니다.</p>
+            <h4>Interview Prompts</h4>
+            <ul>
+              <li>EMR만으로 부족해서 종이, 채팅, 기억을 사용했던 최근 사례를 보여주세요.</li>
+              <li>다음 사람에게 환자를 넘기기 전 어떤 정보가 필요한가요?</li>
+              <li>수동으로 다시 확인할 만큼 비용이 큰 실수는 무엇인가요?</li>
+              <li>피크 시간대에 어떤 화면을 계속 열어두나요?</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <section id="service-blueprint">
+        <h2>Service Blueprint</h2>
+        <p class="lead">
+          서비스 블루프린트는 화면 단위가 아니라 책임 이전 단위로 병원 운영을 보는 도구입니다. 아래 표는 접수부터 수납까지 각 단계에서 사용자가 하는 일, 시스템이 가져야 할 신호, 그리고 디자인상 위험을 정리한 것입니다.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Frontstage User Action</th>
+              <th>Backstage / System Signal</th>
+              <th>Design Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Reception</td>
+              <td>방문을 등록하고 환자/보호자/담당의 맥락을 배정한다.</td>
+              <td>Encounter, patient, guardian, visit reason, doctor assignment</td>
+              <td>중복 환자 생성, 담당의 미배정, 대기열 혼란</td>
+            </tr>
+            <tr>
+              <td>Chart</td>
+              <td>SOAP을 기록하고 진단과 오더를 생성한다.</td>
+              <td>Chart number, diagnosis, order IDs, draft/final state</td>
+              <td>잘못된 차트에 오더 생성, 근거 부족 상태로 완료</td>
+            </tr>
+            <tr>
+              <td>Lab / Imaging</td>
+              <td>검사 또는 영상 결과를 입력하거나 첨부한다.</td>
+              <td>Result source, linked order, abnormal flags, review state</td>
+              <td>잘못된 환자/오더 연결, 결과 미리뷰, 차트 반영 누락</td>
+            </tr>
+            <tr>
+              <td>Dispensing / Treatment</td>
+              <td>지시된 약 또는 처치 업무를 수행하고 완료한다.</td>
+              <td>Owner, completion state, medication/treatment detail</td>
+              <td>완료 상태가 차트나 수납에 보이지 않음</td>
+            </tr>
+            <tr>
+              <td>Billing</td>
+              <td>청구서를 확인하고 보호자에게 설명한 뒤 결제를 처리한다.</td>
+              <td>Invoice lines, clinical sources, payment state</td>
+              <td>누락 청구, 중복 청구, 설명되지 않는 비용</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="job-stories">
+        <h2>Role-Based Job Stories</h2>
+        <p class="lead">
+          아래 Job Story는 역할별 화면을 만들기 위한 단순 요구사항이 아니라, 각 역할이 어떤 상황에서 어떤 불확실성을 줄이고 싶어 하는지 설명하는 디자인 anchor입니다.
+        </p>
+
+        <div class="role-grid">
+          <article class="role-card">
+            <h3>Front Desk</h3>
+            <p>보호자가 바쁜 시간대에 도착했을 때, 데스크 직원은 보호자와 동물이 이미 존재하는지 확인하고 올바른 방문을 등록하며 케이스를 배정하거나 대기열에 넣고 싶습니다. 그래야 임상팀이 중복 기록이나 누락된 맥락 없이 시작할 수 있습니다.</p>
+            <div class="focus-list">
+              <span class="pill">Duplicate detection</span>
+              <span class="pill">New vs existing branch</span>
+              <span class="pill">Doctor assignment</span>
+              <span class="pill">Encounter queue route</span>
+            </div>
+          </article>
+
+          <article class="role-card">
+            <h3>Veterinarian</h3>
+            <p>환자를 진료할 때 수의사는 과거 병력, 현재 주호소, SOAP, 진단, 오더를 하나의 의사결정 공간에서 보고 싶습니다. 그래야 방문 흐름을 잃지 않고 방어 가능한 임상 결정을 내릴 수 있습니다.</p>
+            <div class="focus-list">
+              <span class="pill">Evidence strip</span>
+              <span class="pill">History context</span>
+              <span class="pill">Diagnosis source</span>
+              <span class="pill">Order impact</span>
+            </div>
+          </article>
+
+          <article class="role-card">
+            <h3>Nurse / Lab / Imaging / Treatment</h3>
+            <p>오더를 받을 때 임상 지원 직원은 무엇이 준비되었고, 무엇이 막혔고, 누가 소유하며, 결과나 완료 상태가 어떻게 돌아가는지 알고 싶습니다. 그래야 수의사를 계속 방해하지 않고 안전하게 업무를 처리할 수 있습니다.</p>
+            <div class="focus-list">
+              <span class="pill">Queue semantics</span>
+              <span class="pill">Readiness</span>
+              <span class="pill">Blocker labels</span>
+              <span class="pill">Result-to-order match</span>
+            </div>
+          </article>
+
+          <article class="role-card">
+            <h3>Billing Staff</h3>
+            <p>방문을 마감할 때 수납 담당자는 청구 항목이 어떤 임상 업무에서 왔고 완료 상태는 어떤지 설명할 수 있기를 원합니다. 그래야 보호자에게 자신 있게 설명하고 누락 또는 중복 청구를 피할 수 있습니다.</p>
+            <div class="focus-list">
+              <span class="pill">Order-to-invoice trace</span>
+              <span class="pill">Duplicate warning</span>
+              <span class="pill">Guardian explanation</span>
+              <span class="pill">Billing confirmation</span>
+            </div>
+          </article>
+
+          <article class="role-card">
+            <h3>Hospital Manager</h3>
+            <p>병원 흐름이 느려질 때 관리자는 단계, 담당자, 경과 시간 기준으로 병목을 보고 싶습니다. 그래야 직원과 보호자가 지연을 체감하기 전에 재배정하거나 개입할 수 있습니다.</p>
+            <div class="focus-list">
+              <span class="pill">Bottleneck board</span>
+              <span class="pill">SLA</span>
+              <span class="pill">Unassigned work</span>
+              <span class="pill">Delay reason</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="priority-bets">
+        <h2>Priority Development Bets</h2>
+        <p class="lead">
+          아래 베팅은 바로 승인된 작업 항목이 아니라, 향후 PR로 구체화할 수 있는 우선순위 후보입니다. 각 베팅은 가설, 프로토타입 범위, 측정 방법까지 연결되어야 합니다.
+        </p>
+
+        <div class="bet-grid">
+          <article class="bet-card p0">
+            <span class="priority">P0</span>
+            <h3>Encounter Timeline And Role Next Action</h3>
+            <p>앱이 항상 방문 상태, 현재 담당자, 차단 요소, 다음 안전 행동을 보여주면 사용자는 더 빠르게 움직이고 잘못된 맥락의 의사결정을 줄일 수 있습니다.</p>
+            <h4>Prototype Scope</h4>
+            <ul>
+              <li>Home role cards</li>
+              <li>Queue cards</li>
+              <li>Patient context bar</li>
+              <li>Chart and billing right panels</li>
+            </ul>
+          </article>
+
+          <article class="bet-card">
+            <span class="priority p1">P1</span>
+            <h3>Chart, Lab, And Imaging Evidence Surface</h3>
+            <p>SOAP, 진단, 결과, 영상 소견, 오더가 보이는 근거를 통해 연결되면 수의사는 더 적게 훑어보고도 더 나은 결정을 할 수 있습니다.</p>
+            <h4>Measure</h4>
+            <ul>
+              <li>임상 다음 단계 설명 가능 여부</li>
+              <li>이상 결과 누락 여부</li>
+              <li>시나리오 완료 후 확신과 인지 부하</li>
+            </ul>
+          </article>
+
+          <article class="bet-card">
+            <span class="priority p1">P1</span>
+            <h3>Billing Explanation Layer</h3>
+            <p>청구 항목이 임상 출처별로 그룹화되고 위험한 편집의 영향을 보여주면 보호자 응대 마찰을 줄일 수 있습니다.</p>
+            <h4>Measure</h4>
+            <ul>
+              <li>청구서 설명 시간</li>
+              <li>리뷰 후 청구 수정 횟수</li>
+              <li>제공 진료와 청구 일치에 대한 직원 확신</li>
+            </ul>
+          </article>
+
+          <article class="bet-card">
+            <span class="priority p2">P2</span>
+            <h3>Safety UX Audit Across High-Risk Actions</h3>
+            <p>차트 완료, 오더 확인, 결과 리뷰, 수납 확인, 환자 등록 같은 고위험 행동의 상태·확인·복구 패턴을 일관화합니다.</p>
+            <h4>Measure</h4>
+            <ul>
+              <li>확인 전 변경 사항 식별 가능</li>
+              <li>실수 경로에서 취소/복구 가능</li>
+              <li>확인 dialog에 환자/내원 맥락 포함</li>
+            </ul>
+          </article>
+
+          <article class="bet-card">
+            <span class="priority p2">P2</span>
+            <h3>Operational Design Language</h3>
+            <p>테이블, 패널, 버튼, 타이포그래피, 상태, 확인 패턴이 일관된 운영 의미를 가지면 반복 화면이 더 안전하고 빠르게 느껴집니다.</p>
+            <h4>Measure</h4>
+            <ul>
+              <li>동일 의도의 UI variant 감소</li>
+              <li>primary/secondary action 인식 속도 향상</li>
+              <li>후속 UI 감사의 불일치 감소</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="validation">
+        <h2>Validation Plan</h2>
+        <p class="lead">
+          이 문서는 큰 일회성 리서치보다 작은 continuous discovery loop를 권장합니다. 중요한 것은 넓은 의견을 묻는 것이 아니라, 실제 병원 상황을 재현한 구체적 시나리오에서 사용자가 무엇을 보고 판단하는지 관찰하는 것입니다.
+        </p>
+
+        <div class="two-col">
+          <article class="card">
+            <h3>Weekly Cadence</h3>
+            <ul class="check-list">
+              <li>매주 짧은 사용자 대화 또는 workflow walkthrough 1회</li>
+              <li>구체적 시나리오 기반 테스트</li>
+              <li>마찰, 우회 행동, 인용, 의사결정 영향 기록</li>
+              <li>반복되거나 고위험인 발견만 작업 항목으로 승격</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>Core Test Scenarios</h3>
+            <ol class="number-list">
+              <li>데스크가 신규 보호자와 환자를 등록한 뒤 체크인한다.</li>
+              <li>수의사가 대기 환자를 보고 SOAP, 진단, 오더를 만든다.</li>
+              <li>검사/영상 담당자가 오더를 받고 결과를 기록한다.</li>
+              <li>수의사가 결과를 검토하고 차트/오더 결정을 완료한다.</li>
+              <li>수납 담당자가 보호자 청구서를 설명하고 확인한다.</li>
+            </ol>
+          </article>
+        </div>
+
+        <div class="callout">
+          <h3>Testing Questions</h3>
+          <p>
+            “지금 무엇에 주의해야 하나요?”, “왜 이 항목이 긴급하다고 생각하나요?”, “누가 이 업무를 소유하고 있나요?”, “어떤 정보를 시스템 밖에서 다시 확인할 것 같나요?” 같은 질문을 통해 사용자가 화면의 상태와 근거를 실제로 이해했는지 확인합니다.
+          </p>
+        </div>
+      </section>
+
+      <section id="candidate-prs">
+        <h2>Candidate PR-Sized Shaping Ideas</h2>
+        <p class="lead">
+          아래 항목은 아직 승인된 작업이 아닙니다. 실제 PR로 옮기기 전에는 goal, scope, out-of-scope, done criteria, source docs, dependencies, verification을 명확히 해야 합니다.
+        </p>
+
+        <article class="pr-card">
+          <h3>HOME-WORKFLOW-NEXT-ACTION</h3>
+          <p>Home에 나타나는 업무가 왜 표시되는지 설명하고, 사용자를 원본 워크플로우로 안전하게 이동시키는 cross-workflow next-action model을 정의합니다.</p>
+          <div class="split-list">
+            <div class="included">
+              <h4>Included</h4>
+              <ul>
+                <li>event-to-task mapping draft</li>
+                <li>owner, source workflow, urgency, reason, safe-entry fields</li>
+                <li>role queue와 assigned user 구분</li>
+                <li>mock-only boundary notes</li>
+              </ul>
+            </div>
+            <div class="excluded">
+              <h4>Excluded</h4>
+              <ul>
+                <li>live DB/API persistence</li>
+                <li>real-time assignment</li>
+                <li>Home에서 source workflow state mutation</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <article class="pr-card">
+          <h3>WORKFLOW-HANDOFF-BLUEPRINT</h3>
+          <p>접수부터 차트, 오더, 결과, 조제/처치, 수납까지 책임 이전을 문서화하고 failure mode와 candidate UI artifact를 정리합니다.</p>
+          <div class="split-list">
+            <div class="included">
+              <h4>Included</h4>
+              <ul>
+                <li>service blueprint</li>
+                <li>failure modes</li>
+                <li>owner/readiness/blocker states</li>
+                <li>candidate UI artifacts</li>
+              </ul>
+            </div>
+            <div class="excluded">
+              <h4>Excluded</h4>
+              <ul>
+                <li>code implementation</li>
+                <li>backend enforcement</li>
+                <li>pixel-level QA</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <article class="pr-card">
+          <h3>CHART-ORDER-EVIDENCE-LOOP</h3>
+          <p>SOAP, 진단, 검사/영상 결과, 오더, 수납 영향이 하나의 근거 루프로 연결되는 차트 경험을 구체화합니다.</p>
+          <div class="split-list">
+            <div class="included">
+              <h4>Included</h4>
+              <ul>
+                <li>evidence loop model</li>
+                <li>result-review return path</li>
+                <li>order readiness and billing impact concept</li>
+                <li>error-prevention scenarios</li>
+              </ul>
+            </div>
+            <div class="excluded">
+              <h4>Excluded</h4>
+              <ul>
+                <li>AI diagnosis automation</li>
+                <li>live diagnosis catalog API</li>
+                <li>persistence and audit implementation</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <article class="pr-card">
+          <h3>DESIGN-SYSTEM-OPERATIONAL-LANGUAGE</h3>
+          <p>UI 일관성 감사를 dense EMR 화면에 맞는 운영형 디자인 언어로 전환합니다.</p>
+          <div class="split-list">
+            <div class="included">
+              <h4>Included</h4>
+              <ul>
+                <li>typography roles</li>
+                <li>action hierarchy</li>
+                <li>density scale</li>
+                <li>surface/elevation roles</li>
+                <li>table, panel, header, footer guidance</li>
+              </ul>
+            </div>
+            <div class="excluded">
+              <h4>Excluded</h4>
+              <ul>
+                <li>full screen-by-screen polish</li>
+                <li>new visual brand direction</li>
+                <li>generated Clair token edits</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="guardrails">
+        <h2>Live-System Replacement Guardrails</h2>
+        <p class="lead">
+          이 문서는 향후 제품 계약을 설명할 수 있지만, 현재 프로토타입이 live persistence, RLS, server-side permission enforcement, audit-backed state mutation을 이미 갖고 있다고 암시하면 안 됩니다. 디자인 문서는 엔지니어링 현실과 scope 경계를 정직하게 유지해야 합니다.
+        </p>
+
+        <div class="callout danger">
+          <h3>Do Not Imply Live-System Guarantees</h3>
+          <p>현재 UX가 클라이언트 사이드 세션 상태로 동작한다면, 이를 실제 보안·영속성·권한 강제와 혼동하지 않도록 명시해야 합니다.</p>
+        </div>
+
+        <ul class="check-list">
+          <li>현재 프로토타입에서 사용하는 session-only state를 명시한다.</li>
+          <li>향후 source of truth 후보를 API, DB table, auth/session, service catalog, audit log 등으로 구분한다.</li>
+          <li>각 상태를 조회, 생성, 수정, 확인, 취소, override할 수 있는 역할을 정의한다.</li>
+          <li>향후 audit event를 생성해야 하는 행동을 표시한다.</li>
+          <li>UX를 안전한 것으로 간주하기 전에 server-side enforcement가 필요한 경계를 표시한다.</li>
+        </ul>
+      </section>
+
+      <section id="open-questions">
+        <h2>Open Questions</h2>
+        <p class="lead">
+          이 질문들은 다음 PR이나 design shaping을 시작하기 전에 정리해야 할 의사결정 항목입니다. 특히 첫 번째 MVP 검증 대상 역할과 첫 번째 측정 outcome을 먼저 정해야 작업 범위가 흐려지지 않습니다.
+        </p>
+
+        <ul class="check-list">
+          <li>첫 번째 buyer-critical user는 데스크, 수의사, 간호사, 수납 담당자, 병원 관리자 중 누구인가?</li>
+          <li>가장 먼저 측정할 outcome은 next-action identification time, billing wait time, chart completion confidence, handoff error reduction 중 무엇인가?</li>
+          <li>첫 shaped bet은 Home next-action model을 우선해야 하는가, encounter state spine을 우선해야 하는가?</li>
+          <li>처음 관찰할 실제 병원 워크플로우는 예방접종, 급성 구토/설사, 영상 중심 진료, 입원 핸드오프 중 무엇인가?</li>
+          <li>role next actions가 session-only recommendation을 넘어서기 위해 필요한 최소 source-of-truth model은 무엇인가?</li>
+        </ul>
+      </section>
+
+      <section id="references">
+        <h2>References</h2>
+        <p class="lead">
+          이 문서의 방향은 design thinking, UX mapping, usability heuristics, product discovery, Jobs-to-be-Done, Opportunity Solution Tree, Shape Up, Linear Method, design sprint, healthcare/EHR safety research에 기반합니다.
+        </p>
+
+        <ul class="reference-list">
+          <li>https://designthinking.ideo.com/</li>
+          <li>https://www.nngroup.com/articles/ux-mapping-cheat-sheet/</li>
+          <li>https://www.nngroup.com/articles/ten-usability-heuristics/</li>
+          <li>https://www.figma.com/blog/design-critiques-at-figma/</li>
+          <li>https://www.atlassian.com/agile/product-management/discovery</li>
+          <li>https://www.intercom.com/resources/books/intercom-jobs-to-be-done</li>
+          <li>https://www.producttalk.org/opportunity-solution-tree/</li>
+          <li>https://www.producttalk.org/roles-in-a-product-trio/</li>
+          <li>https://www.nngroup.com/articles/customer-journey-mapping/</li>
+          <li>https://www.nngroup.com/articles/service-blueprints-definition/</li>
+          <li>https://basecamp.com/shapeup/1.1-chapter-02</li>
+          <li>https://linear.app/method/introduction</li>
+          <li>https://designsprintkit.withgoogle.com/</li>
+          <li>https://www.gv.com/news/learn-more-faster</li>
+          <li>https://www.svpg.com/four-big-risks/</li>
+          <li>https://psnet.ahrq.gov/primer/electronic-health-records</li>
+          <li>https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2729805</li>
+          <li>https://www.nist.gov/publications/technical-basis-user-interface-design-health-it</li>
+        </ul>
+      </section>
+
+      <div class="footer-note">
+        CLAiR EMR · Design Direction Docs · Draft for product/design/engineering shaping
+      </div>
+    </main>
+
+    <aside class="toc" aria-label="현재 문서 빠른 링크">
+      <div class="toc-card">
+        <div class="toc-title">On this page</div>
+        <ul class="toc-list">
+          <li><a href="#overview">문서 목적</a></li>
+          <li><a href="#direction">제품 방향</a></li>
+          <li><a href="#opportunity-map">기회 영역</a></li>
+          <li><a href="#principles">디자인 원칙</a></li>
+          <li><a href="#development-points">개발 포인트</a></li>
+          <li><a href="#priority-bets">우선순위 베팅</a></li>
+          <li><a href="#guardrails">가드레일</a></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>
