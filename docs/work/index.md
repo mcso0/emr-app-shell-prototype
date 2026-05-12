@@ -28,6 +28,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | CHART-PR-004 | done | chart | P1 | PR 4 | `docs/work/chart/CHART-PR-004-chart-operational-polish.md` |
 | CHART-PR-005 | done | chart | P1 | PR 5 | `docs/work/chart/CHART-PR-005-diagnosis-search-first-pass.md` |
 | CHART-PR-006 | done | chart | P1 | PR 6 | `docs/work/chart/CHART-PR-006-soap-editor-ux-foundation.md` |
+| CHART-PR-007 | done | chart | P1 | PR 7 | `docs/work/chart/CHART-PR-007-editable-order-table.md` |
 | LAB-PR-001 | done | lab | P1 | PR 1 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md` |
 | IMAGING-PR-001 | done | imaging | P1 | PR 1 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md` |
 | HOSPITAL-ADMIN-PR-001 | done | hospital-admin | P1 | PR 1 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md` |
