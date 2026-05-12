@@ -23,6 +23,7 @@ import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-mi
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type PatientContextDatum = {
@@ -50,7 +51,9 @@ type PatientContextBarProps = {
   patientItems: PatientContextDatum[];
   rightPanelBadgeCount?: number;
   rightPanelDisabled?: boolean;
+  rightPanelToggleIcon?: ReactNode;
   rightPanelToggleLabel?: string;
+  rightPanelToggleTooltipLabel?: ReactNode;
   rightPanelOpen?: boolean;
   trailingItems?: PatientContextDatum[];
   vitalItems?: PatientContextDatum[];
@@ -89,7 +92,9 @@ export function EmrPatientContextBar({
   patientItems,
   rightPanelBadgeCount,
   rightPanelDisabled = false,
+  rightPanelToggleIcon,
   rightPanelToggleLabel,
+  rightPanelToggleTooltipLabel,
   rightPanelOpen = false,
   trailingItems = [],
   vitalItems = [],
@@ -226,25 +231,15 @@ export function EmrPatientContextBar({
             <>
               <div className="h-[18px] w-px shrink-0 bg-border" />
               {rightPanelToggleLabel ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
-                  aria-label={`${rightPanelToggleLabel} ${rightPanelOpen ? "접기" : "열기"}`}
+                <RightPanelToggleButton
+                  badgeCount={rightPanelBadgeCount}
                   disabled={rightPanelDisabled}
+                  icon={rightPanelToggleIcon}
+                  label={rightPanelToggleLabel}
+                  open={rightPanelOpen}
+                  tooltipLabel={rightPanelToggleTooltipLabel}
                   onClick={onToggleRightPanel}
-                >
-                  {rightPanelToggleLabel}
-                  {rightPanelBadgeCount ? (
-                    <span
-                      className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--clair-color-atomic-blue-500)] px-1 text-[10px] font-semibold leading-none text-white"
-                      aria-label={`새 장비결과 ${rightPanelBadgeCount}건`}
-                    >
-                      {rightPanelBadgeCount}
-                    </span>
-                  ) : null}
-                </Button>
+                />
               ) : (
                 <PatientContextControlButton
                   aria-label={rightPanelOpen ? "환자 사이드 패널 접기" : "환자 사이드 패널 열기"}
@@ -259,6 +254,62 @@ export function EmrPatientContextBar({
         </div>
       </div>
     </div>
+  );
+}
+
+function RightPanelToggleButton({
+  badgeCount,
+  disabled,
+  icon,
+  label,
+  onClick,
+  open,
+  tooltipLabel,
+}: {
+  badgeCount?: number;
+  disabled?: boolean;
+  icon?: ReactNode;
+  label: ReactNode;
+  onClick?: () => void;
+  open: boolean;
+  tooltipLabel?: ReactNode;
+}) {
+  const button = (
+    <Button
+      type="button"
+      variant="outline"
+      size="xs"
+      className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
+      aria-label={`${label} ${open ? "접기" : "열기"}`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {icon ? (
+        <span data-icon="inline-start" className="flex size-3 items-center justify-center [&_svg]:size-3">
+          {icon}
+        </span>
+      ) : null}
+      {label}
+      {badgeCount ? (
+        <span
+          className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--clair-color-atomic-blue-500)] px-1 text-[10px] font-semibold leading-none text-white"
+          aria-label={`새 장비결과 ${badgeCount}건`}
+        >
+          {badgeCount}
+        </span>
+      ) : null}
+    </Button>
+  );
+
+  if (!tooltipLabel) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent side="bottom" sideOffset={6}>
+        {tooltipLabel}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

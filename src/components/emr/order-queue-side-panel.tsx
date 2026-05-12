@@ -289,7 +289,7 @@ function OrderQueueCard({
         <span className="min-w-0 flex-1 truncate">{item.orderName}</span>
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
-      <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1.5">
+      <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
         <EmrSidePanelMetaBadge label="요청" value={item.requesterName} />
         {item.assigneeName ? <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} /> : null}
         <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>

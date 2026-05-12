@@ -12,6 +12,7 @@ import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation"
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuthClient } from "@/features/auth/auth-client";
+import { cn } from "@/lib/utils";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
 import { GlobalCommandPalette } from "@/shell/global-command-palette";
 
@@ -94,17 +95,17 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
       <Button
         variant="outline"
         size="sm"
-        className="h-8 w-[209px] justify-center gap-1 rounded-[var(--clair-radius-md)] border-[var(--clair-color-line-normal)] bg-white px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-900)] shadow-none hover:border-[var(--clair-color-line-strong)] hover:bg-[var(--clair-color-background-surface)]"
+        className="h-8 w-[209px] justify-center gap-1 rounded-[var(--clair-radius-md)] border-[var(--clair-color-line-normal)] bg-white px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-900)] shadow-none hover:border-[var(--clair-color-line-strong)] hover:bg-[var(--clair-color-background-surface)] max-sm:w-11 max-sm:px-2"
         aria-label={`${workspaceId} 워크스페이스 선택`}
       >
         <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-[var(--clair-color-primary-normal)] text-white">
           <WorkspaceLogoMarkIcon className="size-4" aria-hidden="true" />
         </span>
-        <span className="flex min-w-0 shrink-0 items-center justify-center gap-1 px-0.5">
+        <span className="flex min-w-0 shrink-0 items-center justify-center gap-1 px-0.5 max-sm:hidden">
           <span className="whitespace-nowrap">VIP 동물의료센터</span>
           <span className="whitespace-nowrap">청담점</span>
         </span>
-        <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-black" aria-hidden="true" />
+        <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-black max-sm:hidden" aria-hidden="true" />
       </Button>
       <Separator orientation="vertical" className="mx-2 hidden h-6" />
       <GlobalCommandPalette workspaceId={workspaceId} />
@@ -112,10 +113,10 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
         <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="알림">
           <BellIcon />
         </Button>
-        <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="도움말">
+        <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말">
           <HelpIcon />
         </Button>
-        <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="설정">
+        <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="설정">
           <SettingsIcon />
         </Button>
         <AuthProfileMenu

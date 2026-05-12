@@ -340,20 +340,20 @@ const getWaitMinutesFromTime = (dateTime?: string) => {
   return Math.max(0, dayCurrentTimeMinutes - minutesInDay);
 };
 
-const getWaitingTimePillClassName = (waitingMinutes?: number) => {
+const getWaitingTimeTextClassName = (waitingMinutes?: number) => {
   if (waitingMinutes === undefined || waitingMinutes < 30) {
-    return "border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-600)]";
+    return "text-[var(--clair-color-atomic-gray-600)]";
   }
 
   if (waitingMinutes >= 90) {
-    return "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]";
+    return "text-[var(--clair-color-atomic-red-600)]";
   }
 
   if (waitingMinutes >= 60) {
-    return "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]";
+    return "text-[var(--clair-color-atomic-orange-600)]";
   }
 
-  return "border-[var(--clair-color-atomic-yellow-200)] bg-[var(--clair-color-atomic-yellow-50)] text-[var(--clair-color-atomic-yellow-700)]";
+  return "text-[var(--clair-color-atomic-yellow-700)]";
 };
 
 const getReceptionSideListSortTime = (summary: ReceptionPatientSummary) => {
@@ -581,11 +581,11 @@ function PatientCard({
       {waitingMinutes !== undefined ? (
         <span
           className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[11px] font-semibold leading-none",
-            getWaitingTimePillClassName(waitingMinutes)
+            "ml-1 shrink-0 text-[11px] font-semibold leading-none",
+            getWaitingTimeTextClassName(waitingMinutes)
           )}
         >
-          {waitingMinutes}분 대기
+          ({waitingMinutes}분 대기)
         </span>
       ) : null}
     </>
@@ -614,15 +614,16 @@ function PatientCard({
         <span className="min-w-0 flex-1 truncate">{visitText}</span>
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
-      <div className="flex min-h-5 min-w-0 items-center gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-          <EmrSidePanelMetaBadge
-            label="수의사"
-            maxWidthClassName="max-w-[120px]"
-            value={veterinarianName}
-          />
-        </div>
-        <EmrSidePanelStatusBadge icon={<CdsFilesClockIcon className="size-3.5" aria-hidden="true" />}>
+      <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
+        <EmrSidePanelMetaBadge
+          label="수의사"
+          maxWidthClassName="max-w-[120px]"
+          value={veterinarianName}
+        />
+        <EmrSidePanelStatusBadge
+          icon={<CdsFilesClockIcon className="size-3.5" aria-hidden="true" />}
+          maxWidthClassName="max-w-none"
+        >
           {timeContent}
         </EmrSidePanelStatusBadge>
       </div>

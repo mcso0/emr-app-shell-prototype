@@ -2,8 +2,8 @@ export const SHELL_LAYOUT = {
   navRailWidth: 48,
   topMenuHeight: 44,
   moduleSidePanel: {
-    minWidth: 280,
-    defaultWidth: 280,
+    minWidth: 296,
+    defaultWidth: 296,
   },
   contentAside: {
     minWidth: 280,

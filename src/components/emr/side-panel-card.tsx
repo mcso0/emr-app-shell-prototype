@@ -1,7 +1,9 @@
 "use client";
 
 import type { KeyboardEvent, ReactNode } from "react";
+import { CdsCommunicationMessageSquareIcon } from "@/components/cds-icons/communication-and-media";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsPeopleUserCheckIcon } from "@/components/cds-icons/people-and-places";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,6 +15,9 @@ type EmrSidePanelCardProps = {
   testId?: string;
   onSelect: () => void;
 };
+
+const sidePanelBadgeIconClassName =
+  "flex size-3.5 shrink-0 items-center justify-center text-[var(--clair-color-atomic-gray-400)] [&_svg]:text-[var(--clair-color-atomic-gray-400)]";
 
 export function EmrSidePanelCard({
   children,
@@ -122,25 +127,48 @@ export function EmrSidePanelTypeBadge({ label }: { label: string }) {
 }
 
 export function EmrSidePanelMetaBadge({
+  icon,
   label,
   maxWidthClassName = "max-w-[92px]",
   value,
 }: {
+  icon?: ReactNode;
   label: string;
   maxWidthClassName?: string;
   value: string;
 }) {
+  const resolvedIcon = icon ?? getDefaultMetaBadgeIcon(label);
+
   return (
     <span
+      aria-label={`${label} ${value}`}
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
+        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
         maxWidthClassName
       )}
     >
-      <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{label}</span>
+      {resolvedIcon ? (
+        <span className={sidePanelBadgeIconClassName}>
+          {resolvedIcon}
+        </span>
+      ) : (
+        <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{label}</span>
+      )}
       <span className="truncate text-[var(--clair-color-atomic-gray-700)]">{value}</span>
     </span>
   );
+}
+
+function getDefaultMetaBadgeIcon(label: string) {
+  if (label === "요청") {
+    return <CdsCommunicationMessageSquareIcon className="size-3" aria-hidden="true" />;
+  }
+
+  if (label === "담당") {
+    return <CdsPeopleUserCheckIcon className="size-3" aria-hidden="true" />;
+  }
+
+  return null;
 }
 
 export function EmrSidePanelStatusBadge({
@@ -155,12 +183,12 @@ export function EmrSidePanelStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-1 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-600)]",
+        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-600)]",
         maxWidthClassName
       )}
     >
       {icon ? (
-        <span className="flex size-3.5 shrink-0 items-center justify-center text-[var(--clair-color-atomic-gray-400)]">
+        <span className={sidePanelBadgeIconClassName}>
           {icon}
         </span>
       ) : null}
