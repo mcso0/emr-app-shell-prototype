@@ -120,7 +120,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
 
   return (
     <nav className="flex min-h-0 min-w-[48px] max-w-[48px] flex-col items-center rounded-lg bg-[#171923] p-2 text-[#cbd5e0]">
-      <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-1 overflow-y-auto">
+      <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-[7px] overflow-y-auto">
         <AnimatePresence initial={false}>
           {!modulePanelOpen ? (
             <motion.div
@@ -129,14 +129,14 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
               animate={{ height: "auto", opacity: 1, y: 0 }}
               exit={reduceMotion ? { height: 0 } : { height: 0, opacity: 0, y: -8 }}
               transition={collapsedTopTransition}
-              className="flex w-full shrink-0 flex-col items-center gap-1 overflow-hidden"
+              className="flex w-full shrink-0 flex-col items-center gap-[7px] overflow-hidden"
             >
               <Tooltip>
                 <TooltipTrigger
                   render={
                     <button
                       type="button"
-                      className="flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+                      className="flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50"
                       onClick={() => setModulePanelOpen(true)}
                       aria-label="사이드 패널 펼치기"
                     >
@@ -187,7 +187,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
       </div>
       <button
         type="button"
-        className="relative mt-2 flex size-8 items-center justify-center rounded-[6px] outline-none focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+        className="relative mt-2 flex size-8 items-center justify-center rounded-[6px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-label="사용자 프로필"
       >
         <span className="relative flex size-6 items-center justify-center rounded-full bg-[#a0aec0] text-[8px] font-medium leading-none text-black">
@@ -252,7 +252,7 @@ function RailModuleItem({
             <Link
               href={href}
               className={cn(
-                "flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50",
+                "flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50",
                 active && "bg-[rgba(255,255,255,0.16)] text-white"
               )}
               aria-current={active ? "page" : undefined}
@@ -291,7 +291,7 @@ function RailActionItem({
           render={
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/50"
+              className="flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-label={label}
             >
               <IconFrame>

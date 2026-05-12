@@ -37,7 +37,7 @@ CLAiR keeps the generated Clair token output as the base layer and adds a small 
 - `--emr-surface-selected`: selected list, card, and row surface
 - `--emr-line-hairline`: quiet dividers and panel borders
 - `--emr-line-strong`: stronger structural separators
-- `--emr-accent`: sparse selected, focus, and priority accent
+- `--emr-accent`: sparse selected and priority accent
 - `--emr-accent-subtle`: subtle accent fill
 - `--emr-radius-control`: compact controls
 - `--emr-radius-panel`: panels and repeated cards
@@ -53,7 +53,8 @@ CLAiR uses a bright clinical surface ladder:
 - muted surface: low-contrast header, table, and nested surface
 - selected surface: pale accent-tinted fill
 - hairline: blue-gray structural divider
-- accent: sparse Linear-inspired lavender-blue for selection and focus only
+- accent: sparse Linear-inspired lavender-blue for selected and priority states
+- focus: neutral gray ring through the shared `--ring` token by default
 
 Do not collapse the product into one brand color. Medical, billing, warning, danger, success, pending, and completed states keep their semantic colors.
 
@@ -121,6 +122,7 @@ Every screen should pass a practical operational check:
 
 - text does not overlap or clip in desktop and mobile viewports
 - keyboard focus is visible on controls
+- default component focus rings use a neutral gray tone, not the brand/accent blue
 - selected and hover states are distinguishable
 - status colors remain legible and semantically consistent
 - dense tables preserve headers, row alignment, and action affordances
@@ -134,4 +136,3 @@ Use Playwright screenshots for visual sanity checks after substantial UI changes
 - decorative gradient/orb backgrounds
 - replacing semantic status colors with a single accent
 - claiming live DB, auth, billing, or server permission behavior from session-only UI
-

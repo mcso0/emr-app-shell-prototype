@@ -9,7 +9,6 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
-  CdsFilesDocumentAltFillIcon,
   CdsFilesFileIcon,
   CdsFilesImageIcon,
 } from "@/components/cds-icons/files-and-layout";
@@ -24,6 +23,7 @@ import {
 } from "@/components/icons";
 import {
   EmrInstructionHeaderStack,
+  EmrInstructionHistoryToggle,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
@@ -1291,21 +1291,13 @@ function useCurrentLabDetail() {
 
 export function LabHeader({ hasRightPanel }: ShellComponentProps) {
   const { detail } = useCurrentLabDetail();
-  const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
-  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
   if (!detail) return null;
 
   return (
     <EmrPatientContextBar
-      historyButton={{
-        controls: "lab-content-aside",
-        expanded: contentAsideOpen,
-        label: "검사이력",
-        onClick: () => setContentAsideOpen(!contentAsideOpen),
-      }}
       patientItems={[
         { label: "환자", value: detail.patient.name },
         { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
@@ -1363,9 +1355,9 @@ export function LabContentAside() {
       <EmrListHeader
         className="mx-0 h-6 border-y-0"
         count={totalHistoryCount}
-        label="검사이력"
+        label="임상병리검사 이력"
         leadingAction={
-          <EmrListHeaderIconButton ariaLabel="검사이력 패널 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
+          <EmrListHeaderIconButton ariaLabel="임상병리검사 이력 목록 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
             <CdsNavigationChevronsLeftIcon className="size-4" />
           </EmrListHeaderIconButton>
         }
@@ -1722,6 +1714,8 @@ export function LabContent() {
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
+  const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
+  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(searchParams, selectedLabResultId);
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
   const initialAssignment = {
@@ -1770,12 +1764,15 @@ export function LabContent() {
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar
-            title="임상병리 검사결과지"
+            title="임상병리검사 결과지"
             titleClassName="text-[16px] leading-6"
             icon={
-              <CdsFilesDocumentAltFillIcon
-                className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
-                aria-hidden="true"
+              <EmrInstructionHistoryToggle
+                ariaLabelPrefix="임상병리검사 이력"
+                controls="lab-content-aside"
+                expanded={contentAsideOpen}
+                tooltipLabel="임상병리검사 이력"
+                onClick={() => setContentAsideOpen(!contentAsideOpen)}
               />
             }
             badge={
@@ -1869,21 +1866,13 @@ function useCurrentImagingDetail() {
 
 export function ImagingHeader({ hasRightPanel }: ShellComponentProps) {
   const { detail } = useCurrentImagingDetail();
-  const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
-  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
   if (!detail) return null;
 
   return (
     <EmrPatientContextBar
-      historyButton={{
-        controls: "imaging-content-aside",
-        expanded: contentAsideOpen,
-        label: "영상이력",
-        onClick: () => setContentAsideOpen(!contentAsideOpen),
-      }}
       patientItems={[
         { label: "환자", value: detail.patient.name },
         { label: "보호자", value: detail.primaryGuardian?.name ?? "보호자 미지정" },
@@ -1969,9 +1958,9 @@ export function ImagingContentAside() {
       <EmrListHeader
         className="mx-0 h-6 border-y-0"
         count={totalHistoryCount}
-        label="영상/차트 이력"
+        label="영상검사 이력"
         leadingAction={
-          <EmrListHeaderIconButton ariaLabel="영상이력 패널 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
+          <EmrListHeaderIconButton ariaLabel="영상검사 이력 목록 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
             <CdsNavigationChevronsLeftIcon className="size-4" />
           </EmrListHeaderIconButton>
         }
@@ -2203,6 +2192,8 @@ export function ImagingContent() {
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
+  const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
+  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId);
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
@@ -2250,12 +2241,15 @@ export function ImagingContent() {
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar
-            title="영상 검사 Order 상세"
+            title="영상검사 Order 상세"
             className="h-auto min-h-9 flex-wrap gap-2"
             icon={
-              <CdsFilesImageIcon
-                className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
-                aria-hidden="true"
+              <EmrInstructionHistoryToggle
+                ariaLabelPrefix="영상검사 이력"
+                controls="imaging-content-aside"
+                expanded={contentAsideOpen}
+                tooltipLabel="영상검사 이력"
+                onClick={() => setContentAsideOpen(!contentAsideOpen)}
               />
             }
             badge={

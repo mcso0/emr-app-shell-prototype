@@ -23,7 +23,7 @@ test("sales demo launcher carries the Kong scenario through the golden path", as
   await expectDemoContext(page);
   await expect(page.getByRole("button", { name: /콩이 · 김하늘/ }).first()).toBeVisible();
 
-  await page.getByRole("link", { name: /진료\(차트\)/ }).click();
+  await page.getByRole("link", { name: "진료/차트" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
   await expectDemoContext(page);
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();
@@ -63,7 +63,7 @@ test("golden scenario can be opened across chart, lab, imaging, and billing", as
 
   await page.goto(`/w/clair-demo/lab?${scenarioQuery}&labResultId=lab-result-kong-cbc&modulePanel=open&aside=closed`);
   await expect(page.getByRole("button", { name: /콩이 · 김하늘/ }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await expect(page.getByRole("row", { name: /WBC 21\.4/ })).toBeVisible();
   await expect(page).toHaveURL(/scenario=kong-vomit/);
 

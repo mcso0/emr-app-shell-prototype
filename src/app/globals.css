@@ -67,6 +67,7 @@
   --sidebar-accent-foreground: var(--clair-color-atomic-gray-50);
   --sidebar-border: var(--clair-color-atomic-gray-700);
   --sidebar-ring: var(--clair-color-atomic-sky-500);
+  --ring: var(--clair-color-atomic-gray-400);
   --selection: var(--clair-color-fill-alternative);
   --selection-border: var(--clair-color-line-strong);
   --clair-color-service-background: #FBFCFD;
@@ -100,7 +101,7 @@
   --destructive: var(--clair-color-status-negative-foreground);
   --border: var(--clair-color-line-normal);
   --input: var(--clair-color-line-normal);
-  --ring: var(--clair-color-primary-normal);
+  --ring: var(--clair-color-atomic-gray-500);
 }
 
 @layer base {

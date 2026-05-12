@@ -16,8 +16,29 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history&right=open");
 
   await expect(page.getByText("진료 대기열")).toBeVisible();
+  const selectedQueueCard = page.getByTestId("order-queue-item-encounter-coco-260501");
+  await expect(selectedQueueCard).toHaveAttribute("data-selected", "true");
+  const selectedQueueCardColors = await selectedQueueCard.evaluate((element) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--clair-color-primary-normal)";
+    document.body.appendChild(probe);
+
+    const primaryColor = getComputedStyle(probe).color;
+    probe.remove();
+
+    return {
+      borderColor: getComputedStyle(element).borderTopColor,
+      primaryColor,
+      stripeColor: getComputedStyle(element.firstElementChild ?? element).backgroundColor,
+    };
+  });
+  expect(selectedQueueCardColors.borderColor).toBe(selectedQueueCardColors.primaryColor);
+  expect(selectedQueueCardColors.stripeColor).toBe(selectedQueueCardColors.primaryColor);
   await expect(page.getByRole("button", { name: "차트 이력 패널 접기" })).toBeVisible();
   await expect(page.locator("#chart-content-aside").getByText("차트이력")).toBeVisible();
+  await expect(
+    page.getByRole("separator", { name: "진료 기록과 처방/오더 영역 높이 조절" })
+  ).toHaveCSS("height", "16px");
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("담당 수의사")).toBeVisible();
   await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
   await expect(page.getByText("기본 SOAP")).toBeVisible();
@@ -264,22 +285,46 @@ test("chart patient panels collapse and reopen from the context bar", async ({ p
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history&right=closed");
 
   await expect(page.locator("#chart-content-aside").getByText("차트이력")).toBeVisible();
+  const historyToggleOpen = page.getByRole("button", { name: "차트 이력 패널 접기" });
+  await expect(historyToggleOpen).toHaveAttribute("aria-pressed", "true");
+  await expect(historyToggleOpen).toHaveAttribute("data-state", "on");
   await page.getByRole("button", { name: "차트 이력 패널 접기" }).hover();
   await expect(page.getByText("과거 이력 보기")).toBeVisible();
   await page.getByRole("button", { name: "차트 이력 패널 접기" }).click();
   await expect(page).toHaveURL(/aside=closed/);
 
+  const historyToggleClosed = page.getByRole("button", { name: "차트 이력 패널 열기" });
+  await expect(historyToggleClosed).toHaveAttribute("aria-pressed", "false");
+  await expect(historyToggleClosed).toHaveAttribute("data-state", "off");
   await page.getByRole("button", { name: "차트 이력 패널 열기" }).hover();
   await expect(page.getByText("과거 이력 보기")).toBeVisible();
   await page.getByRole("button", { name: "차트 이력 패널 열기" }).click();
   await expect(page).toHaveURL(/aside=history/);
 
   await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeHidden();
+  const patientInfoToggleClosed = page.getByRole("button", { name: "환자 정보 열기" });
+  await expect(patientInfoToggleClosed).toHaveAttribute("aria-pressed", "false");
+  await expect(patientInfoToggleClosed).toHaveAttribute("data-state", "off");
   await page.getByRole("button", { name: "환자 정보 열기" }).hover();
   await expect(page.getByText("환자 정보 보기")).toBeVisible();
   await page.getByRole("button", { name: "환자 정보 열기" }).click();
   await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeVisible();
+  const patientInfoToggleOpen = page.getByRole("button", { name: "환자 정보 접기" });
+  await expect(patientInfoToggleOpen).toHaveAttribute("aria-pressed", "true");
+  await expect(patientInfoToggleOpen).toHaveAttribute("data-state", "on");
+  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
+  const patientInfoPanelTitle = page.getByRole("heading", { name: "환자 정보" });
+  const patientInfoPanelCollapse = page.getByRole("button", { name: "환자 정보 패널 접기" });
+  await expect(patientInfoPanelCollapse).toBeVisible();
+  const titleBox = await patientInfoPanelTitle.boundingBox();
+  const collapseBox = await patientInfoPanelCollapse.boundingBox();
+  if (!titleBox || !collapseBox) {
+    throw new Error("Patient info panel title or collapse button was not measurable.");
+  }
+  expect(collapseBox.x - (titleBox.x + titleBox.width)).toBeLessThanOrEqual(8);
   await expect(page.getByText("개인/민감 정보", { exact: true })).toBeVisible();
   await expect(page.getByText("부가 정보", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "환자 정보 패널 접기" }).click();
+  await expect(page).toHaveURL(/right=closed/);
+  await expect(page.getByText("개인/민감 정보", { exact: true })).toBeHidden();
 });

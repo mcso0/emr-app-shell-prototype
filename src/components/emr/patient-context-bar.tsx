@@ -144,9 +144,11 @@ export function EmrPatientContextBar({
             <Button
               variant="outline"
               size="xs"
-              className="h-[26px] bg-card aria-expanded:border-ring aria-expanded:bg-background aria-expanded:ring-3 aria-expanded:ring-ring/50"
+              className="h-[26px] bg-card data-[state=on]:border-[var(--clair-color-atomic-gray-400)] data-[state=on]:bg-[var(--clair-color-background-surface)] data-[state=on]:text-[var(--clair-color-label-strong)]"
               aria-expanded={historyButton.expanded}
+              aria-pressed={historyButton.expanded}
               aria-controls={historyButton.controls}
+              data-state={historyButton.expanded ? "on" : "off"}
               onClick={historyButton.onClick}
             >
               <CdsUtilitiesHistoryIcon data-icon="inline-start" />
@@ -279,8 +281,11 @@ function RightPanelToggleButton({
       type="button"
       variant="outline"
       size="xs"
-      className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
+      className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] data-[state=on]:border-[var(--clair-color-atomic-gray-400)] data-[state=on]:bg-[var(--clair-color-background-surface)] data-[state=on]:text-[var(--clair-color-label-strong)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
       aria-label={`${label} ${open ? "접기" : "열기"}`}
+      aria-expanded={open}
+      aria-pressed={open}
+      data-state={open ? "on" : "off"}
       disabled={disabled}
       onClick={onClick}
     >

@@ -25,10 +25,12 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(sidePanel.getByTestId("lab-chart-group-encounter-coco-260501")).toContainText("코코");
   await expect(sidePanel.getByTestId("lab-chart-group-encounter-coco-260501")).toContainText("CBC 검사");
   await queueViewFilter.getByRole("button", { name: "오더별" }).click();
-  await expect(page.getByRole("button", { name: "검사이력", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "임상병리검사 이력 패널 접기" })).toBeVisible();
+  await page.getByRole("button", { name: "임상병리검사 이력 패널 접기" }).hover();
+  await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "임상병리검사 이력" })).toBeVisible();
   await expect(page.getByTestId("lab-history-group-26.05.01")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toHaveCSS("font-size", "16px");
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toHaveCSS("font-size", "16px");
   await expect(page.getByText("요청 일시")).toBeVisible();
   await expect(page.getByTestId("lab-result-status-label")).toHaveText("입력");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
@@ -100,7 +102,7 @@ test("lab workspace prioritizes Kong CBC result from demo query", async ({ page 
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-kong-cbc")).toContainText("콩이");
-  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await expect(page.getByText("환자").first()).toBeVisible();
   await expect(page.getByText("콩이").first()).toBeVisible();
   await expect(page.getByRole("row", { name: /WBC 21.4 K\/uL .*6.*17.*높음/ })).toBeVisible();
@@ -129,9 +131,11 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(sidePanel.getByText("차트별 영상")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-chart-group-encounter-coco-260501")).toContainText("코코");
   await queueViewFilter.getByRole("button", { name: "오더별" }).click();
-  await expect(page.getByRole("button", { name: "영상이력", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "영상검사 이력 패널 접기" })).toBeVisible();
+  await page.getByRole("button", { name: "영상검사 이력 패널 접기" }).hover();
+  await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "영상검사 이력" })).toBeVisible();
   await expect(page.getByTestId("imaging-history-item-imaging-coco-thorax")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "영상 검사 Order 상세" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("흉부 방사선").first()).toBeVisible();
   await expect(page.getByTestId("imaging-study-status-label")).toHaveText("판독중");
   await expect(page.getByText("Order 상세정보")).toBeVisible();
@@ -160,7 +164,7 @@ test("imaging workspace prioritizes Kong abdomen study from demo query", async (
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-kong-abdomen")).toContainText("콩이");
-  await expect(page.getByRole("heading", { name: "영상 검사 Order 상세" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("환자").first()).toBeVisible();
   await expect(page.getByText("콩이").first()).toBeVisible();
   await expect(page.getByRole("textbox", { name: "영상 판독 내용" })).toContainText(

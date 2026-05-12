@@ -16,16 +16,23 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
 
-  await page.getByRole("button", { name: "조제이력" }).click();
+  await page.getByRole("button", { name: "조제 이력 패널 열기" }).hover();
+  await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "조제 이력" })).toBeVisible();
+  await page.getByRole("button", { name: "조제 이력 패널 열기" }).click();
   await expect(page.getByText("26.04.11")).toBeVisible();
 
-  await page.getByRole("button", { name: "조제이력" }).click();
+  await page.getByRole("button", { name: "조제 이력 패널 접기" }).click();
   await page.getByTestId("order-row-section-0-o-10023").click({ position: { x: 100, y: 20 } });
   await expect(page.getByText("상세 정보")).toBeVisible();
   await expect(page.locator('input[value="Atorvastatin 20mg"]')).toBeVisible();
 
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await expect(page.getByText("상세 정보")).toBeHidden();
+
+  await page.getByTestId("order-queue-item-dispensing-queue-1").click();
+  await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
+  await page.getByRole("button", { name: "처치 이력 패널 열기" }).hover();
+  await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "처치 이력" })).toBeVisible();
 });
 
 test("global command palette searches and opens patient context", async ({ page }) => {
@@ -206,7 +213,7 @@ test("dispensing history aside can open from shared URL state", async ({ page })
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=history");
 
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "이력 패널 접기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "조제 이력 목록 접기" })).toBeVisible();
   await expect(page.getByText("5", { exact: true })).toBeVisible();
   await expect(page.getByText("26.04.11")).toBeVisible();
 
@@ -400,8 +407,8 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(orderInfo).toContainText("나비(5세) · 러시안블루");
   await expect(orderInfo).toContainText(/요청 일시\s*2026.04.14 10:42\s*진행중/);
   await expect(orderInfo).toContainText(/요청 수의사\s*김도윤/);
-  await expect(orderInfo).toContainText(/조제 담당\s*송하윤/);
-  await expect(orderInfo).toContainText(/조제 시작\s*10:45/);
+  await expect(orderInfo).toContainText(/처치 담당\s*송하윤/);
+  await expect(orderInfo).toContainText(/처치 시작\s*10:45/);
   await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", "rgb(240, 248, 255)");
 
   const resultContent = page.locator("[data-slot='instruction-result-scroll-content']");
@@ -439,14 +446,15 @@ test("right panel can be collapsed on a module that owns it", async ({ page }) =
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=open");
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
   await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
-  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeVisible();
+  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
   await expect(page).toHaveURL(/right=open/);
+  await expect(page.getByRole("button", { name: "환자 정보 패널 접기" })).toBeVisible();
   await page.getByRole("button", { name: "환자 정보 접기" }).click();
   await expect(page).toHaveURL(/right=closed/);
   await expect(page.getByRole("button", { name: "환자 정보 열기" })).toBeVisible();
   await page.getByRole("button", { name: "환자 정보 열기" }).click();
   await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeVisible();
+  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
 });
 
 test("dispensing does not render the patient side panel or trigger", async ({ page }) => {

@@ -387,7 +387,7 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
     <>
       <button
         type="button"
-        className="mx-auto flex h-8 w-[min(560px,45vw)] min-w-8 items-center rounded-lg border border-[var(--clair-color-line-normal)] bg-[var(--clair-color-background-surface)] px-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] outline-none transition-colors hover:border-[var(--clair-color-line-strong)] hover:bg-white focus-visible:ring-3 focus-visible:ring-[var(--clair-color-atomic-sky-500)]/40 max-sm:w-8 max-sm:px-2"
+        className="mx-auto flex h-8 w-[min(560px,45vw)] min-w-8 items-center rounded-lg border border-[var(--clair-color-line-normal)] bg-[var(--clair-color-background-surface)] px-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] outline-none transition-colors hover:border-[var(--clair-color-line-strong)] hover:bg-white focus-visible:ring-3 focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2"
         aria-label="전역 통합 검색 열기"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}

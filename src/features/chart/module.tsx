@@ -27,11 +27,19 @@ import {
   CdsContentItalicIcon,
   CdsContentLink2Icon,
 } from "@/components/cds-icons/content-and-editor";
-import { CdsNavigationChevronsLeftIcon, CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
-import { CdsUtilitiesHistoryIcon, CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import {
+  CdsNavigationChevronsLeftIcon,
+  CdsNavigationChevronsRightIcon,
+  CdsNavigationSidebarIcon,
+} from "@/components/cds-icons/navigation";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
-import { EmrInstructionHeaderStack, EmrInstructionTitleBar } from "@/components/emr/instruction-header-stack";
+import {
+  EmrInstructionHeaderStack,
+  EmrInstructionHistoryToggle,
+  EmrInstructionTitleBar,
+} from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   EmrListHeader,
@@ -57,7 +65,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   getChartEncounter,
   getChartHistoryRows,
@@ -95,7 +102,7 @@ type OrderFilter = "all" | EmrOrderType;
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
-const CHART_RESIZER_HEIGHT_PX = 10;
+const CHART_RESIZER_HEIGHT_PX = 16;
 const CHART_RESIZER_STEP_PERCENT = 5;
 
 const chartQueueFilterItems = [
@@ -1110,6 +1117,7 @@ function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) 
 
 function ChartRightPanel() {
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const bundle = getSelectedBundle(selectedEncounterId);
   const historyRows = useMemo(
     () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
@@ -1120,9 +1128,19 @@ function ChartRightPanel() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-12 flex-col justify-center border-b border-[var(--emr-line-hairline)] px-3">
-        <div className="text-sm font-semibold">환자 정보</div>
-        <div className="text-[11px] text-muted-foreground">진료 참고 · 개인/민감 정보 · 부가 정보</div>
+      <div className="flex h-12 items-center border-b border-[var(--emr-line-hairline)] px-3">
+        <div className="flex min-w-0 flex-1 items-center">
+          <div className="flex min-w-0 max-w-full items-center gap-1">
+            <h2 className="min-w-0 truncate text-sm font-semibold">환자 정보</h2>
+            <EmrListHeaderIconButton
+              ariaLabel="환자 정보 패널 접기"
+              iconSize="md"
+              onClick={() => setRightPanelOpen(false)}
+            >
+              <CdsNavigationChevronsRightIcon className="size-4" />
+            </EmrListHeaderIconButton>
+          </div>
+        </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
@@ -1335,7 +1353,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="처방/오더" subtitle="처방 · 처치 · 검사 · 영상 오더" />
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="bg-card">
@@ -1344,7 +1362,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           <Button size="sm">+ Order</Button>
         </div>
       </div>
-      <div className="flex min-h-10 shrink-0 items-center border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
+      <div className="flex min-h-8 shrink-0 items-start border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 pb-2 pt-0">
         <SegmentedControl
           aria-label="차트 오더 필터"
           items={tabItems}
@@ -1624,27 +1642,13 @@ export function ChartContent() {
           <EmrInstructionTitleBar
             title="진료 차트"
             icon={
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      className="bg-card aria-expanded:border-ring aria-expanded:bg-background aria-expanded:ring-3 aria-expanded:ring-ring/50"
-                      aria-label={`차트 이력 패널 ${contentAsideOpen ? "접기" : "열기"}`}
-                      aria-controls="chart-content-aside"
-                      aria-expanded={contentAsideOpen}
-                      onClick={() => setContentAsideOpen(!contentAsideOpen)}
-                    >
-                      <CdsUtilitiesHistoryIcon className="size-4" />
-                    </Button>
-                  }
-                />
-                <TooltipContent side="bottom" sideOffset={6}>
-                  과거 이력 보기
-                </TooltipContent>
-              </Tooltip>
+              <EmrInstructionHistoryToggle
+                ariaLabelPrefix="차트 이력"
+                controls="chart-content-aside"
+                expanded={contentAsideOpen}
+                tooltipLabel="과거 이력 보기"
+                onClick={() => setContentAsideOpen(!contentAsideOpen)}
+              />
             }
             badge={
               <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">

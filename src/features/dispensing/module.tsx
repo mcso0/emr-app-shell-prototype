@@ -12,9 +12,6 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import {
-  CdsFilesDocumentAltFillIcon,
-} from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
@@ -28,6 +25,7 @@ import {
 } from "@/components/emr/subpanel";
 import {
   EmrInstructionHeaderStack,
+  EmrInstructionHistoryToggle,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
@@ -65,7 +63,7 @@ import type { Order, OrderQueueItem, ShellComponentProps, TechnicianUser } from 
 type OrderGroupFilter = "all" | "oral" | "other";
 type DispensingContentBodyProps = Pick<
   ShellComponentProps,
-  "hasRightPanel" | "moduleId" | "moduleLabel"
+  "hasRightPanel" | "moduleId"
 > & {
   selectedQueueItem: OrderQueueItem | null;
 };
@@ -115,21 +113,13 @@ export function DispensingSidePanel() {
 
 export function DispensingHeader({ moduleId }: ShellComponentProps) {
   const {
-    contentAsideOpen,
     selectedQueueItemIds,
-    setContentAsideOpen,
   } =
     useLayoutStore();
   const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
 
   return (
     <EmrPatientContextBar
-      historyButton={{
-        controls: "dispensing-content-aside",
-        expanded: contentAsideOpen,
-        label: "조제이력",
-        onClick: () => setContentAsideOpen(!contentAsideOpen),
-      }}
       patientItems={[
         { label: "환자", value: selectedQueueItem?.patientName ?? patient.name },
         { label: "보호자", value: selectedQueueItem?.guardianName ?? patient.guardian },
@@ -153,9 +143,16 @@ export function DispensingHeader({ moduleId }: ShellComponentProps) {
   );
 }
 
-export function DispensingContentAside() {
+function getDispensingInstructionType(selectedQueueItem: OrderQueueItem | null) {
+  return selectedQueueItem?.orderTypeCategory === "treatment" ? "처치" : "조제";
+}
+
+export function DispensingContentAside({ moduleId }: ShellComponentProps) {
+  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
+  const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
+  const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
   const totalHistoryCount = historyGroups.reduce((total, group) => total + group.count, 0);
   const toggleHistoryGroup = (date: string) => {
     setCollapsedHistoryGroups((current) => {
@@ -173,7 +170,11 @@ export function DispensingContentAside() {
 
   return (
     <EmrContentAsidePanel id="dispensing-content-aside">
-      <HistoryListHeader count={totalHistoryCount} onCollapse={() => setContentAsideOpen(false)} />
+      <HistoryListHeader
+        count={totalHistoryCount}
+        label={historyLabel}
+        onCollapse={() => setContentAsideOpen(false)}
+      />
       <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
@@ -198,14 +199,22 @@ export function DispensingContentAside() {
   );
 }
 
-function HistoryListHeader({ count, onCollapse }: { count: number; onCollapse: () => void }) {
+function HistoryListHeader({
+  count,
+  label,
+  onCollapse,
+}: {
+  count: number;
+  label: string;
+  onCollapse: () => void;
+}) {
   return (
     <EmrListHeader
       className="mx-0 h-6 border-y-0"
       count={count}
-      label="조제이력"
+      label={label}
       leadingAction={
-        <EmrListHeaderIconButton ariaLabel="이력 패널 접기" iconSize="md" onClick={onCollapse}>
+        <EmrListHeaderIconButton ariaLabel={`${label} 목록 접기`} iconSize="md" onClick={onCollapse}>
           <CdsNavigationChevronsLeftIcon className="size-4" />
         </EmrListHeaderIconButton>
       }
@@ -496,7 +505,6 @@ function GroupStatusAction({
 export function DispensingContent({
   hasRightPanel,
   moduleId,
-  moduleLabel,
 }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
@@ -506,7 +514,6 @@ export function DispensingContent({
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
-      moduleLabel={moduleLabel}
       selectedQueueItem={selectedQueueItem}
     />
   );
@@ -515,10 +522,14 @@ export function DispensingContent({
 function DispensingContentBody({
   hasRightPanel,
   moduleId,
-  moduleLabel,
   selectedQueueItem,
 }: DispensingContentBodyProps) {
-  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
+  const {
+    contentAsideOpen,
+    rightPanelOpen,
+    setContentAsideOpen,
+    setRightPanelOpen,
+  } = useLayoutStore();
   const selectedQueueItemId = selectedQueueItem?.id;
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
     cloneOrderTableGroups(selectedQueueItemId)
@@ -555,9 +566,10 @@ function DispensingContentBody({
     },
   ];
 
-  const instructionType = moduleLabel === "처치" ? "처치" : "조제";
-  const statusLabel = moduleLabel === "처치" ? "처치중" : "조제중";
-  const completeLabel = moduleLabel === "처치" ? "처치완료" : "조제완료";
+  const instructionType = getDispensingInstructionType(selectedQueueItem);
+  const statusLabel = instructionType === "처치" ? "처치중" : "조제중";
+  const completeLabel = instructionType === "처치" ? "처치완료" : "조제완료";
+  const historyLabel = `${instructionType} 이력`;
   const primaryAssigneeSummary = primaryGroup ? getAssigneeSummary(primaryGroup.assigneeIds) : "미지정";
   const primaryStartStatus =
     primaryGroup?.workStatus === "진행중"
@@ -655,10 +667,13 @@ function DispensingContentBody({
           <EmrInstructionTitleBar
             title={`${instructionType} 지시서`}
             icon={
-                <CdsFilesDocumentAltFillIcon
-                  className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
-                  aria-hidden="true"
-                />
+              <EmrInstructionHistoryToggle
+                ariaLabelPrefix={historyLabel}
+                controls="dispensing-content-aside"
+                expanded={contentAsideOpen}
+                tooltipLabel={historyLabel}
+                onClick={() => setContentAsideOpen(!contentAsideOpen)}
+              />
             }
             badge={
               <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
@@ -667,7 +682,7 @@ function DispensingContentBody({
             }
             actions={
               <>
-              {hasRightPanel && moduleLabel === "처치" ? (
+              {hasRightPanel && instructionType === "처치" ? (
                 <Button
                   variant="outline"
                   size="sm"

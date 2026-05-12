@@ -1,7 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrPageHeader } from "@/components/emr/page-header";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type EmrInstructionHeaderStackProps = {
@@ -21,6 +24,14 @@ type EmrInstructionTitleBarProps = {
   titleClassName?: string;
 };
 
+type EmrInstructionHistoryToggleProps = {
+  ariaLabelPrefix: string;
+  controls: string;
+  expanded: boolean;
+  onClick: () => void;
+  tooltipLabel: string;
+};
+
 export function EmrInstructionTitleBar({
   actions,
   badge,
@@ -38,6 +49,40 @@ export function EmrInstructionTitleBar({
       title={title}
       titleClassName={titleClassName}
     />
+  );
+}
+
+export function EmrInstructionHistoryToggle({
+  ariaLabelPrefix,
+  controls,
+  expanded,
+  onClick,
+  tooltipLabel,
+}: EmrInstructionHistoryToggleProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            className="bg-card data-[state=on]:border-[var(--clair-color-atomic-gray-400)] data-[state=on]:bg-[var(--clair-color-background-surface)] data-[state=on]:text-[var(--clair-color-label-strong)]"
+            aria-label={`${ariaLabelPrefix} 패널 ${expanded ? "접기" : "열기"}`}
+            aria-controls={controls}
+            aria-expanded={expanded}
+            aria-pressed={expanded}
+            data-state={expanded ? "on" : "off"}
+            onClick={onClick}
+          >
+            <CdsUtilitiesHistoryIcon className="size-4" />
+          </Button>
+        }
+      />
+      <TooltipContent side="bottom" sideOffset={6}>
+        {tooltipLabel}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

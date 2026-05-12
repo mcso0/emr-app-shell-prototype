@@ -40,7 +40,7 @@ export function EmrSidePanelCard({
       className={cn(
         "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 pb-2.5 pt-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
         selected &&
-          "border-[var(--emr-accent)] bg-[var(--emr-surface-selected)] pl-3.5 focus-visible:ring-[var(--emr-accent-subtle)]",
+          "border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-atomic-sky-50)] pl-3.5",
         !selected && "hover:bg-[var(--emr-surface-muted)]",
         className
       )}
@@ -52,7 +52,7 @@ export function EmrSidePanelCard({
     >
       {selected ? (
         <span
-          className="absolute inset-y-0 left-0 w-1 bg-[var(--emr-accent)]"
+          className="absolute inset-y-0 left-0 w-1 bg-[var(--clair-color-primary-normal)]"
           aria-hidden="true"
         />
       ) : null}
