@@ -18,6 +18,7 @@ type EmrInstructionTitleBarProps = {
   className?: string;
   icon?: ReactNode;
   title: ReactNode;
+  titleClassName?: string;
 };
 
 export function EmrInstructionTitleBar({
@@ -26,6 +27,7 @@ export function EmrInstructionTitleBar({
   className,
   icon,
   title,
+  titleClassName,
 }: EmrInstructionTitleBarProps) {
   return (
     <EmrPageHeader
@@ -34,6 +36,7 @@ export function EmrInstructionTitleBar({
       className={className}
       icon={icon}
       title={title}
+      titleClassName={titleClassName}
     />
   );
 }

@@ -10,6 +10,7 @@ type EmrPageHeaderProps = {
   className?: string;
   icon?: ReactNode;
   title: ReactNode;
+  titleClassName?: string;
 };
 
 export function EmrPageHeader({
@@ -19,6 +20,7 @@ export function EmrPageHeader({
   className,
   icon,
   title,
+  titleClassName,
 }: EmrPageHeaderProps) {
   return (
     <div
@@ -28,7 +30,12 @@ export function EmrPageHeader({
       <div className="flex min-w-0 items-center gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {icon}
-          <h1 className="truncate text-[18px] font-semibold leading-[26px] tracking-[-0.002em] text-foreground">
+          <h1
+            className={cn(
+              "truncate text-[16px] font-semibold leading-6 tracking-[-0.002em] text-foreground",
+              titleClassName
+            )}
+          >
             {title}
           </h1>
         </div>

@@ -401,7 +401,7 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
 
   return (
     <aside
-      className="flex h-full min-h-0 w-full min-w-[320px] max-w-[320px] flex-col bg-card"
+      className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-card"
       data-testid="customer-side-panel"
     >
       <EmrSubpanelTitle

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inpatient Admission Design Improvement</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --paper: #ffffff;
+      --ink: #172033;
+      --muted: #5f6b7a;
+      --line: #dfe6ef;
+      --blue: #2563eb;
+      --blue-soft: #eaf3ff;
+      --green: #108a55;
+      --green-soft: #eaf7f0;
+      --orange: #b85b00;
+      --orange-soft: #fff4e6;
+      --red: #c23131;
+      --red-soft: #fff0f0;
+      --shadow: 0 14px 38px rgba(18, 32, 58, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.58;
+    }
+
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+    }
+
+    h1, h2, h3 { line-height: 1.18; letter-spacing: 0; }
+    h1 { margin: 0 0 12px; font-size: 34px; }
+    h2 { margin: 36px 0 14px; font-size: 22px; }
+    h3 { margin: 30px 0 10px; font-size: 18px; }
+    p { margin: 0 0 14px; }
+    a { color: var(--blue); font-weight: 650; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .lede {
+      color: var(--muted);
+      max-width: 780px;
+      font-size: 16px;
+    }
+
+    .callout {
+      margin: 28px 0;
+      padding: 18px 20px;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      background: var(--blue-soft);
+    }
+
+    .card {
+      margin: 18px 0 28px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 { margin-top: 0; }
+
+    figure {
+      margin: 18px 0;
+    }
+
+    img {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 10px 28px rgba(18, 32, 58, 0.08);
+    }
+
+    figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      margin-left: 8px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .sketch {
+      overflow-x: auto;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #273244;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .button:hover { text-decoration: none; background: #1f2937; }
+
+    @media (max-width: 760px) {
+      main { padding: 32px 16px 56px; }
+      h1 { font-size: 28px; }
+      .grid { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>입원 화면 개선안</h1>
+    <p class="lede">현재 화면은 dense table 기반의 병동 업무판으로 좋은 출발점입니다. 개선의 초점은 정보를 줄이는 것이 아니라, 위험 환자와 다음 케어, 퇴실 병목, 병상 여유를 첫 화면에서 더 빨리 판단하게 만드는 것입니다.</p>
+
+    <section class="callout">
+      <strong>TL;DR</strong>
+      <p>상단 KPI를 정적인 숫자 카드에서 병동 command strip으로 바꾸고, table 앞쪽에 `다음 케어`와 `긴급도`를 배치하세요. 현재의 정보 밀도는 유지하되 스캔 순서를 병동 의사결정 순서로 재배열하는 것이 가장 효과적입니다.</p>
+      <a class="button" href="improved-inpatient-mockup.html">개선 시안 열기</a>
+    </section>
+
+    <h2>Current State</h2>
+    <figure>
+      <img src="references/current.png" alt="Current inpatient screen">
+      <figcaption>현재 입원 화면. 그룹형 table, 주의 tag, KPI, 검색, 퇴실 상태가 이미 구현되어 있습니다.</figcaption>
+    </figure>
+
+    <h2>Improvement Ideas</h2>
+
+    <article class="card">
+      <h3>1. Ward Command Strip <span class="tag">Highest Impact</span></h3>
+      <p>상단 KPI를 `Critical now`, `Care due`, `Discharge blockers`, `Open beds`처럼 바로 행동으로 이어지는 항목으로 바꿉니다. 각 카드에는 숫자뿐 아니라 환자명, 담당자, 다음 시간 정보를 함께 둡니다.</p>
+      <div class="grid">
+        <figure>
+          <img src="references/elva-bird-eye-view.png" alt="Elva Bird Eye View reference">
+          <figcaption>Elva - 환자 journey state를 lane으로 보여주는 live operations 화면. [Web]</figcaption>
+        </figure>
+        <figure>
+          <img src="references/akute-health-ehr-dashboard.png" alt="Akute Health dashboard reference">
+          <figcaption>Akute Health - KPI, table, chart, tabs를 한 viewport에서 연결합니다. [Lazyweb]</figcaption>
+        </figure>
+      </div>
+      <div class="sketch">+ Critical now 1  + Care due 3        + Discharge blockers 2 + Open beds 5
+| ICU-01 콩이     | 10:30 vitals late | 수납 인계 2건       | ICU 0 / Cat 2
+| 산소/구토 관찰  | 담당 송하윤       | 오늘 퇴실 가능       | Dog 3</div>
+    </article>
+
+    <article class="card">
+      <h3>2. Compact Bed Status Matrix</h3>
+      <p>강아지, 고양이, ICU 병상을 작은 cell matrix로 표현합니다. 입원, 주의, critical, 퇴실 준비, empty 상태를 색과 라벨로 구분하면 table을 읽기 전에 capacity와 위험 분포가 보입니다.</p>
+      <figure>
+        <img src="references/google-status-matrix.png" alt="Status matrix reference">
+        <figcaption>Google status dashboard - 많은 entity의 상태를 작은 matrix로 스캔하게 합니다. [Lazyweb]</figcaption>
+      </figure>
+      <div class="sketch">Dog ward   [203 ready] [204 ready] [205 empty] [206 empty]
+Cat ward   [201 caution] [202 normal] [207 empty]
+ICU        [ICU-01 critical] [ICU-02 cleaning]</div>
+    </article>
+
+    <article class="card">
+      <h3>3. Move Next Care Into the First Scan Path</h3>
+      <p>현재 table은 진단명과 입실 메모가 충분하지만 다음 행동이 문장 속에 숨어 있습니다. `다음 케어` 열을 환자 정보 바로 옆에 두면 shift handoff가 빨라집니다.</p>
+      <div class="grid">
+        <figure>
+          <img src="references/apprentice-health-workflow.png" alt="Apprentice Health workflow reference">
+          <figcaption>Apprentice Health - care path와 searchable patient table을 함께 보여줍니다. [Lazyweb]</figcaption>
+        </figure>
+        <figure>
+          <img src="references/anima-care-dashboard.png" alt="Anima care dashboard reference">
+          <figcaption>Anima - patient status table에서 color-coded indicator를 적극 활용합니다. [Lazyweb]</figcaption>
+        </figure>
+      </div>
+      <div class="sketch">Room    Patient        Next care          Tags              Dx
+ICU-01  콩이 / 김하늘   10분 지연 수액확인  수액 구토관찰      급성 위장관염
+203     두부 / 정하린   퇴실 안내          재활주의 보행관찰  수술 후 회복</div>
+    </article>
+
+    <article class="card">
+      <h3>4. Persistent Detail Panel</h3>
+      <p>row click drawer는 좋은 시작입니다. 다만 입원 업무에서는 선택된 환자의 케어 포인트와 체크리스트가 계속 보여야 하므로, 기본 상태는 `오늘 병동 인계`, 선택 상태는 `선택 환자 상세`로 동작하는 right panel을 권장합니다.</p>
+      <figure>
+        <img src="references/campaign-table-detail-panel.png" alt="Table with right detail panel reference">
+        <figcaption>Table and detail panel - 긴 table을 유지하면서 선택 row의 액션을 오른쪽에서 처리합니다. [Lazyweb]</figcaption>
+      </figure>
+      <div class="sketch">+ Table --------------------------------+ + Selected admission -------+
+| ICU-01 콩이  10분 지연  critical       | | ICU-01 / 콩이             |
+| 203 두부     퇴실 안내  ready          | | Care point                |
+| 201 코코     산소 확인  caution        | | - 구토 횟수 재평가        |
+                                           | Discharge blockers 0/3     |
+                                           | [차트] [보호자 안내]       |</div>
+    </article>
+
+    <article class="card">
+      <h3>5. Work-Mode Filters</h3>
+      <p>species filter는 유지하되 `지연`, `ICU`, `퇴실 준비`, `담당 나`, `오늘 입실` 같은 quick chip을 추가합니다. 병동 위치 기반 탐색과 업무 우선순위 기반 탐색을 동시에 지원해야 합니다.</p>
+      <figure>
+        <img src="references/retoolers-patient-flow.png" alt="Retoolers patient flow reference">
+        <figcaption>Retoolers - patient flow dashboard 사례는 admissions, bed occupancy, detail table, threshold alerts를 강조합니다. [Web]</figcaption>
+      </figure>
+      <div class="sketch">[전체 5] [강아지 2] [고양이 2] [ICU 1]     [지연 1] [퇴실 준비 2] [담당 나 3]</div>
+    </article>
+
+    <h2>What's Working</h2>
+    <ul>
+      <li>현재 화면은 운영형 EMR에 맞는 정보 밀도를 유지하고 있습니다.</li>
+      <li>강아지, 고양이, ICU grouping은 실제 병동 스캔 방식과 잘 맞습니다.</li>
+      <li>주의 tag는 compact하고 색상 의미가 읽힙니다.</li>
+      <li>row click으로 admission detail을 여는 구조는 후속 개선의 좋은 기반입니다.</li>
+    </ul>
+
+    <h2>References</h2>
+    <table>
+      <thead>
+        <tr><th>Reference</th><th>Source</th><th>Pattern</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Elva Bird Eye View</td><td><a href="https://www.elva.ai/features/bird-eye-view">Web</a></td><td>Live patient journey lanes</td></tr>
+        <tr><td>Retoolers Patient Flow</td><td><a href="https://retoolers.io/use-cases/healthcare-patient-flow-dashboard">Web</a></td><td>Patient flow, bed occupancy, threshold alerts</td></tr>
+        <tr><td>Akute Health</td><td>Lazyweb</td><td>EHR dashboard preview with KPI and tables</td></tr>
+        <tr><td>Apprentice Health</td><td>Lazyweb</td><td>Healthcare workflow plus patient table</td></tr>
+        <tr><td>Anima</td><td>Lazyweb</td><td>Patient status indicators</td></tr>
+        <tr><td>Google status matrix</td><td>Lazyweb</td><td>Compact status grid</td></tr>
+        <tr><td>Campaign table detail panel</td><td>Lazyweb</td><td>Long table plus detail/action panel</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

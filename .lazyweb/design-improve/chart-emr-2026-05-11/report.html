@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design Improvement: CLAiR EMR Chart Workspace</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #657187;
+        --line: #dbe3ee;
+        --soft: #f6f8fb;
+        --blue-soft: #eaf4ff;
+        --blue: #2078d4;
+        --panel: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #eef2f7;
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      article {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 36px;
+        box-shadow: 0 12px 40px rgba(29, 43, 67, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 34px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 34px 0 12px;
+        font-size: 22px;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin: 30px 0 10px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 14px;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .callout {
+        margin: 22px 0 28px;
+        padding: 18px 20px;
+        border: 1px solid #b9dfff;
+        border-radius: 8px;
+        background: var(--blue-soft);
+      }
+
+      .note {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      figure {
+        margin: 18px 0 24px;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(29, 43, 67, 0.1);
+      }
+
+      figcaption {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      pre {
+        overflow: auto;
+        margin: 12px 0 22px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #253046;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      li {
+        margin: 8px 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--soft);
+        font-weight: 700;
+      }
+
+      .pill {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #111827;
+        color: white;
+        font-size: 12px;
+        vertical-align: middle;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 24px 12px 48px;
+        }
+
+        article {
+          padding: 22px;
+        }
+
+        h1 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>Design Improvement: CLAiR EMR Chart Workspace</h1>
+        <section class="callout">
+          <strong>TL;DR</strong>
+          <p>
+            The screen is already strong as an operational EMR workspace. The biggest opportunity is to turn the center workspace into a clearer clinical sequence:
+            intake, SOAP, assessment, orders, and completion.
+          </p>
+          <p class="note">Lazyweb MCP health timed out, so this report uses local screen capture plus web references only.</p>
+        </section>
+
+        <h2>Current State</h2>
+        <figure>
+          <img src="references/current.png" alt="Current CLAiR EMR chart screen" />
+          <figcaption>Dense four-zone chart workspace with queue, chart history, clinical note, orders, and patient side panel.</figcaption>
+        </figure>
+
+        <h2>Improvement Ideas</h2>
+
+        <h3>1. Make the Visit Header a Clinical Checklist Strip <span class="pill">highest impact</span></h3>
+        <p>
+          Keep the current patient context bar, but compress the lower chart-info card into a horizontal visit checklist: 접수, SOAP, 진단, 오더, 완료.
+        </p>
+        <figure>
+          <img src="references/idexx-neo-dashboard.png" alt="IDEXX Neo dashboard" />
+          <figcaption>IDEXX Neo uses compact dashboard status summaries. Source: <a href="https://software.idexx.com/products/neo-veterinary-software">IDEXX Neo</a>.</figcaption>
+        </figure>
+        <pre>┌ 환자 콩이 · E-260501-0001 · 09:50 접수 ────────────────────────────┐
+│ [접수 완료 09:50] [SOAP 자동저장 10:32] [진단 1] [오더 4 / 재요청 1] [완료 전] │
+└──────────────────────────────────────────────────────────────┘</pre>
+
+        <h3>2. Turn the Right Patient Panel Into a Prioritized Context Rail</h3>
+        <p>
+          Make the top of the right rail answer "what can change today's care?" before showing general notes and history.
+        </p>
+        <figure>
+          <img src="references/atlassian-issue-context.png" alt="Atlassian issue context pattern" />
+          <figcaption>Jira keeps secondary context in an expandable right-side panel. Source: <a href="https://developer.atlassian.com/cloud/jira/platform/issue-view/">Jira issue view guidelines</a>.</figcaption>
+        </figure>
+        <pre>┌ 환자 사이드 패널 ──────┐
+│ 지금 관련됨  3         │
+│ ! 탈수 경도            │
+│ ! 구토 2회             │
+│ i 보호자: 알림톡 선호  │
+├ 진단 이력 1 ──────────┤
+├ 보호자 메모 ──────────┤
+└ 환자 메모 ────────────┘</pre>
+
+        <h3>3. Give SOAP and Diagnosis a Shared Clinical Note Rhythm</h3>
+        <p>
+          Visually pair SOAP and diagnosis as one clinical note region. Diagnosis comment and Plan should feel like a continuation of SOAP.
+        </p>
+        <figure>
+          <img src="references/idexx-vetconnect-results.png" alt="IDEXX VetConnect result screen" />
+          <figcaption>VetConnect uses patient context, actions, and clinical rows in one calm rhythm. Source: <a href="https://software.idexx.com/products/neo/features">IDEXX Neo features</a>.</figcaption>
+        </figure>
+        <pre>┌ 진료 기록 · 자동저장 10:32 ─────────────┬ 진단 · Plan ─────────────┐
+│ SOAP: 소화기                            │ 급성 위장관염 의심       │
+│ S / O / A / P blocks                    │ 코멘트                   │
+│ 첨부 자료                               │ Plan                     │
+└─────────────────────────────────────────┴──────────────────────────┘</pre>
+
+        <h3>4. Make the Order Table More Action-Oriented</h3>
+        <p>
+          Strengthen row affordances and let the sticky footer name selected orders before charging or confirming.
+        </p>
+        <figure>
+          <img src="references/retool-admin-builder.png" alt="Retool admin builder" />
+          <figcaption>Retool demonstrates filters, tables, selected data, and actions in one operational surface. Source: <a href="https://retool.com/use-case/admin-dashboard">Retool admin dashboard</a>.</figcaption>
+        </figure>
+        <pre>┌ 처방/오더 ───────────────────────────────────────────────┐
+│ 조제 │ Maropitant 16mg T      보호자 복약 안내 포함       │
+│ 검사 │ CBC 검사               채혈 후 결과 수동 입력       │
+│ 영상 │ 흉부 방사선            구토 관련 흉복부 이상 확인   │
+├ 선택: Maropitant 16mg T · CBC 검사       합계 39,500 ─────┤
+│                         [Order 청구] [Order 확정]         │
+└───────────────────────────────────────────────────────────┘</pre>
+
+        <h3>5. Add a Focus Mode for Active Charting</h3>
+        <p>
+          Add a small focus toggle near the chart header that temporarily narrows side panels and gives SOAP, diagnosis, and orders more room.
+        </p>
+        <figure>
+          <img src="references/linear-triage-image.png" alt="Linear triage screen" />
+          <figcaption>Linear's triage pattern centers active work and hides nonessential detail behind compact controls. Source: <a href="https://linear.app/docs/triage">Linear Triage docs</a>.</figcaption>
+        </figure>
+        <pre>┌ nav ┬ chart history collapsed ┬ ACTIVE CHARTING AREA ┬ side rail collapsed ┐
+│     │ ◂                       │ SOAP + Diagnosis + Orders                │
+└─────┴─────────────────────────┴──────────────────────────────────────────┘</pre>
+
+        <h2>What's Working</h2>
+        <ul>
+          <li>The screen preserves full visit context without route changes.</li>
+          <li>The visual foundation is calm, dense, and operational.</li>
+          <li>The anchored order footer is a strong safety pattern.</li>
+          <li>The patient context bar already reduces wrong-patient risk.</li>
+        </ul>
+
+        <h2>All References</h2>
+        <table>
+          <thead>
+            <tr><th>Reference</th><th>Source</th><th>Used For</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>current.png</td><td>Local CLAiR EMR capture</td><td>Current state</td></tr>
+            <tr><td>idexx-neo-dashboard.png</td><td>IDEXX Neo</td><td>Compact status summaries</td></tr>
+            <tr><td>idexx-vetconnect-results.png</td><td>IDEXX Neo features</td><td>Clinical result rhythm</td></tr>
+            <tr><td>atlassian-issue-context.png</td><td>Jira issue view guidelines</td><td>Right contextual rail</td></tr>
+            <tr><td>retool-admin-builder.png</td><td>Retool admin dashboard</td><td>Table + action surface</td></tr>
+            <tr><td>linear-triage-image.png</td><td>Linear Triage docs</td><td>Focused active-work mode</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </main>
+  </body>
+</html>

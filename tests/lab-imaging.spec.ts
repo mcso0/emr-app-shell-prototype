@@ -4,9 +4,10 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await page.goto("/w/clair-demo/lab?modulePanel=open");
 
   const sidePanel = page.locator("aside").first();
+  const queueViewFilter = sidePanel.getByRole("group", { name: "임상병리검사 목록 보기" });
   await expect(sidePanel.getByText("임상병리검사")).toBeVisible();
-  await expect(sidePanel.getByRole("tab", { name: "오더별" })).toHaveAttribute("aria-selected", "true");
-  await expect(sidePanel.getByRole("tab", { name: "차트별" })).toBeVisible();
+  await expect(queueViewFilter.getByRole("button", { name: "오더별" })).toHaveAttribute("aria-pressed", "true");
+  await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("검사 대기열")).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "결과입력 접기" })).toHaveAttribute("aria-expanded", "true");
@@ -19,14 +20,15 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
   await sidePanel.getByRole("button", { name: "결과입력 펼치기" }).click();
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toBeVisible();
-  await sidePanel.getByRole("tab", { name: "차트별" }).click();
+  await queueViewFilter.getByRole("button", { name: "차트별" }).click();
   await expect(sidePanel.getByText("차트별 검사")).toBeVisible();
   await expect(sidePanel.getByTestId("lab-chart-group-encounter-coco-260501")).toContainText("코코");
   await expect(sidePanel.getByTestId("lab-chart-group-encounter-coco-260501")).toContainText("CBC 검사");
-  await sidePanel.getByRole("tab", { name: "오더별" }).click();
+  await queueViewFilter.getByRole("button", { name: "오더별" }).click();
   await expect(page.getByRole("button", { name: "검사이력", exact: true })).toBeVisible();
   await expect(page.getByTestId("lab-history-group-26.05.01")).toBeVisible();
   await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리 검사결과지" })).toHaveCSS("font-size", "16px");
   await expect(page.getByText("요청 일시")).toBeVisible();
   await expect(page.getByTestId("lab-result-status-label")).toHaveText("입력");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
@@ -110,9 +112,10 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await page.goto("/w/clair-demo/imaging?modulePanel=open");
 
   const sidePanel = page.locator("aside").first();
+  const queueViewFilter = sidePanel.getByRole("group", { name: "영상검사 목록 보기" });
   await expect(sidePanel.getByText("영상검사")).toBeVisible();
-  await expect(sidePanel.getByRole("tab", { name: "오더별" })).toHaveAttribute("aria-selected", "true");
-  await expect(sidePanel.getByRole("tab", { name: "차트별" })).toBeVisible();
+  await expect(queueViewFilter.getByRole("button", { name: "오더별" })).toHaveAttribute("aria-pressed", "true");
+  await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "판독중 접기" })).toHaveAttribute("aria-expanded", "true");
@@ -122,10 +125,10 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
   await sidePanel.getByRole("button", { name: "판독중 펼치기" }).click();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
-  await sidePanel.getByRole("tab", { name: "차트별" }).click();
+  await queueViewFilter.getByRole("button", { name: "차트별" }).click();
   await expect(sidePanel.getByText("차트별 영상")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-chart-group-encounter-coco-260501")).toContainText("코코");
-  await sidePanel.getByRole("tab", { name: "오더별" }).click();
+  await queueViewFilter.getByRole("button", { name: "오더별" }).click();
   await expect(page.getByRole("button", { name: "영상이력", exact: true })).toBeVisible();
   await expect(page.getByTestId("imaging-history-item-imaging-coco-thorax")).toBeVisible();
   await expect(page.getByRole("heading", { name: "영상 검사 Order 상세" })).toBeVisible();

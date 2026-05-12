@@ -80,7 +80,7 @@ export const modules: ModuleDefinition[] = [
   },
   {
     id: "treatment",
-    label: "진료(차트)",
+    label: "진료/차트",
     icon: StethoscopeIcon,
     sidePanel: ChartSidePanel,
     contentHeader: ChartHeader,

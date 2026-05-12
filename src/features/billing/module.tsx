@@ -218,18 +218,17 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
         title={moduleLabel}
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
+        tabs={
+          <SegmentedControl
+            aria-label="수납 목록 필터"
+            value={filter}
+            items={filterItems.map((item) => ({ ...item, count: counts[item.value] }))}
+            variant="tabs"
+            className="shrink-0"
+            onValueChange={setFilter}
+          />
+        }
       />
-      <div className="border-b px-3 pb-3">
-        <SegmentedControl
-          aria-label="수납 목록 필터"
-          value={filter}
-          items={filterItems.map((item) => ({ ...item, count: counts[item.value] }))}
-          variant="tabs"
-          className="w-full"
-          itemClassName="flex-1"
-          onValueChange={setFilter}
-        />
-      </div>
       <EmrListHeader
         label={`${filterItems.find((item) => item.value === filter)?.label ?? "수납"} 청구서`}
         count={rows.length}

@@ -20,7 +20,6 @@ import {
 } from "@/components/cds-icons/medical-and-domain";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
-  EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrSubpanel,
@@ -35,7 +34,7 @@ import {
   EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
-import { CircleCloseFillIcon, ExcelFileIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, CircleCloseFillIcon, ExcelFileIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -57,6 +56,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -973,6 +977,278 @@ function ScheduleWalkInQueueCard({
   );
 }
 
+const receptionToolbarDateLabel = "26.05.01 (금)";
+const receptionToolbarWeekLabel = "26.04.27 - 26.05.03";
+const receptionToolbarMonthLabel = "26.05";
+const receptionDateControlLabels: Record<
+  ReceptionCalendarView,
+  {
+    dateLabel: string;
+    pickerLabel: string;
+    previousLabel: string;
+    nextLabel: string;
+  }
+> = {
+  day: {
+    dateLabel: receptionToolbarDateLabel,
+    pickerLabel: "날짜 선택",
+    previousLabel: "이전 날짜",
+    nextLabel: "다음 날짜",
+  },
+  week: {
+    dateLabel: receptionToolbarWeekLabel,
+    pickerLabel: "주 선택",
+    previousLabel: "이전 주",
+    nextLabel: "다음 주",
+  },
+  month: {
+    dateLabel: receptionToolbarMonthLabel,
+    pickerLabel: "월 선택",
+    previousLabel: "이전 월",
+    nextLabel: "다음 월",
+  },
+};
+const receptionDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
+const receptionDatePickerCells = [
+  { key: "2026-04-26", day: "26", inMonth: false },
+  { key: "2026-04-27", day: "27", inMonth: false },
+  { key: "2026-04-28", day: "28", inMonth: false },
+  { key: "2026-04-29", day: "29", inMonth: false },
+  { key: "2026-04-30", day: "30", inMonth: false },
+  { key: "2026-05-01", day: "1", inMonth: true, selected: true },
+  { key: "2026-05-02", day: "2", inMonth: true },
+  { key: "2026-05-03", day: "3", inMonth: true },
+  { key: "2026-05-04", day: "4", inMonth: true },
+  { key: "2026-05-05", day: "5", inMonth: true },
+  { key: "2026-05-06", day: "6", inMonth: true },
+  { key: "2026-05-07", day: "7", inMonth: true },
+  { key: "2026-05-08", day: "8", inMonth: true },
+  { key: "2026-05-09", day: "9", inMonth: true },
+  { key: "2026-05-10", day: "10", inMonth: true },
+  { key: "2026-05-11", day: "11", inMonth: true },
+  { key: "2026-05-12", day: "12", inMonth: true },
+  { key: "2026-05-13", day: "13", inMonth: true },
+  { key: "2026-05-14", day: "14", inMonth: true },
+  { key: "2026-05-15", day: "15", inMonth: true },
+  { key: "2026-05-16", day: "16", inMonth: true },
+  { key: "2026-05-17", day: "17", inMonth: true },
+  { key: "2026-05-18", day: "18", inMonth: true },
+  { key: "2026-05-19", day: "19", inMonth: true },
+  { key: "2026-05-20", day: "20", inMonth: true },
+  { key: "2026-05-21", day: "21", inMonth: true },
+  { key: "2026-05-22", day: "22", inMonth: true },
+  { key: "2026-05-23", day: "23", inMonth: true },
+  { key: "2026-05-24", day: "24", inMonth: true },
+  { key: "2026-05-25", day: "25", inMonth: true },
+  { key: "2026-05-26", day: "26", inMonth: true },
+  { key: "2026-05-27", day: "27", inMonth: true },
+  { key: "2026-05-28", day: "28", inMonth: true },
+  { key: "2026-05-29", day: "29", inMonth: true },
+  { key: "2026-05-30", day: "30", inMonth: true },
+];
+const receptionWeekPickerRows = [
+  { key: "2026-04-13", label: "26.04.13 - 26.04.19" },
+  { key: "2026-04-20", label: "26.04.20 - 26.04.26" },
+  { key: "2026-04-27", label: receptionToolbarWeekLabel, selected: true },
+  { key: "2026-05-04", label: "26.05.04 - 26.05.10" },
+  { key: "2026-05-11", label: "26.05.11 - 26.05.17" },
+];
+const receptionMonthPickerItems = [
+  "26.01",
+  "26.02",
+  "26.03",
+  "26.04",
+  receptionToolbarMonthLabel,
+  "26.06",
+  "26.07",
+  "26.08",
+  "26.09",
+  "26.10",
+  "26.11",
+  "26.12",
+];
+
+function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView }) {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const dateControlLabel = receptionDateControlLabels[view];
+
+  return (
+    <div className="flex h-7 shrink-0 items-center gap-1" data-testid="reception-date-control">
+      <Button
+        variant="outline"
+        size="icon-sm"
+        className="size-7 bg-[var(--emr-surface-panel)]"
+        aria-label={dateControlLabel.previousLabel}
+      >
+        <ChevronLeftIcon />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        className="size-7 bg-[var(--emr-surface-panel)]"
+        aria-label={dateControlLabel.nextLabel}
+      >
+        <ChevronRightIcon />
+      </Button>
+      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 justify-start px-2 text-[13px] font-medium leading-[18px] text-foreground"
+              aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
+            />
+          }
+        >
+          <CdsFilesCalendarIcon
+            className="size-3.5 text-[var(--clair-color-atomic-gray-400)]"
+            aria-hidden="true"
+          />
+          <span>{dateControlLabel.dateLabel}</span>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[244px] gap-3 p-3" initialFocus={false}>
+          {view === "day" ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+                  2026년 5월
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon-xs" aria-label="이전 달">
+                    <ChevronLeftIcon />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon-xs" aria-label="다음 달">
+                    <ChevronRightIcon />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {receptionDatePickerWeekdays.map((weekday) => (
+                  <span
+                    key={weekday}
+                    className="h-6 text-[11px] font-medium leading-6 text-muted-foreground"
+                  >
+                    {weekday}
+                  </span>
+                ))}
+                {receptionDatePickerCells.map((cell) => (
+                  <button
+                    key={cell.key}
+                    type="button"
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-md text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                      cell.inMonth
+                        ? "text-[var(--clair-color-label-strong)]"
+                        : "text-[var(--clair-color-label-alternative)]",
+                      cell.selected &&
+                        "bg-[var(--clair-color-atomic-blue-500)] text-[var(--clair-color-static-white)] hover:bg-[var(--clair-color-atomic-blue-600)]"
+                    )}
+                    aria-label={
+                      cell.selected ? `${receptionToolbarDateLabel} 선택됨` : `${cell.day}일 선택`
+                    }
+                    aria-pressed={cell.selected}
+                    onClick={() => setDatePickerOpen(false)}
+                  >
+                    {cell.day}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+          {view === "week" ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+                  2026년 4월 - 5월
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon-xs" aria-label="이전 주 보기">
+                    <ChevronLeftIcon />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon-xs" aria-label="다음 주 보기">
+                    <ChevronRightIcon />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-1">
+                {receptionWeekPickerRows.map((week) => (
+                  <button
+                    key={week.key}
+                    type="button"
+                    className={cn(
+                      "flex h-8 items-center rounded-md px-2 text-left text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                      week.selected
+                        ? "bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]"
+                        : "text-[var(--clair-color-label-strong)]"
+                    )}
+                    aria-label={week.selected ? `${week.label} 선택됨` : `${week.label} 주 선택`}
+                    aria-pressed={week.selected}
+                    onClick={() => setDatePickerOpen(false)}
+                  >
+                    {week.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+          {view === "month" ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+                  2026년
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon-xs" aria-label="이전 연도">
+                    <ChevronLeftIcon />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon-xs" aria-label="다음 연도">
+                    <ChevronRightIcon />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {receptionMonthPickerItems.map((month) => {
+                  const selected = month === receptionToolbarMonthLabel;
+
+                  return (
+                    <button
+                      key={month}
+                      type="button"
+                      className={cn(
+                        "flex h-8 items-center justify-center rounded-md text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                        selected
+                          ? "bg-[var(--clair-color-atomic-blue-500)] text-[var(--clair-color-static-white)] hover:bg-[var(--clair-color-atomic-blue-600)]"
+                          : "text-[var(--clair-color-label-strong)]"
+                      )}
+                      aria-label={selected ? `${month} 선택됨` : `${month} 월 선택`}
+                      aria-pressed={selected}
+                      onClick={() => setDatePickerOpen(false)}
+                    >
+                      {month}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+        </PopoverContent>
+      </Popover>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 bg-[var(--emr-surface-panel)] px-2 text-[12px] font-medium"
+        aria-label="오늘 일자로 이동"
+        onClick={() => setDatePickerOpen(false)}
+      >
+        오늘
+      </Button>
+    </div>
+  );
+}
+
 function ScheduleToolbar({
   onCreateWalkIn,
   onUnifiedPatientReady,
@@ -994,13 +1270,12 @@ function ScheduleToolbar({
   const veterinarianLabel = getVeterinarianFilterLabel(selectedVeterinarians);
 
   return (
-    <div className="flex min-h-[68px] shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3">
+    <div
+      className="flex h-12 shrink-0 flex-nowrap items-center justify-between gap-3 overflow-hidden border-b bg-card px-4"
+      data-testid="schedule-toolbar"
+    >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <EmrDateNavigator
-          className="h-auto min-w-[220px] max-w-[320px] px-0"
-          dateLabel="26.05.01 (금)"
-          todayLabel="오늘"
-        />
+        <ReceptionScheduleDateControl view={view} />
         <span className="ml-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] px-2 py-1 text-[12px] font-medium leading-4 text-muted-foreground">
           영업시간{" "}
           <span className="font-semibold text-[var(--clair-color-primary-normal)]">
@@ -1012,10 +1287,10 @@ function ScheduleToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger
             className={buttonVariants({
-              variant: "secondary",
+              variant: "outline",
               size: "sm",
               className:
-                "min-w-[124px] justify-start text-[var(--clair-color-label-strong)]",
+                "min-w-[124px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-[var(--clair-color-label-strong)]",
             })}
           >
             <CdsActionsSearchIcon data-icon="inline-start" />
@@ -1239,17 +1514,27 @@ function DayScheduleBoard({
           className="relative z-10 border-r"
           style={{ minHeight: dayScheduleHeight }}
         >
-          {dayScheduleHourLabels.map((hour, index) => (
-            <div
-              key={hour}
-              className="absolute left-0 right-0 flex -translate-y-1/2 justify-end pr-2 text-[11px] text-muted-foreground"
-              style={{
-                top: index * dayScheduleHourRowHeight,
-              }}
-            >
-              {getScheduleHourLabel(hour)}
-            </div>
-          ))}
+          {dayScheduleHourLabels.map((hour, index) => {
+            const firstLabel = index === 0;
+            const lastLabel = index === dayScheduleHourLabels.length - 1;
+
+            return (
+              <div
+                key={hour}
+                className={cn(
+                  "absolute left-0 right-0 flex justify-end pr-2 text-[11px] leading-4 text-muted-foreground",
+                  firstLabel && "translate-y-1",
+                  lastLabel && "-translate-y-full",
+                  !firstLabel && !lastLabel && "-translate-y-1/2"
+                )}
+                style={{
+                  top: index * dayScheduleHourRowHeight,
+                }}
+              >
+                {getScheduleHourLabel(hour)}
+              </div>
+            );
+          })}
         </div>
         <div className="relative z-10 col-span-full col-start-2 min-w-0">
           <div
@@ -1538,8 +1823,11 @@ function ReceptionScheduleBoard({
   view: ReceptionCalendarView;
 }) {
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden p-3">
-      <section className="min-h-0 min-w-0 overflow-hidden rounded-lg border bg-card">
+    <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden">
+      <section
+        className="min-h-0 min-w-0 overflow-hidden bg-card"
+        data-testid="reception-calendar-frame"
+      >
         <ScrollArea className="h-full">
           {view === "day" ? (
             <DayScheduleBoard

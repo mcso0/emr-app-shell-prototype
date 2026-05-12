@@ -1,33 +1,88 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BellIcon,
-  CommandIcon,
   HelpIcon,
-  SearchIcon,
   SettingsIcon,
   WorkspaceLogoMarkIcon,
 } from "@/components/icons";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useAuthClient } from "@/features/auth/auth-client";
+import { AuthProfileMenu } from "@/shell/auth-profile-menu";
+import { GlobalCommandPalette } from "@/shell/global-command-palette";
+
+const mockShellUserProfiles: Record<string, { initial: string; name: string }> = {
+  billing_admin: { initial: "HR", name: "정하린" },
+  front_desk: { initial: "YN", name: "최유나" },
+  hospital_admin: { initial: "MJ", name: "송민재" },
+  nurse: { initial: "HY", name: "송하윤" },
+  vet: { initial: "SJ", name: "이수지" },
+};
+
+const moduleActivityLabels: Record<string, string> = {
+  billing: "수납",
+  customer: "고객관리",
+  dispensing: "조제",
+  home: "홈",
+  imaging: "영상",
+  inpatient: "입원",
+  lab: "검사",
+  orders: "병원관리",
+  reception: "접수/예약",
+  treatment: "진료/차트",
+};
+
+function getModuleActivityLabel(pathname: string) {
+  const moduleId = pathname.split("/")[3];
+  return (moduleId && moduleActivityLabels[moduleId]) || "워크스페이스";
+}
+
+function getActiveMinutes(issuedAt?: string, now = Date.now()) {
+  if (!issuedAt) return 0;
+
+  const issuedTime = new Date(issuedAt).getTime();
+  if (!Number.isFinite(issuedTime)) return 0;
+
+  return Math.max(0, Math.floor((now - issuedTime) / 60000));
+}
 
 export function TopMenu({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [now, setNow] = useState(() => Date.now());
   const { hydrated, session, hydrate, signOut } = useAuthClient();
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
-  const roleId = hydrated && session ? session.role : "mock";
-  const roleInitial = hydrated && session ? session.roleLabel.slice(0, 1) : "G";
+  const userProfile =
+    hydrated && session
+      ? (mockShellUserProfiles[session.role] ?? {
+          initial: session.roleLabel.slice(0, 2).toUpperCase(),
+          name: session.roleLabel,
+        })
+      : { initial: "G", name: "Guest" };
+  const activityModuleLabel = getModuleActivityLabel(pathname);
+  const activeMinutes = getActiveMinutes(hydrated && session ? session.issuedAt : undefined, now);
+  const activityLabel =
+    hydrated && session
+      ? `활동중 · ${activityModuleLabel} ${activeMinutes}분째`
+      : "활동 대기";
   const topIconButtonClassName =
     "text-[var(--clair-color-label-alternative)] hover:bg-[var(--clair-color-fill-alternative)] hover:text-[var(--clair-color-label-strong)]";
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   async function handleLogout() {
     await signOut();
@@ -52,45 +107,24 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
         <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-black" aria-hidden="true" />
       </Button>
       <Separator orientation="vertical" className="mx-2 hidden h-6" />
-      <div className="mx-auto flex h-8 w-[560px] items-center rounded-lg border border-[var(--clair-color-line-normal)] bg-[var(--clair-color-background-surface)] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
-        <SearchIcon className="size-3.5 text-muted-foreground" />
-        <Input
-          className="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:ring-0"
-          placeholder="동물명 또는 보호자명으로 검색"
-        />
-        <CommandIcon className="size-3 text-muted-foreground" />
-        <span className="ml-1 text-[11px] text-muted-foreground">K</span>
-      </div>
+      <GlobalCommandPalette workspaceId={workspaceId} />
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon-sm" className={topIconButtonClassName} aria-label="알림">
+        <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="알림">
           <BellIcon />
         </Button>
-        <Button variant="ghost" size="icon-sm" className={topIconButtonClassName} aria-label="도움말">
+        <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="도움말">
           <HelpIcon />
         </Button>
-        <Button variant="ghost" size="icon-sm" className={topIconButtonClassName} aria-label="설정">
+        <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="설정">
           <SettingsIcon />
         </Button>
-        <div
-          className="ml-1 flex h-8 max-w-[180px] items-center gap-2 rounded-[var(--clair-radius-full)] border border-[var(--clair-color-line-normal)] bg-white px-1.5 pr-2.5 shadow-[0_1px_1px_rgba(26,32,44,0.03)]"
-          aria-label={`mock auth role ${roleLabel}`}
-          data-testid="top-menu-mock-user"
-        >
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-status-info-background)] text-[11px] font-semibold text-[var(--clair-color-status-info-foreground)]">
-            {roleInitial}
-          </span>
-          <span className="flex min-w-0 flex-col leading-none">
-            <span className="truncate text-[11px] font-semibold text-[var(--clair-color-label-strong)]">
-              {roleLabel}
-            </span>
-            <span className="truncate text-[10px] text-[var(--clair-color-label-neutral)]">
-              {roleId}
-            </span>
-          </span>
-        </div>
-        <Button variant="ghost" size="sm" className="text-[var(--clair-color-label-alternative)] hover:bg-[var(--clair-color-fill-alternative)] hover:text-[var(--clair-color-label-strong)]" onClick={handleLogout}>
-          로그아웃
-        </Button>
+        <AuthProfileMenu
+          activityLabel={activityLabel}
+          roleLabel={roleLabel}
+          userInitial={userProfile.initial}
+          userName={userProfile.name}
+          onLogout={handleLogout}
+        />
       </div>
     </header>
   );

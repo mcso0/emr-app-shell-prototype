@@ -29,7 +29,6 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     contentAsideOpen,
     contentAsideWidth,
     modulePanelOpen,
-    moduleSidePanelWidth,
     rightPanelOpen,
     rightPanelWidth,
     setActiveDrawer,
@@ -68,10 +67,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
   const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
-  const effectiveModuleSidePanelWidth = Math.max(
-    moduleSidePanelWidth,
-    SHELL_LAYOUT.moduleSidePanel.minWidth
-  );
+  const effectiveModuleSidePanelWidth = SHELL_LAYOUT.moduleSidePanel.defaultWidth;
   const modulePanelTransition: Transition = reduceMotion
     ? { duration: 0 }
     : {

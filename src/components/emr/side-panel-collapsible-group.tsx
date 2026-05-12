@@ -105,27 +105,29 @@ export function EmrSidePanelCollapsibleGroup({
               aria-hidden="true"
             />
           ) : null}
-          <span className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px]">
+          <span className="flex min-w-0 items-center text-[14px] font-medium leading-5 tracking-[0.196px]">
             <span className="truncate text-[var(--clair-color-atomic-gray-600)]">{label}</span>
-            <span
-              data-testid={dataTestId ? `${dataTestId}-count` : undefined}
-              className={cn(
-                "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] px-1.5 text-[12px] font-semibold leading-4 tracking-normal text-[var(--clair-color-atomic-gray-600)]",
-                countBadgeClassName
-              )}
-              style={countBadgeStyle}
-            >
-              {count}
-            </span>
           </span>
         </div>
-        <motion.span
-          className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1"
-          animate={{ rotate: collapsed ? 180 : 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
-        >
-          <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </motion.span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span
+            data-testid={dataTestId ? `${dataTestId}-count` : undefined}
+            className={cn(
+              "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] px-1.5 text-[12px] font-semibold leading-4 tracking-normal text-[var(--clair-color-atomic-gray-600)]",
+              countBadgeClassName
+            )}
+            style={countBadgeStyle}
+          >
+            {count}
+          </span>
+          <motion.span
+            className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1"
+            animate={{ rotate: collapsed ? 180 : 0 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
+          >
+            <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </motion.span>
+        </span>
       </button>
       <AnimatePresence initial={false}>
         {collapsed ? null : (

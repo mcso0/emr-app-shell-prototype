@@ -201,7 +201,7 @@ export function ChartSidePanel() {
       listLabel="진료 대기열"
       selectedItemId={selectedEncounterId}
       statuses={getChartQueueStatuses()}
-      title="진료(차트)"
+      title="진료/차트"
       onCollapse={() => setModulePanelOpen(false)}
       onSelectItem={(itemId) => {
         selectEncounter(itemId);
@@ -411,8 +411,10 @@ const escapeHtml = (value: string) =>
 function ChartSectionTitle({ subtitle, title }: { subtitle: string; title: string }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2.5">
-      <h2 className="shrink-0 text-[16px] font-semibold text-foreground">{title}</h2>
-      <span className="min-w-0 truncate text-[13px] font-medium text-[var(--clair-color-atomic-gray-400)]">{subtitle}</span>
+      <h2 className="shrink-0 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] text-foreground">
+        {title}
+      </h2>
+      <span className="min-w-0 truncate text-[14px] font-medium text-[var(--clair-color-atomic-gray-400)]">{subtitle}</span>
     </div>
   );
 }
