@@ -16,6 +16,7 @@ Planned subareas:
 Current canonical files:
 
 - `docs/design/system/DESIGN.md`
+- `docs/design/flows/2026-05-12-senior-product-design-development-points.md`
 - `docs/design/reference-screen-index.md`
 - `docs/design/assets/reference-screens/`
 - `docs/design/changelog.md`

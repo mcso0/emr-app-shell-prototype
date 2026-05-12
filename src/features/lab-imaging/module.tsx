@@ -467,11 +467,9 @@ function LabQueueItem({
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? item.result.resultName}</span>
         </div>
         <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
-        <div className="flex h-5 min-w-0 items-center gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-            <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
-            {item.technicianName ? <EmrSidePanelMetaBadge label="담당" value={item.technicianName} /> : null}
-          </div>
+        <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
+          <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
+          {item.technicianName ? <EmrSidePanelMetaBadge label="담당" value={item.technicianName} /> : null}
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(item.result.receivedAt ?? item.result.collectedAt).slice(9)} {statusLabel}
           </EmrSidePanelStatusBadge>
@@ -570,8 +568,8 @@ function LabChartQueueItem({
             </span>
           ) : null}
         </div>
-        <div className="mt-1 flex h-5 min-w-0 items-center justify-between gap-3 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-          <span className="truncate">{statusSummary}</span>
+        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="shrink-0 truncate">{statusSummary}</span>
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.result.receivedAt ?? latestItem?.result.collectedAt).slice(9)}
           </EmrSidePanelStatusBadge>
@@ -617,11 +615,9 @@ function ImagingQueueItem({
           <span className="shrink-0">{item.study.modality}</span>
         </div>
         <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
-        <div className="flex h-5 min-w-0 items-center gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-            <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
-            <EmrSidePanelMetaBadge label="담당" value={item.radiologistName ?? "미지정"} />
-          </div>
+        <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
+          <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
+          <EmrSidePanelMetaBadge label="담당" value={item.radiologistName ?? "미지정"} />
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt).slice(9)} {statusLabel}
           </EmrSidePanelStatusBadge>
@@ -752,8 +748,8 @@ function ImagingChartQueueItem({
             {statusSummary}
           </span>
         </div>
-        <div className="mt-1 flex h-5 min-w-0 items-center justify-between gap-3 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
-          <span className="truncate">{latestItem?.study.modality ?? "영상"}</span>
+        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="shrink-0 truncate">{latestItem?.study.modality ?? "영상"}</span>
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.study.capturedAt ?? latestItem?.study.requestedAt).slice(9)}
           </EmrSidePanelStatusBadge>
@@ -1763,14 +1759,14 @@ export function LabContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-app)] text-[13px] text-muted-foreground">
         검사 대기열에서 항목을 선택해 주세요.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar
@@ -2243,14 +2239,14 @@ export function ImagingContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-app)] text-[13px] text-muted-foreground">
         영상 대기열에서 항목을 선택해 주세요.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar

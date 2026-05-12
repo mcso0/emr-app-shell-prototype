@@ -16,11 +16,13 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history&right=open");
 
   await expect(page.getByText("진료 대기열")).toBeVisible();
-  await expect(page.getByRole("button", { name: "차트이력" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 이력 패널 접기" })).toBeVisible();
   await expect(page.locator("#chart-content-aside").getByText("차트이력")).toBeVisible();
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("담당 수의사")).toBeVisible();
   await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
+  await expect(page.getByText("기본 SOAP")).toBeVisible();
   await expect(page.getByText("소화기 SOAP")).toBeVisible();
+  await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "진단 이력" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /처방\/오더/ })).toBeVisible();
@@ -42,6 +44,46 @@ test("chart diagnosis comment and plan are editable text areas", async ({ page }
 
   await expect(page.getByLabel("진단 코멘트")).toHaveValue("보호자에게 탈수 징후 설명 완료.");
   await expect(page.getByLabel("Plan")).toHaveValue("수액 후 24시간 식욕과 구토 횟수 확인.");
+});
+
+test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const diagnosisPanel = page.getByLabel("진단명 관리");
+
+  await diagnosisPanel.getByLabel("진단명 검색").click();
+  await expect(page.getByRole("listbox", { name: "진단명 검색 결과" })).toBeVisible();
+  await expect(page.getByText("SOAP/주호소 기반 추천")).toBeVisible();
+  await expect(page.getByRole("option", { name: /급성 위장관염 의심/ })).toBeVisible();
+
+  await diagnosisPanel.getByLabel("진단명 검색").fill("췌장");
+  await page.getByRole("option", { name: /췌장염 감별/ }).click();
+
+  await expect(diagnosisPanel.getByText("췌장염 감별")).toBeVisible();
+  await expect(diagnosisPanel.getByText("사전 연결 · 감별")).toBeVisible();
+  await expect(page.getByText("소화기 SOAP")).toBeVisible();
+
+  await diagnosisPanel.getByLabel("진단명 검색").fill("탈수");
+  await page.getByRole("option", { name: /경도 탈수/ }).click();
+
+  await expect(diagnosisPanel.getByText("경도 탈수")).toBeVisible();
+  await expect(page.getByText("전신 SOAP")).toBeVisible();
+
+  const pancreatitisConfirmedToggle = diagnosisPanel.getByRole("button", { name: "췌장염 감별 확진 토글" });
+  await pancreatitisConfirmedToggle.click();
+  await expect(diagnosisPanel.getByText("사전 연결 · 확진")).toBeVisible();
+  await expect(pancreatitisConfirmedToggle).toHaveAttribute("aria-pressed", "true");
+  await pancreatitisConfirmedToggle.click();
+  await expect(pancreatitisConfirmedToggle).toHaveAttribute("aria-pressed", "false");
+
+  await diagnosisPanel.getByLabel("진단명 검색").fill("보호자 설명용 임시 진단");
+  await page.getByRole("option", { name: /보호자 설명용 임시 진단/ }).click();
+
+  await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toBeVisible();
+  await expect(diagnosisPanel.getByText("직접 입력 · 의심")).toBeVisible();
+
+  await diagnosisPanel.getByRole("button", { name: "보호자 설명용 임시 진단 삭제" }).click();
+  await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toHaveCount(0);
 });
 
 test("chart safety context and confirmation dialogs identify the active patient", async ({ page }) => {
@@ -192,6 +234,7 @@ test("chart queue selection changes the selected encounter", async ({ page }) =>
   await expect(page.getByText("E-260430-0005").first()).toBeVisible();
   await expect(page.getByText("예방접종 전 건강 확인").first()).toBeVisible();
   await expect(page.getByText("진단 입력 전입니다.")).toBeVisible();
+  await expect(page.getByText("기본 SOAP")).toBeVisible();
 });
 
 test("chart scenario query primes the encounter without locking queue selection", async ({ page }) => {
@@ -221,14 +264,22 @@ test("chart patient panels collapse and reopen from the context bar", async ({ p
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history&right=closed");
 
   await expect(page.locator("#chart-content-aside").getByText("차트이력")).toBeVisible();
-  await page.getByRole("button", { name: "차트이력" }).click();
+  await page.getByRole("button", { name: "차트 이력 패널 접기" }).hover();
+  await expect(page.getByText("과거 이력 보기")).toBeVisible();
+  await page.getByRole("button", { name: "차트 이력 패널 접기" }).click();
   await expect(page).toHaveURL(/aside=closed/);
 
-  await page.getByRole("button", { name: "차트이력" }).click();
+  await page.getByRole("button", { name: "차트 이력 패널 열기" }).hover();
+  await expect(page.getByText("과거 이력 보기")).toBeVisible();
+  await page.getByRole("button", { name: "차트 이력 패널 열기" }).click();
   await expect(page).toHaveURL(/aside=history/);
 
-  await expect(page.getByText("환자 사이드 패널")).toBeHidden();
-  await page.getByRole("button", { name: "진단 이력 열기" }).click();
+  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeHidden();
+  await page.getByRole("button", { name: "환자 정보 열기" }).hover();
+  await expect(page.getByText("환자 정보 보기")).toBeVisible();
+  await page.getByRole("button", { name: "환자 정보 열기" }).click();
   await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByText("환자 사이드 패널")).toBeVisible();
+  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeVisible();
+  await expect(page.getByText("개인/민감 정보", { exact: true })).toBeVisible();
+  await expect(page.getByText("부가 정보", { exact: true })).toBeVisible();
 });

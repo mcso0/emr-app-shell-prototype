@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import Link from "@tiptap/extension-link";
@@ -10,15 +20,15 @@ import Underline from "@tiptap/extension-underline";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
+  CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsContentBoldIcon,
   CdsContentItalicIcon,
   CdsContentLink2Icon,
 } from "@/components/cds-icons/content-and-editor";
-import { CdsFilesDocumentAltFillIcon } from "@/components/cds-icons/files-and-layout";
-import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { CdsNavigationChevronsLeftIcon, CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
+import { CdsUtilitiesHistoryIcon, CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import { EmrInstructionHeaderStack, EmrInstructionTitleBar } from "@/components/emr/instruction-header-stack";
@@ -35,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -46,6 +57,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   getChartEncounter,
   getChartHistoryRows,
@@ -70,6 +82,7 @@ import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   Diagnosis,
+  DiagnosisType,
   EmrOrder,
   EmrOrderStatus,
   EmrOrderType,
@@ -117,12 +130,12 @@ const getDiagnosisLabel = (diagnoses: Diagnosis[]) =>
   diagnoses.length ? diagnoses.map((diagnosis) => diagnosis.diagnosisText).join(", ") : "진단 미입력";
 
 const getSoapSectionStatusText = (status?: SoapNote["status"], statusAt?: string) => {
-  if (!status) return "작성중";
+  if (!status) return "자동저장 대기";
   const statusLabel =
     status === "autosaved"
       ? "자동저장됨"
       : status === "draft"
-        ? "초안 작성중"
+        ? "작성중"
         : getStatusLabel("soap", status);
 
   return statusAt ? `${statusLabel} · ${getShortClockTime(statusAt)}` : statusLabel;
@@ -141,6 +154,125 @@ const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
 
   return "기타";
 };
+
+const getSoapSystemLabel = (diagnosis: Diagnosis) =>
+  "systemLabel" in diagnosis && typeof diagnosis.systemLabel === "string"
+    ? diagnosis.systemLabel
+    : getDiagnosisSystemLabel(diagnosis);
+
+type DiagnosisCatalogItem = {
+  id: string;
+  name: string;
+  systemLabel: string;
+  synonyms: string[];
+  defaultType: DiagnosisType;
+  hint: string;
+};
+
+type EditableDiagnosis = Diagnosis & {
+  systemLabel: string;
+  catalogMatched: boolean;
+  isPrimary: boolean;
+};
+
+const diagnosisCatalog: DiagnosisCatalogItem[] = [
+  {
+    id: "dx-acute-gastroenteritis",
+    name: "급성 위장관염 의심",
+    systemLabel: "소화기",
+    synonyms: ["acute gastroenteritis", "AGE", "구토", "설사", "식욕저하", "위장염"],
+    defaultType: "suspected",
+    hint: "구토/설사/식욕저하 내원에서 자주 사용",
+  },
+  {
+    id: "dx-dietary-indiscretion",
+    name: "식이성 위장장애",
+    systemLabel: "소화기",
+    synonyms: ["dietary indiscretion", "음식", "과식", "구토"],
+    defaultType: "suspected",
+    hint: "식이 변화나 이물 섭취 가능성 확인 전",
+  },
+  {
+    id: "dx-foreign-body",
+    name: "위장관 이물 감별",
+    systemLabel: "소화기",
+    synonyms: ["foreign body", "이물", "구토", "복부영상"],
+    defaultType: "differential",
+    hint: "영상검사로 배제 또는 확인 필요",
+  },
+  {
+    id: "dx-pancreatitis",
+    name: "췌장염 감별",
+    systemLabel: "소화기",
+    synonyms: ["pancreatitis", "PLI", "복통", "구토", "식욕저하"],
+    defaultType: "differential",
+    hint: "혈액검사/특이 검사로 감별",
+  },
+  {
+    id: "dx-mild-dehydration",
+    name: "경도 탈수",
+    systemLabel: "전신",
+    synonyms: ["dehydration", "탈수", "수액", "구토"],
+    defaultType: "suspected",
+    hint: "수액 처치 판단 근거로 기록",
+  },
+  {
+    id: "dx-allergic-dermatitis",
+    name: "알러지성 피부염",
+    systemLabel: "피부",
+    synonyms: ["allergic dermatitis", "가려움", "발진", "피부염"],
+    defaultType: "confirmed",
+    hint: "피부 병변과 재진 이력 기반",
+  },
+  {
+    id: "dx-wellness-check",
+    name: "예방접종 전 건강 확인",
+    systemLabel: "예방",
+    synonyms: ["wellness", "vaccination", "예방접종", "건강검진"],
+    defaultType: "confirmed",
+    hint: "예방접종 전 진찰 기록",
+  },
+];
+
+const diagnosisTypeLabel: Record<DiagnosisType, string> = {
+  confirmed: "확진",
+  differential: "감별",
+  suspected: "의심",
+};
+
+const normalizeDiagnosisQuery = (value: string) => value.trim().toLocaleLowerCase("ko-KR");
+
+const buildDiagnosisSearchText = (item: DiagnosisCatalogItem) =>
+  [item.name, item.systemLabel, item.hint, ...item.synonyms].join(" ").toLocaleLowerCase("ko-KR");
+
+const getDiagnosisSearchResults = (query: string, soapNote?: SoapNote) => {
+  const normalizedQuery = normalizeDiagnosisQuery(query);
+  const contextText = [
+    soapNote?.subjective,
+    soapNote?.objective,
+    soapNote?.assessment,
+    soapNote?.plan,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (normalizedQuery) {
+    return diagnosisCatalog.filter((item) => buildDiagnosisSearchText(item).includes(normalizedQuery)).slice(0, 6);
+  }
+
+  if (/(구토|위장|식욕|탈수|복부)/.test(contextText)) {
+    return diagnosisCatalog.slice(0, 5);
+  }
+
+  return diagnosisCatalog.slice(0, 4);
+};
+
+const toEditableDiagnosis = (diagnosis: Diagnosis, index: number): EditableDiagnosis => ({
+  ...diagnosis,
+  catalogMatched: Boolean(diagnosis.diagnosisCatalogId) || diagnosisCatalog.some((item) => item.name === diagnosis.diagnosisText),
+  isPrimary: index === 0,
+  systemLabel: getDiagnosisSystemLabel(diagnosis),
+});
 
 function getSelectedBundle(selectedEncounterId: string) {
   return getChartEncounter(selectedEncounterId) ?? getChartEncounter("encounter-coco-260501");
@@ -213,7 +345,7 @@ export function ChartSidePanel() {
 
 export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
-  const { contentAsideOpen, rightPanelOpen, setContentAsideOpen, setRightPanelOpen } = useLayoutStore();
+  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
   const bundle = getSelectedBundle(selectedEncounterId);
 
   if (!bundle) return null;
@@ -222,12 +354,6 @@ export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
 
   return (
     <EmrPatientContextBar
-      historyButton={{
-        controls: "chart-content-aside",
-        expanded: contentAsideOpen,
-        label: "차트이력",
-        onClick: () => setContentAsideOpen(!contentAsideOpen),
-      }}
       patientItems={[
         { label: "차트번호", value: bundle.encounter.encounterNo },
         {
@@ -244,7 +370,9 @@ export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
         { label: "보호자메모", locked: true },
         { label: "수납메모", disabled: true },
       ]}
-      rightPanelToggleLabel="진단 이력"
+      rightPanelToggleLabel="환자 정보"
+      rightPanelToggleIcon={<CdsNavigationSidebarIcon className="-scale-x-100" aria-hidden="true" />}
+      rightPanelToggleTooltipLabel={`환자 정보 ${rightPanelOpen ? "접기" : "보기"}`}
       trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
       onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
       rightPanelDisabled={!hasRightPanel}
@@ -300,7 +428,7 @@ export function ChartContentAside() {
         count={historyRows.length}
         label="차트이력"
         leadingAction={
-          <EmrListHeaderIconButton ariaLabel="차트 이력 패널 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
+          <EmrListHeaderIconButton ariaLabel="차트 이력 목록 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
             <CdsNavigationChevronsLeftIcon className="size-4" />
           </EmrListHeaderIconButton>
         }
@@ -430,22 +558,25 @@ function buildSoapEditorContent(soapNote?: SoapNote) {
 }
 
 function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?: SoapNote }) {
-  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
   const [extraSections, setExtraSections] = useState<Array<{ id: string; title: string }>>([]);
   const diagnosisSystemSections = useMemo(() => {
-    const labels = diagnoses.map(getDiagnosisSystemLabel);
-    const uniqueLabels = Array.from(new Set(labels));
-
-    return uniqueLabels.length ? uniqueLabels : ["기본"];
+    const labels = diagnoses.map(getSoapSystemLabel);
+    return Array.from(new Set(labels));
   }, [diagnoses]);
   const soapSections = [
-    ...diagnosisSystemSections.map((title, index) => ({
-      id: `diagnosis-${title}`,
-      initialContent: buildSoapEditorContent(index === 0 ? soapNote : undefined),
+    {
+      id: "default",
+      initialContent: buildSoapEditorContent(soapNote),
       status: soapNote?.status,
       statusAt: soapNote?.signedAt ?? soapNote?.updatedAt,
+      title: "기본 SOAP",
+    },
+    ...diagnosisSystemSections.map((title) => ({
+      id: `diagnosis-${title}`,
+      initialContent: buildSoapEditorContent(),
+      status: undefined,
+      statusAt: undefined,
       title: `${title} SOAP`,
     })),
     ...extraSections.map((section) => ({
@@ -465,81 +596,14 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
       },
     ]);
   };
-  const addAttachmentToActiveSection = () => {
-    const sectionId = activeSectionId ?? soapSections[0]?.id;
-
-    if (!sectionId) return;
-
-    setAttachmentCounts((current) => ({
-      ...current,
-      [sectionId]: (current[sectionId] ?? 0) + 1,
-    }));
-  };
-  const setLink = () => {
-    if (!activeEditor) return;
-
-    const previousUrl = activeEditor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("링크 URL을 입력하세요.", previousUrl ?? "https://");
-
-    if (url === null) return;
-    if (!url) {
-      activeEditor.chain().focus().unsetLink().run();
-      return;
-    }
-
-    activeEditor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-  };
-
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
       <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="진료 기록" subtitle="진단계통별 SOAP 작성" />
         <div className="flex items-center gap-1.5">
-          <EditorToolbarButton
-            active={activeEditor?.isActive("bold") ?? false}
-            disabled={!activeEditor}
-            label="굵게"
-            onClick={() => activeEditor?.chain().focus().toggleBold().run()}
-          >
-            <CdsContentBoldIcon className="size-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={activeEditor?.isActive("italic") ?? false}
-            disabled={!activeEditor}
-            label="기울임"
-            onClick={() => activeEditor?.chain().focus().toggleItalic().run()}
-          >
-            <CdsContentItalicIcon className="size-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={activeEditor?.isActive("underline") ?? false}
-            disabled={!activeEditor}
-            label="밑줄"
-            onClick={() => activeEditor?.chain().focus().toggleUnderline().run()}
-          >
-            U
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={activeEditor?.isActive("link") ?? false}
-            disabled={!activeEditor}
-            label="링크"
-            onClick={setLink}
-          >
-            <CdsContentLink2Icon className="size-4" />
-          </EditorToolbarButton>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="bg-card"
-            onClick={addAttachmentToActiveSection}
-          >
-            첨부
-          </Button>
           <Button type="button" variant="outline" size="sm" className="bg-card" onClick={addSoapSection}>
             SOAP 추가
           </Button>
-          <Button size="sm">초안 저장</Button>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
@@ -548,34 +612,20 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
             <div key={section.id} className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
               <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3">
                 <span className="text-[13px] font-semibold">{section.title}</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
-                    {getSoapSectionStatusText(section.status, section.statusAt)}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    aria-label={`${section.title} 첨부 추가`}
-                    className="bg-card"
-                    onClick={() =>
-                      setAttachmentCounts((current) => ({
-                        ...current,
-                        [section.id]: (current[section.id] ?? 0) + 1,
-                      }))
-                    }
-                  >
-                    첨부
-                  </Button>
-                </div>
+                <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
+                  {getSoapSectionStatusText(section.status, section.statusAt)}
+                </span>
               </div>
               <SoapRichTextEditor
                 key={`${soapNote?.id ?? "empty"}-${section.id}`}
                 initialContent={section.initialContent}
                 label={section.title}
-                onFocusEditor={(editor) => {
-                  setActiveSectionId(section.id);
-                  setActiveEditor(editor);
+                attachmentCount={attachmentCounts[section.id] ?? 0}
+                onAddAttachment={() => {
+                  setAttachmentCounts((current) => ({
+                    ...current,
+                    [section.id]: (current[section.id] ?? 0) + 1,
+                  }));
                 }}
               />
               <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 text-[12px] text-muted-foreground">
@@ -620,13 +670,15 @@ function EditorToolbarButton({
 }
 
 function SoapRichTextEditor({
+  attachmentCount,
   initialContent,
   label,
-  onFocusEditor,
+  onAddAttachment,
 }: {
+  attachmentCount: number;
   initialContent: string;
   label: string;
-  onFocusEditor: (editor: Editor) => void;
+  onAddAttachment: () => void;
 }) {
   const editor = useEditor({
     extensions: [
@@ -651,38 +703,290 @@ function SoapRichTextEditor({
       },
     },
     immediatelyRender: false,
-    onFocus: ({ editor: focusedEditor }) => onFocusEditor(focusedEditor),
   });
+  const runEditorCommand = (command: (editor: Editor) => void) => {
+    if (!editor) return;
+
+    command(editor);
+  };
+  const setLink = () => {
+    if (!editor) return;
+
+    const previousUrl = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("링크 URL을 입력하세요.", previousUrl ?? "https://");
+
+    if (url === null) return;
+    if (!url) {
+      runEditorCommand((currentEditor) => currentEditor.chain().focus().unsetLink().run());
+      return;
+    }
+
+    runEditorCommand((currentEditor) =>
+      currentEditor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
+    );
+  };
 
   return (
-    <EditorContent editor={editor} />
+    <>
+      <div className="flex min-h-9 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3">
+        <div className="flex items-center gap-1">
+          <EditorToolbarButton
+            active={editor?.isActive("bold") ?? false}
+            disabled={!editor}
+            label={`${label} 굵게`}
+            onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBold().run())}
+          >
+            <CdsContentBoldIcon className="size-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={editor?.isActive("italic") ?? false}
+            disabled={!editor}
+            label={`${label} 기울임`}
+            onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleItalic().run())}
+          >
+            <CdsContentItalicIcon className="size-4" />
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={editor?.isActive("underline") ?? false}
+            disabled={!editor}
+            label={`${label} 밑줄`}
+            onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleUnderline().run())}
+          >
+            U
+          </EditorToolbarButton>
+          <EditorToolbarButton
+            active={editor?.isActive("link") ?? false}
+            disabled={!editor}
+            label={`${label} 링크`}
+            onClick={setLink}
+          >
+            <CdsContentLink2Icon className="size-4" />
+          </EditorToolbarButton>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          aria-label={`${label} 첨부 추가`}
+          className="bg-card"
+          onClick={onAddAttachment}
+        >
+          첨부{attachmentCount ? ` ${attachmentCount}` : ""}
+        </Button>
+      </div>
+      <EditorContent editor={editor} />
+    </>
   );
 }
 
 function AssessmentPanel({
-  diagnoses,
+  diagnosisRows,
+  setDiagnosisRows,
   soapNote,
 }: {
-  diagnoses: Diagnosis[];
+  diagnosisRows: EditableDiagnosis[];
+  setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>>;
   soapNote?: SoapNote;
 }) {
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchResults = useMemo(
+    () => getDiagnosisSearchResults(searchQuery, soapNote),
+    [searchQuery, soapNote]
+  );
+  const normalizedSearchQuery = normalizeDiagnosisQuery(searchQuery);
+  const canAddFreeText =
+    normalizedSearchQuery.length > 0 &&
+    !diagnosisCatalog.some((item) => normalizeDiagnosisQuery(item.name) === normalizedSearchQuery);
+  const resultModeLabel = normalizedSearchQuery ? "검색 결과" : "SOAP/주호소 기반 추천";
+
+  const addDiagnosisFromCatalog = (item: DiagnosisCatalogItem) => {
+    setDiagnosisRows((currentRows) => {
+      if (currentRows.some((row) => row.diagnosisText === item.name)) return currentRows;
+
+      return [
+        ...currentRows,
+        {
+          catalogMatched: true,
+          createdAt: new Date().toISOString(),
+          createdByUserId: "user-vet-suji",
+          diagnosisCatalogId: item.id,
+          diagnosisText: item.name,
+          diagnosisType: item.defaultType,
+          encounterId: soapNote?.encounterId ?? "session-only-encounter",
+          id: `diagnosis-session-${item.id}`,
+          isPrimary: currentRows.length === 0,
+          systemLabel: item.systemLabel,
+        },
+      ];
+    });
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
+
+  const addFreeTextDiagnosis = () => {
+    const diagnosisText = searchQuery.trim();
+    if (!diagnosisText) return;
+
+    setDiagnosisRows((currentRows) => {
+      if (currentRows.some((row) => normalizeDiagnosisQuery(row.diagnosisText) === normalizedSearchQuery)) {
+        return currentRows;
+      }
+
+      return [
+        ...currentRows,
+        {
+          catalogMatched: false,
+          createdAt: new Date().toISOString(),
+          createdByUserId: "user-vet-suji",
+          diagnosisText,
+          diagnosisType: "suspected",
+          encounterId: soapNote?.encounterId ?? "session-only-encounter",
+          id: `diagnosis-session-free-${normalizedSearchQuery.replace(/\s+/g, "-")}`,
+          isPrimary: currentRows.length === 0,
+          systemLabel: getDiagnosisSystemLabel({
+            createdAt: "",
+            createdByUserId: "",
+            diagnosisText,
+            diagnosisType: "suspected",
+            encounterId: "",
+            id: "",
+          }),
+        },
+      ];
+    });
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
+
+  const toggleConfirmedDiagnosis = (diagnosisId: string) => {
+    setDiagnosisRows((currentRows) =>
+      currentRows.map((row) =>
+        row.id === diagnosisId
+          ? { ...row, diagnosisType: row.diagnosisType === "confirmed" ? "suspected" : "confirmed" }
+          : row
+      )
+    );
+  };
+
+  const togglePrimaryDiagnosis = (diagnosisId: string) => {
+    setDiagnosisRows((currentRows) =>
+      currentRows.map((row) => (row.id === diagnosisId ? { ...row, isPrimary: !row.isPrimary } : row))
+    );
+  };
+
+  const removeDiagnosis = (diagnosisId: string) => {
+    setDiagnosisRows((currentRows) => currentRows.filter((row) => row.id !== diagnosisId));
+  };
+
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <section
+      aria-label="진단명 관리"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+    >
       <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="진단명" subtitle="진단 목록 · 코멘트 · 계획" />
-        <Button variant="outline" size="sm" className="bg-card">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-card"
+          onClick={() => {
+            setSearchOpen(true);
+            searchInputRef.current?.focus();
+          }}
+        >
           분류검색
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
         <div className="grid gap-3">
           <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-2">
-            <Input
-              readOnly
-              value="한글, 영문, 약자, 연관검색어로 진단명 검색"
-              className="h-9 bg-[var(--emr-surface-panel)] text-[13px]"
-            />
-            <Button variant="outline" size="sm" className="h-9 bg-card px-0">
+            <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+              <PopoverTrigger nativeButton={false} render={<div className="relative min-w-0" />}>
+                <CdsActionsSearchIcon
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                />
+                <Input
+                  ref={searchInputRef}
+                  aria-label="진단명 검색"
+                  autoComplete="off"
+                  placeholder="한글, 영문, 약자, 연관검색어로 진단명 검색"
+                  value={searchQuery}
+                  className="h-9 bg-[var(--emr-surface-panel)] pl-9 text-[13px]"
+                  onFocus={() => setSearchOpen(true)}
+                  onValueChange={(value) => {
+                    setSearchQuery(value);
+                    setSearchOpen(true);
+                  }}
+                />
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
+                initialFocus={false}
+              >
+                <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                  {resultModeLabel}
+                </div>
+                <div role="listbox" aria-label="진단명 검색 결과" className="grid gap-1">
+                  {searchResults.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="option"
+                      aria-selected={diagnosisRows.some((row) => row.diagnosisText === item.name)}
+                      className="grid gap-1 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--clair-color-background-surface)] aria-selected:bg-[var(--clair-color-atomic-sky-50)]"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => addDiagnosisFromCatalog(item)}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Badge variant="outline" className="shrink-0">
+                          {item.systemLabel}
+                        </Badge>
+                        <span className="truncate text-[13px] font-semibold text-[var(--clair-color-label-normal)]">
+                          {item.name}
+                        </span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">
+                          {diagnosisTypeLabel[item.defaultType]}
+                        </span>
+                      </span>
+                      <span className="truncate text-[11px] text-muted-foreground">{item.hint}</span>
+                    </button>
+                  ))}
+                  {canAddFreeText ? (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected="false"
+                      className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-[var(--clair-color-background-surface)]"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={addFreeTextDiagnosis}
+                    >
+                      <span className="font-semibold">‘{searchQuery.trim()}’ 직접 추가</span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        카탈로그 미연결 진단명으로 이 차트에만 표시
+                      </span>
+                    </button>
+                  ) : null}
+                  {!searchResults.length && !canAddFreeText ? (
+                    <div className="px-2.5 py-3 text-[12px] text-muted-foreground">
+                      표시할 추천 진단명이 없습니다.
+                    </div>
+                  ) : null}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 bg-card px-0"
+              onClick={() => {
+                setSearchOpen(true);
+                searchInputRef.current?.focus();
+              }}
+            >
               검색
             </Button>
           </div>
@@ -694,19 +998,51 @@ function AssessmentPanel({
               <span>중점</span>
               <span>수의사</span>
             </div>
-            {diagnoses.map((diagnosis) => (
+            {diagnosisRows.map((diagnosis) => (
               <div
                 key={diagnosis.id}
                 className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-3 text-[13px]"
               >
-                <Badge variant="outline">{getDiagnosisSystemLabel(diagnosis)}</Badge>
-                <span className="truncate font-medium">{diagnosis.diagnosisText}</span>
-                <span>{diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}</span>
-                <span>{diagnosis.diagnosisType === "suspected" ? "-" : "✓"}</span>
-                <span className="truncate">{getChartStaffName(diagnosis.createdByUserId) ?? "미정"}</span>
+                <Badge variant="outline">{diagnosis.systemLabel}</Badge>
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{diagnosis.diagnosisText}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {diagnosis.catalogMatched ? "사전 연결" : "직접 입력"} · {diagnosisTypeLabel[diagnosis.diagnosisType]}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  aria-label={`${diagnosis.diagnosisText} 확진 토글`}
+                  aria-pressed={diagnosis.diagnosisType === "confirmed"}
+                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--clair-color-background-surface)] aria-pressed:bg-[var(--clair-color-atomic-sky-50)] aria-pressed:text-[var(--clair-color-primary-normal)]"
+                  onClick={() => toggleConfirmedDiagnosis(diagnosis.id)}
+                >
+                  {diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`${diagnosis.diagnosisText} 중점 진단 표시`}
+                  aria-pressed={diagnosis.isPrimary}
+                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--clair-color-background-surface)] aria-pressed:bg-[var(--clair-color-atomic-sky-50)] aria-pressed:text-[var(--clair-color-primary-normal)]"
+                  onClick={() => togglePrimaryDiagnosis(diagnosis.id)}
+                >
+                  {diagnosis.isPrimary ? "✓" : "-"}
+                </button>
+                <span className="flex min-w-0 items-center justify-between gap-1">
+                  <span className="truncate">{getChartStaffName(diagnosis.createdByUserId) ?? "미정"}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={`${diagnosis.diagnosisText} 삭제`}
+                    onClick={() => removeDiagnosis(diagnosis.id)}
+                  >
+                    <CdsActionsXIcon className="size-3" />
+                  </Button>
+                </span>
               </div>
             ))}
-            {!diagnoses.length ? (
+            {!diagnosisRows.length ? (
               <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6 text-center text-[13px] text-muted-foreground">
                 진단 입력 전입니다.
               </div>
@@ -785,22 +1121,22 @@ function ChartRightPanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex h-12 flex-col justify-center border-b border-[var(--emr-line-hairline)] px-3">
-        <div className="text-sm font-semibold">환자 사이드 패널</div>
-        <div className="text-[11px] text-muted-foreground">환자 컨텍스트와 진단 이력</div>
+        <div className="text-sm font-semibold">환자 정보</div>
+        <div className="text-[11px] text-muted-foreground">진료 참고 · 개인/민감 정보 · 부가 정보</div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
           <AssessmentHistory historyRows={historyRows} />
           <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
-            <div className="font-semibold">보호자 메모</div>
+            <div className="font-semibold">개인/민감 정보</div>
             <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
-              {bundle.primaryGuardian?.memo ?? "물 섭취 후 재구토, 검사 비용 설명을 먼저 요청."}
+              보호자 메모: {bundle.primaryGuardian?.memo ?? "물 섭취 후 재구토, 검사 비용 설명을 먼저 요청."}
             </p>
           </section>
           <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
-            <div className="font-semibold">환자 메모</div>
+            <div className="font-semibold">부가 정보</div>
             <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
-              {bundle.patient.specialNote ?? "진료대에서 긴장도가 높아 보호자 동석 권장."}
+              환자 메모: {bundle.patient.specialNote ?? "진료대에서 긴장도가 높아 보호자 동석 권장."}
             </p>
           </section>
         </div>
@@ -1134,6 +1470,7 @@ export function ChartContent() {
   useScenarioEncounterSync();
 
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
   const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const resizingPointerIdRef = useRef<number | null>(null);
   const bundle = getSelectedBundle(selectedEncounterId);
@@ -1141,6 +1478,36 @@ export function ChartContent() {
   const [chartTopPercent, setChartTopPercent] = useState(CHART_TOP_DEFAULT_PERCENT);
   const [isChartResizing, setIsChartResizing] = useState(false);
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
+  const [diagnosisState, setDiagnosisState] = useState<{
+    encounterId?: string;
+    rows: EditableDiagnosis[];
+  }>(() => ({
+    encounterId: bundle?.encounter.id,
+    rows: bundle ? bundle.diagnoses.map(toEditableDiagnosis) : [],
+  }));
+  const activeEncounterId = bundle?.encounter.id;
+
+  if (diagnosisState.encounterId !== activeEncounterId) {
+    setDiagnosisState({
+      encounterId: activeEncounterId,
+      rows: bundle ? bundle.diagnoses.map(toEditableDiagnosis) : [],
+    });
+  }
+
+  const diagnosisRows = diagnosisState.rows;
+  const setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>> = (nextRows) => {
+    setDiagnosisState((current) => {
+      const rows =
+        typeof nextRows === "function"
+          ? (nextRows as (currentRows: EditableDiagnosis[]) => EditableDiagnosis[])(current.rows)
+          : nextRows;
+
+      return {
+        ...current,
+        rows,
+      };
+    });
+  };
   const orderGroups = useMemo(
     () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
     [bundle]
@@ -1257,10 +1624,27 @@ export function ChartContent() {
           <EmrInstructionTitleBar
             title="진료 차트"
             icon={
-              <CdsFilesDocumentAltFillIcon
-                className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
-                aria-hidden="true"
-              />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="bg-card aria-expanded:border-ring aria-expanded:bg-background aria-expanded:ring-3 aria-expanded:ring-ring/50"
+                      aria-label={`차트 이력 패널 ${contentAsideOpen ? "접기" : "열기"}`}
+                      aria-controls="chart-content-aside"
+                      aria-expanded={contentAsideOpen}
+                      onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                    >
+                      <CdsUtilitiesHistoryIcon className="size-4" />
+                    </Button>
+                  }
+                />
+                <TooltipContent side="bottom" sideOffset={6}>
+                  과거 이력 보기
+                </TooltipContent>
+              </Tooltip>
             }
             badge={
               <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
@@ -1292,7 +1676,7 @@ export function ChartContent() {
               <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
                 <span>환자: {bundle.patient.name} · 보호자 {bundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
-                <span>진단명: {bundle.diagnoses.length}건 · 오더: {allOrders.length}건</span>
+                <span>진단명: {diagnosisRows.length}건 · 오더: {allOrders.length}건</span>
                 <span>차트 상태: {getSoapStatusText(latestSoap)}</span>
               </span>
             </span>
@@ -1315,8 +1699,13 @@ export function ChartContent() {
         }}
       >
         <div className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-4 [&>*]:min-w-0">
-          <SoapPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
-          <AssessmentPanel diagnoses={bundle.diagnoses} soapNote={latestSoap} />
+          <SoapPanel diagnoses={diagnosisRows} soapNote={latestSoap} />
+          <AssessmentPanel
+            key={bundle.encounter.id}
+            diagnosisRows={diagnosisRows}
+            setDiagnosisRows={setDiagnosisRows}
+            soapNote={latestSoap}
+          />
         </div>
         <button
           type="button"

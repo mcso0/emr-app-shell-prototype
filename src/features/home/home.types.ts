@@ -104,6 +104,33 @@ export interface HomeFlowSummaryItem {
   detail?: string;
   href: string;
   tone?: "normal" | "warning" | "attention";
+  slaLabel?: string;
+  overdueCount?: number;
+  unassignedCount?: number;
+  nextActionLabel?: string;
+}
+
+export interface HomeNextAction {
+  id: string;
+  title: string;
+  patientName?: string;
+  clientName?: string;
+  sourceLabel: string;
+  priorityLabel: string;
+  dueLabel: string;
+  evidence: string[];
+  actionHref: string;
+  actionLabel: string;
+  tone: "danger" | "warning" | "attention" | "normal";
+}
+
+export interface HomeRoleNextActionHypothesis {
+  role: UserRole;
+  roleLabel: string;
+  hypothesis: string;
+  primarySignal: string;
+  successMetric: string;
+  actions: HomeNextAction[];
 }
 
 export interface HomeDashboardData {
@@ -119,6 +146,7 @@ export interface HomeDashboardData {
   quickStatus: HomeQuickStatus[];
   emptyLaunchers: HomeLauncherAction[];
   flowSummary: HomeFlowSummaryItem[];
+  roleNextActions: HomeRoleNextActionHypothesis[];
   updatedAt: string;
 }
 
