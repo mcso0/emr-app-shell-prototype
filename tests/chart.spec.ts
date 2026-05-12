@@ -67,6 +67,32 @@ test("chart diagnosis comment and plan are editable text areas", async ({ page }
   await expect(page.getByLabel("Plan")).toHaveValue("수액 후 24시간 식욕과 구토 횟수 확인.");
 });
 
+test("chart SOAP editor keeps SOAP fields structured and uses an inline link popover", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const subjectiveEditor = page.getByLabel("기본 SOAP 주관적 기록");
+
+  await expect(page.getByText("주관적", { exact: true }).first()).toBeVisible();
+  await expect(subjectiveEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
+
+  await subjectiveEditor.click();
+  await expect(page.getByText("주관적", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "기본 SOAP 굵게" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "기본 SOAP 글머리 목록" })).toBeEnabled();
+
+  let promptOpened = false;
+  page.on("dialog", async (dialog) => {
+    promptOpened = true;
+    await dialog.dismiss();
+  });
+
+  await page.getByRole("button", { name: "기본 SOAP 링크" }).click();
+  await expect(page.getByText("링크 추가")).toBeVisible();
+  await page.getByLabel("링크 URL").fill("example.com/chart-note");
+  await page.getByRole("button", { name: "적용" }).click();
+  expect(promptOpened).toBe(false);
+});
+
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 
@@ -224,6 +250,48 @@ test("chart order checkboxes update the selected order total", async ({ page }) 
 
   await expect(page.getByText("선택 오더 0건")).toBeVisible();
   await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
+});
+
+test("chart order table edits quantity, commits draft changes, and deletes rows", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const maropitantQuantity = page.getByLabel("Maropitant 16mg T 수량 수정");
+
+  await expect(maropitantQuantity).toHaveValue("1");
+  await maropitantQuantity.fill("0");
+
+  await expect(page.getByText("변경 대기 1건 · 수량 확인 필요 1건")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Order 업데이트/ })).toBeDisabled();
+
+  await maropitantQuantity.fill("2");
+  await page.getByLabel("Maropitant 16mg T 청구서명 수정").fill("Maropitant 16mg T 변경");
+
+  await expect(page.getByText("변경 대기 1건")).toBeVisible();
+  await expect(page.getByText("청구 예상 총액: 139,000")).toBeVisible();
+
+  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await expect(page.getByText("선택 오더 합계: 9,000")).toBeVisible();
+
+  await page.getByRole("button", { name: /Order 업데이트/ }).click();
+  await expect(page.getByText(/변경 대기/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Order 업데이트/ })).toBeDisabled();
+  await expect(page.getByText("청구 예상 총액: 139,000")).toBeVisible();
+
+  await page.getByRole("button", { name: "CBC 검사 오더 삭제" }).click();
+  const deleteDialog = page.getByRole("dialog");
+
+  await expect(deleteDialog.getByText("오더를 삭제할까요?")).toBeVisible();
+  await deleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
+
+  await expect(page.getByLabel("CBC 검사 수량 수정")).toHaveCount(0);
+  await expect(page.getByText("변경 대기 1건")).toBeVisible();
+  await expect(page.getByText("청구 예상 총액: 104,000")).toBeVisible();
+
+  await page.getByRole("button", { name: /변경 취소/ }).click();
+
+  await expect(page.getByLabel("CBC 검사 수량 수정")).toBeVisible();
+  await expect(page.getByText(/변경 대기/)).toHaveCount(0);
+  await expect(page.getByText("청구 예상 총액: 139,000")).toBeVisible();
 });
 
 test("chart opens the Kong scenario as one SOAP, assessment, and order flow", async ({ page }) => {

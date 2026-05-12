@@ -18,6 +18,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import {
+  CdsActionsRotateCcwIcon,
+  CdsActionsSaveIcon,
+  CdsActionsTrash2Icon,
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
   CdsActionsXIcon,
@@ -25,6 +28,7 @@ import {
 import {
   CdsContentBoldIcon,
   CdsContentItalicIcon,
+  CdsContentListIcon,
   CdsContentLink2Icon,
 } from "@/components/cds-icons/content-and-editor";
 import {
@@ -536,6 +540,12 @@ const soapTemplateRows = [
   { label: "계획", valueKey: "plan" },
 ] as const;
 
+type SoapEditorField = {
+  id: (typeof soapTemplateRows)[number]["valueKey"];
+  label: string;
+  value: string;
+};
+
 const escapeHtml = (value: string) =>
   value
     .replaceAll("&", "&amp;")
@@ -554,14 +564,21 @@ function ChartSectionTitle({ subtitle, title }: { subtitle: string; title: strin
   );
 }
 
-function buildSoapEditorContent(soapNote?: SoapNote) {
-  return soapTemplateRows
-    .map(({ label, valueKey }) => {
-      const value = soapNote?.[valueKey] ?? "여기에 입력하세요.";
+function buildSoapEditorFields(soapNote?: SoapNote): SoapEditorField[] {
+  return soapTemplateRows.map(({ label, valueKey }) => ({
+    id: valueKey,
+    label,
+    value: soapNote?.[valueKey] ?? "",
+  }));
+}
 
-      return `<p><strong>${label}</strong><br />: ${escapeHtml(value)}</p>`;
-    })
-    .join("");
+function normalizeEditorLinkHref(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) return "";
+  if (/^(https?:|mailto:|tel:)/i.test(trimmedValue)) return trimmedValue;
+
+  return `https://${trimmedValue}`;
 }
 
 function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?: SoapNote }) {
@@ -574,21 +591,21 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   const soapSections = [
     {
       id: "default",
-      initialContent: buildSoapEditorContent(soapNote),
+      initialFields: buildSoapEditorFields(soapNote),
       status: soapNote?.status,
       statusAt: soapNote?.signedAt ?? soapNote?.updatedAt,
       title: "기본 SOAP",
     },
     ...diagnosisSystemSections.map((title) => ({
       id: `diagnosis-${title}`,
-      initialContent: buildSoapEditorContent(),
+      initialFields: buildSoapEditorFields(),
       status: undefined,
       statusAt: undefined,
       title: `${title} SOAP`,
     })),
     ...extraSections.map((section) => ({
       id: section.id,
-      initialContent: buildSoapEditorContent(),
+      initialFields: buildSoapEditorFields(),
       status: "draft" as const,
       statusAt: undefined,
       title: section.title,
@@ -625,7 +642,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
               </div>
               <SoapRichTextEditor
                 key={`${soapNote?.id ?? "empty"}-${section.id}`}
-                initialContent={section.initialContent}
+                initialFields={section.initialFields}
                 label={section.title}
                 attachmentCount={attachmentCounts[section.id] ?? 0}
                 onAddAttachment={() => {
@@ -647,6 +664,9 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   );
 }
 
+const editorToolbarButtonClassName =
+  "bg-card aria-pressed:border-ring aria-pressed:bg-background aria-pressed:text-[var(--clair-color-primary-normal)]";
+
 function EditorToolbarButton({
   active,
   children,
@@ -667,7 +687,7 @@ function EditorToolbarButton({
       size="icon-sm"
       aria-label={label}
       aria-pressed={active}
-      className={cn("bg-card aria-pressed:border-ring aria-pressed:bg-background", active && "ring-2 ring-ring/30")}
+      className={cn(editorToolbarButtonClassName, active && "ring-2 ring-ring/30")}
       disabled={disabled}
       onClick={onClick}
     >
@@ -678,97 +698,190 @@ function EditorToolbarButton({
 
 function SoapRichTextEditor({
   attachmentCount,
-  initialContent,
+  initialFields,
   label,
   onAddAttachment,
 }: {
   attachmentCount: number;
-  initialContent: string;
+  initialFields: SoapEditorField[];
   label: string;
   onAddAttachment: () => void;
 }) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-[var(--clair-color-primary-normal)] underline underline-offset-2",
-        },
-      }),
-      Placeholder.configure({
-        placeholder: "주관적\n: 여기에 입력하세요.\n객관적\n: 여기에 입력하세요.\n평가\n: 여기에 입력하세요.\n계획\n: 여기에 입력하세요.",
-      }),
-    ],
-    content: initialContent,
-    editorProps: {
-      attributes: {
-        "aria-label": `${label} 기록`,
-        class:
-          "min-h-36 px-3 py-2 text-[13px] leading-5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_p]:my-1.5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:whitespace-pre-line [&_p.is-editor-empty:first-child::before]:text-[var(--clair-color-label-assistive)]",
-      },
-    },
-    immediatelyRender: false,
-  });
-  const runEditorCommand = (command: (editor: Editor) => void) => {
+  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
+  const [activeFieldId, setActiveFieldId] = useState<SoapEditorField["id"]>("subjective");
+  const [toolbarVersion, setToolbarVersion] = useState(0);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkValue, setLinkValue] = useState("");
+
+  useEffect(() => {
+    if (!activeEditor) return;
+
+    const refreshToolbar = () => setToolbarVersion((current) => current + 1);
+
+    activeEditor.on("selectionUpdate", refreshToolbar);
+    activeEditor.on("transaction", refreshToolbar);
+    activeEditor.on("update", refreshToolbar);
+
+    return () => {
+      activeEditor.off("selectionUpdate", refreshToolbar);
+      activeEditor.off("transaction", refreshToolbar);
+      activeEditor.off("update", refreshToolbar);
+    };
+  }, [activeEditor]);
+
+  const activateFieldEditor = (fieldId: SoapEditorField["id"], editor: Editor | null) => {
     if (!editor) return;
 
-    command(editor);
+    setActiveFieldId(fieldId);
+    setActiveEditor(editor);
   };
-  const setLink = () => {
-    if (!editor) return;
+  const runEditorCommand = (command: (editor: Editor) => void) => {
+    if (!activeEditor) return;
 
-    const previousUrl = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("링크 URL을 입력하세요.", previousUrl ?? "https://");
+    command(activeEditor);
+    setToolbarVersion((current) => current + 1);
+  };
+  const openLinkEditor = () => {
+    if (!activeEditor) return;
 
-    if (url === null) return;
-    if (!url) {
+    setLinkValue((activeEditor.getAttributes("link").href as string | undefined) ?? "");
+    setLinkOpen(true);
+  };
+  const applyLink = () => {
+    if (!activeEditor) return;
+
+    const href = normalizeEditorLinkHref(linkValue);
+
+    if (!href) {
       runEditorCommand((currentEditor) => currentEditor.chain().focus().unsetLink().run());
-      return;
+    } else {
+      runEditorCommand((currentEditor) =>
+        currentEditor.chain().focus().extendMarkRange("link").setLink({ href }).run()
+      );
     }
 
-    runEditorCommand((currentEditor) =>
-      currentEditor.chain().focus().extendMarkRange("link").setLink({ href: url }).run()
-    );
+    setLinkOpen(false);
   };
+  const removeLink = () => {
+    runEditorCommand((currentEditor) => currentEditor.chain().focus().unsetLink().run());
+    setLinkValue("");
+    setLinkOpen(false);
+  };
+  const activeFieldLabel =
+    initialFields.find((field) => field.id === activeFieldId)?.label ?? initialFields[0]?.label ?? "SOAP";
+  void toolbarVersion;
 
   return (
     <>
-      <div className="flex min-h-9 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3">
-        <div className="flex items-center gap-1">
-          <EditorToolbarButton
-            active={editor?.isActive("bold") ?? false}
-            disabled={!editor}
-            label={`${label} 굵게`}
-            onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBold().run())}
-          >
-            <CdsContentBoldIcon className="size-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("italic") ?? false}
-            disabled={!editor}
-            label={`${label} 기울임`}
-            onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleItalic().run())}
-          >
-            <CdsContentItalicIcon className="size-4" />
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("underline") ?? false}
-            disabled={!editor}
-            label={`${label} 밑줄`}
-            onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleUnderline().run())}
-          >
-            U
-          </EditorToolbarButton>
-          <EditorToolbarButton
-            active={editor?.isActive("link") ?? false}
-            disabled={!editor}
-            label={`${label} 링크`}
-            onClick={setLink}
-          >
-            <CdsContentLink2Icon className="size-4" />
-          </EditorToolbarButton>
+      <div className="flex min-h-10 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-muted)] px-2 py-1 text-[11px] font-semibold text-[var(--clair-color-label-neutral)]">
+            {activeFieldLabel}
+          </span>
+          <div className="flex items-center gap-1" aria-label={`${label} 서식 도구`}>
+            <EditorToolbarButton
+              active={false}
+              disabled={!activeEditor}
+              label={`${label} 실행 취소`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().undo().run())}
+            >
+              ↶
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={false}
+              disabled={!activeEditor}
+              label={`${label} 다시 실행`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().redo().run())}
+            >
+              ↷
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={activeEditor?.isActive("bold") ?? false}
+              disabled={!activeEditor}
+              label={`${label} 굵게`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBold().run())}
+            >
+              <CdsContentBoldIcon className="size-4" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={activeEditor?.isActive("italic") ?? false}
+              disabled={!activeEditor}
+              label={`${label} 기울임`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleItalic().run())}
+            >
+              <CdsContentItalicIcon className="size-4" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={activeEditor?.isActive("underline") ?? false}
+              disabled={!activeEditor}
+              label={`${label} 밑줄`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleUnderline().run())}
+            >
+              U
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={activeEditor?.isActive("bulletList") ?? false}
+              disabled={!activeEditor}
+              label={`${label} 글머리 목록`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBulletList().run())}
+            >
+              <CdsContentListIcon className="size-4" />
+            </EditorToolbarButton>
+            <EditorToolbarButton
+              active={activeEditor?.isActive("orderedList") ?? false}
+              disabled={!activeEditor}
+              label={`${label} 번호 목록`}
+              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleOrderedList().run())}
+            >
+              1.
+            </EditorToolbarButton>
+            <Popover open={linkOpen} onOpenChange={setLinkOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={`${label} 링크`}
+                    aria-pressed={activeEditor?.isActive("link") ?? false}
+                    className={cn(
+                      editorToolbarButtonClassName,
+                      activeEditor?.isActive("link") && "ring-2 ring-ring/30"
+                    )}
+                    disabled={!activeEditor}
+                    onClick={openLinkEditor}
+                  >
+                    <CdsContentLink2Icon className="size-4" />
+                  </Button>
+                }
+              />
+              <PopoverContent align="start" className="w-72 gap-2 p-3" initialFocus={false}>
+                <div className="grid gap-1.5">
+                  <div className="text-[12px] font-semibold text-[var(--clair-color-label-strong)]">링크 추가</div>
+                  <Input
+                    aria-label="링크 URL"
+                    value={linkValue}
+                    placeholder="https://example.com"
+                    onChange={(event) => setLinkValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        applyLink();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end gap-1.5">
+                  <Button type="button" variant="ghost" size="xs" onClick={removeLink}>
+                    해제
+                  </Button>
+                  <Button type="button" size="xs" onClick={applyLink}>
+                    적용
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
         <Button
           type="button"
@@ -781,8 +894,72 @@ function SoapRichTextEditor({
           첨부{attachmentCount ? ` ${attachmentCount}` : ""}
         </Button>
       </div>
-      <EditorContent editor={editor} />
+      <div className="divide-y divide-[var(--emr-line-hairline)]">
+        {initialFields.map((field) => (
+          <SoapFieldEditor
+            key={field.id}
+            active={activeFieldId === field.id}
+            field={field}
+            sectionLabel={label}
+            onActivate={activateFieldEditor}
+          />
+        ))}
+      </div>
     </>
+  );
+}
+
+function SoapFieldEditor({
+  active,
+  field,
+  onActivate,
+  sectionLabel,
+}: {
+  active: boolean;
+  field: SoapEditorField;
+  onActivate: (fieldId: SoapEditorField["id"], editor: Editor | null) => void;
+  sectionLabel: string;
+}) {
+  const initialContent = field.value ? `<p>${escapeHtml(field.value)}</p>` : "";
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-[var(--clair-color-primary-normal)] underline underline-offset-2",
+        },
+      }),
+      Placeholder.configure({
+        placeholder: `${field.label} 내용을 입력하세요.`,
+      }),
+    ],
+    content: initialContent,
+    editorProps: {
+      attributes: {
+        "aria-label": `${sectionLabel} ${field.label} 기록`,
+        class:
+          "min-h-[64px] px-3 py-2 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p]:my-1.5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--clair-color-label-assistive)]",
+      },
+    },
+    immediatelyRender: false,
+  });
+
+  return (
+    <div
+      className={cn(
+        "grid min-h-[84px] grid-cols-[76px_minmax(0,1fr)] bg-[var(--emr-surface-panel)] transition-colors",
+        active && "bg-[var(--clair-color-atomic-sky-50)]/45"
+      )}
+      onFocusCapture={() => onActivate(field.id, editor)}
+    >
+      <div className="border-r border-[var(--emr-line-hairline)] px-3 py-3">
+        <div className="text-[12px] font-semibold text-[var(--clair-color-label-neutral)]">{field.label}</div>
+        <div className="mt-1 text-[11px] text-[var(--clair-color-label-assistive)]">SOAP</div>
+      </div>
+      <EditorContent editor={editor} />
+    </div>
   );
 }
 
@@ -1168,24 +1345,79 @@ type ChartOrderTableRow = {
   order: EmrOrder;
 };
 
+type ChartOrderDraftRow = ChartOrderTableRow & {
+  billingName: string;
+  committedBillingName: string;
+  committedQuantityInput: string;
+  quantityInput: string;
+  unitPrice?: number;
+};
+
+const getChartOrderDraftRows = (orderGroups: ChartOrderGroup[]): ChartOrderDraftRow[] =>
+  orderGroups.flatMap(({ group, orders }) =>
+    orders.map((order) => {
+      const invoiceLine = getChartInvoiceLineByOrderId(order.id);
+      const quantityInput = String(invoiceLine?.quantity ?? 1);
+      const billingName = invoiceLine?.description ?? order.displayName;
+
+      return {
+        billingName,
+        committedBillingName: billingName,
+        committedQuantityInput: quantityInput,
+        groupTitle: group?.title ?? "개별 오더",
+        order,
+        quantityInput,
+        unitPrice: invoiceLine?.unitPrice,
+      };
+    })
+  );
+
+const getDraftQuantity = (quantityInput: string) => {
+  const quantity = Number(quantityInput);
+
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : null;
+};
+
+const getDraftLineTotal = (row: ChartOrderDraftRow) => {
+  const quantity = getDraftQuantity(row.quantityInput);
+
+  if (quantity === null || row.unitPrice === undefined) return undefined;
+
+  return quantity * row.unitPrice;
+};
+
+const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
+  row.billingName !== row.committedBillingName ||
+  row.quantityInput !== row.committedQuantityInput;
+
 function ChartOrderTable({
   allVisibleSelected,
+  hasCommittedRows,
+  invalidOrderIds,
+  onDeleteOrder,
   onToggleAll,
   onToggleOrder,
+  onUpdateBillingName,
+  onUpdateQuantity,
   rows,
   selectedOrderIds,
   someVisibleSelected,
 }: {
   allVisibleSelected: boolean;
+  hasCommittedRows: boolean;
+  invalidOrderIds: Set<string>;
+  onDeleteOrder: (orderId: string) => void;
   onToggleAll: (checked: boolean) => void;
   onToggleOrder: (orderId: string, checked: boolean) => void;
-  rows: ChartOrderTableRow[];
+  onUpdateBillingName: (orderId: string, billingName: string) => void;
+  onUpdateQuantity: (orderId: string, quantityInput: string) => void;
+  rows: ChartOrderDraftRow[];
   selectedOrderIds: Set<string>;
   someVisibleSelected: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <Table className="min-w-[1080px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
+      <Table className="min-w-[1180px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
             <TableHead className="w-10 px-3 text-muted-foreground">
@@ -1193,6 +1425,7 @@ function ChartOrderTable({
                 aria-label="오더 전체 선택"
                 checked={allVisibleSelected}
                 indeterminate={someVisibleSelected}
+                disabled={!rows.length}
                 onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
               />
             </TableHead>
@@ -1200,22 +1433,26 @@ function ChartOrderTable({
             <TableHead className="w-[68px] text-[12px] text-muted-foreground">분류</TableHead>
             <TableHead className="w-[72px] text-[12px] text-muted-foreground">상태</TableHead>
             <TableHead className="w-[240px] text-[12px] text-muted-foreground">Order명</TableHead>
-            <TableHead className="w-[190px] text-[12px] text-muted-foreground">청구서명</TableHead>
+            <TableHead className="w-[220px] text-[12px] text-muted-foreground">청구서명</TableHead>
             <TableHead className="w-16 text-[12px] text-muted-foreground">수량</TableHead>
             <TableHead className="w-20 text-[12px] text-muted-foreground">단가</TableHead>
             <TableHead className="w-[88px] text-[12px] text-muted-foreground">청구금액</TableHead>
             <TableHead className="w-20 text-[12px] text-muted-foreground">수의사</TableHead>
-            <TableHead className="w-[116px] text-right text-[12px] text-muted-foreground">작업</TableHead>
+            <TableHead className="w-[132px] text-right text-[12px] text-muted-foreground">작업</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ groupTitle, order }) => {
-            const invoiceLine = getChartInvoiceLineByOrderId(order.id);
+          {rows.map((row) => {
+            const { groupTitle, order } = row;
+            const dirty = isChartOrderDraftRowDirty(row);
+            const invalidQuantity = invalidOrderIds.has(order.id);
+            const lineTotal = getDraftLineTotal(row);
 
             return (
               <TableRow
                 key={order.id}
-                className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]"
+                data-dirty={dirty ? "true" : undefined}
+                className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40"
               >
                 <TableCell className="px-3">
                   <Checkbox
@@ -1231,10 +1468,29 @@ function ChartOrderTable({
                   <div className="truncate font-medium">{order.displayName}</div>
                   <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? orderTypeMeta[order.orderType].handoff}</div>
                 </TableCell>
-                <TableCell className="truncate">{invoiceLine?.description ?? order.displayName}</TableCell>
-                <TableCell>{invoiceLine?.quantity ?? 1}</TableCell>
-                <TableCell>{invoiceLine ? invoiceLine.unitPrice.toLocaleString() : "-"}</TableCell>
-                <TableCell>{invoiceLine ? invoiceLine.lineTotal.toLocaleString() : "-"}</TableCell>
+                <TableCell>
+                  <Input
+                    aria-label={`${order.displayName} 청구서명 수정`}
+                    value={row.billingName}
+                    className="h-7 bg-[var(--emr-surface-panel)] px-2 text-[12px]"
+                    onChange={(event) => onUpdateBillingName(order.id, event.target.value)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input
+                    aria-label={`${order.displayName} 수량 수정`}
+                    aria-invalid={invalidQuantity}
+                    inputMode="decimal"
+                    value={row.quantityInput}
+                    className={cn(
+                      "h-7 bg-[var(--emr-surface-panel)] px-2 text-right text-[12px]",
+                      invalidQuantity && "border-[var(--clair-color-atomic-red-400)]"
+                    )}
+                    onChange={(event) => onUpdateQuantity(order.id, event.target.value)}
+                  />
+                </TableCell>
+                <TableCell>{row.unitPrice !== undefined ? row.unitPrice.toLocaleString() : "-"}</TableCell>
+                <TableCell>{lineTotal !== undefined ? lineTotal.toLocaleString() : "-"}</TableCell>
                 <TableCell className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1.5">
@@ -1243,6 +1499,16 @@ function ChartOrderTable({
                     </Button>
                     <Button variant="outline" size="xs" className="bg-card">
                       요청
+                    </Button>
+                    <Button
+                      aria-label={`${order.displayName} 오더 삭제`}
+                      variant="outline"
+                      size="icon-xs"
+                      className="bg-card text-[var(--clair-color-atomic-red-700)]"
+                      disabled={!hasCommittedRows}
+                      onClick={() => onDeleteOrder(order.id)}
+                    >
+                      <CdsActionsTrash2Icon data-icon="inline-start" />
                     </Button>
                   </div>
                 </TableCell>
@@ -1274,9 +1540,13 @@ type OrderActionDialogType = "bill" | "confirm";
 
 function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: ChartOrderGroup[] }) {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
-  const allOrders = useMemo(() => orderGroups.flatMap(({ orders }) => orders), [orderGroups]);
+  const initialDraftRows = useMemo(() => getChartOrderDraftRows(orderGroups), [orderGroups]);
+  const [committedRows, setCommittedRows] = useState<ChartOrderDraftRow[]>(initialDraftRows);
+  const [draftRows, setDraftRows] = useState<ChartOrderDraftRow[]>(initialDraftRows);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(() => new Set());
   const [orderActionDialog, setOrderActionDialog] = useState<OrderActionDialogType | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const allOrders = useMemo(() => draftRows.map(({ order }) => order), [draftRows]);
   const orderCountByType = allOrders.reduce<Record<EmrOrderType, number>>(
     (counts, order) => ({
       ...counts,
@@ -1284,25 +1554,14 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
     }),
     { dispensing: 0, imaging: 0, lab: 0, treatment: 0 }
   );
-  const filteredOrderRows = orderGroups.flatMap(({ group, orders }) =>
-    orders
-      .filter((order) => orderFilter === "all" || order.orderType === orderFilter)
-      .map((order) => ({
-        groupTitle: group?.title ?? "개별 오더",
-        order,
-      }))
+  const filteredOrderRows = draftRows.filter(
+    ({ order }) => orderFilter === "all" || order.orderType === orderFilter
   );
-  const totalAmount = allOrders.reduce((sum, order) => {
-    const line = getChartInvoiceLineByOrderId(order.id);
+  const totalAmount = draftRows.reduce((sum, row) => sum + (getDraftLineTotal(row) ?? 0), 0);
+  const selectedAmount = draftRows.reduce((sum, row) => {
+    if (!selectedOrderIds.has(row.order.id)) return sum;
 
-    return sum + (line?.lineTotal ?? 0);
-  }, 0);
-  const selectedAmount = allOrders.reduce((sum, order) => {
-    if (!selectedOrderIds.has(order.id)) return sum;
-
-    const line = getChartInvoiceLineByOrderId(order.id);
-
-    return sum + (line?.lineTotal ?? 0);
+    return sum + (getDraftLineTotal(row) ?? 0);
   }, 0);
   const selectedOrders = allOrders.filter((order) => selectedOrderIds.has(order.id));
   const recheckOrderCount = allOrders.filter((order) => order.status === "re_requested").length;
@@ -1319,6 +1578,27 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
     { value: "imaging" as const, label: "영상", count: orderCountByType.imaging },
     { value: "treatment" as const, label: "치료", count: orderCountByType.treatment },
   ];
+  const committedRowIds = new Set(committedRows.map(({ order }) => order.id));
+  const deletedDraftOrderCount = committedRows.filter(({ order }) =>
+    draftRows.every((row) => row.order.id !== order.id)
+  ).length;
+  const changedDraftOrderCount =
+    draftRows.filter((row) => {
+      const committedRow = committedRows.find(({ order }) => order.id === row.order.id);
+
+      return committedRow
+        ? row.billingName !== committedRow.billingName ||
+            row.quantityInput !== committedRow.quantityInput
+        : true;
+    }).length + deletedDraftOrderCount;
+  const invalidOrderIds = new Set(
+    draftRows
+      .filter((row) => getDraftQuantity(row.quantityInput) === null)
+      .map(({ order }) => order.id)
+  );
+  const hasDraftChanges = changedDraftOrderCount > 0;
+  const canUpdateOrders = hasDraftChanges && invalidOrderIds.size === 0;
+  const deleteTargetOrder = draftRows.find(({ order }) => order.id === deleteOrderId)?.order;
   const toggleAllVisibleOrders = (checked: boolean) => {
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -1333,6 +1613,56 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
 
       return next;
     });
+  };
+  const updateDraftRow = (orderId: string, nextFields: Partial<Pick<ChartOrderDraftRow, "billingName" | "quantityInput">>) => {
+    setDraftRows((currentRows) =>
+      currentRows.map((row) =>
+        row.order.id === orderId
+          ? {
+              ...row,
+              ...nextFields,
+            }
+          : row
+      )
+    );
+  };
+  const resetDraftRows = () => {
+    setDraftRows(committedRows);
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+      const committedOrderIds = new Set(committedRows.map(({ order }) => order.id));
+
+      next.forEach((orderId) => {
+        if (!committedOrderIds.has(orderId)) {
+          next.delete(orderId);
+        }
+      });
+
+      return next;
+    });
+  };
+  const commitDraftRows = () => {
+    const nextCommittedRows = draftRows.map((row) => ({
+      ...row,
+      committedBillingName: row.billingName,
+      committedQuantityInput: row.quantityInput,
+    }));
+
+    setCommittedRows(nextCommittedRows);
+    setDraftRows(nextCommittedRows);
+  };
+  const confirmDeleteOrder = () => {
+    if (!deleteOrderId) return;
+
+    setDraftRows((currentRows) => currentRows.filter(({ order }) => order.id !== deleteOrderId));
+    setSelectedOrderIds((current) => {
+      const next = new Set(current);
+
+      next.delete(deleteOrderId);
+
+      return next;
+    });
+    setDeleteOrderId(null);
   };
   const toggleOrder = (orderId: string, checked: boolean) => {
     setSelectedOrderIds((current) => {
@@ -1376,8 +1706,13 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-3">
         <ChartOrderTable
           allVisibleSelected={allVisibleSelected}
+          hasCommittedRows={committedRowIds.size > 1}
+          invalidOrderIds={invalidOrderIds}
+          onDeleteOrder={setDeleteOrderId}
           onToggleAll={toggleAllVisibleOrders}
           onToggleOrder={toggleOrder}
+          onUpdateBillingName={(orderId, billingName) => updateDraftRow(orderId, { billingName })}
+          onUpdateQuantity={(orderId, quantityInput) => updateDraftRow(orderId, { quantityInput })}
           rows={filteredOrderRows}
           selectedOrderIds={selectedOrderIds}
           someVisibleSelected={someVisibleSelected}
@@ -1387,6 +1722,12 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
         <div className="min-w-[240px] flex-1 text-muted-foreground">
           <div>선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건</div>
           <div className="mt-1 font-semibold text-foreground">청구 예상 총액: {totalAmount.toLocaleString()}</div>
+          {hasDraftChanges ? (
+            <div className="mt-1 font-medium text-[var(--clair-color-primary-normal)]">
+              변경 대기 {changedDraftOrderCount}건
+              {invalidOrderIds.size ? ` · 수량 확인 필요 ${invalidOrderIds.size}건` : ""}
+            </div>
+          ) : null}
         </div>
         <div className="grid min-w-[280px] flex-[1_1_320px] grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
           <div className="text-right">
@@ -1396,6 +1737,26 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           <Input readOnly value="0%" className="h-9 bg-[var(--emr-surface-panel)] text-right" />
         </div>
         <div className="ml-auto flex shrink-0 justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-card"
+            disabled={!hasDraftChanges}
+            onClick={resetDraftRows}
+          >
+            <CdsActionsRotateCcwIcon data-icon="inline-start" />
+            변경 취소
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-card"
+            disabled={!canUpdateOrders}
+            onClick={commitDraftRows}
+          >
+            <CdsActionsSaveIcon data-icon="inline-start" />
+            Order 업데이트
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -1431,6 +1792,29 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           onCancel={() => setOrderActionDialog(null)}
           onConfirm={() => setOrderActionDialog(null)}
         />
+      </Dialog>
+      <Dialog open={deleteOrderId !== null} onOpenChange={(open) => !open && setDeleteOrderId(null)}>
+        {deleteTargetOrder ? (
+          <EmrConfirmDialogContent
+            title="오더를 삭제할까요?"
+            description={
+              <span className="grid gap-3">
+                <span>
+                  {deleteTargetOrder.displayName} 오더를 현재 차트의 session draft에서 제외합니다. 실제 서버 데이터는 변경하지 않습니다.
+                </span>
+                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+                  삭제 후 `Order 업데이트`를 눌러 현재 세션 변경으로 확정할 수 있습니다.
+                </span>
+              </span>
+            }
+            cancelLabel="취소"
+            confirmLabel="삭제"
+            confirmButtonVariant="destructive"
+            closeAriaLabel="오더 삭제 확인 닫기"
+            onCancel={() => setDeleteOrderId(null)}
+            onConfirm={confirmDeleteOrder}
+          />
+        ) : null}
       </Dialog>
     </section>
   );
