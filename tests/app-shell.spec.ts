@@ -438,14 +438,14 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await expect(sidePanel.getByRole("button", { name: "대기중 접기" })).toBeVisible();
   await expect(sidePanel.getByText("코코")).toBeVisible();
   await expect(page.getByRole("button", { name: "차트 이력 패널 열기" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
+  await expect(page.getByText("기본 SOAP")).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
 test("right panel can be collapsed on a module that owns it", async ({ page }) => {
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=open");
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
-  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
+  await expect(page.getByText("기본 SOAP")).toBeVisible();
   await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
   await expect(page).toHaveURL(/right=open/);
   await expect(page.getByRole("button", { name: "환자 정보 패널 접기" })).toBeVisible();

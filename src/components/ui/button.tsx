@@ -9,15 +9,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--clair-color-atomic-gray-900)] text-[var(--clair-color-static-white)] hover:bg-[var(--clair-color-atomic-gray-700)] aria-expanded:bg-[var(--clair-color-atomic-gray-700)]",
+          "bg-primary text-primary-foreground hover:bg-[oklch(0.28_0.006_285.885)] aria-expanded:bg-[oklch(0.28_0.006_285.885)]",
         outline:
-          "border-[var(--clair-color-line-normal)] bg-background text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-background-surface)] aria-expanded:bg-[var(--clair-color-background-surface)]",
+          "border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         secondary:
-          "bg-[var(--clair-color-background-surface)] text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-background-subtle)] aria-expanded:bg-[var(--clair-color-background-subtle)]",
+          "bg-secondary text-secondary-foreground hover:bg-[var(--emr-state-active)] aria-expanded:bg-[var(--emr-state-active)]",
         ghost:
-          "bg-transparent text-[var(--clair-color-label-strong)] hover:bg-[var(--clair-color-background-subtle)] aria-expanded:bg-[var(--clair-color-background-subtle)]",
+          "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         destructive:
-          "bg-[var(--clair-color-status-negative-background)] text-[var(--clair-color-status-negative-foreground)] hover:bg-[var(--clair-color-atomic-red-100)] focus-visible:ring-destructive/20",
+          "bg-destructive text-destructive-foreground hover:bg-[var(--emr-status-danger-text)] focus-visible:ring-destructive/20",
       },
       size: {
         default:
