@@ -266,7 +266,7 @@ export function EmrListGroup({
       {onToggle ? (
         <button
           type="button"
-          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-[var(--emr-surface-muted)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-expanded={!collapsed}
           onClick={onToggle}
         >
@@ -326,14 +326,14 @@ export function EmrListItem({
       : "rounded-[var(--clair-radius-sm)] px-1 py-1",
     selected
       ? variant === "outline"
-        ? "border-[var(--emr-accent)] bg-[var(--emr-surface-selected)]"
+        ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
         : usesTransparentSurface
-          ? "border-transparent bg-transparent hover:bg-[var(--emr-surface-muted)]"
-          : "border-transparent bg-[var(--emr-accent-subtle)]"
+          ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
+          : "border-transparent bg-[var(--emr-state-selected)]"
       : variant === "outline"
-        ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-muted)]"
+        ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)]"
         : usesTransparentSurface
-          ? "border-transparent bg-transparent hover:bg-[var(--emr-surface-muted)]"
+          ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
           : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-surface-panel)]",
     className
   );

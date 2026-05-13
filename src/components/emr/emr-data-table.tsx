@@ -515,8 +515,8 @@ export function EmrDataTable({
                         type="button"
                         aria-label={`${header.column.id} 컬럼 너비 조절`}
                         className={cn(
-                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-line-hairline)] hover:bg-[var(--emr-accent-subtle)] focus-visible:ring-3 focus-visible:ring-ring/50",
-                          header.column.getIsResizing() && "bg-[var(--emr-accent-subtle)]"
+                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-line-hairline)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50",
+                          header.column.getIsResizing() && "bg-[var(--emr-state-drag)]"
                         )}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={header.getResizeHandler()}
@@ -535,7 +535,7 @@ export function EmrDataTable({
               <TableRow
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 data-testid={`order-row-${sectionId}-${row.original.id}`}
-                className="group/order-row h-11 cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--clair-color-label-normal)] hover:!bg-[var(--emr-surface-muted)] data-[state=selected]:!bg-[var(--emr-surface-selected)]"
+                className="group/order-row h-11 cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)] hover:!bg-[var(--emr-state-hover)] data-[state=selected]:!bg-[var(--emr-state-selected)]"
                 onClick={(event) => {
                   const target = event.target as HTMLElement;
 

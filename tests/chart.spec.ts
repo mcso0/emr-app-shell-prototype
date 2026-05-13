@@ -19,21 +19,18 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   const selectedQueueCard = page.getByTestId("order-queue-item-encounter-coco-260501");
   await expect(selectedQueueCard).toHaveAttribute("data-selected", "true");
   const selectedQueueCardColors = await selectedQueueCard.evaluate((element) => {
-    const probe = document.createElement("span");
-    probe.style.color = "var(--clair-color-primary-normal)";
-    document.body.appendChild(probe);
-
-    const primaryColor = getComputedStyle(probe).color;
-    probe.remove();
+    const selectedBorderProbe = document.createElement("span");
+    selectedBorderProbe.style.color = "var(--emr-state-selected-border)";
+    document.body.appendChild(selectedBorderProbe);
 
     return {
       borderColor: getComputedStyle(element).borderTopColor,
-      primaryColor,
+      selectedBorderColor: getComputedStyle(selectedBorderProbe).color,
       stripeColor: getComputedStyle(element.firstElementChild ?? element).backgroundColor,
     };
   });
-  expect(selectedQueueCardColors.borderColor).toBe(selectedQueueCardColors.primaryColor);
-  expect(selectedQueueCardColors.stripeColor).toBe(selectedQueueCardColors.primaryColor);
+  expect(selectedQueueCardColors.borderColor).toBe(selectedQueueCardColors.selectedBorderColor);
+  expect(selectedQueueCardColors.stripeColor).toBe(selectedQueueCardColors.selectedBorderColor);
   await expect(page.getByRole("button", { name: "차트 이력 패널 접기" })).toBeVisible();
   await expect(page.locator("#chart-content-aside").getByText("차트이력")).toBeVisible();
   await expect(
