@@ -12,6 +12,17 @@ async function expectUrlSearchParams(page: Page, expected: Record<string, string
   }
 }
 
+async function resolveCssColor(page: Page, value: string) {
+  return page.evaluate((colorValue) => {
+    const probe = document.createElement("span");
+    probe.style.color = colorValue;
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, value);
+}
+
 test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
@@ -62,17 +73,17 @@ test("dispensing table supports hover selection and bulk completion", async ({ p
   const statusIcon = statusBadge.getByTestId("order-status-badge-o-10024-icon");
   await expect(statusIcon).toHaveCSS("width", "12px");
   await expect(statusIcon).toHaveCSS("height", "12px");
-  await expect(statusIcon).toHaveCSS("color", "rgb(45, 55, 72)");
+  await expect(statusIcon).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-neutral-text)"));
   await expect(checkbox).toHaveCSS("opacity", "1");
-  await expect(checkbox).toHaveCSS("border-color", "rgb(203, 213, 224)");
+  await expect(checkbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-line-default)"));
   const completedCheckbox = page.getByTestId("order-row-section-0-o-10027").getByRole("checkbox");
   const canceledCheckbox = page.getByTestId("order-row-section-0-o-10028").getByRole("checkbox");
   await expect(completedCheckbox).toBeDisabled();
   await expect(completedCheckbox).toHaveCSS("opacity", "1");
-  await expect(completedCheckbox).toHaveCSS("border-color", "rgb(226, 232, 240)");
+  await expect(completedCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-line-hairline)"));
   await expect(canceledCheckbox).toBeDisabled();
   await expect(canceledCheckbox).toHaveCSS("opacity", "1");
-  await expect(canceledCheckbox).toHaveCSS("border-color", "rgb(226, 232, 240)");
+  await expect(canceledCheckbox).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-line-hairline)"));
 
   await checkbox.click();
   await expect(page.getByText("상세 정보")).toBeHidden();
@@ -342,16 +353,16 @@ test("order queue side panel renders status groups with design token colors", as
   await expect(sidePanel.getByTestId("order-queue-status-completed")).toContainText("완료");
   await expect(sidePanel.getByTestId("order-queue-status-canceled")).toContainText("취소");
 
-  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("background-color", "rgb(255, 250, 240)");
-  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("color", "rgb(221, 107, 32)");
-  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("background-color", "rgb(235, 248, 255)");
-  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("color", "rgb(49, 130, 206)");
-  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("background-color", "rgb(247, 250, 252)");
-  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("color", "rgb(113, 128, 150)");
-  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("background-color", "rgb(240, 255, 244)");
-  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("color", "rgb(56, 161, 105)");
-  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("background-color", "rgb(255, 245, 245)");
-  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("color", "rgb(229, 62, 62)");
+  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-warning-bg)"));
+  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-warning-text)"));
+  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-info-bg)"));
+  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-info-text)"));
+  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-neutral-bg)"));
+  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-neutral-text)"));
+  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
+  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-success-text)"));
+  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
+  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-danger-text)"));
 });
 
 test("order queue status groups can collapse and expand", async ({ page }) => {
@@ -409,7 +420,7 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(orderInfo).toContainText(/요청 수의사\s*김도윤/);
   await expect(orderInfo).toContainText(/처치 담당\s*송하윤/);
   await expect(orderInfo).toContainText(/처치 시작\s*10:45/);
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", "rgb(240, 248, 255)");
+  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-info-bg)"));
 
   const resultContent = page.locator("[data-slot='instruction-result-scroll-content']");
   await expect(resultContent).toContainText("수액 처치");
@@ -418,15 +429,15 @@ test("dispensing queue selection updates existing patient and instruction contex
 
   await page.getByTestId("order-queue-item-dispensing-queue-4").click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", "rgb(240, 255, 244)");
-  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("background-color", "rgb(240, 255, 244)");
-  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("color", "rgb(39, 103, 73)");
+  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
+  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
+  await expect(page.getByTestId("order-status-badge-neb-o-50010")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-success-text)"));
 
   await page.getByTestId("order-queue-item-dispensing-queue-5").click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("취소");
-  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", "rgb(255, 245, 245)");
-  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("background-color", "rgb(255, 245, 245)");
-  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("color", "rgb(197, 48, 48)");
+  await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
+  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
+  await expect(page.getByTestId("order-status-badge-cardio-o-60010")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-danger-text)"));
 });
 
 test("treatment module renders the chart queue instead of the order queue placeholder", async ({ page }) => {
@@ -438,14 +449,14 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await expect(sidePanel.getByRole("button", { name: "대기중 접기" })).toBeVisible();
   await expect(sidePanel.getByText("코코")).toBeVisible();
   await expect(page.getByRole("button", { name: "차트 이력 패널 열기" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
 test("right panel can be collapsed on a module that owns it", async ({ page }) => {
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=open");
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
-  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
   await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
   await expect(page).toHaveURL(/right=open/);
   await expect(page.getByRole("button", { name: "환자 정보 패널 접기" })).toBeVisible();

@@ -43,17 +43,19 @@ CdsUtilitiesCircleDashIcon.displayName = "CdsUtilitiesCircleDashIcon";
 
 const statusTone: Record<string, string> = {
   재요청:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
-  요청: "border-border bg-card text-[var(--clair-color-label-normal)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
+  요청:
+    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   조제중:
-    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   진행중:
-    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
-  대기중: "border-border bg-card text-[var(--clair-color-label-normal)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+  대기중:
+    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   완료:
-    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-600)]",
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   취소:
-    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
 };
 
 const statusIcon: Record<string, AppIcon> = {
@@ -79,7 +81,8 @@ export function EmrStatusBadge({
       data-testid={testId}
       className={cn(
         "h-6 rounded-lg px-2 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em]",
-        statusTone[label] ?? "border-border bg-card text-[var(--clair-color-label-normal)]",
+        statusTone[label] ??
+          "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
         className
       )}
       variant="outline"

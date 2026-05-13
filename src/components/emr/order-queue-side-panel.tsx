@@ -283,12 +283,12 @@ function OrderQueueCard({
           />
         }
       />
-      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-tertiary)]">
         <span className="shrink-0 truncate">{item.orderType}</span>
-        <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+        <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
         <span className="min-w-0 flex-1 truncate">{item.orderName}</span>
       </div>
-      <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+      <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
       <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
         <EmrSidePanelMetaBadge label="요청" value={item.requesterName} />
         {item.assigneeName ? <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} /> : null}

@@ -108,7 +108,7 @@ export function EmrSubpanelTitle({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-500)]"
+                className="text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-tertiary)]"
                 aria-label={collapseLabel}
                 onClick={onCollapse}
               >
@@ -152,7 +152,7 @@ export function EmrDateNavigator({
         aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
       >
         <CalendarIcon
-          className="size-3.5 shrink-0 text-[var(--clair-color-atomic-gray-400)]"
+          className="size-3.5 shrink-0 text-[var(--emr-text-tertiary)]"
           aria-hidden="true"
         />
         <span className="truncate">{dateLabel}</span>
@@ -192,12 +192,12 @@ export function EmrListHeader({
         className
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-600)]">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--emr-text-secondary)]">
         {leadingAction}
         {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
         <span className="truncate">{label}</span>
         {count !== undefined ? (
-          <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)]">
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-primary)]">
             {count}
           </Badge>
         ) : null}
@@ -237,11 +237,11 @@ export function EmrListGroup({
   const titleContent = (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <span className="h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--clair-color-atomic-orange-400)]" />
+        <span className="h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--emr-state-selected-border)]" />
         <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px]">
-          <span className="truncate text-[var(--clair-color-atomic-gray-600)]">{label}</span>
+          <span className="truncate text-[var(--emr-text-secondary)]">{label}</span>
           {count !== undefined ? (
-            <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{count}</span>
+            <span className="shrink-0 text-[var(--emr-text-tertiary)]">{count}</span>
           ) : null}
         </div>
       </div>
@@ -266,7 +266,7 @@ export function EmrListGroup({
       {onToggle ? (
         <button
           type="button"
-          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-[var(--emr-surface-muted)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-expanded={!collapsed}
           onClick={onToggle}
         >
@@ -326,15 +326,15 @@ export function EmrListItem({
       : "rounded-[var(--clair-radius-sm)] px-1 py-1",
     selected
       ? variant === "outline"
-        ? "border-[var(--emr-accent)] bg-[var(--emr-surface-selected)]"
+        ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
         : usesTransparentSurface
-          ? "border-transparent bg-transparent hover:bg-[var(--emr-surface-muted)]"
-          : "border-transparent bg-[var(--emr-accent-subtle)]"
+          ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
+          : "border-transparent bg-[var(--emr-state-selected)]"
       : variant === "outline"
-        ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-muted)]"
+        ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)]"
         : usesTransparentSurface
-          ? "border-transparent bg-transparent hover:bg-[var(--emr-surface-muted)]"
-          : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-surface-panel)]",
+          ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
+          : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-state-hover)]",
     className
   );
 

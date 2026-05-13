@@ -25,8 +25,8 @@ export function EmrIconButton({
       variant="ghost"
       size="icon-xs"
       className={cn(
-        "size-6 rounded-[var(--clair-radius-sm)] bg-transparent p-0 text-[var(--clair-color-label-alternative)]",
-        "[&[aria-expanded=true]:not(:hover)]:!bg-transparent hover:!bg-[var(--clair-color-background-subtle)] hover:text-[var(--clair-color-label-strong)]",
+        "size-6 rounded-[var(--clair-radius-sm)] bg-transparent p-0 text-[var(--emr-text-tertiary)]",
+        "[&[aria-expanded=true]:not(:hover)]:!bg-transparent hover:!bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)]",
         "focus-visible:ring-3 focus-visible:ring-ring/50",
         className
       )}

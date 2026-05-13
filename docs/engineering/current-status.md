@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-10
+Updated: 2026-05-13
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
@@ -69,6 +69,8 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-09 기준 App Shell은 Home처럼 module side panel이 없는 모듈에 진입할 때 `modulePanel=closed` URL/state를 `modulePanel=open`으로 정규화한다. 따라서 접힌 side panel 상태에서 Home으로 이동해도 nav rail의 `사이드 패널 펼치기` 버튼은 노출되지 않으며, 이후 side panel이 있는 모듈로 이동하면 해당 모듈 side panel이 다시 보인다.
 - 2026-05-10 기준 PWA install shell이 추가되었다. App Router manifest, install icons, Apple web app metadata, `#E9ECF2` app chrome theme color를 제공하지만 service worker, offline EMR data cache, push notification, background sync는 지원하지 않는다.
 - 2026-05-10 기준 Light Operational Foundation 1차가 추가되었다. Linear design reference는 다크모드가 아니라 밝은 EMR 업무 화면을 더 조용하고 정밀한 운영형 SaaS UI로 만드는 참고자료로 번역하며, `src/styles/tokens/emr-foundation.css`의 EMR alias layer와 shared subpanel/list/card/table surface 적용을 제공한다. Generated Clair token output은 직접 수정하지 않는다.
+- 2026-05-13 기준 Neutral Command + Semantic Status token direction이 설계 기준으로 추가되었다. shadcn `--primary`는 브랜드 블루가 아니라 command ink로 정의하고, blue는 정보/링크/제한적 브랜드 순간 및 `status-info` 계열로 분리한다. EMR 업무 화면은 surface, line, text, interaction, status alias layer를 통해 고밀도 화면 위계를 관리한다.
+- 2026-05-14 기준 Neutral Command + Semantic Status 적용률 보강으로 shared UI/EMR primitives의 status badge, input/select/textarea, segmented control, line tabs, workspace frame, text side panel, patient context bar, content history list, order queue summary, side-panel card/collapsible group, table checkbox, EMR data table warning/selection affordance가 EMR semantic alias를 더 넓게 사용한다. 화면별 직접 색상 정리는 후속 범위로 남긴다.
 - 2026-05-10 기준 app shell typography는 `pretendard` 패키지의 self-hosted variable webfont를 기본 sans stack으로 사용한다. Top menu와 app background는 `--clair-color-service-background` fallback을 공유해 standalone/PWA chrome과 일반 브라우저 chrome 간 배경 차이를 줄인다.
 - membership/permission enforcement 범위 계획은 완료되었지만 실제 API route, DB client, migration, live Supabase project validation, 서버 권한 enforcement code는 아직 연결하지 않았다.
 - MVP 전환 첫 단계로 `/login` 진입과 app shell auth guard를 제품형 mock auth 흐름으로 통합했고, Supabase 연결 전 auth boundary를 추가했다.

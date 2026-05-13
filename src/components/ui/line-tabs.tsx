@@ -52,12 +52,12 @@ export function LineTabs<TValue extends string>({
               size === "default" &&
                 "gap-1 px-2 text-[14px] leading-5",
               disabled &&
-                "cursor-not-allowed text-[var(--clair-color-atomic-gray-300)]",
+                "cursor-not-allowed text-[var(--emr-text-disabled)]",
               active &&
-                "text-[var(--clair-color-atomic-gray-900)] hover:text-[var(--clair-color-atomic-gray-900)]",
+                "text-[var(--emr-text-primary)] hover:text-[var(--emr-text-primary)]",
               !active &&
                 !disabled &&
-                "text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-atomic-gray-900)]",
+                "text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-primary)]",
               itemClassName
             )}
             onClick={() => onValueChange(item.value)}
@@ -69,7 +69,7 @@ export function LineTabs<TValue extends string>({
             <span
               aria-hidden="true"
               className={cn(
-                "h-0.5 w-full shrink-0 bg-[var(--clair-color-atomic-gray-900)] transition-opacity",
+                "h-0.5 w-full shrink-0 bg-[var(--emr-text-primary)] transition-opacity",
                 active ? "opacity-100" : "opacity-0"
               )}
             />

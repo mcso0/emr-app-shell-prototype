@@ -2,7 +2,7 @@
 version: "alpha"
 name: "CLAiR EMR"
 status: "active"
-updated: "2026-05-10"
+updated: "2026-05-13"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -37,8 +37,8 @@ CLAiR keeps the generated Clair token output as the base layer and adds a small 
 - `--emr-surface-selected`: selected list, card, and row surface
 - `--emr-line-hairline`: quiet dividers and panel borders
 - `--emr-line-strong`: stronger structural separators
-- `--emr-accent`: sparse selected and priority accent
-- `--emr-accent-subtle`: subtle accent fill
+- `--emr-accent`: sparse information, link, and limited brand identity accent
+- `--emr-accent-subtle`: subtle information or brand accent fill, not default selected state
 - `--emr-radius-control`: compact controls
 - `--emr-radius-panel`: panels and repeated cards
 
@@ -48,12 +48,19 @@ Generated files such as `src/styles/tokens/clair.css` should not be edited by ha
 
 CLAiR uses a bright clinical surface ladder:
 
+CLAiR follows the Neutral Command + Semantic Status direction:
+
+- primary is command ink, not brand blue
+- gray and cool-neutral surfaces carry structure, hover, selected, and focus states
+- blue is reserved for information, links, and limited brand identity moments
+- success, warning, danger, info, and neutral status colors stay semantically distinct
+
 - app canvas: near-white operational background
 - panel: white or Clair normal background
 - muted surface: low-contrast header, table, and nested surface
-- selected surface: pale accent-tinted fill
+- selected surface: cool-neutral state fill with enough contrast from hover
 - hairline: blue-gray structural divider
-- accent: sparse Linear-inspired lavender-blue for selected and priority states
+- accent: sparse information, link, and limited brand identity signal
 - focus: neutral gray ring through the shared `--ring` token by default
 
 Do not collapse the product into one brand color. Medical, billing, warning, danger, success, pending, and completed states keep their semantic colors.

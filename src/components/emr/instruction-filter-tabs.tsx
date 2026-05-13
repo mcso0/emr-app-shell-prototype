@@ -21,7 +21,7 @@ export function EmrInstructionFilterTabs<TValue extends string>({
   return (
     <LineTabs
       aria-label={ariaLabel}
-      className={cn("w-full border-b border-[var(--clair-color-line-normal)]", className)}
+      className={cn("w-full border-b border-[var(--emr-line-hairline)]", className)}
       size="default"
       value={value}
       items={items}

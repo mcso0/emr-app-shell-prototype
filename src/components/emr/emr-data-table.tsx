@@ -80,7 +80,7 @@ function OrderValue({
           {diff.previous}
         </span>
         <span className="text-[var(--clair-color-label-assistive)]">-&gt;</span>
-        <span className="truncate text-[var(--clair-color-atomic-orange-600)]">
+        <span className="truncate text-[var(--emr-status-warning-text)]">
           {diff.current}
         </span>
       </span>
@@ -108,7 +108,7 @@ function AssigneeAvatar({ order }: { order: Order }) {
       className={cn(
         "inline-flex size-6 items-center justify-center rounded-full text-[9px] font-medium",
         assigned
-          ? "bg-[var(--clair-color-atomic-gray-200)] text-[var(--clair-color-atomic-gray-900)]"
+          ? "bg-[var(--emr-status-neutral-border)] text-[var(--emr-text-primary)]"
           : "border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--clair-color-label-assistive)]"
       )}
       title={order.assignee}
@@ -195,7 +195,7 @@ function WorkStatusButton({
       className={cn(
         "h-6 gap-1 rounded-md bg-[var(--emr-surface-panel)] px-2 text-[12px]",
         completed &&
-          "border-[var(--clair-color-atomic-sky-100)] text-[var(--clair-color-primary-normal)]"
+          "border-[var(--emr-status-success-border)] text-[var(--emr-status-success-text)]"
       )}
       disabled={completed || order.status === "취소"}
       onClick={(event) => {
@@ -515,8 +515,8 @@ export function EmrDataTable({
                         type="button"
                         aria-label={`${header.column.id} 컬럼 너비 조절`}
                         className={cn(
-                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-line-hairline)] hover:bg-[var(--emr-accent-subtle)] focus-visible:ring-3 focus-visible:ring-ring/50",
-                          header.column.getIsResizing() && "bg-[var(--emr-accent-subtle)]"
+                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-line-hairline)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50",
+                          header.column.getIsResizing() && "bg-[var(--emr-state-drag)]"
                         )}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={header.getResizeHandler()}
@@ -535,7 +535,7 @@ export function EmrDataTable({
               <TableRow
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 data-testid={`order-row-${sectionId}-${row.original.id}`}
-                className="group/order-row h-11 cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--clair-color-label-normal)] hover:!bg-[var(--emr-surface-muted)] data-[state=selected]:!bg-[var(--emr-surface-selected)]"
+                className="group/order-row h-11 cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)] hover:!bg-[var(--emr-state-hover)] data-[state=selected]:!bg-[var(--emr-state-selected)]"
                 onClick={(event) => {
                   const target = event.target as HTMLElement;
 
@@ -576,10 +576,10 @@ export function EmrDataTable({
               {row.original.warningMessage ? (
                 <TableRow
                   key={`${row.id}-warning`}
-                  className="h-8 border-[var(--emr-line-hairline)] bg-[var(--clair-color-atomic-orange-50)] hover:bg-[var(--clair-color-atomic-orange-50)]"
+                  className="h-8 border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] hover:bg-[var(--emr-status-warning-bg)]"
                 >
                   <TableCell colSpan={row.getVisibleCells().length} className="px-8 py-1">
-                    <div className="flex h-6 items-center gap-2 text-[14px] font-medium text-[var(--clair-color-atomic-orange-700)]">
+                    <div className="flex h-6 items-center gap-2 text-[14px] font-medium text-[var(--emr-status-warning-text)]">
                       <WarningIcon className="size-4" />
                       {row.original.warningMessage}
                     </div>

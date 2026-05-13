@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "pretendard/dist/web/variable/pretendardvariable.css";
 @import "../styles/tokens/shadcn.css";
+@import "../styles/tokens/emr-foundation.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -53,36 +54,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --chart-1: var(--clair-color-atomic-blue-500);
-  --chart-2: var(--clair-color-atomic-green-500);
-  --chart-3: var(--clair-color-atomic-orange-500);
-  --chart-4: var(--clair-color-atomic-purple-500);
-  --chart-5: var(--clair-color-atomic-cyan-500);
-  --sidebar: var(--clair-color-atomic-gray-900);
-  --sidebar-foreground: var(--clair-color-atomic-gray-50);
-  --sidebar-primary: var(--clair-color-atomic-gray-800);
-  --sidebar-primary-foreground: var(--clair-color-atomic-common-100);
-  --sidebar-accent: var(--clair-color-atomic-gray-800);
-  --sidebar-accent-foreground: var(--clair-color-atomic-gray-50);
-  --sidebar-border: var(--clair-color-atomic-gray-700);
-  --sidebar-ring: var(--clair-color-atomic-sky-500);
-  --ring: var(--clair-color-atomic-gray-400);
-  --selection: var(--clair-color-fill-alternative);
-  --selection-border: var(--clair-color-line-strong);
-  --clair-color-service-background: #FBFCFD;
-  --emr-surface-app: #FBFCFD;
-  --emr-surface-panel: var(--clair-color-background-normal);
-  --emr-surface-muted: var(--clair-color-background-surface);
-  --emr-surface-selected: #F4F6FF;
-  --emr-line-hairline: #DFE5ED;
-  --emr-line-strong: var(--clair-color-line-strong);
-  --emr-accent: #5E6AD2;
-  --emr-accent-subtle: #EEF0FF;
-  --emr-radius-control: var(--clair-radius-md);
-  --emr-radius-panel: var(--clair-radius-lg);
-}
-
 .dark {
   --background: var(--clair-color-background-normal);
   --foreground: var(--clair-color-label-strong);
@@ -132,7 +103,7 @@
   }
 
   .emr-selected-surface {
-    border-color: var(--emr-accent);
+    border-color: var(--emr-state-selected-border);
     background-color: var(--emr-surface-selected);
   }
 }

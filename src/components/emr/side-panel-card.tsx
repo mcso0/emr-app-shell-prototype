@@ -17,7 +17,7 @@ type EmrSidePanelCardProps = {
 };
 
 const sidePanelBadgeIconClassName =
-  "flex size-3.5 shrink-0 items-center justify-center text-[var(--clair-color-atomic-gray-400)] [&_svg]:text-[var(--clair-color-atomic-gray-400)]";
+  "flex size-3.5 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:text-[var(--emr-text-tertiary)]";
 
 export function EmrSidePanelCard({
   children,
@@ -40,8 +40,8 @@ export function EmrSidePanelCard({
       className={cn(
         "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 pb-2.5 pt-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
         selected &&
-          "border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-atomic-sky-50)] pl-3.5",
-        !selected && "hover:bg-[var(--emr-surface-muted)]",
+          "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] pl-3.5",
+        !selected && "hover:bg-[var(--emr-state-hover)]",
         className
       )}
       data-testid={testId}
@@ -52,7 +52,7 @@ export function EmrSidePanelCard({
     >
       {selected ? (
         <span
-          className="absolute inset-y-0 left-0 w-1 bg-[var(--clair-color-primary-normal)]"
+          className="absolute inset-y-0 left-0 w-1 bg-[var(--emr-state-selected-border)]"
           aria-hidden="true"
         />
       ) : null}
@@ -74,9 +74,9 @@ export function EmrSidePanelIdentityLine({
 }) {
   return (
     <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-semibold leading-5 tracking-normal text-[var(--clair-color-label-strong)]">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-semibold leading-5 tracking-normal text-[var(--emr-text-primary)]">
         <span className="truncate">{patientName}</span>
-        <span className="shrink-0 font-medium text-[var(--clair-color-atomic-gray-500)]">·</span>
+        <span className="shrink-0 font-medium text-[var(--emr-text-tertiary)]">·</span>
         <span className="truncate">{guardianName}</span>
         {typeBadge}
       </div>
@@ -97,7 +97,7 @@ export function EmrSidePanelCardAction({
       type="button"
       variant="outline"
       size="icon-xs"
-      className="size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-panel)] p-0 text-[var(--clair-color-label-normal)] opacity-0 transition-opacity hover:bg-[var(--emr-surface-muted)] focus-visible:opacity-100 group-hover/emr-side-panel-card:opacity-100 group-focus-within/emr-side-panel-card:opacity-100 group-data-[selected=true]/emr-side-panel-card:opacity-100 [&_svg]:size-4"
+      className="size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-panel)] p-0 text-[var(--emr-text-secondary)] opacity-0 transition-opacity hover:bg-[var(--emr-surface-muted)] focus-visible:opacity-100 group-hover/emr-side-panel-card:opacity-100 group-focus-within/emr-side-panel-card:opacity-100 group-data-[selected=true]/emr-side-panel-card:opacity-100 [&_svg]:size-4"
       aria-label={ariaLabel}
       data-testid={testId}
       onClick={(event) => event.stopPropagation()}
@@ -117,8 +117,8 @@ export function EmrSidePanelTypeBadge({ label }: { label: string }) {
       className={cn(
         "h-5 shrink-0 rounded-[var(--clair-radius-atomic-6)] border-transparent px-1.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
         reservation
-          ? "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-atomic-blue-600)]"
-          : "bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-900)]"
+          ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
+          : "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]"
       )}
     >
       {label}
@@ -152,9 +152,9 @@ export function EmrSidePanelMetaBadge({
           {resolvedIcon}
         </span>
       ) : (
-        <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">{label}</span>
+        <span className="shrink-0 text-[var(--emr-text-tertiary)]">{label}</span>
       )}
-      <span className="truncate text-[var(--clair-color-atomic-gray-700)]">{value}</span>
+      <span className="truncate text-[var(--emr-text-secondary)]">{value}</span>
     </span>
   );
 }
@@ -183,7 +183,7 @@ export function EmrSidePanelStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-600)]",
+        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)]",
         maxWidthClassName
       )}
     >
