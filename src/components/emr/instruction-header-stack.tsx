@@ -96,7 +96,7 @@ export function EmrInstructionHeaderStack({
   return (
     <div data-slot="instruction-header-stack" className={cn("flex shrink-0 flex-col", className)}>
       <div data-slot="instruction-header-title-bar">{titleBar}</div>
-      <div data-slot="instruction-header-order-info" className="mt-6">
+      <div data-slot="instruction-header-order-info" className="mt-4">
         {orderInfo}
       </div>
       {filters ? (

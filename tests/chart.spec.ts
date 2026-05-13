@@ -39,46 +39,68 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(
     page.getByRole("separator", { name: "진료 기록과 처방/오더 영역 높이 조절" })
   ).toHaveCSS("height", "16px");
+  const chartWorkspace = page.locator('[data-slot="chart-workspace"]');
+  await expect(chartWorkspace).toHaveCSS("margin-top", "8px");
+  await expect(chartWorkspace).toHaveCSS("padding-top", "8px");
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("담당 수의사")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "진료 기록" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "진료 기록" })).toHaveCount(0);
   await expect(page.getByText("기본 SOAP")).toBeVisible();
-  await expect(page.getByText("소화기 SOAP")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "소화기", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "진단 이력" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /처방\/오더/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
+  const soapDiagnosisGridMetrics = await page.getByTestId("chart-soap-diagnosis-grid").evaluate((element) => {
+    const [soapPanel, diagnosisPanel] = Array.from(element.children) as HTMLElement[];
+
+    return {
+      diagnosisWidth: diagnosisPanel.getBoundingClientRect().width,
+      gap: getComputedStyle(element).columnGap,
+      soapWidth: soapPanel.getBoundingClientRect().width,
+    };
+  });
+  expect(soapDiagnosisGridMetrics.gap).toBe("8px");
+  expect(Math.abs(soapDiagnosisGridMetrics.soapWidth - soapDiagnosisGridMetrics.diagnosisWidth)).toBeLessThanOrEqual(1);
   await expect(page.getByText("급성 위장관염 의심", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("항구토제 세트")).toBeVisible();
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "오더 전체 선택" })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" })).not.toBeChecked();
-  await page.getByRole("button", { name: "소화기 SOAP 첨부 추가" }).click();
-  await expect(page.getByText("1개").first()).toBeVisible();
+  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
+  await page.getByRole("menuitem", { name: "첨부" }).click();
+  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
+  await expect(page.getByRole("menuitem", { name: "첨부 1" })).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
-test("chart diagnosis comment and plan are editable text areas", async ({ page }) => {
+test("chart diagnosis panel omits comment and plan text areas", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 
-  await page.getByLabel("진단 코멘트").fill("보호자에게 탈수 징후 설명 완료.");
-  await page.getByLabel("Plan").fill("수액 후 24시간 식욕과 구토 횟수 확인.");
+  const diagnosisPanel = page.getByLabel("진단명 관리");
 
-  await expect(page.getByLabel("진단 코멘트")).toHaveValue("보호자에게 탈수 징후 설명 완료.");
-  await expect(page.getByLabel("Plan")).toHaveValue("수액 후 24시간 식욕과 구토 횟수 확인.");
+  await expect(diagnosisPanel.getByText("진단 목록 · 코멘트 · 계획")).toHaveCount(0);
+  await expect(diagnosisPanel.getByLabel("진단 코멘트")).toHaveCount(0);
+  await expect(diagnosisPanel.getByLabel("Plan")).toHaveCount(0);
+  await expect(diagnosisPanel.getByText("사전 연결 · 의심")).toHaveCount(0);
 });
 
 test("chart SOAP editor keeps SOAP fields structured and uses an inline link popover", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 
-  const subjectiveEditor = page.getByLabel("기본 SOAP 주관적 기록");
+  const subjectiveEditor = page.getByLabel("기본 SOAP 기록");
 
   await expect(page.getByText("주관적", { exact: true }).first()).toBeVisible();
   await expect(subjectiveEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
 
   await subjectiveEditor.click();
+  await expect(page.getByRole("toolbar", { name: "기본 SOAP 선택 서식 도구" })).toHaveCount(0);
+  await page.keyboard.press("ControlOrMeta+A");
+  const soapSelectionToolbar = page.getByRole("toolbar", { name: "기본 SOAP 선택 서식 도구" });
+  await expect(soapSelectionToolbar).toBeVisible();
   await expect(page.getByText("주관적", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "기본 SOAP 굵게" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "기본 SOAP 글머리 목록" })).toBeEnabled();
+  await expect(soapSelectionToolbar.getByRole("button", { name: "기본 SOAP 굵게" })).toBeEnabled();
+  await expect(soapSelectionToolbar.getByRole("button", { name: "기본 SOAP 글머리 목록" })).toBeEnabled();
 
   let promptOpened = false;
   page.on("dialog", async (dialog) => {
@@ -86,11 +108,42 @@ test("chart SOAP editor keeps SOAP fields structured and uses an inline link pop
     await dialog.dismiss();
   });
 
-  await page.getByRole("button", { name: "기본 SOAP 링크" }).click();
+  await soapSelectionToolbar.getByRole("button", { name: "기본 SOAP 링크" }).click();
   await expect(page.getByText("링크 추가")).toBeVisible();
   await page.getByLabel("링크 URL").fill("example.com/chart-note");
   await page.getByRole("button", { name: "적용" }).click();
   expect(promptOpened).toBe(false);
+});
+
+test("chart SOAP tabs add systems, prevent duplicates, reset, undo, and delete", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  const soapEditor = page.getByLabel("기본 SOAP 기록");
+  await expect(soapEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
+
+  await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
+  await page.getByRole("menuitem", { name: "초기화" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "초기화" }).click();
+  await expect(soapEditor).toContainText("보호자 진술:");
+  await page.getByRole("button", { name: "되돌리기" }).click();
+  await expect(soapEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
+
+  await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "호흡기" }).click();
+  await expect(page.getByRole("tab", { name: "호흡기", exact: true })).toBeVisible();
+  await expect(page.getByLabel("호흡기 SOAP 기록")).toContainText("보호자 진술:");
+
+  await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+  const addDialog = page.getByRole("dialog");
+  await expect(addDialog.getByRole("button", { name: /호흡기/ })).toBeDisabled();
+  await expect(addDialog.getByText("이미 추가됨")).toHaveCount(2);
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "호흡기 SOAP 작업" }).click();
+  await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "삭제" }).click();
+  await expect(page.getByRole("tab", { name: "호흡기", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "소화기", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({ page }) => {
@@ -98,7 +151,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
 
   const diagnosisPanel = page.getByLabel("진단명 관리");
 
-  await diagnosisPanel.getByLabel("진단명 검색").click();
+  await diagnosisPanel.getByRole("button", { name: "분류검색" }).click();
   await expect(page.getByRole("listbox", { name: "진단명 검색 결과" })).toBeVisible();
   await expect(page.getByText("SOAP/주호소 기반 추천")).toBeVisible();
   await expect(page.getByRole("option", { name: /급성 위장관염 의심/ })).toBeVisible();
@@ -107,18 +160,18 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
   await page.getByRole("option", { name: /췌장염 감별/ }).click();
 
   await expect(diagnosisPanel.getByText("췌장염 감별")).toBeVisible();
-  await expect(diagnosisPanel.getByText("사전 연결 · 감별")).toBeVisible();
-  await expect(page.getByText("소화기 SOAP")).toBeVisible();
+  await expect(diagnosisPanel.getByText("사전 연결 · 감별")).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "소화기", exact: true })).toBeVisible();
 
   await diagnosisPanel.getByLabel("진단명 검색").fill("탈수");
   await page.getByRole("option", { name: /경도 탈수/ }).click();
 
   await expect(diagnosisPanel.getByText("경도 탈수")).toBeVisible();
-  await expect(page.getByText("전신 SOAP")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "전신", exact: true })).toBeVisible();
 
   const pancreatitisConfirmedToggle = diagnosisPanel.getByRole("button", { name: "췌장염 감별 확진 토글" });
   await pancreatitisConfirmedToggle.click();
-  await expect(diagnosisPanel.getByText("사전 연결 · 확진")).toBeVisible();
+  await expect(diagnosisPanel.getByText("사전 연결 · 확진")).toHaveCount(0);
   await expect(pancreatitisConfirmedToggle).toHaveAttribute("aria-pressed", "true");
   await pancreatitisConfirmedToggle.click();
   await expect(pancreatitisConfirmedToggle).toHaveAttribute("aria-pressed", "false");
@@ -127,7 +180,7 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
   await page.getByRole("option", { name: /보호자 설명용 임시 진단/ }).click();
 
   await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toBeVisible();
-  await expect(diagnosisPanel.getByText("직접 입력 · 의심")).toBeVisible();
+  await expect(diagnosisPanel.getByText("직접 입력 · 의심")).toHaveCount(0);
 
   await diagnosisPanel.getByRole("button", { name: "보호자 설명용 임시 진단 삭제" }).click();
   await expect(diagnosisPanel.getByText("보호자 설명용 임시 진단")).toHaveCount(0);
@@ -171,14 +224,14 @@ test("chart safety context and confirmation dialogs identify the active patient"
 test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 
-  const addSoapButton = page.getByRole("button", { name: "SOAP 추가", exact: true });
-
-  for (let count = 0; count < 4; count += 1) {
-    await addSoapButton.click();
+  for (const systemLabel of ["호흡기", "피부", "전신", "예방"]) {
+    await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: systemLabel }).click();
   }
 
-  await expect(page.getByText("추가 계통 SOAP 4")).toBeVisible();
-  await expectTopEdgeInViewport(page, page.getByRole("heading", { name: /처방\/오더/ }));
+  await expect(page.getByRole("button", { name: "SOAP 더보기" })).toBeVisible();
+  await expectTopEdgeInViewport(page, page.getByRole("tab", { name: "전체오더" }));
   await expectTopEdgeInViewport(page, page.getByRole("button", { name: "Order 확정" }));
 });
 
@@ -186,7 +239,7 @@ test("chart grab divider resizes the SOAP and order areas", async ({ page }) => 
   await page.goto(kongScenarioUrl);
 
   const divider = page.getByRole("separator", { name: "진료 기록과 처방/오더 영역 높이 조절" });
-  const orderHeading = page.getByRole("heading", { name: /처방\/오더/ });
+  const orderHeading = page.getByRole("tab", { name: "전체오더" });
 
   await expect(divider).toBeVisible();
   await expect(orderHeading).toBeVisible();
@@ -308,10 +361,12 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
   await expect(page.getByText("구토 완화 처방")).toBeVisible();
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
   await expect(page.getByText("복부 초음파").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "경구제 1" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "원내 검사 1" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "영상 1" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "치료 1" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "전체오더 4", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "임상 1", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "영상 1", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "조제 1", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "처치 1", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "수납 0", exact: true })).toBeVisible();
 });
 
 test("chart queue selection changes the selected encounter", async ({ page }) => {

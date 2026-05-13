@@ -12,7 +12,9 @@ import {
   type SetStateAction,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
@@ -36,6 +38,7 @@ import {
   CdsNavigationChevronsRightIcon,
   CdsNavigationSidebarIcon,
 } from "@/components/cds-icons/navigation";
+import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
@@ -55,11 +58,16 @@ import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Table,
   TableBody,
@@ -68,7 +76,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import {
   getChartEncounter,
   getChartHistoryRows,
@@ -101,7 +108,7 @@ import type {
 } from "@/types/emr-domain";
 
 type ChartBundle = NonNullable<ReturnType<typeof getChartEncounter>>;
-type OrderFilter = "all" | EmrOrderType;
+type OrderFilter = "all" | EmrOrderType | "billing";
 
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
@@ -129,6 +136,15 @@ const orderStatusLabel: Record<EmrOrderStatus, string> = {
   re_requested: "재요청",
   requested: "요청",
 };
+
+const chartOrderTabs: Array<{ value: OrderFilter; label: string }> = [
+  { value: "all", label: "전체오더" },
+  { value: "lab", label: "임상" },
+  { value: "imaging", label: "영상" },
+  { value: "dispensing", label: "조제" },
+  { value: "treatment", label: "처치" },
+  { value: "billing", label: "수납" },
+];
 
 const getShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
@@ -540,10 +556,33 @@ const soapTemplateRows = [
   { label: "계획", valueKey: "plan" },
 ] as const;
 
+const soapDefaultTemplate: Record<(typeof soapTemplateRows)[number]["valueKey"], string> = {
+  subjective: "보호자 진술:",
+  objective: "신체검사 소견:",
+  assessment: "평가:",
+  plan: "계획:",
+};
+
+const soapSystemOptions = ["소화기", "호흡기", "피부", "전신", "예방", "검사", "기타"] as const;
+const SOAP_VISIBLE_SYSTEM_TAB_COUNT = 3;
+
 type SoapEditorField = {
   id: (typeof soapTemplateRows)[number]["valueKey"];
   label: string;
   value: string;
+};
+
+type SoapSectionState = {
+  id: string;
+  systemLabel?: string;
+  title: string;
+  fields: SoapEditorField[];
+  content: string;
+  status?: SoapNote["status"];
+  statusAt?: string;
+  attachmentCount: number;
+  deletable: boolean;
+  version: number;
 };
 
 const escapeHtml = (value: string) =>
@@ -553,24 +592,60 @@ const escapeHtml = (value: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
-function ChartSectionTitle({ subtitle, title }: { subtitle: string; title: string }) {
+function ChartSectionTitle({ subtitle, title }: { subtitle?: string; title: string }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2.5">
       <h2 className="shrink-0 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] text-foreground">
         {title}
       </h2>
-      <span className="min-w-0 truncate text-[14px] font-medium text-[var(--clair-color-atomic-gray-400)]">{subtitle}</span>
+      {subtitle ? (
+        <span className="min-w-0 truncate text-[14px] font-medium text-[var(--clair-color-atomic-gray-400)]">
+          {subtitle}
+        </span>
+      ) : null}
     </div>
   );
 }
 
-function buildSoapEditorFields(soapNote?: SoapNote): SoapEditorField[] {
+function buildSoapEditorFields(soapNote?: SoapNote, useDefaultTemplate = true): SoapEditorField[] {
   return soapTemplateRows.map(({ label, valueKey }) => ({
     id: valueKey,
     label,
-    value: soapNote?.[valueKey] ?? "",
+    value: soapNote?.[valueKey] ?? (useDefaultTemplate ? soapDefaultTemplate[valueKey] : ""),
   }));
 }
+
+const buildSystemSoapId = (systemLabel: string) => `system-${systemLabel}`;
+
+const createSystemSoapSection = (systemLabel: string): SoapSectionState => ({
+  id: buildSystemSoapId(systemLabel),
+  systemLabel,
+  title: systemLabel,
+  fields: buildSoapEditorFields(),
+  content: buildSoapDocumentHtml(buildSoapEditorFields()),
+  status: "draft",
+  statusAt: undefined,
+  attachmentCount: 0,
+  deletable: true,
+  version: 0,
+});
+
+const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "").replaceAll("&nbsp;", " ").trim();
+
+function buildSoapDocumentHtml(fields: SoapEditorField[]) {
+  return fields
+    .map((field) => {
+      const value = stripHtml(field.value);
+      return `<p><strong>${escapeHtml(field.label)}</strong></p><p>${escapeHtml(value)}</p>`;
+    })
+    .join("");
+}
+
+const hasMeaningfulSoapContent = (section: SoapSectionState) => {
+  const plainValue = stripHtml(section.content);
+  const templateValue = stripHtml(buildSoapDocumentHtml(buildSoapEditorFields()));
+  return Boolean(plainValue && plainValue !== templateValue);
+};
 
 function normalizeEditorLinkHref(value: string) {
   const trimmedValue = value.trim();
@@ -582,90 +657,418 @@ function normalizeEditorLinkHref(value: string) {
 }
 
 function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?: SoapNote }) {
-  const [attachmentCounts, setAttachmentCounts] = useState<Record<string, number>>({});
-  const [extraSections, setExtraSections] = useState<Array<{ id: string; title: string }>>([]);
+  const defaultSection = useMemo<SoapSectionState>(
+    () => {
+      const fields = buildSoapEditorFields(soapNote);
+
+      return {
+        id: "default",
+        title: "기본 SOAP",
+        fields,
+        content: buildSoapDocumentHtml(fields),
+        status: soapNote?.status,
+        statusAt: soapNote?.signedAt ?? soapNote?.updatedAt,
+        attachmentCount: 0,
+        deletable: false,
+        version: 0,
+      };
+    },
+    [soapNote]
+  );
+  const [sectionOverrides, setSectionOverrides] = useState<Record<string, SoapSectionState>>({});
+  const [manualSystemLabels, setManualSystemLabels] = useState<string[]>([]);
+  const [deletedSystemLabels, setDeletedSystemLabels] = useState<string[]>([]);
+  const [activeSoapId, setActiveSoapId] = useState("default");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteSoapId, setDeleteSoapId] = useState<string | null>(null);
+  const [resetSoapId, setResetSoapId] = useState<string | null>(null);
+
   const diagnosisSystemSections = useMemo(() => {
-    const labels = diagnoses.map(getSoapSystemLabel);
+    const labels = diagnoses.map(getSoapSystemLabel).filter(Boolean);
     return Array.from(new Set(labels));
   }, [diagnoses]);
-  const soapSections = [
-    {
-      id: "default",
-      initialFields: buildSoapEditorFields(soapNote),
-      status: soapNote?.status,
-      statusAt: soapNote?.signedAt ?? soapNote?.updatedAt,
-      title: "기본 SOAP",
-    },
-    ...diagnosisSystemSections.map((title) => ({
-      id: `diagnosis-${title}`,
-      initialFields: buildSoapEditorFields(),
-      status: undefined,
-      statusAt: undefined,
-      title: `${title} SOAP`,
-    })),
-    ...extraSections.map((section) => ({
-      id: section.id,
-      initialFields: buildSoapEditorFields(),
-      status: "draft" as const,
-      statusAt: undefined,
-      title: section.title,
-    })),
-  ];
-  const addSoapSection = () => {
-    setExtraSections((current) => [
-      ...current,
-      {
-        id: `extra-${current.length + 1}`,
-        title: `추가 계통 SOAP ${current.length + 1}`,
-      },
-    ]);
+
+  const systemLabels = useMemo(() => {
+    const labels = [
+      ...diagnosisSystemSections.filter((systemLabel) => !deletedSystemLabels.includes(systemLabel)),
+      ...manualSystemLabels,
+    ];
+    return Array.from(new Set(labels));
+  }, [deletedSystemLabels, diagnosisSystemSections, manualSystemLabels]);
+
+  const soapSections = useMemo(
+    () => [
+      sectionOverrides.default ?? defaultSection,
+      ...systemLabels.map((systemLabel) => {
+        const id = buildSystemSoapId(systemLabel);
+        return sectionOverrides[id] ?? createSystemSoapSection(systemLabel);
+      }),
+    ],
+    [defaultSection, sectionOverrides, systemLabels]
+  );
+  const resolvedActiveSoapId = soapSections.some((section) => section.id === activeSoapId) ? activeSoapId : "default";
+  const activeSection = soapSections.find((section) => section.id === resolvedActiveSoapId) ?? soapSections[0];
+  const addedSystemLabels = new Set(
+    soapSections
+      .map((section) => section.systemLabel)
+      .filter((systemLabel): systemLabel is string => typeof systemLabel === "string")
+  );
+  const systemSections = soapSections.filter((section) => section.id !== "default");
+  const visibleSystemSections = systemSections.slice(0, SOAP_VISIBLE_SYSTEM_TAB_COUNT);
+  const overflowSystemSections = systemSections.slice(SOAP_VISIBLE_SYSTEM_TAB_COUNT);
+  const activeInOverflow = overflowSystemSections.some((section) => section.id === resolvedActiveSoapId);
+  const deleteTarget = soapSections.find((section) => section.id === deleteSoapId);
+  const resetTarget = soapSections.find((section) => section.id === resetSoapId);
+
+  const updateSectionOverride = (section: SoapSectionState) => {
+    setSectionOverrides((currentOverrides) => ({
+      ...currentOverrides,
+      [section.id]: section,
+    }));
   };
+
+  const updateActiveSoapContent = (content: string) => {
+    if (!activeSection) return;
+    updateSectionOverride({ ...activeSection, content });
+  };
+
+  const addSystemSoap = (systemLabel: string, shouldActivate: boolean) => {
+    const nextSection = createSystemSoapSection(systemLabel);
+    setDeletedSystemLabels((currentLabels) => currentLabels.filter((label) => label !== systemLabel));
+    setManualSystemLabels((currentLabels) => {
+      if (currentLabels.includes(systemLabel) || diagnosisSystemSections.includes(systemLabel)) return currentLabels;
+      return [...currentLabels, systemLabel];
+    });
+    setSectionOverrides((currentOverrides) =>
+      currentOverrides[nextSection.id]
+        ? currentOverrides
+        : {
+            ...currentOverrides,
+            [nextSection.id]: nextSection,
+          }
+    );
+    if (shouldActivate) {
+      setActiveSoapId(nextSection.id);
+    }
+  };
+
+  const confirmDeleteSoap = () => {
+    if (!deleteTarget?.deletable) return;
+
+    const sectionToRestore = deleteTarget;
+    const targetIndex = soapSections.findIndex((section) => section.id === deleteTarget.id);
+    const nextActiveId = targetIndex > 0 ? (soapSections[targetIndex - 1]?.id ?? "default") : "default";
+
+    if (deleteTarget.systemLabel) {
+      setDeletedSystemLabels((currentLabels) =>
+        currentLabels.includes(deleteTarget.systemLabel!)
+          ? currentLabels
+          : [...currentLabels, deleteTarget.systemLabel!]
+      );
+      setManualSystemLabels((currentLabels) => currentLabels.filter((label) => label !== deleteTarget.systemLabel));
+    }
+    setSectionOverrides((currentOverrides) => {
+      const nextOverrides = { ...currentOverrides };
+      delete nextOverrides[deleteTarget.id];
+      return nextOverrides;
+    });
+
+    setActiveSoapId(nextActiveId);
+    setDeleteSoapId(null);
+
+    toast.success(`${sectionToRestore.title} SOAP를 삭제했습니다.`, {
+      action: {
+        label: "되돌리기",
+        onClick: () => {
+          if (sectionToRestore.systemLabel) {
+            setDeletedSystemLabels((currentLabels) =>
+              currentLabels.filter((label) => label !== sectionToRestore.systemLabel)
+            );
+            setManualSystemLabels((currentLabels) =>
+              currentLabels.includes(sectionToRestore.systemLabel!)
+                ? currentLabels
+                : [...currentLabels, sectionToRestore.systemLabel!]
+            );
+          }
+          updateSectionOverride(sectionToRestore);
+          setActiveSoapId(sectionToRestore.id);
+        },
+      },
+    });
+  };
+
+  const confirmResetSoap = () => {
+    if (!resetTarget) return;
+
+    const previousSection = resetTarget;
+    const resetFields = buildSoapEditorFields();
+    updateSectionOverride({
+      ...resetTarget,
+      fields: resetFields,
+      content: buildSoapDocumentHtml(resetFields),
+      version: resetTarget.version + 1,
+    });
+    setResetSoapId(null);
+
+    toast.success(`${previousSection.title} 내용을 기본 템플릿으로 초기화했습니다.`, {
+      action: {
+        label: "되돌리기",
+        onClick: () => {
+          updateSectionOverride(previousSection);
+          setActiveSoapId(previousSection.id);
+        },
+      },
+    });
+  };
+
+  const soapTabItems = [
+    { value: "default", label: "기본 SOAP" },
+    ...visibleSystemSections.map((section) => ({ value: section.id, label: section.title })),
+  ];
+  const soapTabs = (
+    <div className="relative z-20 flex min-w-0 flex-1 items-stretch gap-2.5">
+      <ChartLineTabGroup
+        aria-label="SOAP 분류"
+        items={soapTabItems}
+        value={resolvedActiveSoapId}
+        onValueChange={setActiveSoapId}
+      />
+      {overflowSystemSections.length ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label="SOAP 더보기"
+            aria-pressed={activeInOverflow}
+            className={cn(
+              "inline-flex h-full shrink-0 items-center gap-1 px-2 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] outline-none transition-colors hover:bg-[var(--clair-color-background-surface)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              activeInOverflow
+                ? "text-[var(--clair-color-atomic-gray-900)]"
+                : "text-[var(--clair-color-atomic-gray-500)]"
+            )}
+          >
+            더보기
+            <Badge variant="outline" className="ml-1 px-1.5 text-[10px]">
+              {overflowSystemSections.length}
+            </Badge>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-44">
+            {overflowSystemSections.map((section) => (
+              <DropdownMenuItem
+                key={section.id}
+                className="h-8 cursor-pointer justify-between"
+                onClick={() => setActiveSoapId(section.id)}
+              >
+                <span>{section.title}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`${section.title} SOAP 삭제`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDeleteSoapId(section.id);
+                  }}
+                >
+                  <CdsActionsXIcon className="size-3" />
+                </Button>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="self-center text-[var(--clair-color-atomic-gray-500)]"
+        onClick={() => setAddDialogOpen(true)}
+      >
+        + 추가
+      </Button>
+    </div>
+  );
+
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <div className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
-        <ChartSectionTitle title="진료 기록" subtitle="진단계통별 SOAP 작성" />
-        <div className="flex items-center gap-1.5">
-          <Button type="button" variant="outline" size="sm" className="bg-card" onClick={addSoapSection}>
-            SOAP 추가
-          </Button>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-4">
-        <div className="grid gap-3">
-          {soapSections.map((section) => (
-            <div key={section.id} className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-              <div className="relative z-10 flex min-h-9 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3">
-                <span className="text-[13px] font-semibold">{section.title}</span>
-                <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-400)]">
-                  {getSoapSectionStatusText(section.status, section.statusAt)}
-                </span>
-              </div>
-              <SoapRichTextEditor
-                key={`${soapNote?.id ?? "empty"}-${section.id}`}
-                initialFields={section.initialFields}
-                label={section.title}
-                attachmentCount={attachmentCounts[section.id] ?? 0}
-                onAddAttachment={() => {
-                  setAttachmentCounts((current) => ({
-                    ...current,
-                    [section.id]: (current[section.id] ?? 0) + 1,
-                  }));
+      <div className="relative z-10 flex h-12 min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
+        {soapTabs}
+        {activeSection ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${activeSection.title}${activeSection.title.endsWith("SOAP") ? "" : " SOAP"} 작업`}
+                  className="relative z-30 self-center text-[var(--clair-color-atomic-gray-500)]"
+                >
+                  <CdsFilesMoreHorizontalIcon className="size-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                className="h-8 cursor-pointer"
+                onClick={() => setResetSoapId(activeSection.id)}
+              >
+                <CdsActionsRotateCcwIcon data-icon="inline-start" />
+                초기화
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="h-8 cursor-pointer"
+                onClick={() => {
+                  updateSectionOverride({ ...activeSection, attachmentCount: activeSection.attachmentCount + 1 });
                 }}
-              />
-              <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 text-[12px] text-muted-foreground">
-                <span>첨부 자료</span>
-                <Badge variant="outline">{attachmentCounts[section.id] ? `${attachmentCounts[section.id]}개` : "없음"}</Badge>
-              </div>
-            </div>
-          ))}
-        </div>
+              >
+                첨부{activeSection.attachmentCount ? ` ${activeSection.attachmentCount}` : ""}
+              </DropdownMenuItem>
+              {activeSection.deletable ? (
+                <DropdownMenuItem
+                  className="h-8 cursor-pointer text-destructive focus:text-destructive"
+                  onClick={() => setDeleteSoapId(activeSection.id)}
+                >
+                  <CdsActionsTrash2Icon data-icon="inline-start" />
+                  삭제
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
+      <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
+        {activeSection ? (
+          <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
+            <SoapRichTextEditor
+              key={`${soapNote?.id ?? "empty"}-${activeSection.id}-${activeSection.version}`}
+              initialContent={activeSection.content}
+              label={activeSection.title}
+              onContentChange={updateActiveSoapContent}
+            />
+            <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 text-[12px] text-muted-foreground">
+              <span>{getSoapSectionStatusText(activeSection.status, activeSection.statusAt)}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="bg-card text-destructive hover:text-destructive"
+                disabled={!activeSection.deletable}
+                onClick={() => setDeleteSoapId(activeSection.id)}
+              >
+                <CdsActionsTrash2Icon data-icon="inline-start" />
+                삭제
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="max-w-[460px] gap-0 p-0" showCloseButton>
+          <DialogHeader className="border-b border-[var(--emr-line-hairline)] px-6 py-5">
+            <DialogTitle className="text-[18px] font-bold leading-6 text-[var(--clair-color-label-strong)]">
+              SOAP 진단계통 선택
+            </DialogTitle>
+            <DialogDescription className="text-[13px]">
+              진단명 섹션의 계통분류와 같은 기준으로 SOAP 탭을 추가합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-1 p-3">
+            {soapSystemOptions.map((systemLabel) => {
+              const alreadyAdded = addedSystemLabels.has(systemLabel);
+
+              return (
+                <button
+                  key={systemLabel}
+                  type="button"
+                  disabled={alreadyAdded}
+                  className="flex min-h-11 items-center justify-between rounded-md px-3 text-left text-[13px] transition-colors hover:bg-[var(--clair-color-background-surface)] disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => {
+                    addSystemSoap(systemLabel, true);
+                    setAddDialogOpen(false);
+                  }}
+                >
+                  <span className="font-semibold text-[var(--clair-color-label-normal)]">{systemLabel}</span>
+                  {alreadyAdded ? <Badge variant="outline">이미 추가됨</Badge> : null}
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={deleteSoapId !== null} onOpenChange={(open) => !open && setDeleteSoapId(null)}>
+        {deleteTarget ? (
+          <EmrConfirmDialogContent
+            title={`${deleteTarget.title} SOAP 삭제`}
+            description={
+              hasMeaningfulSoapContent(deleteTarget)
+                ? "작성된 SOAP 내용이 삭제됩니다. 계속할까요?"
+                : "이 SOAP 탭을 삭제할까요?"
+            }
+            cancelLabel="취소"
+            confirmLabel="삭제"
+            confirmButtonVariant="destructive"
+            onCancel={() => setDeleteSoapId(null)}
+            onConfirm={confirmDeleteSoap}
+          />
+        ) : null}
+      </Dialog>
+      <Dialog open={resetSoapId !== null} onOpenChange={(open) => !open && setResetSoapId(null)}>
+        {resetTarget ? (
+          <EmrConfirmDialogContent
+            title={`${resetTarget.title} SOAP 초기화`}
+            description="현재 SOAP의 주관적, 객관적, 평가, 계획 내용을 기본 템플릿으로 되돌립니다."
+            cancelLabel="취소"
+            confirmLabel="초기화"
+            onCancel={() => setResetSoapId(null)}
+            onConfirm={confirmResetSoap}
+          />
+        ) : null}
+      </Dialog>
     </section>
   );
 }
 
+function ChartLineTabGroup<TValue extends string>({
+  "aria-label": ariaLabel,
+  items,
+  onValueChange,
+  value,
+}: {
+  items: Array<{ value: TValue; label: ReactNode; count?: number }>;
+  "aria-label": string;
+  onValueChange: (value: TValue) => void;
+  value: TValue;
+}) {
+  return (
+    <div className="flex min-w-0 items-stretch gap-2.5" role="tablist" aria-label={ariaLabel}>
+      {items.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          role="tab"
+          aria-selected={value === item.value}
+          className={cn(
+            "group relative inline-flex items-center whitespace-nowrap px-1 py-1 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] tracking-normal text-[var(--clair-color-atomic-gray-500)] transition-colors hover:text-[var(--clair-color-label-strong)] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            value === item.value && "text-[var(--clair-color-label-strong)]"
+          )}
+          onClick={() => onValueChange(item.value)}
+        >
+          <span>{item.label}</span>
+          {typeof item.count === "number" ? <span className="ml-1 font-semibold tabular-nums">{item.count}</span> : null}
+          <span
+            aria-hidden="true"
+            className={cn(
+              "absolute inset-x-0 bottom-[-1px] h-0.5 bg-[var(--clair-color-label-strong)] opacity-0 transition-opacity",
+              value === item.value && "opacity-100"
+            )}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const editorToolbarButtonClassName =
-  "bg-card aria-pressed:border-ring aria-pressed:bg-background aria-pressed:text-[var(--clair-color-primary-normal)]";
+  "text-[var(--clair-color-atomic-gray-600)] hover:bg-[var(--clair-color-background-subtle)] aria-pressed:bg-[var(--clair-color-background-surface)] aria-pressed:text-[var(--clair-color-label-strong)]";
 
 function EditorToolbarButton({
   active,
@@ -683,11 +1086,11 @@ function EditorToolbarButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="icon-sm"
       aria-label={label}
       aria-pressed={active}
-      className={cn(editorToolbarButtonClassName, active && "ring-2 ring-ring/30")}
+      className={editorToolbarButtonClassName}
       disabled={disabled}
       onClick={onClick}
     >
@@ -697,49 +1100,53 @@ function EditorToolbarButton({
 }
 
 function SoapRichTextEditor({
-  attachmentCount,
-  initialFields,
+  initialContent,
   label,
-  onAddAttachment,
+  onContentChange,
 }: {
-  attachmentCount: number;
-  initialFields: SoapEditorField[];
+  initialContent: string;
   label: string;
-  onAddAttachment: () => void;
+  onContentChange: (content: string) => void;
 }) {
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
-  const [activeFieldId, setActiveFieldId] = useState<SoapEditorField["id"]>("subjective");
-  const [toolbarVersion, setToolbarVersion] = useState(0);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkValue, setLinkValue] = useState("");
+  const editorAriaLabel = label === "기본 SOAP" ? "기본 SOAP 기록" : `${label} SOAP 기록`;
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-[var(--clair-color-primary-normal)] underline underline-offset-2",
+        },
+      }),
+      Placeholder.configure({
+        placeholder: "SOAP 내용을 자유롭게 입력하세요.",
+      }),
+    ],
+    content: initialContent,
+    editorProps: {
+      attributes: {
+        "aria-label": editorAriaLabel,
+        class:
+          "min-h-[180px] px-4 py-3 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--clair-color-label-assistive)]",
+      },
+    },
+    onCreate: ({ editor: currentEditor }) => {
+      setActiveEditor(currentEditor);
+    },
+    onUpdate: ({ editor: currentEditor }) => {
+      onContentChange(currentEditor.getHTML());
+    },
+    immediatelyRender: false,
+  });
 
-  useEffect(() => {
-    if (!activeEditor) return;
-
-    const refreshToolbar = () => setToolbarVersion((current) => current + 1);
-
-    activeEditor.on("selectionUpdate", refreshToolbar);
-    activeEditor.on("transaction", refreshToolbar);
-    activeEditor.on("update", refreshToolbar);
-
-    return () => {
-      activeEditor.off("selectionUpdate", refreshToolbar);
-      activeEditor.off("transaction", refreshToolbar);
-      activeEditor.off("update", refreshToolbar);
-    };
-  }, [activeEditor]);
-
-  const activateFieldEditor = (fieldId: SoapEditorField["id"], editor: Editor | null) => {
-    if (!editor) return;
-
-    setActiveFieldId(fieldId);
-    setActiveEditor(editor);
-  };
   const runEditorCommand = (command: (editor: Editor) => void) => {
     if (!activeEditor) return;
 
     command(activeEditor);
-    setToolbarVersion((current) => current + 1);
   };
   const openLinkEditor = () => {
     if (!activeEditor) return;
@@ -767,34 +1174,25 @@ function SoapRichTextEditor({
     setLinkValue("");
     setLinkOpen(false);
   };
-  const activeFieldLabel =
-    initialFields.find((field) => field.id === activeFieldId)?.label ?? initialFields[0]?.label ?? "SOAP";
-  void toolbarVersion;
-
   return (
     <>
-      <div className="flex min-h-10 items-center justify-between gap-2 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-muted)] px-2 py-1 text-[11px] font-semibold text-[var(--clair-color-label-neutral)]">
-            {activeFieldLabel}
-          </span>
-          <div className="flex items-center gap-1" aria-label={`${label} 서식 도구`}>
-            <EditorToolbarButton
-              active={false}
-              disabled={!activeEditor}
-              label={`${label} 실행 취소`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().undo().run())}
-            >
-              ↶
-            </EditorToolbarButton>
-            <EditorToolbarButton
-              active={false}
-              disabled={!activeEditor}
-              label={`${label} 다시 실행`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().redo().run())}
-            >
-              ↷
-            </EditorToolbarButton>
+      {editor ? (
+        <BubbleMenu
+          editor={editor}
+          updateDelay={0}
+          appendTo={() => document.body}
+          options={{
+            placement: "top",
+            offset: 10,
+            shift: { padding: 8 },
+          }}
+          shouldShow={({ editor: currentEditor, state }) =>
+            linkOpen || (currentEditor.isEditable && !state.selection.empty)
+          }
+          role="toolbar"
+          aria-label={`${label} 선택 서식 도구`}
+          className="z-50 flex items-center gap-1 rounded-[var(--clair-radius-lg)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-2 py-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.16)]"
+        >
             <EditorToolbarButton
               active={activeEditor?.isActive("bold") ?? false}
               disabled={!activeEditor}
@@ -840,14 +1238,11 @@ function SoapRichTextEditor({
                 render={
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="icon-sm"
                     aria-label={`${label} 링크`}
                     aria-pressed={activeEditor?.isActive("link") ?? false}
-                    className={cn(
-                      editorToolbarButtonClassName,
-                      activeEditor?.isActive("link") && "ring-2 ring-ring/30"
-                    )}
+                    className={editorToolbarButtonClassName}
                     disabled={!activeEditor}
                     onClick={openLinkEditor}
                   >
@@ -881,85 +1276,10 @@ function SoapRichTextEditor({
                 </div>
               </PopoverContent>
             </Popover>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          aria-label={`${label} 첨부 추가`}
-          className="bg-card"
-          onClick={onAddAttachment}
-        >
-          첨부{attachmentCount ? ` ${attachmentCount}` : ""}
-        </Button>
-      </div>
-      <div className="divide-y divide-[var(--emr-line-hairline)]">
-        {initialFields.map((field) => (
-          <SoapFieldEditor
-            key={field.id}
-            active={activeFieldId === field.id}
-            field={field}
-            sectionLabel={label}
-            onActivate={activateFieldEditor}
-          />
-        ))}
-      </div>
+        </BubbleMenu>
+      ) : null}
+      <EditorContent editor={editor} className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]" />
     </>
-  );
-}
-
-function SoapFieldEditor({
-  active,
-  field,
-  onActivate,
-  sectionLabel,
-}: {
-  active: boolean;
-  field: SoapEditorField;
-  onActivate: (fieldId: SoapEditorField["id"], editor: Editor | null) => void;
-  sectionLabel: string;
-}) {
-  const initialContent = field.value ? `<p>${escapeHtml(field.value)}</p>` : "";
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-[var(--clair-color-primary-normal)] underline underline-offset-2",
-        },
-      }),
-      Placeholder.configure({
-        placeholder: `${field.label} 내용을 입력하세요.`,
-      }),
-    ],
-    content: initialContent,
-    editorProps: {
-      attributes: {
-        "aria-label": `${sectionLabel} ${field.label} 기록`,
-        class:
-          "min-h-[64px] px-3 py-2 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p]:my-1.5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--clair-color-label-assistive)]",
-      },
-    },
-    immediatelyRender: false,
-  });
-
-  return (
-    <div
-      className={cn(
-        "grid min-h-[84px] grid-cols-[76px_minmax(0,1fr)] bg-[var(--emr-surface-panel)] transition-colors",
-        active && "bg-[var(--clair-color-atomic-sky-50)]/45"
-      )}
-      onFocusCapture={() => onActivate(field.id, editor)}
-    >
-      <div className="border-r border-[var(--emr-line-hairline)] px-3 py-3">
-        <div className="text-[12px] font-semibold text-[var(--clair-color-label-neutral)]">{field.label}</div>
-        <div className="mt-1 text-[11px] text-[var(--clair-color-label-assistive)]">SOAP</div>
-      </div>
-      <EditorContent editor={editor} />
-    </div>
   );
 }
 
@@ -1070,7 +1390,7 @@ function AssessmentPanel({
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
     >
       <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
-        <ChartSectionTitle title="진단명" subtitle="진단 목록 · 코멘트 · 계획" />
+        <ChartSectionTitle title="진단명" />
         <Button
           variant="outline"
           size="sm"
@@ -1185,14 +1505,11 @@ function AssessmentPanel({
             {diagnosisRows.map((diagnosis) => (
               <div
                 key={diagnosis.id}
-                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-3 text-[13px]"
+                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2 text-[13px]"
               >
                 <Badge variant="outline">{diagnosis.systemLabel}</Badge>
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{diagnosis.diagnosisText}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {diagnosis.catalogMatched ? "사전 연결" : "직접 입력"} · {diagnosisTypeLabel[diagnosis.diagnosisType]}
-                  </span>
+                <span className="min-w-0 truncate font-medium">
+                  {diagnosis.diagnosisText}
                 </span>
                 <button
                   type="button"
@@ -1232,39 +1549,9 @@ function AssessmentPanel({
               </div>
             ) : null}
           </div>
-          <AssessmentTextBox
-            key={`assessment-${soapNote?.id ?? "empty"}`}
-            label="진단 코멘트"
-            value={soapNote?.assessment ?? "평가 메모 없음"}
-          />
-          <AssessmentTextBox
-            key={`plan-${soapNote?.id ?? "empty"}`}
-            label="Plan"
-            value={soapNote?.plan ?? "계획 기록 대기"}
-          />
         </div>
       </div>
     </section>
-  );
-}
-
-function AssessmentTextBox({ label, value }: { label: string; value: string }) {
-  const [textValue, setTextValue] = useState(value);
-
-  return (
-    <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <div className="flex h-8 items-center justify-between bg-[var(--emr-surface-muted)] px-3 text-[12px] font-semibold text-muted-foreground">
-        <span>{label}</span>
-        <span>{textValue.length}/500자</span>
-      </div>
-      <Textarea
-        aria-label={label}
-        value={textValue}
-        maxLength={500}
-        className="min-h-24 resize-y rounded-none border-0 bg-[var(--emr-surface-panel)] p-3 text-[13px] leading-5 shadow-none focus-visible:ring-0"
-        onChange={(event) => setTextValue(event.target.value)}
-      />
-    </div>
   );
 }
 
@@ -1416,7 +1703,7 @@ function ChartOrderTable({
   someVisibleSelected: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <div className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
       <Table className="min-w-[1180px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
@@ -1554,8 +1841,17 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
     }),
     { dispensing: 0, imaging: 0, lab: 0, treatment: 0 }
   );
+  const orderTabItems = chartOrderTabs.map((tab) => ({
+    ...tab,
+    count:
+      tab.value === "all"
+        ? allOrders.length
+        : tab.value === "billing"
+          ? 0
+          : orderCountByType[tab.value],
+  }));
   const filteredOrderRows = draftRows.filter(
-    ({ order }) => orderFilter === "all" || order.orderType === orderFilter
+    ({ order }) => orderFilter !== "billing" && (orderFilter === "all" || order.orderType === orderFilter)
   );
   const totalAmount = draftRows.reduce((sum, row) => sum + (getDraftLineTotal(row) ?? 0), 0);
   const selectedAmount = draftRows.reduce((sum, row) => {
@@ -1571,13 +1867,6 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
   const selectedVisibleOrderCount = visibleOrderIds.filter((orderId) => selectedOrderIds.has(orderId)).length;
   const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleOrderCount === visibleOrderIds.length;
   const someVisibleSelected = selectedVisibleOrderCount > 0 && !allVisibleSelected;
-  const tabItems = [
-    { value: "all" as const, label: "전체", count: allOrders.length },
-    { value: "dispensing" as const, label: "경구제", count: orderCountByType.dispensing },
-    { value: "lab" as const, label: "원내 검사", count: orderCountByType.lab },
-    { value: "imaging" as const, label: "영상", count: orderCountByType.imaging },
-    { value: "treatment" as const, label: "치료", count: orderCountByType.treatment },
-  ];
   const committedRowIds = new Set(committedRows.map(({ order }) => order.id));
   const deletedDraftOrderCount = committedRows.filter(({ order }) =>
     draftRows.every((row) => row.order.id !== order.id)
@@ -1680,30 +1969,27 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
   const hasSelectedOrders = selectedOrderIds.size > 0;
   const orderActionLabel = orderActionDialog === "bill" ? "Order 청구" : "Order 확정";
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
+  const draftStatusText = hasDraftChanges
+    ? ` · 변경 대기 ${changedDraftOrderCount}건${invalidOrderIds.size ? ` · 수량 확인 필요 ${invalidOrderIds.size}건` : ""}`
+    : "";
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 bg-[var(--emr-surface-panel)] px-4 py-2">
-        <ChartSectionTitle title="처방/오더" subtitle="처방 · 처치 · 검사 · 영상 오더" />
-        <div className="flex gap-2">
+      <div className="flex min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
+        <ChartLineTabGroup
+          aria-label="처방/오더 분류"
+          items={orderTabItems}
+          value={orderFilter}
+          onValueChange={setOrderFilter}
+        />
+        <div className="flex items-center gap-2 py-2">
           <Button variant="outline" size="sm" className="bg-card">
             Order 출력
           </Button>
           <Button size="sm">+ Order</Button>
         </div>
       </div>
-      <div className="flex min-h-8 shrink-0 items-start border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 pb-2 pt-0">
-        <SegmentedControl
-          aria-label="차트 오더 필터"
-          items={tabItems}
-          variant="pill"
-          value={orderFilter}
-          className="w-fit gap-1.5"
-          itemClassName="h-6 min-h-6 rounded-full px-2 text-[12px] font-semibold leading-4"
-          onValueChange={setOrderFilter}
-        />
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] px-3 pt-2 pb-0">
         <ChartOrderTable
           allVisibleSelected={allVisibleSelected}
           hasCommittedRows={committedRowIds.size > 1}
@@ -1718,25 +2004,22 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           someVisibleSelected={someVisibleSelected}
         />
       </div>
-      <div className="flex min-h-16 shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-3 text-[13px]">
-        <div className="min-w-[240px] flex-1 text-muted-foreground">
-          <div>선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건</div>
-          <div className="mt-1 font-semibold text-foreground">청구 예상 총액: {totalAmount.toLocaleString()}</div>
-          {hasDraftChanges ? (
-            <div className="mt-1 font-medium text-[var(--clair-color-primary-normal)]">
-              변경 대기 {changedDraftOrderCount}건
-              {invalidOrderIds.size ? ` · 수량 확인 필요 ${invalidOrderIds.size}건` : ""}
-            </div>
-          ) : null}
-        </div>
-        <div className="grid min-w-[280px] flex-[1_1_320px] grid-cols-[minmax(0,1fr)_88px] items-center gap-3 text-muted-foreground">
-          <div className="text-right">
-            <div>선택 오더 합계: {selectedAmount.toLocaleString()}</div>
-            <div className="mt-1">Order 별 할인/할증 합계: 0</div>
+      <div className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2 text-[12px]">
+        <div className="min-w-0 text-muted-foreground">
+          <div className="truncate">
+            선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건
+            <span className="font-medium text-[var(--clair-color-primary-normal)]">{draftStatusText}</span>
           </div>
-          <Input readOnly value="0%" className="h-9 bg-[var(--emr-surface-panel)] text-right" />
         </div>
-        <div className="ml-auto flex shrink-0 justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-2 text-muted-foreground">
+          <span className="whitespace-nowrap">선택 오더 합계: {selectedAmount.toLocaleString()}</span>
+          <span className="whitespace-nowrap">Order 별 할인/할증 합계: 0</span>
+          <Input readOnly value="0%" className="h-7 w-[72px] bg-[var(--emr-surface-panel)] text-right" />
+        </div>
+        <div className="min-w-0 truncate font-semibold text-foreground">
+          청구 예상 총액: {totalAmount.toLocaleString()}
+        </div>
+        <div className="flex shrink-0 justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -2079,15 +2362,18 @@ export function ChartContent() {
         ref={chartWorkspaceRef}
         data-slot="chart-workspace"
         className={cn(
-          "mt-4 grid min-h-0 flex-1 border-t border-[var(--emr-line-hairline)] pt-4",
+          "mt-2 grid min-h-0 flex-1 border-t border-[var(--emr-line-hairline)] pt-2",
           isChartResizing && "select-none"
         )}
         style={{
           gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
         }}
       >
-        <div className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-4 [&>*]:min-w-0">
-          <SoapPanel diagnoses={diagnosisRows} soapNote={latestSoap} />
+        <div
+          data-testid="chart-soap-diagnosis-grid"
+          className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
+        >
+          <SoapPanel key={latestSoap?.id ?? selectedEncounterId} diagnoses={diagnosisRows} soapNote={latestSoap} />
           <AssessmentPanel
             key={bundle.encounter.id}
             diagnosisRows={diagnosisRows}
