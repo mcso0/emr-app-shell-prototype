@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-05-10"
+updated: "2026-05-13"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/engineering/current-status.md"
@@ -20,7 +20,7 @@ The first foundation pass should make shared EMR surfaces quieter and more consi
 - use a small surface ladder for app background, panels, muted headers, selected rows, and hover states
 - prefer hairline borders over heavy shadow
 - keep compact control and panel radii, mostly 8px and 12px
-- use accent color sparingly for focus, selection, and primary emphasis
+- keep primary emphasis on command ink, and use neutral/cool-neutral state color for focus and selection
 - let real product screens and dense workflow data carry the interface
 
 ## Explicit Non-Goals
@@ -48,6 +48,8 @@ The public alias set for the first pass is:
 - `--emr-radius-panel`
 
 These aliases are intentionally small. They should cover shared panel, list, table, and selected-surface behavior before any screen-level visual expansion.
+
+The 2026-05-13 token direction clarifies that shadcn `--primary` is command ink rather than brand blue. Brand blue remains available through a limited identity token, while workflow and clinical colors move through explicit EMR status aliases.
 
 ## Component Application
 
