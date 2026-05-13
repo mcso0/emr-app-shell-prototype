@@ -125,12 +125,12 @@ test("chart SOAP tabs add systems, prevent duplicates, reset, undo, and delete",
   await page.getByRole("button", { name: "되돌리기" }).click();
   await expect(soapEditor).toContainText("보호자 진술상 전날 밤부터 구토 3회");
 
-  await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+  await page.getByRole("button", { name: "SOAP 추가" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "호흡기" }).click();
   await expect(page.getByRole("tab", { name: "호흡기", exact: true })).toBeVisible();
   await expect(page.getByLabel("호흡기 SOAP 기록")).toContainText("보호자 진술:");
 
-  await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+  await page.getByRole("button", { name: "SOAP 추가" }).click();
   const addDialog = page.getByRole("dialog");
   await expect(addDialog.getByRole("button", { name: /호흡기/ })).toBeDisabled();
   await expect(addDialog.getByText("이미 추가됨")).toHaveCount(2);
@@ -222,7 +222,7 @@ test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 
   for (const systemLabel of ["호흡기", "피부", "전신", "예방"]) {
-    await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+    await page.getByRole("button", { name: "SOAP 추가" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: systemLabel }).click();
   }

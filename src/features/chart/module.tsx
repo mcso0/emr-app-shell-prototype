@@ -24,6 +24,7 @@ import {
   CdsActionsSaveIcon,
   CdsActionsTrash2Icon,
   CdsActionsListFilterIcon,
+  CdsActionsPlusIcon,
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
@@ -599,7 +600,7 @@ function ChartSectionTitle({ subtitle, title }: { subtitle?: string; title: stri
         {title}
       </h2>
       {subtitle ? (
-        <span className="min-w-0 truncate text-[14px] font-medium text-[var(--clair-color-atomic-gray-400)]">
+        <span className="min-w-0 truncate text-[14px] font-medium text-muted-foreground">
           {subtitle}
         </span>
       ) : null}
@@ -839,10 +840,8 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
             aria-label="SOAP 더보기"
             aria-pressed={activeInOverflow}
             className={cn(
-              "inline-flex h-full shrink-0 items-center gap-1 px-2 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] outline-none transition-colors hover:bg-[var(--clair-color-background-surface)] focus-visible:ring-3 focus-visible:ring-ring/50",
-              activeInOverflow
-                ? "text-[var(--clair-color-atomic-gray-900)]"
-                : "text-[var(--clair-color-atomic-gray-500)]"
+              "inline-flex h-full shrink-0 items-center gap-1 px-2 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              activeInOverflow ? "text-foreground" : "text-muted-foreground"
             )}
           >
             더보기
@@ -875,15 +874,6 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="self-center text-[var(--clair-color-atomic-gray-500)]"
-        onClick={() => setAddDialogOpen(true)}
-      >
-        + 추가
-      </Button>
     </div>
   );
 
@@ -891,6 +881,16 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
       <div className="relative z-10 flex h-12 min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
         {soapTabs}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-center bg-card"
+          onClick={() => setAddDialogOpen(true)}
+        >
+          <CdsActionsPlusIcon data-icon="inline-start" />
+          SOAP 추가
+        </Button>
         {activeSection ? (
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -900,7 +900,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`${activeSection.title}${activeSection.title.endsWith("SOAP") ? "" : " SOAP"} 작업`}
-                  className="relative z-30 self-center text-[var(--clair-color-atomic-gray-500)]"
+                  className="relative z-30 self-center text-muted-foreground"
                 >
                   <CdsFilesMoreHorizontalIcon className="size-4" />
                 </Button>
@@ -945,18 +945,30 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
               onContentChange={updateActiveSoapContent}
             />
             <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 text-[12px] text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground"
+                  onClick={() => setResetSoapId(activeSection.id)}
+                >
+                  <CdsActionsRotateCcwIcon data-icon="inline-start" />
+                  초기화
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="text-destructive hover:text-destructive"
+                  disabled={!activeSection.deletable}
+                  onClick={() => setDeleteSoapId(activeSection.id)}
+                >
+                  <CdsActionsTrash2Icon data-icon="inline-start" />
+                  삭제
+                </Button>
+              </div>
               <span>{getSoapSectionStatusText(activeSection.status, activeSection.statusAt)}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                className="bg-card text-destructive hover:text-destructive"
-                disabled={!activeSection.deletable}
-                onClick={() => setDeleteSoapId(activeSection.id)}
-              >
-                <CdsActionsTrash2Icon data-icon="inline-start" />
-                삭제
-              </Button>
             </div>
           </div>
         ) : null}
@@ -964,7 +976,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-[460px] gap-0 p-0" showCloseButton>
           <DialogHeader className="border-b border-[var(--emr-line-hairline)] px-6 py-5">
-            <DialogTitle className="text-[18px] font-bold leading-6 text-[var(--clair-color-label-strong)]">
+            <DialogTitle className="text-[18px] font-bold leading-6 text-foreground">
               SOAP 진단계통 선택
             </DialogTitle>
             <DialogDescription className="text-[13px]">
@@ -980,13 +992,13 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
                   key={systemLabel}
                   type="button"
                   disabled={alreadyAdded}
-                  className="flex min-h-11 items-center justify-between rounded-md px-3 text-left text-[13px] transition-colors hover:bg-[var(--clair-color-background-surface)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-11 items-center justify-between rounded-md px-3 text-left text-[13px] transition-colors hover:bg-[var(--emr-state-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     addSystemSoap(systemLabel, true);
                     setAddDialogOpen(false);
                   }}
                 >
-                  <span className="font-semibold text-[var(--clair-color-label-normal)]">{systemLabel}</span>
+                  <span className="font-semibold text-foreground">{systemLabel}</span>
                   {alreadyAdded ? <Badge variant="outline">이미 추가됨</Badge> : null}
                 </button>
               );
@@ -1047,8 +1059,8 @@ function ChartLineTabGroup<TValue extends string>({
           role="tab"
           aria-selected={value === item.value}
           className={cn(
-            "group relative inline-flex items-center whitespace-nowrap px-1 py-1 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] tracking-normal text-[var(--clair-color-atomic-gray-500)] transition-colors hover:text-[var(--clair-color-label-strong)] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-            value === item.value && "text-[var(--clair-color-label-strong)]"
+            "group relative inline-flex items-center whitespace-nowrap px-1 py-1 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] tracking-normal text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            value === item.value && "text-foreground"
           )}
           onClick={() => onValueChange(item.value)}
         >
@@ -1057,7 +1069,7 @@ function ChartLineTabGroup<TValue extends string>({
           <span
             aria-hidden="true"
             className={cn(
-              "absolute inset-x-0 bottom-[-1px] h-0.5 bg-[var(--clair-color-label-strong)] opacity-0 transition-opacity",
+              "absolute inset-x-0 bottom-[-1px] h-0.5 bg-foreground opacity-0 transition-opacity",
               value === item.value && "opacity-100"
             )}
           />
@@ -1068,7 +1080,7 @@ function ChartLineTabGroup<TValue extends string>({
 }
 
 const editorToolbarButtonClassName =
-  "text-[var(--clair-color-atomic-gray-600)] hover:bg-[var(--clair-color-background-subtle)] aria-pressed:bg-[var(--clair-color-background-surface)] aria-pressed:text-[var(--clair-color-label-strong)]";
+  "text-muted-foreground hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground";
 
 function EditorToolbarButton({
   active,
@@ -1119,7 +1131,7 @@ function SoapRichTextEditor({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: "text-[var(--clair-color-primary-normal)] underline underline-offset-2",
+          class: "text-[var(--emr-text-link)] underline underline-offset-2",
         },
       }),
       Placeholder.configure({
@@ -1131,7 +1143,7 @@ function SoapRichTextEditor({
       attributes: {
         "aria-label": editorAriaLabel,
         class:
-          "min-h-[180px] px-4 py-3 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--clair-color-label-assistive)]",
+          "min-h-[180px] px-4 py-3 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--emr-text-placeholder)]",
       },
     },
     onCreate: ({ editor: currentEditor }) => {
@@ -1191,7 +1203,7 @@ function SoapRichTextEditor({
           }
           role="toolbar"
           aria-label={`${label} 선택 서식 도구`}
-          className="z-50 flex items-center gap-1 rounded-[var(--clair-radius-lg)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-2 py-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.16)]"
+          className="z-50 flex items-center gap-1 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-2 py-1.5 shadow-lg"
         >
             <EditorToolbarButton
               active={activeEditor?.isActive("bold") ?? false}
@@ -1252,7 +1264,7 @@ function SoapRichTextEditor({
               />
               <PopoverContent align="start" className="w-72 gap-2 p-3" initialFocus={false}>
                 <div className="grid gap-1.5">
-                  <div className="text-[12px] font-semibold text-[var(--clair-color-label-strong)]">링크 추가</div>
+                  <div className="text-[12px] font-semibold text-foreground">링크 추가</div>
                   <Input
                     aria-label="링크 URL"
                     value={linkValue}
@@ -1410,7 +1422,7 @@ function AssessmentPanel({
               <PopoverTrigger nativeButton={false} render={<div className="relative min-w-0" />}>
                 <CdsActionsSearchIcon
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
                   ref={searchInputRef}
@@ -1441,7 +1453,7 @@ function AssessmentPanel({
                       type="button"
                       role="option"
                       aria-selected={diagnosisRows.some((row) => row.diagnosisText === item.name)}
-                      className="grid gap-1 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--clair-color-background-surface)] aria-selected:bg-[var(--clair-color-atomic-sky-50)]"
+                      className="grid gap-1 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => addDiagnosisFromCatalog(item)}
                     >
@@ -1449,7 +1461,7 @@ function AssessmentPanel({
                         <Badge variant="outline" className="shrink-0">
                           {item.systemLabel}
                         </Badge>
-                        <span className="truncate text-[13px] font-semibold text-[var(--clair-color-label-normal)]">
+                        <span className="truncate text-[13px] font-semibold text-foreground">
                           {item.name}
                         </span>
                         <span className="shrink-0 text-[11px] text-muted-foreground">
@@ -1464,7 +1476,7 @@ function AssessmentPanel({
                       type="button"
                       role="option"
                       aria-selected="false"
-                      className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-[var(--clair-color-background-surface)]"
+                      className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-[var(--emr-state-hover)]"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={addFreeTextDiagnosis}
                     >
@@ -1515,7 +1527,7 @@ function AssessmentPanel({
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 확진 토글`}
                   aria-pressed={diagnosis.diagnosisType === "confirmed"}
-                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--clair-color-background-surface)] aria-pressed:bg-[var(--clair-color-atomic-sky-50)] aria-pressed:text-[var(--clair-color-primary-normal)]"
+                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
                   onClick={() => toggleConfirmedDiagnosis(diagnosis.id)}
                 >
                   {diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}
@@ -1524,7 +1536,7 @@ function AssessmentPanel({
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 중점 진단 표시`}
                   aria-pressed={diagnosis.isPrimary}
-                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--clair-color-background-surface)] aria-pressed:bg-[var(--clair-color-atomic-sky-50)] aria-pressed:text-[var(--clair-color-primary-normal)]"
+                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
                   onClick={() => togglePrimaryDiagnosis(diagnosis.id)}
                 >
                   {diagnosis.isPrimary ? "✓" : "-"}
@@ -1771,7 +1783,7 @@ function ChartOrderTable({
                     value={row.quantityInput}
                     className={cn(
                       "h-7 bg-[var(--emr-surface-panel)] px-2 text-right text-[12px]",
-                      invalidQuantity && "border-[var(--clair-color-atomic-red-400)]"
+                      invalidQuantity && "border-[var(--emr-status-danger-border)]"
                     )}
                     onChange={(event) => onUpdateQuantity(order.id, event.target.value)}
                   />
@@ -1791,7 +1803,7 @@ function ChartOrderTable({
                       aria-label={`${order.displayName} 오더 삭제`}
                       variant="outline"
                       size="icon-xs"
-                      className="bg-card text-[var(--clair-color-atomic-red-700)]"
+                      className="bg-card text-destructive"
                       disabled={!hasCommittedRows}
                       onClick={() => onDeleteOrder(order.id)}
                     >
@@ -1986,7 +1998,9 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           <Button variant="outline" size="sm" className="bg-card">
             Order 출력
           </Button>
-          <Button size="sm">+ Order</Button>
+          <Button variant="outline" size="sm" className="bg-card">
+            + Order
+          </Button>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] px-3 pt-2 pb-0">
@@ -2008,7 +2022,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
         <div className="min-w-0 text-muted-foreground">
           <div className="truncate">
             선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건
-            <span className="font-medium text-[var(--clair-color-primary-normal)]">{draftStatusText}</span>
+            <span className="font-medium text-[var(--emr-status-info-text)]">{draftStatusText}</span>
           </div>
         </div>
         <div className="flex min-w-0 items-center justify-end gap-2 text-muted-foreground">
@@ -2062,7 +2076,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
               <span>
                 현재 환자와 선택 오더를 확인한 뒤 진행합니다. 이 prototype에서는 실제 청구/확정 상태를 변경하지 않습니다.
               </span>
-              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
                 <span>환자: {bundle.patient.name} · 보호자 {guardianName}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
                 <span>선택 오더: {selectedOrderIds.size}건 · 선택 금액 {selectedAmount.toLocaleString()}</span>
@@ -2085,7 +2099,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
                 <span>
                   {deleteTargetOrder.displayName} 오더를 현재 차트의 session draft에서 제외합니다. 실제 서버 데이터는 변경하지 않습니다.
                 </span>
-                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
                   삭제 후 `Order 업데이트`를 눌러 현재 세션 변경으로 확정할 수 있습니다.
                 </span>
               </span>
@@ -2124,7 +2138,7 @@ function ChartInstructionInfo({
     {
       label: "차트 상태",
       value: (
-        <span data-testid="chart-soap-status" className="text-[13px] font-semibold text-[var(--clair-color-primary-normal)]">
+        <span data-testid="chart-soap-status" className="text-[13px] font-semibold text-[var(--emr-status-info-text)]">
           {getSoapStatusText(latestSoap)}
         </span>
       ),
@@ -2324,10 +2338,10 @@ export function ChartContent() {
             }
             actions={
               <>
-                <Button variant="outline" size="sm" className="bg-card">
+                <Button variant="outline" className="bg-card">
                   차트 공유
                 </Button>
-                <Button size="sm" onClick={() => setChartCompleteDialogOpen(true)}>
+                <Button onClick={() => setChartCompleteDialogOpen(true)}>
                   차트 작성완료
                 </Button>
               </>
@@ -2344,7 +2358,7 @@ export function ChartContent() {
               <span>
                 진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인합니다. 이 prototype에서는 실제 차트 상태를 변경하지 않습니다.
               </span>
-              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-[var(--clair-color-label-normal)]">
+              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
                 <span>환자: {bundle.patient.name} · 보호자 {bundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
                 <span>진단명: {diagnosisRows.length}건 · 오더: {allOrders.length}건</span>
@@ -2392,7 +2406,7 @@ export function ChartContent() {
           className={cn(
             "group relative -mx-1 flex cursor-row-resize items-center justify-center rounded-md outline-none",
             "focus-visible:ring-3 focus-visible:ring-ring/50",
-            isChartResizing && "bg-[var(--clair-color-atomic-black-alpha-4)]"
+            isChartResizing && "bg-[var(--emr-state-hover)]"
           )}
           onKeyDown={handleChartResizeKeyDown}
           onLostPointerCapture={stopChartResize}
@@ -2402,7 +2416,7 @@ export function ChartContent() {
           onPointerUp={stopChartResize}
         >
           <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--emr-line-hairline)]" />
-          <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--clair-color-atomic-gray-500)]" />
+          <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
         </button>
         <div className="min-h-0 min-w-0">
           <OrderArea key={bundle.encounter.id} bundle={bundle} orderGroups={orderGroups} />
