@@ -36,7 +36,7 @@ export function SegmentedControl<TValue extends string>({
         "inline-flex w-fit items-center",
         variant === "pill" && "gap-2.5",
         variant === "tabs" &&
-          "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--clair-color-atomic-gray-100)] p-[var(--clair-border-width-atomic-4)]",
+          "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] p-[var(--clair-border-width-atomic-4)]",
         className
       )}
     >
@@ -52,12 +52,12 @@ export function SegmentedControl<TValue extends string>({
               "inline-flex shrink-0 items-center justify-center border transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
               variant === "pill" &&
                 (active
-                  ? "min-h-8 rounded-full border-transparent bg-[var(--clair-color-atomic-gray-800)] px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0px] text-[var(--clair-color-static-white)] hover:bg-[var(--clair-color-atomic-gray-800)]"
-                  : "min-h-8 rounded-full border-[var(--clair-color-atomic-gray-200)] bg-[rgba(255,255,255,0.1)] px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0px] text-[var(--clair-color-atomic-gray-600)] hover:bg-selection"),
+                  ? "min-h-8 rounded-full border-transparent bg-primary px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0px] text-primary-foreground hover:bg-primary"
+                  : "min-h-8 rounded-full border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0px] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"),
               variant === "tabs" &&
                 (active
-                  ? "min-h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-card px-1.5 py-px text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-900)] hover:bg-card"
-                  : "min-h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-transparent px-1.5 py-px text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-700)] hover:bg-[var(--clair-color-atomic-black-alpha-4)]"),
+                  ? "min-h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-card px-1.5 py-px text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-primary)] hover:bg-card"
+                  : "min-h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-transparent px-1.5 py-px text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"),
               itemClassName
             )}
             onClick={() => onValueChange(item.value)}

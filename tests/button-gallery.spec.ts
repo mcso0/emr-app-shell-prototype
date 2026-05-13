@@ -9,7 +9,32 @@ test("button gallery exposes Figma-aligned text button sizing and states", async
   await expect(defaultButton).toHaveCSS("border-radius", "8px");
 
   await defaultButton.hover();
-  await expect(defaultButton).toHaveCSS("background-color", "rgb(45, 55, 72)");
+  await page.waitForTimeout(250);
+  const hoverBackground = await defaultButton.evaluate((button) => {
+    const normalizeColor = (color: string) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        throw new Error("Canvas 2D context is unavailable.");
+      }
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data).join(",");
+    };
+
+    const probe = document.createElement("span");
+    probe.style.backgroundColor = "oklch(0.28 0.006 285.885)";
+    document.body.appendChild(probe);
+    const result = {
+      actual: normalizeColor(getComputedStyle(button).backgroundColor),
+      expected: normalizeColor(getComputedStyle(probe).backgroundColor),
+    };
+    probe.remove();
+    return result;
+  });
+  expect(hoverBackground.actual).toBe(hoverBackground.expected);
 
   const disabledButton = page.getByTestId("text-default-xs-default-disable");
   await expect(disabledButton).toBeDisabled();

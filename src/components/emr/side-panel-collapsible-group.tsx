@@ -32,16 +32,16 @@ function getAccessibleLabel(label: ReactNode, accessibleLabel?: string) {
 function getCountBadgeTokens(colorToken?: string) {
   if (!colorToken) return undefined;
 
-  if (colorToken.includes("orange")) return { background: "--clair-color-atomic-orange-50", foreground: "--clair-color-atomic-orange-500" };
-  if (colorToken.includes("green")) return { background: "--clair-color-atomic-green-50", foreground: "--clair-color-atomic-green-500" };
-  if (colorToken.includes("red")) return { background: "--clair-color-atomic-red-50", foreground: "--clair-color-atomic-red-500" };
-  if (colorToken.includes("mint")) return { background: "--clair-color-atomic-mint-50", foreground: "--clair-color-atomic-mint-500" };
-  if (colorToken.includes("gray")) return { background: "--clair-color-atomic-gray-50", foreground: "--clair-color-atomic-gray-500" };
+  if (colorToken.includes("orange")) return { background: "--emr-status-warning-bg", foreground: "--emr-status-warning-text" };
+  if (colorToken.includes("green")) return { background: "--emr-status-success-bg", foreground: "--emr-status-success-text" };
+  if (colorToken.includes("red")) return { background: "--emr-status-danger-bg", foreground: "--emr-status-danger-text" };
+  if (colorToken.includes("mint")) return { background: "--emr-status-success-bg", foreground: "--emr-status-success-text" };
+  if (colorToken.includes("gray")) return { background: "--emr-status-neutral-bg", foreground: "--emr-status-neutral-text" };
   if (colorToken.includes("blue") || colorToken.includes("sky") || colorToken.includes("primary")) {
-    return { background: "--clair-color-atomic-blue-50", foreground: "--clair-color-atomic-blue-500" };
+    return { background: "--emr-status-info-bg", foreground: "--emr-status-info-text" };
   }
 
-  return { background: "--clair-color-atomic-gray-50", foreground: "--clair-color-atomic-gray-500" };
+  return { background: "--emr-status-neutral-bg", foreground: "--emr-status-neutral-text" };
 }
 
 export function EmrSidePanelCollapsibleGroup({
@@ -89,7 +89,7 @@ export function EmrSidePanelCollapsibleGroup({
     <section className={cn("flex flex-col gap-1", className)} data-testid={dataTestId}>
       <button
         type="button"
-        className="flex h-8 w-full items-center gap-3 rounded-[var(--clair-radius-atomic-6)] p-1 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-8)] focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex h-8 w-full items-center gap-3 rounded-[var(--clair-radius-atomic-6)] p-1 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-expanded={!collapsed}
         aria-label={`${resolvedAccessibleLabel} ${collapsed ? "펼치기" : "접기"}`}
         onClick={onToggle}
@@ -98,7 +98,7 @@ export function EmrSidePanelCollapsibleGroup({
           {indicatorVisible ? (
             <span
               className={cn(
-                "h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--clair-color-atomic-gray-400)]",
+                "h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--emr-text-tertiary)]",
                 indicatorClassName
               )}
               style={indicatorColorToken ? { backgroundColor: `var(${indicatorColorToken})` } : undefined}
@@ -106,14 +106,14 @@ export function EmrSidePanelCollapsibleGroup({
             />
           ) : null}
           <span className="flex min-w-0 items-center text-[14px] font-medium leading-5 tracking-[0.196px]">
-            <span className="truncate text-[var(--clair-color-atomic-gray-600)]">{label}</span>
+            <span className="truncate text-[var(--emr-text-secondary)]">{label}</span>
           </span>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
           <span
             data-testid={dataTestId ? `${dataTestId}-count` : undefined}
             className={cn(
-              "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] px-1.5 text-[12px] font-semibold leading-4 tracking-normal text-[var(--clair-color-atomic-gray-600)]",
+              "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] px-1.5 text-[12px] font-semibold leading-4 tracking-normal text-[var(--emr-status-neutral-text)]",
               countBadgeClassName
             )}
             style={countBadgeStyle}

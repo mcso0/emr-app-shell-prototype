@@ -137,14 +137,14 @@ export function EmrPatientContextBar({
   }, [updateScrollState]);
 
   return (
-    <div className={cn("border-b border-[var(--clair-color-atomic-gray-300)] bg-card", className)}>
+    <div className={cn("border-b border-[var(--emr-line-default)] bg-card", className)}>
       <div className="flex h-12 items-center gap-3 px-4">
         {historyButton ? (
           <>
             <Button
               variant="outline"
               size="xs"
-              className="h-[26px] bg-card data-[state=on]:border-[var(--clair-color-atomic-gray-400)] data-[state=on]:bg-[var(--clair-color-background-surface)] data-[state=on]:text-[var(--clair-color-label-strong)]"
+              className="h-[26px] bg-card data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
               aria-expanded={historyButton.expanded}
               aria-pressed={historyButton.expanded}
               aria-controls={historyButton.controls}
@@ -176,7 +176,7 @@ export function EmrPatientContextBar({
                 <EmrIconButton
                   type="button"
                   aria-label="바이탈 입력"
-                  className="size-[26px] bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-label-alternative)] hover:bg-[var(--clair-color-background-subtle)]"
+                  className="size-[26px] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"
                 >
                   <CdsActionsPlusIcon />
                 </EmrIconButton>
@@ -281,7 +281,7 @@ function RightPanelToggleButton({
       type="button"
       variant="outline"
       size="xs"
-      className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] data-[state=on]:border-[var(--clair-color-atomic-gray-400)] data-[state=on]:bg-[var(--clair-color-background-surface)] data-[state=on]:text-[var(--clair-color-label-strong)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100"
+      className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--emr-text-secondary)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
       aria-label={`${label} ${open ? "접기" : "열기"}`}
       aria-expanded={open}
       aria-pressed={open}
@@ -297,7 +297,7 @@ function RightPanelToggleButton({
       {label}
       {badgeCount ? (
         <span
-          className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--clair-color-atomic-blue-500)] px-1 text-[10px] font-semibold leading-none text-white"
+          className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--emr-status-info-text)] px-1 text-[10px] font-semibold leading-none text-[var(--emr-text-inverse)]"
           aria-label={`새 장비결과 ${badgeCount}건`}
         >
           {badgeCount}
@@ -336,10 +336,10 @@ function PatientContextDatumBadge({ label, value }: PatientContextDatum) {
   return (
     <Badge
       variant="secondary"
-      className="h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-gray-50)] px-2 py-0.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]"
+      className="h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]"
     >
-      <span className="text-[var(--clair-color-atomic-gray-500)]">{label}</span>
-      <span className="text-[var(--clair-color-atomic-gray-700)]">{value}</span>
+      <span className="text-[var(--emr-text-tertiary)]">{label}</span>
+      <span className="text-[var(--emr-text-secondary)]">{value}</span>
     </Badge>
   );
 }
@@ -350,7 +350,7 @@ function PatientContextMemoButton({ action }: { action: PatientContextMemoAction
       type="button"
       variant="outline"
       size="xs"
-      className="h-[22px] rounded-[var(--clair-radius-atomic-6)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--clair-color-label-normal)] disabled:bg-[var(--clair-color-atomic-gray-50)]"
+      className="h-[22px] rounded-[var(--clair-radius-atomic-6)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--emr-text-secondary)] disabled:bg-[var(--emr-surface-disabled)] disabled:text-[var(--emr-text-disabled)]"
       disabled={action.disabled}
       onClick={action.onClick}
     >
@@ -375,7 +375,7 @@ function PatientContextControlButton({
       type="button"
       iconSize="md"
       className={cn(
-        "size-6 rounded-[var(--clair-radius-atomic-4)] border border-[var(--clair-color-line-normal)] bg-card text-[var(--clair-color-label-normal)] hover:bg-[var(--clair-color-background-surface)] disabled:border-[var(--clair-color-line-normal)] disabled:bg-card disabled:text-[var(--clair-color-label-assistive)] disabled:opacity-100",
+        "size-6 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-card text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)] disabled:border-[var(--emr-line-hairline)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100",
         className
       )}
       {...props}

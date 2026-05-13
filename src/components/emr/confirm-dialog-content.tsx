@@ -42,25 +42,25 @@ export function EmrConfirmDialogContent({
     >
       <DialogHeader className="px-6 pb-3 pt-6">
         <div className="flex min-w-0 items-start justify-between gap-3">
-          <DialogTitle className="text-[18px] font-bold leading-6 text-[var(--clair-color-label-strong)]">
+          <DialogTitle className="text-[18px] font-bold leading-6 text-[var(--emr-text-primary)]">
             {title}
           </DialogTitle>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="size-8 shrink-0 rounded-md text-[var(--clair-color-atomic-gray-600)] hover:bg-[var(--clair-color-atomic-gray-50)]"
+            className="size-8 shrink-0 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
             aria-label={closeAriaLabel}
             onClick={onCancel}
           >
             <CdsActionsXIcon className="size-4" />
           </Button>
         </div>
-        <DialogDescription className="leading-5 text-[var(--clair-color-label-alternative)]">
+        <DialogDescription className="leading-5 text-[var(--emr-text-tertiary)]">
           {description}
         </DialogDescription>
       </DialogHeader>
-      <DialogFooter className="-mx-0 -mb-0 items-center justify-end rounded-none border-t bg-white px-6 py-4 sm:justify-end">
+      <DialogFooter className="-mx-0 -mb-0 items-center justify-end rounded-none border-t bg-[var(--emr-surface-panel)] px-6 py-4 sm:justify-end">
         <Button variant="outline" onClick={onCancel}>
           {cancelLabel}
         </Button>

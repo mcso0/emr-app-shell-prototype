@@ -67,7 +67,7 @@ export function EmrInstructionHistoryToggle({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="bg-card data-[state=on]:border-[var(--clair-color-atomic-gray-400)] data-[state=on]:bg-[var(--clair-color-background-surface)] data-[state=on]:text-[var(--clair-color-label-strong)]"
+            className="bg-card data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
             aria-label={`${ariaLabelPrefix} 패널 ${expanded ? "접기" : "열기"}`}
             aria-controls={controls}
             aria-expanded={expanded}
@@ -107,7 +107,7 @@ export function EmrInstructionHeaderStack({
       {resultDivider ? (
         <div
           data-slot="instruction-header-result-divider"
-          className="mt-4 h-px w-full shrink-0 bg-[var(--clair-color-line-normal)]"
+          className="mt-4 h-px w-full shrink-0 bg-[var(--emr-line-hairline)]"
         />
       ) : null}
     </div>

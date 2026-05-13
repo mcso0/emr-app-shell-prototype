@@ -10,7 +10,7 @@ export function EmrTableCheckbox({ className, ...props }: EmrTableCheckboxProps)
   return (
     <Checkbox
       className={cn(
-        "border-[var(--clair-color-atomic-gray-300)] opacity-100 transition-opacity data-disabled:border-[var(--clair-color-atomic-gray-200)] data-disabled:opacity-100",
+        "border-[var(--emr-line-default)] opacity-100 transition-opacity data-disabled:border-[var(--emr-line-hairline)] data-disabled:opacity-100",
         className
       )}
       {...props}

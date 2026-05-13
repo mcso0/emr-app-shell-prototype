@@ -103,7 +103,7 @@
   }
 
   .emr-selected-surface {
-    border-color: var(--emr-accent);
+    border-color: var(--emr-state-selected-border);
     background-color: var(--emr-surface-selected);
   }
 }

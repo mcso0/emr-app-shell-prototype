@@ -59,12 +59,12 @@ export function EmrOrderGroupSection({
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {label ? (
-        <div className="flex h-6 items-center text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
+        <div className="flex h-6 items-center text-[12px] font-medium text-[var(--emr-text-tertiary)]">
           {label}
         </div>
       ) : null}
       <motion.section
-        className="overflow-hidden rounded-xl border border-[var(--clair-color-atomic-gray-200)] bg-card px-4"
+        className="overflow-hidden rounded-xl border border-[var(--emr-line-hairline)] bg-card px-4"
         animate={{ paddingBottom: collapsed ? 0 : 16 }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: ORDER_GROUP_EASE }}
       >
@@ -87,7 +87,7 @@ export function EmrOrderGroupSection({
             <div className="flex min-w-0 items-center gap-2.5">
               <span
                 className={cn(
-                  "truncate text-[14px] font-semibold leading-5 text-[var(--clair-color-label-normal)]",
+                  "truncate text-[14px] font-semibold leading-5 text-[var(--emr-text-secondary)]",
                   titleClassName
                 )}
               >
@@ -96,7 +96,7 @@ export function EmrOrderGroupSection({
               {count !== undefined ? (
                 <Badge
                   variant="secondary"
-                  className="h-5 min-w-5 rounded-md px-1 text-[12px] font-medium text-[var(--clair-color-label-alternative)]"
+                  className="h-5 min-w-5 rounded-md px-1 text-[12px] font-medium text-[var(--emr-text-tertiary)]"
                 >
                   {count}
                 </Badge>
