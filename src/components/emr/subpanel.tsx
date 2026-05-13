@@ -334,7 +334,7 @@ export function EmrListItem({
         ? "border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)]"
         : usesTransparentSurface
           ? "border-transparent bg-transparent hover:bg-[var(--emr-state-hover)]"
-          : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-surface-panel)]",
+          : "border-transparent bg-transparent hover:border-[var(--emr-line-hairline)] hover:bg-[var(--emr-state-hover)]",
     className
   );
 
