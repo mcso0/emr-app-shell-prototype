@@ -60,6 +60,20 @@ test("primary command button uses primary token instead of brand blue", async ({
   await expect(chartCompleteButton).toBeVisible();
 
   const colors = await chartCompleteButton.evaluate((button) => {
+    const normalizeColor = (value: string) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        throw new Error("Canvas 2D context is unavailable.");
+      }
+
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data).join(",");
+    };
+
     const primaryProbe = document.createElement("span");
     primaryProbe.style.color = "var(--primary)";
     document.body.appendChild(primaryProbe);
@@ -69,9 +83,9 @@ test("primary command button uses primary token instead of brand blue", async ({
     document.body.appendChild(brandProbe);
 
     const result = {
-      buttonBackground: getComputedStyle(button).backgroundColor,
-      primaryColor: getComputedStyle(primaryProbe).color,
-      brandColor: getComputedStyle(brandProbe).color,
+      buttonBackground: normalizeColor(getComputedStyle(button).backgroundColor),
+      primaryColor: normalizeColor(getComputedStyle(primaryProbe).color),
+      brandColor: normalizeColor(getComputedStyle(brandProbe).color),
     };
 
     primaryProbe.remove();
