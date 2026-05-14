@@ -175,7 +175,7 @@ export function DispensingContentAside({ moduleId }: ShellComponentProps) {
         label={historyLabel}
         onCollapse={() => setContentAsideOpen(false)}
       />
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {historyGroups.map((group) => (
@@ -444,7 +444,7 @@ function GroupStatusAction({
         variant="outline"
         size={size}
         disabled
-        className="border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]"
+        className="border-[var(--emr-status-success-border)] bg-card text-[var(--emr-status-success-text)]"
       >
         <CheckIcon data-icon="inline-start" />
         {completeLabel}
@@ -459,7 +459,7 @@ function GroupStatusAction({
           type="button"
           variant="outline"
           size={size}
-          className="rounded-r-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
         >
           {statusLabel}
         </Button>
@@ -468,7 +468,7 @@ function GroupStatusAction({
             aria-label={`${group.title} 상태 액션`}
             className={cn(
               buttonVariants({ variant: "outline", size: size === "sm" ? "icon-sm" : "icon-xs" }),
-              "-ml-px rounded-l-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
             )}
           >
             <ChevronDownIcon />
@@ -750,7 +750,7 @@ function DispensingContentBody({
                 label={group.label}
                 title={group.title}
                 meta={
-                  <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
+                  <span className="text-[12px] font-medium text-muted-foreground">
                     작업 완료 {completedCount}/{group.rows.length}
                   </span>
                 }
@@ -760,7 +760,7 @@ function DispensingContentBody({
                       수정이력조회
                       <MenuIcon data-icon="inline-end" />
                     </Button>
-                    <div className="h-[18px] w-px bg-[var(--clair-color-line-normal)]" />
+                    <div className="h-[18px] w-px bg-[var(--emr-line-default)]" />
                     <Button variant="outline" size="xs" className="bg-card">
                       필터 1
                     </Button>
