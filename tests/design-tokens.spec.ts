@@ -15,6 +15,14 @@ const extractSourceRange = (source: string, startMarker: string, endMarker: stri
   return source.slice(start, end);
 };
 
+const extractSourceToEnd = (source: string, startMarker: string) => {
+  const start = source.indexOf(startMarker);
+
+  expect(start, `Missing start marker: ${startMarker}`).toBeGreaterThanOrEqual(0);
+
+  return source.slice(start);
+};
+
 test("neutral command token contract is exposed on the app shell", async ({ page }) => {
   await page.goto(treatmentUrl);
 
@@ -128,6 +136,20 @@ test("lab workspace source uses semantic color tokens instead of direct local co
   ].join("\n");
 
   const matches = labSource.match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});
+
+test("imaging workspace source uses semantic color tokens instead of direct local colors", async () => {
+  const source = await fs.promises.readFile("src/features/lab-imaging/module.tsx", "utf8");
+  const imagingSource = [
+    extractSourceRange(source, "const imagingStatusOrder", "const fallbackLabHistoryGroups"),
+    extractSourceRange(source, "function ImagingQueueItem", "export function LabSidePanel"),
+    extractSourceRange(source, "export function ImagingSidePanel", "function LabResultInputSection"),
+    extractSourceToEnd(source, "function useCurrentImagingDetail"),
+  ].join("\n");
+
+  const matches = imagingSource.match(directLocalColorPattern) ?? [];
 
   expect(matches).toEqual([]);
 });
