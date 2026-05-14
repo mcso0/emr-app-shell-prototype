@@ -71,7 +71,7 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
       ? `활동중 · ${activityModuleLabel} ${activeMinutes}분째`
       : "활동 대기";
   const topIconButtonClassName =
-    "text-[var(--clair-color-label-alternative)] hover:bg-[var(--clair-color-fill-alternative)] hover:text-[var(--clair-color-label-strong)]";
+    "text-muted-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground";
 
   useEffect(() => {
     hydrate();
@@ -91,21 +91,21 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <header className="relative z-20 flex h-[52px] items-center bg-[var(--clair-color-service-background,#FBFCFD)] px-2.5">
+    <header className="relative z-20 flex h-[52px] items-center bg-[var(--emr-surface-app)] px-2.5">
       <Button
         variant="outline"
         size="sm"
-        className="h-8 w-[209px] justify-center gap-1 rounded-[var(--clair-radius-md)] border-[var(--clair-color-line-normal)] bg-white px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-900)] shadow-none hover:border-[var(--clair-color-line-strong)] hover:bg-[var(--clair-color-background-surface)] max-sm:w-11 max-sm:px-2"
+        className="h-8 w-[209px] justify-center gap-1 rounded-[var(--clair-radius-md)] border-border bg-card px-3 py-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-foreground shadow-none hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] max-sm:w-11 max-sm:px-2"
         aria-label={`${workspaceId} 워크스페이스 선택`}
       >
-        <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-[var(--clair-color-primary-normal)] text-white">
+        <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-primary text-primary-foreground">
           <WorkspaceLogoMarkIcon className="size-4" aria-hidden="true" />
         </span>
         <span className="flex min-w-0 shrink-0 items-center justify-center gap-1 px-0.5 max-sm:hidden">
           <span className="whitespace-nowrap">VIP 동물의료센터</span>
           <span className="whitespace-nowrap">청담점</span>
         </span>
-        <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-black max-sm:hidden" aria-hidden="true" />
+        <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-foreground max-sm:hidden" aria-hidden="true" />
       </Button>
       <Separator orientation="vertical" className="mx-2 hidden h-6" />
       <GlobalCommandPalette workspaceId={workspaceId} />

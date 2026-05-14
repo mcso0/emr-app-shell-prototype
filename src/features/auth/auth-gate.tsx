@@ -34,10 +34,10 @@ export function AuthGate({ children }: AuthGateProps) {
 
   if (!hydrated || !session) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[var(--clair-color-background-surface)] px-6 text-[var(--clair-color-label-strong)]">
-        <div className="rounded-[var(--clair-radius-lg)] border border-[var(--clair-color-line-normal)] bg-white px-6 py-5 text-center shadow-sm">
+      <main className="grid min-h-screen place-items-center bg-[var(--emr-surface-muted)] px-6 text-foreground">
+        <div className="rounded-[var(--clair-radius-lg)] border border-border bg-card px-6 py-5 text-center shadow-sm">
           <p className="text-[14px] font-semibold">로그인 확인 중</p>
-          <p className="mt-1 text-[12px] text-[var(--clair-color-label-neutral)]">
+          <p className="mt-1 text-[12px] text-muted-foreground">
             워크스페이스 접근 권한을 확인합니다.
           </p>
         </div>
