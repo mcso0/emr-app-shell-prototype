@@ -387,7 +387,7 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
     <>
       <button
         type="button"
-        className="mx-auto flex h-8 w-[min(560px,45vw)] min-w-8 items-center rounded-lg border border-[var(--clair-color-line-normal)] bg-[var(--clair-color-background-surface)] px-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] outline-none transition-colors hover:border-[var(--clair-color-line-strong)] hover:bg-white focus-visible:ring-3 focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2"
+        className="mx-auto flex h-8 w-[min(560px,45vw)] min-w-8 items-center rounded-lg border border-border bg-card px-3 text-left shadow-sm outline-none transition-colors hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2"
         aria-label="전역 통합 검색 열기"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
@@ -396,7 +396,7 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
         <span className="min-w-0 flex-1 truncate px-2 text-[12px] text-muted-foreground max-sm:hidden">
           동물명 또는 보호자명으로 검색
         </span>
-        <span className="inline-flex items-center gap-1 rounded border border-[var(--clair-color-line-normal)] bg-white px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground max-sm:hidden">
+        <span className="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground max-sm:hidden">
           <CommandIcon className="size-3" aria-hidden="true" />
           K
         </span>
@@ -404,7 +404,7 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="top-[88px] max-h-[min(720px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] translate-y-0 gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle,var(--clair-color-line-normal))] bg-white p-0 shadow-[0_22px_72px_rgba(15,23,42,0.2)] sm:max-w-[720px]"
+          className="top-[88px] max-h-[min(720px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] translate-y-0 gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-2xl sm:max-w-[720px]"
           showCloseButton={false}
         >
           <DialogTitle className="sr-only">통합 검색과 빠른 실행</DialogTitle>
@@ -422,7 +422,7 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
               placeholder="동물명, 보호자명, 전화번호, 차트번호 검색"
               className="h-12 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 md:text-[15px]"
             />
-            <kbd className="rounded border border-[var(--clair-color-line-normal)] bg-[var(--clair-color-fill-alternative)] px-1.5 py-1 text-[11px] font-medium leading-none text-muted-foreground">
+            <kbd className="rounded border border-border bg-muted px-1.5 py-1 text-[11px] font-medium leading-none text-muted-foreground">
               Esc
             </kbd>
           </div>
@@ -442,10 +442,10 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
               ))
             ) : (
               <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-6 text-center">
-                <div className="flex size-10 items-center justify-center rounded-full bg-[var(--clair-color-fill-alternative)] text-muted-foreground">
+                <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <SearchIcon className="size-4" aria-hidden="true" />
                 </div>
-                <div className="text-sm font-medium text-[var(--clair-color-label-strong)]">
+                <div className="text-sm font-medium text-foreground">
                   검색 결과가 없습니다.
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -454,7 +454,7 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between border-t bg-[var(--clair-color-background-surface)] px-4 py-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-between border-t bg-muted/50 px-4 py-2 text-[11px] text-muted-foreground">
             <span>Enter 실행</span>
             <span>↑↓ 이동</span>
           </div>
@@ -495,14 +495,14 @@ function CommandSectionView({
               className={cn(
                 "grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] px-2.5 py-2 text-left outline-none transition-colors",
                 active
-                  ? "bg-[var(--clair-color-fill-alternative)] text-[var(--clair-color-label-strong)]"
-                  : "text-[var(--clair-color-label-normal)] hover:bg-[var(--clair-color-background-surface)]"
+                  ? "bg-muted text-foreground"
+                  : "text-[var(--emr-text-secondary)] hover:bg-muted/50"
               )}
               data-active={active || undefined}
               onClick={() => onRunCommand(item)}
               onMouseEnter={() => onSetActiveIndex(itemIndex)}
             >
-              <span className="flex size-8 items-center justify-center rounded-[8px] border border-[var(--clair-color-line-normal)] bg-white text-muted-foreground">
+              <span className="flex size-8 items-center justify-center rounded-[8px] border border-border bg-card text-muted-foreground">
                 <Icon className="size-4" aria-hidden="true" />
               </span>
               <span className="min-w-0">
@@ -511,7 +511,7 @@ function CommandSectionView({
                   {item.subtitle}
                 </span>
               </span>
-              <span className="inline-flex max-w-[120px] items-center rounded-full border border-[var(--clair-color-line-normal)] bg-white px-2 py-0.5 text-[11px] leading-4 text-muted-foreground">
+              <span className="inline-flex max-w-[120px] items-center rounded-full border border-border bg-card px-2 py-0.5 text-[11px] leading-4 text-muted-foreground">
                 <span className="truncate">{item.badge}</span>
               </span>
             </button>

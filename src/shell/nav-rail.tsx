@@ -119,7 +119,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
   );
 
   return (
-    <nav className="flex min-h-0 min-w-[48px] max-w-[48px] flex-col items-center rounded-lg bg-[#171923] p-2 text-[#cbd5e0]">
+    <nav className="flex min-h-0 min-w-[48px] max-w-[48px] flex-col items-center rounded-lg bg-primary p-2 text-primary-foreground/70">
       <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-2 overflow-y-auto">
         <AnimatePresence initial={false}>
           {!modulePanelOpen ? (
@@ -136,7 +136,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
                   render={
                     <button
                       type="button"
-                      className="flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
                       onClick={() => setModulePanelOpen(true)}
                       aria-label="사이드 패널 펼치기"
                     >
@@ -190,9 +190,9 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
         className="relative mt-2 flex size-8 items-center justify-center rounded-[6px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-label="사용자 프로필"
       >
-        <span className="relative flex size-6 items-center justify-center rounded-full bg-[#a0aec0] text-[8px] font-medium leading-none text-black">
+        <span className="relative flex size-6 items-center justify-center rounded-full bg-primary-foreground/70 text-[8px] font-medium leading-none text-primary">
           SH
-          <span className="absolute bottom-0 right-0 size-1.5 rounded-full border border-[#171923] bg-[var(--clair-color-atomic-green-500)]" />
+          <span className="absolute bottom-0 right-0 size-1.5 rounded-full border border-primary bg-[var(--emr-status-success-text)]" />
         </span>
       </button>
     </nav>
@@ -252,8 +252,8 @@ function RailModuleItem({
             <Link
               href={href}
               className={cn(
-                "flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50",
-                active && "bg-[rgba(255,255,255,0.16)] text-white"
+                "flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+                active && "bg-primary-foreground/15 text-primary-foreground"
               )}
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
@@ -291,7 +291,7 @@ function RailActionItem({
           render={
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-[6px] text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
               aria-label={label}
             >
               <IconFrame>
@@ -337,7 +337,7 @@ function NavDivider({ transition }: { transition: Transition }) {
       transition={transition}
       className="flex w-full shrink-0 flex-col items-start overflow-hidden px-1.5 py-2.5"
     >
-      <div className="h-px w-full bg-[#2d3748]" />
+      <div className="h-px w-full bg-primary-foreground/15" />
     </motion.div>
   );
 }
