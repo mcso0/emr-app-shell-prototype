@@ -215,3 +215,18 @@ test("home workspace source uses semantic color tokens instead of direct local c
 
   expect(matches).toEqual([]);
 });
+
+test("auth login source uses semantic color tokens instead of direct local colors", async () => {
+  const sources = await Promise.all(
+    [
+      "src/app/login/page.tsx",
+      "src/features/auth/login-form.tsx",
+      "src/features/auth/auth-gate.tsx",
+      "src/shell/top-menu.tsx",
+      "src/shell/auth-profile-menu.tsx",
+    ].map((path) => fs.promises.readFile(path, "utf8")),
+  );
+  const matches = sources.join("\n").match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});

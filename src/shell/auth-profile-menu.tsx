@@ -37,12 +37,12 @@ export function AuthProfileMenu({
           size: "sm",
           roundness: "round",
           className:
-            "ml-1 h-8 w-11 gap-0.5 border border-transparent bg-white px-[3px] py-1 text-[var(--clair-color-label-neutral)] shadow-[0_1px_1px_rgba(26,32,44,0.03)] hover:border-[var(--clair-color-line-normal)] hover:bg-[var(--clair-color-background-surface)] aria-expanded:border-[var(--clair-color-line-strong)] aria-expanded:bg-[var(--clair-color-background-surface)] aria-expanded:[&_svg[data-slot=profile-chevron]]:rotate-180",
+            "ml-1 h-8 w-11 gap-0.5 border border-transparent bg-card px-[3px] py-1 text-muted-foreground shadow-sm hover:border-border hover:bg-[var(--emr-state-hover)] aria-expanded:border-[var(--emr-line-strong)] aria-expanded:bg-[var(--emr-state-hover)] aria-expanded:[&_svg[data-slot=profile-chevron]]:rotate-180",
         })}
       >
-        <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-atomic-gray-800)] text-[12px] font-bold leading-none text-white">
+        <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-bold leading-none text-primary-foreground">
           {userInitial}
-          <span className="absolute -bottom-0.5 -right-0.5 size-[9px] rounded-full border-[1.5px] border-white bg-[var(--clair-color-status-positive-foreground)]" />
+          <span className="absolute -bottom-0.5 -right-0.5 size-[9px] rounded-full border-[1.5px] border-card bg-[var(--emr-status-success-text)]" />
         </span>
         <CdsNavigationChevronDownIcon
           data-slot="profile-chevron"
@@ -54,27 +54,27 @@ export function AuthProfileMenu({
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-2 py-1.5">
             <span className="flex items-center gap-2">
-              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-atomic-gray-800)] text-[12px] font-bold leading-none text-white">
+              <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-bold leading-none text-primary-foreground">
                 {userInitial}
-                <span className="absolute -bottom-0.5 -right-0.5 size-[9px] rounded-full border-[1.5px] border-white bg-[var(--clair-color-status-positive-foreground)]" />
+                <span className="absolute -bottom-0.5 -right-0.5 size-[9px] rounded-full border-[1.5px] border-card bg-[var(--emr-status-success-text)]" />
               </span>
               <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-[13px] font-semibold leading-4 text-[var(--clair-color-label-strong)]">
+                <span className="truncate text-[13px] font-semibold leading-4 text-foreground">
                   {userName}
                 </span>
-                <span className="truncate text-[11px] font-normal leading-4 text-[var(--clair-color-label-neutral)]">
+                <span className="truncate text-[11px] font-normal leading-4 text-muted-foreground">
                   {roleLabel}
                 </span>
               </span>
             </span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
-        <div className="px-2 pb-1 text-[11px] leading-4 text-[var(--clair-color-label-assistive)]">
+        <div className="px-2 pb-1 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
           {activityLabel}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="h-8 cursor-pointer gap-2" onClick={() => void onLogout()}>
-          <CdsNavigationLogOutIcon className="size-4 text-[var(--clair-color-label-alternative)]" aria-hidden="true" />
+          <CdsNavigationLogOutIcon className="size-4 text-muted-foreground" aria-hidden="true" />
           로그아웃
         </DropdownMenuItem>
       </DropdownMenuContent>

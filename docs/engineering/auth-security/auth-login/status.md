@@ -36,6 +36,7 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `NEXT_PUBLIC_AUTH_MODE=auto` 기본값은 Supabase env가 있으면 provider를 쓰고, env가 없으면 mock/local demo fallback을 유지한다.
 - Membership/permission enforcement plan은 `docs/engineering/auth-security/auth-login/membership-permission-enforcement.md`에 문서화되어 있다.
 - Supabase project API live validation, callback route, DB migration, RLS, server permission enforcement code는 아직 연결하지 않았다.
+- 2026-05-14 기준 `/login`, auth gate loading state, top menu workspace selector, auth profile trigger/menu의 직접 Clair/local color usage는 DESIGN-SYSTEM-PR-015에서 shadcn semantic token과 EMR alias token으로 정리했다. Auth behavior, Supabase adapter boundary, mock session storage, safe `next`, and logout flow were not changed.
 
 ## 완료된 작업
 
@@ -46,6 +47,7 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `docs/completed/auth/2026-05-03-supabase-integration-readiness.md`
 - `docs/completed/auth/2026-05-03-supabase-provider-implementation.md`
 - `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`
+- `docs/completed/design/2026-05-14-auth-login-token-cleanup.md`
 - GitHub PR #10: `feat: add auth transition boundary`
 
 ## 다음 작업

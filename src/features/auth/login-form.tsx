@@ -109,11 +109,11 @@ export function LoginForm() {
   }
 
   return (
-    <main className="min-h-svh bg-[var(--clair-color-background-normal)] text-[var(--clair-color-label-strong)]">
+    <main className="min-h-svh bg-[var(--emr-surface-app)] text-foreground">
       <section className="grid min-h-svh lg:grid-cols-2">
-        <div className="flex min-h-[520px] flex-col bg-white px-6 py-6 md:px-10 md:py-8">
+        <div className="flex min-h-[520px] flex-col bg-card px-6 py-6 md:px-10 md:py-8">
           <div className="flex items-center gap-2 text-[13px] font-semibold leading-5">
-            <span className="flex size-7 items-center justify-center rounded-[var(--clair-radius-md)] bg-[var(--clair-color-atomic-gray-900)] text-[var(--clair-color-static-white)]">
+            <span className="flex size-7 items-center justify-center rounded-[var(--clair-radius-md)] bg-primary text-primary-foreground">
               <WorkspaceLogoMarkIcon aria-hidden="true" />
             </span>
             CLAiR EMR
@@ -129,7 +129,7 @@ export function LoginForm() {
                   <h1 className="text-[28px] font-semibold leading-9 tracking-normal">
                     CLAiR EMR에 로그인
                   </h1>
-                  <p className="text-[14px] leading-6 text-[var(--clair-color-label-neutral)]">
+                  <p className="text-[14px] leading-6 text-muted-foreground">
                     병원 워크스페이스에 접속하려면 계정 정보를 입력하세요.
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export function LoginForm() {
                 {loginError ? (
                   <p
                     role="alert"
-                    className="rounded-[var(--clair-radius-md)] border border-[var(--clair-color-status-negative-background)] bg-[var(--clair-color-status-negative-background)] px-3 py-2 text-[13px] leading-5 text-[var(--clair-color-status-negative-foreground)]"
+                    className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
                   >
                     {loginError}
                   </p>
@@ -173,16 +173,16 @@ export function LoginForm() {
           </div>
         </div>
 
-        <aside className="flex min-h-[520px] items-center justify-center border-t border-[var(--clair-color-line-normal)] bg-[var(--clair-color-background-surface)] px-5 py-8 md:px-10 lg:border-l lg:border-t-0">
+        <aside className="flex min-h-[520px] items-center justify-center border-t border-border bg-[var(--emr-surface-muted)] px-5 py-8 md:px-10 lg:border-l lg:border-t-0">
           <div className="flex w-full max-w-[456px] flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--clair-color-primary-normal)]">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
                 Development controls
               </p>
               <h2 className="text-[24px] font-semibold leading-8 tracking-normal">
                 MVP 테스트 옵션
               </h2>
-              <p className="text-[14px] leading-6 text-[var(--clair-color-label-neutral)]">
+              <p className="text-[14px] leading-6 text-muted-foreground">
                 {usesSupabaseProvider
                   ? "Supabase Auth로 로그인합니다. MVP 테스트 옵션은 local demo 확인용으로 유지합니다."
                   : "현재는 Supabase Auth 연결 전 mock session으로 진입합니다."}
@@ -202,19 +202,19 @@ export function LoginForm() {
                       aria-pressed={selected}
                       onClick={() => setSelectedRole(role.id)}
                       className={cn(
-                        "flex min-h-[68px] items-start gap-3 rounded-[var(--clair-radius-md)] border bg-white p-3 text-left transition-colors",
+                        "flex min-h-[68px] items-start gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3 text-left transition-colors",
                         "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                         selected
-                          ? "border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-primary-background)]"
-                          : "border-[var(--clair-color-line-normal)] hover:bg-[var(--clair-color-background-subtle)]"
+                          ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                          : "border-border hover:bg-[var(--emr-state-hover)]"
                       )}
                     >
                       <span
                         className={cn(
                           "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border",
                           selected
-                            ? "border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-primary-normal)] text-[var(--clair-color-static-white)]"
-                            : "border-[var(--clair-color-line-normal)] text-transparent"
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border text-transparent"
                         )}
                         aria-hidden="true"
                       >
@@ -224,7 +224,7 @@ export function LoginForm() {
                         <span className="block text-[14px] font-semibold leading-5">
                           {role.label}
                         </span>
-                        <span className="mt-1 block text-[12px] leading-4 text-[var(--clair-color-label-neutral)]">
+                        <span className="mt-1 block text-[12px] leading-4 text-muted-foreground">
                           {role.description}
                         </span>
                       </span>
@@ -241,10 +241,10 @@ export function LoginForm() {
                   <label
                     key={option.id}
                     className={cn(
-                      "flex min-h-[64px] cursor-pointer gap-3 rounded-[var(--clair-radius-md)] border bg-white p-3",
+                      "flex min-h-[64px] cursor-pointer gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3",
                       storageMode === option.id
-                        ? "border-[var(--clair-color-primary-normal)] bg-[var(--clair-color-primary-background)]"
-                        : "border-[var(--clair-color-line-normal)]"
+                        ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                        : "border-border"
                     )}
                   >
                     <input
@@ -253,13 +253,13 @@ export function LoginForm() {
                       value={option.id}
                       checked={storageMode === option.id}
                       onChange={() => setStorageMode(option.id)}
-                      className="mt-1 size-4 accent-[var(--clair-color-primary-normal)]"
+                      className="mt-1 size-4 accent-[var(--emr-state-selected-border)]"
                     />
                     <span>
                       <span className="block text-[13px] font-semibold leading-5">
                         {option.label}
                       </span>
-                      <span className="mt-0.5 block text-[12px] leading-4 text-[var(--clair-color-label-neutral)]">
+                      <span className="mt-0.5 block text-[12px] leading-4 text-muted-foreground">
                         {option.description}
                       </span>
                     </span>
@@ -269,25 +269,25 @@ export function LoginForm() {
             </FieldSet>
 
             <div
-              className="rounded-[var(--clair-radius-md)] border border-[var(--clair-color-line-normal)] bg-[var(--clair-color-background-subtle)] p-3"
+              className="rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-subpanel)] p-3"
               data-testid="mock-session-status"
             >
-              <p className="text-[12px] font-semibold leading-4 text-[var(--clair-color-label-neutral)]">
+              <p className="text-[12px] font-semibold leading-4 text-muted-foreground">
                 현재 로그인
               </p>
               {!hydrated ? (
-                <p className="mt-2 text-[13px] text-[var(--clair-color-label-neutral)]">확인 중</p>
+                <p className="mt-2 text-[13px] text-muted-foreground">확인 중</p>
               ) : session ? (
                 <div className="mt-3 flex flex-col gap-3">
                   <div className="grid gap-2 text-[13px]">
                     <div>
-                      <p className="text-[12px] text-[var(--clair-color-label-neutral)]">
+                      <p className="text-[12px] text-muted-foreground">
                         상태
                       </p>
                       <p className="font-semibold">로그인됨</p>
                     </div>
                     <div>
-                      <p className="text-[12px] text-[var(--clair-color-label-neutral)]">
+                      <p className="text-[12px] text-muted-foreground">
                         역할
                       </p>
                       <p className="font-medium">
@@ -296,7 +296,7 @@ export function LoginForm() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[12px] text-[var(--clair-color-label-neutral)]">
+                      <p className="text-[12px] text-muted-foreground">
                         저장소
                       </p>
                       <p className="font-medium">
@@ -313,7 +313,7 @@ export function LoginForm() {
                   </Button>
                 </div>
               ) : (
-                <p className="mt-2 text-[13px] text-[var(--clair-color-label-neutral)]">
+                <p className="mt-2 text-[13px] text-muted-foreground">
                   로그인 전
                 </p>
               )}
