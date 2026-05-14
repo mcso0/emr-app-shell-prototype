@@ -230,3 +230,16 @@ test("auth login source uses semantic color tokens instead of direct local color
 
   expect(matches).toEqual([]);
 });
+
+test("shell chrome source uses semantic color tokens instead of direct local colors", async () => {
+  const sources = await Promise.all(
+    [
+      "src/shell/app-shell.tsx",
+      "src/shell/nav-rail.tsx",
+      "src/shell/global-command-palette.tsx",
+    ].map((path) => fs.promises.readFile(path, "utf8")),
+  );
+  const matches = sources.join("\n").match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});
