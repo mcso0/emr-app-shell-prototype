@@ -77,15 +77,15 @@ const placeholderSideItems = [
 
 const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
   blue:
-    "border-[var(--clair-color-atomic-blue-200)] bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   gray:
-    "border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-700)]",
+    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   green:
-    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   orange:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-700)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   purple:
-    "border-[var(--clair-color-atomic-purple-200)] bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-700)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
 };
 
 function CustomerWorkBadge({ badge }: { badge: CustomerWorkBadge }) {
@@ -259,9 +259,9 @@ function CustomerDataTable<TRow extends { id: string }>({
         </DropdownMenu>
       </div>
       <Table className="text-[14px]" style={{ minWidth: `${minTableWidth}px` }}>
-        <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
+        <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="w-12 bg-[var(--clair-color-atomic-neutral-50)]">
+            <TableHead className="w-12 bg-[var(--emr-surface-muted)]">
               <span
                 data-row-interactive="true"
                 className="inline-flex size-6 items-center justify-center"
@@ -289,14 +289,14 @@ function CustomerDataTable<TRow extends { id: string }>({
               <TableHead
                 key={column.key}
                 className={cn(
-                  "h-11 bg-[var(--clair-color-atomic-neutral-50)] text-[13px] font-medium text-muted-foreground",
+                  "h-11 bg-[var(--emr-surface-muted)] text-[13px] font-medium text-muted-foreground",
                   column.headerClassName
                 )}
               >
                 {column.label}
               </TableHead>
             ))}
-            <TableHead className="w-12 bg-[var(--clair-color-atomic-neutral-50)]" />
+            <TableHead className="w-12 bg-[var(--emr-surface-muted)]" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -312,8 +312,8 @@ function CustomerDataTable<TRow extends { id: string }>({
                   data-testid={rowTestId(row)}
                   data-state={selected || active ? "selected" : undefined}
                   className={cn(
-                    "h-12 cursor-pointer border-border bg-card text-[var(--clair-color-label-normal)] hover:bg-muted/50",
-                    active && "bg-[var(--clair-color-atomic-sky-50)] hover:bg-[var(--clair-color-atomic-sky-50)]"
+                    "h-12 cursor-pointer border-border bg-card text-foreground hover:bg-[var(--emr-state-hover)]",
+                    active && "bg-[var(--emr-state-selected)] hover:bg-[var(--emr-state-selected)]"
                   )}
                   onClick={() => onOpenRow(row)}
                 >
@@ -489,7 +489,7 @@ function CustomerToolbar({
         actionsClassName="ml-auto flex-wrap justify-end"
         icon={
           <CdsPeopleUsersIcon
-            className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
+            className="size-5 shrink-0 text-[var(--emr-text-tertiary)]"
             aria-hidden="true"
           />
         }
@@ -712,7 +712,7 @@ export function CustomerContent() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-surface)]" data-testid="customer-workspace">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]" data-testid="customer-workspace">
       <CustomerToolbar
         listMode={listMode}
         patientCount={patientRows.length}

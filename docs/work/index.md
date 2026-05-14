@@ -22,6 +22,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DESIGN-SYSTEM-PR-008 | done | design-system | P1 | PR 8 | `docs/work/design-system/DESIGN-SYSTEM-PR-008-dispensing-treatment-feature-token-cleanup.md` |
 | DESIGN-SYSTEM-PR-009 | done | design-system | P1 | PR 9 | `docs/work/design-system/DESIGN-SYSTEM-PR-009-billing-feature-token-cleanup.md` |
 | DESIGN-SYSTEM-PR-010 | done | design-system | P1 | PR 10 | `docs/work/design-system/DESIGN-SYSTEM-PR-010-inpatient-feature-token-cleanup.md` |
+| DESIGN-SYSTEM-PR-011 | done | design-system | P1 | PR 11 | `docs/work/design-system/DESIGN-SYSTEM-PR-011-customer-feature-token-cleanup.md` |
 | HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |
