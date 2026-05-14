@@ -31,7 +31,7 @@ export function HomeContent({ workspaceId }: ShellComponentProps) {
   const data = getHomeMockData(role, workspaceId);
 
   return (
-    <div className="h-full min-h-0 bg-[var(--clair-color-background-normal)] p-2">
+    <div className="h-full min-h-0 bg-[var(--emr-surface-app)] p-2">
       <HomeKanbanWorkspace data={data} />
     </div>
   );
@@ -39,8 +39,8 @@ export function HomeContent({ workspaceId }: ShellComponentProps) {
 
 function HomeLoadingState() {
   return (
-    <div className="grid h-full min-h-0 bg-[var(--clair-color-background-normal)] p-2">
-      <div className="grid min-h-0 w-full grid-cols-[minmax(0,1fr)_minmax(300px,340px)] overflow-hidden bg-white">
+    <div className="grid h-full min-h-0 bg-[var(--emr-surface-app)] p-2">
+      <div className="grid min-h-0 w-full grid-cols-[minmax(0,1fr)_minmax(300px,340px)] overflow-hidden bg-card">
         <div className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 border-r border-border p-4">
           <Skeleton className="h-9 w-64 rounded-[var(--clair-radius-sm)]" />
           <Skeleton className="h-7 w-96 rounded-full" />

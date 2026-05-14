@@ -86,12 +86,12 @@ export function MyWorkPanel({
   return (
     <section
       data-testid="home-my-work-panel"
-      className="rounded-[var(--clair-radius-md)] border border-border bg-white p-4 lg:flex lg:h-full lg:min-h-[420px] lg:flex-col"
+      className="rounded-[var(--clair-radius-md)] border border-border bg-card p-4 lg:flex lg:h-full lg:min-h-[420px] lg:flex-col"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="grid size-8 place-items-center rounded-[var(--clair-radius-md)] bg-[var(--clair-color-background-surface)]">
-            <ClipboardListIcon className="size-4 text-[var(--clair-color-primary-normal)]" aria-hidden="true" />
+          <div className="grid size-8 place-items-center rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-muted)]">
+            <ClipboardListIcon className="size-4 text-[var(--emr-status-info-text)]" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <h2 className="truncate text-[16px] font-semibold leading-6">내 업무</h2>
@@ -143,7 +143,7 @@ export function MyWorkPanel({
 
 function MyWorkEmptyState({ launchers }: { launchers: HomeLauncherAction[] }) {
   return (
-    <div className="rounded-[var(--clair-radius-md)] border border-dashed border-border bg-[var(--clair-color-background-surface)] p-4">
+    <div className="rounded-[var(--clair-radius-md)] border border-dashed border-border bg-[var(--emr-surface-muted)] p-4">
       <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
         <div className="min-w-0">
           <h3 className="text-[16px] font-semibold leading-6">바로 시작할 업무를 선택하세요.</h3>
@@ -157,7 +157,7 @@ function MyWorkEmptyState({ launchers }: { launchers: HomeLauncherAction[] }) {
               key={launcher.id}
               className={cn(
                 buttonVariants({ variant: "outline" }),
-                "group h-auto min-h-24 items-stretch justify-between rounded-[var(--clair-radius-md)] bg-white p-3 text-left"
+                "group h-auto min-h-24 items-stretch justify-between rounded-[var(--clair-radius-md)] bg-card p-3 text-left"
               )}
               href={launcher.href}
             >

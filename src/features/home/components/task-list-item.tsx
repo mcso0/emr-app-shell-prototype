@@ -17,11 +17,11 @@ type TaskListItemProps = {
 
 const priorityTone: Record<HomeTaskPriority, string> = {
   urgent:
-    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   high:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   normal:
-    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   low: "border-border bg-card text-muted-foreground",
 };
 
@@ -73,7 +73,7 @@ export function TaskListItem({ task }: TaskListItemProps) {
             {task.assignment === "roleQueue" ? (
               <Badge
                 variant="outline"
-                className="h-5 rounded-md border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] px-1.5 text-[11px] text-[var(--clair-color-primary-normal)]"
+                className="h-5 rounded-md border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-1.5 text-[11px] text-[var(--emr-status-info-text)]"
               >
                 미배정 큐
               </Badge>

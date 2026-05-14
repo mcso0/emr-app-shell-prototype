@@ -47,9 +47,11 @@ test("home renders the dashboard tab before hospital status", async ({ page }) =
   await expect(page.getByRole("tab", { name: "홈" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: "업무 현황" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "내 업무" })).toHaveCount(0);
-  await expect.poll(async () => page.getByRole("tab").allTextContents()).toEqual(["홈", "업무 현황"]);
+  await expect
+    .poll(async () => page.getByRole("tablist", { name: "홈 보기" }).getByRole("tab").allTextContents())
+    .toEqual(["홈", "업무 현황"]);
   await expect(page.getByTestId("home-dashboard")).toBeVisible();
-  await expect(page.getByText("오늘 워크플로우")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "다음 행동" })).toBeVisible();
   await expect(page.getByTestId("home-dashboard-flow")).toBeVisible();
   await expect(page.getByText("병원 운영 현황")).toHaveCount(0);
   await expect(page.getByText("오늘 업무 아웃라인")).toBeVisible();
@@ -64,13 +66,12 @@ test("hospital status tab renders the kanban work-entry surface", async ({ page 
   await openHospitalView(page);
 
   await expect(page.getByRole("tab", { name: "업무 현황" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("전체 업무 리스트와 미배정 큐까지 표시")).toBeVisible();
-  const statusFilter = page.getByRole("group", { name: "홈 업무 상태 필터" });
-  await expect(statusFilter.getByRole("button", { name: "전체 17" })).toHaveAttribute("aria-pressed", "true");
-  await expect(statusFilter.getByRole("button", { name: "긴급 5" })).toBeVisible();
-  await expect(statusFilter.getByRole("button", { name: "지연 3" })).toBeVisible();
-  await expect(statusFilter.getByRole("button", { name: /오늘 마감/ })).toHaveCount(0);
-  await expect(statusFilter.getByRole("button", { name: "미지정 10" })).toBeVisible();
+  await expect(page.getByText("업무 분배와 병목 조정을 위한 운영 보드")).toBeVisible();
+  const operationModeFilter = page.getByRole("group", { name: "업무 현황 운영 모드" });
+  await expect(operationModeFilter.getByRole("button", { name: "전체 흐름 17" })).toHaveAttribute("aria-pressed", "true");
+  await expect(operationModeFilter.getByRole("button", { name: "지연 해소 5" })).toBeVisible();
+  await expect(operationModeFilter.getByRole("button", { name: "배정 필요 10" })).toBeVisible();
+  await expect(operationModeFilter.getByRole("button", { name: /오늘 마감/ })).toHaveCount(0);
   await expect(page.getByLabel("담당자 필터")).toBeVisible();
   await expect(page.getByLabel("업무 필터")).toBeVisible();
   await expect(page.getByTestId("home-kanban-column-waiting").getByRole("heading", { name: "대기" })).toBeVisible();
@@ -122,7 +123,7 @@ test("hospital view filters kanban work by assignee and workstream", async ({ pa
   await expect(page.getByTestId("home-kanban-column-reservation")).toHaveCount(0);
 });
 
-test("status filters move populated workstreams before empty columns", async ({ page }) => {
+test("operation mode filters move populated workstreams before empty columns", async ({ page }) => {
   await useMockRole(page, "vet");
   await page.goto("/w/clair-demo/home");
   await openHospitalView(page);
@@ -143,7 +144,7 @@ test("status filters move populated workstreams before empty columns", async ({ 
     "home-kanban-column-billing",
   ]);
 
-  await page.getByRole("group", { name: "홈 업무 상태 필터" }).getByRole("button", { name: "긴급 5" }).click();
+  await page.getByRole("group", { name: "업무 현황 운영 모드" }).getByRole("button", { name: "지연 해소 5" }).click();
 
   await expect.poll(columnOrder).toEqual([
     "home-kanban-column-waiting",
@@ -162,11 +163,11 @@ test("hospital view hides the work summary panel", async ({ page }) => {
   await page.goto("/w/clair-demo/home");
   await openHospitalView(page);
 
-  const statusFilter = page.getByRole("group", { name: "홈 업무 상태 필터" });
+  const operationModeFilter = page.getByRole("group", { name: "업무 현황 운영 모드" });
 
   await expect(page.getByTestId("home-work-summary-panel")).toHaveCount(0);
   await expect(page.getByTestId("home-focus-task-billing-coco-payment")).toHaveCount(0);
-  await expect(statusFilter.getByRole("button", { name: "전체 17" })).toHaveAttribute("aria-pressed", "true");
+  await expect(operationModeFilter.getByRole("button", { name: "전체 흐름 17" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("업무 필터")).toHaveText("전체");
 });
 

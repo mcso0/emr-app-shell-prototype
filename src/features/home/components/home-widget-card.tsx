@@ -11,17 +11,17 @@ type HomeWidgetCardProps = {
 };
 
 const itemPriorityTone: Record<HomePriority, string> = {
-  critical: "bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
-  high: "bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
-  medium: "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
-  normal: "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
-  urgent: "bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
-  low: "bg-[var(--clair-color-background-surface)] text-muted-foreground",
+  critical: "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
+  high: "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
+  medium: "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+  normal: "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+  urgent: "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
+  low: "bg-[var(--emr-surface-muted)] text-muted-foreground",
 };
 
 export function HomeWidgetCard({ widget }: HomeWidgetCardProps) {
   return (
-    <section className="min-h-[188px] rounded-[var(--clair-radius-md)] border border-border bg-white p-3">
+    <section className="min-h-[188px] rounded-[var(--clair-radius-md)] border border-border bg-card p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-[14px] font-semibold leading-5">{widget.title}</h3>
@@ -48,7 +48,7 @@ export function HomeWidgetCard({ widget }: HomeWidgetCardProps) {
           widget.items.slice(0, 4).map((item) => (
             <div
               key={item.id}
-              className="flex min-h-9 items-center justify-between gap-3 rounded-[var(--clair-radius-sm)] bg-[var(--clair-color-background-surface)] px-2.5 py-1.5"
+              className="flex min-h-9 items-center justify-between gap-3 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-muted)] px-2.5 py-1.5"
             >
               <div className="min-w-0">
                 <div className="truncate text-[12px] font-medium leading-4 text-foreground">

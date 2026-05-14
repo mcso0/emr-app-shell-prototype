@@ -12,7 +12,7 @@ type HospitalFlowBoardProps = {
 
 export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
   return (
-    <section className="rounded-[var(--clair-radius-md)] border border-border bg-white p-3">
+    <section className="rounded-[var(--clair-radius-md)] border border-border bg-card p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold leading-5">병원 전체 흐름</h2>
@@ -35,9 +35,9 @@ export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
                 key={item.status}
                 href={item.actionHref ?? "/w/clair-demo/home"}
                 className={cn(
-                  "group flex min-h-[126px] flex-col justify-between rounded-[var(--clair-radius-md)] border p-2.5 transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                  "group flex min-h-[126px] flex-col justify-between rounded-[var(--clair-radius-md)] border p-2.5 transition-colors hover:bg-[var(--emr-state-hover)]",
                   hasDelay
-                    ? "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)]"
+                    ? "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
                     : "border-border bg-card"
                 )}
               >
@@ -55,7 +55,7 @@ export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
                     <span>평균 {item.averageWaitMinutes}분</span>
                   ) : null}
                   {hasDelay ? (
-                    <span className="font-semibold text-[var(--clair-color-atomic-orange-600)]">
+                    <span className="font-semibold text-[var(--emr-status-warning-text)]">
                       지연 {item.delayedCount}건
                     </span>
                   ) : (
