@@ -199,33 +199,33 @@ const getDerivedLabJudgment = (row: LabResultRow, value: string): LabJudgment =>
 const rangeStateByJudgment: Partial<Record<LabResultRow["judgment"], { label: string; markerClassName: string }>> = {
   critical: {
     label: "초과",
-    markerClassName: "bg-[var(--clair-color-atomic-red-500)] fill-[var(--clair-color-atomic-red-500)]",
+    markerClassName: "bg-[var(--emr-status-danger-text)] fill-[var(--emr-status-danger-text)]",
   },
   high: {
     label: "초과",
-    markerClassName: "bg-[var(--clair-color-atomic-orange-500)] fill-[var(--clair-color-atomic-orange-500)]",
+    markerClassName: "bg-[var(--emr-status-warning-text)] fill-[var(--emr-status-warning-text)]",
   },
   low: {
     label: "미달",
-    markerClassName: "bg-[var(--clair-color-atomic-blue-500)] fill-[var(--clair-color-atomic-blue-500)]",
+    markerClassName: "bg-[var(--emr-status-info-text)] fill-[var(--emr-status-info-text)]",
   },
   normal: {
     label: "정상",
-    markerClassName: "bg-[var(--clair-color-atomic-green-500)] fill-[var(--clair-color-atomic-green-500)]",
+    markerClassName: "bg-[var(--emr-status-success-text)] fill-[var(--emr-status-success-text)]",
   },
 };
 
 const judgmentBadgeClassName: Record<LabResultRow["judgment"], string> = {
   critical:
-    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-700)]",
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   high:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-700)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   low:
-    "border-[var(--clair-color-atomic-blue-200)] bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   normal:
-    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   not_judged:
-    "border-[var(--clair-color-atomic-gray-200)] bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-600)]",
+    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
 };
 
 const labStatusOrder: LabResult["status"][] = ["pending", "received", "entered", "completed", "reviewed"];
@@ -239,11 +239,11 @@ const labStatusGroupLabel: Record<LabResult["status"], string> = {
 };
 
 const labStatusGroupColorToken: Record<LabResult["status"], string> = {
-  pending: "--clair-color-atomic-gray-400",
-  received: "--clair-color-atomic-blue-400",
-  entered: "--clair-color-atomic-orange-400",
-  completed: "--clair-color-atomic-green-400",
-  reviewed: "--clair-color-atomic-mint-400",
+  pending: "--emr-status-neutral-text",
+  received: "--emr-status-info-text",
+  entered: "--emr-status-warning-text",
+  completed: "--emr-status-success-text",
+  reviewed: "--emr-status-success-text",
 };
 
 type LabResultTab = "all" | "cbc" | "chemistry";
@@ -463,10 +463,10 @@ function LabQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? item.result.resultName}</span>
         </div>
-        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
         <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
           <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
           {item.technicianName ? <EmrSidePanelMetaBadge label="담당" value={item.technicianName} /> : null}
@@ -552,23 +552,23 @@ function LabChartQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
           <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
         </div>
-        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
         <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-600)]">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-secondary)]">
             {orderNames}
           </span>
           {abnormalCount > 0 ? (
-            <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-red-500)]">
+            <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-destructive">
               비정상 {abnormalCount}
             </span>
           ) : null}
         </div>
-        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
           <span className="shrink-0 truncate">{statusSummary}</span>
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.result.receivedAt ?? latestItem?.result.collectedAt).slice(9)}
@@ -971,11 +971,11 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
       count={rows.length}
       meta={
         abnormalRows.length > 0 ? (
-          <span className="text-[12px] font-medium text-[var(--clair-color-atomic-red-500)]">
+          <span className="text-[12px] font-medium text-destructive">
             비정상 {abnormalRows.length}
           </span>
         ) : (
-          <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
+          <span className="text-[12px] font-medium text-muted-foreground">
             정상 범위
           </span>
         )
@@ -1000,24 +1000,24 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
           <col className="w-[10%]" />
           <col className="w-[10%]" />
         </colgroup>
-        <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
+        <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
               <div className="flex h-6 min-w-0 items-center px-1">항목</div>
             </TableHead>
-            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
               <div className="flex h-6 min-w-0 items-center px-1">결과값</div>
             </TableHead>
-            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
               <div className="flex h-6 min-w-0 items-center px-1">단위</div>
             </TableHead>
-            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
               <div className="flex h-6 min-w-0 items-center justify-center px-1 text-center">정상범위</div>
             </TableHead>
-            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
               <div className="flex h-6 min-w-0 items-center px-1">판정</div>
             </TableHead>
-            <TableHead className="relative h-10 bg-[var(--clair-color-atomic-neutral-50)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]">
+            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
               <div className="flex h-6 min-w-0 items-center px-1">담당자</div>
             </TableHead>
           </TableRow>
@@ -1026,7 +1026,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
           {rows.map((row) => (
             <TableRow
               key={row.id}
-              className="h-11 border-border bg-card text-[var(--clair-color-label-normal)] hover:!bg-[var(--clair-color-fill-alternative)]"
+              className="h-11 border-border bg-card text-foreground hover:!bg-[var(--emr-state-hover)]"
             >
               <TableCell className="h-11 px-1 py-2 font-medium whitespace-normal">
                 <div className="flex min-h-6 min-w-0 items-center px-1 leading-5">{row.analyteName}</div>
@@ -1072,7 +1072,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
               </TableCell>
               <TableCell className="h-11 px-1 py-2 font-medium" aria-live="polite">
                 <div className="flex h-6 min-w-0 items-center px-1">
-                  <span className="truncate text-[13px] text-[var(--clair-color-label-normal)]">{assigneeName}</span>
+                  <span className="truncate text-[13px] text-foreground">{assigneeName}</span>
                 </div>
               </TableCell>
             </TableRow>
@@ -1088,7 +1088,7 @@ function NormalRangeCell({ row }: { row: LabResultRow }) {
   const scale = getRangeScale(row);
   const rangeState = rangeStateByJudgment[row.judgment] ?? {
     label: "미판정",
-    markerClassName: "bg-[var(--clair-color-atomic-gray-500)] fill-[var(--clair-color-atomic-gray-500)]",
+    markerClassName: "bg-[var(--emr-status-neutral-text)] fill-[var(--emr-status-neutral-text)]",
   };
 
   return (
@@ -1145,7 +1145,7 @@ function NormalRangeChart({
           x2={scale.normalStart}
           y1="6"
           y2="6"
-          stroke="var(--clair-color-atomic-blue-100)"
+          stroke="var(--emr-status-info-border)"
           strokeLinecap="round"
           strokeWidth="3"
         />
@@ -1154,7 +1154,7 @@ function NormalRangeChart({
           x2={scale.normalEnd}
           y1="6"
           y2="6"
-          stroke="var(--clair-color-atomic-green-100)"
+          stroke="var(--emr-status-success-border)"
           strokeWidth="3"
         />
         <line
@@ -1162,7 +1162,7 @@ function NormalRangeChart({
           x2={scale.upperEnd}
           y1="6"
           y2="6"
-          stroke="var(--clair-color-atomic-orange-100)"
+          stroke="var(--emr-status-warning-border)"
           strokeLinecap="round"
           strokeWidth="3"
         />
@@ -1252,15 +1252,15 @@ function AttachmentStrip({
       </div>
       <div className="flex flex-wrap gap-3 p-4">
         {displayAttachments.map((attachment) => (
-          <div key={attachment.id} className="min-w-[220px] overflow-hidden rounded-md border bg-[var(--clair-color-background-surface)]">
+          <div key={attachment.id} className="min-w-[220px] overflow-hidden rounded-md border bg-card">
             {attachment.previewKind === "image" ? (
-              <div className="flex h-24 items-center justify-center bg-[linear-gradient(135deg,var(--clair-color-atomic-sky-50),var(--clair-color-atomic-green-100))]">
-                <div className="flex size-12 items-center justify-center rounded-full bg-card/80 text-[var(--clair-color-atomic-blue-600)] shadow-sm">
+              <div className="flex h-24 items-center justify-center bg-[linear-gradient(135deg,var(--emr-status-info-bg),var(--emr-status-success-bg))]">
+                <div className="flex size-12 items-center justify-center rounded-full bg-card/80 text-[var(--emr-status-info-text)] shadow-sm">
                   <CdsFilesImageIcon className="size-6" aria-hidden="true" />
                 </div>
               </div>
             ) : (
-              <div className="flex h-10 items-center px-3 pt-3 text-[var(--clair-color-atomic-gray-500)]">
+              <div className="flex h-10 items-center px-3 pt-3 text-muted-foreground">
                 <CdsFilesFileIcon className="size-5" aria-hidden="true" />
               </div>
             )}
@@ -1363,7 +1363,7 @@ export function LabContentAside() {
         }
         headerActions={<QueueActions />}
       />
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {groups.map((group) => (
@@ -1558,7 +1558,7 @@ function LabReceiptCard({
       <button
         type="button"
         className={cn(
-          "flex w-full items-start gap-3 px-4 text-left outline-none transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-4)] focus-visible:ring-3 focus-visible:ring-ring/50",
+          "flex w-full items-start gap-3 px-4 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
           expanded ? "pb-1 pt-3" : "py-3"
         )}
         aria-expanded={expanded}
@@ -1567,14 +1567,14 @@ function LabReceiptCard({
       >
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[14px] font-semibold leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-900)]">
+            <span className="truncate text-[14px] font-semibold leading-5 tracking-[0.196px] text-foreground">
               {receipt.equipmentName}
             </span>
-            <span className="shrink-0 rounded border border-[var(--clair-color-atomic-black-alpha-8)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-700)]">
+            <span className="shrink-0 rounded border border-[var(--emr-line-subtle)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)]">
               {receivedTime} 수신
             </span>
           </div>
-          <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
             {patientLabel} · {primaryGuardianLabel} {orderLabel}
           </div>
         </div>
@@ -1596,9 +1596,9 @@ function LabReceiptCard({
             exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
           >
             <div className="px-4 pb-3 pt-2">
-              <div className="mb-2 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+              <div className="mb-2 h-px w-full bg-[var(--emr-line-subtle)]" />
               <div className="flex h-8 items-center justify-between gap-2">
-                <h3 className="text-[13px] font-semibold text-[var(--clair-color-atomic-gray-600)]">검사 결과</h3>
+                <h3 className="text-[13px] font-semibold text-[var(--emr-text-secondary)]">검사 결과</h3>
                 <Button
                   size="xs"
                   variant="outline"
@@ -1611,7 +1611,7 @@ function LabReceiptCard({
               </div>
               {previewRows.length ? (
                 <div className="mt-2 overflow-hidden">
-                  <div className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] bg-[var(--clair-color-atomic-neutral-50)] px-2 py-2 text-[12px] font-medium text-[var(--clair-color-atomic-gray-700)]">
+                  <div className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] bg-[var(--emr-surface-muted)] px-2 py-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
                     <span>검사 항목명</span>
                     <span>수치</span>
                     <span>단위</span>
@@ -1621,7 +1621,7 @@ function LabReceiptCard({
                       key={row.id}
                       className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] border-t px-2 py-2 text-[12px] leading-5"
                     >
-                      <span className="truncate text-[var(--clair-color-atomic-gray-700)]">{row.analyteName}</span>
+                      <span className="truncate text-[var(--emr-text-secondary)]">{row.analyteName}</span>
                       <span className="text-foreground">{row.value}</span>
                       <span className="truncate text-muted-foreground">{row.unit ?? "-"}</span>
                     </div>
@@ -1658,7 +1658,7 @@ function LabStatusAction({
         variant="outline"
         size="sm"
         disabled
-        className="border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]"
+        className="border-[var(--emr-status-info-border)] bg-card text-primary"
       >
         <CheckIcon data-icon="inline-start" />
         검사완료
@@ -1673,7 +1673,7 @@ function LabStatusAction({
           type="button"
           variant="outline"
           size="sm"
-          className="rounded-r-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
         >
           검사중
         </Button>
@@ -1682,7 +1682,7 @@ function LabStatusAction({
             aria-label="검사 상태 액션"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-sm" }),
-              "-ml-px rounded-l-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
             )}
           >
             <ChevronDownIcon />
