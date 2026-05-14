@@ -548,11 +548,11 @@ export function RegistrationFormField({
   return (
     <FormField className={className} data-invalid={Boolean(error) || undefined}>
       <div className="flex min-h-5 items-center justify-between gap-3">
-        <FieldLabel className="text-[14px] font-bold leading-5 text-[var(--clair-color-label-strong)]">
+        <FieldLabel className="text-[14px] font-bold leading-5 text-foreground">
           <span className="inline-flex items-baseline gap-0.5">
             <span>{label}</span>
             {required ? (
-              <span className="text-[var(--clair-color-primary-normal)]">*</span>
+              <span className="text-[var(--emr-text-danger)]">*</span>
             ) : null}
           </span>
         </FieldLabel>
@@ -581,7 +581,7 @@ export function RegistrationDialogCloseButton({
       type="button"
       variant="ghost"
       size="icon-sm"
-      className="size-8 shrink-0 rounded-md text-[var(--clair-color-atomic-gray-600)] hover:bg-[var(--clair-color-atomic-gray-50)]"
+      className="size-8 shrink-0 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
       aria-label={ariaLabel}
       onClick={onClick}
     >
@@ -605,7 +605,7 @@ export function RegistrationFormSection({
     <>
       {separated ? <div className="h-px w-full shrink-0 bg-border" /> : null}
       <FieldSet className={cn("gap-0", className)}>
-        <FieldLegend className="mb-3 text-[13px] font-bold leading-5 text-[var(--clair-color-atomic-gray-400)]">
+        <FieldLegend className="mb-3 text-[13px] font-bold leading-5 text-[var(--emr-text-tertiary)]">
           {title}
         </FieldLegend>
         <FieldGroup className="gap-6">{children}</FieldGroup>
@@ -709,7 +709,7 @@ function BreedAutocomplete({
       >
         <CdsActionsSearchIcon
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
         />
         <Input
           aria-label={ariaLabel}
@@ -738,8 +738,8 @@ function BreedAutocomplete({
                 role="option"
                 aria-selected={value === breed}
                 className={cn(
-                  "rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--clair-color-label-normal)] transition-colors hover:bg-[var(--clair-color-background-surface)]",
-                  value === breed && "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                  "rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]",
+                  value === breed && "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                 )}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
@@ -805,7 +805,7 @@ function GuardianSearchPopover({
       >
         <CdsActionsSearchIcon
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
         />
         <Input
           aria-label="보호자명"
@@ -835,9 +835,9 @@ function GuardianSearchPopover({
                 role="option"
                 aria-selected={selectedGuardianId === guardian.id}
                 className={cn(
-                  "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                  "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
                   selectedGuardianId === guardian.id &&
-                    "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                    "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                 )}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
@@ -915,12 +915,12 @@ function BreedMultiSelect({
         {selectedBreeds.map((breed) => (
           <span
             key={breed}
-            className="inline-flex h-7 items-center gap-1 rounded-full border bg-[var(--clair-color-background-surface)] px-2 text-[12px] font-semibold text-[var(--clair-color-label-normal)]"
+            className="inline-flex h-7 items-center gap-1 rounded-full border bg-[var(--emr-surface-muted)] px-2 text-[12px] font-semibold text-[var(--emr-text-secondary)]"
           >
             {breed}
             <button
               type="button"
-              className="text-[13px] leading-none text-[var(--clair-color-atomic-gray-500)] hover:text-[var(--clair-color-label-strong)]"
+              className="text-[13px] leading-none text-[var(--emr-text-tertiary)] hover:text-foreground"
               aria-label={`${breed} 제거`}
               onClick={() => removeBreed(breed)}
             >
@@ -935,7 +935,7 @@ function BreedMultiSelect({
           >
             <CdsActionsSearchIcon
               aria-hidden="true"
-              className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+              className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
             />
             <Input
               aria-label={ariaLabel}
@@ -969,7 +969,7 @@ function BreedMultiSelect({
                     type="button"
                     role="option"
                     aria-selected={false}
-                    className="rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--clair-color-label-normal)] transition-colors hover:bg-[var(--clair-color-background-surface)]"
+                    className="rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => addBreed(breed)}
                   >
@@ -979,7 +979,7 @@ function BreedMultiSelect({
               ) : (
                 <button
                   type="button"
-                  className="rounded-md px-2.5 py-2 text-left text-[12px] text-muted-foreground hover:bg-[var(--clair-color-background-surface)]"
+                  className="rounded-md px-2.5 py-2 text-left text-[12px] text-muted-foreground hover:bg-[var(--emr-state-hover)]"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => addBreed(query)}
                 >
@@ -1008,7 +1008,7 @@ function ProfileHeader({
   onEdit: () => void;
 }) {
   return (
-    <section className="rounded-lg border bg-[var(--clair-color-background-surface)] p-3">
+    <section className="rounded-lg border bg-[var(--emr-surface-muted)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-[18px] font-semibold">{title}</div>
@@ -1107,7 +1107,7 @@ function LatestWorkGrid({
             <a
               key={shortcut.id}
               href={shortcut.href}
-              className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]"
+              className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--emr-state-hover)]"
             >
               {content}
             </a>
@@ -1135,13 +1135,13 @@ function PatientVisitContextCard({ bundle }: { bundle: PatientProfileBundle }) {
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
 
   return (
-    <section className="rounded-lg border border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] p-3">
+    <section className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[12px] font-semibold text-[var(--clair-color-primary-normal)]">
+          <div className="text-[12px] font-semibold text-[var(--emr-status-info-text)]">
             오늘 내원 맥락
           </div>
-          <div className="mt-1 text-[14px] font-semibold text-[var(--clair-color-label-strong)]">
+          <div className="mt-1 text-[14px] font-semibold text-foreground">
             {guardianName} 보호자가 {bundle.patient.name}를 {reason}로 접수
           </div>
           <div className="mt-1 text-[12px] text-muted-foreground">{summary}</div>
@@ -1492,7 +1492,7 @@ function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
               className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3"
             >
               <div className="min-w-0">
-                <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                <div className="text-[13px] font-semibold text-foreground">
                   {getConsentLabel(consent)}
                 </div>
                 <div className="mt-1 text-[12px] text-muted-foreground">
@@ -1618,7 +1618,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
                     <button
                       key={patient.id}
                       type="button"
-                      className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]"
+                      className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-[var(--emr-state-hover)]"
                       onClick={() => setActiveDrawer({ type: "patient", id: patient.id })}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -1768,7 +1768,7 @@ export function NewPatientDialog({
       >
         <DialogHeader className="px-8 pb-4 pt-7">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+            <DialogTitle className="text-[22px] font-bold leading-7 text-foreground">
               신규 동물 등록
             </DialogTitle>
             <RegistrationDialogCloseButton
@@ -1829,22 +1829,22 @@ export function NewPatientDialog({
 		                  />
 	                </RegistrationFormField>
 	                {duplicateGuardian ? (
-	                  <div className="col-span-2 rounded-lg border border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] p-3">
-	                    <div className="text-[13px] font-semibold text-[var(--clair-color-atomic-red-700)]">
+	                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-3">
+	                    <div className="text-[13px] font-semibold text-[var(--emr-status-danger-text)]">
 	                      이미 등록된 보호자입니다
 	                    </div>
-	                    <div className="mt-1 text-[12px] text-[var(--clair-color-atomic-red-600)]">
+	                    <div className="mt-1 text-[12px] text-[var(--emr-status-danger-text)]">
 	                      {duplicateGuardian.name} · {duplicateGuardian.mobilePhone} 보호자를 선택해 연결해 주세요.
 	                    </div>
 	                  </div>
 	                ) : null}
                 {error && !error.includes("환자명") && !error.includes("보호자명") ? (
-	                  <div className="col-span-2 text-[12px] font-medium text-[var(--clair-color-atomic-red-600)]">
+	                  <div className="col-span-2 text-[12px] font-medium text-[var(--emr-status-danger-text)]">
 	                    {error}
 	                  </div>
 	                ) : null}
                 {duplicatePatientName ? (
-                  <div className="col-span-2 rounded-lg border border-[var(--clair-color-atomic-yellow-200)] bg-[var(--clair-color-atomic-yellow-50)] p-3 text-[12px] font-medium text-[var(--clair-color-atomic-yellow-800)]">
+                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 text-[12px] font-medium text-[var(--emr-status-warning-text)]">
                     동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
                   </div>
                 ) : null}
@@ -1901,7 +1901,7 @@ export function NewPatientDialog({
                   label="주 품종"
                   required
                   actions={
-                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
                       <Switch
                         checked={draft.isMixed}
                         onCheckedChange={(isMixed) =>
@@ -1970,7 +1970,7 @@ export function NewPatientDialog({
                 <RegistrationFormField
                   label="동물 나이"
                   actions={
-                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
                       <Switch
                         size="sm"
                         checked={draft.estimatedAge}
@@ -2058,7 +2058,7 @@ export function NewPatientDialog({
                   className="col-span-2"
                   label="메모"
                   actions={
-                    <span className="text-[12px] font-medium text-[var(--clair-color-atomic-gray-500)]">
+                    <span className="text-[12px] font-medium text-[var(--emr-text-tertiary)]">
                       {draft.specialNote.length}/500자
                     </span>
                   }
@@ -2077,7 +2077,7 @@ export function NewPatientDialog({
             </RegistrationFormSection>
           </div>
         </ScrollArea>
-	        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+	        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-card px-8 py-4 sm:justify-between">
 	          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
 	            품종/보호자 중복은 현재 세션 데이터 기준으로만 확인합니다.
 	          </div>
@@ -2195,7 +2195,7 @@ function NewGuardianDialog({
       >
         <DialogHeader className="px-8 pb-4 pt-7">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+            <DialogTitle className="text-[22px] font-bold leading-7 text-foreground">
               보호자 등록
             </DialogTitle>
             <RegistrationDialogCloseButton
@@ -2251,13 +2251,13 @@ function NewGuardianDialog({
                   />
 	                </RegistrationFormField>
 	                {duplicateGuardian ? (
-	                  <div className="col-span-2 rounded-lg border border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] p-3">
+	                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-3">
 	                    <div className="flex items-start justify-between gap-3">
 	                      <div>
-	                        <div className="text-[13px] font-semibold text-[var(--clair-color-atomic-red-700)]">
+	                        <div className="text-[13px] font-semibold text-[var(--emr-status-danger-text)]">
 	                          이미 등록된 보호자입니다
 	                        </div>
-	                        <div className="mt-1 text-[12px] text-[var(--clair-color-atomic-red-600)]">
+	                        <div className="mt-1 text-[12px] text-[var(--emr-status-danger-text)]">
 	                          {duplicateGuardian.name} · {duplicateGuardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
 	                          {getGuardianPatientCount(duplicateGuardian.id, patientGuardians)}마리
 	                        </div>
@@ -2266,7 +2266,7 @@ function NewGuardianDialog({
 	                        type="button"
 	                        variant="outline"
 	                        size="sm"
-	                        className="bg-white"
+	                        className="bg-card"
 	                        onClick={() => {
 	                          close(false);
 	                          setActiveDrawer({ type: "guardian", id: duplicateGuardian.id });
@@ -2338,7 +2338,7 @@ function NewGuardianDialog({
 	                <div className="rounded-lg border bg-card p-3">
 	                  <div className="flex items-start justify-between gap-3">
 	                    <div>
-	                      <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+	                      <div className="text-[13px] font-semibold text-foreground">
 	                        전자서명
 	                      </div>
 	                      <div className="mt-1 text-[12px] text-muted-foreground">
@@ -2379,11 +2379,11 @@ function NewGuardianDialog({
 	                    >
 	                      서명 완료 처리
 	                    </Button>
-	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
 	                      <Checkbox checked={draft.privacyConsent} disabled />
 	                      개인정보 수집 동의
 	                    </label>
-	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
 	                      <Checkbox
 	                        checked={draft.marketingConsent}
 	                        onCheckedChange={(marketingConsent) =>
@@ -2397,7 +2397,7 @@ function NewGuardianDialog({
 	                    </label>
 	                  </div>
 	                  {error && !error.includes("보호자명") ? (
-	                    <div className="mt-3 text-[12px] font-medium text-[var(--clair-color-atomic-red-600)]">
+	                    <div className="mt-3 text-[12px] font-medium text-[var(--emr-status-danger-text)]">
 	                      {error}
 	                    </div>
 	                  ) : null}
@@ -2406,7 +2406,7 @@ function NewGuardianDialog({
 	            </RegistrationFormSection>
           </div>
         </ScrollArea>
-        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-card px-8 py-4 sm:justify-between">
           <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
             환자 연결은 보호자 상세에서 후속으로 관리합니다.
           </div>
@@ -2531,8 +2531,8 @@ function RegistrationModeCard({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
-        checked && "border-[var(--clair-color-label-strong)] bg-[var(--clair-color-atomic-sky-50)]"
+        "flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
+        checked && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
       )}
       onClick={onClick}
     >
@@ -2541,16 +2541,16 @@ function RegistrationModeCard({
         className={cn(
           "flex size-4 shrink-0 items-center justify-center rounded-full border",
           checked
-            ? "border-[var(--clair-color-label-strong)]"
-            : "border-[var(--clair-color-atomic-gray-300)]"
+            ? "border-[var(--emr-state-selected-border)]"
+            : "border-[var(--emr-line-default)]"
         )}
       >
         {checked ? (
-          <span className="size-2 rounded-full bg-[var(--clair-color-label-strong)]" />
+          <span className="size-2 rounded-full bg-[var(--emr-state-selected-border)]" />
         ) : null}
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-bold text-[var(--clair-color-label-strong)]">
+        <span className="block text-[15px] font-bold text-foreground">
           {title}
         </span>
         <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
@@ -2878,7 +2878,7 @@ function PatientGuardianRegistrationButton({
           <DialogHeader className="px-8 pb-4 pt-7">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+                <DialogTitle className="text-[22px] font-bold leading-7 text-foreground">
                   {step === "mode"
                     ? "신규 등록"
                     : step === "guardian"
@@ -3037,7 +3037,7 @@ function PatientGuardianRegistrationButton({
                       <div className="rounded-lg border bg-card p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                            <div className="text-[13px] font-semibold text-foreground">
                               전자서명
                             </div>
                             <div className="mt-1 text-[12px] text-muted-foreground">
@@ -3087,11 +3087,11 @@ function PatientGuardianRegistrationButton({
                           >
                             서명 완료 처리
                           </Button>
-                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
                             <Checkbox checked={guardianDraft.privacyConsent} disabled />
                             개인정보 수집 동의
                           </label>
-                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
                             <Checkbox
                               checked={guardianDraft.marketingConsent}
                               onCheckedChange={(marketingConsent) =>
@@ -3105,7 +3105,7 @@ function PatientGuardianRegistrationButton({
                           </label>
                         </div>
                         {errors.privacyConsent ? (
-                          <div className="mt-3 text-[12px] font-medium text-[var(--clair-color-atomic-red-600)]">
+                          <div className="mt-3 text-[12px] font-medium text-[var(--emr-status-danger-text)]">
                             {errors.privacyConsent}
                           </div>
                         ) : null}
@@ -3132,7 +3132,7 @@ function PatientGuardianRegistrationButton({
                             >
                               <CdsActionsSearchIcon
                                 aria-hidden="true"
-                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--clair-color-atomic-gray-500)]"
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
                               />
                               <Input
                                 aria-label="기존 보호자 검색"
@@ -3176,9 +3176,9 @@ function PatientGuardianRegistrationButton({
                                         role="option"
                                         aria-selected={selectedGuardianId === guardian.id}
                                         className={cn(
-                                          "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]",
+                                          "flex items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
                                           selectedGuardianId === guardian.id &&
-                                            "bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+                                            "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                                         )}
                                         onMouseDown={(event) => event.preventDefault()}
                                         onClick={() => {
@@ -3222,8 +3222,8 @@ function PatientGuardianRegistrationButton({
                           </Popover>
                         </RegistrationFormField>
                         {selectedGuardian ? (
-                          <details className="group rounded-lg border bg-[var(--clair-color-background-surface)] p-3" open>
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                          <details className="group rounded-lg border bg-[var(--emr-surface-muted)] p-3" open>
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-foreground">
                               <span className="flex min-w-0 items-center gap-2">
                                 <span className="truncate">
                                   {selectedGuardian.name} 보호자의 동물
@@ -3233,7 +3233,7 @@ function PatientGuardianRegistrationButton({
                                 </Badge>
                               </span>
                               <CdsNavigationChevronDownIcon
-                                className="size-4 shrink-0 text-[var(--clair-color-atomic-gray-500)] transition-transform group-open:rotate-180"
+                                className="size-4 shrink-0 text-[var(--emr-text-tertiary)] transition-transform group-open:rotate-180"
                                 aria-hidden="true"
                               />
                             </summary>
@@ -3244,7 +3244,7 @@ function PatientGuardianRegistrationButton({
                                     key={patient.id}
                                     className="flex min-w-0 items-center gap-2 rounded-md border bg-card px-3 py-2"
                                   >
-                                    <span className="shrink-0 text-[13px] font-semibold text-[var(--clair-color-label-strong)]">
+                                    <span className="shrink-0 text-[13px] font-semibold text-foreground">
                                       {patient.name}
                                     </span>
                                     <span className="truncate text-[12px] text-muted-foreground">
@@ -3317,7 +3317,7 @@ function PatientGuardianRegistrationButton({
                         label="주 품종"
                         required
                         actions={
-                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
                             <Switch
                               checked={patientDraft.isMixed}
                               onCheckedChange={(isMixed) =>
@@ -3392,7 +3392,7 @@ function PatientGuardianRegistrationButton({
                         label="동물 나이"
                         required
                         actions={
-                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--clair-color-label-normal)]">
+                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
                             <Switch
                               size="sm"
                               checked={patientDraft.estimatedAge}
@@ -3501,7 +3501,7 @@ function PatientGuardianRegistrationButton({
                       </RegistrationFormField>
                     </div>
                     {duplicatePatientName ? (
-                      <div className="rounded-lg border border-[var(--clair-color-atomic-yellow-200)] bg-[var(--clair-color-atomic-yellow-50)] p-3 text-[12px] font-medium text-[var(--clair-color-atomic-yellow-800)]">
+                      <div className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 text-[12px] font-medium text-[var(--emr-status-warning-text)]">
                         동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
                       </div>
                     ) : null}
@@ -3512,13 +3512,13 @@ function PatientGuardianRegistrationButton({
               {step === "confirm" ? (
                 <div className="grid gap-3">
                   <section className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]">
                       <UserIcon className="size-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="text-[13px] font-semibold text-muted-foreground">보호자</span>
-                        <span className="truncate text-[16px] font-bold text-[var(--clair-color-label-strong)]">
+                        <span className="truncate text-[16px] font-bold text-foreground">
                           {mode === "new_guardian_patient"
                             ? guardianDraft.name
                             : selectedGuardian?.name}
@@ -3539,13 +3539,13 @@ function PatientGuardianRegistrationButton({
                     </div>
                   </section>
                   <section className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]">
                       <BoneIcon className="size-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="text-[13px] font-semibold text-muted-foreground">환자</span>
-                        <span className="truncate text-[16px] font-bold text-[var(--clair-color-label-strong)]">
+                        <span className="truncate text-[16px] font-bold text-foreground">
                           {patientDraft.name}
                         </span>
                       </div>
@@ -3567,14 +3567,14 @@ function PatientGuardianRegistrationButton({
                       </div>
                     </div>
                   </section>
-                  <div className="rounded-lg border border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] p-3 text-[12px] font-medium text-[var(--clair-color-primary-normal)]">
+                  <div className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3 text-[12px] font-medium text-[var(--emr-status-info-text)]">
                     등록을 누르면 위 정보가 현재 session 데이터에 저장됩니다.
                   </div>
                 </div>
               ) : null}
             </div>
           </ScrollArea>
-          <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
+          <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-card px-8 py-4 sm:justify-between">
             <Button variant="ghost" className="px-4 font-semibold" onClick={requestClose}>
               취소
             </Button>
@@ -3647,7 +3647,7 @@ export function NewGuardianButton({
       >
         <UserIcon
           data-icon="inline-start"
-          className="size-3 text-[var(--clair-color-atomic-gray-500)]"
+          className="size-3 text-[var(--emr-text-tertiary)]"
         />
         {label}
       </Button>
@@ -3677,7 +3677,7 @@ export function NewPatientButton({
         {variant === "text" ? (
           <BoneIcon
             data-icon="inline-start"
-            className="size-3 text-[var(--clair-color-atomic-gray-500)]"
+            className="size-3 text-[var(--emr-text-tertiary)]"
           />
         ) : (
           <CdsActionsPlusIcon />
