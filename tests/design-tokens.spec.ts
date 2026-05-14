@@ -188,3 +188,10 @@ test("hospital admin workspace source uses semantic color tokens instead of dire
 
   expect(matches).toEqual([]);
 });
+
+test("profile drawer source uses semantic color tokens instead of direct local colors", async () => {
+  const source = await fs.promises.readFile("src/features/reception/profile-drawer.tsx", "utf8");
+  const matches = source.match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});
