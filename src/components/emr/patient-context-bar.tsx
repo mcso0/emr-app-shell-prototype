@@ -357,7 +357,7 @@ function PatientContextMemoButton({ action }: { action: PatientContextMemoAction
       {action.label}
       {action.locked ? (
         <CdsAlertsLockIcon
-          className="ml-0.5 size-3 text-[var(--clair-color-label-assistive)]"
+          className="ml-0.5 size-3 text-[var(--emr-text-tertiary)]"
           aria-hidden="true"
         />
       ) : null}

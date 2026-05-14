@@ -76,10 +76,10 @@ function OrderValue({
           numericDiffFields.has(field) && "font-medium"
         )}
       >
-        <span className="truncate text-[var(--clair-color-label-alternative)]">
+        <span className="truncate text-muted-foreground">
           {diff.previous}
         </span>
-        <span className="text-[var(--clair-color-label-assistive)]">-&gt;</span>
+        <span className="text-[var(--emr-text-tertiary)]">-&gt;</span>
         <span className="truncate text-[var(--emr-status-warning-text)]">
           {diff.current}
         </span>
@@ -92,7 +92,7 @@ function OrderValue({
       className={cn(
         "block min-w-0 truncate",
         align === "right" && "text-right",
-        isCanceled && "text-[var(--clair-color-label-alternative)] line-through"
+        isCanceled && "text-muted-foreground line-through"
       )}
     >
       {value}
@@ -109,7 +109,7 @@ function AssigneeAvatar({ order }: { order: Order }) {
         "inline-flex size-6 items-center justify-center rounded-full text-[9px] font-medium",
         assigned
           ? "bg-[var(--emr-status-neutral-border)] text-[var(--emr-text-primary)]"
-          : "border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--clair-color-label-assistive)]"
+          : "border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-tertiary)]"
       )}
       title={order.assignee}
     >
@@ -155,7 +155,7 @@ function AssigneeCell({
       data-row-interactive="true"
       aria-label={`${order.name} 담당 변경`}
       value={order.assigneeId ?? ""}
-      className="h-7 max-w-24 rounded-md border border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--clair-color-label-normal)] outline-none hover:bg-[var(--emr-surface-muted)] focus:border-ring focus:bg-[var(--emr-surface-panel)] focus:ring-3 focus:ring-ring/50"
+      className="h-7 max-w-24 rounded-md border border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--emr-text-secondary)] outline-none hover:bg-[var(--emr-surface-muted)] focus:border-ring focus:bg-[var(--emr-surface-panel)] focus:ring-3 focus:ring-ring/50"
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
       onInput={(event) => {
@@ -305,10 +305,10 @@ export function EmrDataTable({
             className={cn(
               "flex min-w-0 items-center gap-1.5",
               row.original.status === "취소" &&
-                "text-[var(--clair-color-label-alternative)] line-through"
+                "text-muted-foreground line-through"
             )}
           >
-            <ChevronDownIcon className="size-3 shrink-0 text-[var(--clair-color-label-assistive)]" />
+            <ChevronDownIcon className="size-3 shrink-0 text-[var(--emr-text-tertiary)]" />
             <span className="truncate font-medium">{row.original.name}</span>
           </div>
         ),
@@ -492,7 +492,7 @@ export function EmrDataTable({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "relative h-10 select-none bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-[var(--clair-color-label-alternative)]",
+                      "relative h-10 select-none bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground",
                       align === "right" && "text-right",
                       align === "center" && "text-center"
                     )}
@@ -593,7 +593,7 @@ export function EmrDataTable({
       {selectedRows.length ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-3 flex justify-center">
           <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 shadow-lg">
-            <span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">
+            <span className="text-[12px] font-medium text-muted-foreground">
               선택한 오더 {selectedRows.length}개
             </span>
             <Button
