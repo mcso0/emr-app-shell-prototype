@@ -278,11 +278,11 @@ const imagingStatusGroupLabel: Record<ImagingStudyStatus, string> = {
 };
 
 const imagingStatusGroupColorToken: Record<ImagingStudyStatus, string> = {
-  requested: "--clair-color-atomic-gray-400",
-  captured: "--clair-color-atomic-blue-400",
-  reading: "--clair-color-atomic-orange-400",
-  read: "--clair-color-atomic-green-400",
-  reviewed: "--clair-color-atomic-mint-400",
+  requested: "--emr-status-neutral-text",
+  captured: "--emr-status-info-text",
+  reading: "--emr-status-warning-text",
+  read: "--emr-status-success-text",
+  reviewed: "--emr-status-success-text",
 };
 
 const fallbackLabHistoryGroups = [
@@ -609,12 +609,12 @@ function ImagingQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="shrink-0">{item.study.modality}</span>
         </div>
-        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
         <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
           <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
           <EmrSidePanelMetaBadge label="담당" value={item.radiologistName ?? "미지정"} />
@@ -734,21 +734,21 @@ function ImagingChartQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
           <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-400)]">·</span>
+          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
         </div>
-        <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
         <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-600)]">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-secondary)]">
             {orderNames}
           </span>
-          <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+          <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
             {statusSummary}
           </span>
         </div>
-        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-gray-500)]">
+        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
           <span className="shrink-0 truncate">{latestItem?.study.modality ?? "영상"}</span>
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.study.capturedAt ?? latestItem?.study.requestedAt).slice(9)}
@@ -1966,7 +1966,7 @@ export function ImagingContentAside() {
         }
         headerActions={<QueueActions />}
       />
-      <div className="h-px w-full shrink-0 bg-[var(--clair-color-line-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
           {groups.map((group) => (
@@ -2023,7 +2023,7 @@ function ImagingStatusAction({
         variant="outline"
         size="sm"
         disabled
-        className="border-[var(--clair-color-atomic-sky-100)] bg-card text-[var(--clair-color-primary-normal)]"
+        className="border-[var(--emr-status-info-border)] bg-card text-primary"
       >
         <CheckIcon data-icon="inline-start" />
         판독완료
@@ -2038,7 +2038,7 @@ function ImagingStatusAction({
           type="button"
           variant="outline"
           size="sm"
-          className="rounded-r-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
         >
           판독중
         </Button>
@@ -2047,7 +2047,7 @@ function ImagingStatusAction({
             aria-label="판독 상태 액션"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-sm" }),
-              "-ml-px rounded-l-none border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]"
+              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
             )}
           >
             <ChevronDownIcon />
@@ -2080,7 +2080,7 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
     <EmrOrderGroupSection
       title="Order 상세정보"
       count={1}
-      meta={<span className="text-[12px] font-medium text-[var(--clair-color-label-alternative)]">같은 차트 기준</span>}
+      meta={<span className="text-[12px] font-medium text-muted-foreground">같은 차트 기준</span>}
       actions={
         <Button size="xs" variant="outline" className="bg-card">
           PACS
@@ -2097,14 +2097,14 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
             <col className="w-[14%]" />
             <col className="w-[13%]" />
           </colgroup>
-          <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
+          <TableHeader className="bg-[var(--emr-surface-muted)]">
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사분류</TableHead>
-              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사명</TableHead>
-              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사명(영문)</TableHead>
-              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">요청자</TableHead>
-              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">요청 일시</TableHead>
-              <TableHead className="h-10 bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-medium text-[var(--clair-color-label-alternative)]">검사 담당자</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사분류</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사명</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사명(영문)</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">요청자</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">요청 일시</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사 담당자</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -2132,7 +2132,7 @@ function ImagingReadingSections({ study }: { study: ImagingStudy }) {
     <section className="rounded-lg border bg-card">
       <div className="flex min-h-11 items-center justify-between gap-3 border-b px-4">
         <h2 className="text-[14px] font-semibold">스터디 판독의견</h2>
-        <div className="flex h-8 items-center gap-1 rounded-lg bg-[var(--clair-color-atomic-neutral-50)] px-2 text-[13px] font-semibold text-muted-foreground">
+        <div className="flex h-8 items-center gap-1 rounded-lg bg-[var(--emr-surface-muted)] px-2 text-[13px] font-semibold text-muted-foreground">
           <span>B</span>
           <span className="italic">I</span>
           <span>T</span>
@@ -2302,7 +2302,7 @@ export function ImagingContent() {
       />
       <ScrollArea data-slot="imaging-result-scroll-area" className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 pb-10 pt-4">
-          <section className="rounded-lg bg-[var(--clair-color-atomic-yellow-50)] px-4 py-3 text-[13px] font-medium leading-5 text-[var(--clair-color-atomic-yellow-800)]">
+          <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 text-[13px] font-medium leading-5 text-[var(--emr-status-warning-text)]">
             병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
           </section>
           <ImagingOrderDetailTable detail={detail} />
@@ -2321,7 +2321,7 @@ function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
     <div className="flex gap-2 overflow-x-auto pb-1">
       {mediaAttachments.map((attachment) => (
         <div key={attachment.id} className="w-[92px] shrink-0 overflow-hidden rounded-md border bg-card">
-          <div className="flex h-16 items-center justify-center bg-[linear-gradient(135deg,var(--clair-color-atomic-gray-900),var(--clair-color-atomic-gray-600))] text-[12px] font-semibold text-white">
+          <div className="flex h-16 items-center justify-center bg-[linear-gradient(135deg,var(--emr-text-primary),var(--emr-text-secondary))] text-[12px] font-semibold text-[var(--emr-text-inverse)]">
             {attachment.mimeType.includes("png") ? "IMG" : "FILE"}
           </div>
           <div className="truncate px-2 py-1.5 text-[11px] text-muted-foreground">{attachment.fileName}</div>
@@ -2391,7 +2391,7 @@ export function ImagingRightPanel() {
 
           <section>
             <div className="text-[13px] font-semibold">보호자 공유용 종합 코멘트</div>
-            <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--clair-color-atomic-neutral-50)] px-3 text-[13px] font-semibold text-muted-foreground">
+            <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--emr-surface-muted)] px-3 text-[13px] font-semibold text-muted-foreground">
               <span>B</span>
               <span className="italic">I</span>
               <span>T</span>
@@ -2416,9 +2416,9 @@ export function ImagingRightPanel() {
               {fileAttachments.map((attachment) => (
                 <div
                   key={attachment.id}
-                  className="flex h-9 items-center justify-between gap-2 rounded-md bg-[var(--clair-color-atomic-neutral-50)] px-3 text-[12px]"
+                  className="flex h-9 items-center justify-between gap-2 rounded-md bg-[var(--emr-surface-muted)] px-3 text-[12px]"
                 >
-                  <span className="truncate text-[var(--clair-color-primary-normal)]">{attachment.fileName}</span>
+                  <span className="truncate text-primary">{attachment.fileName}</span>
                   <Button variant="ghost" size="icon-xs" aria-label={`${attachment.fileName} 삭제`}>
                     <CdsFilesFileIcon className="size-4" aria-hidden="true" />
                   </Button>
