@@ -312,7 +312,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
             <div className="ml-4 border-l py-1 pl-3">
               {orderMenuGroups.map((group) => (
                 <div key={group.id} className="py-1">
-                  <div className="flex h-8 items-center rounded-md px-2 text-[14px] font-semibold text-[var(--clair-color-label-normal)]">
+                  <div className="flex h-8 items-center rounded-md px-2 text-[14px] font-semibold text-[var(--emr-text-primary)]">
                     {group.label}
                   </div>
                   <div className="grid gap-1">
@@ -466,7 +466,7 @@ export function HospitalAdminContent() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]">
       <section className="border-b bg-card px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -550,7 +550,7 @@ export function HospitalAdminContent() {
       <div className="min-h-0 flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <Table className="min-w-[1060px] table-fixed text-[13px]">
-            <TableHeader className="sticky top-0 z-10 bg-[var(--clair-color-atomic-neutral-50)]">
+            <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-10">
                   <Checkbox
@@ -581,7 +581,7 @@ export function HospitalAdminContent() {
                     key={order.id}
                     data-testid={`hospital-order-row-${order.id}`}
                     data-state={selected ? "selected" : undefined}
-                    className="h-11 cursor-pointer bg-card hover:bg-[var(--clair-color-fill-alternative)] data-[state=selected]:bg-[var(--clair-color-fill-normal)]"
+                    className="h-11 cursor-pointer bg-card hover:bg-[var(--emr-state-hover)] data-[state=selected]:bg-[var(--emr-state-selected)]"
                     onClick={() => openDrawer(order)}
                   >
                     <TableCell onClick={(event) => event.stopPropagation()}>
@@ -600,7 +600,7 @@ export function HospitalAdminContent() {
                         className={cn(
                           "font-semibold",
                           order.isActive
-                            ? "text-[var(--clair-color-atomic-green-700)]"
+                            ? "text-[var(--emr-status-success-text)]"
                             : "text-muted-foreground"
                         )}
                       >
@@ -668,9 +668,9 @@ function DrawerField({
 }) {
   return (
     <div className="grid gap-2 md:grid-cols-[150px_minmax(0,1fr)] md:gap-5">
-      <label className="pt-2 text-[14px] font-bold text-[var(--clair-color-label-strong)]">
+      <label className="pt-2 text-[14px] font-bold text-foreground">
         {label}
-        {required ? <span className="ml-1 text-[var(--clair-color-primary-normal)]">*</span> : null}
+        {required ? <span className="ml-1 text-[var(--emr-text-danger)]">*</span> : null}
       </label>
       <div className="min-w-0">
         {children}
@@ -795,7 +795,7 @@ export function HospitalAdminDrawer() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-5 px-8 py-6 pb-28">
           <DrawerField label="분류">
-            <div className="flex h-9 items-center rounded-lg border bg-[var(--clair-color-background-surface)] px-3 text-[13px] font-semibold">
+            <div className="flex h-9 items-center rounded-lg border bg-[var(--emr-surface-muted)] px-3 text-[13px] font-semibold">
               {category?.label} / {subcategory?.label}
             </div>
           </DrawerField>
@@ -951,9 +951,9 @@ export function HospitalAdminDrawer() {
           )}
         </div>
       </ScrollArea>
-      <footer className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t bg-white/95 px-6 py-4 shadow-[0_-8px_18px_rgba(15,23,42,0.05)]">
+      <footer className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t bg-card/95 px-6 py-4 shadow-sm">
         <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <Button variant="outline" className="border-[var(--clair-color-atomic-red-200)] text-[var(--clair-color-atomic-red-700)]" onClick={() => setConfirmDeleteOpen(true)}>
+          <Button variant="outline" className="border-[var(--emr-status-danger-border)] text-[var(--emr-status-danger-text)]" onClick={() => setConfirmDeleteOpen(true)}>
             삭제
           </Button>
           {confirmDeleteOpen ? (
