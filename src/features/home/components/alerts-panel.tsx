@@ -18,14 +18,14 @@ const groups = [
 ] as const;
 
 const groupTone: Record<HomeAlert["severity"], string> = {
-  critical: "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)]",
-  warning: "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)]",
+  critical: "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
+  warning: "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]",
   info: "border-border bg-card",
 };
 
 export function AlertsPanel({ alerts }: AlertsPanelProps) {
   return (
-    <aside className="rounded-[var(--clair-radius-md)] border border-border bg-white p-3">
+    <aside className="rounded-[var(--clair-radius-md)] border border-border bg-card p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold leading-5">알림/예외</h2>

@@ -6,9 +6,9 @@ type HomeCommandHeaderProps = {
 
 export function HomeCommandHeader({ data }: HomeCommandHeaderProps) {
   return (
-    <section className="border-b border-border bg-white px-5 py-5">
+    <section className="border-b border-border bg-card px-5 py-5">
       <div className="max-w-3xl">
-        <p className="text-[12px] font-medium text-[var(--clair-color-primary-normal)]">
+        <p className="text-[12px] font-medium text-[var(--emr-status-info-text)]">
           {data.todayLabel} · {data.hospitalName}
         </p>
         <h1 className="mt-1 text-[22px] font-semibold leading-8">

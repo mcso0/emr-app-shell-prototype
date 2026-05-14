@@ -90,22 +90,22 @@ const statusGroupItems: Array<{
 }> = [
   {
     id: "overdue",
-    indicatorClassName: "bg-[var(--clair-color-atomic-red-400)]",
+    indicatorClassName: "bg-[var(--emr-status-danger-text)]",
     label: statusLabel.overdue,
   },
   {
     id: "requested",
-    indicatorClassName: "bg-[var(--clair-color-atomic-orange-400)]",
+    indicatorClassName: "bg-[var(--emr-status-warning-text)]",
     label: statusLabel.requested,
   },
   {
     id: "assigned",
-    indicatorClassName: "bg-[var(--clair-color-atomic-gray-400)]",
+    indicatorClassName: "bg-[var(--emr-status-neutral-text)]",
     label: statusLabel.assigned,
   },
   {
     id: "inProgress",
-    indicatorClassName: "bg-[var(--clair-color-atomic-sky-400)]",
+    indicatorClassName: "bg-[var(--emr-status-info-text)]",
     label: statusLabel.inProgress,
   },
 ];
@@ -257,7 +257,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
   return (
     <div
       className={cn(
-        "h-full min-h-0 overflow-hidden bg-white",
+        "h-full min-h-0 overflow-hidden bg-card",
         view === "hospital" && "max-xl:overflow-y-auto"
       )}
     >
@@ -279,8 +279,8 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                 role="tab"
                 aria-selected={view === item}
                 className={cn(
-                  "whitespace-nowrap text-[18px] font-bold leading-7 tracking-normal text-[var(--clair-color-label-assistive)] transition-colors hover:text-[var(--clair-color-label-strong)]",
-                  view === item && "text-[var(--clair-color-label-strong)]"
+                  "whitespace-nowrap text-[18px] font-bold leading-7 tracking-normal text-muted-foreground transition-colors hover:text-foreground",
+                  view === item && "text-foreground"
                 )}
                 onClick={() => {
                   setView(item);
@@ -443,12 +443,12 @@ function HospitalBoardSignal({
     <div
       className={cn(
         "grid min-h-[54px] content-center gap-1 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-3 py-2",
-        tone === "danger" && "border-[var(--clair-color-status-negative-background)] bg-[var(--clair-color-status-negative-background)]",
-        tone === "warning" && "border-[var(--clair-color-status-warning-background)] bg-[var(--clair-color-status-warning-background)]"
+        tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
+        tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
       )}
     >
       <span className="text-[11px] font-semibold leading-3 text-muted-foreground">{label}</span>
-      <span className="truncate text-[13px] font-bold leading-5 text-[var(--clair-color-label-strong)]">{value}</span>
+      <span className="truncate text-[13px] font-bold leading-5 text-foreground">{value}</span>
     </div>
   );
 }
@@ -479,7 +479,7 @@ function HospitalTaskDetailPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[12px] font-semibold leading-4 text-muted-foreground">{getTaskTypeLabel(task)}</p>
-            <h2 className="mt-1 text-[18px] font-bold leading-7 text-[var(--clair-color-label-strong)]">{task.title}</h2>
+            <h2 className="mt-1 text-[18px] font-bold leading-7 text-foreground">{task.title}</h2>
           </div>
           <Badge variant={task.status === "overdue" || task.priority === "urgent" ? "destructive" : "secondary"}>
             {getDecisionReason(task)}
@@ -502,7 +502,7 @@ function HospitalTaskDetailPanel({
           {[getDecisionReason(task), task.sourceLabel, task.roleQueueLabel ?? task.encounterLabel ?? "관련 맥락 확인"].map((item) => (
             <span
               key={item}
-              className="rounded-[var(--clair-radius-atomic-8)] border border-border bg-white px-2.5 py-2 text-[12px] font-medium leading-4 text-muted-foreground"
+              className="rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2.5 py-2 text-[12px] font-medium leading-4 text-muted-foreground"
             >
               {item}
             </span>
@@ -633,12 +633,12 @@ function RoleNextActionCommandCenter({
   return (
     <section
       aria-labelledby="home-role-next-action-title"
-      className="grid gap-4 rounded-[var(--clair-radius-md)] border border-border bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FAFC_100%)] p-4"
+      className="grid gap-4 rounded-[var(--clair-radius-md)] border border-border bg-card p-4"
       data-testid="home-role-next-action"
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 max-lg:grid-cols-1">
         <div className="min-w-0">
-          <h2 id="home-role-next-action-title" className="text-[18px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+          <h2 id="home-role-next-action-title" className="text-[18px] font-bold leading-7 text-foreground">
             다음 행동
           </h2>
           <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
@@ -676,7 +676,7 @@ function RoleNextActionCommandCenter({
         <aside className="grid content-between gap-4 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card p-4">
           <div>
             <p className="text-[12px] font-semibold leading-4 text-muted-foreground">역할 가설</p>
-            <p className="mt-2 text-[14px] font-semibold leading-6 text-[var(--clair-color-label-strong)]">
+            <p className="mt-2 text-[14px] font-semibold leading-6 text-foreground">
               {selectedHypothesis.hypothesis}
             </p>
           </div>
@@ -709,7 +709,7 @@ function NextActionCard({ action, rank }: { action: HomeNextAction; rank: number
   return (
     <article
       className={cn(
-        "grid min-h-[188px] content-between gap-4 rounded-[var(--clair-radius-atomic-8)] border bg-white p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)]",
+        "grid min-h-[188px] content-between gap-4 rounded-[var(--clair-radius-atomic-8)] border bg-card p-4 shadow-sm",
         getNextActionToneClass(action.tone)
       )}
     >
@@ -722,7 +722,7 @@ function NextActionCard({ action, rank }: { action: HomeNextAction; rank: number
               </span>
               <span className="truncate text-[12px] font-semibold leading-4 text-muted-foreground">{action.sourceLabel}</span>
             </div>
-            <h3 className="mt-2 text-[16px] font-bold leading-6 text-[var(--clair-color-label-strong)]">
+            <h3 className="mt-2 text-[16px] font-bold leading-6 text-foreground">
               {action.title}
             </h3>
           </div>
@@ -770,20 +770,20 @@ function SignalPill({
     <div
       className={cn(
         "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-3 py-2",
-        tone === "danger" && "border-[var(--clair-color-status-negative-background)] bg-[var(--clair-color-status-negative-background)]",
-        tone === "warning" && "border-[var(--clair-color-status-warning-background)] bg-[var(--clair-color-status-warning-background)]"
+        tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
+        tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
       )}
     >
       <span className="text-[11px] font-semibold leading-3 text-muted-foreground">{label}</span>
-      <span className="truncate text-right text-[13px] font-bold leading-5 text-[var(--clair-color-label-strong)]">{value}</span>
+      <span className="truncate text-right text-[13px] font-bold leading-5 text-foreground">{value}</span>
     </div>
   );
 }
 
 function getNextActionToneClass(tone: HomeNextAction["tone"]) {
-  if (tone === "danger") return "border-[var(--clair-color-status-negative-background)]";
-  if (tone === "warning") return "border-[var(--clair-color-status-warning-background)]";
-  if (tone === "attention") return "border-[var(--clair-color-atomic-orange-200)]";
+  if (tone === "danger") return "border-[var(--emr-status-danger-border)]";
+  if (tone === "warning") return "border-[var(--emr-status-warning-border)]";
+  if (tone === "attention") return "border-[var(--emr-status-warning-border)]";
 
   return "border-border";
 }
@@ -807,31 +807,31 @@ function DashboardBottleneckBoard({
             type="button"
             className={cn(
               "grid min-h-[150px] content-between rounded-[var(--clair-radius-atomic-8)] border border-border bg-background px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-              item.id === bottleneckId && "border-[var(--clair-color-status-warning-background)] bg-[var(--clair-color-status-warning-background)]"
+              item.id === bottleneckId && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
             )}
             onClick={() => router.push(item.href)}
           >
             <span className="flex items-start justify-between gap-2">
-              <span className="truncate text-[13px] font-bold leading-5 text-[var(--clair-color-label-strong)]">{item.label}</span>
-              <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-bold leading-4 text-muted-foreground">
+              <span className="truncate text-[13px] font-bold leading-5 text-foreground">{item.label}</span>
+              <span className="shrink-0 rounded-full bg-card/70 px-2 py-0.5 text-[11px] font-bold leading-4 text-muted-foreground">
                 {item.count}건
               </span>
             </span>
             <span className="grid gap-2 text-[12px] leading-4 text-muted-foreground">
               <span className="truncate">{item.slaLabel ?? item.detail ?? "SLA 확인"}</span>
               <span className="grid grid-cols-2 gap-1.5">
-                <span className="rounded-[var(--clair-radius-atomic-8)] bg-white/80 px-2 py-1">
+                <span className="rounded-[var(--clair-radius-atomic-8)] bg-card/80 px-2 py-1">
                   지연 <b className="text-foreground">{item.overdueCount ?? 0}</b>
                 </span>
-                <span className="rounded-[var(--clair-radius-atomic-8)] bg-white/80 px-2 py-1">
+                <span className="rounded-[var(--clair-radius-atomic-8)] bg-card/80 px-2 py-1">
                   미배정 <b className="text-foreground">{item.unassignedCount ?? 0}</b>
                 </span>
               </span>
             </span>
             <span className="grid gap-1.5">
-              <span className="h-1.5 rounded-full bg-[var(--clair-color-atomic-gray-200)]">
+              <span className="h-1.5 rounded-full bg-[var(--emr-surface-muted)]">
                 <span
-                  className="block h-full rounded-full bg-[var(--clair-color-label-strong)]"
+                  className="block h-full rounded-full bg-[var(--emr-text-primary)]"
                   style={{ width: `${Math.max(16, (item.count / maxCount) * 100)}%` }}
                 />
               </span>
@@ -1029,8 +1029,8 @@ function HomeWorkstreamMultiSelect({
           <div className="grid gap-1">
             <label
               className={cn(
-                "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-white px-2 py-2 text-[12px] leading-4 transition-colors hover:border-[var(--clair-color-atomic-blue-400)] hover:bg-[var(--clair-color-atomic-blue-50)]",
-                selectedFilters.length === 0 && "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-50)]"
+                "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 py-2 text-[12px] leading-4 transition-colors hover:border-[var(--emr-state-selected-border)] hover:bg-[var(--emr-state-hover)]",
+                selectedFilters.length === 0 && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
               )}
               onClick={() => onSelectedFiltersChange([])}
             >
@@ -1051,8 +1051,8 @@ function HomeWorkstreamMultiSelect({
                 <label
                   key={column.id}
                   className={cn(
-                    "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-white px-2 py-2 text-[12px] leading-4 transition-colors hover:border-[var(--clair-color-atomic-blue-400)] hover:bg-[var(--clair-color-atomic-blue-50)]",
-                    active && "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-50)]"
+                    "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 py-2 text-[12px] leading-4 transition-colors hover:border-[var(--emr-state-selected-border)] hover:bg-[var(--emr-state-hover)]",
+                    active && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
                   )}
                   onClick={() => toggleFilter(column.label)}
                 >
@@ -1163,7 +1163,7 @@ function HomeKanbanColumn({
     <section
       data-testid={`home-kanban-column-${column.id}`}
       className={cn(
-        "group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--clair-radius-md)] border border-border bg-[var(--clair-color-background-surface)]",
+        "group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-muted)]",
         columnCollapsed ? "h-auto" : "h-full"
       )}
     >
@@ -1181,7 +1181,7 @@ function HomeKanbanColumn({
           type="button"
           aria-expanded={!columnCollapsed}
           aria-label={`${column.label} ${columnCollapsed ? "펼치기" : "접기"}`}
-          className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-8)] hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/column:opacity-100"
+          className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-colors hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/column:opacity-100"
           onClick={() => setColumnCollapsed((current) => !current)}
         >
           <motion.span
@@ -1274,9 +1274,9 @@ function HomeKanbanTaskCard({
       onSelect={onSelect}
     >
       <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--clair-color-atomic-gray-700)]">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--emr-text-secondary)]">
           <span className="truncate">{task.patientName ?? "환자 미지정"}</span>
-          <span className="shrink-0 text-[var(--clair-color-atomic-gray-500)]">·</span>
+          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="truncate">{task.clientName ?? "보호자 미지정"}</span>
           <EmrSidePanelTypeBadge label={task.receptionType ?? "접수"} />
         </div>
@@ -1285,7 +1285,7 @@ function HomeKanbanTaskCard({
           testId={`home-kanban-task-action-${task.id}`}
         />
       </div>
-      <div className="mt-0.5 flex min-h-5 min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+      <div className="mt-0.5 flex min-h-5 min-w-0 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-tertiary)]">
         <span className="min-w-0 flex-1 truncate">{task.title}</span>
       </div>
       <div className="mt-1 flex min-w-0 flex-wrap gap-1">
@@ -1293,9 +1293,9 @@ function HomeKanbanTaskCard({
           className={cn(
             "rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4",
             task.status === "overdue" || task.priority === "urgent"
-              ? "bg-[var(--clair-color-status-negative-background)] text-[var(--clair-color-status-negative-foreground)]"
+              ? "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
               : task.assignment === "roleQueue"
-                ? "bg-[var(--clair-color-status-warning-background)] text-foreground"
+                ? "bg-[var(--emr-status-warning-bg)] text-foreground"
                 : "bg-muted text-muted-foreground"
           )}
         >
@@ -1305,7 +1305,7 @@ function HomeKanbanTaskCard({
           {getTimeSignal(task)}
         </span>
       </div>
-      <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+      <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
       <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
         <EmrSidePanelMetaBadge label="요청" maxWidthClassName="max-w-[70px]" value={getRequesterLabel(task)} />
         <EmrSidePanelMetaBadge label="담당" maxWidthClassName="max-w-[70px]" value={getAssigneeLabel(task)} />

@@ -13,11 +13,11 @@ type CompactFlowSummaryProps = {
 
 const toneClass: Record<NonNullable<HomeFlowSummaryItem["tone"]>, string> = {
   attention:
-    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   normal:
-    "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   warning:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
 };
 
 function getUpdatedAtLabel(value: string) {
@@ -28,7 +28,7 @@ export function CompactFlowSummary({ items, updatedAt }: CompactFlowSummaryProps
   return (
     <aside
       data-testid="home-flow-summary-panel"
-      className="w-full rounded-[var(--clair-radius-md)] border border-border bg-white p-4 lg:h-full lg:min-h-[420px]"
+      className="w-full rounded-[var(--clair-radius-md)] border border-border bg-card p-4 lg:h-full lg:min-h-[420px]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>

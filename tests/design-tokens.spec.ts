@@ -195,3 +195,23 @@ test("profile drawer source uses semantic color tokens instead of direct local c
 
   expect(matches).toEqual([]);
 });
+
+test("home workspace source uses semantic color tokens instead of direct local colors", async () => {
+  const sources = await Promise.all(
+    [
+      "src/features/home/demo-launcher.tsx",
+      "src/features/home/module.tsx",
+      "src/features/home/components/home-command-header.tsx",
+      "src/features/home/components/compact-flow-summary.tsx",
+      "src/features/home/components/home-widget-card.tsx",
+      "src/features/home/components/my-work-panel.tsx",
+      "src/features/home/components/alerts-panel.tsx",
+      "src/features/home/components/hospital-flow-board.tsx",
+      "src/features/home/components/task-list-item.tsx",
+      "src/features/home/components/home-kanban-workspace.tsx",
+    ].map((path) => fs.promises.readFile(path, "utf8")),
+  );
+  const matches = sources.join("\n").match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});
