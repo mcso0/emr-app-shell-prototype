@@ -120,7 +120,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
 
   return (
     <nav className="flex min-h-0 min-w-[48px] max-w-[48px] flex-col items-center rounded-lg bg-[#171923] p-2 text-[#cbd5e0]">
-      <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-[7px] overflow-y-auto">
+      <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-2 overflow-y-auto">
         <AnimatePresence initial={false}>
           {!modulePanelOpen ? (
             <motion.div
@@ -129,7 +129,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
               animate={{ height: "auto", opacity: 1, y: 0 }}
               exit={reduceMotion ? { height: 0 } : { height: 0, opacity: 0, y: -8 }}
               transition={collapsedTopTransition}
-              className="flex w-full shrink-0 flex-col items-center gap-[7px] overflow-hidden"
+              className="flex w-full shrink-0 flex-col items-center gap-2 overflow-hidden"
             >
               <Tooltip>
                 <TooltipTrigger
