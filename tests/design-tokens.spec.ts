@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import fs from "node:fs";
 
 const treatmentUrl = "/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed";
 
@@ -96,4 +97,14 @@ test("primary command button uses primary token instead of brand blue", async ({
 
   expect(colors.buttonBackground).toBe(colors.primaryColor);
   expect(colors.buttonBackground).not.toBe(colors.brandColor);
+});
+
+test("reception module uses semantic color tokens instead of direct local colors", async () => {
+  const source = await fs.promises.readFile("src/features/reception/module.tsx", "utf8");
+  const directColorPattern =
+    /(clair-color-(?:atomic|background|primary|label|line|static)-|#[0-9A-Fa-f]{3,8}\b|rgba?\(|\b(?:bg|text|border|ring|hover:bg|hover:border|hover:text|focus:border|disabled:bg|shadow)-\[(?:[^\]]*(?:clair-color-|rgba?|#[0-9A-Fa-f])[^\]]*)\]|\b(?:bg|text|border|ring)-(?:white|black|red|green|blue|orange|yellow|sky|gray|slate|zinc|neutral|stone|cyan|purple|pink|rose|emerald|amber)-)/g;
+
+  const matches = source.match(directColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
 });

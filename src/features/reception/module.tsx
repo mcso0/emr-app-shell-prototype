@@ -112,28 +112,28 @@ const otherVeterinarians = allVeterinarians.filter(
 );
 const defaultVeterinarian = allVeterinarians[0];
 const veterinarianHeaderToneClasses = [
-  "border-[var(--clair-color-atomic-sky-600)] bg-[var(--clair-color-atomic-sky-500)]",
-  "border-[var(--clair-color-atomic-teal-700)] bg-[var(--clair-color-atomic-teal-600)]",
-  "border-[var(--clair-color-atomic-purple-700)] bg-[var(--clair-color-atomic-purple-600)]",
-  "border-[var(--clair-color-atomic-orange-700)] bg-[var(--clair-color-atomic-orange-600)]",
-  "border-[var(--clair-color-atomic-forest-green-700)] bg-[var(--clair-color-atomic-forest-green-600)]",
-  "border-[var(--clair-color-atomic-pink-700)] bg-[var(--clair-color-atomic-pink-600)]",
-  "border-[var(--clair-color-atomic-cornflower-700)] bg-[var(--clair-color-atomic-cornflower-600)]",
-  "border-[var(--clair-color-atomic-wood-700)] bg-[var(--clair-color-atomic-wood-600)]",
-  "border-[var(--clair-color-atomic-cyan-800)] bg-[var(--clair-color-atomic-cyan-700)]",
-  "border-[var(--clair-color-atomic-red-700)] bg-[var(--clair-color-atomic-red-600)]",
+  "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-text)]",
+  "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-text)]",
+  "border-[var(--emr-state-selected-border)] bg-[var(--emr-line-selected)]",
+  "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-text)]",
+  "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-text)]",
+  "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-text)]",
+  "border-[var(--emr-status-info-border)] bg-[var(--emr-text-link)]",
+  "border-[var(--emr-line-strong)] bg-[var(--emr-text-secondary)]",
+  "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-text)]",
+  "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-text)]",
 ];
 const veterinarianAccentToneClasses = [
-  "bg-[var(--clair-color-atomic-sky-500)]",
-  "bg-[var(--clair-color-atomic-teal-600)]",
-  "bg-[var(--clair-color-atomic-purple-600)]",
-  "bg-[var(--clair-color-atomic-orange-600)]",
-  "bg-[var(--clair-color-atomic-forest-green-600)]",
-  "bg-[var(--clair-color-atomic-pink-600)]",
-  "bg-[var(--clair-color-atomic-cornflower-600)]",
-  "bg-[var(--clair-color-atomic-wood-600)]",
-  "bg-[var(--clair-color-atomic-cyan-700)]",
-  "bg-[var(--clair-color-atomic-red-600)]",
+  "bg-[var(--emr-status-info-text)]",
+  "bg-[var(--emr-status-success-text)]",
+  "bg-[var(--emr-line-selected)]",
+  "bg-[var(--emr-status-warning-text)]",
+  "bg-[var(--emr-status-success-text)]",
+  "bg-[var(--emr-status-danger-text)]",
+  "bg-[var(--emr-text-link)]",
+  "bg-[var(--emr-text-secondary)]",
+  "bg-[var(--emr-status-info-text)]",
+  "bg-[var(--emr-status-danger-text)]",
 ];
 const calendarViewItems = [
   { value: "day" as const, label: "일" },
@@ -206,7 +206,7 @@ function getVeterinarianToneIndex(veterinarian: Veterinarian) {
 }
 
 function getVeterinarianAccentClassName(veterinarianId?: string) {
-  if (!veterinarianId) return "bg-[var(--clair-color-atomic-gray-300)]";
+  if (!veterinarianId) return "bg-[var(--emr-line-strong)]";
 
   const veterinarian = allVeterinarians.find((item) => item.id === veterinarianId);
   const toneIndex = veterinarian ? getVeterinarianToneIndex(veterinarian) : 0;
@@ -224,11 +224,11 @@ function VeterinarianLaneHeader({
   return (
     <div
       className={cn(
-        "flex h-12 min-w-0 items-center gap-2 rounded-md border px-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]",
+        "flex h-12 min-w-0 items-center gap-2 rounded-md border px-2.5 text-primary-foreground shadow-sm",
         veterinarianHeaderToneClasses[toneIndex % veterinarianHeaderToneClasses.length]
       )}
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-white/35 bg-white/20 text-[10px] font-semibold leading-none text-white">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[var(--emr-text-inverse)] bg-[var(--emr-state-hover)] text-[10px] font-semibold leading-none text-primary-foreground">
         {veterinarian.initial}
       </span>
       <span className="min-w-0 truncate text-[13px] font-semibold">{veterinarian.name}</span>
@@ -243,7 +243,7 @@ function VeterinarianMenuItemLabel({ veterinarian }: { veterinarian: Veterinaria
     <span className="flex min-w-0 items-center gap-2">
       <span
         className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold leading-none text-white",
+          "flex size-5 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold leading-none text-primary-foreground",
           veterinarianHeaderToneClasses[toneIndex % veterinarianHeaderToneClasses.length]
         )}
       >
@@ -342,18 +342,18 @@ const getWaitMinutesFromTime = (dateTime?: string) => {
 
 const getWaitingTimeTextClassName = (waitingMinutes?: number) => {
   if (waitingMinutes === undefined || waitingMinutes < 30) {
-    return "text-[var(--clair-color-atomic-gray-600)]";
+    return "text-[var(--emr-text-secondary)]";
   }
 
   if (waitingMinutes >= 90) {
-    return "text-[var(--clair-color-atomic-red-600)]";
+    return "text-destructive";
   }
 
   if (waitingMinutes >= 60) {
-    return "text-[var(--clair-color-atomic-orange-600)]";
+    return "text-[var(--emr-status-warning-text)]";
   }
 
-  return "text-[var(--clair-color-atomic-yellow-700)]";
+  return "text-[var(--emr-status-warning-text)]";
 };
 
 const getReceptionSideListSortTime = (summary: ReceptionPatientSummary) => {
@@ -461,7 +461,7 @@ function VisitPurposeChip({
   return (
     <span
       data-testid={testId}
-      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md border border-[var(--clair-color-line-subtle)] bg-white/70 px-1.5 text-[10px] font-semibold leading-none text-[var(--clair-color-label-normal)]"
+      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md border border-[var(--emr-line-subtle)] bg-[var(--emr-surface-floating)] px-1.5 text-[10px] font-semibold leading-none text-[var(--emr-text-secondary)]"
     >
       {icon}
       {label}
@@ -519,14 +519,14 @@ function ReceptionStatusBadge({
       className={cn(
         "h-6 rounded-lg px-2 py-0.5 text-[12px] font-medium leading-4",
         tone === "green" &&
-          "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-600)]",
+          "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
         tone === "orange" &&
-          "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)]",
+          "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
         tone === "sky" &&
-          "border-[var(--clair-color-atomic-sky-100)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-primary-normal)]",
+          "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary",
         tone === "red" &&
-          "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-600)]",
-        tone === "default" && "border-border bg-card text-[var(--clair-color-label-normal)]",
+          "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-destructive",
+        tone === "default" && "border-border bg-card text-[var(--emr-text-secondary)]",
         className
       )}
     >
@@ -610,10 +610,10 @@ function PatientCard({
         typeBadge={<EmrSidePanelTypeBadge label={receptionType} />}
         action={<EmrSidePanelCardAction ariaLabel={`${summary.patient.name} 더보기`} />}
       />
-      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--clair-color-atomic-gray-500)]">
+      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
         <span className="min-w-0 flex-1 truncate">{visitText}</span>
       </div>
-      <div className="my-1.5 h-px w-full bg-[var(--clair-color-line-subtle)]" />
+      <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
       <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
         <EmrSidePanelMetaBadge
           label="수의사"
@@ -719,7 +719,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             {searchQuery ? (
               <button
                 type="button"
-                className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-[var(--clair-color-atomic-gray-500)] outline-none transition-colors hover:text-[var(--clair-color-atomic-gray-600)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
                 aria-label="검색어 초기화"
                 onClick={() => setSearchQuery("")}
               >
@@ -839,12 +839,12 @@ function ScheduleAppointmentCard({
   return (
     <div
       className={cn(
-        "relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] p-2 pl-3 shadow-[0_1px_0_rgba(15,23,42,0.03)]",
+        "relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-2 pl-3 shadow-xs",
         appointment.status === "checked_in" &&
-          "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)]",
+          "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)]",
         appointment.status === "no_show" &&
-          "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)]",
-        selected && "ring-2 ring-inset ring-[var(--clair-color-primary-normal)]"
+          "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
+        selected && "ring-2 ring-inset ring-primary"
       )}
       data-testid={`appointment-card-${appointment.id}`}
     >
@@ -867,14 +867,14 @@ function ScheduleAppointmentCard({
           />
         </div>
         <div className="mt-1 flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate text-[13px] font-bold leading-4 text-[var(--clair-color-label-strong)]">
+          <span className="truncate text-[13px] font-bold leading-4 text-foreground">
             {patient?.name ?? "환자 미지정"}
           </span>
-          <span className="truncate text-[12px] font-semibold leading-4 text-[var(--clair-color-label-normal)]">
+          <span className="truncate text-[12px] font-semibold leading-4 text-[var(--emr-text-secondary)]">
             {visitPurpose}
           </span>
         </div>
-        <div className="mt-1 truncate text-[11px] leading-4 text-[var(--clair-color-label-normal)]">
+        <div className="mt-1 truncate text-[11px] leading-4 text-[var(--emr-text-secondary)]">
           {getShortTime(appointment.scheduledStartAt)} · {getAppointmentDurationLabel(appointment)}
         </div>
         {visitDetail ? (
@@ -892,7 +892,7 @@ function ScheduleAppointmentCard({
           className={cn(
             "h-7 px-2 text-[12px]",
             canCheckIn &&
-              "bg-[var(--clair-color-label-strong)] text-white shadow-sm hover:bg-[var(--clair-color-label-normal)]"
+              "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
           )}
           variant={canCheckIn ? "default" : "outline"}
           disabled={!canCheckIn}
@@ -930,7 +930,7 @@ function ScheduleWalkInQueueCard({
 
   return (
     <div
-      className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] p-2 pl-3 shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+      className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 pl-3 shadow-xs"
       data-testid={`walkin-card-${draft.encounter.id}`}
     >
       <span
@@ -956,10 +956,10 @@ function ScheduleWalkInQueueCard({
           />
         </div>
         <div className="mt-1 flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate text-[13px] font-bold leading-4 text-[var(--clair-color-label-strong)]">
+          <span className="truncate text-[13px] font-bold leading-4 text-foreground">
             {patient?.name ?? "환자 미지정"}
           </span>
-          <span className="truncate text-[12px] font-semibold leading-4 text-[var(--clair-color-label-normal)]">
+          <span className="truncate text-[12px] font-semibold leading-4 text-[var(--emr-text-secondary)]">
             {visitPurpose}
           </span>
         </div>
@@ -1104,7 +1104,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           }
         >
           <CdsFilesCalendarIcon
-            className="size-3.5 text-[var(--clair-color-atomic-gray-400)]"
+            className="size-3.5 text-muted-foreground"
             aria-hidden="true"
           />
           <span>{dateControlLabel.dateLabel}</span>
@@ -1113,7 +1113,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           {view === "day" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+                <div className="text-[13px] font-semibold leading-5 text-foreground">
                   2026년 5월
                 </div>
                 <div className="flex items-center gap-1">
@@ -1141,10 +1141,10 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                     className={cn(
                       "flex size-7 items-center justify-center rounded-md text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                       cell.inMonth
-                        ? "text-[var(--clair-color-label-strong)]"
-                        : "text-[var(--clair-color-label-alternative)]",
+                        ? "text-foreground"
+                        : "text-muted-foreground",
                       cell.selected &&
-                        "bg-[var(--clair-color-atomic-blue-500)] text-[var(--clair-color-static-white)] hover:bg-[var(--clair-color-atomic-blue-600)]"
+                        "bg-primary text-primary-foreground hover:bg-primary/90"
                     )}
                     aria-label={
                       cell.selected ? `${receptionToolbarDateLabel} 선택됨` : `${cell.day}일 선택`
@@ -1161,7 +1161,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           {view === "week" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+                <div className="text-[13px] font-semibold leading-5 text-foreground">
                   2026년 4월 - 5월
                 </div>
                 <div className="flex items-center gap-1">
@@ -1181,8 +1181,8 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                     className={cn(
                       "flex h-8 items-center rounded-md px-2 text-left text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                       week.selected
-                        ? "bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]"
-                        : "text-[var(--clair-color-label-strong)]"
+                        ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
+                        : "text-foreground"
                     )}
                     aria-label={week.selected ? `${week.label} 선택됨` : `${week.label} 주 선택`}
                     aria-pressed={week.selected}
@@ -1197,7 +1197,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           {view === "month" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+                <div className="text-[13px] font-semibold leading-5 text-foreground">
                   2026년
                 </div>
                 <div className="flex items-center gap-1">
@@ -1220,8 +1220,8 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                       className={cn(
                         "flex h-8 items-center justify-center rounded-md text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                         selected
-                          ? "bg-[var(--clair-color-atomic-blue-500)] text-[var(--clair-color-static-white)] hover:bg-[var(--clair-color-atomic-blue-600)]"
-                          : "text-[var(--clair-color-label-strong)]"
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "text-foreground"
                       )}
                       aria-label={selected ? `${month} 선택됨` : `${month} 월 선택`}
                       aria-pressed={selected}
@@ -1277,9 +1277,9 @@ function ScheduleToolbar({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <ReceptionScheduleDateControl view={view} />
-        <span className="ml-2 rounded-md bg-[var(--clair-color-atomic-gray-50)] px-2 py-1 text-[12px] font-medium leading-4 text-muted-foreground">
+        <span className="ml-2 rounded-md bg-muted px-2 py-1 text-[12px] font-medium leading-4 text-muted-foreground">
           영업시간{" "}
-          <span className="font-semibold text-[var(--clair-color-primary-normal)]">
+          <span className="font-semibold text-primary">
             {getBusinessHoursTimeRangeLabel()}
           </span>
         </span>
@@ -1291,7 +1291,7 @@ function ScheduleToolbar({
               variant: "outline",
               size: "sm",
               className:
-                "min-w-[124px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-[var(--clair-color-label-strong)]",
+                "min-w-[124px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-foreground",
             })}
           >
             <CdsActionsSearchIcon data-icon="inline-start" />
@@ -1334,7 +1334,7 @@ function ScheduleToolbar({
         />
         <div
           aria-hidden="true"
-          className="h-4 w-px shrink-0 bg-[var(--clair-color-line-normal)]"
+          className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
         />
         <NewUnifiedRegistrationButton onPatientReady={onUnifiedPatientReady} />
         <Button
@@ -1397,20 +1397,20 @@ function ReceptionVisitContextBanner({
   const summary = getReceptionVisitSummary({ appointment, encounter });
 
   return (
-    <section className="border-b bg-[var(--clair-color-atomic-sky-50)] px-4 py-3">
+    <section className="border-b bg-[var(--emr-status-info-bg)] px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <ReceptionStatusBadge label={statusLabel} tone={statusTone} />
-            <h2 className="truncate text-[15px] font-semibold text-[var(--clair-color-label-strong)]">
+            <h2 className="truncate text-[15px] font-semibold text-foreground">
               오늘 내원: {reason}
             </h2>
           </div>
-          <div className="mt-1 text-[12px] text-[var(--clair-color-label-normal)]">
+          <div className="mt-1 text-[12px] text-[var(--emr-text-secondary)]">
             {guardianName ?? "보호자 미지정"} 보호자 · {patientName}({patientNo}) · {summary}
           </div>
         </div>
-        <div className="rounded-md border border-[var(--clair-color-atomic-sky-100)] bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+        <div className="rounded-md border border-[var(--emr-status-info-border)] bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
           session-only demo context
         </div>
       </div>
@@ -1448,7 +1448,7 @@ function DayScheduleBoard({
   return (
     <div className="flex min-h-[720px] flex-col bg-card" data-testid="reception-day-calendar">
       <div
-        className="sticky top-0 z-30 grid border-b bg-card shadow-[0_1px_0_var(--border)]"
+        className="sticky top-0 z-30 grid border-b bg-card shadow-xs"
         style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
       >
         <div className="border-r" />
@@ -1465,7 +1465,7 @@ function DayScheduleBoard({
                   <button
                     key={`all-day-${veterinarian.id}-${appointment.id}`}
                     type="button"
-                    className="truncate rounded border border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] px-2 py-0.5 text-left text-[11px] font-medium text-[var(--clair-color-primary-normal)]"
+                    className="truncate rounded border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-0.5 text-left text-[11px] font-medium text-primary"
                     onClick={() => onSelectAppointment(appointment)}
                   >
                     예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
@@ -1478,7 +1478,7 @@ function DayScheduleBoard({
         })}
       </div>
       {unassignedWalkIns.length ? (
-        <div className="flex gap-2 border-b bg-[var(--clair-color-atomic-gray-50)]/70 p-2">
+        <div className="flex gap-2 border-b bg-muted/70 p-2">
           <div className="flex w-14 shrink-0 items-center justify-center text-[11px] font-medium text-muted-foreground">
             미지정
           </div>
@@ -1502,7 +1502,7 @@ function DayScheduleBoard({
           isBusinessHourRow(hour) ? null : (
             <div
               key={`off-hour-background-${hour}`}
-              className="pointer-events-none absolute inset-x-0 z-0 bg-[var(--clair-color-atomic-gray-50)]/70"
+              className="pointer-events-none absolute inset-x-0 z-0 bg-muted/70"
               style={{
                 top: index * dayScheduleHourRowHeight,
                 height: dayScheduleHourRowHeight,
@@ -1542,8 +1542,8 @@ function DayScheduleBoard({
             className="pointer-events-none absolute -left-1 right-0 z-10 flex items-center"
             style={{ top: currentTimeOffset }}
           >
-            <span className="size-2 rounded-full bg-[var(--clair-color-atomic-red-400)]" />
-            <span className="h-px flex-1 bg-[var(--clair-color-atomic-red-300)]" />
+            <span className="size-2 rounded-full bg-destructive" />
+            <span className="h-px flex-1 bg-[var(--emr-status-danger-border)]" />
           </div>
           {dayScheduleHours.map((hour) => {
             return (
@@ -1594,7 +1594,7 @@ function DayScheduleBoard({
                         <button
                           type="button"
                           aria-label={`${getScheduleHourLabel(hour)} ${veterinarian.name} 빈 시간 접수 생성`}
-                          className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--clair-color-atomic-sky-200)] hover:bg-[var(--clair-color-atomic-sky-50)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                          className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
                           data-testid={`day-empty-slot-${hour}-${veterinarian.id}`}
                           onClick={onCreateWalkIn}
                         >
@@ -1642,7 +1642,7 @@ function WeekScheduleBoard({
       data-testid="reception-week-calendar"
     >
       <div
-        className="sticky top-0 z-30 grid border-b bg-card shadow-[0_1px_0_var(--border)]"
+        className="sticky top-0 z-30 grid border-b bg-card shadow-xs"
         style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}
       >
         <div className="border-r" />
@@ -1651,14 +1651,14 @@ function WeekScheduleBoard({
             key={`${day.label}-${day.day}-header`}
             className={cn(
               "flex h-16 flex-col items-center justify-center border-r last:border-r-0",
-              day.active && "bg-[var(--clair-color-atomic-sky-50)]/60"
+              day.active && "bg-[var(--emr-status-info-bg)]/60"
             )}
           >
             <span className="text-[11px] text-muted-foreground">{day.label}</span>
             <span
               className={cn(
                 "mt-1 flex size-7 items-center justify-center rounded-full text-[14px] font-semibold",
-                day.active && "bg-[var(--clair-color-primary-normal)] text-white"
+                day.active && "bg-primary text-primary-foreground"
               )}
             >
               {day.day}
@@ -1681,8 +1681,8 @@ function WeekScheduleBoard({
               width: dayColumnWidth,
             }}
           >
-            <span className="size-2 rounded-full bg-[var(--clair-color-atomic-red-400)]" />
-            <span className="h-px flex-1 bg-[var(--clair-color-atomic-red-300)]" />
+            <span className="size-2 rounded-full bg-destructive" />
+            <span className="h-px flex-1 bg-[var(--emr-status-danger-border)]" />
           </div>
         ) : null}
 
@@ -1718,8 +1718,8 @@ function WeekScheduleBoard({
                   key={`week-${day.day}-${hour}`}
                   className={cn(
                     "flex min-w-0 gap-2 border-r p-2 last:border-r-0",
-                    day.active && "bg-[var(--clair-color-atomic-sky-50)]/40",
-                    !isBusinessHourRow(hour) && "bg-[var(--clair-color-atomic-gray-50)]/70"
+                    day.active && "bg-[var(--emr-status-info-bg)]/40",
+                    !isBusinessHourRow(hour) && "bg-muted/70"
                   )}
                 >
                   {hourAppointments.map((appointment) => (
@@ -1742,7 +1742,7 @@ function WeekScheduleBoard({
                     <button
                       type="button"
                       aria-label={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
-                      className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--clair-color-atomic-sky-200)] hover:bg-[var(--clair-color-atomic-sky-50)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
                       data-testid={`week-empty-slot-${day.day}-${hour}`}
                       onClick={onCreateWalkIn}
                     >
@@ -1766,7 +1766,7 @@ function WeekScheduleBoard({
           {weekDays.map((day) => (
             <div
               key={`week-bottom-${day.day}`}
-              className={cn("border-r last:border-r-0", day.active && "bg-[var(--clair-color-atomic-sky-50)]/40")}
+              className={cn("border-r last:border-r-0", day.active && "bg-[var(--emr-status-info-bg)]/40")}
             />
           ))}
         </div>
@@ -1786,11 +1786,11 @@ function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) 
           key={day}
           className={cn(
             "min-h-0 border-b border-r p-3 last:border-r-0",
-            day === 1 && "bg-[var(--clair-color-atomic-sky-50)]/50"
+            day === 1 && "bg-[var(--emr-status-info-bg)]/50"
           )}
         >
           <div className="text-[13px] font-semibold">{day}</div>
-          <div className="mt-3 space-y-1 text-[12px] leading-5 text-[var(--clair-color-label-normal)]">
+          <div className="mt-3 space-y-1 text-[12px] leading-5 text-[var(--emr-text-secondary)]">
             <div>진료 0건</div>
             <div>예약 {day === 1 ? appointmentCount : 1}건</div>
             <div>행사 0건</div>
@@ -2009,7 +2009,7 @@ export function ReceptionContent() {
       ) : null}
       {lastMessageDelivery ? (
         <div
-          className="border-b bg-[var(--clair-color-atomic-green-50)] px-4 py-2 text-[12px] font-semibold text-[var(--clair-color-atomic-green-700)]"
+          className="border-b bg-[var(--emr-status-success-bg)] px-4 py-2 text-[12px] font-semibold text-[var(--emr-status-success-text)]"
           data-testid="check-in-message-delivery"
         >
           카카오톡 발송 완료: {lastMessageDelivery.bodySnapshot}
@@ -2050,10 +2050,10 @@ function ReceptionFormField({
   required?: boolean;
 }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1.5 text-[12px] font-medium text-[var(--clair-color-label-normal)]">
+    <label className="flex min-w-0 flex-col gap-1.5 text-[12px] font-medium text-[var(--emr-text-secondary)]">
       <span>
         {label}
-        {required ? <span className="ml-0.5 text-[var(--clair-color-primary-normal)]">*</span> : null}
+        {required ? <span className="ml-0.5 text-primary">*</span> : null}
       </span>
       {children}
     </label>
@@ -2141,7 +2141,7 @@ function WalkInReceptionDialog({
         <DialogHeader className="px-8 pb-4 pt-7">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
-              <DialogTitle className="text-[22px] font-bold leading-7 text-[var(--clair-color-label-strong)]">
+              <DialogTitle className="text-[22px] font-bold leading-7 text-foreground">
                 진료 접수
               </DialogTitle>
               <DialogDescription className="sr-only">
@@ -2170,7 +2170,7 @@ function WalkInReceptionDialog({
                       className="h-10 w-full bg-card"
                     >
                       <CdsActionsSearchIcon
-                        className="size-3 shrink-0 text-[var(--clair-color-atomic-gray-600)]"
+                        className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
                         aria-hidden="true"
                       />
                       <SelectValue placeholder="동물명 또는 보호자명으로 검색" />
@@ -2191,11 +2191,11 @@ function WalkInReceptionDialog({
                   <div className="relative">
                     <Input
                       aria-label="체중"
-                      className="h-10 bg-card pr-9 text-[var(--clair-color-atomic-gray-500)]"
+                      className="h-10 bg-card pr-9 text-muted-foreground"
                       readOnly
                       value={patientWeightKg}
                     />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium leading-4 text-[var(--clair-color-label-strong)]">
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium leading-4 text-foreground">
                       kg
                     </span>
                   </div>
@@ -2227,7 +2227,7 @@ function WalkInReceptionDialog({
                         className={cn(
                           "h-7 rounded-full px-2.5 text-[12px] font-semibold",
                           selected
-                            ? "bg-[var(--clair-color-primary-normal)] text-white hover:bg-[var(--clair-color-primary-normal)]/90"
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
                             : ""
                         )}
                         aria-pressed={selected}
@@ -2319,7 +2319,7 @@ function WalkInReceptionDialog({
                     className="h-10 w-full bg-card"
                   >
                     <CdsActionsSearchIcon
-                      className="size-3 shrink-0 text-[var(--clair-color-atomic-gray-600)]"
+                      className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1 truncate text-left">
@@ -2343,7 +2343,7 @@ function WalkInReceptionDialog({
                 <RegistrationFormField label="접수일">
                 <div className="relative">
                   <CdsFilesCalendarIcon
-                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--clair-color-atomic-gray-600)]"
+                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-secondary)]"
                     aria-hidden="true"
                   />
                   <Input
@@ -2358,12 +2358,12 @@ function WalkInReceptionDialog({
                 <RegistrationFormField label="진료시간">
                 <div className="relative">
                   <CdsFilesClockIcon
-                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--clair-color-atomic-gray-400)]"
+                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <Input
                     aria-label="진료시간"
-                    className="h-10 bg-card pl-9 text-[var(--clair-color-atomic-gray-500)] disabled:bg-[var(--clair-color-background-surface)] disabled:opacity-100"
+                    className="h-10 bg-card pl-9 text-muted-foreground disabled:bg-muted disabled:opacity-100"
                     disabled
                     value="진료시간"
                   />
@@ -2406,8 +2406,8 @@ function WalkInReceptionDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-white px-8 py-4 sm:justify-between">
-          <label className="flex w-fit items-center gap-2 rounded-md border bg-card px-2.5 py-2 text-[12px] font-semibold text-[var(--clair-color-label-normal)]">
+        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-8 py-4 sm:justify-between">
+          <label className="flex w-fit items-center gap-2 rounded-md border bg-card px-2.5 py-2 text-[12px] font-semibold text-[var(--emr-text-secondary)]">
             <Checkbox
               aria-label="카카오톡 발송"
               checked={sendKakaoMessage}
@@ -2419,14 +2419,14 @@ function WalkInReceptionDialog({
             <Button
               type="button"
               variant="ghost"
-              className="h-8 rounded-full px-4 text-[12px] font-semibold text-[var(--clair-color-label-strong)]"
+              className="h-8 rounded-full px-4 text-[12px] font-semibold text-foreground"
               onClick={close}
             >
               취소
             </Button>
             <Button
               type="button"
-              className="h-8 rounded-full bg-[var(--clair-color-primary-normal)] px-4 text-[12px] font-semibold text-white hover:bg-[var(--clair-color-primary-normal)]/90"
+              className="h-8 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90"
               disabled={!canCreate}
               onClick={() => {
                 const selectedVeterinarianId =
@@ -2573,7 +2573,7 @@ export function ReceptionDrawer() {
     <div className="flex h-[calc(100%-48px)] flex-col">
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
-          <section className="rounded-lg border bg-[var(--clair-color-background-surface)] p-3">
+          <section className="rounded-lg border bg-muted p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-[14px] font-semibold">
@@ -2582,7 +2582,7 @@ export function ReceptionDrawer() {
                 <div className="mt-1 text-[12px] text-muted-foreground">
                   {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · {visitSummary}
                 </div>
-                <div className="mt-2 text-[13px] font-medium text-[var(--clair-color-label-strong)]">
+                <div className="mt-2 text-[13px] font-medium text-foreground">
                   오늘 내원: {visitReason}
                 </div>
               </div>
