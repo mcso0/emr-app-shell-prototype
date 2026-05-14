@@ -100,7 +100,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "patient-card-patient-coco",
       "patient-card-patient-haru",
     ]);
-  await expect(sidePanel.getByText("112분 대기")).toHaveClass(/atomic-red-600/);
+  await expect(sidePanel.getByText("112분 대기")).toHaveClass(/text-destructive/);
   await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toHaveCount(0);
   await sideTabs.getByRole("button", { name: "예약", exact: true }).click();
   await expect(sidePanel.getByText("예약 작업")).toHaveCount(0);
@@ -190,7 +190,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   await expect(calendar.getByText("현재 11:20")).toHaveCount(0);
   await expect(kongAppointment.getByTestId("appointment-purpose-appointment-kong-260501")).toContainText("구토/식욕");
-  await expect(kongAppointment.getByTestId("appointment-accent-appointment-kong-260501")).toHaveClass(/atomic-sky-500/);
+  await expect(kongAppointment.getByTestId("appointment-accent-appointment-kong-260501")).toHaveClass(/emr-status-info-text/);
   await expect(kongAppointment).toContainText("콩이");
   await expect(kongAppointment).toContainText("구토 및 복부");
 
@@ -234,7 +234,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   const nabiAppointment = page.getByTestId("appointment-card-appointment-nabi-260501");
   await expect(nabiAppointment.getByTestId("appointment-purpose-appointment-nabi-260501")).toContainText("피부");
-  await expect(nabiAppointment.getByRole("button", { name: "접수 처리" })).toHaveClass(/label-strong/);
+  await expect(nabiAppointment.getByRole("button", { name: "접수 처리" })).toHaveClass(/bg-primary/);
 });
 
 test("reception month calendar fills the available calendar height", async ({ page }) => {
@@ -612,7 +612,7 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await expect(walkInCalendarCard).toContainText("재활");
   await expect(walkInCalendarCard).toContainText("보행 재검 및 통증 상담");
   await expect(walkInCalendarCard.getByTestId("walkin-purpose-draft-encounter-walkin-patient-dubu")).toContainText("진료");
-  await expect(walkInCalendarCard.getByTestId("walkin-accent-draft-encounter-walkin-patient-dubu")).toHaveClass(/atomic-gray-300/);
+  await expect(walkInCalendarCard.getByTestId("walkin-accent-draft-encounter-walkin-patient-dubu")).toHaveClass(/emr-line-strong/);
 });
 
 test("reception opens the walk-in form from an empty calendar slot", async ({ page }) => {
