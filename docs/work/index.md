@@ -12,6 +12,8 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DOCS-PR-004 | done | docs-restructure | P0 | PR 4 | `docs/work/docs-restructure/DOCS-PR-004-engineering-design-migration.md` |
 | DOCS-PR-005 | done | docs-restructure | P1 | PR 5 | `docs/work/docs-restructure/DOCS-PR-005-archive-and-link-checking.md` |
 | DOCS-PR-006 | done | docs-restructure | P0 | PR 6 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md` |
+| SYMPHONY-PR-001 | done | agent-orchestration | P1 | PR 1 | `docs/work/agent-orchestration/SYMPHONY-PR-001-orchestration-foundation.md` |
+| SYMPHONY-PR-002 | done | agent-orchestration | P1 | PR 2 | `docs/work/agent-orchestration/SYMPHONY-PR-002-linear-pilot-kit.md` |
 | DESIGN-SYSTEM-PR-001 | done | design-system | P1 | PR 1 | `docs/work/design-system/DESIGN-SYSTEM-PR-001-light-operational-foundation.md` |
 | DESIGN-SYSTEM-PR-002 | done | design-system | P1 | PR 2 | `docs/work/design-system/DESIGN-SYSTEM-PR-002-ui-consistency-audit.md` |
 | DESIGN-SYSTEM-PR-003 | done | design-system | P1 | PR 3 | `docs/work/design-system/DESIGN-SYSTEM-PR-003-neutral-command-semantic-status-tokens.md` |

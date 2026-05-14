@@ -9,6 +9,7 @@ Planned subareas:
 - `auth-security/`: Supabase Auth, permission, RLS, and server enforcement plans
 - `api-boundaries/`: repository and selector contracts
 - `testing/`: validation strategy and command sets
+- `agent-orchestration/`: Symphony, Linear-driven Codex work routing, and CSO security-agent operations
 - `operations/`: deployment, runtime configuration, monitoring, and production readiness
 - `decisions/`: engineering decisions and ADRs
 
@@ -19,6 +20,7 @@ Current canonical engineering docs:
 - Data model: `docs/engineering/data-model/`
 - Auth/security: `docs/engineering/auth-security/`
 - API boundaries: `docs/engineering/api-boundaries/`
+- Agent orchestration: `docs/engineering/agent-orchestration/`
 - Gap analysis/testing context: `docs/engineering/testing/mvp-gap-analysis.md`
 - Changelog: `docs/engineering/changelog.md`
 
