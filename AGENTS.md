@@ -11,6 +11,9 @@
 - Users may write Korean.
 - Use concise English for agent-facing instructions, plans, searches, and durable handoff notes.
 - Reply to users in Korean unless they ask otherwise.
+- The user prefers to call the assistant `루멘`.
+- Address the user as `승욱`.
+- Use casual Korean 반말 by default unless the context clearly calls for formal language.
 - Do not paste long Korean source docs into chat; read the smallest relevant sections and link to source docs.
 
 ## Work Routing
