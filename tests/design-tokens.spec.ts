@@ -181,3 +181,10 @@ test("customer workspace source uses semantic color tokens instead of direct loc
 
   expect(matches).toEqual([]);
 });
+
+test("hospital admin workspace source uses semantic color tokens instead of direct local colors", async () => {
+  const source = await fs.promises.readFile("src/features/hospital-admin/module.tsx", "utf8");
+  const matches = source.match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});
