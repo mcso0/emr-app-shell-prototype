@@ -4,31 +4,31 @@ export const defaultOrderQueueStatuses: OrderQueueStatusDefinition[] = [
   {
     id: "reRequested",
     label: "재요청",
-    colorToken: "--clair-color-atomic-orange-400",
+    colorToken: "--emr-status-warning-text",
     sortOrder: 10,
   },
   {
     id: "inProgress",
     label: "진행중",
-    colorToken: "--clair-color-atomic-blue-400",
+    colorToken: "--emr-status-info-text",
     sortOrder: 20,
   },
   {
     id: "waiting",
     label: "대기중",
-    colorToken: "--clair-color-atomic-gray-400",
+    colorToken: "--emr-status-neutral-text",
     sortOrder: 30,
   },
   {
     id: "completed",
     label: "완료",
-    colorToken: "--clair-color-atomic-green-400",
+    colorToken: "--emr-status-success-text",
     sortOrder: 40,
   },
   {
     id: "canceled",
     label: "취소",
-    colorToken: "--clair-color-atomic-red-400",
+    colorToken: "--emr-status-danger-text",
     sortOrder: 50,
   },
 ];
@@ -36,7 +36,7 @@ export const defaultOrderQueueStatuses: OrderQueueStatusDefinition[] = [
 const partialCompletedStatus: OrderQueueStatusDefinition = {
   id: "partiallyCompleted",
   label: "부분완료",
-  colorToken: "--clair-color-atomic-mint-400",
+  colorToken: "--emr-status-success-text",
   sortOrder: 60,
 };
 

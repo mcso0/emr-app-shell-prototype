@@ -32,6 +32,11 @@ function getAccessibleLabel(label: ReactNode, accessibleLabel?: string) {
 function getCountBadgeTokens(colorToken?: string) {
   if (!colorToken) return undefined;
 
+  if (colorToken.includes("status-warning")) return { background: "--emr-status-warning-bg", foreground: "--emr-status-warning-text" };
+  if (colorToken.includes("status-success")) return { background: "--emr-status-success-bg", foreground: "--emr-status-success-text" };
+  if (colorToken.includes("status-danger")) return { background: "--emr-status-danger-bg", foreground: "--emr-status-danger-text" };
+  if (colorToken.includes("status-neutral")) return { background: "--emr-status-neutral-bg", foreground: "--emr-status-neutral-text" };
+  if (colorToken.includes("status-info")) return { background: "--emr-status-info-bg", foreground: "--emr-status-info-text" };
   if (colorToken.includes("orange")) return { background: "--emr-status-warning-bg", foreground: "--emr-status-warning-text" };
   if (colorToken.includes("green")) return { background: "--emr-status-success-bg", foreground: "--emr-status-success-text" };
   if (colorToken.includes("red")) return { background: "--emr-status-danger-bg", foreground: "--emr-status-danger-text" };

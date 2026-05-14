@@ -43,19 +43,19 @@ const chartQueueStatuses: OrderQueueStatusDefinition[] = [
   {
     id: "in_progress",
     label: "진료중",
-    colorToken: "--clair-color-primary-normal",
+    colorToken: "--emr-status-info-text",
     sortOrder: 10,
   },
   {
     id: "called",
     label: "호출",
-    colorToken: "--clair-color-atomic-orange-400",
+    colorToken: "--emr-status-warning-text",
     sortOrder: 20,
   },
   {
     id: "waiting",
     label: "진료대기",
-    colorToken: "--clair-color-atomic-gray-400",
+    colorToken: "--emr-status-neutral-text",
     sortOrder: 30,
   },
 ];
