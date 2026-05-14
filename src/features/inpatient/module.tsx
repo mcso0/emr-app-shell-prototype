@@ -64,22 +64,22 @@ import { cn } from "@/lib/utils";
 
 const statusBadgeClassName: Record<InpatientAdmission["status"], string> = {
   admitted:
-    "border-[var(--clair-color-atomic-blue-200)] bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]",
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   critical:
-    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-700)]",
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   discharge_ready:
-    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
 };
 
 const cautionTagClassName: Record<InpatientCautionTag["tone"], string> = {
   care:
-    "border-[var(--clair-color-atomic-green-200)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   danger:
-    "border-[var(--clair-color-atomic-red-200)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-700)]",
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   notice:
-    "border-[var(--clair-color-atomic-orange-200)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-700)]",
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   purple:
-    "border-[var(--clair-color-atomic-purple-200)] bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-700)]",
+    "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
 };
 
 const inpatientWeekdayLabels = ["일", "월", "화", "수", "목", "금", "토"] as const;
@@ -174,20 +174,20 @@ function InpatientDatePicker({
 
 const summaryCardToneClassName = {
   blue: {
-    accent: "bg-[var(--clair-color-atomic-blue-500)]",
-    icon: "bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-700)]",
+    accent: "bg-[var(--emr-status-info-text)]",
+    icon: "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   },
   orange: {
-    accent: "bg-[var(--clair-color-atomic-orange-500)]",
-    icon: "bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-700)]",
+    accent: "bg-[var(--emr-status-warning-text)]",
+    icon: "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   },
   green: {
-    accent: "bg-[var(--clair-color-atomic-green-500)]",
-    icon: "bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-700)]",
+    accent: "bg-[var(--emr-status-success-text)]",
+    icon: "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   },
   purple: {
-    accent: "bg-[var(--clair-color-atomic-purple-500)]",
-    icon: "bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-700)]",
+    accent: "bg-[var(--emr-status-neutral-text)]",
+    icon: "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   },
 };
 
@@ -209,7 +209,7 @@ function SummaryCard({
   const toneClassName = summaryCardToneClassName[tone];
 
   return (
-    <section className="relative min-h-[104px] overflow-hidden rounded-lg border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <section className="relative min-h-[104px] overflow-hidden rounded-lg border bg-card p-4 shadow-xs">
       <div className={cn("absolute inset-x-0 top-0 h-0.5", toneClassName.accent)} />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -245,7 +245,7 @@ function InpatientTableRow({ admission }: { admission: InpatientAdmission }) {
       data-selected={selected ? "true" : undefined}
       className={cn(
         "cursor-pointer",
-        selected && "bg-[var(--clair-color-atomic-sky-50)] hover:bg-[var(--clair-color-atomic-sky-50)]"
+        selected && "bg-[var(--emr-state-selected)] hover:bg-[var(--emr-state-selected)]"
       )}
       onClick={openAdmissionDrawer}
     >
@@ -307,7 +307,7 @@ function InpatientWardSection({
 
   return (
     <section className="rounded-lg border bg-card" data-testid={`inpatient-section-${label}`}>
-      <div className="flex h-11 items-center justify-between border-b bg-[var(--clair-color-atomic-gray-50)] px-4">
+      <div className="flex h-11 items-center justify-between border-b bg-muted/50 px-4">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="text-[14px] font-semibold">{label}</h2>
           <Badge variant="secondary">{admissions.length}</Badge>
@@ -363,7 +363,7 @@ export function InpatientContent() {
   }));
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]">
       <div className="shrink-0 border-b bg-card px-4 py-3">
         <EmrInstructionHeaderStack
           titleBar={
@@ -371,7 +371,7 @@ export function InpatientContent() {
               title="입원 현황"
               icon={
                 <CdsFilesDocumentAltFillIcon
-                  className="size-5 shrink-0 text-[var(--clair-color-atomic-gray-300)]"
+                  className="size-5 shrink-0 text-muted-foreground"
                   aria-hidden="true"
                 />
               }
