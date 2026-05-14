@@ -309,7 +309,7 @@ function BillingTitleCard({ detail }: { detail: BillingDetail }) {
             {detail.invoice.invoiceNo} · {detail.patient?.name ?? "환자 미상"} ·{" "}
             {detail.guardian?.name ?? "보호자 미지정"} · {detail.encounter.encounterNo}
           </div>
-          <div className="mt-2 text-[13px] font-medium text-[var(--clair-color-label-strong)]">
+          <div className="mt-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
             {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게 안내합니다.
           </div>
         </div>
@@ -345,8 +345,8 @@ function GuardianGroups({
             <div
               key={group.guardian.id}
               className={cn(
-                "rounded-md border bg-[var(--clair-color-background-surface)] p-3",
-                active && "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)]"
+                "rounded-md border bg-card p-3",
+                active && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
               )}
             >
               <div className="flex items-center justify-between gap-3">
@@ -439,11 +439,11 @@ function InvoiceLinesTable({
         </div>
         <Badge variant="secondary">{sortedLines.length}</Badge>
       </div>
-      <div className="border-b bg-[var(--clair-color-status-warning-background)] px-4 py-2 text-[12px] text-[var(--clair-color-status-warning-foreground)]">
+      <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] text-[var(--emr-status-warning-text)]">
         실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량만 session-only로 조정합니다.
       </div>
       <Table className="table-fixed text-[13px]">
-        <TableHeader className="bg-[var(--clair-color-atomic-neutral-50)]">
+        <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[88px]">업무</TableHead>
             <TableHead>항목</TableHead>
@@ -547,14 +547,14 @@ function SummaryLine({
   muted?: boolean;
 }) {
   return (
-    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--clair-color-line-subtle)] text-[13px]">
-      <span className={muted ? "text-muted-foreground" : "text-[var(--clair-color-label-normal)]"}>
+    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--emr-line-subtle)] text-[13px]">
+      <span className={muted ? "text-muted-foreground" : "text-[var(--emr-text-secondary)]"}>
         {label}
       </span>
       <span
         className={cn(
           "text-right font-medium",
-          emphasis && "text-[var(--clair-color-primary-normal)]",
+          emphasis && "text-primary",
           muted && "text-muted-foreground"
         )}
       >
@@ -600,7 +600,7 @@ function PaymentStatusNote({
   const isPaid = invoiceStatus === "paid" || balance === 0;
 
   return (
-    <div className="rounded-md border bg-[var(--clair-color-background-surface)] px-3 py-2">
+    <div className="rounded-md border bg-[var(--emr-surface-muted)] px-3 py-2">
       <div className="text-[13px] font-semibold">
         {isPaid ? "세션 내 수납 완료" : "보호자 안내 후 수납 완료 처리"}
       </div>
@@ -649,7 +649,7 @@ export function BillingRightPanel() {
           </div>
 
           <div className="mt-5 text-[13px] font-semibold">읽기 전용 수납 정보</div>
-          <div className="mt-2 rounded-md border bg-[var(--clair-color-background-surface)] px-3">
+          <div className="mt-2 rounded-md border bg-[var(--emr-surface-muted)] px-3">
             <SummaryLine label="영수증 금액" value="미연동" muted />
             <SummaryLine label="VAT 세부" value={formatAmount(detail.invoice.taxAmount)} muted />
             <SummaryLine label="부분 결제 입력" value="미지원" muted />
