@@ -35,7 +35,7 @@ export function OrderQueueSelectionSummary({
               style={{ backgroundColor: `var(${status?.colorToken ?? "--emr-status-neutral-text"})` }}
               aria-hidden="true"
             />
-            <h2 className="truncate text-[15px] font-semibold leading-5 text-[var(--clair-color-label-strong)]">
+            <h2 className="truncate text-[15px] font-semibold leading-5 text-foreground">
               {item.patientName} · {item.guardianName}
             </h2>
             <Badge

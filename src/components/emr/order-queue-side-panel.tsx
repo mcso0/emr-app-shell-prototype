@@ -58,7 +58,7 @@ const orderQueueFilterItems = [
   { value: "treatment" as const, label: "처치" },
 ];
 
-const fallbackStatusColorToken = "--clair-color-atomic-gray-400";
+const fallbackStatusColorToken = "--emr-status-neutral-text";
 
 const createFallbackStatus = (statusId: string, index: number): OrderQueueStatusDefinition => ({
   id: statusId,

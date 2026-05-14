@@ -100,7 +100,7 @@ export function EmrSubpanelTitle({
     <div className={cn("flex h-12 shrink-0 items-center px-4 py-3", className)}>
       <div className="flex min-w-0 flex-1 items-center">
         <div className="relative flex min-w-0 max-w-full items-center">
-          <div className="min-w-0 truncate text-[16px] font-semibold leading-6 tracking-normal text-[var(--clair-color-label-strong)]">
+          <div className="min-w-0 truncate text-[16px] font-semibold leading-6 tracking-normal text-foreground">
             {title}
           </div>
           {onCollapse ? (
@@ -299,7 +299,7 @@ export function EmrListItem({
       <div className="flex min-h-6 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           {title ? (
-            <div className="truncate text-[13px] font-semibold leading-5 text-[var(--clair-color-label-normal)]">
+            <div className="truncate text-[13px] font-semibold leading-5 text-[var(--emr-text-secondary)]">
               {title}
             </div>
           ) : null}

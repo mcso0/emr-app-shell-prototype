@@ -58,7 +58,7 @@ export function EmrContentHistoryGroup({
   const titleContent = (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
-        <span className="truncate text-[var(--clair-color-label-alternative)]">
+        <span className="truncate text-muted-foreground">
           {label}
         </span>
         <span className="shrink-0 text-[var(--emr-text-tertiary)]">
@@ -66,7 +66,7 @@ export function EmrContentHistoryGroup({
         </span>
       </div>
       <motion.span
-        className="flex size-4 shrink-0 items-center justify-center text-[var(--clair-color-label-alternative)]"
+        className="flex size-4 shrink-0 items-center justify-center text-muted-foreground"
         animate={{ rotate: collapsed ? 180 : 0 }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: CONTENT_HISTORY_GROUP_EASE }}
       >
