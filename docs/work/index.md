@@ -29,6 +29,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | DESIGN-SYSTEM-PR-015 | done | design-system | P1 | PR 15 | `docs/work/design-system/DESIGN-SYSTEM-PR-015-auth-login-token-cleanup.md` |
 | DESIGN-SYSTEM-PR-016 | done | design-system | P1 | PR 16 | `docs/work/design-system/DESIGN-SYSTEM-PR-016-shell-chrome-token-cleanup.md` |
 | DESIGN-SYSTEM-PR-017 | done | design-system | P1 | PR 17 | `docs/work/design-system/DESIGN-SYSTEM-PR-017-shared-emr-components-token-cleanup.md` |
+| DESIGN-SYSTEM-PR-018 | done | design-system | P1 | PR 18 | `docs/work/design-system/DESIGN-SYSTEM-PR-018-residual-color-audit.md` |
 | HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |

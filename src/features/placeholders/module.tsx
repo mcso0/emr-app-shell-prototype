@@ -111,11 +111,11 @@ function DemoLauncher() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--clair-color-background-normal)]">
-      <section className="border-b bg-white px-6 py-5">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <section className="border-b bg-card px-6 py-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-[12px] font-semibold text-[var(--clair-color-primary-normal)]">
+            <div className="text-[12px] font-semibold text-primary">
               Sales Demo Prototype
             </div>
             <h1 className="mt-1 text-[22px] font-semibold leading-8">{scenario.title}</h1>
@@ -133,7 +133,7 @@ function DemoLauncher() {
       </section>
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-4 p-5">
-          <section className="rounded-lg border bg-white p-4">
+          <section className="rounded-lg border bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-[15px] font-semibold">7분 골든 경로</h2>
@@ -145,7 +145,7 @@ function DemoLauncher() {
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-5">
               {spine.map((label, index) => (
-                <div key={label} className="rounded-md border bg-[var(--clair-color-background-surface)] p-3">
+                <div key={label} className="rounded-md border bg-muted p-3">
                   <div className="text-[11px] font-semibold text-muted-foreground">
                     STEP {index + 1}
                   </div>
@@ -159,19 +159,19 @@ function DemoLauncher() {
               <Link
                 key={role}
                 href={createDemoHref({ moduleId, workspaceId })}
-                className="rounded-lg border bg-white p-4 text-left transition-colors hover:bg-[var(--clair-color-background-surface)]"
+                className="rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent"
               >
                 <div className="text-[14px] font-semibold">{role}</div>
                 <p className="mt-2 min-h-12 text-[12px] leading-5 text-muted-foreground">
                   {description}
                 </p>
-                <div className="mt-3 text-[12px] font-semibold text-[var(--clair-color-primary-normal)]">
+                <div className="mt-3 text-[12px] font-semibold text-primary">
                   바로 열기
                 </div>
               </Link>
             ))}
           </section>
-          <section className="rounded-lg border bg-white p-4">
+          <section className="rounded-lg border bg-card p-4">
             <h2 className="text-[15px] font-semibold">데모 운영 메모</h2>
             <div className="mt-3 grid gap-2 text-[13px] leading-5 text-muted-foreground md:grid-cols-3">
               <p>새로고침 후 persistence를 약속하지 않고 session-only prototype으로 설명합니다.</p>

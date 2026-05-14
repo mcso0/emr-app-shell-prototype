@@ -36,11 +36,11 @@ const states = [
 ] as const;
 
 const forcedHoverClasses = {
-  default: "bg-[var(--clair-color-atomic-gray-700)]",
-  outline: "bg-[var(--clair-color-background-surface)]",
-  secondary: "bg-[var(--clair-color-background-subtle)]",
-  ghost: "bg-[var(--clair-color-background-subtle)]",
-  destructive: "bg-[var(--clair-color-atomic-red-100)]",
+  default: "bg-primary/90",
+  outline: "bg-accent",
+  secondary: "bg-secondary/80",
+  ghost: "bg-accent",
+  destructive: "bg-destructive/10",
 } as const;
 
 function stateClass(

@@ -259,3 +259,18 @@ test("shared EMR component source uses semantic color tokens instead of direct l
 
   expect(matches).toEqual([]);
 });
+
+test("residual eligible source uses semantic color tokens instead of direct local colors", async () => {
+  const sources = await Promise.all(
+    [
+      "src/app/button-gallery/page.tsx",
+      "src/components/icons.ts",
+      "src/features/chart/data.ts",
+      "src/features/order-queue/data.ts",
+      "src/features/placeholders/module.tsx",
+    ].map((path) => fs.promises.readFile(path, "utf8")),
+  );
+  const matches = sources.join("\n").match(directLocalColorPattern) ?? [];
+
+  expect(matches).toEqual([]);
+});
