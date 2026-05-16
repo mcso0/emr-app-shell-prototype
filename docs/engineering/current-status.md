@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-14
+Updated: 2026-05-16
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
@@ -68,6 +68,7 @@ PR7 UI 정렬과 별도로 진행한 A/B/C/D foundation 작업이 `main`에 통�
 - 2026-05-12 기준 홈의 `업무 현황` 탭은 운영 모드 기반 control surface 시안으로 보강되었다. `전체 흐름`, `내 담당`, `배정 필요`, `지연 해소`, `팀 부하` 모드, 단계별 빠른 이동 strip, 미배정/지연/최다 부하 summary, 선택 업무 상세 패널, 카드별 판단 이유와 목적형 action label을 제공한다. 담당 배정과 메모는 아직 비활성 시안이며 실제 업무 claim/배정 persistence는 구현하지 않는다.
 - 2026-05-09 기준 App Shell은 Home처럼 module side panel이 없는 모듈에 진입할 때 `modulePanel=closed` URL/state를 `modulePanel=open`으로 정규화한다. 따라서 접힌 side panel 상태에서 Home으로 이동해도 nav rail의 `사이드 패널 펼치기` 버튼은 노출되지 않으며, 이후 side panel이 있는 모듈로 이동하면 해당 모듈 side panel이 다시 보인다.
 - 2026-05-10 기준 PWA install shell이 추가되었다. App Router manifest, install icons, Apple web app metadata, `#E9ECF2` app chrome theme color를 제공하지만 service worker, offline EMR data cache, push notification, background sync는 지원하지 않는다.
+- 2026-05-16 기준 App Shell은 Linear-style logical workspace tabs MVP를 제공한다. 각 탭은 session-only route history를 가지며, nav rail 이동은 active tab history에 push되고 상단 뒤로/앞으로는 active tab 기준으로 동작한다. 새 탭은 Home에서 시작하고 마지막 남은 탭은 닫을 수 없다. 비활성 탭 DOM 유지, 탭별 전역 store 격리, Electron/WebContents, live persistence는 아직 지원하지 않는다.
 - 2026-05-10 기준 Light Operational Foundation 1차가 추가되었다. Linear design reference는 다크모드가 아니라 밝은 EMR 업무 화면을 더 조용하고 정밀한 운영형 SaaS UI로 만드는 참고자료로 번역하며, `src/styles/tokens/emr-foundation.css`의 EMR alias layer와 shared subpanel/list/card/table surface 적용을 제공한다. Generated Clair token output은 직접 수정하지 않는다.
 - 2026-05-13 기준 Neutral Command + Semantic Status token direction이 설계 기준으로 추가되었다. shadcn `--primary`는 브랜드 블루가 아니라 command ink로 정의하고, blue는 정보/링크/제한적 브랜드 순간 및 `status-info` 계열로 분리한다. EMR 업무 화면은 surface, line, text, interaction, status alias layer를 통해 고밀도 화면 위계를 관리한다.
 - 2026-05-14 기준 Neutral Command + Semantic Status 적용률 보강으로 shared UI/EMR primitives의 status badge, input/select/textarea, segmented control, line tabs, workspace frame, text side panel, patient context bar, content history list, order queue summary, side-panel card/collapsible group, table checkbox, EMR data table warning/selection affordance가 EMR semantic alias를 더 넓게 사용한다. 화면별 직접 색상 정리는 후속 범위로 남긴다.
