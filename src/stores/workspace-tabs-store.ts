@@ -49,6 +49,10 @@ function getRouteModuleId(route: string) {
   return route.split("?")[0]?.split("/")[3];
 }
 
+function isWorkspaceRoute(route: string, workspaceId: string) {
+  return route.split("?")[0]?.startsWith(`/w/${workspaceId}/`) ?? false;
+}
+
 function getOptionalSearchParam(searchParams: URLSearchParams, key: string) {
   return searchParams.get(key) ?? undefined;
 }
@@ -108,18 +112,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function sanitizePersistedTab(value: unknown): WorkspaceTab | null {
+function sanitizePersistedTab(value: unknown, workspaceId: string): WorkspaceTab | null {
   if (!isRecord(value)) return null;
   if (typeof value.id !== "string" || typeof value.closable !== "boolean") return null;
   if (!Array.isArray(value.history) || value.history.length === 0) return null;
   if (!value.history.every((item) => typeof item === "string")) return null;
   const history = value.history;
+  if (!history.every((route) => isWorkspaceRoute(route, workspaceId))) return null;
   const historyIndex = value.historyIndex;
   if (typeof historyIndex !== "number" || !Number.isInteger(historyIndex)) return null;
   if (historyIndex < 0 || historyIndex >= history.length) return null;
 
   const fallbackModuleId = typeof value.moduleId === "string" ? value.moduleId : "home";
   const route = history[historyIndex];
+  if (!isWorkspaceRoute(route, workspaceId)) return null;
   const metadata = getRouteMetadata(route, fallbackModuleId);
 
   return {
@@ -139,7 +145,7 @@ function sanitizePersistedTabs(value: unknown, workspaceId: string): PersistedWo
   if (value.workspaceId !== workspaceId || typeof value.activeTabId !== "string") return null;
   if (!Array.isArray(value.tabs)) return null;
 
-  const tabs = value.tabs.map(sanitizePersistedTab);
+  const tabs = value.tabs.map((tab) => sanitizePersistedTab(tab, workspaceId));
   if (tabs.some((tab) => tab === null)) return null;
 
   const sanitizedTabs = normalizeTabs(tabs.filter((tab): tab is WorkspaceTab => tab !== null));
