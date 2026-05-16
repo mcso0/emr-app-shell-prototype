@@ -4,9 +4,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
+import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { NavRail } from "@/shell/nav-rail";
-import { TopMenu } from "@/shell/top-menu";
 import { WorkspaceFrame } from "@/shell/workspace-frame";
+import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
 
 type AppShellProps = {
   workspaceId: string;
@@ -54,9 +55,22 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
   const navigationSearch = useMemo(() => getCrossModuleNavigationSearch(search), [search]);
+  const currentRoute = `${pathname}${search ? `?${search}` : ""}`;
   const pendingUrlStateRef = useRef<PendingUrlState | null>(null);
+  const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
+  const {
+    activeTabId,
+    activateTab,
+    closeTab,
+    createTab,
+    goBack,
+    goForward,
+    initialize,
+    tabs,
+  } = useWorkspaceTabsStore();
+  const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const {
     activeDrawer,
     contentAsideOpen,
@@ -68,6 +82,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setModulePanelOpen,
     setRightPanelOpen,
   } = useLayoutStore();
+
+  useEffect(() => {
+    if (tabsInitializedRef.current === workspaceId) return;
+    initialize({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id });
+    tabsInitializedRef.current = workspaceId;
+  }, [currentRoute, initialize, moduleDefinition.id, workspaceId]);
 
   useLayoutEffect(() => {
     enterModule();
@@ -204,10 +224,47 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     urlStateVersion,
   ]);
 
+  function navigateToTabRoute(route: string | null) {
+    if (!route) return;
+    router.push(route, { scroll: false });
+  }
+
+  function handleActivateTab(tabId: string) {
+    navigateToTabRoute(activateTab(tabId));
+  }
+
+  function handleCloseTab(tabId: string) {
+    navigateToTabRoute(closeTab(tabId));
+  }
+
+  function handleNewTab() {
+    const route = `/w/${workspaceId}/home?modulePanel=open`;
+    navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
+  }
+
+  function handleTabBack() {
+    navigateToTabRoute(goBack());
+  }
+
+  function handleTabForward() {
+    navigateToTabRoute(goForward());
+  }
+
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--emr-surface-app)] text-foreground">
-      <TopMenu workspaceId={workspaceId} />
-      <div className="grid h-[calc(100vh-52px)] grid-cols-[48px_1fr] gap-2.5 px-2.5 pb-2.5">
+      <WorkspaceTabsBar
+        activeTabId={activeTabId}
+        canGoBack={Boolean(activeTab && activeTab.historyIndex > 0)}
+        canGoForward={Boolean(activeTab && activeTab.historyIndex < activeTab.history.length - 1)}
+        tabs={tabs}
+        workspaceId={workspaceId}
+        onActivateTab={handleActivateTab}
+        onBack={handleTabBack}
+        onCloseTab={handleCloseTab}
+        onForward={handleTabForward}
+        onNewTab={handleNewTab}
+      />
+      <div className="grid h-[calc(100vh-58px)] grid-cols-[48px_1fr] gap-2.5 px-2.5 pb-2.5">
         <NavRail
           activeModuleId={moduleDefinition.id}
           navigationSearch={navigationSearch}
