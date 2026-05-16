@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
+import type { MouseEvent, ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
 import {
@@ -27,6 +27,7 @@ type NavRailProps = {
   activeModuleId: string;
   navigationSearch?: string;
   workspaceId: string;
+  onNavigateModule?: (href: string, moduleId: string) => void;
 };
 
 type GnbIcon = (props: { className?: string }) => ReactNode;
@@ -103,7 +104,7 @@ function getModuleItem(moduleId: string): RailNavItem | null {
   };
 }
 
-export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: NavRailProps) {
+export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, onNavigateModule }: NavRailProps) {
   const { modulePanelOpen, setModulePanelOpen } = useLayoutStore();
   const reduceMotion = useReducedMotion();
   const railLayoutTransition = reduceMotion
@@ -161,6 +162,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           transition={railLayoutTransition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
         <RailActionItem
           icon={BellGnbIcon}
@@ -175,6 +177,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           transition={railLayoutTransition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
         <NavDivider transition={railLayoutTransition} />
         <NavSection
@@ -183,6 +186,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           transition={railLayoutTransition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
       </div>
       <button
@@ -205,12 +209,14 @@ function NavSection({
   transition,
   navigationSearch,
   workspaceId,
+  onNavigateModule,
 }: {
   activeModuleId: string;
   items: RailNavItem[];
   transition: Transition;
   navigationSearch: string;
   workspaceId: string;
+  onNavigateModule?: (href: string, moduleId: string) => void;
 }) {
   return (
     <>
@@ -222,6 +228,7 @@ function NavSection({
           transition={transition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
       ))}
     </>
@@ -234,15 +241,35 @@ function RailModuleItem({
   transition,
   navigationSearch,
   workspaceId,
+  onNavigateModule,
 }: {
   active: boolean;
   item: RailNavItem;
   transition: Transition;
   navigationSearch: string;
   workspaceId: string;
+  onNavigateModule?: (href: string, moduleId: string) => void;
 }) {
   const Icon = item.icon;
   const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    if (!item.moduleId || !onNavigateModule) return;
+
+    event.preventDefault();
+    onNavigateModule(href, item.moduleId);
+  }
 
   return (
     <RailLayoutItem transition={transition}>
@@ -258,6 +285,7 @@ function RailModuleItem({
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
               data-testid={active ? "nav-rail-active-item" : undefined}
+              onClick={handleClick}
             >
               <IconFrame>
                 <Icon className={item.iconClassName} />

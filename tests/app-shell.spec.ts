@@ -23,6 +23,28 @@ async function resolveCssColor(page: Page, value: string) {
   }, value);
 }
 
+async function clearWorkspaceTabs(page: Page) {
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    window.sessionStorage.removeItem("clair-workspace-tabs:v1:clair-demo");
+  });
+}
+
+function getWorkspaceTablist(page: Page) {
+  return page.getByRole("tablist", { name: "열린 업무 탭" });
+}
+
+function getNavRail(page: Page) {
+  return page.getByRole("navigation");
+}
+
+async function expectActiveWorkspaceTab(page: Page, name: string) {
+  await expect(getWorkspaceTablist(page).getByRole("tab", { name: new RegExp(name) })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+}
+
 test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
@@ -262,7 +284,7 @@ test("home normalizes a collapsed module panel before navigating back to modules
   await page.goto("/w/clair-demo/dispensing?modulePanel=closed&aside=closed");
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
 
-  await page.getByRole("link", { name: "홈" }).click();
+  await getNavRail(page).getByRole("link", { name: "홈" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
   await expect(page).toHaveURL(/modulePanel=open/);
@@ -271,7 +293,7 @@ test("home normalizes a collapsed module panel before navigating back to modules
   await expect(page.getByTestId("home-dashboard")).toBeVisible();
   await expect(page.getByText("운영 병목 보드")).toBeVisible();
 
-  await page.getByRole("link", { name: "조제/처치" }).click();
+  await getNavRail(page).getByRole("link", { name: "조제/처치" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
   await expect(page).toHaveURL(/modulePanel=open/);
@@ -293,7 +315,7 @@ test("shell navigation keeps demo query context across modules", async ({ page }
     invoiceId: "invoice-kong-260501",
   });
 
-  await page.getByRole("link", { name: "임상병리검사" }).click();
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
   await expect(page.getByRole("textbox", { name: "WBC 결과값" })).toHaveValue("21.4");
   await expectUrlSearchParams(page, {
@@ -474,6 +496,117 @@ test("dispensing does not render the patient side panel or trigger", async ({ pa
   await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeHidden();
   await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
   await expect(page).not.toHaveURL(/right=/);
+});
+
+test("workspace tabs create an initial tab and keep the final tab open", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabs = getWorkspaceTablist(page);
+
+  await expect(workspaceTabs).toBeVisible();
+  await expectActiveWorkspaceTab(page, "조제/처치");
+  await expect(workspaceTabs.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
+  await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
+
+  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expectActiveWorkspaceTab(page, "홈");
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
+  await expect(workspaceTabs.getByRole("button", { name: "홈 탭 닫기" })).toBeVisible();
+
+  await workspaceTabs.getByRole("button", { name: "홈 탭 닫기" }).click();
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(1);
+  await expectActiveWorkspaceTab(page, "조제/처치");
+  await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
+});
+
+test("workspace tabs keep navigation history per active tab", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed");
+  await expectActiveWorkspaceTab(page, "진료/차트");
+
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+  await expectActiveWorkspaceTab(page, "검사");
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "탭 뒤로가기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expectActiveWorkspaceTab(page, "진료/차트");
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await expectActiveWorkspaceTab(page, "홈");
+  await getNavRail(page).getByRole("link", { name: "홈" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
+
+  await getNavRail(page).getByRole("link", { name: "수납" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(page).toHaveURL(/right=open/);
+  await expectActiveWorkspaceTab(page, "수납");
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "탭 뒤로가기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "탭 앞으로가기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(page).toHaveURL(/right=open/);
+  await expectActiveWorkspaceTab(page, "수납");
+
+  await getWorkspaceTablist(page).getByRole("tab", { name: /진료\/차트/ }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
+});
+
+test("workspace tabs restore open tabs after reload", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabs = getWorkspaceTablist(page);
+
+  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
+  await expectActiveWorkspaceTab(page, "검사");
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+
+  await page.reload();
+
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
+  await expectActiveWorkspaceTab(page, "검사");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+
+  await workspaceTabs.getByRole("tab", { name: /조제\/처치/ }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+});
+
+test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabsBar = page.locator("[data-testid='workspace-tabs-bar']");
+  const navRail = getNavRail(page);
+  const mainFrame = page.locator("[data-testid='workspace-frame']");
+  const shellBox = await workspaceTabsBar.boundingBox();
+  const navBox = await navRail.boundingBox();
+  const mainBox = await mainFrame.boundingBox();
+
+  expect(shellBox).not.toBeNull();
+  expect(navBox).not.toBeNull();
+  expect(mainBox).not.toBeNull();
+  expect(navBox!.x - shellBox!.x).toBeCloseTo(10, 0);
+  expect(mainBox!.x - (navBox!.x + navBox!.width)).toBeCloseTo(10, 0);
+  expect(navBox!.y - (shellBox!.y + shellBox!.height)).toBeCloseTo(10, 0);
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
 });
 
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
