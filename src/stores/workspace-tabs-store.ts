@@ -53,22 +53,34 @@ function getOptionalSearchParam(searchParams: URLSearchParams, key: string) {
   return searchParams.get(key) ?? undefined;
 }
 
+function getRouteMetadata(route: string, fallbackModuleId: string) {
+  const moduleId = getRouteModuleId(route) ?? fallbackModuleId;
+  const searchParams = new URLSearchParams(route.split("?")[1] ?? "");
+
+  return {
+    title: getTabTitle(moduleId),
+    moduleId,
+    patientId: getOptionalSearchParam(searchParams, "patientId"),
+    encounterId: getOptionalSearchParam(searchParams, "encounterId"),
+  };
+}
+
 function createWorkspaceTab(input: {
   route: string;
   moduleId: string;
   closable: boolean;
 }): WorkspaceTab {
-  const searchParams = new URLSearchParams(input.route.split("?")[1] ?? "");
+  const metadata = getRouteMetadata(input.route, input.moduleId);
 
   return {
     id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    title: getTabTitle(input.moduleId),
+    title: metadata.title,
     closable: input.closable,
     history: [input.route],
     historyIndex: 0,
-    moduleId: input.moduleId,
-    patientId: getOptionalSearchParam(searchParams, "patientId"),
-    encounterId: getOptionalSearchParam(searchParams, "encounterId"),
+    moduleId: metadata.moduleId,
+    patientId: metadata.patientId,
+    encounterId: metadata.encounterId,
   };
 }
 
@@ -85,7 +97,56 @@ function persist(workspaceId: string | null, tabs: WorkspaceTab[], activeTabId: 
   if (!workspaceId || !activeTabId || typeof window === "undefined") return;
 
   const payload: PersistedWorkspaceTabs = { workspaceId, tabs, activeTabId };
-  window.sessionStorage.setItem(getStorageKey(workspaceId), JSON.stringify(payload));
+  try {
+    window.sessionStorage.setItem(getStorageKey(workspaceId), JSON.stringify(payload));
+  } catch {
+    // Persistence is a best-effort shell enhancement; storage failures should not break navigation.
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sanitizePersistedTab(value: unknown): WorkspaceTab | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== "string" || typeof value.closable !== "boolean") return null;
+  if (!Array.isArray(value.history) || value.history.length === 0) return null;
+  if (!value.history.every((item) => typeof item === "string")) return null;
+  const history = value.history;
+  const historyIndex = value.historyIndex;
+  if (typeof historyIndex !== "number" || !Number.isInteger(historyIndex)) return null;
+  if (historyIndex < 0 || historyIndex >= history.length) return null;
+
+  const fallbackModuleId = typeof value.moduleId === "string" ? value.moduleId : "home";
+  const route = history[historyIndex];
+  const metadata = getRouteMetadata(route, fallbackModuleId);
+
+  return {
+    id: value.id,
+    title: metadata.title,
+    closable: value.closable,
+    history,
+    historyIndex,
+    moduleId: metadata.moduleId,
+    patientId: metadata.patientId,
+    encounterId: metadata.encounterId,
+  };
+}
+
+function sanitizePersistedTabs(value: unknown, workspaceId: string): PersistedWorkspaceTabs | null {
+  if (!isRecord(value)) return null;
+  if (value.workspaceId !== workspaceId || typeof value.activeTabId !== "string") return null;
+  if (!Array.isArray(value.tabs)) return null;
+
+  const tabs = value.tabs.map(sanitizePersistedTab);
+  if (tabs.some((tab) => tab === null)) return null;
+
+  const sanitizedTabs = normalizeTabs(tabs.filter((tab): tab is WorkspaceTab => tab !== null));
+  if (sanitizedTabs.length === 0) return null;
+  if (!sanitizedTabs.some((tab) => tab.id === value.activeTabId)) return null;
+
+  return { workspaceId, tabs: sanitizedTabs, activeTabId: value.activeTabId };
 }
 
 function readPersistedTabs(workspaceId: string): PersistedWorkspaceTabs | null {
@@ -94,10 +155,7 @@ function readPersistedTabs(workspaceId: string): PersistedWorkspaceTabs | null {
   try {
     const raw = window.sessionStorage.getItem(getStorageKey(workspaceId));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedWorkspaceTabs;
-    if (parsed.workspaceId !== workspaceId || parsed.tabs.length === 0) return null;
-    if (!parsed.tabs.some((tab) => tab.id === parsed.activeTabId)) return null;
-    return parsed;
+    return sanitizePersistedTabs(JSON.parse(raw), workspaceId);
   } catch {
     return null;
   }
@@ -143,16 +201,16 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
       updateActiveTab(state, (tab) => {
         const nextHistory = tab.history.slice(0, tab.historyIndex + 1);
         nextHistory.push(route);
-        const searchParams = new URLSearchParams(route.split("?")[1] ?? "");
+        const metadata = getRouteMetadata(route, moduleId);
 
         return {
           ...tab,
-          title: getTabTitle(moduleId),
-          moduleId,
+          title: metadata.title,
+          moduleId: metadata.moduleId,
           history: nextHistory,
           historyIndex: nextHistory.length - 1,
-          patientId: getOptionalSearchParam(searchParams, "patientId"),
-          encounterId: getOptionalSearchParam(searchParams, "encounterId"),
+          patientId: metadata.patientId,
+          encounterId: metadata.encounterId,
         };
       })
     );
@@ -193,7 +251,10 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     const tab = createWorkspaceTab({ route, moduleId, closable: true });
 
     set((state) => {
-      const tabs = normalizeTabs([...state.tabs, tab]);
+      const tabs =
+        state.workspaceId && state.workspaceId !== workspaceId
+          ? normalizeTabs([tab])
+          : normalizeTabs([...state.tabs, tab]);
       persist(workspaceId, tabs, tab.id);
       return { workspaceId, tabs, activeTabId: tab.id, hydrated: true };
     });
@@ -207,14 +268,16 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     const nextIndex = activeTab.historyIndex - 1;
     const route = activeTab.history[nextIndex];
     if (!route) return null;
-    const routeModuleId = getRouteModuleId(route) ?? activeTab.moduleId;
+    const metadata = getRouteMetadata(route, activeTab.moduleId);
 
     set((state) =>
       updateActiveTab(state, (tab) => ({
         ...tab,
         historyIndex: nextIndex,
-        moduleId: routeModuleId,
-        title: getTabTitle(routeModuleId),
+        title: metadata.title,
+        moduleId: metadata.moduleId,
+        patientId: metadata.patientId,
+        encounterId: metadata.encounterId,
       }))
     );
 
@@ -227,14 +290,16 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     const nextIndex = activeTab.historyIndex + 1;
     const route = activeTab.history[nextIndex];
     if (!route) return null;
-    const routeModuleId = getRouteModuleId(route) ?? activeTab.moduleId;
+    const metadata = getRouteMetadata(route, activeTab.moduleId);
 
     set((state) =>
       updateActiveTab(state, (tab) => ({
         ...tab,
         historyIndex: nextIndex,
-        moduleId: routeModuleId,
-        title: getTabTitle(routeModuleId),
+        title: metadata.title,
+        moduleId: metadata.moduleId,
+        patientId: metadata.patientId,
+        encounterId: metadata.encounterId,
       }))
     );
 
@@ -244,14 +309,15 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   syncActiveRoute: (route, moduleId) => {
     set((state) =>
       updateActiveTab(state, (tab) => {
+        const metadata = getRouteMetadata(route, moduleId);
+
         if (tab.history[tab.historyIndex] === route) {
-          return { ...tab, title: getTabTitle(moduleId), moduleId };
+          return { ...tab, ...metadata };
         }
 
         return {
           ...tab,
-          title: getTabTitle(moduleId),
-          moduleId,
+          ...metadata,
           history: [route],
           historyIndex: 0,
         };
