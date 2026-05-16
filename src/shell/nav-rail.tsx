@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
 import {
@@ -27,6 +26,7 @@ type NavRailProps = {
   activeModuleId: string;
   navigationSearch?: string;
   workspaceId: string;
+  onNavigateModule?: (href: string, moduleId: string) => void;
 };
 
 type GnbIcon = (props: { className?: string }) => ReactNode;
@@ -103,7 +103,7 @@ function getModuleItem(moduleId: string): RailNavItem | null {
   };
 }
 
-export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: NavRailProps) {
+export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, onNavigateModule }: NavRailProps) {
   const { modulePanelOpen, setModulePanelOpen } = useLayoutStore();
   const reduceMotion = useReducedMotion();
   const railLayoutTransition = reduceMotion
@@ -161,6 +161,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           transition={railLayoutTransition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
         <RailActionItem
           icon={BellGnbIcon}
@@ -175,6 +176,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           transition={railLayoutTransition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
         <NavDivider transition={railLayoutTransition} />
         <NavSection
@@ -183,6 +185,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId }: 
           transition={railLayoutTransition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
       </div>
       <button
@@ -205,12 +208,14 @@ function NavSection({
   transition,
   navigationSearch,
   workspaceId,
+  onNavigateModule,
 }: {
   activeModuleId: string;
   items: RailNavItem[];
   transition: Transition;
   navigationSearch: string;
   workspaceId: string;
+  onNavigateModule?: (href: string, moduleId: string) => void;
 }) {
   return (
     <>
@@ -222,6 +227,7 @@ function NavSection({
           transition={transition}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={onNavigateModule}
         />
       ))}
     </>
@@ -234,12 +240,14 @@ function RailModuleItem({
   transition,
   navigationSearch,
   workspaceId,
+  onNavigateModule,
 }: {
   active: boolean;
   item: RailNavItem;
   transition: Transition;
   navigationSearch: string;
   workspaceId: string;
+  onNavigateModule?: (href: string, moduleId: string) => void;
 }) {
   const Icon = item.icon;
   const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
@@ -249,8 +257,8 @@ function RailModuleItem({
       <Tooltip>
         <TooltipTrigger
           render={
-            <Link
-              href={href}
+            <button
+              type="button"
               className={cn(
                 "flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
                 active && "bg-primary-foreground/15 text-primary-foreground"
@@ -258,11 +266,16 @@ function RailModuleItem({
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
               data-testid={active ? "nav-rail-active-item" : undefined}
+              onClick={() => {
+                if (item.moduleId) {
+                  onNavigateModule?.(href, item.moduleId);
+                }
+              }}
             >
               <IconFrame>
                 <Icon className={item.iconClassName} />
               </IconFrame>
-            </Link>
+            </button>
           }
         />
         <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_SIDE_OFFSET}>

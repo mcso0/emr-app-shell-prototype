@@ -69,6 +69,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     goBack,
     goForward,
     initialize,
+    pushRoute,
     syncActiveRoute,
     tabs,
   } = useWorkspaceTabsStore();
@@ -262,6 +263,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
   }
 
+  function handleNavigateModule(href: string, nextModuleId: string) {
+    pushRoute(href, nextModuleId);
+    pendingTabRouteRef.current = href;
+    router.push(href, { scroll: false });
+  }
+
   function handleTabBack() {
     navigateToTabRoute(goBack());
   }
@@ -289,6 +296,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
           activeModuleId={moduleDefinition.id}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
+          onNavigateModule={handleNavigateModule}
         />
         <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
       </div>
