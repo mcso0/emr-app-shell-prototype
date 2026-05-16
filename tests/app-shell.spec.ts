@@ -24,13 +24,21 @@ async function resolveCssColor(page: Page, value: string) {
 }
 
 async function clearWorkspaceTabs(page: Page) {
-  await page.addInitScript(() => {
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
     window.sessionStorage.removeItem("clair-workspace-tabs:v1:clair-demo");
   });
 }
 
+function getWorkspaceTablist(page: Page) {
+  return page.getByRole("tablist", { name: "열린 업무 탭" });
+}
+
 async function expectActiveWorkspaceTab(page: Page, name: string) {
-  await expect(page.getByRole("tab", { name: new RegExp(name) })).toHaveAttribute("aria-selected", "true");
+  await expect(getWorkspaceTablist(page).getByRole("tab", { name: new RegExp(name) })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 }
 
 test("dispensing shell supports panels and drawer", async ({ page }) => {
@@ -490,21 +498,23 @@ test("workspace tabs create an initial tab and keep the final tab open", async (
   await clearWorkspaceTabs(page);
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
-  await expect(page.getByRole("tablist", { name: "열린 업무 탭" })).toBeVisible();
-  await expectActiveWorkspaceTab(page, "조제/처치");
-  await expect(page.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
+  const workspaceTabs = getWorkspaceTablist(page);
 
-  await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await expect(workspaceTabs).toBeVisible();
+  await expectActiveWorkspaceTab(page, "조제/처치");
+  await expect(workspaceTabs.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
+  await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
+
+  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
   await expectActiveWorkspaceTab(page, "홈");
-  await expect(page.getByRole("tab")).toHaveCount(2);
-  await expect(page.getByRole("button", { name: "홈 탭 닫기" })).toBeVisible();
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
+  await expect(workspaceTabs.getByRole("button", { name: "홈 탭 닫기" })).toBeVisible();
 
-  await page.getByRole("button", { name: "홈 탭 닫기" }).click();
-  await expect(page.getByRole("tab")).toHaveCount(1);
+  await workspaceTabs.getByRole("button", { name: "홈 탭 닫기" }).click();
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(1);
   await expectActiveWorkspaceTab(page, "조제/처치");
-  await expect(page.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
+  await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
 });
 
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
