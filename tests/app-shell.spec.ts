@@ -23,6 +23,16 @@ async function resolveCssColor(page: Page, value: string) {
   }, value);
 }
 
+async function clearWorkspaceTabs(page: Page) {
+  await page.addInitScript(() => {
+    window.sessionStorage.removeItem("clair-workspace-tabs:v1:clair-demo");
+  });
+}
+
+async function expectActiveWorkspaceTab(page: Page, name: string) {
+  await expect(page.getByRole("tab", { name: new RegExp(name) })).toHaveAttribute("aria-selected", "true");
+}
+
 test("dispensing shell supports panels and drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing");
   await expect(page.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
@@ -474,6 +484,27 @@ test("dispensing does not render the patient side panel or trigger", async ({ pa
   await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toBeHidden();
   await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
   await expect(page).not.toHaveURL(/right=/);
+});
+
+test("workspace tabs create an initial tab and keep the final tab open", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  await expect(page.getByRole("tablist", { name: "열린 업무 탭" })).toBeVisible();
+  await expectActiveWorkspaceTab(page, "조제/처치");
+  await expect(page.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page.getByRole("tab")).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "홈 탭 닫기" })).toBeVisible();
+
+  await page.getByRole("button", { name: "홈 탭 닫기" }).click();
+  await expect(page.getByRole("tab")).toHaveCount(1);
+  await expectActiveWorkspaceTab(page, "조제/처치");
+  await expect(page.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
 });
 
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
