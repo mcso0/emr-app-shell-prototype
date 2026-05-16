@@ -284,7 +284,7 @@ test("home normalizes a collapsed module panel before navigating back to modules
   await page.goto("/w/clair-demo/dispensing?modulePanel=closed&aside=closed");
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
 
-  await getNavRail(page).getByRole("button", { name: "홈" }).click();
+  await getNavRail(page).getByRole("link", { name: "홈" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
   await expect(page).toHaveURL(/modulePanel=open/);
@@ -293,7 +293,7 @@ test("home normalizes a collapsed module panel before navigating back to modules
   await expect(page.getByTestId("home-dashboard")).toBeVisible();
   await expect(page.getByText("운영 병목 보드")).toBeVisible();
 
-  await getNavRail(page).getByRole("button", { name: "조제/처치" }).click();
+  await getNavRail(page).getByRole("link", { name: "조제/처치" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
   await expect(page).toHaveURL(/modulePanel=open/);
@@ -315,7 +315,7 @@ test("shell navigation keeps demo query context across modules", async ({ page }
     invoiceId: "invoice-kong-260501",
   });
 
-  await getNavRail(page).getByRole("button", { name: "임상병리검사" }).click();
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
   await expect(page.getByRole("textbox", { name: "WBC 결과값" })).toHaveValue("21.4");
   await expectUrlSearchParams(page, {
@@ -526,7 +526,7 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed");
   await expectActiveWorkspaceTab(page, "진료/차트");
 
-  await getNavRail(page).getByRole("button", { name: "임상병리검사" }).click();
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
   await expectActiveWorkspaceTab(page, "검사");
   await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
@@ -539,8 +539,26 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
   await expectActiveWorkspaceTab(page, "홈");
-  await getNavRail(page).getByRole("button", { name: "수납" }).click();
+  await getNavRail(page).getByRole("link", { name: "홈" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
+
+  await getNavRail(page).getByRole("link", { name: "수납" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(page).toHaveURL(/right=open/);
+  await expectActiveWorkspaceTab(page, "수납");
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "탭 뒤로가기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
+
+  await page.getByRole("button", { name: "탭 앞으로가기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
+  await expect(page).toHaveURL(/right=open/);
   await expectActiveWorkspaceTab(page, "수납");
 
   await getWorkspaceTablist(page).getByRole("tab", { name: /진료\/차트/ }).click();

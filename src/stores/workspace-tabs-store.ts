@@ -205,6 +205,10 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   pushRoute: (route, moduleId) => {
     set((state) =>
       updateActiveTab(state, (tab) => {
+        if (tab.history[tab.historyIndex] === route) {
+          return tab;
+        }
+
         const nextHistory = tab.history.slice(0, tab.historyIndex + 1);
         nextHistory.push(route);
         const metadata = getRouteMetadata(route, moduleId);
@@ -316,16 +320,18 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     set((state) =>
       updateActiveTab(state, (tab) => {
         const metadata = getRouteMetadata(route, moduleId);
+        const nextHistory = [...tab.history];
 
         if (tab.history[tab.historyIndex] === route) {
           return { ...tab, ...metadata };
         }
 
+        nextHistory[tab.historyIndex] = route;
+
         return {
           ...tab,
           ...metadata,
-          history: [route],
-          historyIndex: 0,
+          history: nextHistory,
         };
       })
     );

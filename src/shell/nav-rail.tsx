@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import Link from "next/link";
+import type { MouseEvent, ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
 import {
@@ -252,13 +253,31 @@ function RailModuleItem({
   const Icon = item.icon;
   const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
 
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    if (!item.moduleId || !onNavigateModule) return;
+
+    event.preventDefault();
+    onNavigateModule(href, item.moduleId);
+  }
+
   return (
     <RailLayoutItem transition={transition}>
       <Tooltip>
         <TooltipTrigger
           render={
-            <button
-              type="button"
+            <Link
+              href={href}
               className={cn(
                 "flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
                 active && "bg-primary-foreground/15 text-primary-foreground"
@@ -266,16 +285,12 @@ function RailModuleItem({
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
               data-testid={active ? "nav-rail-active-item" : undefined}
-              onClick={() => {
-                if (item.moduleId) {
-                  onNavigateModule?.(href, item.moduleId);
-                }
-              }}
+              onClick={handleClick}
             >
               <IconFrame>
                 <Icon className={item.iconClassName} />
               </IconFrame>
-            </button>
+            </Link>
           }
         />
         <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_SIDE_OFFSET}>

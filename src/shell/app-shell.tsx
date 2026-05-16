@@ -264,6 +264,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   function handleNavigateModule(href: string, nextModuleId: string) {
+    if (activeTab?.history[activeTab.historyIndex] === href) return;
+
     pushRoute(href, nextModuleId);
     pendingTabRouteRef.current = href;
     router.push(href, { scroll: false });
