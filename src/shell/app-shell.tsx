@@ -57,6 +57,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const navigationSearch = useMemo(() => getCrossModuleNavigationSearch(search), [search]);
   const currentRoute = `${pathname}${search ? `?${search}` : ""}`;
   const pendingUrlStateRef = useRef<PendingUrlState | null>(null);
+  const pendingTabRouteRef = useRef<string | null>(null);
   const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
@@ -68,6 +69,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     goBack,
     goForward,
     initialize,
+    syncActiveRoute,
     tabs,
   } = useWorkspaceTabsStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
@@ -88,6 +90,23 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     initialize({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id });
     tabsInitializedRef.current = workspaceId;
   }, [currentRoute, initialize, moduleDefinition.id, workspaceId]);
+
+  useEffect(() => {
+    if (tabsInitializedRef.current !== workspaceId) return;
+    if (!activeTab) return;
+
+    if (pendingTabRouteRef.current) {
+      if (pendingTabRouteRef.current === currentRoute) {
+        pendingTabRouteRef.current = null;
+      }
+      return;
+    }
+
+    const activeRoute = activeTab.history[activeTab.historyIndex];
+    if (activeRoute === currentRoute && activeTab.moduleId === moduleDefinition.id) return;
+
+    syncActiveRoute(currentRoute, moduleDefinition.id);
+  }, [activeTab, currentRoute, moduleDefinition.id, syncActiveRoute, workspaceId]);
 
   useLayoutEffect(() => {
     enterModule();
@@ -226,6 +245,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   function navigateToTabRoute(route: string | null) {
     if (!route) return;
+    pendingTabRouteRef.current = route;
     router.push(route, { scroll: false });
   }
 
