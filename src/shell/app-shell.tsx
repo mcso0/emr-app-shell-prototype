@@ -293,14 +293,16 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onForward={handleTabForward}
         onNewTab={handleNewTab}
       />
-      <div className="grid h-[calc(100vh-58px)] grid-cols-[48px_1fr] gap-2.5 px-2.5 pb-2.5">
+      <div className="grid h-[calc(100vh-58px)] grid-cols-[48px_1fr] gap-2.5 px-2.5 pt-2.5 pb-2.5">
         <NavRail
           activeModuleId={moduleDefinition.id}
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
           onNavigateModule={handleNavigateModule}
         />
-        <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
+        <div data-testid="workspace-frame" className="min-h-0 min-w-0 [&>main]:h-full">
+          <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
+        </div>
       </div>
     </div>
   );

@@ -588,6 +588,27 @@ test("workspace tabs restore open tabs after reload", async ({ page }) => {
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
 });
 
+test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabsBar = page.locator("[data-testid='workspace-tabs-bar']");
+  const navRail = getNavRail(page);
+  const mainFrame = page.locator("[data-testid='workspace-frame']");
+  const shellBox = await workspaceTabsBar.boundingBox();
+  const navBox = await navRail.boundingBox();
+  const mainBox = await mainFrame.boundingBox();
+
+  expect(shellBox).not.toBeNull();
+  expect(navBox).not.toBeNull();
+  expect(mainBox).not.toBeNull();
+  expect(navBox!.x - shellBox!.x).toBeCloseTo(10, 0);
+  expect(mainBox!.x - (navBox!.x + navBox!.width)).toBeCloseTo(10, 0);
+  expect(navBox!.y - (shellBox!.y + shellBox!.height)).toBeCloseTo(10, 0);
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
+});
+
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
   const response = await request.get("/manifest.webmanifest");
 
