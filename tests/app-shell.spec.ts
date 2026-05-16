@@ -566,6 +566,28 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
 });
 
+test("workspace tabs restore open tabs after reload", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabs = getWorkspaceTablist(page);
+
+  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
+  await expectActiveWorkspaceTab(page, "검사");
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+
+  await page.reload();
+
+  await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
+  await expectActiveWorkspaceTab(page, "검사");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
+
+  await workspaceTabs.getByRole("tab", { name: /조제\/처치/ }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+});
+
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
   const response = await request.get("/manifest.webmanifest");
 
