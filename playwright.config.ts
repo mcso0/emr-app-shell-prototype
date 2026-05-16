@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const devServerUrl = new URL(baseURL);
+
 const mockAuthSession = {
   id: "playwright-default-session",
   role: "hospital_admin",
@@ -15,12 +18,12 @@ export default defineConfig({
     timeout: 5_000,
   },
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL,
     storageState: {
       cookies: [],
       origins: [
         {
-          origin: "http://127.0.0.1:3000",
+          origin: baseURL,
           localStorage: [
             {
               name: "clair.mockAuth.session.v1",
@@ -40,11 +43,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- -H 127.0.0.1",
+    command: `npm run dev -- -H ${devServerUrl.hostname} -p ${devServerUrl.port || "3000"}`,
     env: {
       NEXT_PUBLIC_AUTH_MODE: "mock",
     },
-    url: "http://127.0.0.1:3000",
+    url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,
   },
