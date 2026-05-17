@@ -18,6 +18,22 @@ Keep the first review short. Expand only when the user asks for details or when 
 
 For Level 0 changes from `docs/_meta/documentation-depth-rules.md`, the result review is the only required record. Do not create a work item, changelog entry, or closeout just to document a tiny one-off change.
 
+## HTML Report Requirement
+
+For meaningful project work, especially Linear issue work, create a Korean HTML report for the representative/CEO audience and place it under `docs/completed/<area>/YYYY-MM-DD-<issue-or-slug>-report.html`.
+
+The report should be concise and decision-oriented:
+
+- what was requested
+- what changed or was decided
+- why it matters
+- changed files or docs
+- verification result
+- risks, caveats, or out-of-scope items
+- recommended next step
+
+After creating the report, add its path to the relevant Linear issue as a comment when a Linear issue exists.
+
 ## Good Review
 
 ```text

@@ -11,6 +11,7 @@ import {
   StethoscopeIcon,
   UserIcon,
 } from "@/components/icons";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -312,7 +313,13 @@ function flattenSections(sections: CommandSection[]) {
   return sections.flatMap((section) => section.items);
 }
 
-export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
+export function GlobalCommandPalette({
+  triggerVariant = "wide",
+  workspaceId,
+}: {
+  triggerVariant?: "wide" | "icon";
+  workspaceId: string;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -385,22 +392,35 @@ export function GlobalCommandPalette({ workspaceId }: { workspaceId: string }) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
-        className="mx-auto flex h-8 w-[min(560px,45vw)] min-w-8 items-center rounded-lg border border-border bg-card px-3 text-left shadow-sm outline-none transition-colors hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2"
+        variant="ghost"
+        size={triggerVariant === "icon" ? "icon" : "default"}
+        className={cn(
+          triggerVariant === "icon"
+            ? "justify-center rounded-[var(--emr-radius-control)] px-0 text-muted-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:ring-ring/40"
+            : "mx-auto h-8 w-[min(560px,45vw)] min-w-8 rounded-lg border-border bg-card px-3 text-left shadow-sm hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2",
+        )}
         aria-label="전역 통합 검색 열기"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate px-2 text-[12px] text-muted-foreground max-sm:hidden">
-          동물명 또는 보호자명으로 검색
-        </span>
-        <span className="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground max-sm:hidden">
-          <CommandIcon className="size-3" aria-hidden="true" />
-          K
-        </span>
-      </button>
+        <SearchIcon
+          className={cn("shrink-0 text-muted-foreground", triggerVariant === "icon" ? "size-4" : "size-3.5")}
+          aria-hidden="true"
+        />
+        {triggerVariant === "wide" ? (
+          <>
+            <span className="min-w-0 flex-1 truncate px-2 text-[12px] text-muted-foreground max-sm:hidden">
+              동물명 또는 보호자명으로 검색
+            </span>
+            <span className="inline-flex items-center gap-1 rounded border border-border bg-card px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground max-sm:hidden">
+              <CommandIcon className="size-3" aria-hidden="true" />
+              K
+            </span>
+          </>
+        ) : null}
+      </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent

@@ -6,16 +6,15 @@ import {
   BellIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CloseIcon,
   HelpIcon,
   SettingsIcon,
 } from "@/components/icons";
-import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
 import { Button } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/auth-client";
 import { cn } from "@/lib/utils";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
 import { GlobalCommandPalette } from "@/shell/global-command-palette";
+import { WorkspaceChromeTabs } from "@/shell/workspace-chrome-tabs";
 import type { WorkspaceTab } from "@/stores/workspace-tabs-store";
 
 type WorkspaceTabsBarProps = {
@@ -87,7 +86,6 @@ export function WorkspaceTabsBar({
   const pathname = usePathname();
   const [now, setNow] = useState(() => Date.now());
   const { hydrated, session, hydrate, signOut } = useAuthClient();
-  const hasMultipleTabs = tabs.length > 1;
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const userProfile =
     hydrated && session
@@ -103,7 +101,13 @@ export function WorkspaceTabsBar({
       ? `활동중 · ${activityModuleLabel} ${activeMinutes}분째`
       : "활동 대기";
   const topIconButtonClassName =
-    "text-muted-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground";
+    "rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)] [&_svg]:size-4";
+  const historyButtonClassName =
+    "rounded-[var(--emr-radius-control)] text-muted-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground disabled:opacity-100 disabled:text-[var(--emr-text-disabled)] disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)]";
+  const chromeTabs = tabs.map((tab) => ({
+    id: tab.id,
+    title: getDisplayTitle(tab),
+  }));
 
   useEffect(() => {
     hydrate();
@@ -125,102 +129,52 @@ export function WorkspaceTabsBar({
   return (
     <header
       data-testid="workspace-tabs-bar"
-      className="relative z-20 flex h-[58px] items-center gap-2.5 bg-[var(--emr-surface-app)] px-2.5"
+      className="relative z-20 flex h-8 items-center gap-1.5 bg-[var(--emr-surface-app)]"
     >
-      <GlobalCommandPalette workspaceId={workspaceId} />
+      <GlobalCommandPalette triggerVariant="icon" workspaceId={workspaceId} />
 
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         aria-label="탭 뒤로가기"
         disabled={!canGoBack}
         onClick={onBack}
-        className="size-10 rounded-[var(--emr-radius-panel)]"
+        className={historyButtonClassName}
       >
-        <ChevronLeftIcon className="size-5" aria-hidden="true" />
+        <ChevronLeftIcon className="size-4" aria-hidden="true" />
       </Button>
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         aria-label="탭 앞으로가기"
         disabled={!canGoForward}
         onClick={onForward}
-        className="size-10 rounded-[var(--emr-radius-panel)]"
+        className={historyButtonClassName}
       >
-        <ChevronRightIcon className="size-5" aria-hidden="true" />
+        <ChevronRightIcon className="size-4" aria-hidden="true" />
       </Button>
 
-      <div className="h-7 w-px shrink-0 bg-[var(--emr-line-container)]" />
+      <div className="h-5 w-px shrink-0 bg-[var(--emr-line-default)]" />
 
-      <div
-        className="flex min-w-0 flex-1 items-center gap-2.5"
-        role="tablist"
-        aria-label="열린 업무 탭"
-      >
-        {tabs.map((tab) => {
-          const active = tab.id === activeTabId;
-          const displayTitle = getDisplayTitle(tab);
-
-          return (
-            <div
-              key={tab.id}
-              role="presentation"
-              className={cn(
-                "relative flex h-10 max-w-[230px] min-w-0 items-center",
-                active
-                  ? "text-[var(--emr-text-primary)]"
-                  : "text-[var(--emr-text-secondary)]",
-              )}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={cn(
-                  "flex h-10 min-w-0 flex-1 items-center truncate rounded-[var(--emr-radius-panel)] border py-0 pl-3 text-left text-[14px] font-semibold outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
-                  hasMultipleTabs ? "pr-9" : "pr-3",
-                  active
-                    ? "border-[var(--emr-line-container)] bg-card shadow-[var(--emr-shadow-control)]"
-                    : "border-transparent bg-[var(--emr-surface-muted)] hover:bg-card",
-                )}
-                onClick={() => onActivateTab(tab.id)}
-              >
-                <span className="truncate">{displayTitle}</span>
-              </button>
-              {hasMultipleTabs ? (
-                <button
-                  type="button"
-                  aria-label={`${displayTitle} 탭 닫기`}
-                  className="absolute right-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground outline-none transition-colors hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-                  onClick={() => onCloseTab(tab.id)}
-                >
-                  <CloseIcon className="size-3.5" aria-hidden="true" />
-                </button>
-              ) : null}
-            </div>
-          );
-        })}
-
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="새 업무 탭"
-          onClick={onNewTab}
-          className="size-10 shrink-0 rounded-[var(--emr-radius-panel)]"
-        >
-          <CdsActionsPlusIcon className="size-5" aria-hidden="true" />
-        </Button>
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <WorkspaceChromeTabs
+          activeTabId={activeTabId}
+          tabs={chromeTabs}
+          onActivateTab={onActivateTab}
+          onCloseTab={onCloseTab}
+          onNewTab={onNewTab}
+        />
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
         <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="알림">
-          <BellIcon />
+          <BellIcon className="size-4" />
         </Button>
         <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말">
-          <HelpIcon />
+          <HelpIcon className="size-4" />
         </Button>
         <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="설정">
-          <SettingsIcon />
+          <SettingsIcon className="size-4" />
         </Button>
         <AuthProfileMenu
           activityLabel={activityLabel}

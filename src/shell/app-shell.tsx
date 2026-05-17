@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
@@ -258,8 +259,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   function handleNewTab() {
-    const route = `/w/${workspaceId}/home?modulePanel=open`;
-    navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
+    toast.success("새 탭이 생성되었습니다.");
+    navigateToTabRoute(createTab({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id }));
   }
 
   function handleNavigateModule(href: string, nextModuleId: string) {
@@ -280,21 +281,23 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--emr-surface-app)] text-foreground">
-      <WorkspaceTabsBar
-        activeTabId={activeTabId}
-        canGoBack={Boolean(activeTab && activeTab.historyIndex > 0)}
-        canGoForward={Boolean(activeTab && activeTab.historyIndex < activeTab.history.length - 1)}
-        tabs={tabs}
-        workspaceId={workspaceId}
-        onActivateTab={handleActivateTab}
-        onBack={handleTabBack}
-        onCloseTab={handleCloseTab}
-        onForward={handleTabForward}
-        onNewTab={handleNewTab}
-      />
       <ShellMain
         moduleDefinition={moduleDefinition}
         navigationSearch={navigationSearch}
+        topBar={
+          <WorkspaceTabsBar
+            activeTabId={activeTabId}
+            canGoBack={Boolean(activeTab && activeTab.historyIndex > 0)}
+            canGoForward={Boolean(activeTab && activeTab.historyIndex < activeTab.history.length - 1)}
+            tabs={tabs}
+            workspaceId={workspaceId}
+            onActivateTab={handleActivateTab}
+            onBack={handleTabBack}
+            onCloseTab={handleCloseTab}
+            onForward={handleTabForward}
+            onNewTab={handleNewTab}
+          />
+        }
         workspaceId={workspaceId}
         onNavigateModule={handleNavigateModule}
       />

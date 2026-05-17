@@ -401,7 +401,7 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
 
   return (
     <aside
-      className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-card"
+      className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-[var(--emr-surface-sidepanel)]"
       data-testid="customer-side-panel"
     >
       <EmrSubpanelTitle
@@ -712,7 +712,7 @@ export function CustomerContent() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]" data-testid="customer-workspace">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="customer-workspace">
       <CustomerToolbar
         listMode={listMode}
         patientCount={patientRows.length}

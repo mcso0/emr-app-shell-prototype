@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Transition } from "framer-motion";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { ModuleDefinition } from "@/types/emr";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -14,6 +14,7 @@ import { WorkspaceSwitcher } from "@/shell/workspace-switcher";
 type ShellMainProps = {
   moduleDefinition: ModuleDefinition;
   navigationSearch: string;
+  topBar: ReactNode;
   workspaceId: string;
   onNavigateModule: (href: string, moduleId: string) => void;
 };
@@ -24,6 +25,7 @@ const PANEL_EXIT_EASE = [0.32, 0, 1, 1] as const;
 export function ShellMain({
   moduleDefinition,
   navigationSearch,
+  topBar,
   workspaceId,
   onNavigateModule,
 }: ShellMainProps) {
@@ -50,11 +52,10 @@ export function ShellMain({
 
   return (
     <div
-      className="grid min-h-0 grid-cols-[48px_minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
+      className="grid h-full min-h-0 grid-cols-[48px_minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
       style={{
         "--clair-shell-main-columns": `${navigationColumnWidth}px minmax(0, 1fr)`,
         gap: SHELL_LAYOUT.shell.gap,
-        height: `calc(100vh - ${SHELL_LAYOUT.shell.tabsBarHeight}px)`,
         padding: SHELL_LAYOUT.shell.bodyPadding,
         transitionDuration: reduceMotion ? "0ms" : "160ms",
         transitionTimingFunction: "var(--clair-motion-easing-panel-enter)",
@@ -67,7 +68,7 @@ export function ShellMain({
       >
         <WorkspaceSwitcher
           collapsed={!shouldShowModuleSidePanel}
-          className="max-md:w-12 max-md:justify-center max-md:px-0 max-md:[&>span:nth-of-type(2)]:hidden max-md:[&>svg]:hidden"
+          className="max-md:w-8 max-md:justify-center max-md:px-0 max-md:[&>span:nth-of-type(2)]:hidden max-md:[&>svg]:hidden"
           workspaceId={workspaceId}
         />
 
@@ -122,10 +123,18 @@ export function ShellMain({
         </div>
       </section>
 
-      <section data-testid="shell-workspace-area" className="min-h-0 min-w-0">
-        <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
-          <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
-        </div>
+      <section
+        data-testid="shell-right-section"
+        className="flex min-h-0 min-w-0 flex-col"
+        style={{ gap: SHELL_LAYOUT.shell.gap }}
+      >
+        {topBar}
+
+        <section data-testid="shell-workspace-area" className="min-h-0 min-w-0 flex-1">
+          <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
+            <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
+          </div>
+        </section>
       </section>
     </div>
   );

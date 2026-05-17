@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-18 작업 보고서 - 워크스페이스 인증·권한 범위 확정</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #18202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --soft-line: #e9edf3;
+        --accent: #2563eb;
+        --accent-soft: #eff5ff;
+        --good: #0f8a5f;
+        --warn: #b45309;
+        --danger: #b42318;
+        --radius: 8px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      .report {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(24, 32, 42, 0.06);
+        overflow: hidden;
+      }
+
+      header {
+        padding: 36px 40px 30px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      section {
+        padding: 28px 40px;
+        border-bottom: 1px solid var(--soft-line);
+      }
+
+      section:last-child {
+        border-bottom: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin: 22px 0 10px;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        min-height: 98px;
+        padding: 14px;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+        background: #fcfdff;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .callout {
+        padding: 16px 18px;
+        border: 1px solid #bdd4ff;
+        border-radius: var(--radius);
+        background: var(--accent-soft);
+      }
+
+      .callout strong {
+        color: #174ea6;
+      }
+
+      .decision-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .decision {
+        padding: 14px 16px;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+      }
+
+      .decision strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .decision p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        border: 1px solid var(--soft-line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        font-weight: 700;
+      }
+
+      code {
+        padding: 2px 5px;
+        border: 1px solid var(--soft-line);
+        border-radius: 5px;
+        background: #f8fafc;
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status.good {
+        color: var(--good);
+        background: #ecfdf3;
+      }
+
+      .status.warn {
+        color: var(--warn);
+        background: #fff7ed;
+      }
+
+      .status.danger {
+        color: var(--danger);
+        background: #fef3f2;
+      }
+
+      .doc-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .doc-list a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .doc-list a:hover {
+        text-decoration: underline;
+      }
+
+      footer {
+        padding: 20px 40px 30px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 20px 12px 48px;
+        }
+
+        header,
+        section,
+        footer {
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="report">
+        <header>
+          <p class="eyebrow">DEN-18 작업 보고서</p>
+          <h1>워크스페이스 인증·권한 범위 확정</h1>
+          <p class="subtitle">
+            병원 대표/관리자 구독, 워크스페이스 생성, 직원 초대, 역할 배정, 권한 제어를 제품 MVP
+            기준으로 구현하기 위한 첫 번째 기준 정리 작업입니다.
+          </p>
+          <div class="summary-grid" aria-label="작업 요약">
+            <div class="metric">
+              <strong>현재 상태</strong>
+              <span>Human Review 대기</span>
+            </div>
+            <div class="metric">
+              <strong>작업 유형</strong>
+              <span>제품/권한 기준 문서화</span>
+            </div>
+            <div class="metric">
+              <strong>검증</strong>
+              <span>docs:check 통과</span>
+            </div>
+            <div class="metric">
+              <strong>다음 단계</strong>
+              <span>DEN-20 데이터 모델·보안 gate 계획</span>
+            </div>
+          </div>
+        </header>
+
+        <section>
+          <h2>대표 요약</h2>
+          <div class="callout">
+            <p>
+              <strong>결론:</strong> 이번 작업으로 프로젝트 범위를 단순 로그인 화면 구현이 아니라
+              <strong>워크스페이스 기반 인증·권한 시스템</strong>으로 확정했습니다. 이제 다음 구현 작업이
+              역할과 권한을 다시 해석하지 않고 진행될 수 있습니다.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2>확정한 핵심 결정</h2>
+          <div class="decision-list">
+            <div class="decision">
+              <strong>1. 프로젝트 범위</strong>
+              <p>
+                기존 <code>/login</code>을 새로 만드는 작업이 아니라, 워크스페이스 생성, 직원 초대,
+                역할/권한, 개인 프로필까지 포함하는 제품 기반 작업으로 확정했습니다.
+              </p>
+            </div>
+            <div class="decision">
+              <strong>2. 기본 역할</strong>
+              <p>
+                MVP의 canonical role은 <code>hospital_admin</code>, <code>vet</code>,
+                <code>technician</code>, <code>front_desk</code> 네 가지로 정했습니다.
+              </p>
+            </div>
+            <div class="decision">
+              <strong>3. 중복 역할 정책</strong>
+              <p>
+                한 사용자가 여러 역할을 가질 수 있고, 권한은 합산합니다. 병원관리자 역할이 포함되면
+                관리자 권한을 우선합니다.
+              </p>
+            </div>
+            <div class="decision">
+              <strong>4. 관리자 보호</strong>
+              <p>
+                워크스페이스에는 항상 최소 1명의 활성 병원관리자가 남아야 합니다. 최초 생성자도 실수로
+                관리자 권한을 잃지 않도록 보호해야 합니다.
+              </p>
+            </div>
+            <div class="decision">
+              <strong>5. 개인 프로필 경계</strong>
+              <p>
+                사용자는 개인 프로필을 수정할 수 있지만, 개인 프로필 값은 권한 판단에 쓰지 않습니다.
+                권한은 membership과 permission policy에서만 판단합니다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>역할별 권한 기준</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>영역</th>
+                <th>병원관리자</th>
+                <th>수의사</th>
+                <th>테크니션</th>
+                <th>데스크</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>워크스페이스/병원 설정</td>
+                <td>전체 가능</td>
+                <td>불가</td>
+                <td>불가</td>
+                <td>불가</td>
+              </tr>
+              <tr>
+                <td>직원/역할/권한 관리</td>
+                <td>전체 가능</td>
+                <td>불가</td>
+                <td>불가</td>
+                <td>불가</td>
+              </tr>
+              <tr>
+                <td>진료/차트</td>
+                <td>조회/수정 가능</td>
+                <td>조회/수정 가능</td>
+                <td>조회만 가능</td>
+                <td>조회만 가능</td>
+              </tr>
+              <tr>
+                <td>SOAP/진단 수정</td>
+                <td>가능</td>
+                <td>가능</td>
+                <td>불가</td>
+                <td>불가</td>
+              </tr>
+              <tr>
+                <td>접수/예약</td>
+                <td>가능</td>
+                <td>조회 중심</td>
+                <td>조회 중심</td>
+                <td>가능</td>
+              </tr>
+              <tr>
+                <td>검사/영상/처치/조제</td>
+                <td>가능</td>
+                <td>가능</td>
+                <td>운영 처리 가능</td>
+                <td>조회 중심</td>
+              </tr>
+              <tr>
+                <td>수납</td>
+                <td>가능</td>
+                <td>조회 중심</td>
+                <td>지원 업무 가능</td>
+                <td>수납 업무 가능</td>
+              </tr>
+              <tr>
+                <td>개인 프로필</td>
+                <td>본인 프로필 수정</td>
+                <td>본인 프로필 수정</td>
+                <td>본인 프로필 수정</td>
+                <td>본인 프로필 수정</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="subtitle">
+            상세 권한표는 <code>docs/product/domain/workspace-auth-permissions.md</code>에 문서화했습니다.
+          </p>
+        </section>
+
+        <section>
+          <h2>변경한 문서</h2>
+          <div class="doc-list">
+            <a href="../../product/domain/workspace-auth-permissions.md">docs/product/domain/workspace-auth-permissions.md</a>
+            <a href="../../work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md">docs/work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md</a>
+            <a href="../../product/domain/README.md">docs/product/domain/README.md</a>
+            <a href="../../work/index.md">docs/work/index.md</a>
+            <a href="../../engineering/auth-security/auth-login/supabase-auth-mapping.md">docs/engineering/auth-security/auth-login/supabase-auth-mapping.md</a>
+            <a href="../../engineering/auth-security/auth-login/status.md">docs/engineering/auth-security/auth-login/status.md</a>
+            <a href="../../engineering/current-status.md">docs/engineering/current-status.md</a>
+          </div>
+        </section>
+
+        <section>
+          <h2>검증 결과</h2>
+          <p>
+            <span class="status good">통과</span>
+            <code>npm run docs:check</code>
+          </p>
+          <p>
+            문서 내부 링크 검사가 통과했습니다. 이번 작업은 문서/기준 정리 작업이라 앱 빌드나 Playwright
+            실행은 필요 범위에 포함하지 않았습니다.
+          </p>
+        </section>
+
+        <section>
+          <h2>주의할 점</h2>
+          <ul>
+            <li>
+              현재 코드에는 <code>nurse</code>, <code>billing_admin</code> seed가 남아 있습니다. 새 기준에서는
+              <code>technician</code>과 네 가지 canonical role로 정리해야 합니다.
+            </li>
+            <li>
+              이번 작업은 권한 기준 확정입니다. 실제 서버 권한 검증, DB migration, RLS 정책은 아직 구현하지
+              않았습니다.
+            </li>
+            <li>
+              클라이언트 화면에서 버튼을 숨기는 것만으로는 보안 완료로 보지 않습니다. 후속 이슈에서 서버
+              기준 permission resolver와 enforcement가 필요합니다.
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>다음 단계</h2>
+          <ol>
+            <li>
+              <strong>DEN-20</strong>: 워크스페이스, 멤버십, 초대, 역할, 권한 정책의 데이터 모델과 RLS 보안
+              gate를 확정합니다.
+            </li>
+            <li>
+              <strong>DEN-23</strong>: 병원 대표/관리자가 워크스페이스를 생성하고 최초 관리자 권한을 갖는
+              기반 흐름을 구현합니다.
+            </li>
+            <li>
+              <strong>DEN-24 이후</strong>: 직원 초대, 권한 resolver, 관리자 UI, 개인 프로필, 서버 enforcement
+              순서로 진행합니다.
+            </li>
+          </ol>
+        </section>
+
+        <footer>
+          작성일: 2026-05-17 · 대상 이슈: DEN-18 · 상태: Human Review
+        </footer>
+      </article>
+    </main>
+  </body>
+</html>

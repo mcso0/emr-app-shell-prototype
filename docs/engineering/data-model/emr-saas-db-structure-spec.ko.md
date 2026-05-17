@@ -6,7 +6,7 @@ doc_type: data_model
 related_work: []
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-03
+last_updated: 2026-05-17
 ---
 
 # CLAiR EMR SaaS DB Structure And Spec Draft (KO)
@@ -39,8 +39,11 @@ last_updated: 2026-05-03
 erDiagram
   ORGANIZATION ||--o{ BRANCH : owns
   BRANCH ||--o{ WORKSPACE : exposes
+  WORKSPACE ||--o{ WORKSPACE_SUBSCRIPTION : billed_by
+  WORKSPACE ||--o{ WORKSPACE_INVITATION : invites
   WORKSPACE ||--o{ USER_MEMBERSHIP : has
   USER ||--o{ USER_MEMBERSHIP : joins
+  USER ||--o| USER_PROFILE : configures
 
   WORKSPACE ||--o{ GUARDIAN : manages
   WORKSPACE ||--o{ PATIENT : manages
@@ -139,6 +142,23 @@ erDiagram
 | `branch_id` | uuid fk | |
 | `display_name` | text | 예: VIP 동물의료센터 청담점 |
 | `status` | text | `active`, `archived` |
+| `created_by_user_id` | uuid fk nullable | 최초 워크스페이스 생성자. 로그인 가능한 앱 사용자는 `auth.users.id`와 같은 UUID |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
+
+### `workspace_subscriptions`
+
+워크스페이스 구독/온보딩 gate. 실제 결제 provider 연동은 후속 범위로 둔다.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid pk | |
+| `workspace_id` | text fk | |
+| `status` | text | `trialing`, `active`, `past_due`, `canceled`, `none` |
+| `provider` | text | `manual` 또는 후속 결제 provider |
+| `provider_customer_id` | text nullable | |
+| `provider_subscription_id` | text nullable | |
+| `current_period_end` | timestamptz nullable | |
 | `created_at` | timestamptz | |
 | `updated_at` | timestamptz | |
 
@@ -159,6 +179,19 @@ erDiagram
 | `created_at` | timestamptz | |
 | `updated_at` | timestamptz | |
 
+### `user_profiles`
+
+개인 프로필/환경설정 확장 테이블. 역할, 권한, 멤버십 상태를 저장하지 않는다.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `user_id` | uuid pk/fk | `users.id` |
+| `avatar_url` | text nullable | |
+| `notification_preferences` | jsonb nullable | 권한 source 아님 |
+| `locale` | text nullable | |
+| `timezone` | text nullable | |
+| `updated_at` | timestamptz | |
+
 ### `user_memberships`
 
 워크스페이스별 직원 정보와 역할.
@@ -168,17 +201,44 @@ erDiagram
 | `id` | uuid pk | |
 | `workspace_id` | text fk | |
 | `user_id` | uuid fk | |
-| `role` | text | `veterinarian`, `nurse`, `desk`, `billing`, `hospital_admin`, `system_admin` |
+| `roles` | text[] | MVP canonical roles: `hospital_admin`, `vet`, `technician`, `front_desk` |
 | `department` | text nullable | 진료, 조제, 검사, 영상, 입원 등 |
 | `title` | text nullable | 직책 |
 | `hire_date` | date nullable | |
-| `status` | text | `active`, `inactive` |
+| `status` | text | `pending`, `active`, `inactive` |
+| `invited_by_user_id` | uuid fk nullable | |
+| `activated_at` | timestamptz nullable | |
+| `deactivated_at` | timestamptz nullable | |
 
 Unique: `(workspace_id, user_id)`.
+
+Note: MVP는 additive multi-role 정책을 사용하므로 `roles text[]`를 둔다. `hospital_admin`이 포함되면 전체 병원관리자 권한을 가진다. 마지막 active `hospital_admin` 제거/강등/비활성화는 client UI가 아니라 server-side transaction 또는 private RPC에서 차단해야 한다.
+
+### `workspace_invitations`
+
+워크스페이스 직원 초대 상태.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid pk | |
+| `workspace_id` | text fk | |
+| `email` | citext | |
+| `invited_roles` | text[] | canonical role 배열 |
+| `status` | text | `pending`, `accepted`, `canceled`, `expired` |
+| `invited_by_user_id` | uuid fk | |
+| `accepted_by_user_id` | uuid fk nullable | |
+| `expires_at` | timestamptz nullable | |
+| `accepted_at` | timestamptz nullable | |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
+
+Recommended unique rule: one pending invite per `(workspace_id, lower(email))`.
 
 ### `permission_policies`
 
 기능 제한과 세부 권한을 저장한다.
+
+Note: `role_permission_policies`는 설명용 별칭으로만 사용하고, 실제 기준 이름은 기존 `permission_policies`로 유지한다.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -186,7 +246,7 @@ Unique: `(workspace_id, user_id)`.
 | `workspace_id` | text fk | |
 | `name` | text | |
 | `scope` | text | `role`, `user` |
-| `target_role` | text nullable | |
+| `target_role` | text nullable | canonical role when `scope = role` |
 | `target_user_id` | uuid fk nullable | |
 | `permissions` | jsonb | 모듈/액션 단위 권한 |
 | `created_at` | timestamptz | |

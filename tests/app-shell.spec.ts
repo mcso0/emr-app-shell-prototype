@@ -102,6 +102,7 @@ test("app shell renders workspace switcher in the navigation column when module 
 
   const tabsBar = page.getByTestId("workspace-tabs-bar");
   const navigationColumn = page.getByTestId("shell-navigation-column");
+  const modulePanelArea = page.getByTestId("module-panel-area");
   const workspaceArea = page.getByTestId("shell-workspace-area");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
 
@@ -112,12 +113,24 @@ test("app shell renders workspace switcher in the navigation column when module 
 
   await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
 
+  const tabsBox = await tabsBar.boundingBox();
   const navigationBox = await navigationColumn.boundingBox();
+  const modulePanelBox = await modulePanelArea.boundingBox();
   const workspaceBox = await workspaceArea.boundingBox();
+  const switcherBox = await workspaceSwitcher.boundingBox();
 
+  expectRect(tabsBox);
   expectRect(navigationBox);
+  expectRect(modulePanelBox);
   expectRect(workspaceBox);
-  expect(navigationBox.height).toBe(workspaceBox.height);
+  expectRect(switcherBox);
+  expect(tabsBox.y).toBe(switcherBox.y);
+  expect(Math.round(tabsBox.height)).toBe(32);
+  expect(Math.round(switcherBox.height)).toBe(32);
+  expect(switcherBox.width).toBeLessThan(navigationBox.width);
+  expect(workspaceBox.y - (tabsBox.y + tabsBox.height)).toBe(10);
+  expect(modulePanelBox.y - (switcherBox.y + switcherBox.height)).toBe(10);
+  expect(modulePanelBox.height).toBe(workspaceBox.height);
 });
 
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
@@ -146,7 +159,8 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   expectRect(modulePanelBox);
   expectRect(workspaceBox);
   expect(Math.round(navigationBox.width)).toBe(48);
-  expect(Math.round(switcherBox.width)).toBe(48);
+  expect(Math.round(switcherBox.width)).toBe(32);
+  expect(Math.round(switcherBox.height)).toBe(32);
   expect(Math.round(modulePanelBox.width)).toBe(48);
   expect(workspaceBox.width).toBeGreaterThan(300);
 });
@@ -168,7 +182,8 @@ test("app shell collapses workspace switcher with the navigation column", async 
   expectRect(navigationBox);
   expectRect(switcherBox);
   expect(Math.round(navigationBox.width)).toBe(48);
-  expect(Math.round(switcherBox.width)).toBe(48);
+  expect(Math.round(switcherBox.width)).toBe(32);
+  expect(Math.round(switcherBox.height)).toBe(32);
 });
 
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {
@@ -597,12 +612,13 @@ test("workspace tabs create an initial tab and keep the final tab open", async (
   await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
 
   await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
-  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
-  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+  await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
-  await expect(workspaceTabs.getByRole("button", { name: "홈 탭 닫기" })).toBeVisible();
+  await expect(workspaceTabs.getByRole("tab", { name: /조제\/처치/ })).toHaveCount(2);
+  await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(2);
 
-  await workspaceTabs.getByRole("button", { name: "홈 탭 닫기" }).click();
+  await workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" }).last().click();
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(1);
   await expectActiveWorkspaceTab(page, "조제/처치");
   await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
@@ -625,11 +641,14 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
-  await expectActiveWorkspaceTab(page, "홈");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
   await getNavRail(page).getByRole("link", { name: "홈" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
   await expectActiveWorkspaceTab(page, "홈");
-  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
 
   await getNavRail(page).getByRole("link", { name: "수납" }).click();
@@ -681,22 +700,66 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
 
   const workspaceTabsBar = page.locator("[data-testid='workspace-tabs-bar']");
   const navigationColumn = page.getByTestId("shell-navigation-column");
+  const modulePanelArea = page.getByTestId("module-panel-area");
   const workspaceArea = page.getByTestId("shell-workspace-area");
+  const workspaceSwitcher = page.getByTestId("workspace-switcher");
   const navRail = getNavRail(page);
   const shellBox = await workspaceTabsBar.boundingBox();
   const navigationBox = await navigationColumn.boundingBox();
+  const modulePanelBox = await modulePanelArea.boundingBox();
   const workspaceBox = await workspaceArea.boundingBox();
+  const switcherBox = await workspaceSwitcher.boundingBox();
   const navBox = await navRail.boundingBox();
 
   expect(shellBox).not.toBeNull();
   expect(navigationBox).not.toBeNull();
+  expect(modulePanelBox).not.toBeNull();
   expect(workspaceBox).not.toBeNull();
+  expect(switcherBox).not.toBeNull();
   expect(navBox).not.toBeNull();
-  expect(navBox!.x - shellBox!.x).toBeCloseTo(10, 0);
+  expect(shellBox!.x - (navigationBox!.x + navigationBox!.width)).toBeCloseTo(10, 0);
   expect(workspaceBox!.x - (navigationBox!.x + navigationBox!.width)).toBeCloseTo(10, 0);
-  expect(navigationBox!.y - (shellBox!.y + shellBox!.height)).toBeCloseTo(10, 0);
+  expect(modulePanelBox!.y - (switcherBox!.y + switcherBox!.height)).toBeCloseTo(10, 0);
+  expect(workspaceBox!.y - (shellBox!.y + shellBox!.height)).toBeCloseTo(10, 0);
+  expect(navBox!.x - modulePanelBox!.x).toBeCloseTo(0, 0);
+  expect(Math.round(shellBox!.height)).toBe(32);
+  expect(Math.round(switcherBox!.height)).toBe(32);
+  await expect(page.getByRole("button", { name: "전역 통합 검색 열기" })).toHaveCSS("width", "32px");
+  await expect(page.getByRole("button", { name: "전역 통합 검색 열기" })).toHaveCSS("height", "32px");
+  await expect(page.getByRole("button", { name: "전역 통합 검색 열기" })).not.toContainText(
+    "동물명 또는 보호자명으로 검색",
+  );
+  const hoverColor = await resolveCssColor(page, "var(--emr-state-hover)");
+  const searchButton = page.getByRole("button", { name: "전역 통합 검색 열기" });
+  await searchButton.hover();
+  await expect(searchButton).toHaveCSS("background-color", hoverColor);
+  const newTabButton = page.getByRole("button", { name: "새 업무 탭" });
+  await newTabButton.hover();
+  await expect(newTabButton).toHaveCSS("background-color", hoverColor);
+  await expect(getWorkspaceTablist(page).getByRole("tab").first()).toHaveCSS("height", "32px");
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toHaveCSS("width", "32px");
+  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toHaveCSS("width", "32px");
+  await expect(workspaceTabsBar.getByRole("button", { name: "알림" })).toHaveCSS("width", "32px");
+  await expect(workspaceTabsBar.getByRole("button", { name: "도움말" })).toHaveCSS("width", "32px");
+  await expect(workspaceTabsBar.getByRole("button", { name: "설정" })).toHaveCSS("width", "32px");
   await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
+});
+
+test("workspace tab close button keeps tab hover surface unified", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+
+  const workspaceTabs = getWorkspaceTablist(page);
+  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+
+  const hoverColor = await resolveCssColor(page, "var(--emr-state-hover)");
+  const closeButton = workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" }).first();
+  const tabContainer = closeButton.locator("xpath=ancestor::*[@role='presentation'][1]");
+
+  await closeButton.hover();
+  await expect(tabContainer).toHaveCSS("background-color", hoverColor);
+  await expect(closeButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
@@ -714,7 +777,7 @@ test("PWA manifest exposes install shell metadata", async ({ request, page }) =>
     scope: "/",
     display: "standalone",
     background_color: "#E9ECF2",
-    theme_color: "#E9ECF2",
+    theme_color: "#18181B",
   });
   expect(manifest.icons).toEqual(
     expect.arrayContaining([

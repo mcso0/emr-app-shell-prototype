@@ -9,9 +9,9 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
+  --card: var(--emr-surface-3);
   --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
+  --popover: var(--emr-surface-3);
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.21 0.006 285.885);
   --primary-foreground: oklch(0.985 0 0);
@@ -28,7 +28,7 @@
   --ring: oklch(0.705 0.015 286.067);
 
   --brand: var(--clair-color-atomic-sky-500);
-  --brand-foreground: #FFFFFF;
+  --brand-foreground: oklch(1 0 0);
   --selection: oklch(0.97 0.006 286);
   --selection-border: oklch(0.58 0.014 286);
 
@@ -47,16 +47,24 @@
   --sidebar-border: var(--clair-color-atomic-gray-700);
   --sidebar-ring: oklch(0.705 0.015 286.067);
 
-  --clair-color-service-background: #FBFCFD;
+  --clair-color-service-background: var(--emr-surface-app);
 
-  --emr-surface-app: #FBFCFD;
-  --emr-surface-panel: oklch(1 0 0);
-  --emr-surface-subpanel: oklch(0.985 0.001 286);
+  --emr-surface-0: oklch(0.964 0.001 286.375);
+  --emr-surface-1: oklch(0.98 0.003 286.351);
+  --emr-surface-2: oklch(0.991 0.001 286.376);
+  --emr-surface-3: oklch(1 0 0);
+  --emr-surface-app: var(--emr-surface-0);
+  --emr-surface-content-panel: var(--emr-surface-1);
+  --emr-surface-subpanel: var(--emr-surface-1);
+  --emr-surface-sidepanel: var(--emr-surface-2);
+  --emr-surface-workspace: var(--emr-surface-2);
+  --emr-surface-rightpanel: var(--emr-surface-2);
+  --emr-surface-panel: var(--emr-surface-3);
   --emr-surface-muted: oklch(0.967 0.001 286.375);
   --emr-surface-hover: oklch(0.977 0.001 286.3);
   --emr-surface-selected: oklch(0.97 0.006 286);
   --emr-surface-disabled: oklch(0.955 0.001 286);
-  --emr-surface-floating: oklch(1 0 0);
+  --emr-surface-floating: var(--emr-surface-3);
 
   --emr-line-subtle: oklch(0.945 0.003 286);
   --emr-line-hairline: oklch(0.92 0.004 286.32);
@@ -74,8 +82,8 @@
   --emr-text-link: oklch(0.52 0.13 240);
   --emr-text-danger: oklch(0.577 0.245 27.325);
 
-  --emr-state-hover: var(--emr-surface-hover);
-  --emr-state-active: oklch(0.94 0.004 286);
+  --emr-state-hover: var(--clair-color-atomic-black-alpha-6);
+  --emr-state-active: var(--clair-color-atomic-black-alpha-8);
   --emr-state-selected: var(--emr-surface-selected);
   --emr-state-selected-border: var(--emr-line-selected);
   --emr-state-focus-ring: var(--ring);

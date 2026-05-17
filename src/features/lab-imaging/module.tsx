@@ -1753,14 +1753,14 @@ export function LabContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-app)] text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
         검사 대기열에서 항목을 선택해 주세요.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar
@@ -2230,14 +2230,14 @@ export function ImagingContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-app)] text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
         영상 대기열에서 항목을 선택해 주세요.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar

@@ -77,14 +77,14 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-card transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
       style={{
         "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
         }`,
       } as CSSProperties}
     >
-      <section className="relative flex min-h-0 min-w-0 flex-col bg-card">
+      <section className="relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]">
         {Header ? <Header {...slotProps} /> : null}
         <div
           className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
@@ -96,7 +96,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
         >
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden bg-card max-md:hidden",
+              "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-content-panel)] max-md:hidden",
               ContentAside && contentAsideOpen && "border-r border-[var(--emr-line-default)]"
             )}
           >
@@ -169,7 +169,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 min-w-0 overflow-hidden bg-card transition-opacity duration-150 max-md:hidden",
+          "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] transition-opacity duration-150 max-md:hidden",
           RightPanel && rightPanelOpen && "border-l border-[var(--emr-line-default)]",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}

@@ -137,7 +137,7 @@ export function EmrPatientContextBar({
   }, [updateScrollState]);
 
   return (
-    <div className={cn("border-b border-[var(--emr-line-default)] bg-card", className)}>
+    <div className={cn("border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)]", className)}>
       <div className="flex h-12 items-center gap-3 px-4">
         {historyButton ? (
           <>
@@ -205,7 +205,7 @@ export function EmrPatientContextBar({
           </div>
           <div
             className={cn(
-              "pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-transparent to-card transition-opacity",
+              "pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-transparent to-[var(--emr-surface-workspace)] transition-opacity",
               scrollState.canScrollRight ? "opacity-100" : "opacity-0"
             )}
             aria-hidden="true"

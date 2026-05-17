@@ -36,6 +36,8 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |
 | APP-SHELL-PR-001 | done | app-shell | P1 | PR 1 | `docs/work/app-shell/APP-SHELL-PR-001-workspace-tabs.md` |
+| AUTH-PR-001 | human_review | auth | P0 | PR 1 | `docs/work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md` |
+| AUTH-PR-002 | human_review | auth | P0 | PR 2 | `docs/work/auth/AUTH-PR-002-workspace-membership-data-security-plan.md` |
 | PWA-PR-001 | done | pwa | P1 | PR 1 | `docs/work/pwa/PWA-PR-001-installable-app-shell.md` |
 | RECEPTION-PR-001 | done | reception | P0 | PR 1 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md` |
 | RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |

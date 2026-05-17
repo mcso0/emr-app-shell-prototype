@@ -6,7 +6,6 @@ export const SHELL_LAYOUT = {
   shell: {
     gap: SHELL_GAP,
     bodyPadding: SHELL_GAP,
-    tabsBarHeight: 58,
   },
   navRailWidth: NAV_RAIL_WIDTH,
   topMenuHeight: 44,

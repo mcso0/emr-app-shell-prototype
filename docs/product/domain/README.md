@@ -11,3 +11,6 @@ Use this area for:
 
 Actual schema, ERD, RLS, indexes, migrations, and persistence details belong in `docs/engineering/data-model/`.
 
+## Current Domain Sources
+
+- `workspace-auth-permissions.md`: workspace creation, membership, canonical roles, multi-role permission behavior, and personal profile authorization boundaries.

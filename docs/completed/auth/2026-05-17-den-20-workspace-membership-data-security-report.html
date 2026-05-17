@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-20 작업 보고서 - 워크스페이스 멤버십 데이터·보안 계획</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #18202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --soft-line: #e9edf3;
+        --accent: #2563eb;
+        --accent-soft: #eff5ff;
+        --good: #0f8a5f;
+        --warn: #b45309;
+        --radius: 8px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      .report {
+        overflow: hidden;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(24, 32, 42, 0.06);
+      }
+
+      header {
+        padding: 36px 40px 30px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      section {
+        padding: 28px 40px;
+        border-bottom: 1px solid var(--soft-line);
+      }
+
+      section:last-child {
+        border-bottom: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        min-height: 96px;
+        padding: 14px;
+        background: #fcfdff;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .callout {
+        padding: 16px 18px;
+        background: var(--accent-soft);
+        border: 1px solid #bdd4ff;
+        border-radius: var(--radius);
+      }
+
+      .callout strong {
+        color: #174ea6;
+      }
+
+      .decision-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .decision {
+        padding: 14px 16px;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+      }
+
+      .decision strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .decision p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        border: 1px solid var(--soft-line);
+      }
+
+      th {
+        font-weight: 700;
+        background: #f8fafc;
+      }
+
+      code {
+        padding: 2px 5px;
+        background: #f8fafc;
+        border: 1px solid var(--soft-line);
+        border-radius: 5px;
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status.good {
+        color: var(--good);
+        background: #ecfdf3;
+      }
+
+      .status.warn {
+        color: var(--warn);
+        background: #fff7ed;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 24px 20px;
+        }
+
+        h1 {
+          font-size: 25px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="report">
+        <header>
+          <p class="eyebrow">DEN-20 · AUTH-PR-002 · 2026-05-17</p>
+          <h1>워크스페이스 멤버십 데이터·보안 계획 보고</h1>
+          <p class="subtitle">
+            워크스페이스 생성, 직원 초대, 역할 부여, 권한 차단을 실제 제품 수준으로 구현하기 전에 필요한 데이터 구조와 보안 경계를 확정했습니다.
+          </p>
+
+          <div class="summary-grid" aria-label="작업 요약">
+            <div class="metric">
+              <strong>상태</strong>
+              <span>Human Review 준비</span>
+            </div>
+            <div class="metric">
+              <strong>범위</strong>
+              <span>설계·문서화만 수행</span>
+            </div>
+            <div class="metric">
+              <strong>핵심 결정</strong>
+              <span>멤버십 역할은 additive roles 배열</span>
+            </div>
+            <div class="metric">
+              <strong>검증</strong>
+              <span>docs:check, source lint 통과</span>
+            </div>
+          </div>
+        </header>
+
+        <section>
+          <h2>요청 사항</h2>
+          <p>
+            DEN-18에서 확정한 역할·권한 요구사항을 바탕으로, 다음 구현에 들어가기 전 멤버십 데이터 모델, RLS 방향, 서버 보안 게이트, 감사 이벤트를 실제 현업 기준에 맞게 계획하는 작업이었습니다.
+          </p>
+          <div class="callout">
+            <strong>이번 작업은 구현 전 잠금 장치입니다.</strong>
+            실제 Supabase migration, RLS SQL, 서버 코드, 결제 연동, 이메일 발송은 아직 만들지 않았습니다.
+          </div>
+        </section>
+
+        <section>
+          <h2>결정 사항</h2>
+          <div class="decision-list">
+            <div class="decision">
+              <strong>1. 권한은 Supabase Auth가 아니라 앱 멤버십 테이블에서 판단</strong>
+              <p><code>auth.users.id</code>는 로그인 사용자 식별에만 쓰고, 워크스페이스 권한은 <code>users</code>, <code>user_memberships</code>, <code>permission_policies</code>에서 판단합니다.</p>
+            </div>
+            <div class="decision">
+              <strong>2. 역할 중복은 허용하되 권한은 합집합으로 계산</strong>
+              <p><code>user_memberships.roles</code>를 배열로 두고, <code>hospital_admin</code>이 포함되면 전체 병원관리자 권한을 갖는 것으로 정했습니다.</p>
+            </div>
+            <div class="decision">
+              <strong>3. 개인 프로필과 권한 source를 분리</strong>
+              <p>사용자는 이름, 연락처, 아바타, 알림 선호를 수정할 수 있지만 역할·권한·멤버십 상태는 개인 프로필에서 바꿀 수 없습니다.</p>
+            </div>
+            <div class="decision">
+              <strong>4. 마지막 병원관리자 보호는 서버에서 막아야 함</strong>
+              <p>마지막 active <code>hospital_admin</code>을 제거하거나 강등하는 작업은 UI가 아니라 서버 transaction 또는 private RPC에서 차단해야 합니다.</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>테이블 계획</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>테이블</th>
+                <th>역할</th>
+                <th>주의점</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>workspaces</code></td>
+                <td>병원 운영 공간</td>
+                <td>생성자 <code>created_by_user_id</code>를 남겨 최초 관리자 흐름을 추적합니다.</td>
+              </tr>
+              <tr>
+                <td><code>workspace_subscriptions</code></td>
+                <td>구독/온보딩 상태</td>
+                <td>실제 결제 provider 연동은 후속 범위입니다.</td>
+              </tr>
+              <tr>
+                <td><code>users</code>, <code>user_profiles</code></td>
+                <td>앱 사용자와 개인 설정</td>
+                <td>프로필 데이터는 권한 source가 아닙니다.</td>
+              </tr>
+              <tr>
+                <td><code>user_memberships</code></td>
+                <td>워크스페이스 소속과 역할</td>
+                <td><code>roles text[]</code>를 사용하고, active 멤버십만 접근 권한으로 인정합니다.</td>
+              </tr>
+              <tr>
+                <td><code>workspace_invitations</code></td>
+                <td>직원 초대</td>
+                <td>동일 워크스페이스·이메일의 pending 초대 중복을 막습니다.</td>
+              </tr>
+              <tr>
+                <td><code>permission_policies</code></td>
+                <td>역할별 권한 정책</td>
+                <td><code>role_permission_policies</code>는 별도 테이블이 아니라 설명용 별칭으로 정리했습니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>보안 기준</h2>
+          <ul>
+            <li>사용자 수정 가능한 Supabase <code>user_metadata</code>는 권한 판단이나 RLS에 쓰지 않습니다.</li>
+            <li>Supabase Data API 노출 권한과 RLS는 별도 레이어로 관리해야 합니다.</li>
+            <li>RLS 정책은 <code>TO authenticated</code>를 명시하고, UPDATE에는 SELECT 정책도 같이 필요합니다.</li>
+            <li>View는 RLS를 우회할 수 있으므로 <code>security_invoker</code> 또는 비노출 schema 전략을 써야 합니다.</li>
+            <li>서버 권한 resolver 없이 client UI gating만으로 보안 완료 처리하지 않습니다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>변경 문서</h2>
+          <ul>
+            <li><code>docs/engineering/auth-security/auth-login/workspace-membership-data-security-plan.md</code></li>
+            <li><code>docs/work/auth/AUTH-PR-002-workspace-membership-data-security-plan.md</code></li>
+            <li><code>docs/engineering/data-model/emr-saas-db-structure-spec.ko.md</code></li>
+            <li><code>docs/engineering/auth-security/auth-login/supabase-auth-mapping.md</code></li>
+            <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+            <li><code>docs/engineering/current-status.md</code></li>
+            <li><code>docs/work/index.md</code></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>검증과 상태</h2>
+          <p><span class="status good">완료</span> <code>npm run docs:check</code> 통과</p>
+          <p><span class="status good">완료</span> <code>npm run lint -- --ignore-pattern '.worktrees/**'</code> 통과</p>
+          <p><span class="status warn">주의</span> 일반 <code>npm run lint</code>는 생성된 <code>.worktrees/workspace-tabs-mvp/.next/**</code> 파일을 스캔해 실패했습니다. 이번 문서 변경과 직접 관련 없는 생성물 이슈입니다.</p>
+          <p><span class="status warn">주의</span> 이번 작업은 계획 작업이므로 실제 DB, RLS, 서버 enforcement는 아직 제품에 반영되지 않았습니다.</p>
+        </section>
+
+        <section>
+          <h2>다음 권장 작업</h2>
+          <p>
+            DEN-20을 Human Review로 넘긴 뒤, 다음은 DEN-23 워크스페이스 생성 foundation입니다. 이때도 실제 Supabase migration/RLS를 바로 만들기보다, 서버 경계와 mock/session 호환성을 먼저 구현하는 순서가 안전합니다.
+          </p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

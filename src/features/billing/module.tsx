@@ -504,14 +504,14 @@ export function BillingContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-app)] text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
         수납 목록에서 청구서를 선택해 주세요.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-4 p-4">
           <BillingTitleCard detail={detail} />
