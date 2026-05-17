@@ -120,6 +120,37 @@ test("app shell renders workspace switcher in the navigation column when module 
   expect(navigationBox.height).toBe(workspaceBox.height);
 });
 
+test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  const navigationColumn = page.getByTestId("shell-navigation-column");
+  const workspaceArea = page.getByTestId("shell-workspace-area");
+  const workspaceSwitcher = page.getByTestId("workspace-switcher");
+  const modulePanelArea = page.getByTestId("module-panel-area");
+
+  await expect(navigationColumn).toBeVisible();
+  await expect(workspaceSwitcher).toBeVisible();
+  await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
+  await expect(getNavRail(page).getByRole("link", { name: "홈" })).toBeVisible();
+  await expect(page.getByTestId("module-side-panel-title")).toBeHidden();
+  await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
+
+  const navigationBox = await navigationColumn.boundingBox();
+  const switcherBox = await workspaceSwitcher.boundingBox();
+  const modulePanelBox = await modulePanelArea.boundingBox();
+  const workspaceBox = await workspaceArea.boundingBox();
+
+  expectRect(navigationBox);
+  expectRect(switcherBox);
+  expectRect(modulePanelBox);
+  expectRect(workspaceBox);
+  expect(Math.round(navigationBox.width)).toBe(48);
+  expect(Math.round(switcherBox.width)).toBe(48);
+  expect(Math.round(modulePanelBox.width)).toBe(48);
+  expect(workspaceBox.width).toBeGreaterThan(300);
+});
+
 test("app shell collapses workspace switcher with the navigation column", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=closed");
 

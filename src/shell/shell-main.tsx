@@ -50,7 +50,7 @@ export function ShellMain({
 
   return (
     <div
-      className="grid min-h-0 grid-cols-[minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
+      className="grid min-h-0 grid-cols-[48px_minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
       style={{
         "--clair-shell-main-columns": `${navigationColumnWidth}px minmax(0, 1fr)`,
         gap: SHELL_LAYOUT.shell.gap,
@@ -62,19 +62,23 @@ export function ShellMain({
     >
       <section
         data-testid="shell-navigation-column"
-        className="flex min-h-0 min-w-0 flex-col transition-[width] max-md:hidden"
-        style={{ gap: SHELL_LAYOUT.shell.gap, width: navigationColumnWidth }}
+        className="flex min-h-0 min-w-0 flex-col"
+        style={{ gap: SHELL_LAYOUT.shell.gap }}
       >
-        <WorkspaceSwitcher collapsed={!shouldShowModuleSidePanel} workspaceId={workspaceId} />
+        <WorkspaceSwitcher
+          collapsed={!shouldShowModuleSidePanel}
+          className="max-md:w-12 max-md:justify-center max-md:px-0 max-md:[&>span:nth-of-type(2)]:hidden max-md:[&>svg]:hidden"
+          workspaceId={workspaceId}
+        />
 
         <div
           data-testid="module-panel-area"
-          className="grid min-h-0 flex-1 transition-[grid-template-columns]"
+          className="grid min-h-0 flex-1 grid-cols-[48px] transition-[grid-template-columns] md:grid-cols-[var(--clair-module-panel-columns)]"
           style={{
-            gap: SHELL_LAYOUT.shell.gap,
-            gridTemplateColumns: shouldShowModuleSidePanel
+            "--clair-module-panel-columns": shouldShowModuleSidePanel
               ? `${SHELL_LAYOUT.navRailWidth}px minmax(0, ${SHELL_LAYOUT.moduleSidePanel.defaultWidth}px)`
               : `${SHELL_LAYOUT.navRailWidth}px 0px`,
+            gap: SHELL_LAYOUT.shell.gap,
             transitionDuration: reduceMotion ? "0ms" : "160ms",
             transitionTimingFunction: "var(--clair-motion-easing-panel-enter)",
           } as CSSProperties}
@@ -88,7 +92,7 @@ export function ShellMain({
 
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-panel)]",
+              "min-h-0 min-w-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-panel)] max-md:hidden",
               !shouldShowModuleSidePanel && "pointer-events-none border-transparent opacity-0"
             )}
           >
