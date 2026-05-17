@@ -1,6 +1,15 @@
 export const SHELL_LAYOUT = {
+  shell: {
+    gap: 10,
+    bodyPadding: 10,
+    tabsBarHeight: 58,
+  },
   navRailWidth: 48,
   topMenuHeight: 44,
+  navigationColumn: {
+    collapsedWidth: 48,
+    openWidth: 354,
+  },
   moduleSidePanel: {
     minWidth: 296,
     defaultWidth: 296,
