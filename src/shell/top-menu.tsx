@@ -12,17 +12,16 @@ import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation"
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuthClient } from "@/features/auth/auth-client";
+import {
+  createPersonalProfileSession,
+  getDefaultSessionPersonalProfile,
+  getSessionPersonalProfile,
+  readPersonalProfilesState,
+} from "@/features/auth/personal-profile-session";
+import { useSessionWorkspaceDisplayName } from "@/features/auth/workspace-display";
 import { cn } from "@/lib/utils";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
 import { GlobalCommandPalette } from "@/shell/global-command-palette";
-
-const mockShellUserProfiles: Record<string, { initial: string; name: string }> = {
-  billing_admin: { initial: "HR", name: "정하린" },
-  front_desk: { initial: "YN", name: "최유나" },
-  hospital_admin: { initial: "MJ", name: "송민재" },
-  nurse: { initial: "HY", name: "송하윤" },
-  vet: { initial: "SJ", name: "이수지" },
-};
 
 const moduleActivityLabels: Record<string, string> = {
   billing: "수납",
@@ -51,18 +50,28 @@ function getActiveMinutes(issuedAt?: string, now = Date.now()) {
   return Math.max(0, Math.floor((now - issuedTime) / 60000));
 }
 
+function readBrowserPersonalProfile(session: NonNullable<ReturnType<typeof useAuthClient>["session"]>) {
+  if (typeof window === "undefined") {
+    return getDefaultSessionPersonalProfile(createPersonalProfileSession(session));
+  }
+
+  return getSessionPersonalProfile(
+    readPersonalProfilesState(window.sessionStorage, window.localStorage),
+    createPersonalProfileSession(session)
+  );
+}
+
 export function TopMenu({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [now, setNow] = useState(() => Date.now());
+  const workspaceDisplayName = useSessionWorkspaceDisplayName(workspaceId);
   const { hydrated, session, hydrate, signOut } = useAuthClient();
+  const personalProfile = hydrated && session ? readBrowserPersonalProfile(session) : null;
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const userProfile =
-    hydrated && session
-      ? (mockShellUserProfiles[session.role] ?? {
-          initial: session.roleLabel.slice(0, 2).toUpperCase(),
-          name: session.roleLabel,
-        })
+    hydrated && session && personalProfile
+      ? { initial: personalProfile.initials, name: personalProfile.displayName }
       : { initial: "G", name: "Guest" };
   const activityModuleLabel = getModuleActivityLabel(pathname);
   const activeMinutes = getActiveMinutes(hydrated && session ? session.issuedAt : undefined, now);
@@ -90,6 +99,8 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
     router.replace("/login");
   }
 
+  const profileHref = `/profile?${new URLSearchParams({ returnTo: pathname }).toString()}`;
+
   return (
     <header className="relative z-20 flex h-[52px] items-center bg-[var(--emr-surface-app)] px-2.5">
       <Button
@@ -101,9 +112,8 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
         <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-primary text-primary-foreground">
           <WorkspaceLogoMarkIcon className="size-4" aria-hidden="true" />
         </span>
-        <span className="flex min-w-0 shrink-0 items-center justify-center gap-1 px-0.5 max-sm:hidden">
-          <span className="whitespace-nowrap">VIP 동물의료센터</span>
-          <span className="whitespace-nowrap">청담점</span>
+        <span className="flex min-w-0 shrink px-0.5 max-sm:hidden">
+          <span className="truncate">{workspaceDisplayName}</span>
         </span>
         <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-foreground max-sm:hidden" aria-hidden="true" />
       </Button>
@@ -125,6 +135,7 @@ export function TopMenu({ workspaceId }: { workspaceId: string }) {
           userInitial={userProfile.initial}
           userName={userProfile.name}
           onLogout={handleLogout}
+          profileHref={profileHref}
         />
       </div>
     </header>

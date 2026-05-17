@@ -6,6 +6,26 @@ import {
   canViewBilling,
   getMockAuthCapabilities,
 } from "../src/features/auth/permissions";
+import {
+  PERSONAL_PROFILE_STORAGE_KEY,
+  upsertSessionPersonalProfile,
+  validatePersonalProfileInput,
+  type PersonalProfilesState,
+  type SessionPersonalProfile,
+  type PersonalProfileInput,
+  type PersonalProfileValidationResult,
+} from "../src/features/auth/personal-profile-session";
+import {
+  SESSION_WORKSPACES_STORAGE_KEY,
+  appendSessionWorkspaceInvitation,
+  cancelSessionWorkspaceInvitation,
+  createSessionWorkspace,
+  createSessionWorkspaceInvitation,
+  deactivateSessionWorkspaceMembership,
+  updateSessionWorkspaceMembershipRoles,
+  validateWorkspaceInvitationInput,
+  validateWorkspaceCreationInput,
+} from "../src/features/auth/workspace-session";
 
 const storageKey = "clair.mockAuth.session.v1";
 const authUiFiles = [
@@ -201,6 +221,402 @@ test("login exposes pending and provider error states without creating a session
   expect(stored).toEqual({ session: null, local: null });
 });
 
+test("workspace creation route requires login and preserves the onboarding URL", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await expect(page).toHaveURL(/\/login\?next=/);
+  expect(new URL(page.url()).searchParams.get("next")).toBe("/workspace/new");
+});
+
+test("workspace creation validates required fields before creating state", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page).toHaveURL(/\/workspace\/new/);
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await expect(page.getByText("병원/워크스페이스 이름을 입력하세요.")).toBeVisible();
+  await expect(page).toHaveURL(/\/workspace\/new/);
+
+  const stored = await page.evaluate((key) => window.localStorage.getItem(key), SESSION_WORKSPACES_STORAGE_KEY);
+  expect(stored).toBeNull();
+});
+
+test("hospital admin can create and select a session-only workspace", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page.getByRole("heading", { name: "워크스페이스 만들기" })).toBeVisible();
+  await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
+  await page.getByLabel("대표/관리자 이름").fill("김승욱");
+  await page.getByLabel("연락 이메일").fill("owner@hanbit.test");
+  await page.getByLabel("연락처").fill("010-1234-5678");
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await expect(page).toHaveURL(/\/w\/hanbit-animal-hospital\/home/);
+  await expect(page.getByTestId("workspace-switcher")).toContainText(
+    "Hanbit Animal Hospital"
+  );
+  await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
+
+  const stored = await page.evaluate((key) => {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }, SESSION_WORKSPACES_STORAGE_KEY);
+
+  expect(stored).toMatchObject({
+    currentWorkspaceId: "hanbit-animal-hospital",
+    workspaces: [
+      {
+        id: "hanbit-animal-hospital",
+        displayName: "Hanbit Animal Hospital",
+        representativeName: "김승욱",
+        contactEmail: "owner@hanbit.test",
+        contactPhone: "010-1234-5678",
+        subscriptionStatus: "trialing",
+      },
+    ],
+    memberships: [
+      {
+        workspaceId: "hanbit-animal-hospital",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+    ],
+  });
+});
+
+test("hospital admin can manage session-only member invitations", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
+  await page.getByLabel("대표/관리자 이름").fill("김승욱");
+  await page.getByLabel("연락 이메일").fill("owner@hanbit.test");
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await expect(page).toHaveURL(/\/w\/hanbit-animal-hospital\/home/);
+  await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
+  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+
+  await expect(page.getByRole("heading", { name: "구성원 및 초대" })).toBeVisible();
+  await expect(page.getByText("활성 1명")).toBeVisible();
+  await expect(page.getByText("대기 0건")).toBeVisible();
+  await expect(page.getByText("비활성 0명")).toBeVisible();
+
+  await page.getByLabel("초대 이메일").fill("vet@hanbit.test");
+  await page.getByLabel("직책").fill("진료팀장");
+  await page.getByLabel("부서").fill("진료팀");
+  await page.getByRole("checkbox", { name: "수의사" }).check();
+  await page.getByRole("checkbox", { name: "데스크" }).check();
+  await page.getByRole("button", { name: "초대 만들기" }).click();
+
+  await expect(page.getByText("vet@hanbit.test")).toBeVisible();
+  await expect(page.getByText("수의사, 데스크")).toBeVisible();
+  await expect(page.getByText("대기 1건")).toBeVisible();
+
+  await page.getByLabel("초대 이메일").fill("VET@HANBIT.TEST");
+  await page.getByRole("button", { name: "초대 만들기" }).click();
+  await expect(page.getByText("이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.")).toBeVisible();
+
+  await page.getByRole("button", { name: "초대 재발송" }).click();
+  await expect(page.getByText("재발송 1회")).toBeVisible();
+
+  await page.getByRole("button", { name: "수락 시뮬레이션" }).click();
+  await expect(page.getByText("활성 2명")).toBeVisible();
+  await expect(page.getByText("대기 0건")).toBeVisible();
+  await expect(page.getByText("accepted")).toBeVisible();
+
+  const stored = await page.evaluate((key) => {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }, SESSION_WORKSPACES_STORAGE_KEY);
+
+  expect(stored.invitations).toEqual([
+    expect.objectContaining({
+      email: "vet@hanbit.test",
+      invitedRoles: ["vet", "front_desk"],
+      status: "accepted",
+    }),
+  ]);
+  expect(stored.memberships).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        workspaceId: "hanbit-animal-hospital",
+        userSessionId: "invitee:vet@hanbit.test",
+        roles: ["vet", "front_desk"],
+        status: "active",
+      }),
+    ])
+  );
+});
+
+test("pending invitations can be canceled in session-only state", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
+  await page.getByLabel("대표/관리자 이름").fill("김승욱");
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
+  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+  await page.getByLabel("초대 이메일").fill("desk@hanbit.test");
+  await page.getByRole("checkbox", { name: "데스크" }).check();
+  await page.getByRole("button", { name: "초대 만들기" }).click();
+
+  await expect(page.getByText("desk@hanbit.test")).toBeVisible();
+  await page.getByRole("button", { name: "초대 취소" }).click();
+
+  await expect(page.getByText("canceled")).toBeVisible();
+  await expect(page.getByText("대기 0건")).toBeVisible();
+});
+
+test("non-admin roles cannot manage workspace invitations", async ({ page }) => {
+  await page.goto("/login?next=%2Fw%2Fclair-demo%2Forders%3FmodulePanel%3Dopen%26aside%3Dclosed");
+
+  await page.getByRole("button", { name: /수의사/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+
+  await expect(page.getByRole("heading", { name: "구성원 및 초대" })).toBeVisible();
+  await expect(page.getByText("병원관리자만 직원을 초대하거나 멤버십을 변경할 수 있습니다.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "초대 만들기" })).toBeDisabled();
+});
+
+test("hospital admin can edit active member roles with permission summary", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
+  await page.getByLabel("대표/관리자 이름").fill("김승욱");
+  await page.getByLabel("연락 이메일").fill("owner@hanbit.test");
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
+  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+
+  await page.getByLabel("초대 이메일").fill("vet@hanbit.test");
+  await page.getByLabel("직책").fill("진료팀장");
+  await page.getByLabel("부서").fill("진료팀");
+  await page.getByRole("checkbox", { name: "수의사" }).check();
+  await page.getByRole("checkbox", { name: "데스크" }).check();
+  await page.getByRole("button", { name: "초대 만들기" }).click();
+  await page.getByRole("button", { name: "수락 시뮬레이션" }).click();
+
+  const memberRow = page.getByRole("row").filter({ hasText: "vet@hanbit.test" }).filter({
+    hasText: "active",
+  });
+  await memberRow.getByRole("button", { name: "역할 수정" }).click();
+
+  const roleDialog = page.getByRole("dialog", { name: "구성원 역할 수정" });
+  await expect(roleDialog.getByRole("heading", { name: "구성원 역할 수정" })).toBeVisible();
+  await expect(roleDialog.getByText("진료/차트 수정 가능")).toBeVisible();
+  await roleDialog.getByRole("checkbox", { name: "테크니션" }).check();
+  await expect(roleDialog.getByText("역할 합산 권한")).toBeVisible();
+  await page.getByRole("button", { name: "변경 검토" }).click();
+  await expect(page.getByRole("heading", { name: "역할 변경 확인" })).toBeVisible();
+  await page.getByRole("button", { name: "역할 변경" }).click();
+
+  await expect(memberRow).toContainText("수의사, 데스크, 테크니션");
+
+  const stored = await page.evaluate((key) => {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }, SESSION_WORKSPACES_STORAGE_KEY);
+
+  expect(stored.memberships).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        email: "vet@hanbit.test",
+        roles: ["vet", "front_desk", "technician"],
+        status: "active",
+      }),
+    ])
+  );
+});
+
+test("role management UI blocks last active hospital admin demotion and deactivation", async ({
+  page,
+}) => {
+  await page.goto("/workspace/new");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await page.getByLabel("병원/워크스페이스 이름").fill("Hanbit Animal Hospital");
+  await page.getByLabel("대표/관리자 이름").fill("김승욱");
+  await page.getByLabel("연락 이메일").fill("owner@hanbit.test");
+  await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+
+  await page.goto("/w/hanbit-animal-hospital/orders?modulePanel=open&aside=closed");
+  await page.getByRole("button", { name: "병원구성원 관리" }).click();
+
+  const adminRow = page.getByRole("row").filter({ hasText: "owner@hanbit.test" });
+  await adminRow.getByRole("button", { name: "역할 수정" }).click();
+  const roleDialog = page.getByRole("dialog", { name: "구성원 역할 수정" });
+  await roleDialog.getByRole("checkbox", { name: "병원관리자" }).uncheck();
+  await roleDialog.getByRole("checkbox", { name: "수의사" }).check();
+  await page.getByRole("button", { name: "변경 검토" }).click();
+  await expect(page.getByText("최소 1명의 활성 병원관리자가 필요합니다.")).toBeVisible();
+  await page.getByRole("button", { name: "역할 수정 닫기" }).click();
+
+  await adminRow.getByRole("button", { name: "비활성화" }).click();
+  await expect(page.getByRole("heading", { name: "구성원 비활성화 확인" })).toBeVisible();
+  await page.getByRole("button", { name: "비활성화" }).click();
+  await expect(page.getByText("마지막 병원관리자는 비활성화할 수 없습니다.")).toBeVisible();
+  await expect(adminRow).toContainText("active");
+});
+
+test("profile menu opens personal profile settings with read-only authorization context", async ({
+  page,
+}) => {
+  await page.goto("/login?next=%2Fw%2Fclair-demo%2Freception%3FmodulePanel%3Dopen%26aside%3Dclosed");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await page.getByTestId("top-menu-mock-user").click();
+  await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
+
+  await expect(page).toHaveURL(/\/profile/);
+  await expect(page.getByRole("heading", { name: "개인 프로필 설정" })).toBeVisible();
+  await expect(page.getByLabel("이름")).toHaveValue("송민재");
+  await expect(page.getByLabel("이니셜")).toHaveValue("MJ");
+  await expect(page.getByText("권한 정보는 워크스페이스 멤버십에서 관리됩니다.")).toBeVisible();
+  await expect(
+    page.getByText("현재 로그인 역할은 병원 관리자이며, 이 화면에서는 역할 변경이나 권한 상승을 할 수 없습니다.")
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /역할 변경/ })).toHaveCount(0);
+});
+
+test("personal profile settings validate editable fields and save session-only data", async ({
+  page,
+}) => {
+  await page.goto("/login?next=%2Fw%2Fclair-demo%2Freception%3FmodulePanel%3Dopen%26aside%3Dclosed");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+  await page.getByTestId("top-menu-mock-user").click();
+  await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
+
+  await page.getByLabel("이름").fill("");
+  await page.getByLabel("이니셜").fill("ADMIN");
+  await page.getByRole("button", { name: "저장" }).click();
+
+  await expect(page.getByText("이름을 입력하세요.")).toBeVisible();
+  await expect(page.getByText("이니셜은 1~3자로 입력하세요.")).toBeVisible();
+
+  await page.getByLabel("이름").fill("김승욱");
+  await page.getByLabel("이니셜").fill("SW");
+  await page.getByLabel("연락처").fill("010-1111-2222");
+  await page.getByRole("checkbox", { name: "운영 알림 받기" }).check();
+  await page.getByRole("button", { name: "저장" }).click();
+
+  await expect(page.getByText("프로필이 저장되었습니다.")).toBeVisible();
+
+  const stored = await page.evaluate((key) => {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }, PERSONAL_PROFILE_STORAGE_KEY);
+
+  expect(stored.profiles[0]).toMatchObject({
+    displayName: "김승욱",
+    initials: "SW",
+    phone: "010-1111-2222",
+    notificationOptIn: true,
+  });
+  expect(stored.profiles[0]).not.toHaveProperty("roles");
+  expect(stored.profiles[0]).not.toHaveProperty("roleLabel");
+
+  await page.getByRole("link", { name: "워크스페이스로 돌아가기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await page.getByTestId("top-menu-mock-user").click();
+  await expect(page.getByRole("menu")).toContainText("김승욱");
+});
+
+test("personal profile contract keeps user-editable profile separate from authorization source", () => {
+  const input: PersonalProfileInput = {
+    displayName: " ",
+    initials: "ADMIN",
+    phone: "",
+    notificationOptIn: true,
+  };
+
+  expect(validatePersonalProfileInput(input)).toEqual({
+    valid: false,
+    fieldErrors: {
+      displayName: "이름을 입력하세요.",
+      initials: "이니셜은 1~3자로 입력하세요.",
+    },
+  } satisfies PersonalProfileValidationResult);
+
+  const state: PersonalProfilesState = {
+    profiles: [],
+    updatedAt: "2026-05-17T00:00:00.000Z",
+  };
+  const saved = upsertSessionPersonalProfile(
+    state,
+    {
+      sessionId: "admin-session",
+      storageMode: "local",
+      role: "hospital_admin",
+      roleLabel: "병원 관리자",
+    },
+    {
+      displayName: "김승욱",
+      initials: "SW",
+      phone: "010-1111-2222",
+      notificationOptIn: true,
+    },
+    "2026-05-17T01:00:00.000Z"
+  );
+
+  expect(saved.profiles).toEqual([
+    {
+      sessionId: "admin-session",
+      displayName: "김승욱",
+      initials: "SW",
+      phone: "010-1111-2222",
+      notificationOptIn: true,
+      updatedAt: "2026-05-17T01:00:00.000Z",
+    } satisfies SessionPersonalProfile,
+  ]);
+  expect(JSON.stringify(saved.profiles[0])).not.toMatch(/hospital_admin|병원 관리자|roles?/);
+});
+
 test("mock auth permission helper exposes role capabilities without UI gating", () => {
   expect(canViewBilling("front_desk")).toBe(false);
   expect(canViewBilling("billing_admin")).toBe(true);
@@ -209,5 +625,238 @@ test("mock auth permission helper exposes role capabilities without UI gating", 
   expect(canManageHospital("hospital_admin")).toBe(true);
   expect(getMockAuthCapabilities("hospital_admin")).toEqual(
     expect.arrayContaining(["view_billing", "edit_orders", "manage_hospital"])
+  );
+});
+
+test("workspace creation contract assigns the creator as active hospital admin", () => {
+  const result = createSessionWorkspace(
+    {
+      hospitalName: "Hanbit Animal Hospital",
+      adminDisplayName: "김승욱",
+      contactEmail: "owner@hanbit.test",
+      contactPhone: "010-1234-5678",
+      subscriptionStatus: "trialing",
+    },
+    {
+      sessionId: "mock-session-1",
+      storageMode: "local",
+    },
+    "2026-05-17T00:00:00.000Z"
+  );
+
+  expect(result.workspace).toMatchObject({
+    id: "hanbit-animal-hospital",
+    displayName: "Hanbit Animal Hospital",
+    representativeName: "김승욱",
+    contactEmail: "owner@hanbit.test",
+    contactPhone: "010-1234-5678",
+    subscriptionStatus: "trialing",
+    createdBySessionId: "mock-session-1",
+  });
+  expect(result.membership).toMatchObject({
+    workspaceId: "hanbit-animal-hospital",
+    userSessionId: "mock-session-1",
+    roles: ["hospital_admin"],
+    status: "active",
+  });
+});
+
+test("workspace creation contract returns field errors for missing required fields", () => {
+  expect(
+    validateWorkspaceCreationInput({
+      hospitalName: " ",
+      adminDisplayName: " ",
+      contactEmail: "not-an-email",
+      contactPhone: "",
+      subscriptionStatus: "trialing",
+    })
+  ).toEqual({
+    valid: false,
+    fieldErrors: {
+      hospitalName: "병원/워크스페이스 이름을 입력하세요.",
+      adminDisplayName: "대표/관리자 이름을 입력하세요.",
+      contactEmail: "올바른 이메일 형식으로 입력하세요.",
+    },
+  });
+});
+
+test("workspace invitation contract blocks duplicate pending and active memberships", () => {
+  const creation = createSessionWorkspace(
+    {
+      hospitalName: "Hanbit Animal Hospital",
+      adminDisplayName: "김승욱",
+      contactEmail: "owner@hanbit.test",
+      contactPhone: "010-1234-5678",
+      subscriptionStatus: "trialing",
+    },
+    {
+      sessionId: "admin-session",
+      storageMode: "local",
+    },
+    "2026-05-17T00:00:00.000Z"
+  );
+  const invitation = createSessionWorkspaceInvitation(
+    {
+      email: "VET@HANBIT.TEST",
+      roles: ["vet", "technician"],
+      title: "진료팀장",
+      department: "진료팀",
+    },
+    creation.workspace.id,
+    {
+      sessionId: "admin-session",
+      storageMode: "local",
+    },
+    "2026-05-17T00:00:00.000Z"
+  );
+  const state = appendSessionWorkspaceInvitation(
+    {
+      currentWorkspaceId: creation.workspace.id,
+      workspaces: [creation.workspace],
+      memberships: [creation.membership],
+      invitations: [],
+      updatedAt: "2026-05-17T00:00:00.000Z",
+    },
+    invitation,
+    "2026-05-17T00:00:00.000Z"
+  );
+
+  expect(invitation).toMatchObject({
+    email: "vet@hanbit.test",
+    invitedRoles: ["vet", "technician"],
+    status: "pending",
+    invitedBySessionId: "admin-session",
+  });
+  expect(
+    validateWorkspaceInvitationInput(
+      {
+        email: "vet@hanbit.test",
+        roles: ["front_desk"],
+        title: "",
+        department: "",
+      },
+      state,
+      creation.workspace.id
+    )
+  ).toEqual({
+    valid: false,
+    fieldErrors: {
+      email: "이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.",
+    },
+  });
+
+  const canceledState = cancelSessionWorkspaceInvitation(
+    state,
+    invitation.id,
+    "2026-05-17T01:00:00.000Z"
+  );
+  const activeState = {
+    ...canceledState,
+    memberships: [
+      ...canceledState.memberships,
+      {
+        id: "hanbit-animal-hospital:invitee:vet@hanbit.test",
+        workspaceId: creation.workspace.id,
+        userSessionId: "invitee:vet@hanbit.test",
+        displayName: "vet",
+        email: "vet@hanbit.test",
+        roles: ["vet" as const],
+        status: "active" as const,
+        createdAt: "2026-05-17T01:00:00.000Z",
+      },
+    ],
+  };
+
+  expect(
+    validateWorkspaceInvitationInput(
+      {
+        email: "vet@hanbit.test",
+        roles: ["front_desk"],
+        title: "",
+        department: "",
+      },
+      activeState,
+      creation.workspace.id
+    )
+  ).toEqual({
+    valid: false,
+    fieldErrors: {
+      email: "이미 활성 멤버로 등록된 이메일입니다.",
+    },
+  });
+});
+
+test("workspace membership role mutation contract protects the last active hospital admin", () => {
+  const creation = createSessionWorkspace(
+    {
+      hospitalName: "Hanbit Animal Hospital",
+      adminDisplayName: "김승욱",
+      contactEmail: "owner@hanbit.test",
+      contactPhone: "010-1234-5678",
+      subscriptionStatus: "trialing",
+    },
+    {
+      sessionId: "admin-session",
+      storageMode: "local",
+    },
+    "2026-05-17T00:00:00.000Z"
+  );
+  const state = {
+    currentWorkspaceId: creation.workspace.id,
+    workspaces: [creation.workspace],
+    memberships: [
+      creation.membership,
+      {
+        id: "hanbit-animal-hospital:vet-session",
+        workspaceId: creation.workspace.id,
+        userSessionId: "vet-session",
+        displayName: "vet",
+        email: "vet@hanbit.test",
+        roles: ["vet" as const],
+        status: "active" as const,
+        createdAt: "2026-05-17T01:00:00.000Z",
+      },
+    ],
+    invitations: [],
+    updatedAt: "2026-05-17T00:00:00.000Z",
+  };
+
+  expect(
+    updateSessionWorkspaceMembershipRoles(
+      state,
+      creation.membership.id,
+      ["vet"],
+      "2026-05-17T02:00:00.000Z"
+    )
+  ).toMatchObject({
+    success: false,
+    reason: "last_admin_protected",
+  });
+  expect(
+    deactivateSessionWorkspaceMembership(
+      state,
+      creation.membership.id,
+      "2026-05-17T02:00:00.000Z"
+    )
+  ).toMatchObject({
+    success: false,
+    reason: "last_admin_protected",
+  });
+
+  const roleUpdate = updateSessionWorkspaceMembershipRoles(
+    state,
+    "hanbit-animal-hospital:vet-session",
+    ["vet", "front_desk", "technician"],
+    "2026-05-17T02:00:00.000Z"
+  );
+
+  expect(roleUpdate).toMatchObject({ success: true });
+  expect(roleUpdate.state.memberships).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: "hanbit-animal-hospital:vet-session",
+        roles: ["vet", "front_desk", "technician"],
+      }),
+    ])
   );
 });

@@ -3,6 +3,7 @@
 import { WorkspaceLogoMarkIcon } from "@/components/icons";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
+import { useSessionWorkspaceDisplayName } from "@/features/auth/workspace-display";
 import { cn } from "@/lib/utils";
 
 type WorkspaceSwitcherProps = {
@@ -12,6 +13,8 @@ type WorkspaceSwitcherProps = {
 };
 
 export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }: WorkspaceSwitcherProps) {
+  const workspaceDisplayName = useSessionWorkspaceDisplayName(workspaceId);
+
   return (
     <Button
       type="button"
@@ -30,7 +33,7 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
       <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-[var(--brand)] text-[var(--brand-foreground)]">
         <WorkspaceLogoMarkIcon className="size-5" aria-hidden="true" />
       </span>
-      <span className={cn("truncate", collapsed && "hidden")}>VIP 동물의료센터 청담점</span>
+      <span className={cn("truncate", collapsed && "hidden")}>{workspaceDisplayName}</span>
       <CdsNavigationChevronDownIcon
         className={cn("size-4 shrink-0 text-[var(--emr-text-tertiary)]", collapsed && "hidden")}
         aria-hidden="true"

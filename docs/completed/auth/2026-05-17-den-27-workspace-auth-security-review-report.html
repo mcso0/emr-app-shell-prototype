@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-27 워크스페이스 인증·권한 보안 리뷰</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #5f6368;
+        --line: #d9dee7;
+        --surface: #ffffff;
+        --paper: #f5f7fa;
+        --high: #b42318;
+        --medium: #b54708;
+        --good: #067647;
+        --info: #175cd3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        width: min(1120px, calc(100% - 48px));
+        margin: 40px auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 40px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.2;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      h2 {
+        margin-top: 36px;
+        font-size: 20px;
+      }
+
+      h3 {
+        margin-top: 22px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 10px 0 0;
+      }
+
+      .meta {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .box {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        background: #fbfcfe;
+      }
+
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .value {
+        display: block;
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 750;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        vertical-align: top;
+        border: 1px solid var(--line);
+        padding: 12px;
+        text-align: left;
+      }
+
+      th {
+        background: #f7f9fc;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      ul {
+        margin: 12px 0 0 18px;
+        padding: 0;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2f7;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .high {
+        color: var(--high);
+        font-weight: 750;
+      }
+
+      .medium {
+        color: var(--medium);
+        font-weight: 750;
+      }
+
+      .good {
+        color: var(--good);
+        font-weight: 750;
+      }
+
+      .callout {
+        margin-top: 18px;
+        border-left: 4px solid var(--info);
+        background: #eef4ff;
+        padding: 14px 16px;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          width: min(100% - 24px, 1120px);
+          margin: 20px auto;
+          padding: 24px;
+        }
+
+        .summary {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-27 워크스페이스 인증·권한 보안 리뷰</h1>
+      <p class="meta">
+        작성일: 2026-05-17 · 상태: Human Review · 범위: CSO review, report-only
+      </p>
+
+      <section class="summary" aria-label="요약">
+        <div class="box">
+          <span class="label">코드 변경</span>
+          <span class="value">없음</span>
+        </div>
+        <div class="box">
+          <span class="label">주요 발견</span>
+          <span class="value">High 2 / Medium 1</span>
+        </div>
+        <div class="box">
+          <span class="label">통과 확인</span>
+          <span class="value">프로필 분리 / 역할 합산</span>
+        </div>
+        <div class="box">
+          <span class="label">운영 전 핵심</span>
+          <span class="value">검증된 서버 세션</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>대표 보고</h2>
+        <p>
+          승욱, 현재 구현은 MVP 프로토타입 단계에서는 방향이 맞다. 개인 프로필은 권한 원천으로
+          섞이지 않았고, 역할이 여러 개인 경우 권한을 합산하는 정책도 테스트로 확인된다. 다만
+          운영 제품으로 넘어가기 전에는 데모용 사용자 식별 헤더와 브라우저 저장소 기반 역할 변경을
+          반드시 서버 검증 흐름으로 교체해야 한다.
+        </p>
+        <div class="callout">
+          결론: 지금 당장 출시 가능한 보안 완성 상태는 아니지만, 위험한 부분이 어디인지 명확히
+          분리되어 있다. 다음 구현은 “Supabase 서버 세션 검증 → 역할 변경 API 연결 → DB 트랜잭션/RLS”
+          순서로 가는 것이 맞다.
+        </div>
+      </section>
+
+      <section>
+        <h2>Findings</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>심각도</th>
+              <th>상태/신뢰도</th>
+              <th>취약 지점</th>
+              <th>악용 시나리오</th>
+              <th>영향</th>
+              <th>보완</th>
+              <th>후속 이슈 제안</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="high">High</td>
+              <td>Verified / High</td>
+              <td>
+                <code>POST /api/workspaces/[workspaceId]/memberships/[membershipId]/roles</code>가
+                현재 <code>x-clair-demo-session-user-id</code> 헤더를 actor identity로 사용한다.
+              </td>
+              <td>
+                실제 저장 기능이 붙은 뒤에도 이 헤더를 유지하면 호출자가 <code>user-admin</code>을
+                가장해 역할 변경 권한을 통과할 수 있다.
+              </td>
+              <td>권한 상승, 구성원 역할 변경, 병원관리자 권한 탈취 가능성.</td>
+              <td>
+                운영 경로에서는 Supabase server session으로 actor를 검증하고, 데모 헤더는 테스트/개발
+                환경에서만 허용한다.
+              </td>
+              <td>05-03 Replace demo role-update identity header with verified Supabase server session</td>
+            </tr>
+            <tr>
+              <td class="high">High</td>
+              <td>Verified / High</td>
+              <td>
+                병원구성원 역할 변경 UI는 아직 <code>updateSessionWorkspaceMembershipRoles</code>와
+                browser storage를 직접 사용한다.
+              </td>
+              <td>
+                브라우저 저장소를 조작하면 현재 세션 UI 상태의 역할/멤버십을 바꿀 수 있다. 프로토타입에서는
+                허용 가능한 데모 동작이지만, live persistence와 연결되면 안 된다.
+              </td>
+              <td>관리 UI와 서버 권한 경계가 어긋나며, 운영자가 보안 완료로 오해할 위험.</td>
+              <td>
+                역할 변경/비활성화 UI를 서버 라우트 또는 server action으로 연결하고, 서버 허용 후에만
+                클라이언트 상태를 갱신한다.
+              </td>
+              <td>05-04 Route-backed role mutation UI handoff</td>
+            </tr>
+            <tr>
+              <td class="medium">Medium</td>
+              <td>Verified / Medium</td>
+              <td>
+                마지막 active <code>hospital_admin</code> 보호는 session helper와 server resolver 계약에는
+                있으나, 아직 DB transaction/RPC 보호는 없다.
+              </td>
+              <td>
+                라이브 DB에서 두 요청이 동시에 마지막 관리자 강등/비활성화를 시도하면, 단순 app-level 체크만으로는
+                race condition이 생길 수 있다.
+              </td>
+              <td>워크스페이스가 관리자 없는 상태가 될 수 있음.</td>
+              <td>
+                live write 전 private RPC 또는 단일 서버 트랜잭션에서 row lock과 함께 마지막 관리자 보호를
+                강제한다.
+              </td>
+              <td>05-05 DB transaction/RPC for last active hospital admin guard</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>확인된 안전 장치</h2>
+        <ul>
+          <li>개인 프로필 저장소에는 role, role label, permission field가 저장되지 않는다.</li>
+          <li>권한 판단은 개인 프로필이 아니라 workspace membership/role/resolver contract를 기준으로 한다.</li>
+          <li>다중 역할은 additive union으로 계산되며, <code>hospital_admin</code>은 전체 권한을 갖는다.</li>
+          <li><code>technician</code>과 <code>front_desk</code>는 <code>chart:view</code>는 가능하지만 <code>chart:update</code>는 없다.</li>
+          <li>서버 역할 변경 enforcement module은 <code>server-only</code>이며 browser storage API를 사용하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검토한 파일과 문서</h2>
+        <ul>
+          <li><code>docs/product/domain/workspace-auth-permissions.md</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/workspace-membership-data-security-plan.md</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/membership-permission-enforcement.md</code></li>
+          <li><code>src/features/auth/workspace-session.ts</code></li>
+          <li><code>src/features/auth/workspace-membership-management.tsx</code></li>
+          <li><code>src/features/auth/personal-profile-session.ts</code></li>
+          <li><code>src/features/auth/permission-resolver.ts</code></li>
+          <li><code>src/features/auth/server-role-update-enforcement.ts</code></li>
+          <li><code>src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/roles/route.ts</code></li>
+          <li><code>tests/auth.spec.ts</code>, <code>tests/permission-resolver.spec.ts</code>, <code>tests/server-permission-enforcement.spec.ts</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>DEN-27 범위에서 제품 소스 코드는 수정하지 않았다.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li>이 보고서는 Linear DEN-27의 Human Review handoff 자료다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

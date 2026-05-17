@@ -38,6 +38,14 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | APP-SHELL-PR-001 | done | app-shell | P1 | PR 1 | `docs/work/app-shell/APP-SHELL-PR-001-workspace-tabs.md` |
 | AUTH-PR-001 | human_review | auth | P0 | PR 1 | `docs/work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md` |
 | AUTH-PR-002 | human_review | auth | P0 | PR 2 | `docs/work/auth/AUTH-PR-002-workspace-membership-data-security-plan.md` |
+| AUTH-PR-003 | human_review | auth | P0 | PR 3 | `docs/work/auth/AUTH-PR-003-next-security-patch.md` |
+| AUTH-PR-004 | human_review | auth | P0 | PR 4 | `docs/work/auth/AUTH-PR-004-workspace-creation-foundation.md` |
+| AUTH-PR-005 | human_review | auth | P0 | PR 5 | `docs/work/auth/AUTH-PR-005-member-invitation-status-flow.md` |
+| AUTH-PR-006 | human_review | auth | P0 | PR 6 | `docs/work/auth/AUTH-PR-006-server-permission-resolver-contract.md` |
+| AUTH-PR-007 | human_review | auth | P0 | PR 7 | `docs/work/auth/AUTH-PR-007-role-management-admin-ui.md` |
+| AUTH-PR-008 | human_review | auth | P0 | PR 8 | `docs/work/auth/AUTH-PR-008-personal-profile-settings.md` |
+| AUTH-PR-009 | human_review | auth | P0 | PR 9 | `docs/work/auth/AUTH-PR-009-first-server-permission-enforcement-slice.md` |
+| AUTH-PR-010 | human_review | auth | P0 | PR 10 | `docs/work/auth/AUTH-PR-010-security-review-workspace-auth-permission-boundary.md` |
 | PWA-PR-001 | done | pwa | P1 | PR 1 | `docs/work/pwa/PWA-PR-001-installable-app-shell.md` |
 | RECEPTION-PR-001 | done | reception | P0 | PR 1 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md` |
 | RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |
