@@ -49,6 +49,17 @@ The active target is Product MVP. The prototype already covers the outpatient fl
 8. Add a closeout under `docs/completed/` when the work item calls for one.
 9. Give the user a concise result review using `docs/_meta/result-review-rules.md`.
 
+## Manual Linear Compact Rules
+
+For Linear requests, prefer `$manual-linear-ops` when available. If the skill is unavailable, use these compact rules. Read `docs/engineering/agent-orchestration/manual-linear-operations.md` only when project placement, multi-Codex coordination, Rework/Done handling, PR grouping, or security/DB/payment scope is ambiguous.
+
+- Keep `DEN` as the Linear team key; manage work order through title prefixes like `00-01` and `01-01`.
+- Ask the representative before creating a new project, moving work between projects, adding milestones, or choosing between a new project and an existing one.
+- Default to one Linear issue, one Codex owner, one branch, and one PR.
+- Stop meaningful issue work at `Human Review`; move to `Done` only when the representative explicitly accepts or asks.
+- Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo/link/wording fixes.
+- Do not enter live Supabase, DB migration, RLS, payment/subscription, email delivery, production deploy, or role/permission policy changes without explicit approval.
+
 ## Current Recommended Work
 
 Start from `docs/work/index.md`. If no ready item matches the user's request, search existing work items before adding to `docs/work/inbox.md`.
