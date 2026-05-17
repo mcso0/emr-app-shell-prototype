@@ -23,6 +23,19 @@ async function resolveCssColor(page: Page, value: string) {
   }, value);
 }
 
+function expectRect(value: Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>): asserts value is NonNullable<typeof value> {
+  expect(value).not.toBeNull();
+}
+
+async function expectHorizontalGap(page: Page, leftTestId: string, rightTestId: string, expectedGap: number) {
+  const leftBox = await page.getByTestId(leftTestId).boundingBox();
+  const rightBox = await page.getByTestId(rightTestId).boundingBox();
+
+  expectRect(leftBox);
+  expectRect(rightBox);
+  expect(Math.round(rightBox.x - (leftBox.x + leftBox.width))).toBe(expectedGap);
+}
+
 async function clearWorkspaceTabs(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
@@ -82,6 +95,49 @@ test("global command palette searches and opens patient context", async ({ page 
 
   await expect(page).toHaveURL(/drawer=reception-patient%3Apatient-kong/);
   await expect(page.getByText("환자 정보")).toBeVisible();
+});
+
+test("app shell renders workspace switcher in the navigation column when module panel is open", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  const tabsBar = page.getByTestId("workspace-tabs-bar");
+  const navigationColumn = page.getByTestId("shell-navigation-column");
+  const workspaceArea = page.getByTestId("shell-workspace-area");
+  const workspaceSwitcher = page.getByTestId("workspace-switcher");
+
+  await expect(tabsBar.getByRole("button", { name: "clair-demo 워크스페이스 선택" })).toHaveCount(0);
+  await expect(navigationColumn.getByRole("button", { name: "clair-demo 워크스페이스 선택" })).toBeVisible();
+  await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeVisible();
+  await expect(page.getByRole("button", { name: "사이드 패널 접기", exact: true })).toBeVisible();
+
+  await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
+
+  const navigationBox = await navigationColumn.boundingBox();
+  const workspaceBox = await workspaceArea.boundingBox();
+
+  expectRect(navigationBox);
+  expectRect(workspaceBox);
+  expect(navigationBox.height).toBe(workspaceBox.height);
+});
+
+test("app shell collapses workspace switcher with the navigation column", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=closed");
+
+  const navigationColumn = page.getByTestId("shell-navigation-column");
+  const workspaceSwitcher = page.getByTestId("workspace-switcher");
+
+  await expect(workspaceSwitcher).toBeVisible();
+  await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
+  await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
+  await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
+
+  const navigationBox = await navigationColumn.boundingBox();
+  const switcherBox = await workspaceSwitcher.boundingBox();
+
+  expectRect(navigationBox);
+  expectRect(switcherBox);
+  expect(Math.round(navigationBox.width)).toBe(48);
+  expect(Math.round(switcherBox.width)).toBe(48);
 });
 
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {
