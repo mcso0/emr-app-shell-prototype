@@ -5,8 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
-import { NavRail } from "@/shell/nav-rail";
-import { WorkspaceFrame } from "@/shell/workspace-frame";
+import { ShellMain } from "@/shell/shell-main";
 import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
 
 type AppShellProps = {
@@ -293,17 +292,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onForward={handleTabForward}
         onNewTab={handleNewTab}
       />
-      <div className="grid h-[calc(100vh-58px)] grid-cols-[48px_1fr] gap-2.5 px-2.5 pt-2.5 pb-2.5">
-        <NavRail
-          activeModuleId={moduleDefinition.id}
-          navigationSearch={navigationSearch}
-          workspaceId={workspaceId}
-          onNavigateModule={handleNavigateModule}
-        />
-        <div data-testid="workspace-frame" className="min-h-0 min-w-0 [&>main]:h-full">
-          <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
-        </div>
-      </div>
+      <ShellMain
+        moduleDefinition={moduleDefinition}
+        navigationSearch={navigationSearch}
+        workspaceId={workspaceId}
+        onNavigateModule={handleNavigateModule}
+      />
     </div>
   );
 }
