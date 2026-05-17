@@ -9,10 +9,8 @@ import {
   CloseIcon,
   HelpIcon,
   SettingsIcon,
-  WorkspaceLogoMarkIcon,
 } from "@/components/icons";
 import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
-import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/auth-client";
 import { cn } from "@/lib/utils";
@@ -129,18 +127,6 @@ export function WorkspaceTabsBar({
       data-testid="workspace-tabs-bar"
       className="relative z-20 flex h-[58px] items-center gap-2.5 bg-[var(--emr-surface-app)] px-2.5"
     >
-      <button
-        type="button"
-        className="flex h-10 min-w-[240px] items-center justify-center gap-2 rounded-[var(--emr-radius-panel)] bg-[var(--emr-surface-panel)] px-3 text-[15px] font-semibold text-[var(--emr-text-primary)] shadow-[var(--emr-shadow-control)] outline-none transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/40"
-        aria-label={`${workspaceId} 워크스페이스 선택`}
-      >
-        <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-primary text-primary-foreground">
-          <WorkspaceLogoMarkIcon className="size-7" aria-hidden="true" />
-        </span>
-        <span className="truncate">VIP 동물의료센터 청담점</span>
-        <CdsNavigationChevronDownIcon className="size-4 shrink-0 text-foreground" aria-hidden="true" />
-      </button>
-
       <GlobalCommandPalette workspaceId={workspaceId} />
 
       <Button
