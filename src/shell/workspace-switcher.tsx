@@ -27,7 +27,7 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
       <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-primary text-primary-foreground">
         <WorkspaceLogoMarkIcon className="size-7" aria-hidden="true" />
       </span>
-      <span className={cn("truncate", collapsed && "sr-only")}>VIP 동물의료센터 청담점</span>
+      <span className={cn("truncate", collapsed && "hidden")}>VIP 동물의료센터 청담점</span>
       <CdsNavigationChevronDownIcon
         className={cn("size-4 shrink-0 text-foreground", collapsed && "hidden")}
         aria-hidden="true"
