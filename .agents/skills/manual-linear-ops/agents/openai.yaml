@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manual Linear Ops"
+  short_description: "Run this repo's manual Linear workflow"
+  default_prompt: "Use $manual-linear-ops to plan and manage this Linear work."
