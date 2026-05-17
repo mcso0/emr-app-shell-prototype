@@ -50,10 +50,10 @@ export function ShellMain({
 
   return (
     <div
-      className="grid min-h-0 transition-[grid-template-columns] max-md:grid-cols-1"
+      className="grid min-h-0 grid-cols-[minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
       style={{
+        "--clair-shell-main-columns": `${navigationColumnWidth}px minmax(0, 1fr)`,
         gap: SHELL_LAYOUT.shell.gap,
-        gridTemplateColumns: `${navigationColumnWidth}px minmax(0, 1fr)`,
         height: `calc(100vh - ${SHELL_LAYOUT.shell.tabsBarHeight}px)`,
         padding: SHELL_LAYOUT.shell.bodyPadding,
         transitionDuration: reduceMotion ? "0ms" : "160ms",
@@ -118,8 +118,10 @@ export function ShellMain({
         </div>
       </section>
 
-      <section data-testid="shell-workspace-area" className="min-h-0 min-w-0 [&>main]:h-full">
-        <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
+      <section data-testid="shell-workspace-area" className="min-h-0 min-w-0">
+        <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
+          <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
+        </div>
       </section>
     </div>
   );
