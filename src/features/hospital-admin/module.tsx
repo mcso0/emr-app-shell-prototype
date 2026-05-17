@@ -281,7 +281,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   };
 
   return (
-    <aside className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-card">
+    <aside className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-[var(--emr-surface-sidepanel)]">
       <EmrSubpanelTitle
         title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
         collapseLabel="병원관리 사이드 패널 접기"
@@ -466,7 +466,7 @@ export function HospitalAdminContent() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <section className="border-b bg-card px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

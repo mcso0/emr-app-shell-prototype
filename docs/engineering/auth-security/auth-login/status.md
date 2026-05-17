@@ -1,6 +1,6 @@
 # Auth Login Status
 
-Updated: 2026-05-03
+Updated: 2026-05-17
 
 ## 목표
 
@@ -37,6 +37,8 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - Membership/permission enforcement plan은 `docs/engineering/auth-security/auth-login/membership-permission-enforcement.md`에 문서화되어 있다.
 - Supabase project API live validation, callback route, DB migration, RLS, server permission enforcement code는 아직 연결하지 않았다.
 - 2026-05-14 기준 `/login`, auth gate loading state, top menu workspace selector, auth profile trigger/menu의 직접 Clair/local color usage는 DESIGN-SYSTEM-PR-015에서 shadcn semantic token과 EMR alias token으로 정리했다. Auth behavior, Supabase adapter boundary, mock session storage, safe `next`, and logout flow were not changed.
+- 2026-05-17 기준 workspace auth product scope는 `docs/product/domain/workspace-auth-permissions.md`에 고정했다. Canonical MVP roles are `hospital_admin`, `vet`, `technician`, and `front_desk`; current seed roles `nurse` and `billing_admin` are compatibility/legacy implementation details until follow-up implementation reconciles them.
+- 2026-05-17 기준 workspace membership data/security plan은 `docs/engineering/auth-security/auth-login/workspace-membership-data-security-plan.md`에 고정했다. MVP membership roles are additive `roles text[]`; personal profile data is separated from authorization source; last active `hospital_admin` protection requires a server transaction or private RPC; migration SQL, RLS SQL, and live Supabase validation remain out of scope.
 
 ## 완료된 작업
 
@@ -48,11 +50,14 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `docs/completed/auth/2026-05-03-supabase-provider-implementation.md`
 - `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`
 - `docs/completed/design/2026-05-14-auth-login-token-cleanup.md`
+- `docs/completed/auth/2026-05-17-den-18-workspace-auth-scope-report.html`
+- `docs/completed/auth/2026-05-17-den-20-workspace-membership-data-security-report.html`
 - GitHub PR #10: `feat: add auth transition boundary`
 
 ## 다음 작업
 
-1. 별도 승인 후 permission resolver, migration/RLS, API/server action enforcement 중 하나를 독립 work order로 진행한다.
+1. Complete `AUTH-PR-002` / Linear `DEN-20` Human Review.
+2. Then proceed in order through workspace creation, invitation/membership, permission resolver, admin/profile UI, and first server enforcement slice.
 
 ## 금지 범위
 

@@ -661,7 +661,7 @@ function DispensingContentBody({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
       <EmrInstructionHeaderStack
         titleBar={
           <EmrInstructionTitleBar

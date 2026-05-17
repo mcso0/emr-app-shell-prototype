@@ -363,7 +363,7 @@ export function InpatientContent() {
   }));
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <div className="shrink-0 border-b bg-card px-4 py-3">
         <EmrInstructionHeaderStack
           titleBar={

@@ -1,7 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import type { Transition } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type { CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
 import {
@@ -19,21 +18,15 @@ type WorkspaceFrameProps = {
   workspaceId: string;
 };
 
-const PANEL_ENTER_EASE = [0.16, 0, 0.08, 1] as const;
-const PANEL_EXIT_EASE = [0.32, 0, 1, 1] as const;
-
 export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrameProps) {
-  const reduceMotion = useReducedMotion();
   const {
     activeDrawer,
     contentAsideOpen,
     contentAsideWidth,
-    modulePanelOpen,
     rightPanelOpen,
     rightPanelWidth,
     setActiveDrawer,
   } = useLayoutStore();
-  const SidePanel = moduleDefinition.sidePanel;
   const Header = moduleDefinition.contentHeader;
   const ContentAside = moduleDefinition.contentAside;
   const Content = moduleDefinition.content;
@@ -66,14 +59,6 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       ? SHELL_LAYOUT.drawer.largeWidth
       : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
-  const shouldShowModuleSidePanel = Boolean(modulePanelOpen && SidePanel);
-  const effectiveModuleSidePanelWidth = SHELL_LAYOUT.moduleSidePanel.defaultWidth;
-  const modulePanelTransition: Transition = reduceMotion
-    ? { duration: 0 }
-    : {
-        duration: modulePanelOpen ? 0.16 : 0.12,
-        ease: modulePanelOpen ? PANEL_ENTER_EASE : PANEL_EXIT_EASE,
-      };
   const effectiveContentAsideWidth = Math.max(
     contentAsideWidth,
     SHELL_LAYOUT.contentAside.minWidth
@@ -92,54 +77,14 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-card transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
       style={{
-        "--clair-workspace-frame-columns": `${
-          modulePanelOpen && SidePanel ? `${effectiveModuleSidePanelWidth}px` : "0px"
-        } minmax(0, 1fr) ${
+        "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
         }`,
-        transitionDuration: reduceMotion
-          ? "0ms"
-          : modulePanelOpen
-            ? "var(--clair-motion-duration-panel-enter)"
-            : "var(--clair-motion-duration-panel-exit)",
-        transitionTimingFunction: modulePanelOpen
-          ? "var(--clair-motion-easing-panel-enter)"
-          : "var(--clair-motion-easing-panel-exit)",
       } as CSSProperties}
     >
-      <aside
-        className={cn(
-          "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-panel)] max-md:hidden",
-          shouldShowModuleSidePanel && "border-r border-[var(--emr-line-default)]"
-        )}
-      >
-        <div
-          className="relative flex h-full flex-col"
-          style={{
-            minWidth: SHELL_LAYOUT.moduleSidePanel.minWidth,
-            width: effectiveModuleSidePanelWidth,
-          }}
-        >
-          <AnimatePresence initial={false}>
-            {shouldShowModuleSidePanel && SidePanel ? (
-              <motion.div
-                key={`${moduleDefinition.id}-module-side-panel`}
-                initial={reduceMotion ? false : { opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={reduceMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
-                transition={modulePanelTransition}
-                className="h-full min-h-0"
-              >
-                <SidePanel {...slotProps} />
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
-      </aside>
-
-      <section className="relative flex min-h-0 min-w-0 flex-col bg-card">
+      <section className="relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]">
         {Header ? <Header {...slotProps} /> : null}
         <div
           className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
@@ -151,7 +96,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
         >
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden bg-card max-md:hidden",
+              "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-content-panel)] max-md:hidden",
               ContentAside && contentAsideOpen && "border-r border-[var(--emr-line-default)]"
             )}
           >
@@ -224,7 +169,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 min-w-0 overflow-hidden bg-card transition-opacity duration-150 max-md:hidden",
+          "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] transition-opacity duration-150 max-md:hidden",
           RightPanel && rightPanelOpen && "border-l border-[var(--emr-line-default)]",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}

@@ -25,7 +25,7 @@ export function DemoLauncher() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-app)]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <section className="border-b bg-card px-6 py-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

@@ -1,6 +1,6 @@
 # Supabase Auth Mapping
 
-Updated: 2026-05-03
+Updated: 2026-05-17
 
 이 문서는 Work Order 01의 결과물이다. 실제 Supabase 연결, package 설치, env 연결, DB migration, RLS policy, auth code 변경 없이 Supabase Auth session과 앱 도메인 사용자/멤버십/권한 source의 관계만 고정한다.
 
@@ -36,6 +36,8 @@ Updated: 2026-05-03
 
 `user_memberships`는 사용자가 어떤 병원/워크스페이스에 어떤 역할로 소속되어 있는지 표현한다. 한 사용자는 여러 workspace에 속할 수 있고, 현재 라우트의 `/w/[workspaceId]/...`가 permission lookup의 workspace scope가 된다.
 
+2026-05-17 DEN-20 decision: MVP role assignment is additive and is represented as `roles text[]` on the membership row. This replaces the earlier single-role planning note. If future custom roles, deny rules, or detailed role history are approved, this can migrate to a normalized `user_membership_roles` table.
+
 핵심 필드:
 
 | Field | Purpose |
@@ -43,7 +45,7 @@ Updated: 2026-05-03
 | `id` | membership row id |
 | `workspace_id` | 소속 workspace. workspace는 branch/organization을 통해 병원 운영 단위에 연결된다 |
 | `user_id` | 앱 `users.id`, 즉 Supabase `auth.users.id`와 동일한 UUID |
-| `role` | workspace 안의 기본 역할 |
+| `roles` | workspace 안의 canonical role 배열. MVP 값은 `hospital_admin`, `vet`, `technician`, `front_desk` |
 | `department`, `title`, `hire_date` | 직원 표시/운영 정보 |
 | `status` | `active`, `inactive`, `invited` 같은 membership 상태 |
 | `created_at`, `updated_at` | 감사와 운영 추적 |
@@ -53,22 +55,38 @@ Updated: 2026-05-03
 - `unique(workspace_id, user_id)`를 유지한다.
 - membership이 없거나 `status != active`인 사용자는 해당 workspace의 제품 권한을 가진 것으로 보지 않는다.
 - workspace switching은 session만으로 결정하지 않고, 선택한 `workspace_id`에 대한 active membership 조회 결과로 결정한다.
+- active membership의 `roles`는 비어 있을 수 없다.
+- 마지막 active `hospital_admin` 제거, 비활성화, 강등은 server-side transaction 또는 private RPC에서 차단한다.
 
-canonical role:
+Product canonical roles are now defined in `docs/product/domain/workspace-auth-permissions.md`.
+
+Canonical workspace roles for the workspace auth project:
+
+| Canonical role | Label | Notes |
+|---|---|---|
+| `hospital_admin` | 병원관리자 | Full workspace/admin authority. The first workspace creator starts here. |
+| `vet` | 수의사 | Broad clinical/operational access, excluding hospital/admin settings. |
+| `technician` | 테크니션 | Clinical support. Chart/medical record view only; operational completion can be granted. |
+| `front_desk` | 데스크 | Reception/customer-facing role. Chart/medical record view only. |
+
+Current seed compatibility:
 
 | Canonical role | Label | Current alias/reference |
 |---|---|---|
 | `front_desk` | 프론트 데스크 | DB spec의 `desk`와 대응 |
 | `vet` | 수의사 | DB spec의 `veterinarian`과 대응 |
-| `nurse` | 간호/테크니션 | 기존 mock/seed 유지 |
-| `billing_admin` | 수납 관리자 | DB spec의 `billing`보다 현재 seed와 맞춘다 |
+| `technician` | 테크니션 | 현재 mock/seed의 `nurse`와 대응. 구현 시 alias 또는 rename을 명시적으로 처리한다. |
 | `hospital_admin` | 병원 관리자 | 현재 seed와 맞춘다 |
+
+`billing_admin`은 기존 seed에는 있지만 대표 요구사항의 canonical MVP role set에는 포함하지 않는다. 수납 권한은 초기에는 `hospital_admin`, `vet`, `technician`, `front_desk` 권한표로 표현하고, 별도 수납 전용 역할은 후속 제품 결정 후 추가한다.
 
 `system_admin`은 전체 SaaS 운영자 역할로 필요할 수 있지만, 현재 MVP auth transition의 workspace role canonical set에는 포함하지 않는다. 후속 병원관리/운영자 계획에서 별도 scope로 추가한다.
 
 ### `permission_policies`
 
 `permission_policies`는 제품 권한 판단 source다. Supabase Auth session이나 user metadata에 권한을 싣지 않는다.
+
+DEN-20 naming decision: keep the existing table name `permission_policies`; treat `role_permission_policies` as a descriptive alias, not a second table.
 
 핵심 필드:
 
