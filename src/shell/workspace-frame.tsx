@@ -77,7 +77,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] shadow-xs transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
       style={{
         "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"

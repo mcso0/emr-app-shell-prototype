@@ -36,6 +36,15 @@ async function expectHorizontalGap(page: Page, leftTestId: string, rightTestId: 
   expect(Math.round(rightBox.x - (leftBox.x + leftBox.width))).toBe(expectedGap);
 }
 
+async function waitForTestIdWidth(page: Page, testId: string, expectedWidth: number) {
+  await expect
+    .poll(async () => {
+      const box = await page.getByTestId(testId).boundingBox();
+      return box ? Math.round(box.width) : null;
+    })
+    .toBe(expectedWidth);
+}
+
 async function clearWorkspaceTabs(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
@@ -159,7 +168,7 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   expectRect(modulePanelBox);
   expectRect(workspaceBox);
   expect(Math.round(navigationBox.width)).toBe(48);
-  expect(Math.round(switcherBox.width)).toBe(32);
+  expect(Math.round(switcherBox.width)).toBe(48);
   expect(Math.round(switcherBox.height)).toBe(32);
   expect(Math.round(modulePanelBox.width)).toBe(48);
   expect(workspaceBox.width).toBeGreaterThan(300);
@@ -167,9 +176,11 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
 
 test("app shell collapses workspace switcher with the navigation column", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=closed");
+  await waitForTestIdWidth(page, "shell-navigation-column", 48);
 
   const navigationColumn = page.getByTestId("shell-navigation-column");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
+  const workspaceMark = workspaceSwitcher.locator('[data-slot="workspace-switcher-mark"]');
 
   await expect(workspaceSwitcher).toBeVisible();
   await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
@@ -178,12 +189,16 @@ test("app shell collapses workspace switcher with the navigation column", async 
 
   const navigationBox = await navigationColumn.boundingBox();
   const switcherBox = await workspaceSwitcher.boundingBox();
+  const markBox = await workspaceMark.boundingBox();
 
   expectRect(navigationBox);
   expectRect(switcherBox);
+  expectRect(markBox);
   expect(Math.round(navigationBox.width)).toBe(48);
-  expect(Math.round(switcherBox.width)).toBe(32);
+  expect(Math.round(switcherBox.width)).toBe(48);
   expect(Math.round(switcherBox.height)).toBe(32);
+  expect(Math.round(markBox.width)).toBe(24);
+  expect(Math.round(markBox.x + markBox.width / 2)).toBe(Math.round(navigationBox.x + navigationBox.width / 2));
 });
 
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {

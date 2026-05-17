@@ -72,7 +72,7 @@ const allFilterLabel = "전체";
 const unassignedFilterLabel = "미지정";
 
 const viewLabels: Record<HomeWorkspaceView, string> = {
-  home: "홈",
+  home: "업무 요약",
   hospital: "업무 현황",
 };
 

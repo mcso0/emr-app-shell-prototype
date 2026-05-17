@@ -11,10 +11,12 @@ import {
   StethoscopeIcon,
   UserIcon,
 } from "@/components/icons";
+import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { SegmentedControl, type SegmentedControlItem } from "@/components/ui/segmented-control";
 import {
   mockAppointments,
   mockEncounters,
@@ -30,6 +32,7 @@ import type { AppIcon } from "@/components/icons";
 import type { Appointment, Encounter, EmrId, Guardian, Patient } from "@/types/emr-domain";
 
 type CommandItemKind = "action" | "patient" | "guardian" | "appointment" | "encounter";
+type CommandFilter = "all" | "patient" | "guardian" | "phone" | "chart" | "vet" | "technician" | "desk";
 
 type CommandItem = {
   id: string;
@@ -40,6 +43,7 @@ type CommandItem = {
   badge?: string;
   icon: AppIcon;
   keywords: string[];
+  filterKeywords?: Partial<Record<CommandFilter, string[]>>;
 };
 
 type CommandSection = {
@@ -49,6 +53,17 @@ type CommandSection = {
 };
 
 const MAX_ITEMS_PER_SECTION = 6;
+
+const commandFilterItems: Array<SegmentedControlItem<CommandFilter>> = [
+  { value: "all", label: "전체" },
+  { value: "patient", label: "동물" },
+  { value: "guardian", label: "보호자" },
+  { value: "phone", label: "전화번호" },
+  { value: "chart", label: "차트 번호" },
+  { value: "vet", label: "수의사" },
+  { value: "technician", label: "테크니션" },
+  { value: "desk", label: "데스크" },
+];
 
 const quickActionSpecs = [
   {
@@ -131,6 +146,10 @@ function getStaffName(userId?: EmrId) {
   return userId ? mockStaffUsers.find((staff) => staff.id === userId)?.name : undefined;
 }
 
+function getStaffRole(userId?: EmrId) {
+  return userId ? mockStaffUsers.find((staff) => staff.id === userId)?.role : undefined;
+}
+
 function getPatient(patientId: EmrId) {
   return mockPatients.find((patient) => patient.id === patientId);
 }
@@ -174,6 +193,12 @@ function buildPatientItem(workspaceId: string, patient: Patient): CommandItem {
     badge: "환자",
     icon: UserIcon,
     keywords: patientKeywords(patient, guardian),
+    filterKeywords: {
+      patient: [patient.name, patient.breed, patient.microchipNo, patient.patientRegistrationNo].filter(Boolean) as string[],
+      guardian: [guardian?.name].filter(Boolean) as string[],
+      phone: [guardian?.mobilePhone, guardian?.phone].filter(Boolean) as string[],
+      chart: [patient.patientNo, patient.patientRegistrationNo].filter(Boolean) as string[],
+    },
   };
 }
 
@@ -193,6 +218,11 @@ function buildGuardianItem(workspaceId: string, guardian: Guardian): CommandItem
     keywords: [guardian.name, guardian.mobilePhone, guardian.phone, guardian.email, ...patientNames].filter(
       Boolean
     ) as string[],
+    filterKeywords: {
+      patient: patientNames,
+      guardian: [guardian.name, guardian.email].filter(Boolean) as string[],
+      phone: [guardian.mobilePhone, guardian.phone].filter(Boolean) as string[],
+    },
   };
 }
 
@@ -200,14 +230,14 @@ function buildAppointmentItem(workspaceId: string, appointment: Appointment): Co
   const patient = getPatient(appointment.patientId);
   const guardian = getGuardian(appointment.guardianId, appointment.patientId);
   if (!patient) return null;
+  const assignedVetName = getStaffName(appointment.assignedVeterinarianId);
+  const createdByName = getStaffName(appointment.createdByUserId);
 
   return {
     id: `appointment-${appointment.id}`,
     kind: "appointment",
     title: `${patient.name} · ${appointment.visitPurpose ?? "예약"}`,
-    subtitle: `${formatShortTime(appointment.scheduledStartAt)} · ${guardian?.name ?? "보호자 미지정"} · ${
-      getStaffName(appointment.assignedVeterinarianId) ?? "담당 미정"
-    }`,
+    subtitle: `${formatShortTime(appointment.scheduledStartAt)} · ${guardian?.name ?? "보호자 미지정"} · ${assignedVetName ?? "담당 미정"}`,
     href: createHref(workspaceId, "reception", {
       patientId: patient.id,
       drawer: `reception-appointment:${appointment.id}`,
@@ -221,8 +251,17 @@ function buildAppointmentItem(workspaceId: string, appointment: Appointment): Co
       guardian?.mobilePhone,
       appointment.visitPurpose,
       appointment.symptomNote,
-      getStaffName(appointment.assignedVeterinarianId),
+      assignedVetName,
+      createdByName,
     ].filter(Boolean) as string[],
+    filterKeywords: {
+      patient: [patient.name, appointment.visitPurpose, appointment.symptomNote].filter(Boolean) as string[],
+      guardian: [guardian?.name].filter(Boolean) as string[],
+      phone: [guardian?.mobilePhone, guardian?.phone].filter(Boolean) as string[],
+      chart: [patient.patientNo, patient.patientRegistrationNo].filter(Boolean) as string[],
+      vet: appointment.assignedVeterinarianId ? [assignedVetName].filter(Boolean) as string[] : [],
+      desk: getStaffRole(appointment.createdByUserId) === "desk" ? [createdByName].filter(Boolean) as string[] : [],
+    },
   };
 }
 
@@ -232,6 +271,7 @@ function buildEncounterItem(workspaceId: string, encounter: Encounter): CommandI
   if (!patient) return null;
 
   const queueEntry = mockWaitingQueueEntries.find((entry) => entry.encounterId === encounter.id);
+  const primaryVetName = getStaffName(encounter.primaryVeterinarianId);
 
   return {
     id: `encounter-${encounter.id}`,
@@ -255,21 +295,32 @@ function buildEncounterItem(workspaceId: string, encounter: Encounter): CommandI
       encounter.encounterNo,
       encounter.chiefComplaint,
       encounter.visitPurpose,
-      getStaffName(encounter.primaryVeterinarianId),
+      primaryVetName,
     ].filter(Boolean) as string[],
+    filterKeywords: {
+      patient: [patient.name, encounter.chiefComplaint, encounter.visitPurpose].filter(Boolean) as string[],
+      guardian: [guardian?.name].filter(Boolean) as string[],
+      phone: [guardian?.mobilePhone, guardian?.phone].filter(Boolean) as string[],
+      chart: [patient.patientNo, patient.patientRegistrationNo, encounter.encounterNo].filter(Boolean) as string[],
+      vet: encounter.primaryVeterinarianId ? [primaryVetName].filter(Boolean) as string[] : [],
+    },
   };
 }
 
-function buildCommandSections(workspaceId: string, query: string): CommandSection[] {
+function buildCommandSections(workspaceId: string, query: string, filter: CommandFilter): CommandSection[] {
   const normalizedQuery = normalizeText(query);
+  const matchesFilter = (item: CommandItem) => {
+    if (filter === "all") return true;
+    const filterKeywords = item.filterKeywords?.[filter] ?? [];
+    return filterKeywords.length > 0;
+  };
   const matchesQuery = (item: CommandItem) => {
     if (!normalizedQuery) return true;
-    return normalizeText([item.title, item.subtitle, item.badge, ...item.keywords].join(" ")).includes(
-      normalizedQuery
-    );
+    const scopedKeywords = filter === "all" ? item.keywords : item.filterKeywords?.[filter] ?? [];
+    return normalizeText([item.title, item.subtitle, item.badge, ...scopedKeywords].join(" ")).includes(normalizedQuery);
   };
   const limitItems = (items: CommandItem[], defaultLimit = 4) =>
-    items.filter(matchesQuery).slice(0, normalizedQuery ? MAX_ITEMS_PER_SECTION : defaultLimit);
+    items.filter((item) => matchesFilter(item) && matchesQuery(item)).slice(0, normalizedQuery ? MAX_ITEMS_PER_SECTION : defaultLimit);
   const quickActions: CommandItem[] = quickActionSpecs.map((action) => ({
     id: `action-${action.id}`,
     kind: "action",
@@ -279,6 +330,10 @@ function buildCommandSections(workspaceId: string, query: string): CommandSectio
     badge: action.badge,
     icon: action.icon,
     keywords: [...action.keywords, action.title, action.subtitle],
+    filterKeywords: {
+      desk: action.moduleId === "reception" ? [...action.keywords, action.title, action.subtitle] : [],
+      vet: action.moduleId === "treatment" ? [...action.keywords, action.title, action.subtitle] : [],
+    },
   }));
   const patientItems = mockPatients.map((patient) => buildPatientItem(workspaceId, patient));
   const guardianItems = mockGuardians.map((guardian) => buildGuardianItem(workspaceId, guardian));
@@ -324,7 +379,8 @@ export function GlobalCommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const sections = useMemo(() => buildCommandSections(workspaceId, query), [query, workspaceId]);
+  const [activeFilter, setActiveFilter] = useState<CommandFilter>("all");
+  const sections = useMemo(() => buildCommandSections(workspaceId, query, activeFilter), [activeFilter, query, workspaceId]);
   const flattenedItems = useMemo(() => flattenSections(sections), [sections]);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -351,12 +407,18 @@ export function GlobalCommandPalette({
     setOpen(nextOpen);
     if (!nextOpen) {
       setQuery("");
+      setActiveFilter("all");
       setActiveIndex(0);
     }
   };
 
   const handleQueryChange = (nextQuery: string) => {
     setQuery(nextQuery);
+    setActiveIndex(0);
+  };
+
+  const handleFilterChange = (nextFilter: CommandFilter) => {
+    setActiveFilter(nextFilter);
     setActiveIndex(0);
   };
 
@@ -398,17 +460,18 @@ export function GlobalCommandPalette({
         size={triggerVariant === "icon" ? "icon" : "default"}
         className={cn(
           triggerVariant === "icon"
-            ? "justify-center rounded-[var(--emr-radius-control)] px-0 text-muted-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:ring-ring/40"
+            ? "justify-center rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card px-0 text-muted-foreground shadow-none hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:ring-ring/40"
             : "mx-auto h-8 w-[min(560px,45vw)] min-w-8 rounded-lg border-border bg-card px-3 text-left shadow-sm hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2",
         )}
         aria-label="전역 통합 검색 열기"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <SearchIcon
-          className={cn("shrink-0 text-muted-foreground", triggerVariant === "icon" ? "size-4" : "size-3.5")}
-          aria-hidden="true"
-        />
+        {triggerVariant === "icon" ? (
+          <CdsActionsSearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        )}
         {triggerVariant === "wide" ? (
           <>
             <span className="min-w-0 flex-1 truncate px-2 text-[12px] text-muted-foreground max-sm:hidden">
@@ -424,7 +487,8 @@ export function GlobalCommandPalette({
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="top-[88px] max-h-[min(720px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] translate-y-0 gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-2xl sm:max-w-[720px]"
+          className="h-[min(680px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-[0_34px_110px_rgba(0,0,0,0.28),0_14px_38px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] sm:max-w-[720px]"
+          overlayClassName="bg-transparent backdrop-blur-none [-webkit-backdrop-filter:none] [backdrop-filter:none] supports-backdrop-filter:backdrop-blur-none"
           showCloseButton={false}
         >
           <DialogTitle className="sr-only">통합 검색과 빠른 실행</DialogTitle>
@@ -446,7 +510,17 @@ export function GlobalCommandPalette({
               Esc
             </kbd>
           </div>
-          <div className="max-h-[560px] overflow-y-auto px-2 py-2">
+          <div className="px-4 py-2">
+            <SegmentedControl
+              value={activeFilter}
+              items={commandFilterItems}
+              aria-label="검색 필터"
+              className="max-w-full gap-1.5 overflow-x-auto"
+              itemClassName="h-6 min-h-6 rounded-full px-2.5 py-0 text-[12px] font-medium leading-4 tracking-normal aria-pressed:border-transparent aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+              onValueChange={handleFilterChange}
+            />
+          </div>
+          <div className="min-h-0 overflow-y-auto px-2 py-2">
             {sections.length ? (
               sections.map((section, sectionIndex) => (
                 <div key={section.id}>
@@ -522,7 +596,7 @@ function CommandSectionView({
               onClick={() => onRunCommand(item)}
               onMouseEnter={() => onSetActiveIndex(itemIndex)}
             >
-              <span className="flex size-8 items-center justify-center rounded-[8px] border border-border bg-card text-muted-foreground">
+              <span className="flex size-8 items-center justify-center rounded-[8px] bg-[var(--clair-color-atomic-black-alpha-4)] text-muted-foreground">
                 <Icon className="size-4" aria-hidden="true" />
               </span>
               <span className="min-w-0">

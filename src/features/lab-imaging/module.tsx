@@ -448,6 +448,7 @@ function LabQueueItem({
   return (
     <div data-testid={`lab-queue-item-${item.result.id}`}>
       <EmrSidePanelCard
+        selectionVariant="modulePanel"
         selected={selected}
         onSelect={onSelect}
         testId={`lab-queue-card-${item.result.id}`}
@@ -537,6 +538,7 @@ function LabChartQueueItem({
   return (
     <div data-testid={`lab-chart-group-${group.encounter.id}`}>
       <EmrSidePanelCard
+        selectionVariant="modulePanel"
         selected={selected}
         onSelect={onSelect}
         testId={`lab-chart-card-${group.encounter.id}`}
@@ -594,6 +596,7 @@ function ImagingQueueItem({
   return (
     <div data-testid={`imaging-queue-item-${item.study.id}`}>
       <EmrSidePanelCard
+        selectionVariant="modulePanel"
         selected={selected}
         onSelect={onSelect}
         testId={`imaging-queue-card-${item.study.id}`}
@@ -719,6 +722,7 @@ function ImagingChartQueueItem({
   return (
     <div data-testid={`imaging-chart-group-${group.encounter.id}`}>
       <EmrSidePanelCard
+        selectionVariant="modulePanel"
         selected={selected}
         onSelect={onSelect}
         testId={`imaging-chart-card-${group.encounter.id}`}

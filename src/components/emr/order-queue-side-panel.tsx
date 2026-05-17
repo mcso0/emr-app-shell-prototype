@@ -268,6 +268,7 @@ function OrderQueueCard({
 }) {
   return (
     <EmrSidePanelCard
+      selectionVariant="modulePanel"
       selected={selected}
       testId={`order-queue-item-${item.id}`}
       onSelect={onSelect}

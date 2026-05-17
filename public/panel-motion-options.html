@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel Motion Options</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --app: #eef0f4;
+        --surface: #ffffff;
+        --surface-2: #f7f8fa;
+        --line: #d9dde5;
+        --line-strong: #b7bfcc;
+        --ink: #16181d;
+        --muted: #687180;
+        --faint: #929aa8;
+        --rail: #111318;
+        --rail-icon: #b9c0cb;
+        --blue: #1f6feb;
+        --teal: #098b7c;
+        --orange: #c7691c;
+        --nav: 48px;
+        --gap: 10px;
+        --panel: 296px;
+        --open: calc(var(--nav) + var(--gap) + var(--panel));
+        --closed: var(--nav);
+        --radius: 8px;
+        --ease-in: cubic-bezier(0.16, 0, 0.08, 1);
+        --ease-out: cubic-bezier(0.32, 0, 1, 1);
+        --ease-soft: cubic-bezier(0.2, 0, 0, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--app);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        display: grid;
+        align-content: start;
+        gap: 18px;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: end;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      .lead {
+        max-width: 780px;
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .toolbar button,
+      .demo-toggle {
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+        color: var(--ink);
+        padding: 0 12px;
+        cursor: pointer;
+      }
+
+      .toolbar button:hover,
+      .demo-toggle:hover {
+        border-color: var(--line-strong);
+      }
+
+      .demos {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .section-label {
+        display: grid;
+        gap: 4px;
+        margin-top: 4px;
+      }
+
+      .section-label h2 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      .section-label p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .card {
+        display: grid;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: 0 12px 24px rgb(22 24 29 / 0.06);
+      }
+
+      .card-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+      }
+
+      .card-title {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .badge {
+        display: inline-flex;
+        height: 20px;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0 8px;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .badge.current {
+        background: var(--orange);
+      }
+
+      .badge.recommended {
+        background: var(--blue);
+      }
+
+      .badge.alt {
+        background: var(--teal);
+      }
+
+      .notes {
+        display: grid;
+        gap: 6px;
+        border-top: 1px solid var(--line);
+        background: var(--surface-2);
+        padding: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .note-title {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .demo-shell {
+        --left-width: var(--open);
+        display: grid;
+        grid-template-columns: var(--left-width) minmax(0, 1fr);
+        gap: var(--gap);
+        height: 420px;
+        padding: var(--gap);
+        background: #f3f5f8;
+        transition-property: grid-template-columns;
+        transition-duration: 260ms;
+        transition-timing-function: var(--ease-soft);
+      }
+
+      .logo-demos {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .logo-stage {
+        --track-width: 354px;
+        --rail-center: 24px;
+        position: relative;
+        height: 154px;
+        overflow: hidden;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background:
+          linear-gradient(90deg, rgb(31 111 235 / 0.1) 0 48px, transparent 48px),
+          linear-gradient(180deg, #f7f8fb, #ffffff);
+        padding: 22px 14px;
+      }
+
+      .axis-line {
+        position: absolute;
+        left: calc(14px + var(--rail-center));
+        top: 12px;
+        bottom: 12px;
+        width: 1px;
+        background: rgb(31 111 235 / 0.65);
+      }
+
+      .axis-line::before {
+        content: "rail center";
+        position: absolute;
+        left: 7px;
+        top: 0;
+        color: var(--blue);
+        font-size: 10px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .logo-track {
+        position: relative;
+        display: flex;
+        width: var(--track-width);
+        height: 40px;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 8px 16px rgb(22 24 29 / 0.06);
+        transition:
+          width 260ms var(--ease-soft),
+          padding 260ms var(--ease-soft);
+      }
+
+      .logo-stage.is-closed .logo-track {
+        width: 48px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        flex: 0 0 22px;
+        place-items: center;
+        border-radius: 7px;
+        background: var(--blue);
+        color: white;
+        font-size: 12px;
+        font-weight: 900;
+        transition:
+          margin 260ms var(--ease-soft),
+          width 260ms var(--ease-soft),
+          height 260ms var(--ease-soft),
+          transform 260ms var(--ease-soft);
+      }
+
+      .brand-copy {
+        min-width: 0;
+        overflow: hidden;
+        padding-left: 8px;
+        color: #2e3642;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+        transition:
+          opacity 180ms var(--ease-soft),
+          transform 220ms var(--ease-soft);
+      }
+
+      .logo-stage.is-closed .brand-copy {
+        opacity: 0;
+        transform: translateX(-4px);
+      }
+
+      .logo-current .logo-track {
+        padding: 0 8px;
+      }
+
+      .logo-current.logo-stage.is-closed .logo-track {
+        justify-content: center;
+        padding: 0;
+      }
+
+      .logo-padding .logo-track {
+        padding: 0 13px;
+      }
+
+      .logo-padding.logo-stage.is-closed .logo-track {
+        justify-content: center;
+        padding: 0;
+      }
+
+      .logo-slot .logo-track {
+        padding: 0;
+      }
+
+      .logo-slot .mark-slot {
+        display: grid;
+        width: 48px;
+        height: 40px;
+        flex: 0 0 48px;
+        place-items: center;
+      }
+
+      .logo-slot.logo-stage.is-closed .logo-track {
+        padding: 0;
+      }
+
+      .logo-big .brand-mark {
+        width: 24px;
+        height: 24px;
+        flex-basis: 24px;
+      }
+
+      .movement-caption {
+        display: grid;
+        gap: 4px;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .movement-caption strong {
+        color: var(--ink);
+      }
+
+      .demo-shell.is-closed {
+        --left-width: var(--closed);
+      }
+
+      .left {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: var(--gap);
+      }
+
+      .switcher-row {
+        position: relative;
+        height: 32px;
+        min-width: 0;
+      }
+
+      .switcher {
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: flex;
+        height: 32px;
+        max-width: 100%;
+        align-items: center;
+        gap: 8px;
+        overflow: hidden;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        color: #303844;
+        padding: 0 8px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        transition:
+          left 220ms var(--ease-soft),
+          width 160ms var(--ease-soft),
+          opacity 160ms var(--ease-soft),
+          transform 160ms var(--ease-soft);
+      }
+
+      .logo {
+        display: grid;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--blue);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .chevron {
+        color: var(--faint);
+      }
+
+      .panel-area {
+        display: grid;
+        min-height: 0;
+        flex: 1;
+        grid-template-columns: var(--nav) minmax(0, var(--panel));
+        gap: var(--gap);
+      }
+
+      .rail {
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        overflow: hidden;
+        border-radius: var(--radius);
+        background: var(--rail);
+        padding: 8px;
+      }
+
+      .rail-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .rail-button,
+      .rail-toggle {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--rail-icon);
+      }
+
+      .rail-button.active {
+        background: rgb(255 255 255 / 0.16);
+        color: #ffffff;
+      }
+
+      .rail-divider {
+        width: 24px;
+        height: 1px;
+        background: rgb(255 255 255 / 0.12);
+      }
+
+      .avatar {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 50%;
+        background: #f2f4f7;
+        color: #16181d;
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .side-panel {
+        min-width: var(--panel);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+      }
+
+      .panel-inner {
+        width: var(--panel);
+      }
+
+      .panel-title {
+        display: flex;
+        height: 48px;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        padding: 0 14px;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .collapse-hit {
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 7px;
+        background: #f2f4f7;
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .list {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .list-item {
+        display: grid;
+        gap: 5px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 10px;
+      }
+
+      .skeleton {
+        height: 8px;
+        border-radius: 999px;
+        background: #e3e7ed;
+      }
+
+      .main {
+        display: grid;
+        min-width: 0;
+        grid-template-rows: 32px minmax(0, 1fr);
+        gap: var(--gap);
+      }
+
+      .tabs {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tab {
+        display: inline-flex;
+        height: 32px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--surface);
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .workspace {
+        display: grid;
+        min-width: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+
+      .context {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        padding: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .pill {
+        border-radius: 999px;
+        background: #edf2ff;
+        color: #244f9e;
+        padding: 5px 8px;
+        font-weight: 700;
+      }
+
+      .workspace-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .pane {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 12px;
+      }
+
+      .pane h3 {
+        margin: 0 0 12px;
+        font-size: 13px;
+      }
+
+      .text-lines {
+        display: grid;
+        gap: 10px;
+      }
+
+      .line {
+        height: 9px;
+        border-radius: 999px;
+        background: #e5e8ee;
+      }
+
+      .line.short {
+        width: 60%;
+      }
+
+      .current-demo .demo-shell {
+        transition-duration: 160ms;
+        transition-timing-function: var(--ease-in);
+      }
+
+      .current-demo .panel-area {
+        transition: grid-template-columns 160ms var(--ease-in);
+      }
+
+      .current-demo .demo-shell.is-closed .panel-area {
+        grid-template-columns: var(--nav) 0;
+      }
+
+      .current-demo .demo-shell.is-closed .side-panel {
+        border-color: transparent;
+        opacity: 0;
+        transition:
+          opacity 120ms var(--ease-out),
+          border-color 120ms var(--ease-out);
+      }
+
+      .current-demo .side-panel {
+        transition:
+          opacity 120ms var(--ease-out),
+          border-color 120ms var(--ease-out);
+      }
+
+      .current-demo .demo-shell.is-closed .panel-inner {
+        transform: translateX(-12px);
+        opacity: 0;
+      }
+
+      .current-demo .panel-inner {
+        transition:
+          transform 120ms var(--ease-out),
+          opacity 120ms var(--ease-out);
+      }
+
+      .current-demo .demo-shell.is-closed .switcher {
+        left: 8px;
+        width: 32px;
+        padding: 0;
+      }
+
+      .current-demo .demo-shell.is-closed .switcher-label,
+      .current-demo .demo-shell.is-closed .chevron {
+        display: none;
+      }
+
+      .current-demo .rail-toggle-slot {
+        height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(-8px);
+        transition:
+          height 180ms var(--ease-soft),
+          opacity 180ms var(--ease-soft),
+          transform 180ms var(--ease-soft);
+      }
+
+      .current-demo .demo-shell.is-closed .rail-toggle-slot {
+        height: 32px;
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .recommended-demo .panel-area {
+        grid-template-columns: var(--nav) minmax(0, var(--panel));
+      }
+
+      .recommended-demo .side-panel {
+        transform-origin: left center;
+        transition:
+          opacity 220ms var(--ease-soft),
+          clip-path 260ms var(--ease-soft);
+      }
+
+      .recommended-demo .demo-shell.is-closed .side-panel {
+        opacity: 0.96;
+        clip-path: inset(0 100% 0 0);
+      }
+
+      .recommended-demo .switcher-row {
+        width: var(--left-width);
+      }
+
+      .recommended-demo .switcher {
+        width: 194px;
+      }
+
+      .recommended-demo .demo-shell.is-closed .switcher {
+        left: 8px;
+        width: 32px;
+        padding: 0;
+      }
+
+      .recommended-demo .demo-shell.is-closed .switcher-label,
+      .recommended-demo .demo-shell.is-closed .chevron {
+        opacity: 0;
+      }
+
+      .recommended-demo .rail-toggle-slot {
+        height: 32px;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.92);
+        transition:
+          opacity 180ms var(--ease-soft),
+          transform 180ms var(--ease-soft);
+      }
+
+      .recommended-demo .demo-shell.is-closed .rail-toggle-slot {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1);
+      }
+
+      .alt-demo .demo-shell {
+        transition-duration: 320ms;
+      }
+
+      .alt-demo .panel-area {
+        grid-template-columns: var(--nav) var(--panel);
+      }
+
+      .alt-demo .side-panel {
+        transition:
+          transform 300ms var(--ease-soft),
+          opacity 220ms var(--ease-soft);
+      }
+
+      .alt-demo .demo-shell.is-closed .side-panel {
+        opacity: 0;
+        transform: translateX(calc(-1 * var(--panel)));
+      }
+
+      .alt-demo .demo-shell.is-closed .switcher {
+        left: 8px;
+        width: 32px;
+        padding: 0;
+      }
+
+      .alt-demo .demo-shell.is-closed .switcher-label,
+      .alt-demo .demo-shell.is-closed .chevron {
+        opacity: 0;
+      }
+
+      .alt-demo .rail-toggle-slot {
+        height: 32px;
+        opacity: 0;
+        transform: translateX(-4px);
+        transition:
+          opacity 180ms var(--ease-soft),
+          transform 180ms var(--ease-soft);
+      }
+
+      .alt-demo .demo-shell.is-closed .rail-toggle-slot {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      @media (max-width: 1180px) {
+        .demos {
+          grid-template-columns: 1fr;
+        }
+
+        .logo-demos {
+          grid-template-columns: 1fr;
+        }
+
+        .demo-shell {
+          height: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro">
+        <div>
+          <h1>사이드 패널 접힘 모션 제안 비교</h1>
+          <p class="lead">
+            각 카드의 버튼을 눌러 접힘과 펼침을 비교하세요. 왼쪽 카드는 현재 구조에서 생기는
+            복합 전환을 과장해 재현했고, 가운데 카드는 추천안인 단일 폭 전환 + 고정 rail 축
+            방식입니다.
+          </p>
+        </div>
+        <div class="toolbar">
+          <button data-action="open-all" type="button">모두 펼치기</button>
+          <button data-action="close-all" type="button">모두 접기</button>
+          <button data-action="play-all" type="button">비교 재생</button>
+        </div>
+      </section>
+
+      <section class="demos">
+        <article class="card current-demo">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="badge current">현재식</span>
+              이중 grid + content exit
+            </div>
+            <button class="demo-toggle" type="button">접기</button>
+          </div>
+          <div class="demo-shell" data-demo>
+            <div class="left">
+              <div class="switcher-row">
+                <button class="switcher" type="button">
+                  <span class="logo">C</span>
+                  <span class="switcher-label">VIP 동물의료센터 청담점</span>
+                  <span class="chevron">⌄</span>
+                </button>
+              </div>
+              <div class="panel-area">
+                <div class="rail">
+                  <div class="rail-stack">
+                    <div class="rail-toggle-slot"><button class="rail-toggle" type="button">⇤</button></div>
+                    <button class="rail-button" type="button">⌂</button>
+                    <div class="rail-divider"></div>
+                    <button class="rail-button active" type="button">☤</button>
+                    <button class="rail-button" type="button">◇</button>
+                    <button class="rail-button" type="button">▧</button>
+                  </div>
+                  <div class="avatar">SH</div>
+                </div>
+                <aside class="side-panel">
+                  <div class="panel-inner">
+                    <div class="panel-title">접수/예약 <button class="collapse-hit" type="button">‹</button></div>
+                    <div class="list">
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+            <div class="main">
+              <div class="tabs"><span class="tab">접수/예약</span></div>
+              <div class="workspace">
+                <div class="context"><span class="pill">환자 컨텍스트</span><span>예약 · 접수 · 담당자</span></div>
+                <div class="workspace-body">
+                  <div class="pane"><h3>캘린더</h3><div class="text-lines"><div class="line"></div><div class="line short"></div><div class="line"></div></div></div>
+                  <div class="pane"><h3>업무 상세</h3><div class="text-lines"><div class="line"></div><div class="line"></div><div class="line short"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <div class="note-title">보이는 문제</div>
+            <div>바깥 폭, 안쪽 grid, 패널 content exit, 상단 rail 버튼 삽입이 동시에 일어나 위치가 튀어 보입니다.</div>
+          </div>
+        </article>
+
+        <article class="card recommended-demo">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="badge recommended">추천</span>
+              단일 width owner + rail slot 고정
+            </div>
+            <button class="demo-toggle" type="button">접기</button>
+          </div>
+          <div class="demo-shell" data-demo>
+            <div class="left">
+              <div class="switcher-row">
+                <button class="switcher" type="button">
+                  <span class="logo">C</span>
+                  <span class="switcher-label">VIP 동물의료센터 청담점</span>
+                  <span class="chevron">⌄</span>
+                </button>
+              </div>
+              <div class="panel-area">
+                <div class="rail">
+                  <div class="rail-stack">
+                    <div class="rail-toggle-slot"><button class="rail-toggle" type="button">⇤</button></div>
+                    <button class="rail-button" type="button">⌂</button>
+                    <div class="rail-divider"></div>
+                    <button class="rail-button active" type="button">☤</button>
+                    <button class="rail-button" type="button">◇</button>
+                    <button class="rail-button" type="button">▧</button>
+                  </div>
+                  <div class="avatar">SH</div>
+                </div>
+                <aside class="side-panel">
+                  <div class="panel-inner">
+                    <div class="panel-title">접수/예약 <button class="collapse-hit" type="button">‹</button></div>
+                    <div class="list">
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+            <div class="main">
+              <div class="tabs"><span class="tab">접수/예약</span></div>
+              <div class="workspace">
+                <div class="context"><span class="pill">환자 컨텍스트</span><span>예약 · 접수 · 담당자</span></div>
+                <div class="workspace-body">
+                  <div class="pane"><h3>캘린더</h3><div class="text-lines"><div class="line"></div><div class="line short"></div><div class="line"></div></div></div>
+                  <div class="pane"><h3>업무 상세</h3><div class="text-lines"><div class="line"></div><div class="line"></div><div class="line short"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <div class="note-title">구현 방향</div>
+            <div>좌측 shell 폭만 접히고, nav rail과 펼치기 버튼의 세로 공간은 유지됩니다. 패널은 clip 안에서 사라집니다.</div>
+          </div>
+        </article>
+
+        <article class="card alt-demo">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="badge alt">대안</span>
+              패널 transform slide
+            </div>
+            <button class="demo-toggle" type="button">접기</button>
+          </div>
+          <div class="demo-shell" data-demo>
+            <div class="left">
+              <div class="switcher-row">
+                <button class="switcher" type="button">
+                  <span class="logo">C</span>
+                  <span class="switcher-label">VIP 동물의료센터 청담점</span>
+                  <span class="chevron">⌄</span>
+                </button>
+              </div>
+              <div class="panel-area">
+                <div class="rail">
+                  <div class="rail-stack">
+                    <div class="rail-toggle-slot"><button class="rail-toggle" type="button">⇤</button></div>
+                    <button class="rail-button" type="button">⌂</button>
+                    <div class="rail-divider"></div>
+                    <button class="rail-button active" type="button">☤</button>
+                    <button class="rail-button" type="button">◇</button>
+                    <button class="rail-button" type="button">▧</button>
+                  </div>
+                  <div class="avatar">SH</div>
+                </div>
+                <aside class="side-panel">
+                  <div class="panel-inner">
+                    <div class="panel-title">접수/예약 <button class="collapse-hit" type="button">‹</button></div>
+                    <div class="list">
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                      <div class="list-item"><div class="skeleton"></div><div class="skeleton short"></div></div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+            <div class="main">
+              <div class="tabs"><span class="tab">접수/예약</span></div>
+              <div class="workspace">
+                <div class="context"><span class="pill">환자 컨텍스트</span><span>예약 · 접수 · 담당자</span></div>
+                <div class="workspace-body">
+                  <div class="pane"><h3>캘린더</h3><div class="text-lines"><div class="line"></div><div class="line short"></div><div class="line"></div></div></div>
+                  <div class="pane"><h3>업무 상세</h3><div class="text-lines"><div class="line"></div><div class="line"></div><div class="line short"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="notes">
+            <div class="note-title">주의점</div>
+            <div>패널 자체는 가장 매끈하게 미끄러지지만, 본문 폭 재배치와 시간차가 생기면 실제 앱에서는 다소 떠 보일 수 있습니다.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="section-label">
+        <h2>병원 로고 중심축 시안</h2>
+        <p>
+          파란 세로선은 접힌 nav rail의 중심축입니다. 각 카드에서 접기/펼치기를 눌러 로고가
+          축을 향해 이동하는지, 아니면 축 위에 고정되는지 비교하세요.
+        </p>
+      </section>
+
+      <section class="logo-demos">
+        <article class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="badge current">현재감</span>
+              왼쪽 정렬 버튼에서 중앙 아이콘으로 전환
+            </div>
+            <button class="logo-toggle demo-toggle" type="button">접기</button>
+          </div>
+          <div class="logo-stage logo-current" data-logo-demo>
+            <div class="axis-line"></div>
+            <div class="logo-track">
+              <span class="brand-mark">C</span>
+              <span class="brand-copy">VIP 동물의료센터 청담점</span>
+            </div>
+            <div class="movement-caption">
+              <strong>문제 재현</strong>
+              <span>open에서는 로고 중심이 왼쪽 padding 기준이고, closed에서는 48px 중앙으로 이동합니다.</span>
+            </div>
+          </div>
+          <div class="notes">
+            <div class="note-title">느낌</div>
+            <div>접히는 순간 로고가 오른쪽으로 짧게 이동해서 튀거나 튕기는 것처럼 보입니다.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="badge alt">간단안</span>
+              open 상태 padding으로 축 맞추기
+            </div>
+            <button class="logo-toggle demo-toggle" type="button">접기</button>
+          </div>
+          <div class="logo-stage logo-padding" data-logo-demo>
+            <div class="axis-line"></div>
+            <div class="logo-track">
+              <span class="brand-mark">C</span>
+              <span class="brand-copy">VIP 동물의료센터 청담점</span>
+            </div>
+            <div class="movement-caption">
+              <strong>작은 수정</strong>
+              <span>open 상태의 왼쪽 padding을 늘려 로고 중심을 rail center에 가깝게 맞춥니다.</span>
+            </div>
+          </div>
+          <div class="notes">
+            <div class="note-title">장단점</div>
+            <div>구현은 작지만 padding 값이 레이아웃 계약처럼 명확하지 않아 후속 변경에 약합니다.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="badge recommended">추천</span>
+              48px 고정 로고 슬롯
+            </div>
+            <button class="logo-toggle demo-toggle" type="button">접기</button>
+          </div>
+          <div class="logo-stage logo-slot logo-big" data-logo-demo>
+            <div class="axis-line"></div>
+            <div class="logo-track">
+              <span class="mark-slot"><span class="brand-mark">C</span></span>
+              <span class="brand-copy">VIP 동물의료센터 청담점</span>
+            </div>
+            <div class="movement-caption">
+              <strong>권장 구조</strong>
+              <span>로고는 항상 48px 슬롯 중앙에 고정하고, 병원명 텍스트만 clip/fade 됩니다.</span>
+            </div>
+          </div>
+          <div class="notes">
+            <div class="note-title">장점</div>
+            <div>로고 x좌표가 변하지 않아서 튐이 사라집니다. 24px 로고도 같이 비교되도록 넣었습니다.</div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const demos = Array.from(document.querySelectorAll("[data-demo]"));
+
+      function setClosed(demo, closed) {
+        demo.classList.toggle("is-closed", closed);
+        const button = demo.closest(".card").querySelector(".demo-toggle");
+        button.textContent = closed ? "펼치기" : "접기";
+      }
+
+      document.querySelectorAll(".demo-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+          const demo = button.closest(".card").querySelector("[data-demo]");
+          setClosed(demo, !demo.classList.contains("is-closed"));
+        });
+      });
+
+      document.querySelector('[data-action="open-all"]').addEventListener("click", () => {
+        demos.forEach((demo) => setClosed(demo, false));
+      });
+
+      document.querySelector('[data-action="close-all"]').addEventListener("click", () => {
+        demos.forEach((demo) => setClosed(demo, true));
+      });
+
+      document.querySelector('[data-action="play-all"]').addEventListener("click", async () => {
+        demos.forEach((demo) => setClosed(demo, false));
+        await new Promise((resolve) => setTimeout(resolve, 360));
+        demos.forEach((demo) => setClosed(demo, true));
+        await new Promise((resolve) => setTimeout(resolve, 620));
+        demos.forEach((demo) => setClosed(demo, false));
+      });
+
+      const logoDemos = Array.from(document.querySelectorAll("[data-logo-demo]"));
+
+      function setLogoClosed(demo, closed) {
+        demo.classList.toggle("is-closed", closed);
+        const button = demo.closest(".card").querySelector(".logo-toggle");
+        button.textContent = closed ? "펼치기" : "접기";
+      }
+
+      document.querySelectorAll(".logo-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+          const demo = button.closest(".card").querySelector("[data-logo-demo]");
+          setLogoClosed(demo, !demo.classList.contains("is-closed"));
+        });
+      });
+
+      document.querySelector('[data-action="open-all"]').addEventListener("click", () => {
+        logoDemos.forEach((demo) => setLogoClosed(demo, false));
+      });
+
+      document.querySelector('[data-action="close-all"]').addEventListener("click", () => {
+        logoDemos.forEach((demo) => setLogoClosed(demo, true));
+      });
+
+      document.querySelector('[data-action="play-all"]').addEventListener("click", async () => {
+        logoDemos.forEach((demo) => setLogoClosed(demo, false));
+        await new Promise((resolve) => setTimeout(resolve, 360));
+        logoDemos.forEach((demo) => setLogoClosed(demo, true));
+        await new Promise((resolve) => setTimeout(resolve, 620));
+        logoDemos.forEach((demo) => setLogoClosed(demo, false));
+      });
+    </script>
+  </body>
+</html>

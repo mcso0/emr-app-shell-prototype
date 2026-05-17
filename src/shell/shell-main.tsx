@@ -68,7 +68,7 @@ export function ShellMain({
       >
         <WorkspaceSwitcher
           collapsed={!shouldShowModuleSidePanel}
-          className="max-md:w-8 max-md:justify-center max-md:px-0 max-md:[&>span:nth-of-type(2)]:hidden max-md:[&>svg]:hidden"
+          className="max-md:w-12 max-md:justify-start max-md:[&>[data-slot=workspace-switcher-label]]:hidden max-md:[&>svg]:hidden"
           workspaceId={workspaceId}
         />
 
@@ -93,7 +93,7 @@ export function ShellMain({
 
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-panel)] max-md:hidden",
+              "min-h-0 min-w-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-panel)] shadow-xs max-md:hidden",
               !shouldShowModuleSidePanel && "pointer-events-none border-transparent opacity-0"
             )}
           >

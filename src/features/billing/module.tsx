@@ -172,6 +172,11 @@ function QueueItem({
       <EmrListItem
         selected={selected}
         variant="outline"
+        className={
+          selected
+            ? "border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] shadow-xs hover:bg-[var(--clair-color-atomic-sky-50)]"
+            : undefined
+        }
         title={`${row.patient?.name ?? "환자 미상"} · ${row.invoice.invoiceNo}`}
         subtitle={`${row.guardian?.name ?? "보호자 미지정"} · ${row.encounter.encounterNo}`}
         meta={balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}

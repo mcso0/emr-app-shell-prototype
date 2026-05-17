@@ -11,10 +11,26 @@ import {
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/auth-client";
+import { useBillingStore } from "@/features/billing/store";
+import { useChartStore } from "@/features/chart/store";
+import { getInpatientAdmission } from "@/features/inpatient/data";
+import { useInpatientStore } from "@/features/inpatient/store";
+import { useLabImagingStore } from "@/features/lab-imaging/store";
+import { getSelectedOrderQueueItem } from "@/features/order-queue/data";
+import { useReceptionStore } from "@/features/reception/store";
 import { cn } from "@/lib/utils";
+import {
+  getMockEncounterBundle,
+  getMockPatientBundle,
+  mockImagingStudies,
+  mockInvoices,
+  mockLabResults,
+} from "@/mocks/emr-domain";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
 import { GlobalCommandPalette } from "@/shell/global-command-palette";
+import { moduleIconById } from "@/shell/module-nav-icons";
 import { WorkspaceChromeTabs } from "@/shell/workspace-chrome-tabs";
+import { useLayoutStore } from "@/stores/layout-store";
 import type { WorkspaceTab } from "@/stores/workspace-tabs-store";
 
 type WorkspaceTabsBarProps = {
@@ -56,9 +72,156 @@ const moduleActivityLabels: Record<string, string> = {
   treatment: "진료/차트",
 };
 
+type WorkspaceTabPreview = {
+  description: string;
+  title: string;
+};
+
+type WorkspaceTabPreviewContext = {
+  selectedBillingInvoiceId: string;
+  selectedChartEncounterId: string;
+  selectedImagingStudyId: string;
+  selectedInpatientAdmissionId: string;
+  selectedLabResultId: string;
+  selectedQueueItemIds: Record<string, string>;
+  selectedReceptionEncounterId?: string;
+  selectedReceptionPatientId: string;
+};
+
 function getModuleActivityLabel(pathname: string) {
   const moduleId = pathname.split("/")[3];
   return (moduleId && moduleActivityLabels[moduleId]) || "워크스페이스";
+}
+
+function getTabRouteSearchParam(tab: WorkspaceTab, key: string) {
+  const route = tab.history[tab.historyIndex] ?? tab.history.at(-1) ?? "";
+  const search = route.split("?")[1] ?? "";
+
+  return new URLSearchParams(search).get(key) ?? undefined;
+}
+
+function getTabQueuePreview(tab: WorkspaceTab, context: WorkspaceTabPreviewContext) {
+  const item = getSelectedOrderQueueItem(tab.moduleId, context.selectedQueueItemIds[tab.moduleId]);
+
+  if (!item) return null;
+
+  return {
+    title: `${item.patientName} · ${item.guardianName}`,
+    description: [getDisplayTitle(tab), item.orderName].filter(Boolean).join(" · "),
+  };
+}
+
+function getTabInpatientPreview(tab: WorkspaceTab, context: WorkspaceTabPreviewContext) {
+  const admission = getInpatientAdmission(context.selectedInpatientAdmissionId);
+
+  return {
+    title: `${admission.patientName} · ${admission.guardianName}`,
+    description: [getDisplayTitle(tab), admission.diagnosis].filter(Boolean).join(" · "),
+  };
+}
+
+function getTabEncounterId(tab: WorkspaceTab, context: WorkspaceTabPreviewContext) {
+  if (tab.encounterId) return tab.encounterId;
+
+  if (tab.moduleId === "billing") {
+    const invoiceId = getTabRouteSearchParam(tab, "invoiceId") ?? context.selectedBillingInvoiceId;
+    return mockInvoices.find((item) => item.id === invoiceId)?.encounterId;
+  }
+
+  if (tab.moduleId === "reception") {
+    return context.selectedReceptionEncounterId;
+  }
+
+  if (tab.moduleId === "treatment") {
+    return context.selectedChartEncounterId;
+  }
+
+  if (tab.moduleId === "imaging") {
+    const imagingStudyId = getTabRouteSearchParam(tab, "imagingStudyId") ?? context.selectedImagingStudyId;
+    return mockImagingStudies.find((item) => item.id === imagingStudyId)?.encounterId;
+  }
+
+  if (tab.moduleId === "lab") {
+    const labResultId = getTabRouteSearchParam(tab, "labResultId") ?? context.selectedLabResultId;
+    return mockLabResults.find((item) => item.id === labResultId)?.encounterId;
+  }
+
+  return undefined;
+}
+
+function getTabPatientId(tab: WorkspaceTab, context: WorkspaceTabPreviewContext) {
+  if (tab.patientId) return tab.patientId;
+
+  if (tab.moduleId === "billing") {
+    const invoiceId = getTabRouteSearchParam(tab, "invoiceId") ?? context.selectedBillingInvoiceId;
+    const encounterId = mockInvoices.find((item) => item.id === invoiceId)?.encounterId;
+    return encounterId ? getMockEncounterBundle(encounterId)?.patient.id : undefined;
+  }
+
+  if (tab.moduleId === "reception") {
+    return context.selectedReceptionPatientId;
+  }
+
+  if (tab.moduleId === "imaging") {
+    const imagingStudyId = getTabRouteSearchParam(tab, "imagingStudyId") ?? context.selectedImagingStudyId;
+    return mockImagingStudies.find((item) => item.id === imagingStudyId)?.patientId;
+  }
+
+  if (tab.moduleId === "lab") {
+    const labResultId = getTabRouteSearchParam(tab, "labResultId") ?? context.selectedLabResultId;
+    return mockLabResults.find((item) => item.id === labResultId)?.patientId;
+  }
+
+  return undefined;
+}
+
+function getTabPreview(tab: WorkspaceTab, context: WorkspaceTabPreviewContext): WorkspaceTabPreview {
+  const displayTitle = getDisplayTitle(tab);
+
+  if (tab.moduleId === "home") {
+    return {
+      title: "업무 요약",
+      description: "오늘의 다음 행동과 운영 병목을 한눈에 확인",
+    };
+  }
+
+  if (tab.moduleId === "dispensing") {
+    const queuePreview = getTabQueuePreview(tab, context);
+    if (queuePreview) return queuePreview;
+  }
+
+  if (tab.moduleId === "inpatient") {
+    return getTabInpatientPreview(tab, context);
+  }
+
+  const encounterId = getTabEncounterId(tab, context);
+  const patientId = getTabPatientId(tab, context);
+  const encounterBundle = encounterId ? getMockEncounterBundle(encounterId) : null;
+  const patientBundle =
+    encounterBundle ?? (patientId ? getMockPatientBundle(patientId) : null);
+  const patient = patientBundle?.patient;
+  const guardian =
+    patientBundle && "primaryGuardian" in patientBundle
+      ? patientBundle.primaryGuardian
+      : undefined;
+  const encounter =
+    encounterBundle?.encounter ??
+    (encounterId && patientBundle && "encounters" in patientBundle
+      ? patientBundle.encounters.find((item) => item.id === encounterId)
+      : undefined);
+  const workDetail = encounter?.chiefComplaint ?? encounter?.visitPurpose;
+
+  if (!patient) {
+    return {
+      title: displayTitle,
+      description: "환자 맥락 없는 업무 탭",
+    };
+  }
+
+  return {
+    title: guardian?.name ? `${patient.name} · ${guardian.name}` : patient.name,
+    description: [displayTitle, workDetail].filter(Boolean).join(" · "),
+  };
 }
 
 function getActiveMinutes(issuedAt?: string, now = Date.now()) {
@@ -85,6 +248,14 @@ export function WorkspaceTabsBar({
   const router = useRouter();
   const pathname = usePathname();
   const [now, setNow] = useState(() => Date.now());
+  const selectedBillingInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
+  const selectedChartEncounterId = useChartStore((state) => state.selectedEncounterId);
+  const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
+  const selectedInpatientAdmissionId = useInpatientStore((state) => state.selectedAdmissionId);
+  const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
+  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
+  const selectedReceptionEncounterId = useReceptionStore((state) => state.selectedEncounterId);
+  const selectedReceptionPatientId = useReceptionStore((state) => state.selectedPatientId);
   const { hydrated, session, hydrate, signOut } = useAuthClient();
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const userProfile =
@@ -103,11 +274,29 @@ export function WorkspaceTabsBar({
   const topIconButtonClassName =
     "rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)] [&_svg]:size-4";
   const historyButtonClassName =
-    "rounded-[var(--emr-radius-control)] text-muted-foreground hover:bg-[var(--emr-state-hover)] hover:text-foreground disabled:opacity-100 disabled:text-[var(--emr-text-disabled)] disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)]";
-  const chromeTabs = tabs.map((tab) => ({
-    id: tab.id,
-    title: getDisplayTitle(tab),
-  }));
+    "rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card text-muted-foreground shadow-none hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground disabled:border-[var(--emr-line-subtle)] disabled:bg-transparent disabled:opacity-100 disabled:text-[var(--emr-text-disabled)] disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)]";
+  const previewContext = {
+    selectedBillingInvoiceId,
+    selectedChartEncounterId,
+    selectedImagingStudyId,
+    selectedInpatientAdmissionId,
+    selectedLabResultId,
+    selectedQueueItemIds,
+    selectedReceptionEncounterId,
+    selectedReceptionPatientId,
+  };
+  const chromeTabs = tabs.map((tab) => {
+    const preview = getTabPreview(tab, previewContext);
+
+    return {
+      icon: moduleIconById[tab.moduleId]?.icon,
+      iconClassName: cn(moduleIconById[tab.moduleId]?.iconClassName, tab.moduleId === "lab" && "translate-y-px"),
+      id: tab.id,
+      title: getDisplayTitle(tab),
+      tooltipDescription: preview.description,
+      tooltipTitle: preview.title,
+    };
+  });
 
   useEffect(() => {
     hydrate();
@@ -133,6 +322,8 @@ export function WorkspaceTabsBar({
     >
       <GlobalCommandPalette triggerVariant="icon" workspaceId={workspaceId} />
 
+      <div className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]" />
+
       <Button
         variant="ghost"
         size="icon"
@@ -154,7 +345,7 @@ export function WorkspaceTabsBar({
         <ChevronRightIcon className="size-4" aria-hidden="true" />
       </Button>
 
-      <div className="h-5 w-px shrink-0 bg-[var(--emr-line-default)]" />
+      <div className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]" />
 
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <WorkspaceChromeTabs

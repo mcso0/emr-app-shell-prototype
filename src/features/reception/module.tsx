@@ -600,6 +600,7 @@ function PatientCard({
 
   return (
     <EmrSidePanelCard
+      selectionVariant="modulePanel"
       selected={selected}
       testId={`patient-card-${summary.patient.id}`}
       onSelect={onSelect}
