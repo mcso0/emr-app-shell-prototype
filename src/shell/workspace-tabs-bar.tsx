@@ -11,6 +11,12 @@ import {
 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/auth-client";
+import {
+  createPersonalProfileSession,
+  getDefaultSessionPersonalProfile,
+  getSessionPersonalProfile,
+  readPersonalProfilesState,
+} from "@/features/auth/personal-profile-session";
 import { useBillingStore } from "@/features/billing/store";
 import { useChartStore } from "@/features/chart/store";
 import { getInpatientAdmission } from "@/features/inpatient/data";
@@ -50,14 +56,6 @@ function getDisplayTitle(tab: WorkspaceTab) {
   if (tab.moduleId === "dispensing") return "조제/처치";
   return tab.title;
 }
-
-const mockShellUserProfiles: Record<string, { initial: string; name: string }> = {
-  billing_admin: { initial: "HR", name: "정하린" },
-  front_desk: { initial: "YN", name: "최유나" },
-  hospital_admin: { initial: "MJ", name: "송민재" },
-  nurse: { initial: "HY", name: "송하윤" },
-  vet: { initial: "SJ", name: "이수지" },
-};
 
 const moduleActivityLabels: Record<string, string> = {
   billing: "수납",
@@ -233,6 +231,17 @@ function getActiveMinutes(issuedAt?: string, now = Date.now()) {
   return Math.max(0, Math.floor((now - issuedTime) / 60000));
 }
 
+function readBrowserPersonalProfile(session: NonNullable<ReturnType<typeof useAuthClient>["session"]>) {
+  if (typeof window === "undefined") {
+    return getDefaultSessionPersonalProfile(createPersonalProfileSession(session));
+  }
+
+  return getSessionPersonalProfile(
+    readPersonalProfilesState(window.sessionStorage, window.localStorage),
+    createPersonalProfileSession(session)
+  );
+}
+
 export function WorkspaceTabsBar({
   activeTabId,
   canGoBack,
@@ -257,13 +266,11 @@ export function WorkspaceTabsBar({
   const selectedReceptionEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedReceptionPatientId = useReceptionStore((state) => state.selectedPatientId);
   const { hydrated, session, hydrate, signOut } = useAuthClient();
+  const personalProfile = hydrated && session ? readBrowserPersonalProfile(session) : null;
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
   const userProfile =
-    hydrated && session
-      ? (mockShellUserProfiles[session.role] ?? {
-          initial: session.roleLabel.slice(0, 2).toUpperCase(),
-          name: session.roleLabel,
-        })
+    hydrated && session && personalProfile
+      ? { initial: personalProfile.initials, name: personalProfile.displayName }
       : { initial: "G", name: "Guest" };
   const activityModuleLabel = getModuleActivityLabel(pathname);
   const activeMinutes = getActiveMinutes(hydrated && session ? session.issuedAt : undefined, now);
@@ -314,6 +321,7 @@ export function WorkspaceTabsBar({
     await signOut();
     router.replace("/login");
   }
+  const profileHref = `/profile?${new URLSearchParams({ returnTo: pathname }).toString()}`;
 
   return (
     <header
@@ -373,6 +381,7 @@ export function WorkspaceTabsBar({
           userInitial={userProfile.initial}
           userName={userProfile.name}
           onLogout={handleLogout}
+          profileHref={profileHref}
         />
       </div>
     </header>

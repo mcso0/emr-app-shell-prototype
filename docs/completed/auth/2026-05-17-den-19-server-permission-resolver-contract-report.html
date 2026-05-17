@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-19 작업 보고서 - 서버 권한 판정 계약</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #18202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --soft-line: #e9edf3;
+        --accent: #2563eb;
+        --accent-soft: #eff5ff;
+        --good: #0f8a5f;
+        --warn: #b45309;
+        --radius: 8px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      .report {
+        overflow: hidden;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(24, 32, 42, 0.06);
+      }
+
+      header {
+        padding: 36px 40px 30px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      section {
+        padding: 28px 40px;
+        border-bottom: 1px solid var(--soft-line);
+      }
+
+      section:last-child {
+        border-bottom: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        border: 1px solid var(--soft-line);
+      }
+
+      th {
+        font-weight: 700;
+        background: #f8fafc;
+      }
+
+      code {
+        padding: 2px 5px;
+        background: #f8fafc;
+        border: 1px solid var(--soft-line);
+        border-radius: 5px;
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        min-height: 96px;
+        padding: 14px;
+        background: #fcfdff;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .callout {
+        padding: 16px 18px;
+        background: var(--accent-soft);
+        border: 1px solid #bdd4ff;
+        border-radius: var(--radius);
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status.good {
+        color: var(--good);
+        background: #ecfdf3;
+      }
+
+      .status.warn {
+        color: var(--warn);
+        background: #fff7ed;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 24px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="report">
+        <header>
+          <p class="eyebrow">DEN-19 · 구현 보고서 · 2026-05-17</p>
+          <h1>서버 권한 판정 계약 구현</h1>
+          <p class="subtitle">
+            워크스페이스 멤버십과 역할을 기준으로 권한을 계산하는 서버 전용 계약을 추가했습니다.
+            이번 작업은 실제 DB/RLS 적용 전, 앞으로 모든 서버 API가 따라야 할 권한 판단 기준선을 세운 작업입니다.
+          </p>
+          <div class="summary-grid">
+            <div class="metric">
+              <strong>상태</strong>
+              <span>Human Review 준비</span>
+            </div>
+            <div class="metric">
+              <strong>범위</strong>
+              <span>권한 계산 계약과 테스트</span>
+            </div>
+            <div class="metric">
+              <strong>서버 경계</strong>
+              <span><code>server-only</code> entrypoint 추가</span>
+            </div>
+            <div class="metric">
+              <strong>검증</strong>
+              <span>resolver 6개 테스트 통과</span>
+            </div>
+          </div>
+        </header>
+
+        <section>
+          <h2>대표 요약</h2>
+          <p>
+            권한 판단을 브라우저 세션이나 Supabase Auth metadata가 아니라 앱의 워크스페이스 멤버십 데이터로 계산하도록
+            표준 계약을 만들었습니다. 아직 실제 Supabase DB에 연결한 것은 아니지만, 어떤 사용자가 어떤 병원 워크스페이스에서
+            어떤 권한을 갖는지 서버 코드가 일관되게 판단할 수 있는 기준이 생겼습니다.
+          </p>
+          <div class="callout">
+            <strong>핵심 의미:</strong> 이후 차트 저장, 멤버 초대, 병원 설정 변경 같은 민감한 기능은 이 계약을 기준으로
+            서버에서 허용 또는 차단해야 합니다. 화면에서 버튼을 숨기는 것만으로는 보안 완료로 보지 않습니다.
+          </div>
+        </section>
+
+        <section>
+          <h2>구현 내용</h2>
+          <ul>
+            <li><code>src/features/auth/permission-resolver.ts</code>에 순수 권한 계산 계약을 추가했습니다.</li>
+            <li><code>src/features/auth/permission-resolver.server.ts</code>에 <code>import "server-only"</code>를 적용해 서버 전용 진입점을 만들었습니다.</li>
+            <li><code>hospital_admin</code>, <code>vet</code>, <code>technician</code>, <code>front_desk</code> 4개 MVP 역할을 기준으로 권한을 계산합니다.</li>
+            <li>여러 역할을 가진 사용자는 각 역할 권한의 합집합을 갖고, <code>hospital_admin</code>이 포함되면 전체 관리자 권한을 갖습니다.</li>
+            <li>비로그인, 비활성 사용자, 미소속 워크스페이스, 비활성 멤버십, 권한 없음, 마지막 관리자 보호를 typed denial reason으로 반환합니다.</li>
+            <li>조회, 생성, 수정 권한을 빠르게 확인하는 <code>canView</code>, <code>canCreate</code>, <code>canUpdate</code> helper를 추가했습니다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>권한 기준</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>역할</th>
+                <th>이번 계약의 핵심 기준</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>hospital_admin</code></td>
+                <td>워크스페이스 전체 권한. 역할/권한 관리와 병원 설정 변경까지 가능.</td>
+              </tr>
+              <tr>
+                <td><code>vet</code></td>
+                <td>차트 작성과 오더 요청/변경 가능. 관리자 설정과 역할 권한 관리는 불가.</td>
+              </tr>
+              <tr>
+                <td><code>technician</code></td>
+                <td>차트 조회 가능, 차트 수정 불가. 검사/영상/조제 완료 같은 운영 지원 권한 가능.</td>
+              </tr>
+              <tr>
+                <td><code>front_desk</code></td>
+                <td>접수/예약, 고객/환자 기본 정보, 수납 처리 가능. 차트 수정 불가.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>보안 판단</h2>
+          <p>
+            이번 구현은 실제 운영 보안을 완성한 것이 아니라, 운영 보안을 만들기 위한 첫 번째 서버 계약입니다.
+            이후 API Route, Server Action, Data Access Layer가 이 계약을 호출하도록 연결해야 실제 보호가 시작됩니다.
+          </p>
+          <ul>
+            <li><span class="status good">적용됨</span> 서버 전용 entrypoint, typed resolver, 테스트 기반 권한 matrix</li>
+            <li><span class="status warn">후속 필요</span> Supabase DB adapter, migration, RLS policy, 실제 API enforcement</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>검증 결과</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>검증</th>
+                <th>결과</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>RED 테스트</td>
+                <td><code>permission-resolver</code> 모듈이 없어 실패하는 것을 확인했습니다.</td>
+              </tr>
+              <tr>
+                <td>권한 계약 테스트</td>
+                <td><code>npx playwright test tests/permission-resolver.spec.ts --reporter=line</code> - 6개 통과</td>
+              </tr>
+              <tr>
+                <td>타입체크</td>
+                <td><code>npx tsc --noEmit</code> 통과</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>남은 일</h2>
+          <ul>
+            <li>실제 Supabase DB에서 사용자, 멤버십, 권한 정책을 읽는 adapter 구현</li>
+            <li>마이그레이션과 RLS 정책 작성 및 검증</li>
+            <li>차트 저장, 초대/역할 변경, 병원 설정 변경 같은 첫 서버 mutation에 resolver 적용</li>
+            <li>관리자/개인 프로필 화면에서 권한 결과를 사용자에게 설명하는 UX 보강</li>
+          </ul>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

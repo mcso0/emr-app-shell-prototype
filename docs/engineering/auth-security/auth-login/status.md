@@ -39,6 +39,14 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - 2026-05-14 기준 `/login`, auth gate loading state, top menu workspace selector, auth profile trigger/menu의 직접 Clair/local color usage는 DESIGN-SYSTEM-PR-015에서 shadcn semantic token과 EMR alias token으로 정리했다. Auth behavior, Supabase adapter boundary, mock session storage, safe `next`, and logout flow were not changed.
 - 2026-05-17 기준 workspace auth product scope는 `docs/product/domain/workspace-auth-permissions.md`에 고정했다. Canonical MVP roles are `hospital_admin`, `vet`, `technician`, and `front_desk`; current seed roles `nurse` and `billing_admin` are compatibility/legacy implementation details until follow-up implementation reconciles them.
 - 2026-05-17 기준 workspace membership data/security plan은 `docs/engineering/auth-security/auth-login/workspace-membership-data-security-plan.md`에 고정했다. MVP membership roles are additive `roles text[]`; personal profile data is separated from authorization source; last active `hospital_admin` protection requires a server transaction or private RPC; migration SQL, RLS SQL, and live Supabase validation remain out of scope.
+- 2026-05-17 기준 DEN-28에서 Next.js 보안 패치를 별도 적용했다. `next`와 `eslint-config-next`는 `16.2.6`으로 exact pin 되었고, workspace creation/server enforcement work는 이 패치 검증 이후 진행한다.
+- 2026-05-17 기준 DEN-23에서 `/workspace/new` session-only workspace creation foundation을 추가했다. 병원관리자 mock user는 workspace name, representative/admin name, contact email/phone을 입력해 workspace를 만들 수 있고, 생성자는 active `hospital_admin` membership을 받으며 새 workspace home으로 이동한다. Supabase persistence, migration/RLS, payment integration, server enforcement는 아직 범위 밖이다.
+- 2026-05-17 기준 DEN-24에서 병원관리 `병원구성원 관리` 화면에 session-only member invitation flow를 추가했다. 병원관리자는 이메일 초대, 다중 역할 지정, pending invite 재발송/취소/수락 시뮬레이션을 할 수 있고, active/pending/inactive member state count를 확인할 수 있다. 비관리자 mock role은 초대 및 멤버십 변경 UI가 차단된다. Real email delivery, public invite links, Supabase persistence, migration/RLS, seat billing, server enforcement는 아직 범위 밖이다.
+- 2026-05-17 기준 DEN-19에서 server-only workspace permission resolver contract를 추가했다. Resolver는 앱 멤버십/역할 데이터를 기준으로 effective permission을 계산하고, unauthenticated, inactive user, missing membership, inactive membership, permission missing, last admin protected denial을 typed result로 반환한다. Live Supabase DB adapter, migration/RLS, API route/server action enforcement는 아직 범위 밖이다.
+- 2026-05-17 기준 DEN-25에서 병원관리 `병원구성원 관리` 화면에 session-only role management UI를 추가했다. 병원관리자는 활성 구성원의 다중 역할을 수정하고 effective permission summary를 확인할 수 있으며, 역할 변경과 비활성화는 확인 dialog를 거친다. 마지막 active `hospital_admin` 강등/비활성화는 session contract와 UI 모두에서 차단된다. Live DB writes, audit persistence, server action/API enforcement, DB-level transaction protection은 아직 범위 밖이다.
+- 2026-05-17 기준 DEN-26에서 `/profile` 개인 프로필 설정 화면을 추가했다. 사용자는 이름, 이니셜, 연락처, 운영 알림 placeholder를 session-only로 저장할 수 있고, 저장된 표시 정보는 shell profile menu에 반영된다. 역할/권한 정보는 읽기 전용으로만 표시되며 profile storage에는 role, role label, permission field를 저장하지 않는다. Supabase identity profile, email change, password/MFA, live persistence는 아직 범위 밖이다.
+- 2026-05-17 기준 DEN-21에서 첫 server-side permission enforcement slice를 추가했다. `POST /api/workspaces/[workspaceId]/memberships/[membershipId]/roles` route는 server-only enforcement module을 통해 active membership, `role_permission:manage`, canonical roles, and last active `hospital_admin` protection을 확인한다. 현재 actor identity는 demo-only `x-clair-demo-session-user-id` header로 받으며, Supabase verified session, DB writes, migration/RLS는 아직 범위 밖이다.
+- 2026-05-17 기준 DEN-27 CSO 보안 리뷰를 완료했다. 개인 프로필은 권한 source로 쓰이지 않고, multi-role additive resolver, desk/technician chart mutation restriction, last-admin guard는 현재 계약/테스트로 확인된다. 운영 전 필수 보완점은 demo identity header 제거, role management UI의 server route handoff, DB transaction/private RPC 기반 last-admin protection이다.
 
 ## 완료된 작업
 
@@ -52,12 +60,27 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `docs/completed/design/2026-05-14-auth-login-token-cleanup.md`
 - `docs/completed/auth/2026-05-17-den-18-workspace-auth-scope-report.html`
 - `docs/completed/auth/2026-05-17-den-20-workspace-membership-data-security-report.html`
+- `docs/completed/auth/2026-05-17-den-28-next-security-patch-report.html`
+- `docs/completed/auth/2026-05-17-den-23-workspace-creation-foundation-report.html`
+- `docs/completed/auth/2026-05-17-den-24-member-invitation-status-flow-report.html`
+- `docs/completed/auth/2026-05-17-den-19-server-permission-resolver-contract-report.html`
+- `docs/completed/auth/2026-05-17-den-25-role-management-admin-ui-report.html`
+- `docs/completed/auth/2026-05-17-den-26-personal-profile-settings-report.html`
+- `docs/completed/auth/2026-05-17-den-21-first-server-permission-enforcement-report.html`
 - GitHub PR #10: `feat: add auth transition boundary`
 
 ## 다음 작업
 
 1. Complete `AUTH-PR-002` / Linear `DEN-20` Human Review.
-2. Then proceed in order through workspace creation, invitation/membership, permission resolver, admin/profile UI, and first server enforcement slice.
+2. Complete `AUTH-PR-003` / Linear `DEN-28` Human Review.
+3. Complete `AUTH-PR-004` / Linear `DEN-23` Human Review.
+4. Complete `AUTH-PR-005` / Linear `DEN-24` Human Review.
+5. Complete `AUTH-PR-006` / Linear `DEN-19` Human Review.
+6. Complete `AUTH-PR-007` / Linear `DEN-25` Human Review.
+7. Complete `AUTH-PR-008` / Linear `DEN-26` Human Review.
+8. Complete `AUTH-PR-009` / Linear `DEN-21` Human Review.
+9. Complete `AUTH-PR-010` / Linear `DEN-27` Human Review.
+9. Then proceed through Supabase session validation, migration/RLS, or route-backed persistence.
 
 ## 금지 범위
 
@@ -109,3 +132,98 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `rg "membership|permission|RLS|server-side enforcement" docs/implementation`
 
 검증 결과와 세부 결정은 `docs/completed/auth/2026-05-03-membership-permission-enforcement.md`에 남긴다.
+
+2026-05-17 DEN-28 Next.js Security Patch:
+
+- `npm audit --audit-level=high` (`found 0 vulnerabilities`)
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts --reporter=line` (`41 passed`)
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-28-next-security-patch-report.html`에 남긴다.
+
+2026-05-17 DEN-23 Workspace Creation Foundation:
+
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts --reporter=line` (`16 passed`)
+- `npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts --reporter=line` (`46 passed`)
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-23-workspace-creation-foundation-report.html`에 남긴다.
+
+2026-05-17 DEN-24 Member Invitation Status Flow:
+
+- Red: `npx playwright test tests/auth.spec.ts --reporter=line` failed because member management navigation and invitation contract functions were missing.
+- `npx playwright test tests/auth.spec.ts --reporter=line` (`20 passed`)
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts --reporter=line` (`50 passed`)
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-24-member-invitation-status-flow-report.html`에 남긴다.
+
+2026-05-17 DEN-19 Server Permission Resolver Contract:
+
+- Red: `npx playwright test tests/permission-resolver.spec.ts --reporter=line` failed because the resolver module did not exist.
+- `npx playwright test tests/permission-resolver.spec.ts --reporter=line` (`6 passed`)
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts tests/permission-resolver.spec.ts --reporter=line` (`26 passed`)
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-19-server-permission-resolver-contract-report.html`에 남긴다.
+
+2026-05-17 DEN-25 Role Management Admin UI:
+
+- Red: `npx playwright test tests/auth.spec.ts --reporter=line` failed because role edit UI actions and session membership mutation helpers did not exist.
+- `npx playwright test tests/auth.spec.ts --reporter=line` (`23 passed`)
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts tests/permission-resolver.spec.ts tests/app-shell.spec.ts --reporter=line` (`59 passed`)
+- `npm run docs:check`
+- Local browser smoke via Playwright against `http://localhost:3000`: role summary rendered and last-admin guard message was visible.
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-25-role-management-admin-ui-report.html`에 남긴다.
+
+2026-05-17 DEN-26 Personal Profile Settings:
+
+- Red: `npx playwright test tests/auth.spec.ts --reporter=line` failed because profile settings session contract and UI did not exist.
+- `npx playwright test tests/auth.spec.ts -g "profile" --reporter=line` (`3 passed`)
+- `npx playwright test tests/auth.spec.ts --reporter=line` (`26 passed`)
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts tests/permission-resolver.spec.ts tests/app-shell.spec.ts --reporter=line` (`62 passed`)
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-26-personal-profile-settings-report.html`에 남긴다.
+
+2026-05-17 DEN-21 First Server Permission Enforcement Slice:
+
+- Red: `npx playwright test tests/server-permission-enforcement.spec.ts --reporter=line` failed with 404 because the route did not exist.
+- `npx playwright test tests/server-permission-enforcement.spec.ts --reporter=line` (`4 passed`)
+- `npm run lint -- --ignore-pattern '.worktrees/**'`
+- `npx tsc --noEmit`
+- `npm run build`
+- `npx playwright test tests/auth.spec.ts tests/permission-resolver.spec.ts tests/server-permission-enforcement.spec.ts --reporter=line` (`36 passed`)
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-21-first-server-permission-enforcement-report.html`에 남긴다.
+
+2026-05-17 DEN-27 Security Review Workspace Auth Permission Boundary:
+
+- CSO review checked workspace creation, invitation, role management, profile settings, permission resolver, and first server enforcement slice.
+- Verified no user-editable profile field is used as an authorization source.
+- Verified additive multi-role behavior and desk/technician chart update denial are covered by resolver tests.
+- Verified the server role-update boundary is `server-only` and does not use browser storage APIs.
+- Identified three live-readiness follow-ups: replace demo identity header with verified Supabase server session, route role management UI through server enforcement, and implement transactional DB/RPC last-admin protection before live writes.
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/auth/2026-05-17-den-27-workspace-auth-security-review-report.html`에 남긴다.

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-26 작업 보고서 - 개인 프로필 설정</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #18202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --soft-line: #e9edf3;
+        --accent: #2563eb;
+        --accent-soft: #eff5ff;
+        --good: #0f8a5f;
+        --warn: #b45309;
+        --radius: 8px;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.65; }
+      main { max-width: 1040px; margin: 0 auto; padding: 48px 24px 72px; }
+      .report { overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 16px 40px rgba(24, 32, 42, 0.06); }
+      header { padding: 36px 40px 30px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%); }
+      .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 0; }
+      h1 { margin: 0; font-size: 30px; line-height: 1.25; letter-spacing: 0; }
+      .subtitle { margin: 14px 0 0; color: var(--muted); font-size: 15px; }
+      section { padding: 28px 40px; border-bottom: 1px solid var(--soft-line); }
+      section:last-child { border-bottom: 0; }
+      h2 { margin: 0 0 14px; font-size: 20px; line-height: 1.35; letter-spacing: 0; }
+      p { margin: 0 0 12px; }
+      ul { margin: 0; padding-left: 20px; }
+      li + li { margin-top: 6px; }
+      table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 14px; }
+      th, td { padding: 11px 12px; text-align: left; vertical-align: top; border: 1px solid var(--soft-line); }
+      th { font-weight: 700; background: #f8fafc; }
+      code { padding: 2px 5px; background: #f8fafc; border: 1px solid var(--soft-line); border-radius: 5px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
+      .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+      .metric { min-height: 96px; padding: 14px; background: #fcfdff; border: 1px solid var(--soft-line); border-radius: var(--radius); }
+      .metric strong { display: block; margin-bottom: 5px; font-size: 14px; }
+      .metric span { color: var(--muted); font-size: 13px; }
+      .callout { padding: 16px 18px; background: var(--accent-soft); border: 1px solid #bdd4ff; border-radius: var(--radius); }
+      .status { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+      .status.good { color: var(--good); background: #ecfdf3; }
+      @media (max-width: 760px) {
+        main { padding: 24px 14px 48px; }
+        header, section { padding: 24px; }
+        .summary-grid { grid-template-columns: 1fr; }
+        h1 { font-size: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="report">
+        <header>
+          <p class="eyebrow">DEN-26 · 구현 보고서 · 2026-05-17</p>
+          <h1>개인 프로필 설정</h1>
+          <p class="subtitle">
+            사용자가 본인 표시 정보를 수정하되, 권한 판단 source와는 분리되도록 session-only 프로필 설정을 추가했습니다.
+          </p>
+          <div class="summary-grid">
+            <div class="metric"><strong>상태</strong><span class="status good">Human Review 준비</span></div>
+            <div class="metric"><strong>범위</strong><span>/profile, profile menu, storage contract</span></div>
+            <div class="metric"><strong>권한 원칙</strong><span>역할/권한은 읽기 전용</span></div>
+            <div class="metric"><strong>검증</strong><span>Auth profile regression 통과</span></div>
+          </div>
+        </header>
+        <section>
+          <h2>요청 사항</h2>
+          <p>대표 요구사항 중 “사용자가 자신의 개인 프로필 설정이 가능해야 한다” 항목을 구현했습니다. 단, 사용자가 직접 수정할 수 있는 프로필 정보가 역할이나 권한 판단에 사용되지 않도록 경계를 분리했습니다.</p>
+        </section>
+        <section>
+          <h2>구현 내용</h2>
+          <ul>
+            <li>프로필 메뉴에 <code>개인 프로필 설정</code> 진입점을 추가했습니다.</li>
+            <li><code>/profile</code> 페이지를 auth gate 뒤에 두어 로그인 사용자만 접근하게 했습니다.</li>
+            <li>이름, 이니셜, 연락처, 운영 알림 placeholder를 수정할 수 있게 했습니다.</li>
+            <li>저장된 이름과 이니셜은 shell profile menu에 반영됩니다.</li>
+            <li>역할/권한 정보는 읽기 전용 문구로만 제공하고 self-service 변경 UI는 만들지 않았습니다.</li>
+          </ul>
+        </section>
+        <section>
+          <h2>권한 분리 기준</h2>
+          <table>
+            <thead>
+              <tr><th>구분</th><th>이번 구현</th><th>이유</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>개인 프로필</td><td>사용자 표시 정보 저장</td><td>사용자 경험을 위한 정보이며 권한 source가 아닙니다.</td></tr>
+              <tr><td>역할/권한</td><td>읽기 전용 표시</td><td>권한은 workspace membership과 permission policy에서만 판단해야 합니다.</td></tr>
+              <tr><td>저장 위치</td><td><code>clair.personalProfiles.v1</code></td><td>기존 session-only prototype 경계를 유지합니다.</td></tr>
+            </tbody>
+          </table>
+        </section>
+        <section>
+          <h2>주요 변경 파일</h2>
+          <ul>
+            <li><code>src/app/profile/page.tsx</code></li>
+            <li><code>src/features/auth/personal-profile-settings.tsx</code></li>
+            <li><code>src/features/auth/personal-profile-session.ts</code></li>
+            <li><code>src/shell/auth-profile-menu.tsx</code></li>
+            <li><code>src/shell/top-menu.tsx</code></li>
+            <li><code>src/shell/workspace-tabs-bar.tsx</code></li>
+            <li><code>tests/auth.spec.ts</code></li>
+          </ul>
+        </section>
+        <section>
+          <h2>검증 결과</h2>
+          <ul>
+            <li>RED: 프로필 session contract와 UI가 없어 auth spec이 실패하는 것을 먼저 확인했습니다.</li>
+            <li><code>npx playwright test tests/auth.spec.ts -g "profile" --reporter=line</code>: 3 passed</li>
+            <li><code>npx playwright test tests/auth.spec.ts --reporter=line</code>: 26 passed</li>
+            <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed</li>
+            <li><code>npx tsc --noEmit</code>: passed</li>
+            <li><code>npm run build</code>: passed</li>
+            <li><code>npx playwright test tests/auth.spec.ts tests/permission-resolver.spec.ts tests/app-shell.spec.ts --reporter=line</code>: 62 passed</li>
+            <li><code>npm run docs:check</code>: passed, 548 docs/agent markdown files checked</li>
+          </ul>
+        </section>
+        <section>
+          <h2>남은 범위</h2>
+          <div class="callout">
+            <p><strong>아직 실제 계정 관리 기능은 아닙니다.</strong></p>
+            <p>Supabase identity profile, 이메일 변경, 비밀번호 변경, MFA, OAuth 계정 관리, live persistence는 후속 범위입니다.</p>
+          </div>
+        </section>
+        <section>
+          <h2>추천 다음 단계</h2>
+          <p>개인 프로필까지 UI 기반 요구사항을 닫았으므로, 다음은 migration/RLS 또는 첫 server-side permission enforcement slice로 넘어가는 것이 좋습니다.</p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

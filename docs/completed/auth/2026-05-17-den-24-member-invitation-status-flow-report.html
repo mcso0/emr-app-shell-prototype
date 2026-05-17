@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-24 작업 보고서 - 직원 초대와 멤버십 상태 흐름</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #18202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --soft-line: #e9edf3;
+        --accent: #2563eb;
+        --accent-soft: #eff5ff;
+        --good: #0f8a5f;
+        --warn: #b45309;
+        --radius: 8px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      .report {
+        overflow: hidden;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(24, 32, 42, 0.06);
+      }
+
+      header {
+        padding: 36px 40px 30px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      section {
+        padding: 28px 40px;
+        border-bottom: 1px solid var(--soft-line);
+      }
+
+      section:last-child {
+        border-bottom: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        min-height: 96px;
+        padding: 14px;
+        background: #fcfdff;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .callout {
+        padding: 16px 18px;
+        background: var(--accent-soft);
+        border: 1px solid #bdd4ff;
+        border-radius: var(--radius);
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        border: 1px solid var(--soft-line);
+      }
+
+      th {
+        font-weight: 700;
+        background: #f8fafc;
+      }
+
+      code {
+        padding: 2px 5px;
+        background: #f8fafc;
+        border: 1px solid var(--soft-line);
+        border-radius: 5px;
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status.good {
+        color: var(--good);
+        background: #ecfdf3;
+      }
+
+      .status.warn {
+        color: var(--warn);
+        background: #fff7ed;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 24px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="report">
+        <header>
+          <p class="eyebrow">DEN-24 · 구현 보고서 · 2026-05-17</p>
+          <h1>직원 초대와 멤버십 상태 흐름</h1>
+          <p class="subtitle">
+            병원관리자가 직원을 이메일로 초대하고, 초대 상태를 관리하며, 수락 시 활성 멤버로 전환되는
+            session-only 기반 흐름을 구현했습니다.
+          </p>
+          <div class="summary-grid">
+            <div class="metric">
+              <strong>상태</strong>
+              <span>Human Review 준비</span>
+            </div>
+            <div class="metric">
+              <strong>진입점</strong>
+              <span><code>병원관리 / 병원구성원 관리</code></span>
+            </div>
+            <div class="metric">
+              <strong>권한 기준</strong>
+              <span><code>hospital_admin</code>만 관리 가능</span>
+            </div>
+            <div class="metric">
+              <strong>검증</strong>
+              <span>auth/app-shell 50개 통과</span>
+            </div>
+          </div>
+        </header>
+
+        <section>
+          <h2>요청 내용</h2>
+          <p>
+            병원관리자가 직원을 초대하고, 초대 상태가 <code>pending</code>에서 active membership으로
+            전환되는 제품 기반을 만들어야 했습니다. 실제 이메일 발송이나 Supabase 저장은 제외 범위였습니다.
+          </p>
+        </section>
+
+        <section>
+          <h2>구현 내용</h2>
+          <ul>
+            <li>session workspace state에 invitation 모델을 추가했습니다.</li>
+            <li>초대 정보로 email, workspace, invited roles, status, inviter, expires/accepted/canceled/resend metadata를 저장합니다.</li>
+            <li>병원관리 module의 <code>병원구성원 관리</code> 메뉴를 활성화했습니다.</li>
+            <li>초대 form에서 이메일, 다중 역할, 직책, 부서를 입력할 수 있습니다.</li>
+            <li>중복 pending invite와 이미 active member인 이메일 초대를 차단합니다.</li>
+            <li>pending invite에 대해 재발송, 취소, 수락 시뮬레이션을 제공합니다.</li>
+            <li>수락 시뮬레이션은 <code>invitee:&lt;email&gt;</code> active membership을 생성합니다.</li>
+            <li>비관리자 mock role은 구성원 화면을 볼 수 있지만 초대와 변경 action은 차단됩니다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>왜 중요한가</h2>
+          <div class="callout">
+            <p>
+              DEN-23은 병원 대표가 워크스페이스를 만드는 첫 관문이었습니다. DEN-24는 그 다음 단계인
+              “직원을 병원 워크스페이스에 합류시키는 운영 관문”입니다. 이 흐름이 있어야 실제 EMR SaaS처럼
+              병원 단위 권한 관리와 역할 기반 업무 분리가 가능해집니다.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2>수정된 주요 파일</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>파일</th>
+                <th>역할</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/features/auth/workspace-session.ts</code></td>
+                <td>초대/멤버십 상태 계약, validation, resend/cancel/accept helper</td>
+              </tr>
+              <tr>
+                <td><code>src/features/auth/workspace-membership-management.tsx</code></td>
+                <td>구성원 관리 화면, 초대 form, 멤버십 상태 table</td>
+              </tr>
+              <tr>
+                <td><code>src/features/hospital-admin/module.tsx</code></td>
+                <td>병원구성원 관리 메뉴 활성화와 content 전환</td>
+              </tr>
+              <tr>
+                <td><code>src/features/hospital-admin/store.ts</code></td>
+                <td>병원관리 section state 추가</td>
+              </tr>
+              <tr>
+                <td><code>tests/auth.spec.ts</code></td>
+                <td>초대 생성, 중복 방지, 재발송/취소/수락, 관리자 권한 회귀 테스트</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>검증 결과</h2>
+          <ul>
+            <li><span class="status good">통과</span> <code>npx playwright test tests/auth.spec.ts --reporter=line</code>: 20 passed</li>
+            <li><span class="status good">통과</span> <code>npm run lint -- --ignore-pattern '.worktrees/**'</code></li>
+            <li><span class="status good">통과</span> <code>npx tsc --noEmit</code></li>
+            <li><span class="status good">통과</span> <code>npm run build</code></li>
+            <li><span class="status good">통과</span> <code>npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts --reporter=line</code>: 50 passed</li>
+            <li><span class="status good">통과</span> <code>npm run docs:check</code></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>남은 범위와 리스크</h2>
+          <ul>
+            <li><span class="status warn">주의</span> 이번 구현은 browser storage 기반 session-only prototype입니다.</li>
+            <li>실제 이메일 발송, 공개 초대 링크, SSO/SCIM/domain auto-join은 아직 구현하지 않았습니다.</li>
+            <li>실제 Supabase persistence, migration SQL, RLS SQL은 아직 구현하지 않았습니다.</li>
+            <li>좌석 과금과 구독 seat charging은 아직 구현하지 않았습니다.</li>
+            <li>서버 권한 enforcement와 마지막 active 병원관리자 보호 transaction은 후속 티켓 범위입니다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>다음 단계</h2>
+          <p>
+            DEN-24는 Human Review로 넘기고, 대표 확인 후 다음 단계는 permission resolver나 역할/권한 관리 UI,
+            또는 첫 server enforcement slice로 진행하는 것이 적절합니다.
+          </p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

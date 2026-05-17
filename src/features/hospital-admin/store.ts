@@ -16,6 +16,7 @@ import {
 } from "@/features/hospital-admin/data";
 
 type HospitalAdminStore = {
+  activeSection: "orders" | "members";
   billingFilter: HospitalOrderBillingFilter;
   orders: HospitalOrderCatalogItem[];
   searchQuery: string;
@@ -28,6 +29,7 @@ type HospitalAdminStore = {
   createOrder: (draft?: Partial<HospitalOrderDraft>) => HospitalOrderCatalogItem;
   deleteOrder: (orderId: string) => void;
   duplicateOrder: (orderId: string) => HospitalOrderCatalogItem | null;
+  setActiveSection: (section: "orders" | "members") => void;
   setBillingFilter: (filter: HospitalOrderBillingFilter) => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategoryId: (categoryId: HospitalOrderCategoryId) => void;
@@ -45,6 +47,7 @@ const defaultSubcategoryId = getDefaultSubcategoryId(defaultCategoryId) ?? "clin
 const getNextOrderId = () => `hospital-order-${Date.now().toString(36)}`;
 
 export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => ({
+  activeSection: "orders",
   billingFilter: "all",
   orders: hospitalOrderSeedItems,
   searchQuery: "",
@@ -96,6 +99,7 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
       standardName: `${source.standardName} 복사본`,
     });
   },
+  setActiveSection: (activeSection) => set({ activeSection }),
   setBillingFilter: (billingFilter) => set({ billingFilter }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSelectedCategoryId: (selectedCategoryId) =>

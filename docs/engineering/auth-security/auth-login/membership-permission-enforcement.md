@@ -65,6 +65,13 @@ Domain permission source:
 - `npx tsc --noEmit`
 - 관련 unit/Playwright tests
 
+2026-05-17 DEN-19 implementation note:
+
+- `src/features/auth/permission-resolver.ts` now defines the mock-backed resolver contract and typed denial results.
+- `src/features/auth/permission-resolver.server.ts` is the `server-only` entrypoint for future API/DAL use.
+- `tests/permission-resolver.spec.ts` covers additive multi-role behavior, chart mutation boundaries, inactive/missing denial reasons, and last active `hospital_admin` protection.
+- This implementation does not include a live Supabase adapter, migration SQL, RLS SQL, or route/server action enforcement.
+
 ### Unit B: Membership/profile migration
 
 목표:

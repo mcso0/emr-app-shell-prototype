@@ -3,6 +3,7 @@
 import { WorkspaceLogoMarkIcon } from "@/components/icons";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
+import { useSessionWorkspaceDisplayName } from "@/features/auth/workspace-display";
 import { cn } from "@/lib/utils";
 
 type WorkspaceSwitcherProps = {
@@ -12,6 +13,8 @@ type WorkspaceSwitcherProps = {
 };
 
 export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }: WorkspaceSwitcherProps) {
+  const workspaceDisplayName = useSessionWorkspaceDisplayName(workspaceId);
+
   return (
     <Button
       type="button"
@@ -46,7 +49,7 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
           collapsed ? "pointer-events-none opacity-0" : "opacity-100"
         )}
       >
-        VIP 동물의료센터 청담점
+        {workspaceDisplayName}
       </span>
       <CdsNavigationChevronDownIcon
         className={cn(

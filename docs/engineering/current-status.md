@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-16
+Updated: 2026-05-17
 
 이 문서는 EMR SaaS 작업의 현재 상태를 설명하는 단일 시작점이다. 새 작업을 시작하는 Codex나 개발자는 먼저 이 문서를 읽고, 필요한 세부 문서로 이동한다.
 
@@ -251,6 +251,14 @@ MVP 목표:
 - Membership/permission enforcement는 plan-only로 완료되었다. migration/RLS/server resolver 구현은 별도 승인 전까지 하지 않는다.
 - 2026-05-17 기준 workspace auth product scope와 role/permission matrix는 `docs/product/domain/workspace-auth-permissions.md`가 기준이다. Canonical MVP roles는 `hospital_admin`, `vet`, `technician`, `front_desk`이며 기존 seed의 `nurse`/`billing_admin`은 후속 구현에서 alias/role 정책으로 정리해야 한다.
 - 2026-05-17 기준 workspace membership data/security plan은 `docs/engineering/auth-security/auth-login/workspace-membership-data-security-plan.md`가 기준이다. MVP role assignment는 additive `roles text[]`이고, personal profile data는 권한 source에서 분리하며, 마지막 active `hospital_admin` 보호는 server transaction/private RPC로 구현해야 한다. Migration SQL, RLS SQL, live Supabase validation은 아직 완료된 것으로 보지 않는다.
+- 2026-05-17 기준 DEN-28에서 Next.js security patch를 별도 적용해 `next`와 `eslint-config-next`를 `16.2.6`으로 exact pin했다. `npm audit --audit-level=high`, source-scoped lint, typecheck, build, auth/app-shell Playwright regression이 통과했으며, workspace creation/server enforcement work는 이 패치 위에서 진행한다.
+- 2026-05-17 기준 DEN-23에서 `/workspace/new` session-only workspace creation foundation을 추가했다. 생성된 workspace와 creator `hospital_admin` membership은 browser storage contract에 저장되고 새 workspace home으로 진입한다. Live Supabase persistence, migration/RLS, real subscription/payment provider, server-side permission enforcement는 아직 완료된 것으로 보지 않는다.
+- 2026-05-17 기준 DEN-24에서 병원관리 module의 `병원구성원 관리`에 session-only invitation and membership status flow를 추가했다. `hospital_admin` mock role은 이메일 초대, 다중 역할 지정, pending invite 재발송/취소/수락 시뮬레이션을 할 수 있고, 비관리자 mock role은 초대/멤버십 변경이 차단된다. Real email delivery, public invite links, Supabase persistence, migration/RLS, seat billing, server enforcement는 아직 완료된 것으로 보지 않는다.
+- 2026-05-17 기준 DEN-19에서 server-only workspace permission resolver contract를 추가했다. Canonical MVP roles(`hospital_admin`, `vet`, `technician`, `front_desk`)의 additive permission union, chart view/update boundary, typed denial reasons, and last active `hospital_admin` guard are covered by contract tests. Live Supabase DB adapter, migration/RLS, and API/server action enforcement are still future work.
+- 2026-05-17 기준 DEN-25에서 `병원구성원 관리`에 session-only role management UI를 추가했다. Hospital admins can edit active member roles, see effective permission summaries, confirm role changes/deactivation, and are blocked from demoting or deactivating the last active `hospital_admin`. Live DB writes, audit persistence, server action/API enforcement, and DB-level last-admin transaction protection remain future work.
+- 2026-05-17 기준 DEN-26에서 `/profile` session-only personal profile settings를 추가했다. Users can edit display name, initials, phone, and notification preference placeholder, while role/permission context remains read-only and authorization still comes from workspace membership/permission sources. Supabase identity profile, email change, password/MFA, and live persistence remain future work.
+- 2026-05-17 기준 DEN-21에서 first server-side permission enforcement slice를 추가했다. The role update Route Handler `POST /api/workspaces/[workspaceId]/memberships/[membershipId]/roles` calls a server-only enforcement module before allowing role mutation intent. It checks active membership, `role_permission:manage`, canonical role input, and last active `hospital_admin` protection. The current identity seam is demo-only request header based; Supabase verified session, DB writes, migration/RLS, and route-backed UI persistence remain future work.
+- 2026-05-17 기준 DEN-27 CSO security review에서 workspace auth/permission boundary를 검토했다. Profile data is not used as an authorization source, additive multi-role resolution and chart mutation restrictions are covered by tests, and the server enforcement slice is server-only. The highest live-readiness risks are the demo identity header, client-storage role mutation UI, and future DB-level last-admin transaction/RPC protection.
 - UI는 Figma나 screenshot을 1:1 복제하지 않고, 프로젝트 foundation, token, 기존 컴포넌트를 우선 사용한다.
 - 공통 컴포넌트 추출은 반복 패턴이 안정된 뒤 진행한다. PR7 화면 정렬 전에는 무리하게 공통화하지 않는다.
 - prototype 상태는 session-only이다. 새로고침 후 유지되는 persistence를 전제로 만들지 않는다.

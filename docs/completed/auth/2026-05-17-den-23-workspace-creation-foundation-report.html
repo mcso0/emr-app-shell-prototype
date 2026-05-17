@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-23 작업 보고서 - 워크스페이스 생성 기반</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #18202a;
+        --muted: #667085;
+        --line: #d9dee7;
+        --soft-line: #e9edf3;
+        --accent: #2563eb;
+        --accent-soft: #eff5ff;
+        --good: #0f8a5f;
+        --warn: #b45309;
+        --radius: 8px;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      .report {
+        overflow: hidden;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(24, 32, 42, 0.06);
+      }
+
+      header {
+        padding: 36px 40px 30px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      section {
+        padding: 28px 40px;
+        border-bottom: 1px solid var(--soft-line);
+      }
+
+      section:last-child {
+        border-bottom: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .metric {
+        min-height: 96px;
+        padding: 14px;
+        background: #fcfdff;
+        border: 1px solid var(--soft-line);
+        border-radius: var(--radius);
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .callout {
+        padding: 16px 18px;
+        background: var(--accent-soft);
+        border: 1px solid #bdd4ff;
+        border-radius: var(--radius);
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        border: 1px solid var(--soft-line);
+      }
+
+      th {
+        font-weight: 700;
+        background: #f8fafc;
+      }
+
+      code {
+        padding: 2px 5px;
+        background: #f8fafc;
+        border: 1px solid var(--soft-line);
+        border-radius: 5px;
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status.good {
+        color: var(--good);
+        background: #ecfdf3;
+      }
+
+      .status.warn {
+        color: var(--warn);
+        background: #fff7ed;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 24px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="report">
+        <header>
+          <p class="eyebrow">DEN-23 · 구현 보고서 · 2026-05-17</p>
+          <h1>워크스페이스 생성 기반 구현</h1>
+          <p class="subtitle">
+            병원 대표/관리자가 구독 후 병원 워크스페이스를 만들고, 최초 생성자가 자동으로
+            병원관리자 권한을 받는 session-only 기반 흐름을 구현했다.
+          </p>
+          <div class="summary-grid">
+            <div class="metric">
+              <strong>상태</strong>
+              <span>Human Review 준비</span>
+            </div>
+            <div class="metric">
+              <strong>진입점</strong>
+              <span><code>/workspace/new</code></span>
+            </div>
+            <div class="metric">
+              <strong>권한 계약</strong>
+              <span>creator active hospital_admin</span>
+            </div>
+            <div class="metric">
+              <strong>검증</strong>
+              <span>auth/app-shell 46개 통과</span>
+            </div>
+          </div>
+        </header>
+
+        <section>
+          <h2>요청 내용</h2>
+          <p>
+            병원 대표나 병원 관리자가 EMR 구독 후 워크스페이스를 만들 수 있고, 최초 생성자가
+            병원관리자 권한을 갖는 제품 기반을 먼저 만들라는 요청이었다.
+          </p>
+        </section>
+
+        <section>
+          <h2>구현 내용</h2>
+          <ul>
+            <li><code>/workspace/new</code> 온보딩 route를 추가했다.</li>
+            <li>로그인 전 접근 시 기존 AuthGate로 <code>/login?next=/workspace/new</code>로 이동한다.</li>
+            <li>병원/워크스페이스 이름, 대표/관리자 이름, 연락 이메일, 연락처를 입력받는다.</li>
+            <li>필수값과 이메일 형식 검증을 추가했다.</li>
+            <li>생성된 workspace와 creator membership을 browser storage contract에 저장한다.</li>
+            <li>생성자는 active <code>hospital_admin</code> role을 받는다.</li>
+            <li>생성 후 새 workspace의 home 화면으로 이동한다.</li>
+            <li>App Shell workspace switcher가 session workspace 표시명을 보여준다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>왜 중요한가</h2>
+          <div class="callout">
+            <p>
+              지금까지는 모든 사용자가 데모 workspace인 <code>clair-demo</code>에 들어가는 구조였다.
+              이번 작업으로 “병원이 자기 workspace를 만든다”는 SaaS 제품의 첫 관문과, 최초 관리자
+              멤버십 계약이 코드와 테스트에 생겼다.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2>수정된 주요 파일</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>파일</th>
+                <th>역할</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/app/workspace/new/page.tsx</code></td>
+                <td>워크스페이스 생성 route와 Suspense/AuthGate 경계</td>
+              </tr>
+              <tr>
+                <td><code>src/features/auth/workspace-onboarding.tsx</code></td>
+                <td>생성 화면, 입력 검증, 생성 후 이동</td>
+              </tr>
+              <tr>
+                <td><code>src/features/auth/workspace-session.ts</code></td>
+                <td>session-only workspace와 membership 저장 계약</td>
+              </tr>
+              <tr>
+                <td><code>src/features/auth/workspace-display.ts</code></td>
+                <td>App Shell 표시명 hook</td>
+              </tr>
+              <tr>
+                <td><code>src/shell/workspace-switcher.tsx</code>, <code>src/shell/top-menu.tsx</code></td>
+                <td>새 workspace 표시명 반영</td>
+              </tr>
+              <tr>
+                <td><code>tests/auth.spec.ts</code></td>
+                <td>guard, validation, creation, membership regression</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>검증 결과</h2>
+          <ul>
+            <li><span class="status good">통과</span> <code>npm run lint -- --ignore-pattern '.worktrees/**'</code></li>
+            <li><span class="status good">통과</span> <code>npx tsc --noEmit</code></li>
+            <li><span class="status good">통과</span> <code>npm run build</code></li>
+            <li><span class="status good">통과</span> <code>npx playwright test tests/auth.spec.ts --reporter=line</code>: 16 passed</li>
+            <li><span class="status good">통과</span> <code>npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts --reporter=line</code>: 46 passed</li>
+            <li><span class="status good">통과</span> <code>npm run docs:check</code></li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>남은 범위와 리스크</h2>
+          <ul>
+            <li><span class="status warn">주의</span> 이번 구현은 browser storage 기반 session-only prototype이다.</li>
+            <li>실제 Supabase persistence, migration SQL, RLS SQL은 아직 구현하지 않았다.</li>
+            <li>실제 결제/구독 제공자 연동은 아직 구현하지 않았다. 현재 구독 상태는 <code>trialing</code> placeholder다.</li>
+            <li>서버 권한 enforcement와 마지막 병원관리자 보호 transaction은 후속 티켓 범위다.</li>
+            <li>직원 초대와 멤버 관리 UI는 DEN-24 이후 범위다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>다음 단계</h2>
+          <p>
+            DEN-23은 Human Review로 넘기고, 대표 확인 후 DEN-24 직원 초대와 멤버십 상태 흐름으로
+            진행하는 것이 자연스럽다.
+          </p>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>

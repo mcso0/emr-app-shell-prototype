@@ -66,6 +66,7 @@ import {
   type HospitalOrderSubcategoryId,
   type HospitalOrderWorkTypeFilter,
 } from "@/features/hospital-admin/data";
+import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -259,11 +260,13 @@ function getSubcategoryCount(orders: HospitalOrderCatalogItem[], subcategoryId: 
 }
 
 export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
+  const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const orders = useHospitalAdminStore((state) => state.orders);
   const selectedCategoryId = useHospitalAdminStore((state) => state.selectedCategoryId);
   const selectedSubcategoryId = useHospitalAdminStore((state) => state.selectedSubcategoryId);
   const setSelectedCategoryId = useHospitalAdminStore((state) => state.setSelectedCategoryId);
   const setSelectedSubcategoryId = useHospitalAdminStore((state) => state.setSelectedSubcategoryId);
+  const setActiveSection = useHospitalAdminStore((state) => state.setActiveSection);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["orders"]));
   const toggleSection = (sectionId: string) => {
@@ -291,12 +294,15 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
         <div className="grid gap-1 pt-1">
           {hospitalAdminMenuItems.map((item) => {
             const Icon = item.icon;
+            const isMembers = item.label === "병원구성원 관리";
 
             return (
               <EmrTextSideNavButton
                 key={item.label}
-                disabled
+                active={isMembers && activeSection === "members"}
+                disabled={!isMembers}
                 icon={<Icon className="size-4 shrink-0" />}
+                onClick={isMembers ? () => setActiveSection("members") : undefined}
               >
                 {item.label}
               </EmrTextSideNavButton>
@@ -307,7 +313,10 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
             icon={<CdsFilesFileTextIcon className="size-4 shrink-0" />}
             open={openSections.has("orders")}
             testId="hospital-admin-menu-order-management"
-            onToggle={() => toggleSection("orders")}
+            onToggle={() => {
+              setActiveSection("orders");
+              toggleSection("orders");
+            }}
           >
             <div className="ml-4 border-l py-1 pl-3">
               {orderMenuGroups.map((group) => (
@@ -337,6 +346,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
                           onClick={() => {
                             if (!item.categoryId || !item.subcategoryId) return;
 
+                            setActiveSection("orders");
                             setSelectedCategoryId(item.categoryId);
                             setSelectedSubcategoryId(item.subcategoryId);
                           }}
@@ -374,7 +384,8 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   );
 }
 
-export function HospitalAdminContent() {
+export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
+  const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const billingFilter = useHospitalAdminStore((state) => state.billingFilter);
   const clearSelectedOrders = useHospitalAdminStore((state) => state.clearSelectedOrders);
   const createOrder = useHospitalAdminStore((state) => state.createOrder);
@@ -431,6 +442,10 @@ export function HospitalAdminContent() {
   const selectedVisibleCount = visibleOrderIds.filter((id) => selectedOrderIds.includes(id)).length;
   const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleCount === visibleOrderIds.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+
+  if (activeSection === "members") {
+    return <WorkspaceMembershipManagement workspaceId={workspaceId} />;
+  }
 
   const openDrawer = (order: HospitalOrderCatalogItem) => {
     if (selectedOrderIds.length > 0) return;
