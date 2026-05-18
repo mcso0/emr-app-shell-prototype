@@ -81,6 +81,22 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |
 | RECEPTION-PR-003 | done | reception | P1 | PR 3 | `docs/work/reception/RECEPTION-PR-003-registration-quality-ux.md` |
 | RECEPTION-PR-004 | done | reception | P1 | PR 4 | `docs/work/reception/RECEPTION-PR-004-unified-registration-entry.md` |
+| RECEPTION-LIVE-PR-001 | human_review | reception | P0 | Project 03 / DEN-54 | `docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md` |
+| RECEPTION-LIVE-PR-002 | human_review | reception | P0 | Project 03 / DEN-55 | `docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md` |
+| RECEPTION-LIVE-PR-003 | human_review | reception | P0 | Project 03 / DEN-56 | `docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md` |
+| RECEPTION-LIVE-PR-004 | human_review | reception | P0 | Project 03 / DEN-57 | `docs/work/reception/RECEPTION-LIVE-PR-004-patient-guardian-lookup.md` |
+| RECEPTION-LIVE-PR-005 | human_review | reception | P0 | Project 03 / DEN-58 | `docs/work/reception/RECEPTION-LIVE-PR-005-patient-guardian-registration-write.md` |
+| RECEPTION-LIVE-PR-006 | human_review | reception | P0 | Project 03 / DEN-60 | `docs/work/reception/RECEPTION-LIVE-PR-006-walk-in-encounter-create.md` |
+| RECEPTION-LIVE-PR-007 | human_review | reception | P0 | Project 03 / DEN-59 | `docs/work/reception/RECEPTION-LIVE-PR-007-appointment-check-in-transition.md` |
+| RECEPTION-LIVE-PR-008 | human_review | reception | P0 | Project 03 / DEN-61 | `docs/work/reception/RECEPTION-LIVE-PR-008-reception-mutation-permission-hardening.md` |
+| RECEPTION-LIVE-PR-009 | human_review | reception | P0 | Project 03 / DEN-62 | `docs/work/reception/RECEPTION-LIVE-PR-009-reception-queue-read.md` |
+| RECEPTION-LIVE-PR-010 | human_review | reception | P0 | Project 03 / DEN-63 | `docs/work/reception/RECEPTION-LIVE-PR-010-reception-day-calendar-read.md` |
+| RECEPTION-LIVE-PR-011 | human_review | reception | P0 | Project 03 / DEN-64 | `docs/work/reception/RECEPTION-LIVE-PR-011-sales-demo-mock-fallback-preservation.md` |
+| RECEPTION-LIVE-PR-012 | human_review | reception | P0 | Project 04 / DEN-65 | `docs/work/reception/RECEPTION-LIVE-PR-012-reception-persistence-regression-coverage.md` |
+| RECEPTION-LIVE-PR-013 | human_review | reception | P0 | Project 04 / DEN-66 | `docs/work/reception/RECEPTION-LIVE-PR-013-chart-order-billing-handoff-closeout.md` |
+| CLINICAL-BILLING-PR-001 | human_review | clinical-billing | P0 | Project 04 / DEN-67 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-001-scope-encounter-dependency.md` |
+| CLINICAL-BILLING-PR-002 | human_review | clinical-billing | P0 | Project 04 / DEN-68 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-002-schema-migration.md` |
+| DEMO-DATA-PR-001 | human_review | demo-data | P0 | Project 04 / DEN-99 | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md` |
 | CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
 | CHART-PR-002 | done | chart | P1 | PR 2 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md` |
 | CHART-PR-003 | done | chart | P1 | PR 3 | `docs/work/chart/CHART-PR-003-chart-safety-mvp-ux.md` |
@@ -106,7 +122,13 @@ The docs restructure and docs operations sequence is complete. Product MVP imple
 
 Recommended next shaping target:
 
-- Project 02 Todo is complete and ready for 승욱 Human Review. Do not start Project 03 without explicit approval.
+- Project 04 has started after 승욱 approval to continue through all Project 04 issues.
+- DEN-67 `00-01 Confirm clinical billing persistence scope and encounter dependency` is ready for Human Review.
+- DEN-68 `00-02 Implement clinical order billing schema migration` is ready for Human Review.
+- DEN-99 `00-03 Define portfolio virtual hospital demo dataset foundation` is ready for Human Review.
+- Next recommended Linear Project 04 implementation issue is DEN-69 `01-01 Persist SOAP field saves and autosave metadata`.
+- DEN-69+ should use `docs/product/demo-data/` as an added product data reference before continuing schema/UI work.
+- Keep Project 04 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
 
 ## Inbox
 

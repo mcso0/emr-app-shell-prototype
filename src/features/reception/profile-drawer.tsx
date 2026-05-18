@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import {
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
@@ -49,6 +50,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useMockAuthStore } from "@/features/auth/session-store";
 import {
   getGuardianDisplay,
   getPatientDisplayAge,
@@ -59,6 +61,10 @@ import {
   normalizeGuardianPhone,
   usePatientProfileStore,
 } from "@/features/reception/patient-profile-store";
+import type {
+  ReceptionPatientGuardianRegistrationInput,
+  ReceptionPatientGuardianRegistrationResponse,
+} from "@/features/reception/patient-guardian-registration";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import {
@@ -2561,13 +2567,93 @@ function RegistrationModeCard({
   );
 }
 
+function getRegistrationWorkspaceId(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? "clair-demo";
+  return value ?? "clair-demo";
+}
+
+function getReceptionRegistrationDemoActorId(role?: string) {
+  if (role === "hospital_admin" || role === "billing_admin") return "user-admin";
+  if (role === "vet") return "user-vet";
+  return "user-front-desk";
+}
+
+async function submitRegistration({
+  actorRole,
+  input,
+  workspaceId,
+}: {
+  actorRole?: string;
+  input: ReceptionPatientGuardianRegistrationInput;
+  workspaceId: string;
+}): Promise<ReceptionPatientGuardianRegistrationResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-registration`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clair-demo-session-user-id": getReceptionRegistrationDemoActorId(actorRole),
+        },
+        body: JSON.stringify(input),
+      }
+    );
+    const body = (await response.json()) as ReceptionPatientGuardianRegistrationResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+function getRegistrationRouteErrorMessage(
+  result: Extract<ReceptionPatientGuardianRegistrationResponse, { ok: false }>
+) {
+  if (result.error === "rate_limited") {
+    return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  if (result.error === "invalid_input") {
+    return Object.values(result.fieldErrors ?? {})[0] ?? "등록 정보를 확인해 주세요.";
+  }
+  if (result.denialReason === "duplicate_guardian_mobile_phone") {
+    return "이미 등록된 보호자입니다.";
+  }
+  if (result.denialReason === "duplicate_patient_microchip") {
+    return "이미 등록된 마이크로칩 번호입니다.";
+  }
+  if (result.denialReason === "duplicate_patient_registration_no") {
+    return "이미 등록된 동물등록번호입니다.";
+  }
+  if (result.denialReason === "guardian_unavailable") {
+    return "연결할 보호자를 찾을 수 없습니다.";
+  }
+  if (
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 환자/보호자를 등록할 권한이 없습니다.";
+  }
+
+  return "환자/보호자 등록에 실패했습니다.";
+}
+
 function PatientGuardianRegistrationButton({
   onPatientReady,
 }: {
   onPatientReady: (patientId: EmrId) => void;
 }) {
-  const addGuardian = usePatientProfileStore((state) => state.addGuardian);
-  const addPatient = usePatientProfileStore((state) => state.addPatient);
+  const applyPatientGuardianRegistration = usePatientProfileStore(
+    (state) => state.applyPatientGuardianRegistration
+  );
+  const authSession = useMockAuthStore((state) => state.session);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const hasDuplicatePatientNameForGuardian = usePatientProfileStore(
     (state) => state.hasDuplicatePatientNameForGuardian
@@ -2575,6 +2661,8 @@ function PatientGuardianRegistrationButton({
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
   const [open, setOpen] = useState(false);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [errors, setErrors] = useState<RegistrationErrors>({});
@@ -2584,6 +2672,7 @@ function PatientGuardianRegistrationButton({
   const [mode, setMode] = useState<RegistrationMode>("new_guardian_patient");
   const [patientDraft, setPatientDraft] = useState(() => createNewPatientDraft());
   const [selectedGuardianId, setSelectedGuardianId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<RegistrationStep>("mode");
 
   const selectedGuardian = guardians.find((guardian) => guardian.id === selectedGuardianId);
@@ -2661,6 +2750,7 @@ function PatientGuardianRegistrationButton({
     setMode("new_guardian_patient");
     setPatientDraft(createNewPatientDraft());
     setSelectedGuardianId("");
+    setSubmitting(false);
     setStep("mode");
   };
   const requestClose = () => {
@@ -2764,6 +2854,30 @@ function PatientGuardianRegistrationButton({
       specialNote: patientDraft.specialNote,
     };
   };
+  const getRegistrationPayload = (guardianId: EmrId): ReceptionPatientGuardianRegistrationInput => ({
+    mode,
+    ...(mode === "existing_guardian_patient" ? { existingGuardianId: guardianId } : {}),
+    ...(mode === "new_guardian_patient"
+      ? {
+          guardian: {
+            address: formatKoreanAddress({
+              detail: guardianDraft.addressDetail,
+              postalCode: guardianDraft.addressPostalCode,
+              road: guardianDraft.addressRoad,
+            }),
+            birthDate: guardianDraft.birthDate,
+            email: guardianDraft.email,
+            marketingConsent: guardianDraft.marketingConsent,
+            memo: guardianDraft.memo,
+            mobilePhone: guardianDraft.mobilePhone,
+            name: guardianDraft.name,
+            phone: guardianDraft.phone,
+            privacyConsent: guardianDraft.signatureStatus === "completed",
+          },
+        }
+      : {}),
+    patient: getPatientPayload(guardianId),
+  });
   const showSuccessToast = (patientId: EmrId, message: string) => {
     toast.success(message, {
       action: {
@@ -2776,42 +2890,20 @@ function PatientGuardianRegistrationButton({
       },
     });
   };
-  const commitRegistration = () => {
+  const commitRegistration = async () => {
+    if (submitting) return;
     if (!validatePatientStep()) {
       setStep("patient");
       return;
     }
 
-    let guardianId = selectedGuardian?.id;
+    let guardianId = mode === "new_guardian_patient" ? "draft-guardian" : selectedGuardian?.id;
 
     if (mode === "new_guardian_patient") {
       if (!validateGuardianStep()) {
         setStep("guardian");
         return;
       }
-
-      const guardianResult = addGuardian({
-        address: formatKoreanAddress({
-          detail: guardianDraft.addressDetail,
-          postalCode: guardianDraft.addressPostalCode,
-          road: guardianDraft.addressRoad,
-        }),
-        birthDate: guardianDraft.birthDate,
-        email: guardianDraft.email,
-        marketingConsent: guardianDraft.marketingConsent,
-        memo: guardianDraft.memo,
-        mobilePhone: guardianDraft.mobilePhone,
-        name: guardianDraft.name,
-        phone: guardianDraft.phone,
-        privacyConsent: guardianDraft.signatureStatus === "completed",
-      });
-
-      if (guardianResult.error || !guardianResult.guardianId) {
-        toast.error(guardianResult.error ?? "보호자 등록에 실패했습니다.");
-        return;
-      }
-
-      guardianId = guardianResult.guardianId;
     }
 
     if (!guardianId) {
@@ -2819,17 +2911,24 @@ function PatientGuardianRegistrationButton({
       return;
     }
 
-    const patientResult = addPatient(getPatientPayload(guardianId));
+    setSubmitting(true);
+    const result = await submitRegistration({
+      actorRole: authSession?.role,
+      input: getRegistrationPayload(guardianId),
+      workspaceId,
+    });
+    setSubmitting(false);
 
-    if (patientResult.error || !patientResult.patientId) {
-      toast.error(patientResult.error ?? "환자 등록에 실패했습니다.");
+    if (!result.ok) {
+      toast.error(getRegistrationRouteErrorMessage(result));
       return;
     }
 
+    const patientId = applyPatientGuardianRegistration(result.registration);
     setOpen(false);
     reset();
     showSuccessToast(
-      patientResult.patientId,
+      patientId,
       mode === "new_guardian_patient"
         ? "환자/보호자 등록이 완료되었습니다."
         : "환자 등록이 완료되었습니다."
@@ -3597,7 +3696,7 @@ function PatientGuardianRegistrationButton({
               ) : null}
               <Button
                 className="px-5 font-semibold"
-                disabled={!canGoNext}
+                disabled={!canGoNext || submitting}
                 onClick={() => {
                   if (step === "mode") goNextFromMode();
                   if (step === "guardian") goNextFromGuardian();
@@ -3605,7 +3704,7 @@ function PatientGuardianRegistrationButton({
                   if (step === "confirm") commitRegistration();
                 }}
               >
-                {step === "confirm" ? "등록" : "다음"}
+                {step === "confirm" ? (submitting ? "등록 중" : "등록") : "다음"}
               </Button>
             </div>
           </DialogFooter>

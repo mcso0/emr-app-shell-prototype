@@ -54,6 +54,52 @@ test("sales demo launcher carries the Kong scenario through the golden path", as
   await expect(page.getByText("156,500원").first()).toBeVisible();
 });
 
+test("reception live reader mock fallbacks preserve the Kong sales demo context", async ({
+  page,
+}) => {
+  let calendarReadRequested = false;
+  let queueReadRequested = false;
+
+  await page.route("**/reception/calendar/day**", async (route) => {
+    calendarReadRequested = true;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        workspaceId: "clair-demo",
+        date: "2026-05-01",
+        records: [],
+        enforcedBy: "reception-calendar-read",
+      }),
+    });
+  });
+  await page.route("**/reception/queue**", async (route) => {
+    queueReadRequested = true;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        queue: [],
+        enforcedBy: "reception-queue-read",
+      }),
+    });
+  });
+
+  await page.goto(`/w/clair-demo/reception?${scenarioQuery}&modulePanel=open&aside=closed`);
+
+  await expect.poll(() => calendarReadRequested).toBe(true);
+  await expect.poll(() => queueReadRequested).toBe(true);
+  await expectDemoContext(page);
+  await expect(page.getByTestId("appointment-card-appointment-kong-260501")).toContainText(
+    "구토 및 복부 불편"
+  );
+  await expect(page.getByRole("button", { name: /콩이 · 김하늘/ }).first()).toBeVisible();
+});
+
 test("golden scenario can be opened across chart, lab, imaging, and billing", async ({ page }) => {
   await page.goto(`/w/clair-demo/treatment?${scenarioQuery}&modulePanel=open&aside=closed`);
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();

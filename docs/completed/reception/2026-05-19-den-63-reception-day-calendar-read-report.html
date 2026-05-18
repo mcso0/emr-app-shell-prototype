@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-63 Reception Day Calendar Read 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { color: #0f172a; }
+      code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+      .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-63 Reception Day Calendar Read 보고서</h1>
+
+    <h2>대표 요약</h2>
+    <p>접수 달력이 저장된 예약과 현장 접수 데이터를 읽을 수 있는 서버 통로를 만들었다. 이제 새로고침 후에도 서버 응답 기준으로 예약 카드와 현장 접수 카드가 달력에 반영될 수 있다.</p>
+
+    <h2>작업 내용</h2>
+    <ul>
+      <li><code>GET /api/workspaces/[workspaceId]/reception/calendar/day</code> route 추가</li>
+      <li>active workspace membership과 <code>reception:view</code> 권한 확인 추가</li>
+      <li>mock fallback reader와 Supabase RPC gateway 추가</li>
+      <li><code>public.clair_list_reception_day_calendar(...)</code> local-first SQL 추가</li>
+      <li>성공 응답을 접수 schedule state에 병합해 appointment-only, checked-in appointment, walk-in 표시 지원</li>
+      <li>기존 demo/mock fixture 흐름 유지</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/reception/calendar/day/route.ts</code></li>
+      <li><code>src/features/reception/server-reception-calendar-read-core.ts</code></li>
+      <li><code>src/features/reception/server-reception-calendar-read.ts</code></li>
+      <li><code>src/features/reception/reception-calendar-read.ts</code></li>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>src/features/reception/store.ts</code></li>
+      <li><code>src/features/reception/data.ts</code></li>
+      <li><code>supabase/migrations/20260519150000_reception_day_calendar_reader.sql</code></li>
+      <li><code>tests/reception-calendar-read-server.spec.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/reception-calendar-read-server.spec.ts --reporter=line</code>: 5 passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "server-backed reception day calendar read" --reporter=line</code>: 1 passed</li>
+      <li><code>npx tsc --noEmit</code>: passed</li>
+      <li><code>npm run build</code>: passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 27 passed</li>
+      <li><code>npm run security:secrets</code>: passed</li>
+      <li><code>npm run docs:check</code>: passed</li>
+    </ul>
+
+    <div class="warn">
+      <p>appointment CRUD, drag/drop scheduling, no-show automation, queue status mutation, chart/order/billing persistence, final RLS policy SQL, remote Supabase, 실서버, 실제 환자/병원 데이터는 진행하지 않았다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-64에서 sales demo와 mock fallback이 Project 03 live 전환 중에도 안정적으로 유지되는지 회귀 범위를 정리한다.</p>
+  </body>
+</html>

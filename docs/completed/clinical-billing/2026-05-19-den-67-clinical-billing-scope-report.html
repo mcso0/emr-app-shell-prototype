@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-67 Clinical Billing Persistence Scope 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { color: #0f172a; }
+      code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+      table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+      th, td { border: 1px solid #d8dee9; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; }
+      .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-67 Clinical Billing Persistence Scope 보고서</h1>
+
+    <h2>대표 요약</h2>
+    <p>Project 04에서 차트, 오더, 수납을 어디까지 실제 저장 흐름으로 바꿀지 먼저 확정했다. 핵심은 접수에서 만들어진 <code>encounter.id</code>를 차트/SOAP/진단/오더/수납의 공통 연결 ID로 쓰는 것이다.</p>
+
+    <h2>확정한 범위</h2>
+    <table>
+      <thead>
+        <tr><th>영역</th><th>이번 프로젝트 포함</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>차트/SOAP</td><td>SOAP 저장, autosave metadata, 차트 작성완료 상태</td></tr>
+        <tr><td>진단</td><td>진단명 선택, 자유 입력, 확진/중점 또는 동등한 MVP 표시</td></tr>
+        <tr><td>오더</td><td>draft line 수정, 수량/삭제/확정, 상태 변경</td></tr>
+        <tr><td>수납</td><td>확정 오더 기반 invoice candidate, 청구 확정, 미납/수납완료 상태</td></tr>
+        <tr><td>회귀/인수인계</td><td>외래 전체 persistence regression과 audit/security handoff</td></tr>
+      </tbody>
+    </table>
+
+    <h2>중요한 결정</h2>
+    <ul>
+      <li><code>workspaceId</code>는 모든 읽기/쓰기의 필수 scope다.</li>
+      <li><code>encounter.id</code>는 차트, 오더, 수납을 연결하는 기본 ID다.</li>
+      <li>환자/보호자/예약 ID는 표시와 맥락용이지 권한 판단 기준이 아니다.</li>
+      <li>수납 금액은 서버가 저장된 오더와 가격 기준으로 다시 계산해야 한다.</li>
+      <li>권한은 active membership과 permission resolver 기준으로 확인한다.</li>
+    </ul>
+
+    <h2>제외한 범위</h2>
+    <ul>
+      <li>검사/영상/조제/처치 전체 live 전환</li>
+      <li>실제 PG/결제사 연동</li>
+      <li>AI/약물 안전 자동화</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터</li>
+      <li>production deploy</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code>: passed</li>
+      <li><code>npm run security:secrets</code>: passed</li>
+    </ul>
+
+    <div class="warn">
+      <p>이번 DEN-67은 구현 전 범위 확정 작업이다. DB migration, route, UI 저장 구현은 DEN-68부터 시작한다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-68 <code>00-02 Implement clinical order billing schema migration</code>로 넘어가 최소 차트/오더/수납 DB 구조를 local-first로 만든다.</p>
+  </body>
+</html>

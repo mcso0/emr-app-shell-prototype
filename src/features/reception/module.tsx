@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
@@ -92,7 +93,23 @@ import {
   NewUnifiedRegistrationButton,
   PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
+import { useMockAuthStore } from "@/features/auth/session-store";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
+import type {
+  ReceptionAppointmentCheckInRecord,
+  ReceptionAppointmentCheckInResponse,
+} from "@/features/reception/appointment-check-in";
+import type {
+  ReceptionPatientGuardianLookupItem,
+  ReceptionPatientGuardianLookupResponse,
+} from "@/features/reception/patient-guardian-lookup";
+import type { ReceptionCalendarReadResponse } from "@/features/reception/reception-calendar-read";
+import type { ReceptionQueueReadResponse } from "@/features/reception/reception-queue-read";
+import type {
+  ReceptionWalkInEncounterInput,
+  ReceptionWalkInEncounterRecord,
+  ReceptionWalkInEncounterResponse,
+} from "@/features/reception/walk-in-encounter";
 import { useReceptionStore } from "@/features/reception/store";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
@@ -187,6 +204,12 @@ type WalkInReceptionInput = {
 };
 const unassignedVeterinarianValue = "unassigned";
 
+function getReceptionDemoActorId(role?: string) {
+  if (role === "hospital_admin" || role === "billing_admin") return "user-admin";
+  if (role === "vet") return "user-vet";
+  return "user-front-desk";
+}
+
 function getVeterinarianFilterLabel(selectedVeterinarians: Veterinarian[]) {
   const [firstVeterinarian] = selectedVeterinarians;
 
@@ -275,6 +298,202 @@ const getReceptionPatientOptionLabel = (summary: ReceptionPatientSummary) =>
   ]
     .filter(Boolean)
     .join(" · ");
+
+const getReceptionPatientSearchText = (
+  patient: Patient,
+  primaryGuardian?: ReceptionPatientSummary["primaryGuardian"]
+) =>
+  [
+    patient.name,
+    patient.patientNo,
+    patient.breed,
+    getSpeciesLabel(patient.species),
+    primaryGuardian?.name,
+    primaryGuardian?.mobilePhone,
+    primaryGuardian?.phone,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+const mapLookupItemToReceptionPatientSummary = (
+  item: ReceptionPatientGuardianLookupItem
+): ReceptionPatientSummary => ({
+  patient: item.patient,
+  primaryGuardian: item.primaryGuardian,
+  searchText: item.searchText ?? getReceptionPatientSearchText(item.patient, item.primaryGuardian),
+});
+
+async function submitWalkInEncounter({
+  actorRole,
+  input,
+  workspaceId,
+}: {
+  actorRole?: string;
+  input: ReceptionWalkInEncounterInput;
+  workspaceId: string;
+}): Promise<ReceptionWalkInEncounterResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/walk-in-encounters`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
+        },
+        body: JSON.stringify(input),
+      }
+    );
+    const body = (await response.json()) as ReceptionWalkInEncounterResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function submitAppointmentCheckIn({
+  actorRole,
+  appointmentId,
+  workspaceId,
+}: {
+  actorRole?: string;
+  appointmentId: string;
+  workspaceId: string;
+}): Promise<ReceptionAppointmentCheckInResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/appointments/${encodeURIComponent(appointmentId)}/check-in`,
+      {
+        method: "POST",
+        headers: {
+          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
+        },
+      }
+    );
+    const body = (await response.json()) as ReceptionAppointmentCheckInResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function loadReceptionQueue({
+  actorId,
+  workspaceId,
+}: {
+  actorId?: string;
+  workspaceId: string;
+}): Promise<ReceptionQueueReadResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/queue`,
+      {
+        cache: "no-store",
+        headers: actorId ? { "x-clair-demo-session-user-id": actorId } : undefined,
+      }
+    );
+    const body = (await response.json()) as ReceptionQueueReadResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function loadReceptionCalendar({
+  actorId,
+  date,
+  workspaceId,
+}: {
+  actorId?: string;
+  date: string;
+  workspaceId: string;
+}): Promise<ReceptionCalendarReadResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/calendar/day?date=${encodeURIComponent(date)}`,
+      {
+        cache: "no-store",
+        headers: actorId ? { "x-clair-demo-session-user-id": actorId } : undefined,
+      }
+    );
+    const body = (await response.json()) as ReceptionCalendarReadResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+function getWalkInRouteErrorMessage(
+  result: Extract<ReceptionWalkInEncounterResponse, { ok: false }>
+) {
+  if (result.error === "rate_limited") return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (result.error === "invalid_input") {
+    return Object.values(result.fieldErrors ?? {})[0] ?? "접수 정보를 확인해 주세요.";
+  }
+  if (result.denialReason === "patient_unavailable") return "접수할 환자를 찾을 수 없습니다.";
+  if (result.denialReason === "guardian_unavailable") return "연결할 보호자를 찾을 수 없습니다.";
+  if (result.denialReason === "patient_guardian_link_missing") {
+    return "선택한 보호자와 환자 연결을 확인해 주세요.";
+  }
+  if (
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 현장 접수를 생성할 권한이 없습니다.";
+  }
+
+  return "현장 접수 생성에 실패했습니다.";
+}
+
+function getAppointmentCheckInRouteErrorMessage(
+  result: Extract<ReceptionAppointmentCheckInResponse, { ok: false }>
+) {
+  if (result.error === "rate_limited") return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (result.denialReason === "appointment_unavailable") return "예약 정보를 찾을 수 없습니다.";
+  if (result.denialReason === "appointment_already_checked_in") {
+    return "이미 접수된 예약입니다.";
+  }
+  if (result.denialReason === "appointment_not_check_in_ready") {
+    return "접수 처리할 수 없는 예약 상태입니다.";
+  }
+  if (
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 예약 접수를 처리할 권한이 없습니다.";
+  }
+
+  return "예약 접수 처리에 실패했습니다.";
+}
 
 const recentPatientWeightKgByPatientId: Record<string, string> = {
   "patient-coco": "4.20",
@@ -635,6 +854,8 @@ function PatientCard({
 export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
+  const queueReadError = useReceptionStore((state) => state.queueReadError);
+  const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
   const [listMode, setListMode] = useState<ReceptionSideListMode>("reception");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchQuery = useReceptionStore((state) => state.searchQuery);
@@ -683,6 +904,16 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           />
         }
       />
+      {queueReadStatus === "loading" ? (
+        <div className="border-b border-[var(--emr-line-subtle)] px-4 py-2 text-[12px] text-muted-foreground">
+          대기열 불러오는 중
+        </div>
+      ) : null}
+      {queueReadStatus === "error" ? (
+        <div className="border-b border-[var(--emr-line-subtle)] px-4 py-2 text-[12px] text-[var(--emr-status-danger-text)]">
+          {queueReadError ?? "대기열을 불러오지 못했습니다."}
+        </div>
+      ) : null}
       <EmrListHeader
         label={sideListLabel}
         count={sideListCount}
@@ -1864,6 +2095,7 @@ function ReceptionScheduleBoard({
 }
 
 export function ReceptionContent() {
+  const params = useParams<{ workspaceId?: string | string[] }>();
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const [calendarView, setCalendarView] = useState<ReceptionCalendarView>("day");
@@ -1875,20 +2107,46 @@ export function ReceptionContent() {
   const selectedAppointmentId = useReceptionStore((state) => state.selectedAppointmentId);
   const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const calendarReadError = useReceptionStore((state) => state.calendarReadError);
+  const calendarReadStatus = useReceptionStore((state) => state.calendarReadStatus);
   const messageDeliveries = useReceptionStore((state) => state.messageDeliveries);
-  const checkInAppointment = useReceptionStore((state) => state.checkInAppointment);
+  const applyAppointmentCheckIn = useReceptionStore((state) => state.applyAppointmentCheckIn);
+  const applyPersistedReceptionCalendar = useReceptionStore(
+    (state) => state.applyPersistedReceptionCalendar
+  );
+  const applyPersistedReceptionQueue = useReceptionStore(
+    (state) => state.applyPersistedReceptionQueue
+  );
+  const applyWalkInCheckIn = useReceptionStore((state) => state.applyWalkInCheckIn);
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectAppointment = useReceptionStore((state) => state.selectAppointment);
   const selectEncounter = useReceptionStore((state) => state.selectEncounter);
   const selectPatient = useReceptionStore((state) => state.selectPatient);
+  const setReceptionCalendarReadStatus = useReceptionStore(
+    (state) => state.setReceptionCalendarReadStatus
+  );
+  const setReceptionQueueReadStatus = useReceptionStore(
+    (state) => state.setReceptionQueueReadStatus
+  );
+  const persistedCalendarAppointments = useReceptionStore(
+    (state) => state.persistedCalendarAppointments
+  );
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const authSession = useMockAuthStore((state) => state.session);
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryPatientId = searchParams.get("patientId") ?? scenario?.patientId;
   const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
-  const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : params.workspaceId?.[0] ?? "clair-demo";
+  const appointments = useMemo(
+    () => getTodayAppointments(draftCheckIns, persistedCalendarAppointments),
+    [draftCheckIns, persistedCalendarAppointments]
+  );
   const patientSummaries = useMemo(
     () => getReceptionPatientSummaries(draftCheckIns, { guardians, patientGuardians, patients }),
     [draftCheckIns, guardians, patientGuardians, patients]
@@ -1941,6 +2199,20 @@ export function ReceptionContent() {
     selectPatient(patientId);
     setActiveDrawer({ type: "reception-patient", id: patientId });
   };
+  const handleCheckInAppointment = async (appointment: Appointment) => {
+    const result = await submitAppointmentCheckIn({
+      actorRole: authSession?.role,
+      appointmentId: appointment.id,
+      workspaceId,
+    });
+
+    if (!result.ok) {
+      toast.error(getAppointmentCheckInRouteErrorMessage(result));
+      return;
+    }
+
+    applyAppointmentCheckIn({ appointment, checkIn: result.checkIn });
+  };
   const openWalkInDialog = () => {
     setActiveDrawer(null);
     setWalkInInitialPatientId(undefined);
@@ -1968,6 +2240,64 @@ export function ReceptionContent() {
     selectedEncounterId,
     selectedPatientId,
   ]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCalendar() {
+      setReceptionCalendarReadStatus("loading");
+      const result = await loadReceptionCalendar({
+        actorId: authSession?.id,
+        date: "2026-05-01",
+        workspaceId,
+      });
+
+      if (cancelled) return;
+
+      if (!result.ok) {
+        setReceptionCalendarReadStatus("error", "서버 캘린더를 불러오지 못했습니다.");
+        return;
+      }
+
+      applyPersistedReceptionCalendar(result.records);
+    }
+
+    void loadCalendar();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    applyPersistedReceptionCalendar,
+    authSession?.id,
+    setReceptionCalendarReadStatus,
+    workspaceId,
+  ]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQueue() {
+      setReceptionQueueReadStatus("loading");
+      const result = await loadReceptionQueue({
+        actorId: authSession?.id,
+        workspaceId,
+      });
+
+      if (cancelled) return;
+
+      if (!result.ok) {
+        setReceptionQueueReadStatus("error", "서버 대기열을 불러오지 못했습니다.");
+        return;
+      }
+
+      applyPersistedReceptionQueue(result.queue);
+    }
+
+    void loadQueue();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPersistedReceptionQueue, authSession?.id, setReceptionQueueReadStatus, workspaceId]);
 
   if (!selectedPatient) {
     return (
@@ -1997,12 +2327,13 @@ export function ReceptionContent() {
           initialPatientId={walkInInitialPatientId}
           open={walkInDialogOpen}
           patientSummaries={patientSummaries}
+          workspaceId={workspaceId}
           onOpenChange={(nextOpen) => {
             setWalkInDialogOpen(nextOpen);
             if (!nextOpen) setWalkInInitialPatientId(undefined);
           }}
-          onCreate={(input) => {
-            createWalkInCheckIn(input);
+          onCreate={(input, walkIn) => {
+            applyWalkInCheckIn({ ...input, walkIn });
             setWalkInInitialPatientId(undefined);
             setWalkInDialogOpen(false);
           }}
@@ -2026,6 +2357,16 @@ export function ReceptionContent() {
           reason={selectedVisitReason}
         />
       ) : null}
+      {calendarReadStatus === "loading" ? (
+        <div className="border-b bg-muted/50 px-4 py-2 text-[12px] font-medium text-muted-foreground">
+          저장된 예약을 불러오는 중
+        </div>
+      ) : null}
+      {calendarReadStatus === "error" ? (
+        <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] font-semibold text-[var(--emr-status-warning-text)]">
+          {calendarReadError ?? "저장된 예약을 불러오지 못했습니다."}
+        </div>
+      ) : null}
       <ReceptionScheduleBoard
         appointments={visibleAppointments}
         draftCheckIns={draftCheckIns}
@@ -2035,7 +2376,7 @@ export function ReceptionContent() {
         onSelectAppointment={handleSelectAppointment}
         onSelectPatient={handleSelectPatientFromSchedule}
         onCreateWalkIn={openWalkInDialog}
-        onCheckIn={checkInAppointment}
+        onCheckIn={handleCheckInAppointment}
       />
     </div>
   );
@@ -2067,13 +2408,19 @@ function WalkInReceptionDialog({
   onOpenChange,
   open,
   patientSummaries,
+  workspaceId,
 }: {
   initialPatientId?: string;
-  onCreate: (input: WalkInReceptionInput) => void;
+  onCreate: (
+    input: WalkInReceptionInput,
+    walkIn: ReceptionWalkInEncounterRecord
+  ) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   patientSummaries: ReceptionPatientSummary[];
+  workspaceId: string;
 }) {
+  const authSession = useMockAuthStore((state) => state.session);
   const [receptionDepartment, setReceptionDepartment] = useState(defaultWalkInDepartment);
   const [receptionDuration, setReceptionDuration] = useState(defaultWalkInDuration);
   const [receptionMemo, setReceptionMemo] = useState("");
@@ -2081,13 +2428,23 @@ function WalkInReceptionDialog({
   const [receptionVeterinarianId, setReceptionVeterinarianId] = useState(
     unassignedVeterinarianValue
   );
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookupResults, setLookupResults] = useState<ReceptionPatientGuardianLookupItem[]>([]);
+  const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">("idle");
+  const [submitting, setSubmitting] = useState(false);
   const [customPurposeTags, setCustomPurposeTags] = useState<string[]>([]);
   const [isAddingPurposeTag, setIsAddingPurposeTag] = useState(false);
   const [newPurposeTag, setNewPurposeTag] = useState("");
   const [receptionPurposeTags, setReceptionPurposeTags] = useState<string[]>([]);
   const [receptionVisitPurpose, setReceptionVisitPurpose] = useState("");
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
-  const selectedSummary = patientSummaries.find(
+  const lookupActive = lookupQuery.trim().length > 0;
+  const lookupPatientSummaries = useMemo(
+    () => lookupResults.map(mapLookupItemToReceptionPatientSummary),
+    [lookupResults]
+  );
+  const selectablePatientSummaries = lookupActive ? lookupPatientSummaries : patientSummaries;
+  const selectedSummary = selectablePatientSummaries.find(
     (summary) => summary.patient.id === receptionPatientId
   );
   const patient = selectedSummary?.patient;
@@ -2099,6 +2456,72 @@ function WalkInReceptionDialog({
   const patientOptionText = selectedSummary ? getReceptionPatientOptionLabel(selectedSummary) : "";
   const patientWeightKg = getRecentPatientWeightKg(patient);
   const purposeChips = [...receptionPurposeChips, ...customPurposeTags];
+  const lookupHelper =
+    lookupActive && lookupState === "loading"
+      ? "DB 환자 검색 중입니다."
+      : lookupActive && lookupState === "error"
+        ? "환자 검색을 불러오지 못했습니다."
+        : lookupActive
+          ? lookupPatientSummaries.length
+            ? `DB 검색 결과 ${lookupPatientSummaries.length}건`
+            : "검색 결과가 없습니다."
+          : patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다.";
+
+  useEffect(() => {
+    if (!open) return;
+
+    const query = lookupQuery.trim();
+    if (!query) {
+      setLookupResults([]);
+      setLookupState("idle");
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function loadLookup() {
+      setLookupState("loading");
+
+      try {
+        const headers = authSession?.id
+          ? { "x-clair-demo-session-user-id": authSession.id }
+          : undefined;
+        const response = await fetch(
+          `/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?query=${encodeURIComponent(query)}`,
+          {
+            cache: "no-store",
+            headers,
+            signal: controller.signal,
+          }
+        );
+        const result = (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+        if (cancelled) return;
+
+        if (!response.ok || !result.ok) {
+          setLookupResults([]);
+          setLookupState("error");
+          return;
+        }
+
+        setLookupResults(result.patients);
+        setLookupState("idle");
+      } catch (error) {
+        if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) {
+          setLookupResults([]);
+          setLookupState("error");
+        }
+      }
+    }
+
+    void loadLookup();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [authSession?.id, authSession?.role, lookupQuery, open, workspaceId]);
 
   const close = () => onOpenChange(false);
   const togglePurposeTag = (purpose: string) => {
@@ -2131,6 +2554,42 @@ function WalkInReceptionDialog({
     setIsAddingPurposeTag(false);
     setNewPurposeTag("");
   };
+  const create = async () => {
+    const selectedVeterinarianId =
+      receptionVeterinarianId === unassignedVeterinarianValue
+        ? undefined
+        : receptionVeterinarianId;
+
+    if (!patient || submitting) return;
+
+    const input: WalkInReceptionInput = {
+      department: receptionDepartment,
+      durationMinutes: getDurationMinutesFromLabel(receptionDuration),
+      guardianId: guardian?.id,
+      guardianMobilePhone: guardian?.mobilePhone,
+      memo: receptionMemo.trim() || undefined,
+      patientId: patient.id,
+      patientName: patient.name,
+      primaryVeterinarianId: selectedVeterinarianId,
+      sendKakaoMessage,
+      visitPurpose,
+    };
+
+    setSubmitting(true);
+    const result = await submitWalkInEncounter({
+      actorRole: authSession?.role,
+      input,
+      workspaceId,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(getWalkInRouteErrorMessage(result));
+      return;
+    }
+
+    onCreate(input, result.walkIn);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2160,8 +2619,15 @@ function WalkInReceptionDialog({
                 <RegistrationFormField
                   label="환자 검색"
                   required
-                  helper={patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다."}
+                  helper={lookupHelper}
                 >
+                  <Input
+                    aria-label="검색어 입력"
+                    className="mb-2 h-10 bg-card"
+                    placeholder="환자명, 보호자명, 전화번호 검색"
+                    value={lookupQuery}
+                    onChange={(event) => setLookupQuery(event.target.value)}
+                  />
                   <Select
                     value={receptionPatientId}
                     onValueChange={(value) => setReceptionPatientId(value ?? "")}
@@ -2174,11 +2640,30 @@ function WalkInReceptionDialog({
                         className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
                         aria-hidden="true"
                       />
-                      <SelectValue placeholder="동물명 또는 보호자명으로 검색" />
+                      <span className="flex flex-1 items-center gap-1.5 truncate text-left data-placeholder:text-[var(--emr-text-placeholder)]">
+                        {patientOptionText || "동물명 또는 보호자명으로 검색"}
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        {patientSummaries.map((summary) => (
+                        {lookupActive && lookupState === "loading" ? (
+                          <SelectItem disabled value="lookup-loading">
+                            DB 환자 검색 중입니다.
+                          </SelectItem>
+                        ) : null}
+                        {lookupActive && lookupState === "error" ? (
+                          <SelectItem disabled value="lookup-error">
+                            환자 검색을 불러오지 못했습니다.
+                          </SelectItem>
+                        ) : null}
+                        {lookupActive &&
+                        lookupState === "idle" &&
+                        selectablePatientSummaries.length === 0 ? (
+                          <SelectItem disabled value="lookup-empty">
+                            검색 결과가 없습니다.
+                          </SelectItem>
+                        ) : null}
+                        {selectablePatientSummaries.map((summary) => (
                           <SelectItem key={summary.patient.id} value={summary.patient.id}>
                             {getReceptionPatientOptionLabel(summary)}
                           </SelectItem>
@@ -2428,30 +2913,10 @@ function WalkInReceptionDialog({
             <Button
               type="button"
               className="h-8 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90"
-              disabled={!canCreate}
-              onClick={() => {
-                const selectedVeterinarianId =
-                  receptionVeterinarianId === unassignedVeterinarianValue
-                    ? undefined
-                    : receptionVeterinarianId;
-
-                if (!patient) return;
-
-                onCreate({
-                  department: receptionDepartment,
-                  durationMinutes: getDurationMinutesFromLabel(receptionDuration),
-                  guardianId: guardian?.id,
-                  guardianMobilePhone: guardian?.mobilePhone,
-                  memo: receptionMemo.trim() || undefined,
-                  patientId: patient.id,
-                  patientName: patient.name,
-                  primaryVeterinarianId: selectedVeterinarianId,
-                  sendKakaoMessage,
-                  visitPurpose,
-                });
-              }}
+              disabled={!canCreate || submitting}
+              onClick={create}
             >
-              생성
+              {submitting ? "생성 중" : "생성"}
             </Button>
           </div>
         </DialogFooter>
@@ -2479,14 +2944,20 @@ function getReceptionDrawerPatientNo(
 }
 
 export function ReceptionDrawer() {
+  const params = useParams<{ workspaceId?: string | string[] }>();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
-  const checkInAppointment = useReceptionStore((state) => state.checkInAppointment);
+  const applyAppointmentCheckIn = useReceptionStore((state) => state.applyAppointmentCheckIn);
   const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const authSession = useMockAuthStore((state) => state.session);
   const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : params.workspaceId?.[0] ?? "clair-demo";
   useEffect(() => {
     if (activeDrawer?.type === "reception-form") {
       setActiveDrawer(null);
@@ -2561,6 +3032,13 @@ export function ReceptionDrawer() {
   const receptionDate = getShortDate(
     selectedEncounter?.checkedInAt ?? selectedAppointment?.scheduledStartAt
   );
+  const handleAppointmentCheckIn = async (
+    appointment: Appointment,
+    checkIn: ReceptionAppointmentCheckInRecord
+  ) => {
+    applyAppointmentCheckIn({ appointment, checkIn });
+    setActiveDrawer(null);
+  };
 
   if (!patient || !bundle) {
     return (
@@ -2708,8 +3186,18 @@ export function ReceptionDrawer() {
         <Button
           onClick={() => {
             if (selectedAppointment) {
-              checkInAppointment(selectedAppointment);
-              setActiveDrawer(null);
+              void submitAppointmentCheckIn({
+                actorRole: authSession?.role,
+                appointmentId: selectedAppointment.id,
+                workspaceId,
+              }).then((result) => {
+                if (!result.ok) {
+                  toast.error(getAppointmentCheckInRouteErrorMessage(result));
+                  return;
+                }
+
+                void handleAppointmentCheckIn(selectedAppointment, result.checkIn);
+              });
               return;
             }
 

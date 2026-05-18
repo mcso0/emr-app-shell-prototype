@@ -91,6 +91,14 @@ Responsibilities:
 - Attach Korean HTML reports for meaningful completed work.
 - Stop at `Human Review` unless the representative asks to commit, push, PR, or mark done.
 
+Execution mode:
+
+- The lead Codex may choose the best execution shape for each issue: direct single-agent work, sub-agent delegation, or another better-fit workflow.
+- Use direct work for small docs, narrow code changes, and high-conflict files.
+- Use sub-agents when the work naturally splits into independent roles such as codebase exploration, DB contract review, security review, UI implementation, or verification.
+- Keep one Linear issue owner and one final integrator even when sub-agents help.
+- Do not use sub-agents to bypass Linear status, branch, file ownership, security, remote Supabase, real data, or Human Review rules.
+
 ### Additional Codex Sessions
 
 Additional Codex sessions may work in parallel only when each one has:

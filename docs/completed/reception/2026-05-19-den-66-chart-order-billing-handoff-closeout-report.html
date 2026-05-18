@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-66 Chart Order Billing Handoff Closeout 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { color: #0f172a; }
+      code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+      .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-66 Chart Order Billing Handoff Closeout 보고서</h1>
+
+    <h2>대표 요약</h2>
+    <p>접수/encounter persistence 작업을 다음 차트·오더·수납 persistence가 이어받을 수 있게 정리했다. 다음 단계는 실제 구현 전에 DEN-67에서 차트/오더/수납 범위와 encounter 의존성을 먼저 확정하는 것이다.</p>
+
+    <h2>완료된 접수 범위</h2>
+    <ul>
+      <li>환자/보호자 조회와 등록 boundary</li>
+      <li>현장 접수 encounter 생성 boundary</li>
+      <li>예약 check-in에서 appointment와 encounter를 연결하는 boundary</li>
+      <li>접수 대기열과 day calendar read boundary</li>
+      <li>권한 기준과 cross-workspace 차단 테스트</li>
+      <li>세일즈 데모와 mock fallback 보존 테스트</li>
+      <li>저장 후 새로고침 회귀 테스트</li>
+    </ul>
+
+    <h2>다음 프로젝트가 믿어도 되는 계약</h2>
+    <ul>
+      <li><code>encounter.id</code>를 차트, 오더, 수납의 기본 연결 ID로 사용한다.</li>
+      <li><code>workspaceId</code>는 모든 읽기/쓰기 scope에 필수다.</li>
+      <li><code>status</code>는 <code>waiting</code>, <code>in_consultation</code>, <code>ordered</code>, <code>ready_for_billing</code>, <code>completed</code>, <code>cancelled</code> 흐름으로 해석한다.</li>
+      <li>queue row는 운영 대기열 위치이고, encounter 존재의 원천은 아니다.</li>
+    </ul>
+
+    <h2>남은 리스크</h2>
+    <ul>
+      <li>Docker daemon이 꺼져 있어 local Supabase SQL runtime replay는 아직 별도 환경에서 필요하다.</li>
+      <li>final domain RLS policy SQL과 Supabase advisor review는 다음 단계에서 필요하다.</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터는 계속 건드리지 않았다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code>: passed</li>
+      <li><code>npm run security:secrets</code>: passed</li>
+    </ul>
+
+    <div class="warn">
+      <p>chart/order/billing 구현, issue Done 처리, remote Supabase, 실서버, 실제 환자/병원 데이터는 진행하지 않았다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-67 <code>00-01 Confirm clinical billing persistence scope and encounter dependency</code>를 먼저 시작한다.</p>
+  </body>
+</html>

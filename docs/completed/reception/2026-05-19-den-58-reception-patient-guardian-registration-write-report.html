@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-58 Reception Patient Guardian Registration Write 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+      .ok { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-58 Reception Patient Guardian Registration Write 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>접수 화면의 신규 환자·보호자 등록을 서버 route가 소유하는 최소 저장 경계로 연결했다. 아직 진료 접수 생성까지 저장하지는 않고, 접수 전에 필요한 환자·보호자 등록만 분리해서 live persistence 기반으로 옮긴 상태다.</p>
+    </div>
+
+    <h2>무엇을 만들었나</h2>
+    <ul>
+      <li><code>POST /api/workspaces/[workspaceId]/reception/patient-guardian-registration</code> route</li>
+      <li>server-owned registration core, mock fallback writer, Supabase writer gateway</li>
+      <li>환자·보호자 최소 등록용 local-first SQL writer function migration</li>
+      <li>접수 <code>환자/보호자 등록</code> dialog의 최종 등록 submit route 연결</li>
+      <li>active workspace membership, <code>reception:create</code>, route-level rate limit 적용</li>
+      <li>보호자 휴대전화, 마이크로칩, 동물등록번호 중복의 안정적인 차단 응답</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>이제 현장 접수를 만들기 전에 필요한 새 보호자와 새 환자를 서버 경계에서 등록할 수 있다. 다음 DEN-60의 현장 접수 encounter 생성은 이 등록 결과를 기반으로 이어질 수 있다.</p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/reception/patient-guardian-registration/route.ts</code></li>
+      <li><code>src/features/reception/patient-guardian-registration.ts</code></li>
+      <li><code>src/features/reception/server-patient-guardian-registration.ts</code></li>
+      <li><code>src/features/reception/server-patient-guardian-registration-core.ts</code></li>
+      <li><code>src/features/reception/profile-drawer.tsx</code></li>
+      <li><code>src/features/reception/patient-profile-store.ts</code></li>
+      <li><code>supabase/migrations/20260519110000_reception_patient_guardian_registration_writer.sql</code></li>
+      <li><code>tests/reception-patient-guardian-registration-server.spec.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>tests/workspace-rate-limit-server.spec.ts</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-patient-guardian-registration-write.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-005-patient-guardian-registration-write.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <div class="warn">
+      <p>이번 작업은 최소 등록 write boundary다. Encounter 생성, 예약 check-in, 고객관리 전체 CRUD, 고급 중복 병합, Kakao/SMS/email/storage provider 연동, final domain RLS policy SQL, remote Supabase link/push, production deploy, 실제 환자·보호자·병원 데이터 접근은 제외했다.</p>
+    </div>
+
+    <h2>검증</h2>
+    <div class="ok">
+      <ul>
+        <li><code>npx playwright test tests/reception-patient-guardian-registration-server.spec.ts --reporter=line</code>: 6 passed</li>
+        <li><code>npx playwright test tests/reception.spec.ts -g "patient guardian registration creates|server-backed patient guardian registration" --reporter=line</code>: 2 passed</li>
+        <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 23 passed</li>
+        <li><code>npx playwright test tests/workspace-rate-limit-server.spec.ts -g "shared rate limit boundary" --reporter=line</code>: 1 passed</li>
+        <li><code>npx tsc --noEmit</code>: 통과</li>
+        <li><code>npm run security:secrets</code>: Secret scan passed, 1160 tracked files checked</li>
+        <li><code>npm run docs:check</code>: Checked 352 docs/agent markdown files</li>
+      </ul>
+    </div>
+
+    <h2>남은 리스크</h2>
+    <p><code>npx supabase db reset --local</code>은 Docker daemon이 꺼져 있어 실행하지 못했다. 원격/staging 전에는 Docker local Supabase에서 실제 SQL replay를 다시 확인해야 한다.</p>
+
+    <h2>다음 추천</h2>
+    <p>DEN-60에서 현장 접수 form을 server route와 local-first DB transaction boundary로 연결한다. 계속 remote Supabase와 실데이터는 별도 승인 전까지 제외한다.</p>
+  </body>
+</html>

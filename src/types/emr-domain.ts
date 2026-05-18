@@ -225,10 +225,15 @@ export type Encounter = {
   appointmentId?: EmrId;
   primaryVeterinarianId?: EmrId;
   encounterNo: string;
+  receptionType?: "walk_in" | "appointment";
+  department?: string;
+  durationMinutes?: number;
   chiefComplaint?: string;
   visitPurpose?: string;
+  receptionMemo?: string;
   status: EncounterStatus;
   checkedInAt?: IsoDateTime;
+  checkedInByUserId?: EmrId;
   startedAt?: IsoDateTime;
   completedAt?: IsoDateTime;
   createdAt: IsoDateTime;
