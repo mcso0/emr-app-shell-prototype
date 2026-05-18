@@ -46,7 +46,17 @@ const roleIds = new Set<WorkspaceRoleId>([
   "front_desk",
 ]);
 
-export function createDemoRoleUpdatePermissionAdapter(now = new Date().toISOString()) {
+export function createDemoRoleUpdatePermissionAdapter({
+  now = new Date().toISOString(),
+  workspaceId = "workspace-a",
+  targetMembershipId = "membership-vet",
+}: {
+  now?: string;
+  workspaceId?: string;
+  targetMembershipId?: string;
+} = {}) {
+  const demoWorkspaceId = workspaceId === "workspace-b" ? "workspace-a" : workspaceId;
+
   return createMockWorkspacePermissionAdapter({
     now,
     users: [
@@ -60,35 +70,35 @@ export function createDemoRoleUpdatePermissionAdapter(now = new Date().toISOStri
     memberships: [
       {
         id: "membership-admin",
-        workspaceId: "workspace-a",
+        workspaceId: demoWorkspaceId,
         userId: "user-admin",
         roles: ["hospital_admin"],
         status: "active",
       },
       {
-        id: "membership-vet",
-        workspaceId: "workspace-a",
+        id: targetMembershipId === "membership-admin" ? "membership-vet" : targetMembershipId,
+        workspaceId: demoWorkspaceId,
         userId: "user-vet",
         roles: ["vet"],
         status: "active",
       },
       {
         id: "membership-desk",
-        workspaceId: "workspace-a",
+        workspaceId: demoWorkspaceId,
         userId: "user-desk",
         roles: ["front_desk"],
         status: "active",
       },
       {
         id: "membership-tech",
-        workspaceId: "workspace-a",
+        workspaceId: demoWorkspaceId,
         userId: "user-tech",
         roles: ["technician"],
         status: "active",
       },
       {
         id: "membership-suspended",
-        workspaceId: "workspace-a",
+        workspaceId: demoWorkspaceId,
         userId: "user-suspended",
         roles: ["hospital_admin"],
         status: "suspended",
@@ -102,15 +112,17 @@ export function authorizeWorkspaceRoleUpdate({
   workspaceId,
   targetMembershipId,
   nextRoles,
-  adapter = createDemoRoleUpdatePermissionAdapter(),
+  adapter,
 }: WorkspaceRoleUpdateAuthorizationRequest): WorkspaceRoleUpdateAuthorizationResult {
+  const permissionAdapter =
+    adapter ?? createDemoRoleUpdatePermissionAdapter({ workspaceId, targetMembershipId });
   const normalizedRoles = normalizeRequestedRoles(nextRoles);
 
   if (normalizedRoles.length === 0) {
     return { ok: false, status: 400, error: "invalid_roles" };
   }
 
-  const actorResolution = resolveWorkspacePermission(adapter, {
+  const actorResolution = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
     requiredPermission: "role_permission:manage",
@@ -124,7 +136,7 @@ export function authorizeWorkspaceRoleUpdate({
     };
   }
 
-  const targetMembership = adapter.memberships.find(
+  const targetMembership = permissionAdapter.memberships.find(
     (membership) =>
       membership.workspaceId === workspaceId && membership.id === targetMembershipId
   );
@@ -137,7 +149,7 @@ export function authorizeWorkspaceRoleUpdate({
     };
   }
 
-  const lastAdminGuard = assertLastWorkspaceAdminGuard(adapter, {
+  const lastAdminGuard = assertLastWorkspaceAdminGuard(permissionAdapter, {
     workspaceId,
     targetMembershipId,
     nextRoles: normalizedRoles,

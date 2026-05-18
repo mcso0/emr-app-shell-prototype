@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-40 Live Auth DB/RLS Security Review 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #18181b;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 960px;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        margin-top: 28px;
+        padding-top: 20px;
+        font-size: 18px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .summary {
+        background: #fafafa;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+      .blocker {
+        border-left: 4px solid #dc2626;
+        padding-left: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-40 Live Auth DB/RLS Security Review 보고서</h1>
+
+    <section class="summary">
+      <p>
+        Project 01의 server session, role-update route, workspace auth migration, last-admin DB guard,
+        RLS baseline, DB-backed permission adapter, cross-workspace denial coverage를 보안 리뷰했다.
+        결론은 <strong>Project 01 handoff는 가능하지만, pilot/live 적용은 아직 차단</strong>이다.
+      </p>
+    </section>
+
+    <h2>Blockers before pilot/live</h2>
+    <ul class="blocker">
+      <li>실제 Supabase migration/RLS 실행 검증이 아직 없다. 현재 머신에 Docker/local Postgres가 없어 local DB apply를 실행하지 못했다.</li>
+      <li>역할 관리 UI는 아직 session-only이며, live DB write/private helper에 연결되지 않았다.</li>
+      <li>Remote Supabase staging/live validation은 대표 승인 gate 뒤에 남아 있다.</li>
+    </ul>
+
+    <h2>Positive evidence</h2>
+    <ul>
+      <li><code>readServerSession()</code>은 server-only이며 <code>auth.getClaims()</code> 기반이다.</li>
+      <li>Role update route는 verified session seam을 사용하고, demo header는 mock fallback mode에서만 허용한다.</li>
+      <li>Server resolver는 unauthenticated, inactive, missing membership, permission missing, last-admin, cross-workspace case를 거절한다.</li>
+      <li>Last active <code>hospital_admin</code> DB guard는 private trigger/helper foundation으로 작성되어 있다.</li>
+      <li>Workspace auth RLS는 <code>to authenticated</code>, <code>auth.uid()</code>, active app user, active membership row 기준으로 제한한다.</li>
+      <li>권한 source는 user-editable metadata가 아니라 app-domain membership/permission rows로 유지된다.</li>
+    </ul>
+
+    <h2>Verification</h2>
+    <ul>
+      <li>Source/security <code>rg</code> scan 완료</li>
+      <li><code>npx playwright test tests/server-session-reader.spec.ts tests/server-permission-enforcement.spec.ts tests/workspace-membership-rls-migration.spec.ts tests/workspace-last-admin-protection-migration.spec.ts tests/db-workspace-permission-adapter.spec.ts tests/permission-resolver.spec.ts --reporter=line</code> 통과: 26 passed</li>
+      <li><code>npm audit --audit-level=high</code> 통과: found 0 vulnerabilities</li>
+      <li><code>npm run docs:check</code> 통과: 571 docs/agent markdown files checked</li>
+    </ul>
+
+    <h2>하지 말아야 할 것</h2>
+    <ul>
+      <li>대표 승인 없이 remote Supabase project link, SQL execution, migration push를 하지 않는다.</li>
+      <li>Service-role key, secret key, DB password, remote connection string, CLI token을 client/public docs/chat/Linear/log에 노출하지 않는다.</li>
+      <li>실제 DB/RLS execution test 전에는 pilot/live ready로 표시하지 않는다.</li>
+      <li>DEN-40 범위에서 Project 02 작업을 시작하지 않는다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      DEN-41에서 Project 01 handoff를 닫고, Project 02로 넘길 준비물과 pilot/live 전 차단 조건을
+      한 문서로 패키징하면 된다.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-53 Project 02 Workspace Persistence Closeout 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-53 Project 02 Workspace Persistence Closeout 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-18</p>
+    <div class="note">
+      <p>Project 02는 workspace, 구성원, 초대, 역할/상태, 개인 프로필 흐름을 local-first server/DB persistence 경계로 옮겼고 Human Review 준비 상태다.</p>
+    </div>
+    <h2>완료 범위</h2>
+    <ul>
+      <li>Docker local Supabase DB/RLS 실행 gate</li>
+      <li>workspace creation persistence</li>
+      <li>active membership 기반 workspace selector</li>
+      <li>invitation create/resend/cancel/accept persistence</li>
+      <li>member status read</li>
+      <li>role/status write persistence와 last-admin 보호</li>
+      <li>personal profile persistence와 권한 source 분리</li>
+      <li>secret scan, API error contract, route-level rate limit, security review</li>
+    </ul>
+    <h2>다음 프로젝트 handoff</h2>
+    <p>접수/encounter persistence는 server session actor, workspace active membership, membership/permission policy source를 기준으로 설계해야 한다. Profile display data는 권한 source로 쓰면 안 된다.</p>
+    <h2>남은 리스크</h2>
+    <ul>
+      <li>remote/staging live 전 shared rate limit store 필요</li>
+      <li><code>requestId</code>와 safe logging helper route-wide 적용 필요</li>
+      <li>remote migration 전 Supabase advisors와 RPC security review 필요</li>
+      <li>production logging 전 secret redaction 기준 필요</li>
+    </ul>
+    <div class="warn">
+      <p>Project 03 구현, remote Supabase, 실데이터, production deploy는 진행하지 않았다. 승욱 리뷰와 별도 승인 전 시작하면 안 된다.</p>
+    </div>
+    <h2>검증</h2>
+    <p><code>npm run docs:check</code> 통과.</p>
+  </body>
+</html>

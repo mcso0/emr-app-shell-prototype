@@ -1,6 +1,6 @@
 # MVP Auth Transition Roadmap
 
-Updated: 2026-05-03
+Updated: 2026-05-18
 
 이 문서는 이 채팅과 후속 채팅에서 MVP auth 작업을 이어가기 위한 기준 문서다. 새 auth 작업을 시작할 때는 `docs/engineering/current-status.md`를 먼저 읽고, 바로 이어서 이 문서를 읽는다.
 
@@ -42,6 +42,35 @@ Updated: 2026-05-03
 - Supabase provider adapter 구현을 완료했다. `@supabase/supabase-js`, `@supabase/ssr`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_AUTH_MODE` 기준을 사용한다.
 - 실제 Supabase project/API live validation, callback route, DB migration, RLS, server-side permission enforcement는 계속 금지 범위로 유지한다.
 - Membership/permission enforcement 범위 계획을 완료했다. 실제 resolver code, migration, RLS policy는 별도 승인 후 진행한다.
+- 2026-05-18 기준 Project 01 / DEN-29에서 live Supabase readiness 실행 모드를 local-first로 고정했다. Project 01은 로컬 Supabase 검증을 기본 전제로 진행하고, remote Supabase staging/live 변경은 별도 대표 승인 gate 없이는 하지 않는다. 기준 문서는 `docs/engineering/auth-security/auth-login/live-supabase-readiness-execution-mode.md`이다.
+- 2026-05-18 기준 Project 01 / DEN-31에서 server-only Supabase session reader contract를 추가했다. Server entrypoint는 `auth.getClaims()` 기반 typed result를 반환하고, DEN-32에서 demo identity header를 verified session seam으로 교체할 준비를 마쳤다.
+- 2026-05-18 기준 Project 01 / DEN-32에서 role update Route Handler의 production-shaped actor identity source를 verified server session seam으로 전환했다. Demo header는 mock fallback mode에서만 허용된다.
+- 2026-05-18 기준 Project 01 / DEN-33에서 auth guard/server session regression을 보강했다. Client guard, mock fallback, Supabase missing-session denial, app-shell regression이 verified session milestone의 handoff 기준이다.
+- 2026-05-18 기준 Project 01 / DEN-34에서 workspace auth schema foundation migration을 작성했다. 이 migration은 local-first draft이며, RLS policies와 remote Supabase 적용은 후속 gate로 남긴다.
+- 2026-05-18 기준 Project 01 / DEN-35에서 local migration validation 절차와 auth seed contract를 추가했다. Docker/local Postgres가 있는 환경에서 `npx supabase db reset --local`로 재검증해야 한다.
+- 2026-05-18 기준 Project 01 / DEN-36에서 마지막 active `hospital_admin` 보호를 위한 private trigger/helper foundation을 추가했다. Role management live writes는 아직 연결하지 않았다.
+- 2026-05-18 기준 Project 01 / DEN-37에서 workspace auth table RLS baseline을 추가했다. Active member read와 hospital admin write boundary가 private helper 기반 policy로 분리되어 있다.
+- 2026-05-18 기준 Project 01 / DEN-38에서 DB-backed permission adapter boundary를 추가했다. Resolver interface는 유지하고 DB row mapping/gateway를 별도로 둔다.
+- 2026-05-18 기준 Project 01 / DEN-39에서 server/RLS cross-workspace denial regression과 denial matrix를 추가했다.
+- 2026-05-18 기준 Project 01 / DEN-40에서 live auth DB/RLS foundation 보안 리뷰를 완료했다. Handoff는 가능하지만 actual Supabase migration/RLS execution, live role write persistence, remote staging/live validation은 pilot/live blocker다.
+- 2026-05-18 기준 Project 01 / DEN-41에서 Project 01 closeout과 Project 02 handoff를 작성했다. Project 02는 UI persistence 구현보다 먼저 actual DB/RLS execution gate로 시작해야 한다.
+- 2026-05-18 기준 Project 02 / DEN-94에서 Docker local Supabase DB/RLS execution gate를 통과했다. Actual RLS execution 중 private helper grant 누락을 발견해 새 migration으로 수정했고, admin/member/unknown user boundary와 last-admin DB guard를 실제 SQL로 검증했다.
+- 2026-05-18 기준 Project 02 / DEN-42에서 workspace live persistence scope/dependency를 확정했다. Project 02는 workspace creation, membership-backed workspace selector, invitations, role management, personal profile persistence까지 local-first로 진행하고, remote Supabase, real data, email delivery, subscription/payment, Project 03+ clinical persistence는 별도 승인 전 제외한다.
+- 2026-05-18 기준 Project 02 / DEN-43에서 workspace/member mutation server route contract를 확정했다. Protected route는 verified server session actor를 기준으로 하고, demo header는 mock fallback에서만 허용한다. Workspace/member admin mutation은 `role_permission:manage`를 요구하며, personal profile은 authorization source와 분리한다.
+- 2026-05-18 기준 Project 02 / DEN-44에서 `/workspace/new` 생성 흐름을 route-backed live persistence boundary로 전환했다. Supabase mode는 local-first transaction RPC로 workspace와 creator active `hospital_admin` membership을 함께 만들고, mock fallback은 기존 demo 흐름을 유지한다.
+- 2026-05-18 기준 Project 02 / DEN-45에서 workspace selector와 shell workspace context를 persisted active membership reader에 연결했다. `GET /api/workspaces`는 verified session 기반으로 active membership workspace list를 반환하고, mock fallback은 기존 browser-state display path를 유지한다.
+- 2026-05-18 기준 Project 02 / DEN-46에서 직원 초대 생성을 route-backed live persistence boundary로 전환했다. Supabase mode는 local-first transaction RPC로 pending invitation을 저장하고, duplicate pending invitation, active member email, non-admin actor를 차단한다.
+- 2026-05-18 기준 Project 02 / DEN-47에서 초대 재발송, 취소, 수락 lifecycle을 route-backed live persistence boundary로 전환했다. Supabase mode는 local-first transaction RPC로 resend count, canceled status, accepted status, active membership creation을 저장한다.
+- 2026-05-18 기준 Project 02 / DEN-48에서 병원구성원 관리 화면을 persisted member/invitation status reader에 연결했다. Server rows가 있으면 active/pending/inactive counts와 list를 route response에서 가져오고, mock fallback은 유지한다.
+- 2026-05-18 기준 Project 02 / DEN-49에서 역할 수정 UI를 server enforcement route에 연결했다. 서버 권한검사 성공 후에만 local fallback state가 갱신되며, DB write persistence는 DEN-50으로 남겼다.
+- 2026-05-18 기준 Project 02 / DEN-50에서 역할 변경과 멤버 상태 변경 DB write wrapper를 추가했다. 기존 last-admin DB trigger가 role demotion과 deactivation을 최종 보호한다.
+- 2026-05-18 기준 Project 02 / DEN-51에서 역할 관리 handoff regression matrix를 추가했다. UI/server/DB guard coverage가 권한 사고 핵심 시나리오를 계속 포함하도록 고정했다.
+- 2026-05-18 기준 Project 02 / DEN-52에서 개인 프로필 설정을 route-backed local-first persistence에 연결했다. Editable profile fields는 display name, initials, phone, notification preference로 제한하고, role/permission/membership authority source와 분리했다.
+- 2026-05-18 기준 Project 02 / DEN-95에서 live persistence secret scanning gate를 추가했다. 로컬/CI에서 `npm run security:secrets`로 tracked env file과 common secret-shaped values를 검사한다.
+- 2026-05-18 기준 Project 02 / DEN-96에서 live API error/telemetry contract를 확정했다. 후속 route는 `requestId`, stable error category, status matrix, safe logging, raw secret/error leak 금지 기준을 따라야 한다.
+- 2026-05-18 기준 Project 02 / DEN-97에서 workspace/member/profile mutation route에 route-level rate limit boundary를 추가했다. 초과 요청은 `429 rate_limited`와 `Retry-After`로 차단한다.
+- 2026-05-18 기준 Project 02 / DEN-98에서 workspace persistence 보안 리뷰를 완료했다. Local-first handoff blocker는 없고, remote/staging live 전 shared rate limit store, request id/safe logging helper, Supabase advisor/RPC review, production log redaction이 follow-up이다.
+- 2026-05-18 기준 Project 02 / DEN-53에서 workspace/member live persistence closeout과 reception persistence workspace context handoff를 작성했다. Project 02는 Human Review 준비 상태이며 Project 03은 별도 승인 전 시작하지 않는다.
 
 ## 최종 목표와 결과물
 

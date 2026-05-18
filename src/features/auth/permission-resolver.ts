@@ -2,8 +2,8 @@ import { mockPermissionSeeds } from "@/mocks/emr-domain";
 import type { PermissionId, PermissionResource } from "@/types/emr-domain";
 
 export type WorkspaceRoleId = "hospital_admin" | "vet" | "technician" | "front_desk";
-export type WorkspacePermissionUserStatus = "active" | "inactive" | "suspended";
-export type WorkspaceMembershipStatus = "active" | "inactive" | "suspended";
+export type WorkspacePermissionUserStatus = "active" | "inactive" | "suspended" | "invited";
+export type WorkspaceMembershipStatus = "active" | "inactive" | "suspended" | "pending";
 
 export type WorkspacePermissionUser = {
   id: string;
@@ -19,10 +19,17 @@ export type WorkspaceMembership = {
   status: WorkspaceMembershipStatus;
 };
 
+export type WorkspaceRolePermissionPolicy = {
+  workspaceId: string;
+  role: WorkspaceRoleId;
+  permissionIds: PermissionId[] | ["*"];
+};
+
 export type WorkspacePermissionAdapter = {
   now: string;
   users: WorkspacePermissionUser[];
   memberships: WorkspaceMembership[];
+  permissionPolicies?: WorkspaceRolePermissionPolicy[];
 };
 
 export type WorkspacePermissionDenialReason =
@@ -62,6 +69,7 @@ export type LastWorkspaceAdminGuardResult =
   | { allowed: false; denialReason: "last_admin_protected" };
 
 const allPermissionIds = mockPermissionSeeds.map((permission) => permission.id);
+const allPermissionIdSet = new Set<PermissionId>(allPermissionIds);
 
 const canonicalRolePermissions: Record<WorkspaceRoleId, PermissionId[]> = {
   hospital_admin: allPermissionIds,
@@ -125,6 +133,7 @@ export function createMockWorkspacePermissionAdapter(
     now: input.now ?? new Date().toISOString(),
     users: input.users ?? [],
     memberships: input.memberships ?? [],
+    permissionPolicies: input.permissionPolicies,
   };
 }
 
@@ -132,7 +141,7 @@ export function resolveWorkspacePermission(
   adapter: WorkspacePermissionAdapter,
   request: WorkspacePermissionRequest
 ): WorkspacePermissionResolution {
-  const denied = createPermissionResultFactory(request);
+  const denied = createPermissionResultFactory(adapter, request);
 
   if (!request.sessionUserId) {
     return denied("unauthenticated");
@@ -157,7 +166,11 @@ export function resolveWorkspacePermission(
   }
 
   const assignedRoles = normalizeRoles(membership.roles);
-  const effectivePermissionIds = resolveEffectivePermissionIds(assignedRoles);
+  const effectivePermissionIds = resolveEffectivePermissionIds(
+    adapter,
+    request.workspaceId,
+    assignedRoles
+  );
   const hasFullWorkspaceAccess = assignedRoles.includes("hospital_admin");
 
   if (request.requiredPermission && !effectivePermissionIds.includes(request.requiredPermission)) {
@@ -253,9 +266,29 @@ function can(
   }).allowed;
 }
 
-function resolveEffectivePermissionIds(roles: WorkspaceRoleId[]): PermissionId[] {
+function resolveEffectivePermissionIds(
+  adapter: WorkspacePermissionAdapter,
+  workspaceId: string,
+  roles: WorkspaceRoleId[]
+): PermissionId[] {
   if (roles.includes("hospital_admin")) {
     return allPermissionIds;
+  }
+
+  if (adapter.permissionPolicies) {
+    const allowed = adapter.permissionPolicies
+      .filter((policy) => policy.workspaceId === workspaceId && roles.includes(policy.role))
+      .flatMap((policy) => policy.permissionIds);
+
+    if (allowed.includes("*")) {
+      return allPermissionIds;
+    }
+
+    return Array.from(
+      new Set(allowed.filter((permissionId): permissionId is PermissionId => {
+        return permissionId !== "*" && allPermissionIdSet.has(permissionId);
+      }))
+    ).sort();
   }
 
   return Array.from(
@@ -267,7 +300,10 @@ function normalizeRoles(roles: WorkspaceRoleId[]): WorkspaceRoleId[] {
   return Array.from(new Set(roles));
 }
 
-function createPermissionResultFactory(request: WorkspacePermissionRequest) {
+function createPermissionResultFactory(
+  adapter: WorkspacePermissionAdapter,
+  request: WorkspacePermissionRequest
+) {
   return (
     denialReason: WorkspacePermissionDenialReason,
     userId: string | null = request.sessionUserId ?? null,
@@ -279,7 +315,9 @@ function createPermissionResultFactory(request: WorkspacePermissionRequest) {
     workspaceId: request.workspaceId,
     membershipId: membership?.id ?? null,
     assignedRoles: membership ? normalizeRoles(membership.roles) : [],
-    effectivePermissionIds: membership ? resolveEffectivePermissionIds(membership.roles) : [],
+    effectivePermissionIds: membership
+      ? resolveEffectivePermissionIds(adapter, request.workspaceId, membership.roles)
+      : [],
     hasFullWorkspaceAccess: membership?.roles.includes("hospital_admin") ?? false,
   });
 }

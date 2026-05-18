@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-43 Workspace/Member Server Route Contract 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        color: #171717;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f4f5;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 16px 0;
+      }
+      th, td {
+        border: 1px solid #d4d4d8;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f4f4f5;
+      }
+      .note {
+        background: #f8fafc;
+        border-left: 4px solid #2563eb;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-43 Workspace/Member Server Route Contract 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-18</p>
+
+    <div class="note">
+      <p>
+        Project 02의 실제 저장 구현 전에 서버 route 계약을 확정했다.
+        이제 workspace 생성, 초대, 역할 변경, 프로필 저장이 각자 어떤 권한 검사를 통과해야 하는지 기준이 생겼다.
+      </p>
+    </div>
+
+    <h2>요청</h2>
+    <p>
+      DEN-43에서 workspace/member mutation을 위한 server route contract를 설계하고,
+      follow-up 구현 이슈들이 따를 permission, denial reason, mock fallback, test strategy를 정리한다.
+    </p>
+
+    <h2>핵심 결정</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>영역</th>
+          <th>결정</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Actor identity</td>
+          <td><code>readServerSession()</code> 기준. Demo header는 mock mode fallback에서만 허용.</td>
+        </tr>
+        <tr>
+          <td>관리 권한</td>
+          <td>초대, 역할 변경, 멤버 비활성화는 active membership과 <code>role_permission:manage</code> 필요.</td>
+        </tr>
+        <tr>
+          <td>프로필</td>
+          <td>본인 프로필만 저장 가능. role, permission, membership authority field는 거부.</td>
+        </tr>
+        <tr>
+          <td>마지막 관리자 보호</td>
+          <td>서버 authorization과 DB guard 양쪽에서 <code>last_admin_protected</code>를 유지.</td>
+        </tr>
+        <tr>
+          <td>제외 범위</td>
+          <td>remote Supabase, 실제 이메일, 결제/구독, Project 03+ clinical persistence는 승인 전 제외.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>docs/engineering/auth-security/auth-login/workspace-member-server-route-contract.md</code></li>
+      <li><code>docs/work/auth/AUTH-PR-026-workspace-member-server-route-contract.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/engineering/auth-security/mvp-auth-transition-roadmap.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+      <li><code>docs/completed/auth/2026-05-18-den-43-workspace-member-server-route-contract-report.html</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <p><code>npm run docs:check</code> 통과. 내부 문서 링크 검증 결과 정상.</p>
+
+    <h2>남은 질문</h2>
+    <ul>
+      <li>DEN-44에서 unapproved elevated credential 없이 workspace 생성 transaction 방식을 선택해야 한다.</li>
+      <li>DEN-47에서 real email/public invite link 없이 초대 수락을 임시 local-first로 어떻게 표현할지 정해야 한다.</li>
+      <li>Audit persistence는 아직 구현하지 않았고, 후속 구현에서 hook point만 먼저 둘 수 있다.</li>
+    </ul>
+
+    <h2>추천 다음 작업</h2>
+    <p>
+      다음은 DEN-44 <code>01-01 Persist workspace creation and creator hospital_admin membership</code>이다.
+      DEN-43 계약을 따라 workspace 생성 server route와 creator membership transaction boundary를 구현하면 된다.
+    </p>
+  </body>
+</html>

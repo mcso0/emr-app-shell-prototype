@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-50 Workspace Role Status DB Persistence 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-50 Workspace Role Status DB Persistence 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-18</p>
+    <div class="note">
+      <p>역할 변경과 멤버 비활성화가 local Supabase DB transaction wrapper를 갖게 됐다. 마지막 병원관리자 보호는 DB trigger가 막는다.</p>
+    </div>
+    <h2>변경</h2>
+    <ul>
+      <li><code>public.clair_update_workspace_membership_roles()</code>를 추가했다.</li>
+      <li><code>public.clair_update_workspace_membership_status()</code>를 추가했다.</li>
+      <li><code>PATCH /api/workspaces/[workspaceId]/memberships/[membershipId]/status</code>를 추가했다.</li>
+      <li>비활성화 UI도 서버 route를 먼저 확인한다.</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li><code>42 passed</code> 관련 Playwright 회귀 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npx supabase db reset --local</code> 통과</li>
+      <li>local SQL role/status update, last-admin guard, non-admin denial 통과</li>
+      <li><code>npm run build</code> 통과</li>
+    </ul>
+    <h2>제외 범위</h2>
+    <ul>
+      <li>audit persistence 전체 구현은 하지 않았다.</li>
+      <li>billing/seat enforcement와 remote Supabase는 건드리지 않았다.</li>
+    </ul>
+  </body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-37 Workspace Membership RLS Baseline 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #18181b;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        margin-top: 28px;
+        padding-top: 20px;
+        font-size: 18px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .summary {
+        background: #fafafa;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-37 Workspace Membership RLS Baseline 보고서</h1>
+
+    <section class="summary">
+      <p>
+        Workspace auth table에 active membership 기반 RLS baseline을 추가했다.
+        Hospital admin 관리 action과 일반 멤버 read boundary를 분리했다.
+      </p>
+    </section>
+
+    <h2>추가된 RLS policy 목록</h2>
+    <ul>
+      <li><code>users_select_self_or_workspace_member</code></li>
+      <li><code>workspaces_select_active_member</code>, <code>workspaces_update_admin</code></li>
+      <li><code>user_profiles_select_self_or_workspace_member</code>, <code>user_profiles_insert_self</code>, <code>user_profiles_update_self</code></li>
+      <li><code>user_memberships_select_active_member</code>, <code>user_memberships_insert_admin</code>, <code>user_memberships_update_admin</code>, <code>user_memberships_delete_admin</code></li>
+      <li><code>workspace_invitations_*_admin</code></li>
+      <li><code>permission_policies_select_active_member</code>, <code>permission_policies_*_admin</code></li>
+    </ul>
+
+    <h2>허용/차단 시나리오</h2>
+    <ul>
+      <li>Active workspace member는 같은 workspace의 auth rows를 읽을 수 있다.</li>
+      <li>다른 workspace membership은 현재 workspace 접근 권한이 아니다.</li>
+      <li>Membership, invitation, permission policy write는 hospital admin policy로 분리했다.</li>
+      <li>Anonymous policy는 만들지 않았다.</li>
+      <li>Clinical/business domain table RLS는 아직 만들지 않았다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li>Red: 빈 migration 상태에서 <code>npx playwright test tests/workspace-membership-rls-migration.spec.ts --reporter=line</code> 실패</li>
+      <li><code>npx playwright test tests/workspace-membership-rls-migration.spec.ts tests/permission-resolver.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+    </ul>
+
+    <h2>후속 domain table RLS 범위</h2>
+    <ul>
+      <li>Chart, order, billing, clinical domain table RLS는 후속 Project 01 범위다.</li>
+      <li>Docker/local Supabase Postgres가 없어 실제 RLS execution test는 아직 실행하지 못했다.</li>
+      <li>Remote Supabase project 변경 없음</li>
+      <li>Project 02 작업 없음</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 이슈는 <code>DEN-38 Connect permission resolver to DB-backed membership adapter</code>다.
+      DB adapter는 이번 RLS helper와 같은 active membership/admin 모델을 따라야 한다.
+    </p>
+  </body>
+</html>

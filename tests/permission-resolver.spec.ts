@@ -175,6 +175,31 @@ test("resolver returns typed denial reasons for unauthenticated, inactive, missi
   ).toBe("permission_missing");
 });
 
+test("workspace membership from another workspace does not grant access", () => {
+  const adapter = createMockWorkspacePermissionAdapter({
+    now,
+    users: [{ id: "user-admin", status: "active" }],
+    memberships: [
+      {
+        id: "membership-admin-b",
+        workspaceId: "workspace-b",
+        userId: "user-admin",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+    ],
+  });
+
+  const result = resolveWorkspacePermission(adapter, {
+    sessionUserId: "user-admin",
+    workspaceId: "workspace-a",
+    requiredPermission: "role_permission:manage",
+  });
+
+  expect(result.allowed).toBe(false);
+  expect(result.denialReason).toBe("workspace_membership_missing");
+});
+
 test("last active hospital admin guard blocks demotion or deactivation", () => {
   const adapter = createMockWorkspacePermissionAdapter({
     now,

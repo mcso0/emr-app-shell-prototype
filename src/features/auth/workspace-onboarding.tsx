@@ -51,7 +51,7 @@ export function WorkspaceOnboarding() {
     hydrate();
   }, [hydrate]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session || !canCreateWorkspace) return;
 
@@ -71,12 +71,39 @@ export function WorkspaceOnboarding() {
     }
 
     setIsSubmitting(true);
-    const creation = createSessionWorkspace(input, {
-      sessionId: session.id,
-      storageMode: session.storageMode,
+    const response = await fetch("/api/workspaces", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(session.role === "supabase" ? {} : { "x-clair-demo-session-user-id": session.id }),
+      },
+      body: JSON.stringify(input),
     });
+    const result = (await response.json()) as
+      | {
+          ok: true;
+          workspace: ReturnType<typeof createSessionWorkspace>["workspace"];
+          membership: ReturnType<typeof createSessionWorkspace>["membership"];
+        }
+      | {
+          ok: false;
+          error?: "invalid_input";
+          fieldErrors?: WorkspaceCreationFieldErrors;
+        };
+
+    if (!result.ok) {
+      if (result.error === "invalid_input" && result.fieldErrors) {
+        setFieldErrors(result.fieldErrors);
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
     const currentState = getBrowserWorkspaceState() ?? createEmptySessionWorkspacesState();
-    const nextState = appendSessionWorkspace(currentState, creation);
+    const nextState = appendSessionWorkspace(currentState, {
+      workspace: result.workspace,
+      membership: result.membership,
+    });
     persistSessionWorkspacesState(
       nextState,
       session.storageMode,
@@ -84,7 +111,7 @@ export function WorkspaceOnboarding() {
       window.localStorage
     );
     window.dispatchEvent(new Event("clair.sessionWorkspaces.v1"));
-    router.replace(`/w/${creation.workspace.id}/home?modulePanel=open&aside=closed`);
+    router.replace(`/w/${result.workspace.id}/home?modulePanel=open&aside=closed`);
   }
 
   if (!hydrated || !session) {

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-42 Workspace Live Persistence Scope 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        color: #171717;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f4f5;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 16px 0;
+      }
+      th, td {
+        border: 1px solid #d4d4d8;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f4f4f5;
+      }
+      .note {
+        background: #f8fafc;
+        border-left: 4px solid #2563eb;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-42 Workspace Live Persistence Scope 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-18</p>
+
+    <div class="note">
+      <p>
+        Project 02의 범위를 확정했다. 이제 바로 구현부터 들어가지 않고,
+        어떤 흐름을 라이브 저장으로 옮기고 어떤 범위는 승인 전 금지할지 기준이 생겼다.
+      </p>
+    </div>
+
+    <h2>요청</h2>
+    <p>
+      DEN-94 이후 Project 02의 다음 이슈인 DEN-42를 진행해 workspace/member live persistence의
+      범위, dependency, 승인 gate, 다음 이슈를 확정한다.
+    </p>
+
+    <h2>결정</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>포함</th>
+          <th>제외</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>workspace 생성과 creator <code>hospital_admin</code> membership 저장</td>
+          <td>remote Supabase link/push/SQL 실행</td>
+        </tr>
+        <tr>
+          <td>persisted membership 기반 workspace selector</td>
+          <td>실제 병원/환자/보호자/직원 데이터 사용</td>
+        </tr>
+        <tr>
+          <td>초대 생성, 수락, 취소, 재발송 상태 저장</td>
+          <td>실제 이메일 발송과 public invite link launch</td>
+        </tr>
+        <tr>
+          <td>역할 변경/비활성화 server handoff와 DB last-admin guard</td>
+          <td>결제, 구독, seat billing provider 연동</td>
+        </tr>
+        <tr>
+          <td>개인 프로필 저장, 단 권한 source와 분리</td>
+          <td>접수/차트/오더/수납 등 Project 03+ clinical persistence</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      Project 02는 제품 MVP의 첫 live persistence 구간이다. 범위를 먼저 고정하지 않으면
+      원격 DB, 이메일, 결제, 임상 데이터 저장이 섞여 위험해진다. 이번 문서는 그 경계를 막고
+      DEN-43부터 순서대로 구현할 수 있게 한다.
+    </p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>docs/engineering/auth-security/auth-login/workspace-live-persistence-scope.md</code></li>
+      <li><code>docs/work/auth/AUTH-PR-025-workspace-live-persistence-scope-dependencies.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/engineering/auth-security/mvp-auth-transition-roadmap.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+      <li><code>docs/completed/auth/2026-05-18-den-42-workspace-live-persistence-scope-report.html</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <p><code>npm run docs:check</code> 통과. 내부 문서 링크 검증 결과 정상.</p>
+
+    <h2>남은 위험과 제외 범위</h2>
+    <ul>
+      <li>remote Supabase 작업은 아직 승인되지 않았다.</li>
+      <li>실제 이메일/결제/구독 연동은 제외했다.</li>
+      <li>접수, encounter, chart, order, billing persistence는 Project 03 이상 범위다.</li>
+      <li>DEN-42는 범위 확정 이슈라 app code나 DB migration은 변경하지 않았다.</li>
+    </ul>
+
+    <h2>추천 다음 작업</h2>
+    <p>
+      다음은 DEN-43 <code>00-02 Design server route contract for workspace and member mutations</code>이다.
+      DEN-44의 workspace 생성 live write 전에 route별 actor, permission, denial reason, mock fallback,
+      test strategy를 먼저 확정해야 한다.
+    </p>
+  </body>
+</html>
