@@ -480,3 +480,189 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `npm run docs:check`
 
 검증 결과와 세부 결정은 `docs/completed/auth/2026-05-18-den-53-project-02-workspace-persistence-closeout-report.html`에 남긴다.
+
+2026-05-18 DEN-54 Reception Encounter Persistence Contract:
+
+- Started Project 03 after 승욱 approval, without touching remote Supabase, real data, production deploy, or implementation code.
+- Added `docs/engineering/auth-security/auth-login/reception-encounter-persistence-contract.md`.
+- Confirmed walk-in check-in creates an encounter without an appointment.
+- Confirmed appointment check-in updates the appointment and creates one linked encounter plus queue row in a transaction boundary.
+- Defined Project 03 field contract, dependency map, permission boundary, mock fallback strategy, and chart/order/billing handoff fields.
+- Recorded 승욱's operating preference that 루멘 may choose direct work, sub-agent delegation, or another better-fit workflow by task.
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-18-den-54-reception-encounter-contract-report.html`에 남긴다.
+
+2026-05-19 DEN-55 Reception Domain Schema Extension Plan:
+
+- Added `docs/engineering/auth-security/auth-login/reception-domain-schema-extension-plan.md`.
+- Proposed the minimum Project 03 domain tables: `guardians`, `patients`, `patient_guardians`, `consents`, `appointments`, `appointment_change_logs`, `encounters`, and `waiting_queue_entries`.
+- Added workspace scope, identifiers, status enum mapping, indexes, duplicate guards, and mock-to-DB mapping for DEN-56.
+- Split RLS/server enforcement into follow-up implementation scope instead of implementing policy SQL in DEN-55.
+- Recorded privacy/consent open questions around guardian birth date, phone uniqueness, `privacy`/`messaging`/`marketing` consent, document storage, and sensitive memo handling.
+- Did not implement migration, UI changes, remote Supabase, production deploy, or real data access.
+- `npm run docs:check`
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-55-reception-schema-extension-plan-report.html`에 남긴다.
+
+2026-05-19 DEN-56 Reception Domain Schema Migration:
+
+- Added `supabase/migrations/20260519090000_reception_domain_schema_foundation.sql`.
+- Added local-first Project 03 domain tables for guardians, patients, patient relationships, consents, appointments, appointment change logs, encounters, and waiting queue entries.
+- Added workspace scope, status constraints, duplicate guards, lookup indexes, same-workspace composite foreign keys, updated-at triggers, and RLS enablement.
+- Added synthetic reception fixture rows to `supabase/seed.sql`.
+- Added focused static migration contract coverage in `tests/reception-domain-schema-migration.spec.ts`.
+- Verified focused migration contract, typecheck, and secret scan. Docker daemon was unavailable, so actual `npx supabase db reset --local` SQL runtime replay remains a local DB follow-up.
+- Did not touch remote Supabase, production deploy, real data, UI route wiring, full customer CRUD, chart/order/billing, or final domain RLS policy SQL.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-56-reception-domain-schema-migration-report.html`에 남긴다.
+
+2026-05-19 DEN-57 Reception Patient Guardian Lookup:
+
+- Added `GET /api/workspaces/[workspaceId]/reception/patient-guardian-lookup`.
+- Added server-owned lookup core, mock fallback gateway, and Supabase reader gateway.
+- Added local-first reader migration `supabase/migrations/20260519100000_reception_patient_guardian_lookup_reader.sql`.
+- Connected the walk-in reception dialog to DB-backed patient/guardian lookup states.
+- Enforced active workspace membership and `patient:view` before lookup.
+- Verified focused server/API route contract, DB reader static contract, reception UI lookup states, full reception regression, typecheck, secret scan, and docs check. Docker daemon was unavailable, so actual `npx supabase db reset --local` SQL runtime replay remains a local DB follow-up.
+- Did not implement new patient/guardian live write, encounter creation, full customer CRUD, final domain RLS policy SQL, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-57-reception-patient-guardian-lookup-report.html`에 남긴다.
+
+2026-05-19 DEN-58 Reception Patient Guardian Registration Write:
+
+- Added `POST /api/workspaces/[workspaceId]/reception/patient-guardian-registration`.
+- Added server-owned registration core, mock fallback writer, and Supabase writer gateway.
+- Added local-first writer migration `supabase/migrations/20260519110000_reception_patient_guardian_registration_writer.sql`.
+- Connected the reception `환자/보호자 등록` dialog final submit to the server route and merged successful persisted-shaped rows back into local demo state.
+- Enforced route-level rate limiting, active workspace membership, and `reception:create` before registration.
+- Added stable duplicate denial handling for normalized guardian phone, patient microchip number, and patient registration number.
+- Verified focused server/API route contract, writer static contract, UI route submit behavior, full reception regression, rate-limit route coverage, typecheck, secret scan, and docs check. Docker daemon was unavailable, so actual `npx supabase db reset --local` SQL runtime replay remains a local DB follow-up.
+- Did not implement encounter creation, appointment check-in, full customer CRUD, provider integration, final domain RLS policy SQL, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-58-reception-patient-guardian-registration-write-report.html`에 남긴다.
+
+2026-05-19 DEN-60 Reception Walk-In Encounter Create:
+
+- Added `POST /api/workspaces/[workspaceId]/reception/walk-in-encounters`.
+- Added server-owned walk-in encounter core, mock fallback writer, and Supabase writer gateway.
+- Added local-first writer migration `supabase/migrations/20260519120000_reception_walk_in_encounter_writer.sql`.
+- Connected the reception walk-in dialog final `생성` submit to the server route and merged successful persisted-shaped encounter/queue rows back into local demo state.
+- Enforced route-level rate limiting, active workspace membership, and `reception:create` before walk-in creation.
+- Verified focused server/API route contract, writer static contract, UI route submit behavior, full reception regression, rate-limit route coverage, typecheck, and secret scan. Docker daemon was unavailable, so actual `npx supabase db reset --local` SQL runtime replay remains a local DB follow-up.
+- Did not implement appointment check-in, persisted queue/calendar read replacement, chart/order/billing/provider persistence, final domain RLS policy SQL, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-60-reception-walk-in-encounter-create-report.html`에 남긴다.
+
+2026-05-19 DEN-59 Reception Appointment Check-In Transition:
+
+- Added `POST /api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in`.
+- Added server-owned appointment check-in core, mock fallback writer, and Supabase writer gateway.
+- Added local-first writer migration `supabase/migrations/20260519130000_reception_appointment_check_in_writer.sql`.
+- Connected appointment `접수 처리` actions to the server route and merged successful persisted-shaped appointment/encounter/queue rows back into local demo state.
+- Enforced route-level rate limiting, active workspace membership, and `reception:create` before appointment transition.
+- Added stable denial handling for missing, non-confirmed, and already checked-in appointments.
+- Verified focused server/API route contract, writer static contract, UI route submit behavior, full reception regression, rate-limit route coverage, typecheck, secret scan, and docs check. Docker daemon was unavailable, so actual `npx supabase db reset --local` SQL runtime replay remains a local DB follow-up.
+- Did not implement appointment CRUD, no-show automation, provider integration, queue/calendar persisted read replacement, chart/order/billing persistence, final domain RLS policy SQL, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-59-reception-appointment-check-in-transition-report.html`에 남긴다.
+
+2026-05-19 DEN-61 Reception Mutation Permission Hardening:
+
+- Added shared reception mutation permission matrix in `src/features/reception/reception-mutation-permissions.ts`.
+- Locked patient/guardian registration, walk-in encounter creation, and appointment check-in to active workspace membership plus `reception:create`.
+- Added audit hook point names for the three mutations without implementing audit persistence.
+- Added focused denial coverage for unauthenticated actor, inactive app user, cross-workspace membership, inactive workspace membership, and role without `reception:create` across all three mutations.
+- Updated reception route error copy so `inactive_user` is treated as a permission/workspace access denial.
+- Verified focused DEN-61 permission coverage, existing reception mutation server coverage, full reception regression, typecheck, secret scan, and docs check. Remote Supabase, production deploy, real data, role policy changes, chart/order/billing permission enforcement, and full audit persistence were not touched.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-61-reception-mutation-permission-hardening-report.html`에 남긴다.
+
+2026-05-19 DEN-62 Reception Queue Read:
+
+- Added `GET /api/workspaces/[workspaceId]/reception/queue`.
+- Added server-owned queue read core, mock fallback reader, and Supabase reader gateway.
+- Added local-first reader migration `supabase/migrations/20260519140000_reception_queue_reader.sql`.
+- Connected reception content to hydrate side panel state from a successful server queue response.
+- Enforced active workspace membership and `reception:view` before queue read.
+- Preserved existing mock demo fixture behavior by treating mock mode as an empty persisted overlay.
+- Verified focused route/server coverage, UI hydration coverage, full reception regression, typecheck, production build, secret scan, and docs check.
+- Did not implement calendar persisted read conversion, queue status mutation, chart/order/billing persistence, final domain RLS policy SQL, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-62-reception-queue-read-report.html`에 남긴다.
+
+2026-05-19 DEN-63 Reception Day Calendar Read:
+
+- Added `GET /api/workspaces/[workspaceId]/reception/calendar/day?date=YYYY-MM-DD`.
+- Added server-owned day calendar read core, mock fallback reader, and Supabase reader gateway.
+- Added local-first reader migration `supabase/migrations/20260519150000_reception_day_calendar_reader.sql`.
+- Connected reception content to hydrate appointment cards and walk-in cards from a successful server calendar response.
+- Enforced active workspace membership and `reception:view` before calendar read.
+- Preserved existing mock demo fixture behavior by treating mock mode as an empty persisted overlay.
+- Stabilized the nav rail test so cross-module URL state query parameters do not break module path assertions.
+- Verified focused route/server coverage, UI hydration coverage, typecheck, production build, full reception regression, secret scan, and docs check.
+- Did not implement appointment CRUD, drag/drop scheduling, no-show automation, queue status mutation, chart/order/billing persistence, final domain RLS policy SQL, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-63-reception-day-calendar-read-report.html`에 남긴다.
+
+2026-05-19 DEN-64 Sales Demo And Mock Fallback Preservation:
+
+- Added sales demo regression coverage for empty queue/calendar live reader mock fallback overlays.
+- Confirmed the `kong-vomit` reception context keeps `patient-kong`, `encounter-kong-260501`, the Kong appointment card, and side panel patient context visible.
+- Documented mock/local mode versus Supabase mode reader fallback behavior.
+- Verified focused sales demo fallback coverage, typecheck, combined reception + sales demo regression, secret scan, and docs check.
+- Did not add new demo scenarios, change sales copy, implement billing/chart persistence, touch remote Supabase, deploy production, or access real data.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-64-sales-demo-mock-fallback-preservation-report.html`에 남긴다.
+
+2026-05-19 DEN-65 Reception Persistence Regression Coverage:
+
+- Added E2E-style regression coverage for walk-in create -> reload -> queue/calendar read restoration.
+- Added E2E-style regression coverage for appointment check-in -> reload -> queue/calendar read restoration.
+- Added cross-workspace queue/calendar read denial coverage for the demo actor.
+- Used deterministic persisted-shaped Playwright route fixtures rather than remote Supabase or real data.
+- Verified focused persistence regression coverage, production build, full reception regression, secret scan, and docs check.
+- Did not implement chart/order/billing E2E, performance testing, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-65-reception-persistence-regression-coverage-report.html`에 남긴다.
+
+2026-05-19 DEN-66 Chart Order Billing Handoff Closeout:
+
+- Updated the encounter persistence contract with completed local-first reception boundaries and chart/order/billing handoff guidance.
+- Documented the encounter fields and status meanings that chart/order/billing persistence should depend on.
+- Added Korean closeout report for reception persistence and next-project handoff.
+- Recommended DEN-67 `00-01 Confirm clinical billing persistence scope and encounter dependency` as the next issue.
+- Verified docs check and secret scan.
+- Did not start chart/order/billing implementation, move issues to Done, touch remote Supabase, deploy production, or access real data.
+
+검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-66-chart-order-billing-handoff-closeout-report.html`에 남긴다.
+
+2026-05-19 DEN-67 Clinical Billing Persistence Scope:
+
+- Confirmed Project 04 included scope for SOAP/chart notes, diagnosis rows, order draft/confirmation/lifecycle, billing invoice candidates, invoice line/status/payment-state persistence, full outpatient regression, and audit/security handoff.
+- Fixed `encounter.id` and `workspaceId` as the clinical/billing persistence dependency contract.
+- Documented permission boundaries, server-side amount recalculation expectation, mock fallback strategy, audit event candidates, and explicit out-of-scope areas.
+- Recommended DEN-68 `00-02 Implement clinical order billing schema migration` as the next issue.
+- Did not implement migration, route/UI persistence, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/clinical-billing/2026-05-19-den-67-clinical-billing-scope-report.html`에 남긴다.
+
+2026-05-19 DEN-68 Clinical Order Billing Schema Migration:
+
+- Added local-first schema foundation for chart notes, diagnoses, order groups, orders, order events/revisions, invoices, invoice lines, payments, and service catalog rows.
+- Added synthetic seed rows linked to the existing DEN-56 reception encounter: SOAP note, diagnosis, ready-for-billing order, issued unpaid invoice, and invoice line.
+- Added static schema and seed contract coverage.
+- Verified focused clinical billing schema coverage, combined reception schema/server suite, typecheck, production build, secret scan, and docs check.
+- Did not implement SOAP/order/billing route writes, UI live persistence wiring, final domain RLS policies, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/clinical-billing/2026-05-19-den-68-clinical-order-billing-schema-migration-report.html`에 남긴다.
+
+2026-05-19 DEN-99 Portfolio Virtual Hospital Demo Dataset Foundation:
+
+- Added `docs/product/demo-data/` as the portfolio synthetic demo-data foundation.
+- Defined VIP동물의료센터 청담점, five outpatient scenarios, base orders, order sets/templates, diagnosis system samples, staff roles, and workflow handoff.
+- Used public veterinary/EMR references only as design context; no real patient, guardian, clinic, or medical record data was imported.
+- Verified docs check and secret scan.
+- Did not implement UI changes, DB migrations, remote Supabase, production deploy, or real data access.
+
+검증 결과와 세부 결정은 `docs/completed/demo-data/2026-05-19-den-99-portfolio-virtual-hospital-demo-dataset-report.html`에 남긴다.

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-56 Reception Domain Schema Migration 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+      .ok { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-56 Reception Domain Schema Migration 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>접수 live persistence의 첫 DB 기반으로, 환자·보호자·예약·내원·대기열을 저장할 local-first schema migration과 synthetic seed/test contract를 추가했다.</p>
+    </div>
+
+    <h2>무엇을 만들었나</h2>
+    <ul>
+      <li><code>guardians</code>, <code>patients</code>, <code>patient_guardians</code>, <code>consents</code> 테이블</li>
+      <li><code>appointments</code>, <code>appointment_change_logs</code>, <code>encounters</code>, <code>waiting_queue_entries</code> 테이블</li>
+      <li>workspace 범위, 상태값 제한, 중복 방지, 검색 index, 같은 workspace 안에서만 연결되는 composite foreign key</li>
+      <li>수정 시각 trigger와 RLS enablement</li>
+      <li>local-only synthetic seed fixture와 migration contract test</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>이제 Project 03의 다음 작업인 환자/보호자 DB 검색, 신규 등록, 현장 접수, 예약 check-in persistence가 같은 DB 구조를 기준으로 진행될 수 있다.</p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>supabase/migrations/20260519090000_reception_domain_schema_foundation.sql</code></li>
+      <li><code>supabase/seed.sql</code></li>
+      <li><code>tests/reception-domain-schema-migration.spec.ts</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-domain-schema-migration.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/engineering/data-model/emr-saas-db-structure-spec.ko.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <div class="warn">
+      <p>이번 작업은 local-first migration이다. remote Supabase link/push, production deploy, 실제 환자/병원 데이터, UI route wiring, full customer CRUD, chart/order/billing, 최종 domain RLS policy는 제외했다.</p>
+    </div>
+
+    <h2>검증</h2>
+    <div class="ok">
+      <ul>
+        <li><code>npx playwright test tests/reception-domain-schema-migration.spec.ts --reporter=line</code>: 6 passed</li>
+        <li><code>npx tsc --noEmit</code>: 통과</li>
+        <li><code>npm run security:secrets</code>: Secret scan passed, 1160 tracked files checked</li>
+        <li><code>npm run docs:check</code>: Checked 348 docs/agent markdown files</li>
+      </ul>
+    </div>
+
+    <h2>남은 리스크</h2>
+    <p><code>npx supabase db reset --local</code>은 Docker daemon이 꺼져 있어 실행하지 못했다. 원격/staging 전에는 Docker local Supabase에서 실제 SQL replay를 다시 확인해야 한다.</p>
+
+    <h2>다음 추천</h2>
+    <p>DEN-57에서 DB-backed patient/guardian lookup repository를 진행한다. 계속 local-first로 유지하고, remote Supabase와 실데이터는 별도 승인 전까지 제외한다.</p>
+  </body>
+</html>

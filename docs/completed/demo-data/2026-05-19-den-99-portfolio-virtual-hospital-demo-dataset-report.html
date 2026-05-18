@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-99 포트폴리오 가상 병원 데모 데이터셋 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --ink: #111827;
+        --muted: #64748b;
+        --line: #e2e8f0;
+        --accent: #2563eb;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      section {
+        margin-top: 16px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--card);
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 15px;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 700;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2ff;
+        color: #1e3a8a;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-99 포트폴리오 가상 병원 데모 데이터셋 보고서</h1>
+      <p class="meta">작성일: 2026-05-19 · Linear: DEN-99 · Project 04 / 00 Clinical Persistence Scope & Data Contract</p>
+
+      <section>
+        <h2>요청</h2>
+        <p>
+          실제 런칭용 의료 데이터가 아니라, 포트폴리오용으로 실제 업무 프로그램처럼 작동하는 EMR MVP를 만들기 위한
+          가상 병원 데모 데이터셋 1차 기준을 정리했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>결과</h2>
+        <ul>
+          <li>VIP동물의료센터 청담점을 고급형 중형 동물의료센터로 정의했다.</li>
+          <li>접수부터 수납까지 이어지는 대표 외래 시나리오 5개를 만들었다.</li>
+          <li>기본 오더, 세트오더, 템플릿, 진단계통, 진단명 샘플을 정의했다.</li>
+          <li>데스크, 수의사, 테크니션, 수납, 병원관리자 역할별 업무 흐름을 정리했다.</li>
+          <li>나중에 mock/seed/DB 데이터로 바꾸기 위한 handoff 문서를 작성했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>작성 문서</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>문서</th>
+              <th>역할</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>docs/product/demo-data/README.md</code></td><td>데이터셋 목적과 원칙</td></tr>
+            <tr><td><code>docs/product/demo-data/research-notes.md</code></td><td>공개 참고자료와 사용 원칙</td></tr>
+            <tr><td><code>docs/product/demo-data/virtual-hospital-profile.md</code></td><td>가상 병원 컨셉</td></tr>
+            <tr><td><code>docs/product/demo-data/demo-scenarios-v1.md</code></td><td>대표 시나리오 5개</td></tr>
+            <tr><td><code>docs/product/demo-data/order-catalog-v1.md</code></td><td>기본 오더 카탈로그</td></tr>
+            <tr><td><code>docs/product/demo-data/order-sets-and-templates-v1.md</code></td><td>세트오더와 템플릿</td></tr>
+            <tr><td><code>docs/product/demo-data/diagnosis-catalog-v1.md</code></td><td>진단계통/진단명 샘플</td></tr>
+            <tr><td><code>docs/product/demo-data/staff-roles-workflow-v1.md</code></td><td>역할과 업무 흐름</td></tr>
+            <tr><td><code>docs/product/demo-data/seed-handoff-v1.md</code></td><td>앱 데이터 전환 handoff</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>참고 자료</h2>
+        <p>
+          AAHA guideline/standards, WSAVA vaccination guideline, ISFM/AAFP cat-friendly guideline, VetSCT,
+          FDA/openFDA animal adverse event resources를 참고했다. 이 자료들은 실제 의료 데이터로 가져온 것이 아니라,
+          업무 흐름과 데이터 항목을 현실감 있게 설계하기 위한 참고 근거로만 사용했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>실제 환자/보호자/병원 데이터 접근 또는 저장</li>
+          <li>실제 의료 데이터 import</li>
+          <li>의료 정확성 보장 또는 수의사 검수 대체</li>
+          <li>remote Supabase, 실서버, production deploy</li>
+          <li>오더/진단명 UI 구현 또는 DB migration 추가 구현</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: 통과</li>
+          <li><code>npm run security:secrets</code>: 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>추천 다음 단계</h2>
+        <p>
+          DEN-68 이후 chart/order/billing schema와 UI 구현은 이 데이터셋을 기준으로
+          표준 오더, 병원별 오더, 세트오더, 템플릿, 진단명 카탈로그를 깨지 않게 진행한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

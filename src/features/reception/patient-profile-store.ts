@@ -9,6 +9,7 @@ import {
   mockPatients,
 } from "@/mocks/emr-domain";
 import type { Consent, ConsentType, EmrId, Guardian, Patient, PatientGuardian, PatientSex } from "@/types/emr-domain";
+import type { ReceptionPatientGuardianRegistrationRecord } from "@/features/reception/patient-guardian-registration";
 
 type NewPatientInput = {
   birthDate?: string;
@@ -45,6 +46,7 @@ type PatientProfileStore = {
   patients: Patient[];
   addGuardian: (input: NewGuardianInput) => { duplicateGuardianId?: EmrId; error?: string; guardianId?: EmrId };
   addPatient: (input: NewPatientInput) => { duplicateGuardianId?: EmrId; error?: string; patientId?: EmrId };
+  applyPatientGuardianRegistration: (registration: ReceptionPatientGuardianRegistrationRecord) => EmrId;
   hasDuplicatePatientNameForGuardian: (guardianId: EmrId, patientName: string) => boolean;
   setPrimaryGuardian: (patientId: EmrId, guardianId: EmrId) => void;
   toggleGuardianMessageConsent: (patientId: EmrId, guardianId: EmrId) => void;
@@ -219,6 +221,16 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
 
     return { patientId };
   },
+  applyPatientGuardianRegistration: (registration) => {
+    set((state) => ({
+      consents: mergeById(state.consents, registration.consents),
+      guardians: mergeById(state.guardians, [registration.guardian]),
+      patientGuardians: mergeById(state.patientGuardians, [registration.patientGuardian]),
+      patients: mergeById(state.patients, [registration.patient]),
+    }));
+
+    return registration.patient.id;
+  },
   hasDuplicatePatientNameForGuardian: (guardianId, patientName) => {
     const normalizedPatientName = patientName.trim();
 
@@ -267,3 +279,8 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
       ),
     })),
 }));
+
+function mergeById<T extends { id: EmrId }>(current: T[], incoming: T[]) {
+  const incomingIds = new Set(incoming.map((item) => item.id));
+  return [...current.filter((item) => !incomingIds.has(item.id)), ...incoming];
+}

@@ -254,6 +254,8 @@ Note: `role_permission_policies`는 설명용 별칭으로만 사용하고, 실�
 
 ## 3. 보호자, 환자, 동의
 
+Project 03의 접수 live persistence에서 실제 migration으로 좁힌 최소 schema 계획은 `docs/engineering/auth-security/auth-login/reception-domain-schema-extension-plan.md`를 기준으로 하고, DEN-56 구현 요약은 `docs/engineering/auth-security/auth-login/reception-domain-schema-migration.md`를 기준으로 한다. 이 문서의 넓은 DB 초안은 전체 제품 방향을 설명하고, Project 03 local-first migration은 `guardians`, `patients`, `patient_guardians`, `consents`, `appointments`, `appointment_change_logs`, `encounters`, `waiting_queue_entries`의 첫 구현 범위를 고정한다.
+
 ### `guardians`
 
 보호자/고객.

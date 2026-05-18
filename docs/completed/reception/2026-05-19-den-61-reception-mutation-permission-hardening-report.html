@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-61 Reception Mutation Permission Hardening 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-61 Reception Mutation Permission Hardening 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>접수에서 데이터를 새로 만드는 세 가지 작업이 같은 권한 기준을 쓰도록 고정했다. 이제 잘못된 workspace나 권한 없는 사용자가 접수 데이터를 만드는 사고를 테스트로 막는다.</p>
+    </div>
+
+    <h2>적용한 기준</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>작업</th>
+          <th>필요 권한</th>
+          <th>감사 로그 hook 후보</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>환자/보호자 등록</td>
+          <td><code>reception:create</code></td>
+          <td><code>reception.patient_guardian.register</code></td>
+        </tr>
+        <tr>
+          <td>현장 접수 encounter 생성</td>
+          <td><code>reception:create</code></td>
+          <td><code>reception.walk_in.create</code></td>
+        </tr>
+        <tr>
+          <td>예약 접수 check-in</td>
+          <td><code>reception:create</code></td>
+          <td><code>reception.appointment.check_in</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>차단 확인</h2>
+    <ul>
+      <li>로그인 actor 없음: <code>unauthenticated</code></li>
+      <li>비활성 사용자: <code>inactive_user</code></li>
+      <li>다른 workspace 멤버십만 있음: <code>workspace_membership_missing</code></li>
+      <li>비활성 멤버십: <code>workspace_membership_inactive</code></li>
+      <li>권한 없는 역할: <code>permission_missing</code></li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/features/reception/reception-mutation-permissions.ts</code></li>
+      <li><code>src/features/reception/server-patient-guardian-registration-core.ts</code></li>
+      <li><code>src/features/reception/server-walk-in-encounter-core.ts</code></li>
+      <li><code>src/features/reception/server-appointment-check-in-core.ts</code></li>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>src/features/reception/profile-drawer.tsx</code></li>
+      <li><code>tests/reception-mutation-permissions-server.spec.ts</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-mutation-permission-hardening.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-008-reception-mutation-permission-hardening.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/reception-mutation-permissions-server.spec.ts --reporter=line</code>: 17 passed</li>
+      <li><code>npx playwright test tests/reception-patient-guardian-registration-server.spec.ts tests/reception-walk-in-encounter-server.spec.ts tests/reception-appointment-check-in-server.spec.ts tests/reception-mutation-permissions-server.spec.ts --reporter=line</code>: 35 passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 25 passed</li>
+      <li><code>npx tsc --noEmit</code>: passed</li>
+      <li><code>npm run security:secrets</code>: Secret scan passed, 1160 tracked files checked</li>
+      <li><code>npm run docs:check</code>: Checked 358 docs/agent markdown files</li>
+    </ul>
+
+    <div class="warn">
+      <p>remote Supabase, 실서버, 실제 환자/병원 데이터, role policy 변경, audit persistence 전체 구현은 진행하지 않았다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-62에서 접수 대기열과 side panel을 persisted encounter source로 읽게 전환한다.</p>
+  </body>
+</html>

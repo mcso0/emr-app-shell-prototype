@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-65 Reception Persistence Regression Coverage 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { color: #0f172a; }
+      code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+      .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-65 Reception Persistence Regression Coverage 보고서</h1>
+
+    <h2>대표 요약</h2>
+    <p>접수에서 저장 성공 후 새로고침해도 대기열과 달력 읽기 경로로 다시 보이는지 자동 테스트를 추가했다. 실제 DB나 실데이터는 쓰지 않고, 안전한 route mock으로 저장된 것처럼 검증했다.</p>
+
+    <h2>작업 내용</h2>
+    <ul>
+      <li>현장 접수 생성 후 reload 검증 추가</li>
+      <li>예약 check-in 후 reload 검증 추가</li>
+      <li>다른 workspace의 queue/calendar read 차단 검증 추가</li>
+      <li>후속 chart persistence가 사용할 encounter id가 테스트에서 안정적으로 확인되도록 fixture ID 고정</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-012-reception-persistence-regression-coverage.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-persistence-regression-coverage.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/reception.spec.ts -g "persistence regression|cross-workspace" --reporter=line</code>: 3 passed</li>
+      <li><code>npm run build</code>: passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 30 passed</li>
+      <li><code>npm run security:secrets</code>: passed</li>
+      <li><code>npm run docs:check</code>: passed</li>
+    </ul>
+
+    <div class="warn">
+      <p>chart/order/billing E2E, performance testing, remote Supabase, 실서버, 실제 환자/병원 데이터는 진행하지 않았다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-66에서 Chart/Order/Billing handoff와 Project 03/04 reception closeout을 작성한다.</p>
+  </body>
+</html>

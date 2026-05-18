@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-54 Reception Encounter Persistence Contract 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-54 Reception Encounter Persistence Contract 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-18</p>
+    <div class="note">
+      <p>Project 03의 첫 작업으로, 접수/예약 live persistence가 어떤 기준으로 encounter를 만들고 후속 차트·오더·수납에 넘길지 계약을 확정했다.</p>
+    </div>
+
+    <h2>결정한 내용</h2>
+    <ul>
+      <li>현장 접수는 appointment 없이 <code>encounter</code>를 생성한다.</li>
+      <li>예약 접수는 appointment를 <code>checked_in</code>으로 바꾸고, 같은 transaction 경계에서 encounter와 queue row를 만든다.</li>
+      <li>서버는 workspace active membership과 reception permission을 확인해야 한다.</li>
+      <li>patient, guardian, appointment는 같은 workspace 범위 안에서만 연결된다.</li>
+      <li>Project 03은 local-first로 진행하며 remote Supabase, 실데이터, production deploy는 별도 승인 전 제외한다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>접수 기록은 이후 진료 차트, 처방/오더, 수납이 모두 따라가는 첫 기준점이다. 여기서 encounter 계약을 고정해야 뒤 프로젝트가 같은 환자·보호자·내원 건을 안전하게 이어받을 수 있다.</p>
+
+    <h2>변경 문서</h2>
+    <ul>
+      <li><code>docs/engineering/auth-security/auth-login/reception-encounter-persistence-contract.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+      <li><code>docs/engineering/agent-orchestration/manual-linear-operations.md</code></li>
+    </ul>
+
+    <h2>다음 순서</h2>
+    <ol>
+      <li>DEN-55: patient, guardian, appointment, encounter schema extension plan</li>
+      <li>DEN-56: local-first schema migration</li>
+      <li>DEN-57: patient/guardian lookup repository</li>
+      <li>DEN-58 이후: minimal registration, walk-in, appointment check-in persistence</li>
+    </ol>
+
+    <div class="warn">
+      <p>이번 작업은 문서 계약 확정이다. 코드 구현, remote Supabase, 실서버, 실제 환자/병원 데이터는 건드리지 않았다.</p>
+    </div>
+
+    <h2>검증</h2>
+    <p><code>npm run docs:check</code> 통과.</p>
+  </body>
+</html>

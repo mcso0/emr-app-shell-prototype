@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-59 Reception Appointment Check-In Transition 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+      .ok { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-59 Reception Appointment Check-In Transition 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>예약 확정 건의 <code>접수 처리</code>를 서버 route가 소유하는 저장 경계로 연결했다. 이제 예약 접수는 서버가 예약 상태와 중복 여부를 확인한 뒤 appointment, encounter, 대기열을 같은 transaction boundary에서 처리한다.</p>
+    </div>
+
+    <h2>무엇을 만들었나</h2>
+    <ul>
+      <li><code>POST /api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in</code> route</li>
+      <li>server-owned appointment check-in core, mock fallback writer, Supabase writer gateway</li>
+      <li>appointment status update, linked encounter, consultation queue row, appointment change log를 함께 만드는 local-first SQL writer function</li>
+      <li>접수 appointment card와 drawer의 <code>접수 처리</code> route 연결</li>
+      <li>active workspace membership, <code>reception:create</code>, route-level rate limit 적용</li>
+      <li>missing/non-confirmed/already checked-in appointment의 안정적인 차단 응답</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>예약 환자가 내원했을 때 "예약확정에서 접수완료로 바꾸고 진료대기 encounter를 만드는 일"이 서버 경계 뒤로 이동했다. Project 03의 두 핵심 접수 생성 흐름인 현장 접수와 예약 접수가 모두 같은 패턴을 갖게 됐다.</p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in/route.ts</code></li>
+      <li><code>src/features/reception/appointment-check-in.ts</code></li>
+      <li><code>src/features/reception/server-appointment-check-in.ts</code></li>
+      <li><code>src/features/reception/server-appointment-check-in-core.ts</code></li>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>src/features/reception/store.ts</code></li>
+      <li><code>supabase/migrations/20260519130000_reception_appointment_check_in_writer.sql</code></li>
+      <li><code>tests/reception-appointment-check-in-server.spec.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>tests/workspace-rate-limit-server.spec.ts</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-appointment-check-in-transition.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-007-appointment-check-in-transition.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <div class="warn">
+      <p>이번 작업은 예약 접수 transition boundary다. 예약 CRUD, no-show 자동화, Kakao/SMS/email/storage provider 연동, queue/calendar persisted read replacement, chart/SOAP/order/billing/audit persistence, final domain RLS policy SQL, remote Supabase link/push, production deploy, 실제 환자·보호자·병원 데이터 접근은 제외했다.</p>
+    </div>
+
+    <h2>검증</h2>
+    <div class="ok">
+      <ul>
+        <li><code>npx playwright test tests/reception-appointment-check-in-server.spec.ts --reporter=line</code>: 6 passed</li>
+        <li><code>npx playwright test tests/reception.spec.ts -g "server-backed appointment check-in|reception check-in converts" --reporter=line</code>: 2 passed</li>
+        <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 25 passed</li>
+        <li><code>npx playwright test tests/workspace-rate-limit-server.spec.ts -g "shared rate limit boundary" --reporter=line</code>: 1 passed</li>
+        <li><code>npx tsc --noEmit</code>: 통과</li>
+        <li><code>npm run security:secrets</code>: Secret scan passed, 1160 tracked files checked</li>
+        <li><code>npm run docs:check</code>: Checked 356 docs/agent markdown files</li>
+      </ul>
+    </div>
+
+    <h2>남은 리스크</h2>
+    <p><code>npx supabase db reset --local</code>은 Docker daemon이 꺼져 있어 실행하지 못했다. 원격/staging 전에는 Docker local Supabase에서 실제 SQL replay를 다시 확인해야 한다.</p>
+
+    <h2>다음 추천</h2>
+    <p>Linear 기준 다음 작업은 DEN-61 <code>02-03 Enforce workspace and role permissions on reception mutations</code>이다. 계속 remote Supabase와 실데이터는 별도 승인 전까지 제외한다.</p>
+  </body>
+</html>

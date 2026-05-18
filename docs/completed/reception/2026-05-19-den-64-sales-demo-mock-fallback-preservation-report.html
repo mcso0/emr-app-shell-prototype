@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-64 Sales Demo And Mock Fallback Preservation 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { color: #0f172a; }
+      code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+      .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-64 Sales Demo And Mock Fallback Preservation 보고서</h1>
+
+    <h2>대표 요약</h2>
+    <p>접수 기능을 서버 저장 방식으로 바꾸는 중에도 기존 콩이 세일즈 데모와 mock 화면이 깨지지 않도록 회귀 테스트와 문서를 보강했다.</p>
+
+    <h2>작업 내용</h2>
+    <ul>
+      <li>queue/calendar live reader가 빈 mock fallback을 반환해도 콩이 예약 카드와 환자 컨텍스트가 유지되는 테스트 추가</li>
+      <li>sales demo golden path와 접수 회귀 테스트를 함께 실행해 보존 여부 확인</li>
+      <li>mock/local mode와 Supabase mode의 reader fallback 정책 문서화</li>
+      <li>shell URL state query가 module path 검증을 흔들지 않도록 접수 nav regression을 안정화한 DEN-63 변경을 보존 범위에 포함</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>tests/sales-demo-flow.spec.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-011-sales-demo-mock-fallback-preservation.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-sales-demo-mock-fallback-preservation.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/sales-demo-flow.spec.ts -g "reception live reader mock fallbacks" --reporter=line</code>: 1 passed</li>
+      <li><code>npx tsc --noEmit</code>: passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts tests/sales-demo-flow.spec.ts --reporter=line</code>: 30 passed</li>
+      <li><code>npm run security:secrets</code>: passed</li>
+      <li><code>npm run docs:check</code>: passed</li>
+    </ul>
+
+    <div class="warn">
+      <p>새 demo scenario, sales copy 변경, billing/chart persistence, remote Supabase, 실서버, 실제 환자/병원 데이터는 진행하지 않았다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-65에서 Project 04의 end-to-end reception persistence regression coverage를 시작한다.</p>
+  </body>
+</html>

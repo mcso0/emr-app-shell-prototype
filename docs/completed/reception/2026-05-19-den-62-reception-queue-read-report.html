@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-62 Reception Queue Read 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-62 Reception Queue Read 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>접수 대기열과 side panel이 서버에서 읽은 encounter/queue 응답을 받을 수 있는 첫 read boundary를 추가했다.</p>
+    </div>
+
+    <h2>무엇이 바뀌었나</h2>
+    <ul>
+      <li><code>GET /api/workspaces/[workspaceId]/reception/queue</code> route를 추가했다.</li>
+      <li>서버에서 active workspace membership과 <code>reception:view</code>를 확인한다.</li>
+      <li>Supabase mode에서는 <code>clair_list_reception_queue</code> reader RPC를 사용한다.</li>
+      <li>화면 store는 서버 queue 응답을 persisted overlay로 받아 side panel에 반영한다.</li>
+      <li>mock demo fixture는 기존처럼 유지한다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>DEN-60/DEN-59에서 encounter를 만들 수 있게 됐고, DEN-62는 그 저장된 encounter를 접수 화면에서 다시 읽기 시작하는 첫 단계다. 이 경계가 있어야 새로고침 후에도 접수 대기열을 신뢰할 수 있다.</p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/reception/queue/route.ts</code></li>
+      <li><code>src/features/reception/server-reception-queue-read-core.ts</code></li>
+      <li><code>src/features/reception/server-reception-queue-read.ts</code></li>
+      <li><code>src/features/reception/reception-queue-read.ts</code></li>
+      <li><code>src/features/reception/store.ts</code></li>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>supabase/migrations/20260519140000_reception_queue_reader.sql</code></li>
+      <li><code>tests/reception-queue-read-server.spec.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/reception-queue-read-server.spec.ts --reporter=line</code>: 5 passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "server-backed reception queue read" --reporter=line</code>: 1 passed</li>
+      <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 26 passed</li>
+      <li><code>npx tsc --noEmit</code>: passed</li>
+      <li><code>npm run build</code>: passed</li>
+      <li><code>npm run security:secrets</code>: passed</li>
+      <li><code>npm run docs:check</code>: passed</li>
+    </ul>
+
+    <div class="warn">
+      <p>calendar read 전환, chart/order/billing persistence, queue status mutation, final RLS policy SQL, remote Supabase, 실서버, 실제 환자/병원 데이터는 진행하지 않았다.</p>
+    </div>
+
+    <h2>다음 추천</h2>
+    <p>DEN-63에서 day calendar가 persisted appointment/encounter 상태를 읽도록 전환한다.</p>
+  </body>
+</html>

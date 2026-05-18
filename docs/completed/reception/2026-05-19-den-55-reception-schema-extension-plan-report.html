@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-55 Reception Schema Extension Plan 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-55 Reception Schema Extension Plan 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>접수 live persistence를 위해 필요한 최소 DB 테이블과 필드, 상태값, 개인정보/동의 범위를 구현 전 계획으로 정리했다.</p>
+    </div>
+
+    <h2>제안한 테이블</h2>
+    <ul>
+      <li><code>guardians</code></li>
+      <li><code>patients</code></li>
+      <li><code>patient_guardians</code></li>
+      <li><code>consents</code></li>
+      <li><code>appointments</code></li>
+      <li><code>appointment_change_logs</code></li>
+      <li><code>encounters</code></li>
+      <li><code>waiting_queue_entries</code></li>
+    </ul>
+
+    <h2>중요 결정</h2>
+    <ul>
+      <li>모든 업무 데이터는 workspace 범위 안에서 저장한다.</li>
+      <li>환자번호, 마이크로칩, 환자등록번호, appointment-linked encounter 중복 방지 기준을 제안했다.</li>
+      <li>접수에서 쓰는 <code>reception_type</code>, <code>department</code>, <code>duration_minutes</code>, <code>reception_memo</code>, <code>checked_in_by_user_id</code>를 encounter 확장 후보로 확정했다.</li>
+      <li>DB 상태값은 영어 enum 문자열로 유지하고, 한국어 표시는 UI mapper에 남긴다.</li>
+      <li>RLS와 서버 권한 enforcement는 DEN-61 등 후속 issue로 분리했다.</li>
+    </ul>
+
+    <h2>개인정보/동의 질문</h2>
+    <ul>
+      <li>보호자 생년월일을 첫 live slice에서 저장할지 여부</li>
+      <li>보호자 휴대전화 중복을 DB unique로 막을지, 경고/서버 validation으로 둘지 여부</li>
+      <li>최소 등록 필수 동의를 개인정보 동의만으로 둘지, 메시지 동의까지 요구할지 여부</li>
+      <li>마케팅 동의를 Project 03에서 허용할지 또는 후속으로 미룰지 여부</li>
+    </ul>
+
+    <h2>변경 문서</h2>
+    <ul>
+      <li><code>docs/engineering/auth-security/auth-login/reception-domain-schema-extension-plan.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <div class="warn">
+      <p>이번 작업은 schema plan이다. migration 구현, UI 변경, remote Supabase, 실서버, 실제 환자/병원 데이터는 건드리지 않았다.</p>
+    </div>
+
+    <h2>검증</h2>
+    <p><code>npm run docs:check</code> 통과.</p>
+  </body>
+</html>

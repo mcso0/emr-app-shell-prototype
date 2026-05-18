@@ -26,6 +26,7 @@ export type ReceptionDraftCheckIn = {
   memo?: string;
   queueEntry: WaitingQueueEntry;
   receptionType?: "appointment" | "walk_in";
+  source?: "persisted_calendar" | "persisted_queue" | "session";
 };
 
 export type ReceptionPatientSummary = {
@@ -165,26 +166,37 @@ export const getFilteredReceptionPatients = (
 };
 
 export const getEffectiveAppointments = (
-  draftCheckIns: ReceptionDraftCheckIn[]
+  draftCheckIns: ReceptionDraftCheckIn[],
+  persistedAppointments: Appointment[] = []
 ): Appointment[] => {
   const checkedInAppointmentIds = new Set(
     draftCheckIns.flatMap((draft) => (draft.appointmentId ? [draft.appointmentId] : []))
   );
+  const persistedAppointmentIds = new Set(persistedAppointments.map((appointment) => appointment.id));
+  const appointments = [
+    ...mockAppointments.map((appointment) =>
+      persistedAppointments.find((item) => item.id === appointment.id) ?? appointment
+    ),
+    ...persistedAppointments.filter((appointment) => !mockAppointments.some((item) => item.id === appointment.id)),
+  ];
 
-  return mockAppointments.map((appointment) =>
+  return appointments.map((appointment) =>
     checkedInAppointmentIds.has(appointment.id)
       ? {
           ...appointment,
-          status: "checked_in",
+          status: "checked_in" as const,
           updatedAt: draftCheckIns.find((draft) => draft.appointmentId === appointment.id)
             ?.encounter.updatedAt ?? appointment.updatedAt,
         }
       : appointment
-  );
+  ).filter((appointment) => appointment.workspaceId === "clair-demo" || persistedAppointmentIds.has(appointment.id));
 };
 
-export const getTodayAppointments = (draftCheckIns: ReceptionDraftCheckIn[]) =>
-  getEffectiveAppointments(draftCheckIns).filter((appointment) =>
+export const getTodayAppointments = (
+  draftCheckIns: ReceptionDraftCheckIn[],
+  persistedAppointments: Appointment[] = []
+) =>
+  getEffectiveAppointments(draftCheckIns, persistedAppointments).filter((appointment) =>
     appointment.scheduledStartAt.startsWith(TODAY_PREFIX)
   );
 

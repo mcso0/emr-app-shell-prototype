@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-60 Reception Walk-In Encounter Create 보고서</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #171717; }
+      code { background: #f4f4f5; padding: 2px 5px; border-radius: 4px; }
+      .note { background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; }
+      .warn { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; }
+      .ok { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-60 Reception Walk-In Encounter Create 보고서</h1>
+    <p><strong>작성일:</strong> 2026-05-19</p>
+    <div class="note">
+      <p>접수 화면의 현장 접수 생성을 서버 route가 소유하는 저장 경계로 연결했다. 이제 현장 접수는 서버가 환자, 보호자 관계, 권한을 확인한 뒤 encounter와 대기열 row를 함께 만든다.</p>
+    </div>
+
+    <h2>무엇을 만들었나</h2>
+    <ul>
+      <li><code>POST /api/workspaces/[workspaceId]/reception/walk-in-encounters</code> route</li>
+      <li>server-owned walk-in encounter core, mock fallback writer, Supabase writer gateway</li>
+      <li>현장 접수 encounter와 consultation queue row를 함께 만드는 local-first SQL writer function</li>
+      <li>접수 <code>진료 접수</code> dialog의 최종 생성 submit route 연결</li>
+      <li>active workspace membership, <code>reception:create</code>, route-level rate limit 적용</li>
+      <li>서버 응답으로 받은 persisted-shaped encounter/queue를 local demo UI에 반영</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>접수 업무의 핵심인 "예약 없이 온 환자를 진료대기 상태로 올리는 일"이 서버 경계 뒤로 이동했다. 다음 DEN-59의 예약 접수 전환도 같은 패턴으로 구현할 수 있다.</p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/reception/walk-in-encounters/route.ts</code></li>
+      <li><code>src/features/reception/walk-in-encounter.ts</code></li>
+      <li><code>src/features/reception/server-walk-in-encounter.ts</code></li>
+      <li><code>src/features/reception/server-walk-in-encounter-core.ts</code></li>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>src/features/reception/store.ts</code></li>
+      <li><code>src/types/emr-domain.ts</code></li>
+      <li><code>supabase/migrations/20260519120000_reception_walk_in_encounter_writer.sql</code></li>
+      <li><code>tests/reception-walk-in-encounter-server.spec.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>tests/workspace-rate-limit-server.spec.ts</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/reception-walk-in-encounter-create.md</code></li>
+      <li><code>docs/work/reception/RECEPTION-LIVE-PR-006-walk-in-encounter-create.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <div class="warn">
+      <p>이번 작업은 현장 접수 create boundary다. 예약 check-in, queue/calendar read replacement, chart/SOAP/order/billing/audit/provider persistence, final domain RLS policy SQL, remote Supabase link/push, production deploy, 실제 환자·보호자·병원 데이터 접근은 제외했다.</p>
+    </div>
+
+    <h2>검증</h2>
+    <div class="ok">
+      <ul>
+        <li><code>npx playwright test tests/reception-walk-in-encounter-server.spec.ts --reporter=line</code>: 6 passed</li>
+        <li><code>npx playwright test tests/reception.spec.ts -g "reception creates a walk-in waiting row|reception walk-in keeps selected veterinarian|server-backed walk-in encounter" --reporter=line</code>: 3 passed</li>
+        <li><code>npx playwright test tests/reception.spec.ts --reporter=line</code>: 24 passed</li>
+        <li><code>npx playwright test tests/workspace-rate-limit-server.spec.ts -g "shared rate limit boundary" --reporter=line</code>: 1 passed</li>
+        <li><code>npx tsc --noEmit</code>: 통과</li>
+        <li><code>npm run security:secrets</code>: Secret scan passed, 1160 tracked files checked</li>
+        <li><code>npm run docs:check</code>: Checked 354 docs/agent markdown files</li>
+      </ul>
+    </div>
+
+    <h2>남은 리스크</h2>
+    <p><code>npx supabase db reset --local</code>은 Docker daemon이 꺼져 있어 실행하지 못했다. 원격/staging 전에는 Docker local Supabase에서 실제 SQL replay를 다시 확인해야 한다.</p>
+
+    <h2>다음 추천</h2>
+    <p>DEN-59에서 예약 확정 건을 접수완료로 바꾸고 linked encounter와 queue row를 transaction boundary에서 생성한다. 계속 remote Supabase와 실데이터는 별도 승인 전까지 제외한다.</p>
+  </body>
+</html>
