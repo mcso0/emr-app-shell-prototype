@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-31 Server Session Reader Contract 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #18181b;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        margin-top: 28px;
+        padding-top: 20px;
+        font-size: 18px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .summary {
+        background: #fafafa;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-31 Server Session Reader Contract 보고서</h1>
+
+    <section class="summary">
+      <p>
+        Project 01의 verified server session 첫 구현 단위로, Next.js server boundary에서 Supabase
+        verified user claims를 읽는 contract와 server-only entrypoint를 추가했다.
+      </p>
+    </section>
+
+    <h2>변경 사항</h2>
+    <ul>
+      <li><code>readServerSessionFromSupabase()</code> contract를 추가해 authenticated, mock fallback, unauthenticated, misconfigured, error 상태를 typed result로 반환한다.</li>
+      <li><code>readServerSession()</code> server-only entrypoint를 추가하고 Supabase server client의 <code>auth.getClaims()</code>를 사용한다.</li>
+      <li><code>NEXT_PUBLIC_AUTH_MODE=mock</code>과 env-missing <code>auto</code> mode는 기존 mock fallback으로 유지한다.</li>
+      <li>browser storage와 client global에 의존하지 않는 것을 테스트로 고정했다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      기존 첫 server permission enforcement slice는 demo-only header로 actor identity를 받았다.
+      이번 변경은 DEN-32에서 그 헤더를 Supabase verified session seam으로 교체할 수 있는 최소 기반이다.
+    </p>
+
+    <h2>변경된 파일</h2>
+    <ul>
+      <li><code>src/features/auth/server-session-contract.ts</code></li>
+      <li><code>src/features/auth/server-session-reader.ts</code></li>
+      <li><code>tests/server-session-reader.spec.ts</code></li>
+      <li><code>docs/work/auth/AUTH-PR-013-server-side-supabase-session-reader-contract.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+      <li><code>docs/completed/auth/2026-05-18-den-31-server-session-reader-contract-report.html</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/server-session-reader.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npx playwright test tests/server-session-reader.spec.ts tests/auth.spec.ts tests/server-permission-enforcement.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+    </ul>
+
+    <h2>범위 준수</h2>
+    <ul>
+      <li>route 전환 없음</li>
+      <li>DB write, migration, RLS 구현 없음</li>
+      <li>password/OAuth/MFA/callback 구현 없음</li>
+      <li>remote Supabase project 변경 없음</li>
+      <li>Project 02 작업 없음</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 이슈는 <code>DEN-32 Replace role update demo identity header with verified session seam</code>이다.
+      새 session reader를 role update route에 연결하고, mock/test fallback 경계를 명시적으로 유지해야 한다.
+    </p>
+  </body>
+</html>

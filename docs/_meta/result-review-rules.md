@@ -8,13 +8,14 @@ Default language: Korean, unless the user asks otherwise. Keep any supporting ag
 
 Include:
 
+- a brief non-developer summary of what changed and why it matters
 - what changed
 - which files or docs changed
 - current status
 - verification result
 - useful next step
 
-Keep the first review short. Expand only when the user asks for details or when there is a notable risk.
+Keep the first review short and understandable for a non-developer decision-maker. Expand only when the user asks for details or when there is a notable risk.
 
 For Level 0 changes from `docs/_meta/documentation-depth-rules.md`, the result review is the only required record. Do not create a work item, changelog entry, or closeout just to document a tiny one-off change.
 

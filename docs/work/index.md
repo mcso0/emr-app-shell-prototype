@@ -46,6 +46,36 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | AUTH-PR-008 | human_review | auth | P0 | PR 8 | `docs/work/auth/AUTH-PR-008-personal-profile-settings.md` |
 | AUTH-PR-009 | human_review | auth | P0 | PR 9 | `docs/work/auth/AUTH-PR-009-first-server-permission-enforcement-slice.md` |
 | AUTH-PR-010 | human_review | auth | P0 | PR 10 | `docs/work/auth/AUTH-PR-010-security-review-workspace-auth-permission-boundary.md` |
+| AUTH-PR-011 | human_review | auth | P0 | PR 11 | `docs/work/auth/AUTH-PR-011-live-supabase-readiness-execution-mode.md` |
+| AUTH-PR-012 | human_review | auth | P0 | PR 12 | `docs/work/auth/AUTH-PR-012-auth-db-env-secret-verification-gates.md` |
+| AUTH-PR-013 | human_review | auth | P0 | PR 13 | `docs/work/auth/AUTH-PR-013-server-side-supabase-session-reader-contract.md` |
+| AUTH-PR-014 | human_review | auth | P0 | PR 14 | `docs/work/auth/AUTH-PR-014-role-update-verified-session-seam.md` |
+| AUTH-PR-015 | human_review | auth | P0 | PR 15 | `docs/work/auth/AUTH-PR-015-auth-guard-server-session-regression.md` |
+| AUTH-PR-016 | human_review | auth | P0 | PR 16 | `docs/work/auth/AUTH-PR-016-workspace-auth-schema-migration.md` |
+| AUTH-PR-017 | human_review | auth | P0 | PR 17 | `docs/work/auth/AUTH-PR-017-local-migration-validation-auth-seed-contract.md` |
+| AUTH-PR-018 | human_review | auth | P0 | PR 18 | `docs/work/auth/AUTH-PR-018-db-level-last-admin-protection-foundation.md` |
+| AUTH-PR-019 | human_review | auth | P0 | PR 19 | `docs/work/auth/AUTH-PR-019-workspace-membership-rls-policy-baseline.md` |
+| AUTH-PR-020 | human_review | auth | P0 | PR 20 | `docs/work/auth/AUTH-PR-020-db-backed-permission-adapter.md` |
+| AUTH-PR-021 | human_review | auth | P0 | PR 21 | `docs/work/auth/AUTH-PR-021-cross-workspace-denial-regression.md` |
+| AUTH-PR-022 | human_review | auth | P0 | PR 22 | `docs/work/auth/AUTH-PR-022-security-review-live-auth-db-rls-foundation.md` |
+| AUTH-PR-023 | human_review | auth | P0 | PR 23 | `docs/work/auth/AUTH-PR-023-workspace-persistence-handoff-project-closeout.md` |
+| AUTH-PR-024 | human_review | auth | P0 | PR 24 | `docs/work/auth/AUTH-PR-024-docker-local-supabase-rls-execution-gate.md` |
+| AUTH-PR-025 | human_review | auth | P0 | PR 25 | `docs/work/auth/AUTH-PR-025-workspace-live-persistence-scope-dependencies.md` |
+| AUTH-PR-026 | human_review | auth | P0 | PR 26 | `docs/work/auth/AUTH-PR-026-workspace-member-server-route-contract.md` |
+| AUTH-PR-027 | human_review | auth | P0 | PR 27 | `docs/work/auth/AUTH-PR-027-workspace-creation-live-persistence.md` |
+| AUTH-PR-028 | human_review | auth | P0 | PR 28 | `docs/work/auth/AUTH-PR-028-workspace-membership-list-live-read.md` |
+| AUTH-PR-029 | human_review | auth | P0 | PR 29 | `docs/work/auth/AUTH-PR-029-workspace-invitation-create-live-persistence.md` |
+| AUTH-PR-030 | human_review | auth | P0 | PR 30 | `docs/work/auth/AUTH-PR-030-workspace-invitation-lifecycle-live-persistence.md` |
+| AUTH-PR-031 | human_review | auth | P0 | PR 31 | `docs/work/auth/AUTH-PR-031-workspace-membership-status-live-read.md` |
+| AUTH-PR-032 | human_review | auth | P0 | PR 32 | `docs/work/auth/AUTH-PR-032-workspace-role-edit-server-enforcement-ui.md` |
+| AUTH-PR-033 | human_review | auth | P0 | PR 33 | `docs/work/auth/AUTH-PR-033-workspace-role-status-db-persistence.md` |
+| AUTH-PR-034 | human_review | auth | P0 | PR 34 | `docs/work/auth/AUTH-PR-034-workspace-role-management-regression-coverage.md` |
+| AUTH-PR-035 | human_review | auth | P0 | PR 35 | `docs/work/auth/AUTH-PR-035-personal-profile-live-persistence.md` |
+| AUTH-PR-036 | human_review | auth | P0 | PR 36 | `docs/work/auth/AUTH-PR-036-live-persistence-secret-scanning-gate.md` |
+| AUTH-PR-037 | human_review | auth | P0 | PR 37 | `docs/work/auth/AUTH-PR-037-api-error-telemetry-contract.md` |
+| AUTH-PR-038 | human_review | auth | P0 | PR 38 | `docs/work/auth/AUTH-PR-038-workspace-live-api-rate-limiting.md` |
+| AUTH-PR-039 | human_review | auth | P0 | PR 39 | `docs/work/auth/AUTH-PR-039-workspace-persistence-security-review.md` |
+| AUTH-PR-040 | human_review | auth | P0 | PR 40 | `docs/work/auth/AUTH-PR-040-project-02-workspace-persistence-closeout.md` |
 | PWA-PR-001 | done | pwa | P1 | PR 1 | `docs/work/pwa/PWA-PR-001-installable-app-shell.md` |
 | RECEPTION-PR-001 | done | reception | P0 | PR 1 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md` |
 | RECEPTION-PR-002 | done | reception | P1 | PR 2 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md` |
@@ -76,7 +106,7 @@ The docs restructure and docs operations sequence is complete. Product MVP imple
 
 Recommended next shaping target:
 
-- Permission resolver or migration/RLS implementation unit, based on `docs/engineering/current-status.md`.
+- Project 02 Todo is complete and ready for 승욱 Human Review. Do not start Project 03 without explicit approval.
 
 ## Inbox
 

@@ -59,7 +59,7 @@ export function PersonalProfileSettings() {
     hydrate();
   }, [hydrate]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!profileSession) return;
 
@@ -78,8 +78,51 @@ export function PersonalProfileSettings() {
       return;
     }
 
+    let persistedInput = input;
+
+    try {
+      const response = await fetch("/api/users/me/profile", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          ...(profileSession.role === "supabase"
+            ? {}
+            : { "x-clair-demo-session-user-id": profileSession.sessionId }),
+        },
+        body: JSON.stringify(input),
+      });
+      const result = await response.json() as {
+        ok: boolean;
+        profile?: {
+          displayName: string;
+          initials: string;
+          phone: string | null;
+          notificationOptIn: boolean;
+        };
+        fieldErrors?: PersonalProfileFieldErrors;
+      };
+
+      if (!response.ok || !result.ok) {
+        setFieldErrors(result.fieldErrors ?? {});
+        setSaveMessage("프로필 저장 권한 또는 서버 상태를 확인해 주세요.");
+        return;
+      }
+
+      if (result.profile) {
+        persistedInput = {
+          displayName: result.profile.displayName,
+          initials: result.profile.initials,
+          phone: result.profile.phone ?? "",
+          notificationOptIn: result.profile.notificationOptIn,
+        };
+      }
+    } catch {
+      setSaveMessage("프로필 저장 권한 또는 서버 상태를 확인해 주세요.");
+      return;
+    }
+
     const currentState = getBrowserProfileState() ?? createEmptyPersonalProfilesState();
-    const nextState = upsertSessionPersonalProfile(currentState, profileSession, input);
+    const nextState = upsertSessionPersonalProfile(currentState, profileSession, persistedInput);
     persistPersonalProfilesState(
       nextState,
       profileSession.storageMode,
@@ -142,7 +185,7 @@ export function PersonalProfileSettings() {
                 표시 정보
               </h2>
               <p className="text-[13px] leading-5 text-muted-foreground">
-                변경 내용은 현재 브라우저의 session-only profile 저장소에만 기록됩니다.
+                변경 내용은 서버 프로필 저장소에 먼저 기록되고, 브라우저 표시 상태에 반영됩니다.
               </p>
             </div>
 

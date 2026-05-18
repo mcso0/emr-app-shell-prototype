@@ -142,6 +142,39 @@ test("app shell renders workspace switcher in the navigation column when module 
   expect(modulePanelBox.height).toBe(workspaceBox.height);
 });
 
+test("workspace switcher reads persisted workspace display name from server list", async ({ page }) => {
+  await page.route("**/api/workspaces", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        workspaces: [
+          {
+            id: "persisted-hanbit",
+            displayName: "Persisted Hanbit Animal Hospital",
+            membershipId: "membership-persisted-hanbit",
+            roles: ["hospital_admin"],
+            status: "active",
+          },
+        ],
+        enforcedBy: "workspace-membership-reader",
+      }),
+    });
+  });
+
+  await page.goto("/w/persisted-hanbit/reception?modulePanel=open");
+
+  await expect(page.getByTestId("workspace-switcher")).toContainText(
+    "Persisted Hanbit Animal Hospital"
+  );
+});
+
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open");

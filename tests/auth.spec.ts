@@ -26,6 +26,8 @@ import {
   validateWorkspaceInvitationInput,
   validateWorkspaceCreationInput,
 } from "../src/features/auth/workspace-session";
+import { readServerSessionFromSupabase } from "../src/features/auth/server-session-contract";
+import { resolveRoleUpdateActorIdentity } from "../src/features/auth/server-role-update-identity";
 
 const storageKey = "clair.mockAuth.session.v1";
 const authUiFiles = [
@@ -199,6 +201,57 @@ test("playwright auth regressions pin mock auth mode", () => {
   expect(config).toContain("mock");
 });
 
+test("server session mode regression keeps client guard and route identity boundaries explicit", async () => {
+  const authGate = readFileSync("src/features/auth/auth-gate.tsx", "utf8");
+  const route = readFileSync(
+    "src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/roles/route.ts",
+    "utf8"
+  );
+  const identity = readFileSync("src/features/auth/server-role-update-identity.ts", "utf8");
+
+  expect(authGate).toContain("useAuthClient");
+  expect(authGate).not.toContain("readServerSession");
+  expect(authGate).not.toContain("x-clair-demo-session-user-id");
+  expect(route).toContain("readServerSession");
+  expect(identity).toContain("demo_header_mock_mode");
+  expect(identity).toContain("supabase_session");
+
+  const mockFallback = await readServerSessionFromSupabase({
+    authMode: "mock",
+    hasSupabasePublicConfig: true,
+  });
+  const mockActor = resolveRoleUpdateActorIdentity({
+    serverSession: mockFallback,
+    demoHeaderUserId: "user-admin",
+  });
+
+  expect(mockActor).toEqual({
+    ok: true,
+    actorUserId: "user-admin",
+    source: "demo_header_mock_mode",
+  });
+
+  const missingSupabaseSession = await readServerSessionFromSupabase({
+    authMode: "supabase",
+    hasSupabasePublicConfig: true,
+    getClaims: async () => ({
+      data: null,
+      error: { name: "AuthSessionMissingError", message: "Auth session missing" },
+    }),
+  });
+  const deniedActor = resolveRoleUpdateActorIdentity({
+    serverSession: missingSupabaseSession,
+    demoHeaderUserId: "user-admin",
+  });
+
+  expect(deniedActor).toEqual({
+    ok: false,
+    denialReason: "unauthenticated",
+    sessionStatus: "unauthenticated",
+    sessionReason: "no_session",
+  });
+});
+
 test("login exposes pending and provider error states without creating a session", async ({
   page,
 }) => {
@@ -249,7 +302,7 @@ test("workspace creation validates required fields before creating state", async
   expect(stored).toBeNull();
 });
 
-test("hospital admin can create and select a session-only workspace", async ({
+test("hospital admin can create and select a route-backed workspace", async ({
   page,
 }) => {
   await page.goto("/workspace/new");
@@ -263,7 +316,13 @@ test("hospital admin can create and select a session-only workspace", async ({
   await page.getByLabel("대표/관리자 이름").fill("김승욱");
   await page.getByLabel("연락 이메일").fill("owner@hanbit.test");
   await page.getByLabel("연락처").fill("010-1234-5678");
+  const creationResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/workspaces") &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "워크스페이스 만들기" }).click();
+  expect((await creationResponse).status()).toBe(201);
 
   await expect(page).toHaveURL(/\/w\/hanbit-animal-hospital\/home/);
   await expect(page.getByTestId("workspace-switcher")).toContainText(
@@ -298,7 +357,7 @@ test("hospital admin can create and select a session-only workspace", async ({
   });
 });
 
-test("hospital admin can manage session-only member invitations", async ({
+test("hospital admin can manage route-backed member invitations", async ({
   page,
 }) => {
   await page.goto("/workspace/new");
@@ -326,7 +385,13 @@ test("hospital admin can manage session-only member invitations", async ({
   await page.getByLabel("부서").fill("진료팀");
   await page.getByRole("checkbox", { name: "수의사" }).check();
   await page.getByRole("checkbox", { name: "데스크" }).check();
+  const invitationResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/hanbit-animal-hospital/invitations") &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "초대 만들기" }).click();
+  await expect((await invitationResponse).status()).toBe(201);
 
   await expect(page.getByText("vet@hanbit.test")).toBeVisible();
   await expect(page.getByText("수의사, 데스크")).toBeVisible();
@@ -336,10 +401,24 @@ test("hospital admin can manage session-only member invitations", async ({
   await page.getByRole("button", { name: "초대 만들기" }).click();
   await expect(page.getByText("이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.")).toBeVisible();
 
+  const resendResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/hanbit-animal-hospital/invitations/") &&
+      response.url().endsWith("/resend") &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "초대 재발송" }).click();
+  await expect((await resendResponse).status()).toBe(200);
   await expect(page.getByText("재발송 1회")).toBeVisible();
 
+  const acceptResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/hanbit-animal-hospital/invitations/") &&
+      response.url().endsWith("/accept") &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "수락 시뮬레이션" }).click();
+  await expect((await acceptResponse).status()).toBe(200);
   await expect(page.getByText("활성 2명")).toBeVisible();
   await expect(page.getByText("대기 0건")).toBeVisible();
   await expect(page.getByText("accepted")).toBeVisible();
@@ -388,7 +467,14 @@ test("pending invitations can be canceled in session-only state", async ({
   await page.getByRole("button", { name: "초대 만들기" }).click();
 
   await expect(page.getByText("desk@hanbit.test")).toBeVisible();
+  const cancelResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/hanbit-animal-hospital/invitations/") &&
+      response.url().endsWith("/cancel") &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "초대 취소" }).click();
+  await expect((await cancelResponse).status()).toBe(200);
 
   await expect(page.getByText("canceled")).toBeVisible();
   await expect(page.getByText("대기 0건")).toBeVisible();
@@ -444,7 +530,14 @@ test("hospital admin can edit active member roles with permission summary", asyn
   await expect(roleDialog.getByText("역할 합산 권한")).toBeVisible();
   await page.getByRole("button", { name: "변경 검토" }).click();
   await expect(page.getByRole("heading", { name: "역할 변경 확인" })).toBeVisible();
+  const roleUpdateResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/hanbit-animal-hospital/memberships/") &&
+      response.url().endsWith("/roles") &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "역할 변경" }).click();
+  await expect((await roleUpdateResponse).status()).toBe(200);
 
   await expect(memberRow).toContainText("수의사, 데스크, 테크니션");
 
@@ -543,7 +636,13 @@ test("personal profile settings validate editable fields and save session-only d
   await page.getByLabel("이니셜").fill("SW");
   await page.getByLabel("연락처").fill("010-1111-2222");
   await page.getByRole("checkbox", { name: "운영 알림 받기" }).check();
+  const profileSaveResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/users/me/profile") &&
+      response.request().method() === "PATCH"
+  );
   await page.getByRole("button", { name: "저장" }).click();
+  await expect((await profileSaveResponse).status()).toBe(200);
 
   await expect(page.getByText("프로필이 저장되었습니다.")).toBeVisible();
 

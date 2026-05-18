@@ -52,6 +52,36 @@ type InvitationRow = SessionWorkspaceInvitation & {
 
 type MembershipRow = MemberRow | InvitationRow;
 
+type WorkspaceInvitationRouteResponse =
+  | {
+      ok: true;
+      invitation: SessionWorkspaceInvitation;
+    }
+  | {
+      ok: false;
+      error?: "invalid_input";
+      fieldErrors?: WorkspaceInvitationFieldErrors;
+      denialReason?:
+        | "duplicate_pending_invitation"
+        | "active_membership_exists"
+        | "permission_missing"
+        | "workspace_membership_missing"
+        | "workspace_membership_inactive"
+        | "unauthenticated";
+    };
+
+type WorkspaceMembershipStatusRouteResponse =
+  | {
+      ok: true;
+      memberships: SessionWorkspaceMembership[];
+      invitations: SessionWorkspaceInvitation[];
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+    };
+
 function getBrowserWorkspaceState() {
   if (typeof window === "undefined") return createEmptySessionWorkspacesState();
 
@@ -98,12 +128,17 @@ export function WorkspaceMembershipManagement({
   const { hydrated, hydrate, session } = useAuthClient();
   const [state, setState] = useState<SessionWorkspacesState>(getBrowserWorkspaceState);
   const [fieldErrors, setFieldErrors] = useState<WorkspaceInvitationFieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [statusReadState, setStatusReadState] =
+    useState<"idle" | "loading" | "error">("idle");
+  const [submittingInvitation, setSubmittingInvitation] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<SessionWorkspaceRole[]>([]);
   const [editingMembership, setEditingMembership] = useState<SessionWorkspaceMembership | null>(
     null
   );
   const [editingRoles, setEditingRoles] = useState<SessionWorkspaceRole[]>([]);
   const [roleChangeError, setRoleChangeError] = useState<string | null>(null);
+  const [submittingRoleChange, setSubmittingRoleChange] = useState(false);
   const [confirmRoleChangeOpen, setConfirmRoleChangeOpen] = useState(false);
   const [deactivatingMembership, setDeactivatingMembership] =
     useState<SessionWorkspaceMembership | null>(null);
@@ -113,6 +148,52 @@ export function WorkspaceMembershipManagement({
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated || !session) return;
+
+    let canceled = false;
+
+    async function loadPersistedMembershipStatus() {
+      setStatusReadState("loading");
+
+      try {
+        const response = await fetch(`/api/workspaces/${workspaceId}/memberships`, {
+          headers:
+            session?.role === "supabase"
+              ? undefined
+              : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session?.role ?? "") },
+        });
+        const result = await response.json() as WorkspaceMembershipStatusRouteResponse;
+
+        if (canceled) return;
+
+        if (!response.ok || !result.ok) {
+          setStatusReadState("error");
+          return;
+        }
+
+        if (result.memberships.length > 0 || result.invitations.length > 0) {
+          updateState(
+            mergePersistedWorkspaceMembershipStatus(state, workspaceId, {
+              memberships: result.memberships,
+              invitations: result.invitations,
+            })
+          );
+        }
+
+        setStatusReadState("idle");
+      } catch {
+        if (!canceled) setStatusReadState("error");
+      }
+    }
+
+    void loadPersistedMembershipStatus();
+
+    return () => {
+      canceled = true;
+    };
+  }, [hydrated, session?.id, session?.role, workspaceId]);
 
   const workspaceRows = useMemo<MembershipRow[]>(() => {
     const memberships = state.memberships
@@ -160,7 +241,7 @@ export function WorkspaceMembershipManagement({
     );
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session || !canManageMembers) return;
 
@@ -179,25 +260,127 @@ export function WorkspaceMembershipManagement({
       return;
     }
 
-    const invitation = createSessionWorkspaceInvitation(input, workspaceId, {
-      sessionId: session.id,
-      storageMode: session.storageMode,
-    });
-    updateState(appendSessionWorkspaceInvitation(state, invitation));
-    setFieldErrors({});
-    setSelectedRoles([]);
-    form.reset();
+    setSubmittingInvitation(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/invitations`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(session.role === "supabase"
+            ? {}
+            : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
+        },
+        body: JSON.stringify(input),
+      });
+      const result = await response.json() as WorkspaceInvitationRouteResponse;
+
+      if (!result.ok) {
+        if (result.error === "invalid_input") {
+          setFieldErrors(result.fieldErrors ?? {});
+          return;
+        }
+
+        if (result.denialReason === "duplicate_pending_invitation") {
+          setFieldErrors({
+            email: "이미 대기 중인 초대가 있습니다. 재발송을 사용하세요.",
+          });
+          return;
+        }
+
+        if (result.denialReason === "active_membership_exists") {
+          setFieldErrors({ email: "이미 활성 멤버로 등록된 이메일입니다." });
+          return;
+        }
+
+        setSubmitError("초대 저장 권한 또는 서버 상태를 확인해 주세요.");
+        return;
+      }
+
+      if (!response.ok) {
+        setSubmitError("초대 저장 권한 또는 서버 상태를 확인해 주세요.");
+        return;
+      }
+
+      updateState(appendSessionWorkspaceInvitation(state, result.invitation));
+      setFieldErrors({});
+      setSelectedRoles([]);
+      form.reset();
+    } catch {
+      const invitation = createSessionWorkspaceInvitation(input, workspaceId, {
+        sessionId: session.id,
+        storageMode: session.storageMode,
+      });
+      updateState(appendSessionWorkspaceInvitation(state, invitation));
+      setFieldErrors({});
+      setSelectedRoles([]);
+      form.reset();
+    } finally {
+      setSubmittingInvitation(false);
+    }
   }
 
-  function handleResend(invitationId: string) {
+  async function handleResend(invitationId: string) {
+    if (!session || !canManageMembers) return;
+
+    try {
+      const response = await postInvitationLifecycle({
+        workspaceId,
+        invitationId,
+        action: "resend",
+        actorRole: session.role,
+      });
+      if (!response.ok) {
+        setSubmitError("초대 재발송 권한 또는 서버 상태를 확인해 주세요.");
+        return;
+      }
+    } catch {
+      // Mock fallback state still supports local demo operation.
+    }
+
     updateState(resendSessionWorkspaceInvitation(state, invitationId));
   }
 
-  function handleCancel(invitationId: string) {
+  async function handleCancel(invitationId: string) {
+    if (!session || !canManageMembers) return;
+
+    try {
+      const response = await postInvitationLifecycle({
+        workspaceId,
+        invitationId,
+        action: "cancel",
+        actorRole: session.role,
+      });
+      if (!response.ok) {
+        setSubmitError("초대 취소 권한 또는 서버 상태를 확인해 주세요.");
+        return;
+      }
+    } catch {
+      // Mock fallback state still supports local demo operation.
+    }
+
     updateState(cancelSessionWorkspaceInvitation(state, invitationId));
   }
 
-  function handleAccept(invitationId: string) {
+  async function handleAccept(invitationId: string) {
+    if (!session || !canManageMembers) return;
+
+    try {
+      const response = await postInvitationLifecycle({
+        workspaceId,
+        invitationId,
+        action: "accept",
+        actorRole: session.role,
+      });
+      if (!response.ok) {
+        setSubmitError("초대 수락 시뮬레이션 상태를 확인해 주세요.");
+        return;
+      }
+    } catch {
+      // Mock fallback state still supports local demo operation.
+    }
+
     updateState(acceptSessionWorkspaceInvitation(state, invitationId));
   }
 
@@ -234,8 +417,44 @@ export function WorkspaceMembershipManagement({
     setConfirmRoleChangeOpen(true);
   }
 
-  function handleRoleChangeConfirm() {
-    if (!editingMembership) return;
+  async function handleRoleChangeConfirm() {
+    if (!editingMembership || !session) return;
+
+    setSubmittingRoleChange(true);
+    setRoleChangeError(null);
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/memberships/${editingMembership.id}/roles`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(session.role === "supabase"
+              ? {}
+              : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
+          },
+          body: JSON.stringify({ roles: editingRoles }),
+        }
+      );
+      const serverResult = await response.json() as {
+        ok: boolean;
+        denialReason?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !serverResult.ok) {
+        setRoleChangeError(getMembershipMutationErrorMessage(serverResult.denialReason ?? serverResult.error ?? ""));
+        setConfirmRoleChangeOpen(false);
+        return;
+      }
+    } catch {
+      setRoleChangeError("서버 권한 확인에 실패했습니다.");
+      setConfirmRoleChangeOpen(false);
+      return;
+    } finally {
+      setSubmittingRoleChange(false);
+    }
 
     const result = updateSessionWorkspaceMembershipRoles(
       state,
@@ -256,8 +475,43 @@ export function WorkspaceMembershipManagement({
     setConfirmRoleChangeOpen(false);
   }
 
-  function handleDeactivationConfirm() {
-    if (!deactivatingMembership) return;
+  async function handleDeactivationConfirm() {
+    if (!deactivatingMembership || !session) return;
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/memberships/${deactivatingMembership.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            ...(session.role === "supabase"
+              ? {}
+              : { "x-clair-demo-session-user-id": getDemoInvitationActorId(session.role) }),
+          },
+          body: JSON.stringify({ status: "inactive" }),
+        }
+      );
+      const serverResult = await response.json() as {
+        ok: boolean;
+        denialReason?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !serverResult.ok) {
+        setDeactivationError(
+          serverResult.denialReason === "last_admin_protected"
+            ? "마지막 병원관리자는 비활성화할 수 없습니다."
+            : "서버 권한 확인에 실패했습니다."
+        );
+        setDeactivatingMembership(null);
+        return;
+      }
+    } catch {
+      setDeactivationError("서버 권한 확인에 실패했습니다.");
+      setDeactivatingMembership(null);
+      return;
+    }
 
     const result = deactivateSessionWorkspaceMembership(state, deactivatingMembership.id);
 
@@ -325,6 +579,23 @@ export function WorkspaceMembershipManagement({
               </p>
             ) : null}
 
+            {statusReadState === "loading" ? (
+              <p className="text-[12px] text-muted-foreground">서버 상태를 불러오는 중입니다.</p>
+            ) : statusReadState === "error" ? (
+              <p role="alert" className="text-[12px] text-[var(--emr-status-warning-text)]">
+                서버 상태를 읽지 못해 브라우저 임시 상태를 표시합니다.
+              </p>
+            ) : null}
+
+            {submitError ? (
+              <p
+                role="alert"
+                className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
+              >
+                {submitError}
+              </p>
+            ) : null}
+
             <label className="grid gap-1.5 text-[13px] font-medium">
               초대 이메일
               <Input
@@ -376,8 +647,8 @@ export function WorkspaceMembershipManagement({
               <Input name="department" placeholder="진료팀" disabled={!canManageMembers} />
             </label>
 
-            <Button type="submit" disabled={!canManageMembers}>
-              초대 만들기
+            <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
+              {submittingInvitation ? "초대 저장 중" : "초대 만들기"}
             </Button>
           </div>
         </form>
@@ -568,7 +839,7 @@ export function WorkspaceMembershipManagement({
             </>
           }
           cancelLabel="취소"
-          confirmLabel="역할 변경"
+          confirmLabel={submittingRoleChange ? "서버 확인 중" : "역할 변경"}
           onCancel={() => setConfirmRoleChangeOpen(false)}
           onConfirm={handleRoleChangeConfirm}
         />
@@ -613,4 +884,54 @@ function getMembershipMutationErrorMessage(reason: string) {
     return "하나 이상의 역할을 선택하세요.";
   }
   return "멤버십 변경 대상을 찾을 수 없습니다.";
+}
+
+function getDemoInvitationActorId(role: string) {
+  if (role === "hospital_admin" || role === "billing_admin") return "user-admin";
+  if (role === "front_desk") return "user-desk";
+  if (role === "nurse") return "user-tech";
+  return "user-vet";
+}
+
+function mergePersistedWorkspaceMembershipStatus(
+  state: SessionWorkspacesState,
+  workspaceId: string,
+  persisted: {
+    memberships: SessionWorkspaceMembership[];
+    invitations: SessionWorkspaceInvitation[];
+  },
+  now = new Date().toISOString()
+): SessionWorkspacesState {
+  return {
+    ...state,
+    memberships: [
+      ...state.memberships.filter((membership) => membership.workspaceId !== workspaceId),
+      ...persisted.memberships,
+    ],
+    invitations: [
+      ...state.invitations.filter((invitation) => invitation.workspaceId !== workspaceId),
+      ...persisted.invitations,
+    ],
+    updatedAt: now,
+  };
+}
+
+function postInvitationLifecycle({
+  workspaceId,
+  invitationId,
+  action,
+  actorRole,
+}: {
+  workspaceId: string;
+  invitationId: string;
+  action: "resend" | "cancel" | "accept";
+  actorRole: string;
+}) {
+  return fetch(`/api/workspaces/${workspaceId}/invitations/${invitationId}/${action}`, {
+    method: "POST",
+    headers:
+      actorRole === "supabase"
+        ? undefined
+        : { "x-clair-demo-session-user-id": getDemoInvitationActorId(actorRole) },
+  });
 }

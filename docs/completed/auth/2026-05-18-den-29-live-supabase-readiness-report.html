@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-29 Live Supabase Readiness 실행 모드 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #18181b;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        margin-top: 28px;
+        padding-top: 20px;
+        font-size: 18px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .summary {
+        background: #fafafa;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-29 Live Supabase Readiness 실행 모드 보고서</h1>
+
+    <section class="summary">
+      <p>
+        Project 01의 첫 이슈로, live Supabase/DB/RLS/server enforcement 작업에 들어가기 전
+        실행 모드와 승인 게이트를 정리했다. 결론은 <strong>local-first Supabase validation</strong>이다.
+      </p>
+    </section>
+
+    <h2>요청</h2>
+    <p>
+      <code>01 Live Auth &amp; Supabase DB/RLS Foundation</code> 프로젝트의 첫 마일스톤 첫 이슈부터
+      진행하되, Project 02는 시작하지 않는 범위에서 Project 01 작업을 시작한다.
+    </p>
+
+    <h2>결정</h2>
+    <ul>
+      <li>Project 01은 기본적으로 로컬 Supabase 검증을 우선한다.</li>
+      <li>remote Supabase staging/live 변경은 별도 대표 승인 없이는 하지 않는다.</li>
+      <li>migration/RLS/server-session 구현은 각 Linear 이슈가 허용하는 범위 안에서만 진행한다.</li>
+      <li>Project 02는 Project 01 handoff 전까지 시작하지 않는다.</li>
+    </ul>
+
+    <h2>변경된 문서</h2>
+    <ul>
+      <li><code>docs/engineering/auth-security/auth-login/live-supabase-readiness-execution-mode.md</code></li>
+      <li><code>docs/work/auth/AUTH-PR-011-live-supabase-readiness-execution-mode.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+      <li><code>docs/engineering/auth-security/mvp-auth-transition-roadmap.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      Project 01은 실제 DB schema, migration, RLS, server-side permission enforcement로 이어지는
+      고위험 기반 작업이다. 실행 모드를 먼저 고정하지 않으면 로컬 검증, staging 적용, production 적용이
+      섞이면서 의도하지 않은 live project 변경이나 권한 경계 오해가 생길 수 있다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li>Supabase 공식 docs/changelog 기준으로 local development, CLI, migrations, RLS, API keys, Data API grants, RLS Tester를 확인했다.</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 이슈에서는 코드 구현, migration 작성, RLS SQL 작성, live Supabase 변경을 하지 않았다.</li>
+      <li>remote Supabase 검증은 아직 승인되지 않았다.</li>
+      <li>Project 02 범위는 시작하지 않았다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 이슈는 <code>DEN-30 Define auth DB environment, secrets, and verification gates</code>다.
+      DEN-29의 local-first 원칙을 바탕으로 env/secrets와 검증 gate를 더 구체화한다.
+    </p>
+  </body>
+</html>

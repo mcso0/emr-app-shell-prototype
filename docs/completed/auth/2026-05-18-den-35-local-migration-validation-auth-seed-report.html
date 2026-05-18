@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-35 Local Migration Validation And Auth Seed 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #18181b;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        margin-top: 28px;
+        padding-top: 20px;
+        font-size: 18px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      .summary {
+        background: #fafafa;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-35 Local Migration Validation And Auth Seed 보고서</h1>
+
+    <section class="summary">
+      <p>
+        Workspace auth migration을 재현 가능하게 검증하기 위한 local Supabase 절차와
+        deterministic auth seed contract를 추가했다. 현재 환경은 Docker가 없어 실제 local DB apply는 실행하지 못했다.
+      </p>
+    </section>
+
+    <h2>추가한 산출물</h2>
+    <ul>
+      <li><code>supabase/seed.sql</code>: local auth seed contract</li>
+      <li><code>docs/engineering/auth-security/auth-login/workspace-auth-local-validation-and-seed.md</code>: local validation, reset, rollback 절차</li>
+      <li><code>tests/workspace-auth-seed-contract.spec.ts</code>: seed contract regression</li>
+    </ul>
+
+    <h2>Seed contract summary</h2>
+    <ul>
+      <li>Workspace: <code>clair-demo</code></li>
+      <li>Users: <code>admin@clair.local</code>, <code>vet@clair.local</code>, <code>technician@clair.local</code>, <code>front-desk@clair.local</code></li>
+      <li>Canonical roles: <code>hospital_admin</code>, <code>vet</code>, <code>technician</code>, <code>front_desk</code></li>
+      <li>Permission policies: role-scope allow-only MVP policy rows</li>
+      <li>Legacy compatibility: <code>nurse -> technician</code>, <code>billing_admin -> hospital_admin</code></li>
+    </ul>
+
+    <h2>검증 환경과 명령</h2>
+    <ul>
+      <li><code>npx supabase --version</code> returned <code>2.98.2</code></li>
+      <li><code>npx supabase db reset --help</code>, <code>npx supabase db lint --help</code>, <code>npx supabase stop --help</code> 확인</li>
+      <li><code>docker info --format '{{.ServerVersion}}'</code>는 <code>docker: command not found</code>로 실패</li>
+      <li><code>npx supabase migration list --local</code>은 local Postgres <code>127.0.0.1:54322</code> 미기동으로 실패</li>
+    </ul>
+
+    <h2>통과한 검증</h2>
+    <ul>
+      <li>Red: <code>npx playwright test tests/workspace-auth-seed-contract.spec.ts --reporter=line</code> failed because <code>supabase/seed.sql</code> did not exist.</li>
+      <li><code>npx playwright test tests/workspace-auth-seed-contract.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx playwright test tests/workspace-auth-schema-migration.spec.ts tests/workspace-auth-seed-contract.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+    </ul>
+
+    <h2>범위 준수</h2>
+    <ul>
+      <li>Live Supabase project 적용 없음</li>
+      <li>업무 데이터 seed 전체 이관 없음</li>
+      <li>UI 변경 없음</li>
+      <li>Remote Supabase project 변경 없음</li>
+      <li>Project 02 작업 없음</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 이슈는 <code>DEN-36 Implement DB-level last-admin protection foundation</code>다.
+      Seed contract의 <code>hospital_admin</code> membership을 기준으로 last-admin protection foundation을 설계하면 된다.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import type { APIRequestContext, APIResponse } from "@playwright/test";
+
+const workspaceId = "workspace-a";
+
+async function postInvitation(
+  request: APIRequestContext,
+  options: {
+    actor?: string;
+    email?: string;
+    roles?: string[];
+    workspaceId?: string;
+  }
+) {
+  return request.post(
+    `/api/workspaces/${options.workspaceId ?? workspaceId}/invitations`,
+    {
+      headers: options.actor ? { "x-clair-demo-session-user-id": options.actor } : {},
+      data: {
+        email: options.email ?? "VET@HANBIT.TEST",
+        roles: options.roles ?? ["vet", "front_desk"],
+        title: "진료팀장",
+        department: "진료팀",
+      },
+    }
+  );
+}
+
+test("workspace invitation route creates pending invitation for hospital admin", async ({
+  request,
+}) => {
+  const response = await postInvitation(request, { actor: "user-admin" });
+
+  expect(response.status()).toBe(201);
+  await expectJson(response, {
+    ok: true,
+    workspaceId,
+    enforcedBy: "workspace-invitation-server-route",
+  });
+
+  const json = await response.json();
+  expect(json.invitation).toMatchObject({
+    workspaceId,
+    email: "vet@hanbit.test",
+    invitedRoles: ["vet", "front_desk"],
+    title: "진료팀장",
+    department: "진료팀",
+    status: "pending",
+    invitedBySessionId: "user-admin",
+  });
+});
+
+test("workspace invitation route denies missing, unauthorized, and invalid requests", async ({
+  request,
+}) => {
+  const unauthenticated = await postInvitation(request, {});
+  expect(unauthenticated.status()).toBe(401);
+  await expectJson(unauthenticated, {
+    ok: false,
+    denialReason: "unauthenticated",
+  });
+
+  const missingPermission = await postInvitation(request, { actor: "user-vet" });
+  expect(missingPermission.status()).toBe(403);
+  await expectJson(missingPermission, {
+    ok: false,
+    denialReason: "permission_missing",
+  });
+
+  const invalid = await postInvitation(request, {
+    actor: "user-admin",
+    email: "not-an-email",
+    roles: [],
+  });
+  expect(invalid.status()).toBe(400);
+  await expectJson(invalid, {
+    ok: false,
+    error: "invalid_input",
+  });
+});
+
+test("workspace invitation persistence boundary stays server-only", () => {
+  const routeSource = readFileSync(
+    "src/app/api/workspaces/[workspaceId]/invitations/route.ts",
+    "utf8"
+  );
+  const serverSource = readFileSync(
+    "src/features/auth/server-workspace-invitation.ts",
+    "utf8"
+  );
+  const migrationSource = readFileSync(
+    "supabase/migrations/20260518122000_workspace_invitation_create_transaction.sql",
+    "utf8"
+  );
+
+  expect(routeSource).toContain("createWorkspaceInvitation");
+  expect(routeSource).toContain("readServerSession");
+  expect(serverSource).toContain('import "server-only"');
+  expect(serverSource).not.toMatch(/sessionStorage|localStorage|window\\./);
+  expect(migrationSource).toContain("clair_create_workspace_invitation");
+  expect(migrationSource).toContain("role_permission:manage");
+  expect(migrationSource).toContain("duplicate_pending_invitation");
+  expect(migrationSource).toContain("active_membership_exists");
+  expect(migrationSource).not.toMatch(/service_role|supabase_secret|db_password/i);
+});
+
+async function expectJson(response: APIResponse, shape: Record<string, unknown>) {
+  await expect(response.json()).resolves.toEqual(expect.objectContaining(shape));
+}
