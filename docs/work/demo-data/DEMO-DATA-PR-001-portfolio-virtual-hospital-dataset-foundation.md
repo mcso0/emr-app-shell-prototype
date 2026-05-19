@@ -61,3 +61,22 @@ Project 04 depends on order, diagnosis, template, and scenario semantics. If tho
 ## Result
 
 Created the first-pass synthetic virtual hospital dataset foundation for portfolio MVP planning. The dataset is designed to become app mock/seed data in follow-up implementation work.
+
+## Human Review Addendum
+
+- Added hospital admin Order 관리 table field guidance after reviewing the provided preset reference screenshot.
+- Clarified that order catalog rows need standard order name, in-hospital name, billing name, availability status, price, unit, target species, and individual/set row type.
+- Added seed handoff fields so future fixtures can render realistic order-management rows without using real hospital or patient data.
+- Added Order 세트 list and drawer field guidance after reviewing the set-management reference screenshot, including included order counts, amount basis, billing reflection, care guide, internal instruction, scheduler, and included order table rows.
+- Added `lab-test-items-v1.md` after reviewing the 검사 항목 reference screen, separating billable lab orders from result-sheet item categories, input types, units, ordering, and deletion locks.
+- Added order detail drawer and `medication-order-details-v1.md` guidance after reviewing the order detail reference screen, separating shared routing/billing/guide fields from medication-specific calculation metadata.
+- Added `hospital-admin-preset-reference-archive-v1.md` to split incoming preset-screen observations into data candidates versus UX/operational rules.
+- Added `order-pricing-rules-v1.md` for set fixed price, included-order sum, range price, child billing reflection, sales-unit migration, and chart-applied snapshot rules.
+- Added `chart-order-application-v1.md` after reviewing the expanded 진료/차트 Order section, separating master presets from encounter-owned applied order rows, confirmation state, billing footer totals, and scheduler handoff.
+- Added 진료 오더 table cell guidance to `chart-order-application-v1.md`, including T-code labels, NT task states, contextual state-button actions, order-name truncation/tooltips, controlled-drug compact badges, device resend errors, and urgent flags.
+- Tightened the data-first contract across order catalog, order sets, lab items, medication details, pricing, chart-applied order rows, and seed handoff so future fixtures can store source IDs, applied snapshots, set child rows, calculation sources, delete-lock derivation, task links, invoice links, and separate confirmation/billing lifecycle state.
+- Moved screen-only behavior such as sorting, dirty prompts, visual layout, dialog copy, tooltip wording, tab layout, and modal usability into deferred screen-implementation notes.
+- Added the requested five-family order data structure map: master order data, order set data, lab test item data, chart-applied order data, and billing/calculation data.
+- Added data-affecting rules for minimum lab item linkage, frequency aliases, total-count math, sales-unit quantity behavior, vaccine/dose-sequence metadata, and controlled storage/route/instruction values.
+- Recorded 승욱's product decision that Order 세트 must be managed in a separate hospital-admin surface from individual Order 관리, while chart-side order search/application can still combine individual orders, sets, and templates.
+- Addendum report: `docs/completed/demo-data/2026-05-19-den-99-order-management-table-addendum-report.html`

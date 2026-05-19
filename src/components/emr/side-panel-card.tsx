@@ -40,10 +40,10 @@ export function EmrSidePanelCard({
       role="button"
       tabIndex={0}
       className={cn(
-        "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 pb-2.5 pt-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 pb-2.5 pt-2 text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)] active:shadow-none",
         selected &&
           (selectionVariant === "modulePanel"
-            ? "border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] shadow-xs hover:bg-[var(--clair-color-atomic-sky-50)]"
+            ? "border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] hover:bg-[var(--clair-color-atomic-sky-50)]"
             : "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] pl-3.5"),
         !selected && "hover:bg-[var(--emr-state-hover)]",
         className

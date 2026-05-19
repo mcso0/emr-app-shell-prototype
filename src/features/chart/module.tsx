@@ -878,7 +878,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   );
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
       <div className="relative z-10 flex h-12 min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
         {soapTabs}
         <Button
@@ -1399,7 +1399,7 @@ function AssessmentPanel({
   return (
     <section
       aria-label="진단명 관리"
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"
     >
       <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <ChartSectionTitle title="진단명" />
@@ -1986,7 +1986,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
     : "";
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
       <div className="flex min-h-12 shrink-0 items-stretch justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4">
         <ChartLineTabGroup
           aria-label="처방/오더 분류"
