@@ -88,6 +88,7 @@ import {
   type ChartHistoryRow,
   type ChartOrderGroup,
 } from "@/features/chart/data";
+import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { useChartStore } from "@/features/chart/store";
 import {
   getPatientDisplayAge,
@@ -105,11 +106,45 @@ import type {
   EmrOrder,
   EmrOrderStatus,
   EmrOrderType,
+  Encounter,
   SoapNote,
 } from "@/types/emr-domain";
 
 type ChartBundle = NonNullable<ReturnType<typeof getChartEncounter>>;
 type OrderFilter = "all" | EmrOrderType | "billing";
+type SoapSaveState = "idle" | "loading" | "saving" | "saved" | "error";
+type ChartSoapNoteRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      soapNote: SoapNote | null;
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
+type ChartCompletionSnapshot = {
+  encounterId: string;
+  workspaceId: string;
+  status: Encounter["status"];
+  chartCompletedAt?: string;
+  chartCompletedByUserId?: string;
+  updatedAt: string;
+};
+type ChartCompletionRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      completion: ChartCompletionSnapshot;
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
 
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
@@ -170,7 +205,25 @@ const getSoapSectionStatusText = (status?: SoapNote["status"], statusAt?: string
 };
 
 const getSoapStatusText = (soapNote?: SoapNote) =>
-  soapNote ? getSoapSectionStatusText(soapNote.status, soapNote.signedAt ?? soapNote.updatedAt) : "차트 대기";
+  soapNote
+    ? getSoapSectionStatusText(soapNote.status, soapNote.signedAt ?? soapNote.autosavedAt ?? soapNote.updatedAt)
+    : "차트 대기";
+
+const isChartReadyForBilling = (encounter: Pick<Encounter, "chartCompletedAt" | "status">) =>
+  Boolean(encounter.chartCompletedAt) || encounter.status === "ready_for_billing";
+
+const getChartCompletionStatusText = (encounter: Pick<Encounter, "chartCompletedAt" | "status">) => {
+  if (isChartReadyForBilling(encounter)) {
+    return `작성완료 · ${getShortClockTime(encounter.chartCompletedAt)}`;
+  }
+
+  if (encounter.status === "completed") return "수납완료";
+  if (encounter.status === "ordered") return "오더 진행중";
+  if (encounter.status === "in_consultation") return "진료중";
+  if (encounter.status === "waiting") return "차트 대기";
+
+  return getStatusLabel("encounter", encounter.status);
+};
 
 const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
   const text = diagnosis.diagnosisText;
@@ -648,6 +701,180 @@ const hasMeaningfulSoapContent = (section: SoapSectionState) => {
   return Boolean(plainValue && plainValue !== templateValue);
 };
 
+function getDemoActorHeader(session: AuthSession | null) {
+  return session && (!("provider" in session) || session.provider !== "supabase")
+    ? { "x-clair-demo-session-user-id": session.id }
+    : undefined;
+}
+
+function extractSoapFieldsFromHtml(content: string) {
+  const fallback = {
+    subjective: stripHtml(content),
+    objective: "",
+    assessment: "",
+    plan: "",
+  };
+
+  if (typeof document === "undefined") return fallback;
+
+  const labelToField = new Map<string, keyof typeof fallback>(
+    soapTemplateRows.map(({ label, valueKey }) => [label, valueKey])
+  );
+  const root = document.createElement("div");
+  root.innerHTML = content;
+  const paragraphs = Array.from(root.querySelectorAll("p"));
+  const fields = { ...fallback, subjective: "" };
+  let foundStructuredField = false;
+
+  for (let index = 0; index < paragraphs.length; index += 1) {
+    const label = paragraphs[index]?.textContent?.trim() ?? "";
+    const field = labelToField.get(label);
+
+    if (!field) continue;
+
+    fields[field] = paragraphs[index + 1]?.textContent?.trim() ?? "";
+    foundStructuredField = true;
+  }
+
+  return foundStructuredField ? fields : fallback;
+}
+
+async function loadChartSoapNote({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartSoapNoteRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/soap-notes?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as ChartSoapNoteRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function saveChartSoapNote({
+  actorHeaders,
+  content,
+  encounterId,
+  mode,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  content: string;
+  encounterId: string;
+  mode: "autosave" | "manual_save";
+  workspaceId: string;
+}): Promise<ChartSoapNoteRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/soap-notes`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({
+          encounterId,
+          mode,
+          ...extractSoapFieldsFromHtml(content),
+        }),
+      }
+    );
+    const body = (await response.json()) as ChartSoapNoteRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function loadChartCompletion({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartCompletionRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/completion?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as ChartCompletionRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function completeChartRoute({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartCompletionRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/completion`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({ encounterId }),
+      }
+    );
+    const body = (await response.json()) as ChartCompletionRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
 function normalizeEditorLinkHref(value: string) {
   const trimmedValue = value.trim();
 
@@ -657,7 +884,21 @@ function normalizeEditorLinkHref(value: string) {
   return `https://${trimmedValue}`;
 }
 
-function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?: SoapNote }) {
+function SoapPanel({
+  actorHeaders,
+  diagnoses,
+  encounterId,
+  onPersistedSoapNote,
+  soapNote,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  diagnoses: Diagnosis[];
+  encounterId: string;
+  onPersistedSoapNote: (soapNote: SoapNote) => void;
+  soapNote?: SoapNote;
+  workspaceId: string;
+}) {
   const defaultSection = useMemo<SoapSectionState>(
     () => {
       const fields = buildSoapEditorFields(soapNote);
@@ -668,7 +909,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
         fields,
         content: buildSoapDocumentHtml(fields),
         status: soapNote?.status,
-        statusAt: soapNote?.signedAt ?? soapNote?.updatedAt,
+        statusAt: soapNote?.signedAt ?? soapNote?.autosavedAt ?? soapNote?.updatedAt,
         attachmentCount: 0,
         deletable: false,
         version: 0,
@@ -683,6 +924,9 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteSoapId, setDeleteSoapId] = useState<string | null>(null);
   const [resetSoapId, setResetSoapId] = useState<string | null>(null);
+  const [pendingDefaultContent, setPendingDefaultContent] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SoapSaveState>("idle");
+  const latestDefaultContentRef = useRef(defaultSection.content);
 
   const diagnosisSystemSections = useMemo(() => {
     const labels = diagnoses.map(getSoapSystemLabel).filter(Boolean);
@@ -731,7 +975,54 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
   const updateActiveSoapContent = (content: string) => {
     if (!activeSection) return;
     updateSectionOverride({ ...activeSection, content });
+    if (activeSection.id === "default") {
+      latestDefaultContentRef.current = content;
+      setPendingDefaultContent(content);
+      setSaveState("saving");
+    }
   };
+
+  const persistDefaultSoapContent = async (content: string, mode: "autosave" | "manual_save") => {
+    setSaveState("saving");
+    const result = await saveChartSoapNote({
+      actorHeaders,
+      content,
+      encounterId,
+      mode,
+      workspaceId,
+    });
+
+    if (!result.ok || !result.soapNote) {
+      setSaveState("error");
+      return;
+    }
+
+    setSaveState("saved");
+    latestDefaultContentRef.current = content;
+    onPersistedSoapNote(result.soapNote);
+    updateSectionOverride({
+      ...defaultSection,
+      content,
+      status: result.soapNote.status,
+      statusAt: result.soapNote.signedAt ?? result.soapNote.autosavedAt ?? result.soapNote.updatedAt,
+      version: defaultSection.version + 1,
+    });
+  };
+
+  useEffect(() => {
+    latestDefaultContentRef.current = defaultSection.content;
+  }, [defaultSection.content]);
+
+  useEffect(() => {
+    if (pendingDefaultContent === null) return;
+
+    const timerId = window.setTimeout(() => {
+      void persistDefaultSoapContent(pendingDefaultContent, "autosave");
+      setPendingDefaultContent(null);
+    }, 800);
+
+    return () => window.clearTimeout(timerId);
+  }, [pendingDefaultContent]);
 
   const addSystemSoap = (systemLabel: string, shouldActivate: boolean) => {
     const nextSection = createSystemSoapSection(systemLabel);
@@ -876,6 +1167,14 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
       ) : null}
     </div>
   );
+  const activeStatusText =
+    saveState === "loading"
+      ? "저장 상태 확인 중"
+      : saveState === "saving"
+        ? "자동저장 중"
+        : saveState === "error"
+          ? "저장 실패"
+          : getSoapSectionStatusText(activeSection?.status, activeSection?.statusAt);
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
@@ -939,7 +1238,7 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
         {activeSection ? (
           <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
             <SoapRichTextEditor
-              key={`${soapNote?.id ?? "empty"}-${activeSection.id}-${activeSection.version}`}
+              key={`${soapNote?.id ?? "empty"}-${soapNote?.updatedAt ?? "initial"}-${activeSection.id}-${activeSection.version}`}
               initialContent={activeSection.content}
               label={activeSection.title}
               onContentChange={updateActiveSoapContent}
@@ -968,7 +1267,20 @@ function SoapPanel({ diagnoses, soapNote }: { diagnoses: Diagnosis[]; soapNote?:
                   삭제
                 </Button>
               </div>
-              <span>{getSoapSectionStatusText(activeSection.status, activeSection.statusAt)}</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground"
+                  disabled={activeSection.id !== "default"}
+                  onClick={() => void persistDefaultSoapContent(latestDefaultContentRef.current, "manual_save")}
+                >
+                  <CdsActionsSaveIcon data-icon="inline-start" />
+                  SOAP 저장
+                </Button>
+                <span>{activeStatusText}</span>
+              </div>
             </div>
           </div>
         ) : null}
@@ -2138,8 +2450,16 @@ function ChartInstructionInfo({
     {
       label: "차트 상태",
       value: (
-        <span data-testid="chart-soap-status" className="text-[13px] font-semibold text-[var(--emr-status-info-text)]">
-          {getSoapStatusText(latestSoap)}
+        <span className="grid gap-0.5">
+          <span
+            data-testid="chart-completion-status"
+            className="text-[13px] font-semibold text-[var(--emr-status-info-text)]"
+          >
+            {getChartCompletionStatusText(bundle.encounter)}
+          </span>
+          <span data-testid="chart-soap-status" className="text-[12px] font-medium text-muted-foreground">
+            {getSoapStatusText(latestSoap)}
+          </span>
         </span>
       ),
     },
@@ -2170,10 +2490,38 @@ export function ChartContent() {
 
   const selectedEncounterId = useChartStore((state) => state.selectedEncounterId);
   const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
+  const { hydrated: authHydrated, session: authSession, hydrate: hydrateAuthSession } = useAuthClient();
   const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const resizingPointerIdRef = useRef<number | null>(null);
   const bundle = getSelectedBundle(selectedEncounterId);
   const latestSoap = bundle?.soapNotes.at(-1);
+  const activeEncounterId = bundle?.encounter.id;
+  const activeWorkspaceId = bundle?.encounter.workspaceId;
+  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
+  const [persistedSoapState, setPersistedSoapState] = useState<{
+    encounterId?: string;
+    soapNote?: SoapNote | null;
+  }>({});
+  const [chartCompletionState, setChartCompletionState] = useState<{
+    completion?: ChartCompletionSnapshot | null;
+    encounterId?: string;
+    status: "idle" | "loading" | "saving" | "saved" | "error";
+  }>({ status: "idle" });
+  const effectiveLatestSoap =
+    persistedSoapState.encounterId === activeEncounterId && persistedSoapState.soapNote
+      ? persistedSoapState.soapNote
+      : latestSoap;
+  const effectiveEncounter =
+    bundle && chartCompletionState.encounterId === activeEncounterId && chartCompletionState.completion
+      ? {
+          ...bundle.encounter,
+          status: chartCompletionState.completion.status,
+          chartCompletedAt: chartCompletionState.completion.chartCompletedAt,
+          chartCompletedByUserId: chartCompletionState.completion.chartCompletedByUserId,
+          updatedAt: chartCompletionState.completion.updatedAt,
+        }
+      : bundle?.encounter;
+  const effectiveBundle = bundle && effectiveEncounter ? { ...bundle, encounter: effectiveEncounter } : bundle;
   const [chartTopPercent, setChartTopPercent] = useState(CHART_TOP_DEFAULT_PERCENT);
   const [isChartResizing, setIsChartResizing] = useState(false);
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
@@ -2184,7 +2532,6 @@ export function ChartContent() {
     encounterId: bundle?.encounter.id,
     rows: bundle ? bundle.diagnoses.map(toEditableDiagnosis) : [],
   }));
-  const activeEncounterId = bundle?.encounter.id;
 
   if (diagnosisState.encounterId !== activeEncounterId) {
     setDiagnosisState({
@@ -2289,6 +2636,111 @@ export function ChartContent() {
       setClampedChartTopPercent(100);
     }
   };
+  const handleChartCompletionConfirm = async () => {
+    if (chartCompletionState.status === "saving") return;
+    if (!activeEncounterId || !activeWorkspaceId) {
+      toast.error("진료 차트를 먼저 선택해 주세요.");
+      return;
+    }
+
+    setChartCompletionState((current) => ({
+      completion: current.encounterId === activeEncounterId ? current.completion : null,
+      encounterId: activeEncounterId,
+      status: "saving",
+    }));
+
+    const result = await completeChartRoute({
+      actorHeaders,
+      encounterId: activeEncounterId,
+      workspaceId: activeWorkspaceId,
+    });
+
+    if (!result.ok) {
+      setChartCompletionState((current) => ({
+        completion: current.encounterId === activeEncounterId ? current.completion : null,
+        encounterId: activeEncounterId,
+        status: "error",
+      }));
+      toast.error(
+        result.denialReason === "permission_missing"
+          ? "차트 작성완료 권한이 없어 저장하지 못했어요."
+          : "차트 작성완료 상태를 저장하지 못했어요."
+      );
+      return;
+    }
+
+    setChartCompletionState({
+      completion: result.completion,
+      encounterId: activeEncounterId,
+      status: "saved",
+    });
+    setChartCompleteDialogOpen(false);
+    toast.success("차트 작성완료 상태를 저장했어요.");
+  };
+
+  useEffect(() => {
+    hydrateAuthSession();
+  }, [hydrateAuthSession]);
+
+  useEffect(() => {
+    if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
+
+    let cancelled = false;
+
+    async function loadPersistedSoap() {
+      const result = await loadChartSoapNote({
+        actorHeaders,
+        encounterId: activeEncounterId!,
+        workspaceId: activeWorkspaceId!,
+      });
+
+      if (cancelled) return;
+
+      setPersistedSoapState({
+        encounterId: activeEncounterId,
+        soapNote: result.ok ? result.soapNote : null,
+      });
+    }
+
+    void loadPersistedSoap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
+
+  useEffect(() => {
+    if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
+
+    let cancelled = false;
+    setChartCompletionState((current) => ({
+      completion: current.encounterId === activeEncounterId ? current.completion : null,
+      encounterId: activeEncounterId,
+      status: "loading",
+    }));
+
+    async function loadPersistedCompletion() {
+      const result = await loadChartCompletion({
+        actorHeaders,
+        encounterId: activeEncounterId!,
+        workspaceId: activeWorkspaceId!,
+      });
+
+      if (cancelled) return;
+
+      setChartCompletionState({
+        completion: result.ok ? result.completion : null,
+        encounterId: activeEncounterId,
+        status: result.ok ? "idle" : "error",
+      });
+    }
+
+    void loadPersistedCompletion();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
 
   useEffect(() => {
     if (!isChartResizing) return;
@@ -2314,7 +2766,10 @@ export function ChartContent() {
     };
   }, [isChartResizing]);
 
-  if (!bundle) return <EmptyChartState />;
+  if (!bundle || !effectiveBundle) return <EmptyChartState />;
+
+  const currentBundle = effectiveBundle;
+  const chartCompletionStatusText = getChartCompletionStatusText(currentBundle.encounter);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
@@ -2333,7 +2788,7 @@ export function ChartContent() {
             }
             badge={
               <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
-                {bundle.encounter.encounterNo}
+                {currentBundle.encounter.encounterNo}
               </Badge>
             }
             actions={
@@ -2348,7 +2803,7 @@ export function ChartContent() {
             }
           />
         }
-        orderInfo={<ChartInstructionInfo bundle={bundle} latestSoap={latestSoap} />}
+        orderInfo={<ChartInstructionInfo bundle={currentBundle} latestSoap={effectiveLatestSoap} />}
       />
       <Dialog open={chartCompleteDialogOpen} onOpenChange={setChartCompleteDialogOpen}>
         <EmrConfirmDialogContent
@@ -2356,20 +2811,21 @@ export function ChartContent() {
           description={
             <span className="grid gap-3">
               <span>
-                진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인합니다. 이 prototype에서는 실제 차트 상태를 변경하지 않습니다.
+                진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 작성완료 상태를 저장합니다.
               </span>
               <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
-                <span>환자: {bundle.patient.name} · 보호자 {bundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
-                <span>차트번호: {bundle.encounter.encounterNo}</span>
+                <span>환자: {currentBundle.patient.name} · 보호자 {currentBundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
+                <span>차트번호: {currentBundle.encounter.encounterNo}</span>
                 <span>진단명: {diagnosisRows.length}건 · 오더: {allOrders.length}건</span>
-                <span>차트 상태: {getSoapStatusText(latestSoap)}</span>
+                <span>차트 상태: {chartCompletionStatusText}</span>
+                <span>SOAP 상태: {getSoapStatusText(effectiveLatestSoap)}</span>
               </span>
             </span>
           }
           cancelLabel="계속 작성"
-          confirmLabel="작성완료 확인"
+          confirmLabel={chartCompletionState.status === "saving" ? "저장 중" : "작성완료 확인"}
           onCancel={() => setChartCompleteDialogOpen(false)}
-          onConfirm={() => setChartCompleteDialogOpen(false)}
+          onConfirm={handleChartCompletionConfirm}
         />
       </Dialog>
       <div
@@ -2388,15 +2844,21 @@ export function ChartContent() {
           className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
         >
           <SoapPanel
-            key={`chart-soap-${latestSoap?.id ?? selectedEncounterId}`}
+            key={`chart-soap-${effectiveLatestSoap?.id ?? selectedEncounterId}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
+            actorHeaders={actorHeaders}
             diagnoses={diagnosisRows}
-            soapNote={latestSoap}
+            encounterId={bundle.encounter.id}
+            onPersistedSoapNote={(soapNote) =>
+              setPersistedSoapState({ encounterId: bundle.encounter.id, soapNote })
+            }
+            soapNote={effectiveLatestSoap}
+            workspaceId={bundle.encounter.workspaceId}
           />
           <AssessmentPanel
             key={`chart-assessment-${bundle.encounter.id}`}
             diagnosisRows={diagnosisRows}
             setDiagnosisRows={setDiagnosisRows}
-            soapNote={latestSoap}
+            soapNote={effectiveLatestSoap}
           />
         </div>
         <button

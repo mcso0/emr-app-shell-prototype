@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-70 차트 작성완료 저장 리포트</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-70 차트 작성완료 저장 리포트</h1>
+      <p>
+        차트 화면의 <strong>차트 작성완료</strong> 버튼이 더 이상 화면만 닫는 동작이 아니라,
+        서버 route를 통해 작성완료 상태와 작성자를 저장하도록 연결했다.
+      </p>
+      <h2>비개발자 요약</h2>
+      <ul>
+        <li>수의사가 차트를 작성완료로 확정하면 그 상태가 새로고침 후에도 남는다.</li>
+        <li>차트 완료는 수납 준비 상태로 넘기는 의미이며, 결제 완료와 섞지 않았다.</li>
+        <li>권한 없는 역할은 차트 완료 상태를 저장할 수 없다.</li>
+        <li>이번 작업은 synthetic demo-data와 local-first mock fallback 범위에서만 검증했다.</li>
+      </ul>
+      <h2>구현 범위</h2>
+      <ul>
+        <li><code>GET/PATCH /api/workspaces/[workspaceId]/chart/completion</code> route 추가</li>
+        <li>active workspace membership, <code>chart:view</code>, <code>chart:update</code>, encounter workspace scope 검사</li>
+        <li>mock fallback과 Supabase RPC gateway 분리</li>
+        <li><code>chart_completed_at</code>, <code>chart_completed_by_user_id</code> local-first migration 추가</li>
+        <li>차트 헤더에 차트 완료 상태와 SOAP 상태를 분리 표시</li>
+      </ul>
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx playwright test tests/chart-completion-persistence-server.spec.ts --reporter=line</code></li>
+        <li><code>npx playwright test tests/chart.spec.ts --reporter=line</code></li>
+        <li><code>npx tsc --noEmit</code></li>
+        <li><code>npm run build</code></li>
+        <li><code>npm run docs:check</code></li>
+        <li><code>npm run security:secrets</code></li>
+      </ul>
+      <h2>안전 경계</h2>
+      <ul>
+        <li>remote Supabase, 실서버, 실제 환자/병원 데이터에는 접근하지 않았다.</li>
+        <li>service role, DB password, secret 값은 추가하거나 노출하지 않았다.</li>
+        <li>Linear는 Human Review까지만 이동한다.</li>
+      </ul>
+    </main>
+  </body>
+</html>
