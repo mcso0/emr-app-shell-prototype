@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-126 접수 목록 및 환자 검색 UI 정리 리포트</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 920px; margin: 0 auto; padding: 48px 28px; }
+      article { background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 32px; box-shadow: 0 8px 28px rgb(15 23 42 / 0.06); }
+      h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.25; }
+      h2 { margin: 28px 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { border-radius: 5px; background: #f4f4f5; padding: 2px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .meta { margin: 0 0 24px; color: #667085; font-size: 13px; }
+      .note { border-left: 4px solid #71717a; background: #fafafa; padding: 12px 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-126 접수 목록 및 환자 검색 UI 정리 리포트</h1>
+        <p class="meta">2026-05-20 · Project 05-M1 · Reception List/Search Cleanup</p>
+
+        <h2>요약</h2>
+        <p>
+          접수 사이드 패널의 대기열 검색과 진료 접수 dialog의 환자 검색 입력을 같은 feature-local 검색
+          컴포넌트로 정리했다. 대기열/캘린더의 loading, error, empty 상태도 같은 작은 표시 컴포넌트를
+          쓰도록 맞춰서, 검색/목록 UI의 반복 markup을 줄였다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>src/features/reception/reception-list-search.tsx</code>를 추가했다.</li>
+          <li><code>ReceptionSearchInput</code>으로 검색 icon, clear button, aria-label, padding 규칙을 모았다.</li>
+          <li><code>ReceptionPanelStateMessage</code>로 대기열/캘린더 loading과 error 상태 표시를 통일했다.</li>
+          <li><code>ReceptionEmptyState</code>로 접수 사이드 목록의 빈 검색 결과 표면을 분리했다.</li>
+          <li>검색어가 비어 있을 때 환자 lookup effect 안에서 즉시 setState하던 경로를 제거해 lint 경고를 없앴다.</li>
+        </ul>
+
+        <h2>화면 리뷰 메모</h2>
+        <ul>
+          <li>대기열 검색과 진료 접수 환자 검색 모두 기존 placeholder와 한국어 label을 유지한다.</li>
+          <li>검색어 삭제 버튼은 같은 위치와 focus ring을 사용한다.</li>
+          <li>대기열 read, 캘린더 read, 진료 접수 생성, mock/live fallback 동작은 변경하지 않았다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/reception/module.tsx src/features/reception/reception-list-search.tsx tests/sales-demo-flow.spec.ts tests/app-shell.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/sales-demo-flow.spec.ts --reporter=line</code> 통과: 3 passed</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts --grep "global command palette searches and opens patient context|app shell renders workspace switcher in the navigation column when module panel is open" --reporter=line</code> 통과: 2 passed</li>
+          <li>Playwright를 두 개 동시에 실행했을 때는 dev server <code>127.0.0.1:3000</code> 포트 충돌이 있었고, 같은 검증을 순차 실행해 통과했다.</li>
+        </ul>
+
+        <h2>제외 범위</h2>
+        <ul>
+          <li>DB schema, Supabase, RLS, live persistence, server permission, encounter mutation은 변경하지 않았다.</li>
+          <li>접수 일정/체크인 workflow 의미와 환자/보호자 등록 동작은 변경하지 않았다.</li>
+          <li>전체 접수 calendar 재구성은 하지 않았다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: Reuse <code>ReceptionSearchInput</code> for feature-local reception searches that need icon,
+          clear action, and dense Korean placeholders. Keep workflow-specific select/popover behavior local until
+          more screens need the same lookup contract. The calendar fixed grid remains a documented follow-up.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

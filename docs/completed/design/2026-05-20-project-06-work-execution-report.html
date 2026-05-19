@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project 06 병원어드민/입원 컴포넌트 오딧 수행 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 30px 0 12px;
+        font-size: 17px;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #e4e7ec;
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f4f4f5;
+        font-weight: 600;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>Project 06 병원어드민/입원 컴포넌트 오딧 수행 보고서</h1>
+        <p class="meta">2026-05-20 · Admin/Inpatient Component Audit · Human Review 기준 완료</p>
+
+        <h2>대표 요약</h2>
+        <p>
+          병원관리와 입원 화면에서 조밀한 table, form, drawer, badge가 같은 규칙으로 보이도록 정리했다.
+          저장 구조나 실제 업무 정책은 건드리지 않고, 화면 유지보수성과 리뷰 가능성을 높인 작업이다.
+        </p>
+
+        <h2>이슈 상태</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Linear</th>
+              <th>마일스톤</th>
+              <th>결과</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DEN-129</td>
+              <td>06-M1 병원어드민 테이블/폼 표준화</td>
+              <td>병원관리 처방 카탈로그 table column recipe, shadcn Field 기반 drawer row, non-overlap footer 정리</td>
+              <td>Human Review</td>
+            </tr>
+            <tr>
+              <td>DEN-131</td>
+              <td>06-M2 입원 테이블/상태 배지 표준화</td>
+              <td>입원 ward table column recipe, semantic status tone mapping, truncate/overflow 검증 정리</td>
+              <td>Human Review</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>주요 변경</h2>
+        <ul>
+          <li><code>src/features/hospital-admin/module.tsx</code>: 병원관리 처방 카탈로그 table/form/drawer 구조 표준화</li>
+          <li><code>src/features/inpatient/module.tsx</code>: 입원 현황판 table/status/caution/card tone 구조 표준화</li>
+          <li><code>tests/inpatient.spec.ts</code>: 입원 dense table recipe와 overflow 확인 추가</li>
+          <li>DEN-129, DEN-131 각각 docs/work 문서와 completed HTML 리포트 추가</li>
+        </ul>
+
+        <h2>건드리지 않은 범위</h2>
+        <p class="note">
+          Supabase, DB schema, RLS, migration, API persistence, 서버 검증, 권한 정책, 입원 lifecycle persistence,
+          퇴실 workflow, 수가/청구 로직, 실제 환자/병원 데이터는 변경하지 않았다. Linear Done 이동도 하지 않았다.
+        </p>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/features/hospital-admin/module.tsx</code></li>
+          <li><code>npx eslint src/features/inpatient/module.tsx tests/inpatient.spec.ts</code></li>
+          <li><code>npx tsc --noEmit</code></li>
+          <li><code>npx playwright test tests/hospital-admin.spec.ts --reporter=line</code> · 5 passed</li>
+          <li><code>npx playwright test tests/inpatient.spec.ts --reporter=line</code> · 3 passed</li>
+          <li>hospital-admin/inpatient desktop 및 narrow viewport browser QA</li>
+          <li><code>npm run build</code></li>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+        </ul>
+
+        <h2>승욱 리뷰 포인트</h2>
+        <ul>
+          <li>병원관리와 입원 모두 dense table은 고정 min-width와 horizontal scroll을 유지했다.</li>
+          <li>입원 상태 배지는 아직 feature-local mapper가 더 안전하다고 판단했다.</li>
+          <li>저장/권한/실제 퇴실 workflow는 별도 제품·DB 이슈로 분리하는 게 맞다.</li>
+        </ul>
+      </article>
+    </main>
+  </body>
+</html>

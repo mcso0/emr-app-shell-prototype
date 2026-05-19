@@ -17,7 +17,17 @@ test("inpatient workspace renders ward table and opens admission detail drawer",
   await expect(page.getByText("강아지 입원실")).toBeVisible();
   await expect(page.getByText("고양이 입원실")).toBeVisible();
   await expect(page.getByRole("heading", { name: "집중 치료실" })).toBeVisible();
+  await expect(page.getByTestId("inpatient-section-집중 치료실").locator("table")).toHaveClass(/table-fixed/);
+  const tableMetrics = await page
+    .getByTestId("inpatient-section-집중 치료실")
+    .locator("[data-slot='table-container']")
+    .evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+  expect(tableMetrics.scrollWidth).toBeGreaterThanOrEqual(tableMetrics.clientWidth);
   await expect(page.getByTestId("inpatient-row-adm-kong-icu")).toContainText("콩이");
+  await expect(page.getByTestId("inpatient-row-adm-kong-icu")).toContainText("구토관찰");
   await expect(page.getByText("급성 위장관염 의심")).toBeVisible();
   await expect(page.getByText("입원 상세")).toHaveCount(0);
 
@@ -25,6 +35,7 @@ test("inpatient workspace renders ward table and opens admission detail drawer",
 
   await expect(page.getByText("입원 상세")).toBeVisible();
   await expect(page.getByText("ICU-01 · 콩이 · 김하늘")).toBeVisible();
+  await expect(page.getByText("집중관리")).toBeVisible();
   await expect(page.getByText("오늘 케어 포인트")).toBeVisible();
   await expect(page.getByText("퇴실 체크리스트")).toBeVisible();
 

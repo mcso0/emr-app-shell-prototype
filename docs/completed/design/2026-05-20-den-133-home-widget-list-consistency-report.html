@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-133 홈 위젯 및 목록 UI 일관성 점검 리포트</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 920px; margin: 0 auto; padding: 48px 28px; }
+      article { background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 32px; box-shadow: 0 8px 28px rgb(15 23 42 / 0.06); }
+      h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.25; }
+      h2 { margin: 28px 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { border-radius: 5px; background: #f4f4f5; padding: 2px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .meta { margin: 0 0 24px; color: #667085; font-size: 13px; }
+      .note { border-left: 4px solid #71717a; background: #fafafa; padding: 12px 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-133 홈 위젯 및 목록 UI 일관성 점검 리포트</h1>
+        <p class="meta">2026-05-20 · Project 04-M2 · Home Widget/List Design-System Pass</p>
+
+        <h2>요약</h2>
+        <p>
+          홈의 주요 위젯과 목록 패널이 각자 직접 만들던 card surface를 홈 전용 <code>HomePanelCard</code>로
+          모았다. 화면의 정보 구조, mock 데이터, 필터, 링크 동작은 유지했고, shadcn/ui <code>Card</code> 기반
+          표면을 재사용하도록 정리해 이후 홈 UI 오딧에서 기준점을 잡기 쉽게 만들었다.
+        </p>
+
+        <h2>일관성 개선</h2>
+        <ul>
+          <li><code>src/features/home/components/home-panel-card.tsx</code>를 추가해 홈 패널용 card wrapper를 만들었다.</li>
+          <li><code>AlertsPanel</code>, <code>HomeWidgetCard</code>, <code>CompactFlowSummary</code>, <code>HospitalFlowBoard</code>, <code>MyWorkPanel</code>의 outer card surface를 같은 wrapper로 통일했다.</li>
+          <li>기존 밀도와 높이 기준을 보존하기 위해 wrapper 사용 시 <code>gap-0</code>, 기존 padding, 기존 min-height를 유지했다.</li>
+          <li>Badge, Button/link, SegmentedControl 사용은 기존 shadcn/EMR 패턴을 유지했다.</li>
+        </ul>
+
+        <h2>화면 리뷰 메모</h2>
+        <ul>
+          <li>홈 대시보드의 위젯, 병원 흐름 요약, 병원 전체 흐름, 내 업무 패널의 card border/background/radius 기준이 더 명확해졌다.</li>
+          <li>목록 내부 row, empty state, warning/critical status tone은 사용 맥락이 달라 이번 범위에서는 유지했다.</li>
+          <li>필터 컨트롤은 이미 <code>SegmentedControl</code>을 쓰고 있어 별도 교체 없이 회귀 검증만 했다.</li>
+        </ul>
+
+        <h2>결정 또는 후속 검토</h2>
+        <ul>
+          <li>홈 내부의 작은 list row와 Kanban workspace 내부 surface까지 동일 wrapper로 넓힐지는 후속 이슈에서 화면별 밀도 기준을 보고 결정하는 편이 안전하다.</li>
+          <li>카드의 시맨틱 태그(section/aside/article)는 이번 정리에서 shadcn <code>Card</code> 기반 div로 수렴했다. 접근성 landmark가 필요해지면 공용 <code>Card</code>의 polymorphic 지원 여부를 별도 설계로 다루는 것이 좋다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/home/components/*.tsx tests/home.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/home.spec.ts --reporter=line</code> 통과: 16 passed</li>
+          <li><code>npm run docs:check</code> 통과</li>
+        </ul>
+
+        <h2>제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, server enforcement, live task operation은 변경하지 않았다.</li>
+          <li>dashboard metric, task state, role content semantics, permission policy는 변경하지 않았다.</li>
+          <li>대형 IA 재설계나 홈 전체 레이아웃 재구성은 하지 않았다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: DEN-133 normalized the primary Home widget/list panel surfaces through a feature-local wrapper
+          over shadcn Card. Remaining debt is intentionally documented rather than fixed: row-level list items,
+          Kanban workspace internal surfaces, and possible polymorphic semantics should be handled only if a later
+          issue broadens the Home UI surface contract.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

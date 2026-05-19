@@ -23,7 +23,7 @@ import {
   EmrTextSideNavButton,
   EmrTextSideNavSection,
 } from "@/components/emr/text-side-panel";
-import { ChevronDownIcon, MenuIcon } from "@/components/icons";
+import { ChevronDownIcon, CircleCloseFillIcon, MenuIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -74,6 +74,11 @@ const placeholderSideItems = [
   { label: "CS내역", icon: CdsPeopleUsersIcon, children: ["전체 CS", "미처리", "완료"] },
   { label: "진료의뢰수신", icon: CdsFilesFileTextIcon, children: ["수신 목록", "처리중", "완료"] },
 ];
+const customerSidePanelWidthClassName = "min-w-[280px] max-w-[280px]";
+const customerTableWidthClassNames = {
+  guardian: "min-w-[1120px]",
+  patient: "min-w-[1320px]",
+} as const;
 
 const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
   blue:
@@ -112,7 +117,7 @@ type CustomerDataTableProps<TRow extends { id: string }> = {
   emptyLabel: string;
   getRowLabel: (row: TRow) => string;
   isActiveRow: (row: TRow) => boolean;
-  minTableWidth: number;
+  minTableWidthClassName: string;
   onOpenRow: (row: TRow) => void;
   rowTestId: (row: TRow) => string;
   rows: TRow[];
@@ -164,7 +169,7 @@ function CustomerDataTable<TRow extends { id: string }>({
   emptyLabel,
   getRowLabel,
   isActiveRow,
-  minTableWidth,
+  minTableWidthClassName,
   onOpenRow,
   rowTestId,
   rows,
@@ -258,7 +263,7 @@ function CustomerDataTable<TRow extends { id: string }>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <Table className="text-[14px]" style={{ minWidth: `${minTableWidth}px` }}>
+      <Table className={cn("text-[14px]", minTableWidthClassName)}>
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="w-12 bg-[var(--emr-surface-muted)]">
@@ -401,7 +406,10 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
 
   return (
     <aside
-      className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-[var(--emr-surface-sidepanel)]"
+      className={cn(
+        "group/emr-subpanel flex h-full min-h-0 w-full flex-col bg-[var(--emr-surface-sidepanel)]",
+        customerSidePanelWidthClassName
+      )}
       data-testid="customer-side-panel"
     >
       <EmrSubpanelTitle
@@ -465,6 +473,40 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   );
 }
 
+function CustomerSearchInput({
+  value,
+  onValueChange,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative w-[320px] max-w-full min-w-0">
+      <CdsActionsSearchIcon
+        className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <Input
+        aria-label="고객관리 검색"
+        placeholder="동물명, 보호자명, 전화번호, 환자코드 검색"
+        value={value}
+        className={cn("h-9 pl-8", value ? "pr-8" : "pr-3")}
+        onValueChange={onValueChange}
+      />
+      {value ? (
+        <button
+          type="button"
+          className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          aria-label="고객관리 검색어 초기화"
+          onClick={() => onValueChange("")}
+        >
+          <CircleCloseFillIcon className="size-4" aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function CustomerToolbar({
   listMode,
   patientCount,
@@ -500,16 +542,7 @@ function CustomerToolbar({
         }
         actions={
           <>
-            <div className="relative w-[320px] max-w-full min-w-0">
-              <CdsActionsSearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="고객관리 검색"
-                placeholder="동물명, 보호자명, 전화번호, 환자코드 검색"
-                value={query}
-                className="h-9 pl-8"
-                onValueChange={setQuery}
-              />
-            </div>
+            <CustomerSearchInput value={query} onValueChange={setQuery} />
             <NewUnifiedRegistrationButton onPatientReady={(patientId) => setActiveDrawer({ type: "patient", id: patientId })} />
             <Button type="button" variant="outline" size="sm" className="bg-card">
               <CdsActionsListFilterIcon className="size-4" />
@@ -543,14 +576,14 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         key: "patientNo",
         label: "환자코드",
         required: true,
-        className: "font-semibold",
+        className: "whitespace-nowrap font-semibold",
         cell: (row) => row.patientNo,
       },
       {
         key: "name",
         label: "동물명",
         required: true,
-        className: "font-semibold",
+        className: "max-w-40 truncate font-semibold",
         cell: (row) => row.name,
       },
       {
@@ -590,16 +623,19 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
       {
         key: "phone",
         label: "전화번호",
+        className: "whitespace-nowrap",
         cell: (row) => row.phone,
       },
       {
         key: "messageConsent",
         label: "수신 여부",
+        className: "whitespace-nowrap",
         cell: (row) => row.messageConsent,
       },
       {
         key: "registeredAt",
         label: "등록일시",
+        className: "whitespace-nowrap",
         cell: (row) => row.registeredAt,
       },
     ],
@@ -616,7 +652,7 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         activeDrawer?.id === row.id &&
         (activeDrawer.type === "patient" || activeDrawer.type === "reception-patient")
       }
-      minTableWidth={1320}
+      minTableWidthClassName={customerTableWidthClassNames.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
       rowTestId={(row) => `customer-patient-row-${row.id}`}
       rows={rows}
@@ -635,13 +671,14 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         key: "name",
         label: "보호자명",
         required: true,
-        className: "font-semibold",
+        className: "max-w-44 truncate font-semibold",
         cell: (row) => row.name,
       },
       {
         key: "mobilePhone",
         label: "휴대전화",
         required: true,
+        className: "whitespace-nowrap",
         cell: (row) => row.mobilePhone,
       },
       {
@@ -653,6 +690,7 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
       {
         key: "consentSummary",
         label: "동의 상태",
+        className: "whitespace-nowrap",
         cell: (row) => row.consentSummary,
       },
       {
@@ -670,6 +708,7 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
       {
         key: "registeredAt",
         label: "등록일시",
+        className: "whitespace-nowrap",
         cell: (row) => row.registeredAt,
       },
     ],
@@ -686,7 +725,7 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         activeDrawer?.id === row.id &&
         (activeDrawer.type === "guardian" || activeDrawer.type === "reception-guardian")
       }
-      minTableWidth={1120}
+      minTableWidthClassName={customerTableWidthClassNames.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
       rowTestId={(row) => `customer-guardian-row-${row.id}`}
       rows={rows}

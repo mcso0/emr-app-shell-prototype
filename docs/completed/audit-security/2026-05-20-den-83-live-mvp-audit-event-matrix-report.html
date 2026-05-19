@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-83 Live MVP Audit Event Matrix 보고서</title>
+    <style>
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171717; background: #f7f8fa; line-height: 1.6; }
+      main { max-width: 980px; margin: 0 auto; padding: 44px 28px 72px; }
+      section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; margin-top: 18px; }
+      h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+      h2 { margin: 0 0 12px; font-size: 19px; }
+      p { margin: 8px 0; }
+      ul { margin: 8px 0 0 20px; padding: 0; }
+      li { margin: 6px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+      th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #f3f4f6; font-weight: 700; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #f3f4f6; border-radius: 4px; padding: 2px 4px; }
+      .eyebrow { color: #525252; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+      .summary { font-size: 18px; color: #262626; }
+      .warn { color: #92400e; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DEN-83 / Project 05</p>
+      <h1>Live MVP Audit Event Matrix 보고서</h1>
+      <p class="summary">누가, 언제, 어떤 핵심 데이터를 바꿨는지 추적하기 위한 이벤트 계약을 정리했다.</p>
+
+      <section>
+        <h2>이번에 정한 것</h2>
+        <ul>
+          <li>모든 audit event가 가져야 할 공통 envelope를 정의했다.</li>
+          <li>workspace/member/profile, reception/encounter, chart/diagnosis, order, billing/payment 이벤트 이름을 확정했다.</li>
+          <li>민감 정보 저장 금지 범위를 명확히 했다.</li>
+          <li>DEN-84부터 어떤 순서로 구현해야 하는지 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>대표 이벤트</h2>
+        <table>
+          <thead>
+            <tr><th>영역</th><th>이벤트 예시</th><th>의미</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>권한/멤버</td><td><code>workspace.membership_roles_changed</code></td><td>구성원 역할이 바뀐 기록</td></tr>
+            <tr><td>접수</td><td><code>reception.walk_in_created</code></td><td>현장 접수 encounter 생성 기록</td></tr>
+            <tr><td>차트</td><td><code>chart.soap_saved</code></td><td>SOAP 저장/자동저장 기록</td></tr>
+            <tr><td>오더</td><td><code>order.confirmed</code></td><td>오더 확정 기록</td></tr>
+            <tr><td>수납</td><td><code>billing.payment_state_changed</code></td><td>미납/수납 완료 상태 변경 기록</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>저장 금지</h2>
+        <ul>
+          <li>서비스 role key, DB password, authorization header, session token, invite token</li>
+          <li>PG, KakaoTalk, PACS, 장비, 이메일 provider raw payload</li>
+          <li>stack trace, SQL error detail, 내부 파일 경로</li>
+          <li>전체 SOAP 본문, 전체 개인정보 snapshot, 실제 환자/병원 데이터</li>
+          <li>client가 보낸 금액을 청구 기준으로 저장하는 것</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 순서</h2>
+        <p>DEN-84에서 audit_events schema와 server-only append helper를 만들고, DEN-85에서 실제 mutation route에 event emit을 연결하는 순서가 자연스럽다.</p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: 통과</li>
+          <li><code>npm run security:secrets</code>: 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

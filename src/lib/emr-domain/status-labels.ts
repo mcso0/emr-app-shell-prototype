@@ -113,6 +113,7 @@ export const statusLabels = {
     requested: "요청",
     re_requested: "재요청",
     in_progress: "진행중",
+    confirmed: "확정",
     completed: "완료",
     cancelled: "취소",
   },

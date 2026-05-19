@@ -49,6 +49,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import {
+  HomeMutedPill,
+  HomeNextActionPriorityBadge,
+  HomeTaskDecisionBadge,
+  HomeTaskDecisionPill,
+  HomeTaskStatusBadge,
+} from "@/features/home/components/home-task-badges";
 import type {
   HomeDashboardData,
   HomeKanbanColumn,
@@ -72,7 +79,7 @@ const allFilterLabel = "전체";
 const unassignedFilterLabel = "미지정";
 
 const viewLabels: Record<HomeWorkspaceView, string> = {
-  home: "업무 요약",
+  home: "홈",
   hospital: "업무 현황",
 };
 
@@ -277,6 +284,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
                 key={item}
                 type="button"
                 role="tab"
+                aria-label={item === "home" ? "대시보드 보기" : viewLabels[item]}
                 aria-selected={view === item}
                 className={cn(
                   "whitespace-nowrap text-[18px] font-bold leading-7 tracking-normal text-muted-foreground transition-colors hover:text-foreground",
@@ -481,9 +489,7 @@ function HospitalTaskDetailPanel({
             <p className="text-[12px] font-semibold leading-4 text-muted-foreground">{getTaskTypeLabel(task)}</p>
             <h2 className="mt-1 text-[18px] font-bold leading-7 text-foreground">{task.title}</h2>
           </div>
-          <Badge variant={task.status === "overdue" || task.priority === "urgent" ? "destructive" : "secondary"}>
-            {getDecisionReason(task)}
-          </Badge>
+          <HomeTaskDecisionBadge task={task} label={getDecisionReason(task)} />
         </div>
         <p className="text-[13px] leading-5 text-muted-foreground">{task.recommendedAction}</p>
       </div>
@@ -726,9 +732,7 @@ function NextActionCard({ action, rank }: { action: HomeNextAction; rank: number
               {action.title}
             </h3>
           </div>
-          <Badge variant={action.tone === "danger" ? "destructive" : "secondary"} className="shrink-0">
-            {action.priorityLabel}
-          </Badge>
+          <HomeNextActionPriorityBadge action={action} />
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-[12px] leading-4 text-muted-foreground">
           {action.patientName ? <span className="font-semibold text-foreground">{action.patientName}</span> : null}
@@ -934,9 +938,7 @@ function DashboardOutlineTable({
                   <Badge variant="outline" className="bg-card">{getTaskTypeLabel(task)}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={task.status === "overdue" || task.priority === "urgent" ? "destructive" : task.status === "inProgress" ? "default" : "secondary"}>
-                    {getStatusDisplayLabel(task)}
-                  </Badge>
+                  <HomeTaskStatusBadge task={task} label={getStatusDisplayLabel(task)} />
                 </TableCell>
                 <TableCell>
                   <div className="min-w-0">
@@ -1289,21 +1291,8 @@ function HomeKanbanTaskCard({
         <span className="min-w-0 flex-1 truncate">{task.title}</span>
       </div>
       <div className="mt-1 flex min-w-0 flex-wrap gap-1">
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4",
-            task.status === "overdue" || task.priority === "urgent"
-              ? "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
-              : task.assignment === "roleQueue"
-                ? "bg-[var(--emr-status-warning-bg)] text-foreground"
-                : "bg-muted text-muted-foreground"
-          )}
-        >
-          {getDecisionReason(task)}
-        </span>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold leading-4 text-muted-foreground">
-          {getTimeSignal(task)}
-        </span>
+        <HomeTaskDecisionPill task={task} label={getDecisionReason(task)} />
+        <HomeMutedPill label={getTimeSignal(task)} />
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
       <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">

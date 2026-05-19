@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-91 Representative Pilot Rehearsal And Defect Triage Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      .status { font-size: 26px; font-weight: 800; color: #136f3f; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+      .warn { border-left: 4px solid #d9822b; padding: 10px 14px; background: #fff8ef; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-91 / Human Review</p>
+    <h1>Representative Pilot Rehearsal And Defect Triage Report</h1>
+    <p>콩이 구토 내원 synthetic scenario 기준으로 7-10분 대표 파일럿 리허설과 결함 분류를 정리했다.</p>
+
+    <h2>대표 판단</h2>
+    <p class="status">Local-first rehearsal ready, with follow-ups</p>
+    <p>대표자가 홈 → 접수 → 차트/SOAP/진단 → 오더 → 수납 → 감사/권한 설명까지 막히지 않고 설명할 수 있는 상태다.</p>
+
+    <div class="warn">이 보고서는 remote/live pilot 승인서가 아니다. 실서버, 실제 환자/병원 데이터, 원격 Supabase 검증은 포함하지 않았다.</div>
+
+    <h2>7-10분 리허설 흐름</h2>
+    <table>
+      <thead><tr><th>시간</th><th>장면</th><th>확인 포인트</th></tr></thead>
+      <tbody>
+        <tr><td>0:00-0:45</td><td>로그인/홈</td><td>Clair demo workspace, 역할/워크스페이스 맥락, demo launcher 확인</td></tr>
+        <tr><td>0:45-1:45</td><td>콩이 구토 내원</td><td>synthetic workflow data라고 설명하고 scenario context 유지</td></tr>
+        <tr><td>1:45-2:45</td><td>접수</td><td>김하늘/콩이/내원 사유/encounter continuity 확인</td></tr>
+        <tr><td>2:45-4:15</td><td>차트</td><td>SOAP, diagnosis row, chart completion, editable order draft 확인</td></tr>
+        <tr><td>4:15-5:30</td><td>오더 fan-out</td><td>검사/영상/처치/조제/수납 후보로 이어지는 구조 확인</td></tr>
+        <tr><td>5:30-6:45</td><td>수납</td><td>invoice candidate, line edit, unpaid/completed payment state 확인</td></tr>
+        <tr><td>6:45-9:00</td><td>감사/권한/마무리</td><td>audit, role/workspace denial, 남은 follow-up과 Post-MVP 경계 설명</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Defect Triage</h2>
+    <table>
+      <thead><tr><th>분류</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>Blocker</td><td>새 local-first walkthrough blocker는 없음. 단, remote/live pilot은 audit completeness와 RLS validation 전까지 승인 아님.</td></tr>
+        <tr><td>Follow-up</td><td>mock role label 정리, DEN-88 audit gap 처리, 쉬운 한국어 denial copy, Tiptap/Node warning 정리, pilot reset checklist.</td></tr>
+        <tr><td>Post-MVP</td><td>외부 연동, full downstream live persistence, compliance export/dashboard, performance/load, real clinic data migration.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/sales-demo-flow.spec.ts tests/outpatient-persistence-regression.spec.ts --reporter=line</code> → 4 passed</li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <div class="note">DEN-91은 Human Review로 넘기고, 다음은 DEN-92 Product MVP live transition closeout report다.</div>
+  </body>
+</html>

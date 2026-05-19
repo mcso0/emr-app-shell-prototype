@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-77 청구 라인/청구 확정 저장 완료 보고</title>
+  </head>
+  <body>
+    <h1>DEN-77 청구 라인/청구 확정 저장 완료 보고</h1>
+    <p>
+      수납 화면의 청구 항목 수량 수정과 청구 확정을 route-backed persistence로 연결했다.
+      금액은 클라이언트 입력값을 믿지 않고 서버가 단가와 수량으로 다시 계산한다.
+    </p>
+    <h2>작업 내용</h2>
+    <ul>
+      <li><code>GET/PATCH /api/workspaces/[workspaceId]/billing/invoice-lines</code> 추가</li>
+      <li>active workspace membership, <code>billing:view</code>, <code>billing:issue</code> 확인</li>
+      <li>invoice workspace ownership과 invoice line ownership 검증</li>
+      <li>청구 확정 시 <code>status=issued</code>, actor, timestamp 저장</li>
+      <li>수납 화면 수량 편집과 청구 확정 버튼에 저장 중/저장됨/실패 상태 연결</li>
+      <li>local-first Supabase RPC migration 추가</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/billing-invoice-line-persistence-server.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/billing.spec.ts --reporter=line</code>: 통과</li>
+    </ul>
+    <h2>제외 범위</h2>
+    <ul>
+      <li>PG/payment provider, 영수증, 현금영수증, 세금 정산, 환불 workflow는 제외했다.</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터는 사용하지 않았다.</li>
+    </ul>
+  </body>
+</html>

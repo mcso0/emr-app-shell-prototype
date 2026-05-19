@@ -15,6 +15,8 @@ type BillingStore = {
   payments: Payment[];
   selectedInvoiceId: EmrId;
   selectedInvoiceIds: EmrId[];
+  applyInvoiceSnapshot: (invoice: Invoice, invoiceLines: InvoiceLine[]) => void;
+  applyPaymentStatusSnapshot: (invoice: Invoice, payments: Payment[]) => void;
   issueSelectedInvoice: () => void;
   markSelectedInvoicePaid: () => void;
   markSelectedInvoiceUnpaid: () => void;
@@ -50,6 +52,23 @@ export const useBillingStore = create<BillingStore>()((set, get) => ({
   payments: mockPayments.map((payment) => ({ ...payment })),
   selectedInvoiceId: "invoice-coco-260501",
   selectedInvoiceIds: ["invoice-coco-260501"],
+  applyInvoiceSnapshot: (invoice, invoiceLines) =>
+    set((state) => ({
+      invoiceLines: [
+        ...state.invoiceLines.filter((line) => line.invoiceId !== invoice.id),
+        ...invoiceLines.map((line) => ({ ...line })),
+      ],
+      invoices: state.invoices.map((item) => item.id === invoice.id ? { ...item, ...invoice } : item),
+    })),
+  applyPaymentStatusSnapshot: (invoice, payments) =>
+    set((state) => ({
+      invoices: state.invoices.map((item) => item.id === invoice.id ? { ...item, ...invoice } : item),
+      paymentMethod: invoice.selectedPaymentMethod ?? state.paymentMethod,
+      payments: [
+        ...state.payments.filter((payment) => payment.invoiceId !== invoice.id),
+        ...payments.map((payment) => ({ ...payment })),
+      ],
+    })),
   issueSelectedInvoice: () => {
     const { selectedInvoiceId } = get();
     set((state) => ({

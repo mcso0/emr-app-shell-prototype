@@ -62,25 +62,51 @@ import { useInpatientStore } from "@/features/inpatient/store";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
 
-const statusBadgeClassName: Record<InpatientAdmission["status"], string> = {
-  admitted:
-    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
-  critical:
-    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
-  discharge_ready:
-    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
-};
+type InpatientSemanticTone = "danger" | "info" | "neutral" | "success" | "warning";
 
-const cautionTagClassName: Record<InpatientCautionTag["tone"], string> = {
-  care:
-    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
+const inpatientToneClassName: Record<InpatientSemanticTone, string> = {
   danger:
     "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
-  notice:
-    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
-  purple:
+  info:
+    "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
+  neutral:
     "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
+  success:
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
+  warning:
+    "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
 };
+
+const inpatientStatusTone: Record<InpatientAdmission["status"], InpatientSemanticTone> = {
+  admitted: "info",
+  critical: "danger",
+  discharge_ready: "success",
+};
+
+const inpatientCautionTone: Record<InpatientCautionTag["tone"], InpatientSemanticTone> = {
+  care: "success",
+  danger: "danger",
+  notice: "warning",
+  purple: "neutral",
+};
+
+const inpatientTableMinWidthClass = "min-w-[1180px]";
+
+const inpatientTableColumnClasses = {
+  room: "w-[76px]",
+  patient: "w-[132px]",
+  guardian: "w-[96px]",
+  chart: "w-[70px]",
+  cautions: "w-[164px]",
+  diagnosis: "w-[172px]",
+  memo: "w-[208px]",
+  admittedAt: "w-[112px]",
+  stay: "w-[68px]",
+  department: "w-[84px]",
+  attendingVet: "w-[84px]",
+  primaryNurse: "w-[84px]",
+  discharge: "w-[74px]",
+} as const;
 
 const inpatientWeekdayLabels = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const inpatientTodayDate = "2026-05-06";
@@ -99,7 +125,10 @@ function formatInpatientDateLabel(dateValue: string) {
 
 function CautionTag({ tag }: { tag: InpatientCautionTag }) {
   return (
-    <Badge variant="outline" className={cn("h-5 rounded-md px-1.5", cautionTagClassName[tag.tone])}>
+    <Badge
+      variant="outline"
+      className={cn("h-5 rounded-md px-1.5", inpatientToneClassName[inpatientCautionTone[tag.tone]])}
+    >
       {tag.label}
     </Badge>
   );
@@ -107,7 +136,10 @@ function CautionTag({ tag }: { tag: InpatientCautionTag }) {
 
 function StatusBadge({ status }: { status: InpatientAdmission["status"] }) {
   return (
-    <Badge variant="outline" className={cn("h-5 rounded-md px-1.5", statusBadgeClassName[status])}>
+    <Badge
+      variant="outline"
+      className={cn("h-5 rounded-md px-1.5", inpatientToneClassName[inpatientStatusTone[status]])}
+    >
       {getInpatientStatusLabel(status)}
     </Badge>
   );
@@ -173,23 +205,23 @@ function InpatientDatePicker({
 }
 
 const summaryCardToneClassName = {
-  blue: {
+  info: {
     accent: "bg-[var(--emr-status-info-text)]",
     icon: "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   },
-  orange: {
+  warning: {
     accent: "bg-[var(--emr-status-warning-text)]",
     icon: "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   },
-  green: {
+  success: {
     accent: "bg-[var(--emr-status-success-text)]",
     icon: "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   },
-  purple: {
+  neutral: {
     accent: "bg-[var(--emr-status-neutral-text)]",
     icon: "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
   },
-};
+} satisfies Partial<Record<InpatientSemanticTone, { accent: string; icon: string }>>;
 
 type SummaryCardTone = keyof typeof summaryCardToneClassName;
 
@@ -249,13 +281,13 @@ function InpatientTableRow({ admission }: { admission: InpatientAdmission }) {
       )}
       onClick={openAdmissionDrawer}
     >
-      <TableCell className="w-20 font-semibold">{admission.room}</TableCell>
-      <TableCell className="min-w-36">
+      <TableCell className={cn(inpatientTableColumnClasses.room, "font-semibold")}>{admission.room}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.patient}>
         <div className="font-semibold">{admission.patientName}</div>
         <div className="text-[12px] text-muted-foreground">{admission.breed}</div>
       </TableCell>
-      <TableCell>{admission.guardianName}</TableCell>
-      <TableCell>
+      <TableCell className={inpatientTableColumnClasses.guardian}>{admission.guardianName}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.chart}>
         <Button
           type="button"
           variant="outline"
@@ -267,21 +299,25 @@ function InpatientTableRow({ admission }: { admission: InpatientAdmission }) {
           차트
         </Button>
       </TableCell>
-      <TableCell className="min-w-44">
+      <TableCell className={inpatientTableColumnClasses.cautions}>
         <div className="flex flex-wrap gap-1">
           {admission.cautions.map((tag) => (
             <CautionTag key={tag.label} tag={tag} />
           ))}
         </div>
       </TableCell>
-      <TableCell className="max-w-48 truncate">{admission.diagnosis}</TableCell>
-      <TableCell className="max-w-56 truncate">{admission.admissionMemo}</TableCell>
-      <TableCell>{admission.admittedAt}</TableCell>
-      <TableCell>{admission.stayDayLabel}</TableCell>
-      <TableCell>{admission.department}</TableCell>
-      <TableCell>{admission.attendingVet}</TableCell>
-      <TableCell>{admission.primaryNurse}</TableCell>
-      <TableCell>
+      <TableCell className={cn(inpatientTableColumnClasses.diagnosis, "truncate")} title={admission.diagnosis}>
+        {admission.diagnosis}
+      </TableCell>
+      <TableCell className={cn(inpatientTableColumnClasses.memo, "truncate")} title={admission.admissionMemo}>
+        {admission.admissionMemo}
+      </TableCell>
+      <TableCell className={inpatientTableColumnClasses.admittedAt}>{admission.admittedAt}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.stay}>{admission.stayDayLabel}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.department}>{admission.department}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.attendingVet}>{admission.attendingVet}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.primaryNurse}>{admission.primaryNurse}</TableCell>
+      <TableCell className={inpatientTableColumnClasses.discharge}>
         <Button
           type="button"
           variant={admission.status === "discharge_ready" ? "default" : "outline"}
@@ -315,22 +351,22 @@ function InpatientWardSection({
         <span className="text-[12px] text-muted-foreground">입원실 · 주의사항 · 담당 · 퇴실 상태</span>
       </div>
       <div className="overflow-x-auto">
-        <Table className="min-w-[1180px]">
+        <Table className={cn(inpatientTableMinWidthClass, "table-fixed text-[13px]")}>
           <TableHeader>
             <TableRow>
-              <TableHead>입원실</TableHead>
-              <TableHead>동물명</TableHead>
-              <TableHead>보호자</TableHead>
-              <TableHead>차트</TableHead>
-              <TableHead>유의사항</TableHead>
-              <TableHead>진단명</TableHead>
-              <TableHead>입실 메모</TableHead>
-              <TableHead>입실시점</TableHead>
-              <TableHead>기간</TableHead>
-              <TableHead>진료과</TableHead>
-              <TableHead>주치의</TableHead>
-              <TableHead>담당자</TableHead>
-              <TableHead>퇴실</TableHead>
+              <TableHead className={inpatientTableColumnClasses.room}>입원실</TableHead>
+              <TableHead className={inpatientTableColumnClasses.patient}>동물명</TableHead>
+              <TableHead className={inpatientTableColumnClasses.guardian}>보호자</TableHead>
+              <TableHead className={inpatientTableColumnClasses.chart}>차트</TableHead>
+              <TableHead className={inpatientTableColumnClasses.cautions}>유의사항</TableHead>
+              <TableHead className={inpatientTableColumnClasses.diagnosis}>진단명</TableHead>
+              <TableHead className={inpatientTableColumnClasses.memo}>입실 메모</TableHead>
+              <TableHead className={inpatientTableColumnClasses.admittedAt}>입실시점</TableHead>
+              <TableHead className={inpatientTableColumnClasses.stay}>기간</TableHead>
+              <TableHead className={inpatientTableColumnClasses.department}>진료과</TableHead>
+              <TableHead className={inpatientTableColumnClasses.attendingVet}>주치의</TableHead>
+              <TableHead className={inpatientTableColumnClasses.primaryNurse}>담당자</TableHead>
+              <TableHead className={inpatientTableColumnClasses.discharge}>퇴실</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -397,28 +433,28 @@ export function InpatientContent() {
                 label="입원중"
                 value={`${counts.admitted + counts.critical}마리`}
                 description="현재 병동/ICU 재원"
-                tone="blue"
+                tone="info"
                 icon={<CdsMedicalBedIcon aria-hidden="true" className="size-4" />}
               />
               <SummaryCard
                 label="주의 태그"
                 value={`${counts.cautionTags}개`}
                 description="산소·금식·면회 등"
-                tone="orange"
+                tone="warning"
                 icon={<CdsAlertsAlertTriangleIcon aria-hidden="true" className="size-4" />}
               />
               <SummaryCard
                 label="퇴실 준비"
                 value={`${counts.discharge_ready}마리`}
                 description="승인/안내 대기"
-                tone="green"
+                tone="success"
                 icon={<CdsMedicalClipboardCheckIcon aria-hidden="true" className="size-4" />}
               />
               <SummaryCard
                 label="오늘 입실"
                 value={`${counts.todayAdmissions}마리`}
                 description="금일 신규 입실"
-                tone="purple"
+                tone="neutral"
                 icon={<CdsFilesClockIcon aria-hidden="true" className="size-4" />}
               />
             </div>

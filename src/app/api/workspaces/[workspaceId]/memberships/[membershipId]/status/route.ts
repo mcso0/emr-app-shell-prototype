@@ -4,6 +4,14 @@ import {
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
 import { authorizeWorkspaceRoleUpdate } from "@/features/auth/server-role-update-enforcement";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import {
+  emitLiveMutationAuditEvent,
+  getAuditRequestId,
+} from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,12 +84,32 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
       return Response.json({ ok: false, denialReason }, { status });
     }
 
+    const updatedStatus = (data as { status?: string }).status ?? nextStatus;
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway: createSupabaseLiveAuditAppendGateway(
+        client as unknown as SupabaseLiveAuditAppendRpcClient
+      ),
+      input: {
+        workspaceId,
+        actorUserId: identity.actorUserId,
+        eventType: "workspace.membership_status_changed",
+        targetType: "membership",
+        targetId: membershipId,
+        requestId: getAuditRequestId(request),
+        after: { status: updatedStatus },
+        metadata: { source: "workspace-membership-status-route" },
+      },
+    });
+    if (!audit.ok) {
+      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
+    }
+
     return Response.json(
       {
         ok: true,
         workspaceId,
         targetMembershipId: membershipId,
-        updatedStatus: (data as { status?: string }).status ?? nextStatus,
+        updatedStatus,
         enforcedBy: "server-permission-resolver",
       },
       { status: 200 }
@@ -104,6 +132,22 @@ export async function PATCH(request: Request, { params }: MembershipStatusRouteC
 
   if (!result.ok) {
     return Response.json(result, { status: result.status });
+  }
+
+  const audit = await emitLiveMutationAuditEvent({
+    input: {
+      workspaceId,
+      actorUserId: identity.actorUserId,
+      eventType: "workspace.membership_status_changed",
+      targetType: "membership",
+      targetId: membershipId,
+      requestId: getAuditRequestId(request),
+      after: { status: nextStatus },
+      metadata: { source: "workspace-membership-status-route" },
+    },
+  });
+  if (!audit.ok) {
+    return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
   }
 
   return Response.json(

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-140 UI Debt Inventory Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        max-width: 920px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #d1d5db;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+      .meta {
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .box {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 16px;
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="meta">Linear: DEN-140 · 완료일: 2026-05-20 · 상태: Human Review 요청 예정</p>
+    <h1>UI 하드코딩·중복 패턴 인벤토리</h1>
+
+    <section>
+      <h2>핵심 요약</h2>
+      <p>
+        현재 UI debt는 단순 색상 문제가 아니라 큰 화면 파일, 고정 레이아웃 값, 화면별 table/form/dialog/status/empty state 변형이 겹친 문제다. 다만 이미 shadcn/ui와 EMR 공통 컴포넌트가 꽤 있으므로, 새 공통 컴포넌트를 성급히 만들기보다 기존 primitive 재사용과 feature-local 분리를 먼저 하는 쪽이 안전하다.
+      </p>
+    </section>
+
+    <section>
+      <h2>가장 큰 UI debt</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>근거</th>
+            <th>권장 처리</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>접수 profile drawer</td>
+            <td><code>profile-drawer.tsx</code> 3789줄, arbitrary/fixed layout 116건</td>
+            <td>공통화보다 feature-local 분리 먼저</td>
+          </tr>
+          <tr>
+            <td>진료 차트</td>
+            <td><code>chart/module.tsx</code> 3518줄, SOAP/진단/오더/확인 dialog가 한 파일에 집중</td>
+            <td>01 프로젝트 첫 화면 리팩토링 대상으로 추천</td>
+          </tr>
+          <tr>
+            <td>접수 화면</td>
+            <td><code>reception/module.tsx</code> 3215줄, raw controls 10건, arbitrary/fixed layout 100건</td>
+            <td>calendar, queue, walk-in dialog를 local로 분리</td>
+          </tr>
+          <tr>
+            <td>Lab/Imaging</td>
+            <td><code>lab-imaging/module.tsx</code> 2448줄, arbitrary/fixed layout 111건</td>
+            <td>Lab과 Imaging 의미를 유지하며 분리</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>다음 시작 추천</h2>
+      <p>
+        00 프로젝트가 끝난 뒤 첫 화면 리팩토링은 Linear 순서대로 <strong>01 진료/차트</strong>부터 시작하는 것을 추천한다. 차트는 파일 크기와 UI 복잡도가 크지만 이미 EMR queue/history/status/dialog primitive를 일부 쓰고 있어, “기존 behavior를 지키면서 feature-local 분리부터 진행한다”는 패턴을 만들기 좋다.
+      </p>
+    </section>
+
+    <section>
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>docs/design/system/ui-debt-inventory.md</code></li>
+        <li><code>docs/design/system/README.md</code></li>
+        <li><code>docs/completed/design/2026-05-20-den-140-ui-debt-inventory-report.html</code></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>검증 결과</h2>
+      <div class="box">
+        <ul>
+          <li><code>rg</code>와 파일 line-count 스캔으로 oversized file, raw controls, arbitrary/fixed layout, status/tone, empty/error/loading 후보를 확인했다.</li>
+          <li><code>src/components/ui/*</code>와 <code>src/components/emr/*</code> 주요 primitive를 확인한 뒤 추천 목적지를 분류했다.</li>
+          <li><code>docs/design/system/DESIGN.md</code>, <code>ui-refactor-operating-model.md</code>, <code>docs/design/qa/2026-05-10-ui-consistency-audit.md</code>와 정합성을 확인했다.</li>
+          <li>구현 리팩토링, DB, Supabase, RLS, live persistence, server enforcement 변경은 하지 않았다.</li>
+          <li><code>npm run docs:check</code> 검증 대상이다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>결정 필요 사항</h2>
+      <p>
+        지금 단계에서 추가 결정은 없다. 다음 이슈는 같은 00 프로젝트의 <code>DEN-141 / 00-02</code>이며, 이번 인벤토리를 바탕으로 component extraction rule과 ownership boundary를 정의하면 된다.
+      </p>
+    </section>
+  </body>
+</html>

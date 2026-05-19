@@ -35,7 +35,7 @@ import {
   EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
-import { ChevronLeftIcon, ChevronRightIcon, CircleCloseFillIcon, ExcelFileIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, ExcelFileIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -111,6 +111,11 @@ import type {
   ReceptionWalkInEncounterResponse,
 } from "@/features/reception/walk-in-encounter";
 import { useReceptionStore } from "@/features/reception/store";
+import {
+  ReceptionEmptyState,
+  ReceptionPanelStateMessage,
+  ReceptionSearchInput,
+} from "@/features/reception/reception-list-search";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
@@ -905,14 +910,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       {queueReadStatus === "loading" ? (
-        <div className="border-b border-[var(--emr-line-subtle)] px-4 py-2 text-[12px] text-muted-foreground">
-          대기열 불러오는 중
-        </div>
+        <ReceptionPanelStateMessage>대기열 불러오는 중</ReceptionPanelStateMessage>
       ) : null}
       {queueReadStatus === "error" ? (
-        <div className="border-b border-[var(--emr-line-subtle)] px-4 py-2 text-[12px] text-[var(--emr-status-danger-text)]">
+        <ReceptionPanelStateMessage tone="danger">
           {queueReadError ?? "대기열을 불러오지 못했습니다."}
-        </div>
+        </ReceptionPanelStateMessage>
       ) : null}
       <EmrListHeader
         label={sideListLabel}
@@ -936,29 +939,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       />
       {searchOpen || searchQuery ? (
         <div className="px-4 pb-3">
-          <div className="relative">
-            <CdsActionsSearchIcon
-              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              aria-label="대기열 검색"
-              className="pl-8 pr-8"
-              placeholder="대기열 내 환자, 보호자, 전화번호 검색"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                aria-label="검색어 초기화"
-                onClick={() => setSearchQuery("")}
-              >
-                <CircleCloseFillIcon className="size-4" aria-hidden="true" />
-              </button>
-            ) : null}
-          </div>
+          <ReceptionSearchInput
+            aria-label="대기열 검색"
+            placeholder="대기열 내 환자, 보호자, 전화번호 검색"
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
         </div>
       ) : null}
       <EmrSubpanelBody>
@@ -999,9 +985,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             />
           ))
         ) : (
-          <div className="rounded-lg border border-dashed bg-card p-4 text-[13px] text-muted-foreground">
-            검색 결과가 없습니다.
-          </div>
+          <ReceptionEmptyState>검색 결과가 없습니다.</ReceptionEmptyState>
         )}
       </EmrSubpanelBody>
     </EmrSubpanel>
@@ -2114,7 +2098,6 @@ export function ReceptionContent() {
     (state) => state.applyPersistedReceptionQueue
   );
   const applyWalkInCheckIn = useReceptionStore((state) => state.applyWalkInCheckIn);
-  const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
   const selectAppointment = useReceptionStore((state) => state.selectAppointment);
   const selectEncounter = useReceptionStore((state) => state.selectEncounter);
   const selectPatient = useReceptionStore((state) => state.selectPatient);
@@ -2354,14 +2337,12 @@ export function ReceptionContent() {
         />
       ) : null}
       {calendarReadStatus === "loading" ? (
-        <div className="border-b bg-muted/50 px-4 py-2 text-[12px] font-medium text-muted-foreground">
-          저장된 예약을 불러오는 중
-        </div>
+        <ReceptionPanelStateMessage>저장된 예약을 불러오는 중</ReceptionPanelStateMessage>
       ) : null}
       {calendarReadStatus === "error" ? (
-        <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] font-semibold text-[var(--emr-status-warning-text)]">
+        <ReceptionPanelStateMessage tone="warning">
           {calendarReadError ?? "저장된 예약을 불러오지 못했습니다."}
-        </div>
+        </ReceptionPanelStateMessage>
       ) : null}
       <ReceptionScheduleBoard
         appointments={visibleAppointments}
@@ -2468,8 +2449,6 @@ function WalkInReceptionDialog({
 
     const query = lookupQuery.trim();
     if (!query) {
-      setLookupResults([]);
-      setLookupState("idle");
       return;
     }
 
@@ -2617,12 +2596,13 @@ function WalkInReceptionDialog({
                   required
                   helper={lookupHelper}
                 >
-                  <Input
+                  <ReceptionSearchInput
                     aria-label="검색어 입력"
-                    className="mb-2 h-10 bg-card"
+                    className="mb-2"
+                    inputClassName="h-10 bg-card"
                     placeholder="환자명, 보호자명, 전화번호 검색"
                     value={lookupQuery}
-                    onChange={(event) => setLookupQuery(event.target.value)}
+                    onValueChange={setLookupQuery}
                   />
                   <Select
                     value={receptionPatientId}

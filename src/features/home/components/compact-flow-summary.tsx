@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRightIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { HomePanelCard } from "@/features/home/components/home-panel-card";
 import type { HomeFlowSummaryItem } from "@/features/home/home.types";
 
 type CompactFlowSummaryProps = {
@@ -26,9 +27,9 @@ function getUpdatedAtLabel(value: string) {
 
 export function CompactFlowSummary({ items, updatedAt }: CompactFlowSummaryProps) {
   return (
-    <aside
+    <HomePanelCard
       data-testid="home-flow-summary-panel"
-      className="w-full rounded-[var(--clair-radius-md)] border border-border bg-card p-4 lg:h-full lg:min-h-[420px]"
+      className="w-full gap-0 p-4 lg:h-full lg:min-h-[420px]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -76,6 +77,6 @@ export function CompactFlowSummary({ items, updatedAt }: CompactFlowSummaryProps
           </Link>
         ))}
       </div>
-    </aside>
+    </HomePanelCard>
   );
 }

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-72 오더 draft 저장 완료 보고</title>
+    <style>
+      body {
+        color: #18181b;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 880px;
+      }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        font-size: 18px;
+        margin-top: 28px;
+        padding-top: 20px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .summary {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-72 오더 draft 저장 완료 보고</h1>
+    <p class="summary">
+      차트 오더 테이블의 청구서명, 수량, 삭제 draft 변경을 서버 route-backed 저장 흐름에 연결했다.
+      금액은 클라이언트 입력값을 믿지 않고 서버의 단가 snapshot 기준으로 다시 계산한다.
+    </p>
+
+    <h2>요청</h2>
+    <ul>
+      <li>Project 04의 DEN-72 <code>02-02 Persist editable order draft table changes</code> 구현.</li>
+      <li>DEN-100 chart-applied order snapshot 구조 사용.</li>
+      <li>mock fallback과 local-first boundary 유지.</li>
+      <li>Linear는 <code>Human Review</code>까지만 이동.</li>
+    </ul>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li><code>GET/PATCH /api/workspaces/[workspaceId]/chart/order-drafts</code> route를 추가했다.</li>
+      <li>server core에서 <code>chart:view</code>, <code>chart:update</code>, active membership, encounter workspace scope를 확인한다.</li>
+      <li>billing display name과 quantity 저장을 지원하고, line total은 server unit price snapshot으로 재계산한다.</li>
+      <li>차트 오더 테이블의 <code>Order 업데이트</code> 버튼이 route save를 호출한다.</li>
+      <li>뒤늦게 도착한 draft load가 사용자의 빠른 입력을 덮어쓰지 않도록 draft touch boundary를 추가했다.</li>
+      <li>local-first Supabase RPC migration을 추가했다. remote Supabase 적용은 하지 않았다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/features/chart/server-order-draft-persistence-core.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/chart/order-drafts/route.ts</code></li>
+      <li><code>supabase/migrations/20260519210000_chart_order_draft_persistence_rpc.sql</code></li>
+      <li><code>src/features/chart/module.tsx</code></li>
+      <li><code>tests/chart-order-draft-persistence-server.spec.ts</code></li>
+      <li><code>docs/work/clinical-billing/CLINICAL-BILLING-PR-007-order-draft-persistence.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/chart-order-draft-persistence-server.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/chart.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li><code>npm run build</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run security:secrets</code>: 통과</li>
+    </ul>
+
+    <h2>위험과 제외 범위</h2>
+    <ul>
+      <li>실제 Supabase 원격 project, 실서버, 실제 환자/병원 데이터에는 접근하지 않았다.</li>
+      <li>Order finalization, billing candidate issuance, invoice/payment 상태 변경은 제외했다.</li>
+      <li>병원관리 service catalog CRUD와 외부 장비 연동은 제외했다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 Project 04 이슈는 DEN-73 order confirmation/lifecycle persistence가 자연스럽다.
+      DEN-100의 chart-applied order snapshot 구조를 계속 기준으로 사용하면 된다.
+    </p>
+  </body>
+</html>

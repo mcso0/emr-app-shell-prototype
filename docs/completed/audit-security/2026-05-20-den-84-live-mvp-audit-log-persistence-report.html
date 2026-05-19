@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-84 Live MVP Audit Log Persistence 보고서</title>
+    <style>
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171717; background: #f7f8fa; line-height: 1.6; }
+      main { max-width: 980px; margin: 0 auto; padding: 44px 28px 72px; }
+      section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; margin-top: 18px; }
+      h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+      h2 { margin: 0 0 12px; font-size: 19px; }
+      p { margin: 8px 0; }
+      ul { margin: 8px 0 0 20px; padding: 0; }
+      li { margin: 6px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+      th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #f3f4f6; font-weight: 700; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #f3f4f6; border-radius: 4px; padding: 2px 4px; }
+      .eyebrow { color: #525252; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+      .summary { font-size: 18px; color: #262626; }
+      .warn { color: #92400e; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DEN-84 / Project 05</p>
+      <h1>Live MVP Audit Log Persistence 보고서</h1>
+      <p class="summary">후속 mutation route들이 “감사 로그를 남길 수 있는” DB 구조와 서버 helper 경계를 만들었다.</p>
+
+      <section>
+        <h2>무엇이 생겼나</h2>
+        <ul>
+          <li><code>audit_events</code> 테이블 migration을 추가했다.</li>
+          <li>workspace, actor, target, before/after, metadata를 담는 append contract를 만들었다.</li>
+          <li>route들이 부를 수 있는 server-only append helper를 추가했다.</li>
+          <li>민감 키가 들어오면 DB에 쓰기 전에 차단한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>중요한 안전 결정</h2>
+        <ul>
+          <li>audit table은 직접 client mutation을 열지 않는다.</li>
+          <li>append는 <code>clair_append_audit_event</code> RPC와 server helper를 통해서만 한다.</li>
+          <li>시크릿, token, raw provider payload, stack trace, SQL error, 전체 SOAP/차트 본문은 payload에 저장하지 않는다.</li>
+          <li class="warn">아직 실제 mutation route에 event emit을 연결한 것은 아니다. 그건 DEN-85 범위다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx playwright test tests/live-audit-log-persistence.spec.ts --reporter=line</code>: 통과</li>
+          <li><code>npx tsc --noEmit</code>: 통과</li>
+          <li><code>npm run build</code>: 통과</li>
+          <li><code>npm run docs:check</code>: 통과</li>
+          <li><code>npm run security:secrets</code>: 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>DEN-85에서 workspace/member, reception, chart, order, billing mutation route가 이 helper를 호출하도록 연결하면 된다.</p>
+      </section>
+    </main>
+  </body>
+</html>

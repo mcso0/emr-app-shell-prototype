@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-73 오더 확정/청구 액션 저장 완료 보고</title>
+    <style>
+      body {
+        color: #18181b;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 880px;
+      }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+      h2 {
+        border-top: 1px solid #e4e4e7;
+        font-size: 18px;
+        margin-top: 28px;
+        padding-top: 20px;
+      }
+      code {
+        background: #f4f4f5;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .summary {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-73 오더 확정/청구 액션 저장 완료 보고</h1>
+    <p class="summary">
+      차트에서 선택한 오더의 <code>Order 확정</code>과 <code>Order 청구</code> 액션을 서버 route-backed 저장 흐름에 연결했다.
+      청구 액션은 invoice/payment 완료가 아니라 billing candidate hook point까지만 저장한다.
+    </p>
+
+    <h2>요청</h2>
+    <ul>
+      <li>Project 04의 DEN-73 <code>02-03 Persist order confirmation and selected order submit action</code> 구현.</li>
+      <li>DEN-100 chart-applied order snapshot 구조 사용.</li>
+      <li>mock fallback과 local-first boundary 유지.</li>
+      <li>Linear는 <code>Human Review</code>까지만 이동.</li>
+    </ul>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li><code>GET/PATCH /api/workspaces/[workspaceId]/chart/order-actions</code> route를 추가했다.</li>
+      <li>server core에서 <code>chart:view</code>, <code>chart:update</code>, active membership, encounter/order scope를 확인한다.</li>
+      <li><code>Order 확정</code>은 confirmation status, actor, timestamp를 저장한다.</li>
+      <li><code>Order 청구</code>는 billing candidate status와 id만 저장하고 invoice/payment finalization은 하지 않는다.</li>
+      <li>차트 확인 dialog의 confirm action이 route save를 호출하고, 저장 후 row status를 반영한다.</li>
+      <li>local-first Supabase RPC migration을 추가했다. remote Supabase 적용은 하지 않았다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <ul>
+      <li><code>src/features/chart/server-order-action-persistence-core.ts</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/chart/order-actions/route.ts</code></li>
+      <li><code>supabase/migrations/20260519220000_chart_order_action_persistence_rpc.sql</code></li>
+      <li><code>src/features/chart/module.tsx</code></li>
+      <li><code>tests/chart-order-action-persistence-server.spec.ts</code></li>
+      <li><code>docs/work/clinical-billing/CLINICAL-BILLING-PR-008-order-action-persistence.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/chart-order-action-persistence-server.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/chart.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li><code>npm run build</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run security:secrets</code>: 통과</li>
+    </ul>
+
+    <h2>위험과 제외 범위</h2>
+    <ul>
+      <li>실제 Supabase 원격 project, 실서버, 실제 환자/병원 데이터에는 접근하지 않았다.</li>
+      <li>Invoice finalization, payment state, external order delivery는 제외했다.</li>
+      <li>Full audit rollout은 제외하고 local-first <code>order_events</code> handoff만 남겼다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 order/billing issue에서는 DEN-73의 billing candidate hook point와 DEN-100 snapshot 계약을 이어받으면 된다.
+    </p>
+  </body>
+</html>

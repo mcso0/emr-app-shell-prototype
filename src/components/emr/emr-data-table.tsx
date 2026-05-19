@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -14,6 +14,12 @@ import { CheckIcon, ChevronDownIcon, WarningIcon } from "@/components/icons";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -44,6 +50,7 @@ const numericDiffFields = new Set<OrderDiffField>([
   "amount",
   "quantity",
 ]);
+const unassignedTechnicianValue = "unassigned-technician";
 
 function isSelectableOrder(order: Order) {
   return order.status !== "완료" && order.status !== "취소" && order.workStatus !== "완료";
@@ -128,52 +135,54 @@ function AssigneeCell({
   onAssign: (technicianId: string) => void;
 }) {
   const disabled = order.status === "완료" || order.status === "취소" || order.workStatus === "완료";
-  const selectRef = useRef<HTMLSelectElement>(null);
+  const assigneeName = order.assigneeId
+    ? technicians.find((technician) => technician.id === order.assigneeId)?.name ?? order.assignee
+    : "미지정";
   const handleAssigneeChange = useCallback((technicianId: string) => {
     if (technicianId) {
       onAssign(technicianId);
     }
   }, [onAssign]);
 
-  useEffect(() => {
-    const select = selectRef.current;
-    if (!select) return undefined;
-
-    const handleNativeChange = () => handleAssigneeChange(select.value);
-
-    select.addEventListener("change", handleNativeChange, true);
-    return () => select.removeEventListener("change", handleNativeChange, true);
-  }, [handleAssigneeChange]);
-
   if (disabled) {
     return <AssigneeAvatar order={order} />;
   }
 
   return (
-    <select
-      ref={selectRef}
-      data-row-interactive="true"
-      aria-label={`${order.name} 담당 변경`}
-      value={order.assigneeId ?? ""}
-      className="h-7 max-w-24 rounded-md border border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--emr-text-secondary)] outline-none hover:bg-[var(--emr-surface-muted)] focus:border-ring focus:bg-[var(--emr-surface-panel)] focus:ring-3 focus:ring-ring/50"
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
-      onInput={(event) => {
-        event.stopPropagation();
-        handleAssigneeChange(event.currentTarget.value);
-      }}
-      onChange={(event) => {
-        event.stopPropagation();
-        handleAssigneeChange(event.currentTarget.value);
+    <Select
+      value={order.assigneeId ?? unassignedTechnicianValue}
+      onValueChange={(technicianId) => {
+        if (technicianId && technicianId !== unassignedTechnicianValue) {
+          handleAssigneeChange(technicianId);
+        }
       }}
     >
-      <option value="">미지정</option>
-      {technicians.map((technician) => (
-        <option key={technician.id} value={technician.id}>
-          {technician.name}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        data-row-interactive="true"
+        aria-label={`${order.name} 담당 변경`}
+        size="sm"
+        className="h-7 max-w-24 border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--emr-text-secondary)] shadow-none hover:bg-[var(--emr-surface-muted)] data-[popup-open]:bg-[var(--emr-surface-muted)]"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <span className="min-w-0 flex-1 truncate text-left">{assigneeName}</span>
+      </SelectTrigger>
+      <SelectContent
+        align="center"
+        className="min-w-28"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <SelectItem value={unassignedTechnicianValue}>미지정</SelectItem>
+        {technicians.map((technician) => (
+          <SelectItem key={technician.id} value={technician.id}>
+            {technician.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -588,6 +597,16 @@ export function EmrDataTable({
               ) : null}
             </Fragment>
           ))}
+          {table.getRowModel().rows.length === 0 ? (
+            <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
+              <TableCell
+                colSpan={table.getVisibleFlatColumns().length}
+                className="h-24 text-center text-[13px] font-medium text-muted-foreground"
+              >
+                표시할 오더가 없습니다.
+              </TableCell>
+            </TableRow>
+          ) : null}
         </TableBody>
       </Table>
       {selectedRows.length ? (

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-86 Live Audit Review Surface Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-86 / Human Review</p>
+    <h1>Live Audit Review Surface Report</h1>
+    <p>병원관리자가 주요 audit event를 확인할 수 있는 최소 화면을 추가했다. 병원관리 모듈의 <code>감사 로그</code> 메뉴에서 시간, 이벤트, actor, target, 안전한 요약을 볼 수 있다.</p>
+
+    <h2>작업 범위</h2>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>UI 진입점</td><td><code>병원관리 > 감사 로그</code></td></tr>
+        <tr><td>서버 route</td><td><code>GET /api/workspaces/[workspaceId]/audit/events</code></td></tr>
+        <tr><td>DB read RPC</td><td><code>public.clair_list_audit_events(...)</code></td></tr>
+        <tr><td>권한</td><td>hospital_admin만 허용, non-admin은 접근 제한</td></tr>
+        <tr><td>필터</td><td>검색어와 event type 최소 필터</td></tr>
+      </tbody>
+    </table>
+
+    <h2>제외한 것</h2>
+    <p>분석 차트, 다운로드/내보내기, 보관 정책 UI, 외부 compliance export, 실제 운영 데이터 접근은 제외했다. Audit payload도 DEN-83 기준대로 전체 SOAP/chart body, raw payload, secret/token류를 노출하지 않는다.</p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/audit-review-surface.spec.ts --reporter=line</code></li>
+      <li><code>npx playwright test tests/auth.spec.ts --reporter=line</code></li>
+      <li><code>npx tsc --noEmit</code></li>
+      <li><code>npm run build</code></li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <div class="note">다음 단계는 DEN-87/DEN-88에서 auth/RLS/workspace와 clinical/billing mutation boundary를 audit 기준으로 점검하는 것이다.</div>
+  </body>
+</html>

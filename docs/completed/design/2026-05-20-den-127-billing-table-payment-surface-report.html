@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-127 수납 테이블 및 결제 표면 정리 리포트</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 920px; margin: 0 auto; padding: 48px 28px; }
+      article { background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 32px; box-shadow: 0 8px 28px rgb(15 23 42 / 0.06); }
+      h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.25; }
+      h2 { margin: 28px 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { border-radius: 5px; background: #f4f4f5; padding: 2px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .meta { margin: 0 0 24px; color: #667085; font-size: 13px; }
+      .note { border-left: 4px solid #71717a; background: #fafafa; padding: 12px 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-127 수납 테이블 및 결제 표면 정리 리포트</h1>
+        <p class="meta">2026-05-20 · Project 05-M2 · Billing Table & Payment Surface Pass</p>
+
+        <h2>요약</h2>
+        <p>
+          수납 화면의 청구 항목 table에서 흩어져 있던 고정 column width를 local column recipe로 모으고,
+          금액/수량 cell의 숫자 정렬과 overflow 처리를 정리했다. 결제 영역은 실제 결제 연동 없이 세션 전용
+          상태 변경이라는 점을 계속 드러내도록 안내/오류/action footer 표면을 작은 컴포넌트로 분리했다.
+        </p>
+
+        <h2>시각 변경</h2>
+        <ul>
+          <li>청구 항목 table은 <code>min-w-[720px]</code>와 horizontal overflow wrapper를 사용해 좁은 폭에서 컬럼이 겹치지 않게 했다.</li>
+          <li>단가, 할인, 청구금액은 <code>tabular-nums</code>와 <code>whitespace-nowrap</code> 기준으로 맞췄다.</li>
+          <li>긴 청구 항목명은 table column 안에서 truncate되도록 조정했다.</li>
+          <li>수납 우측 패널의 오류 메시지와 하단 결제 action footer를 작은 컴포넌트로 분리했다.</li>
+        </ul>
+
+        <h2>세션 전용 유지 범위</h2>
+        <ul>
+          <li>실제 PG, 영수증, VAT 세부, 부분 결제 입력은 계속 미연동/미지원으로 남겼다.</li>
+          <li>수납 완료, 미납 처리, 청구 확정은 기존 세션 전용 상태 변경 흐름을 유지한다.</li>
+          <li>invoice domain model, payment persistence, server validation, audit log persistence는 변경하지 않았다.</li>
+        </ul>
+
+        <h2>후속 검토</h2>
+        <ul>
+          <li>수납 table column recipe가 다른 금액 table에서도 반복되면 shared EMR dense money table rule로 승격할 수 있다.</li>
+          <li>실제 결제 모달이 생기기 전까지는 현재 right panel footer를 결제-facing action 기준으로 유지하는 것이 안전하다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/billing/module.tsx tests/billing.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/billing.spec.ts --reporter=line</code> 통과: 3 passed</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: DEN-127 kept billing behavior and payment semantics unchanged. The main reusable pattern is a
+          feature-local invoice line column recipe plus dense amount cell class. Promote it only if another billing
+          or reporting table needs the same monetary column contract.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

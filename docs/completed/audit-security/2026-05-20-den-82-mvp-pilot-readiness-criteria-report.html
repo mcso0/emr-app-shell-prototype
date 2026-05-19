@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-82 MVP 파일럿 readiness 기준 보고서</title>
+    <style>
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171717; background: #f7f8fa; line-height: 1.6; }
+      main { max-width: 960px; margin: 0 auto; padding: 44px 28px 72px; }
+      section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; margin-top: 18px; }
+      h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+      h2 { margin: 0 0 12px; font-size: 19px; }
+      p { margin: 8px 0; }
+      ul { margin: 8px 0 0 20px; padding: 0; }
+      li { margin: 6px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+      th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #f3f4f6; font-weight: 700; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #f3f4f6; border-radius: 4px; padding: 2px 4px; }
+      .eyebrow { color: #525252; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+      .summary { font-size: 18px; color: #262626; }
+      .warn { color: #92400e; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DEN-82 / Project 05</p>
+      <h1>MVP 파일럿 readiness 기준 보고서</h1>
+      <p class="summary">이번 작업은 “파일럿 가능/불가능”을 감으로 판단하지 않도록 기준표와 blocker 정책을 만든 작업이다.</p>
+
+      <section>
+        <h2>결정한 기준</h2>
+        <table>
+          <thead>
+            <tr><th>구분</th><th>파일럿 전 꼭 필요</th><th>후속 가능</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Auth/권한</td><td>서버 세션, active membership, cross-workspace denial</td><td>로그 정리, rate limit 저장소 고도화</td></tr>
+            <tr><td>DB/RLS</td><td>local-first replay 근거와 domain RLS 계획</td><td>remote 적용 전 advisor review</td></tr>
+            <tr><td>Persistence</td><td>접수-차트-오더-수납 핵심 reload checkpoint</td><td>검사/영상/조제/처치 전체 live 전환</td></tr>
+            <tr><td>Audit</td><td>핵심 mutation event matrix</td><td>대시보드, export, 장기 보관 정책</td></tr>
+            <tr><td>QA</td><td>외래 workflow와 권한 denial 점검</td><td>부하 테스트, provider별 QA</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Blocker 정책</h2>
+        <ul>
+          <li>다른 병원 데이터 노출, 권한 없는 변경, 핵심 외래 상태 유실, 시크릿 노출, 청구 금액 불신은 <span class="warn">파일럿 blocker</span>다.</li>
+          <li>안전하게 파일럿은 가능하지만 신뢰도를 높이는 일은 follow-up으로 둔다.</li>
+          <li>PACS, KakaoTalk, PG 정산, AI, compliance dashboard는 Post-MVP로 분리한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>대표 체크리스트</h2>
+        <ul>
+          <li>로그인 후 올바른 병원 workspace에 들어가는가?</li>
+          <li>접수에서 만든 encounter가 차트와 수납까지 이어지는가?</li>
+          <li>권한 없는 사용자가 안전하게 차단되는가?</li>
+          <li>실제 의료 자문이나 실제 환자 데이터처럼 보이지 않는가?</li>
+          <li>보안/QA가 다음 이슈에서 같은 기준으로 판단할 수 있는가?</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>현재 판단</h2>
+        <p>Project 04 handoff는 충분하지만, MVP 전체는 아직 파일럿 준비 완료가 아니다. DEN-83부터 DEN-91까지 audit, 보안 리뷰, QA, 대표 리허설을 거쳐야 한다.</p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: 통과</li>
+          <li><code>npm run security:secrets</code>: 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

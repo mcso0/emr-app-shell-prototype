@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { cn } from "@/lib/utils";
@@ -791,8 +792,35 @@ function DispensingContentBody({
               </EmrOrderGroupSection>
             );
           })}
+          {!visibleTableGroups.length ? (
+            <div className="rounded-lg border border-[var(--emr-line-hairline)] bg-card p-8 text-center text-[13px] font-medium text-muted-foreground">
+              표시할 오더 그룹이 없습니다.
+            </div>
+          ) : null}
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+function DispensingDrawerField({
+  children,
+  inputId,
+  label,
+}: {
+  children: ReactNode;
+  inputId: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Label
+        htmlFor={inputId}
+        className="text-[12px] leading-4 text-muted-foreground"
+      >
+        {label}
+      </Label>
+      {children}
     </div>
   );
 }
@@ -800,6 +828,14 @@ function DispensingContentBody({
 export function DispensingDrawer() {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const order = allOrderRows.find((row) => row.id === activeDrawer?.id) ?? allOrderRows[0];
+  const drawerFields = [
+    ["구분", order.category],
+    ["상태", order.status],
+    ["경로", order.route],
+    ["빈도", order.frequency],
+    ["요청 일시", order.requestedAt],
+    ["요청 수의사", order.doctor],
+  ];
 
   return (
     <div className="flex h-[calc(100%-48px)] flex-col gap-4 overflow-y-auto p-4">
@@ -808,24 +844,31 @@ export function DispensingDrawer() {
         <div className="mt-1 text-base font-semibold">{order.name}</div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {[
-          ["구분", order.category],
-          ["상태", order.status],
-          ["경로", order.route],
-          ["빈도", order.frequency],
-          ["요청 일시", order.requestedAt],
-          ["요청 수의사", order.doctor],
-        ].map(([label, value]) => (
-          <label key={label} className="flex flex-col gap-1 text-[12px] text-muted-foreground">
-            {label}
-            <Input value={value} readOnly className="h-8 bg-card text-foreground" />
-          </label>
-        ))}
+        {drawerFields.map(([label, value], index) => {
+          const inputId = `dispensing-drawer-${order.id}-field-${index}`;
+
+          return (
+            <DispensingDrawerField key={label} inputId={inputId} label={label}>
+              <Input
+                id={inputId}
+                value={value}
+                readOnly
+                className="h-8 bg-card text-foreground"
+              />
+            </DispensingDrawerField>
+          );
+        })}
       </div>
-      <label className="flex flex-col gap-1 text-[12px] text-muted-foreground">
-        용량
-        <DoseInput key={order.id} initialDose={order.dose} />
-      </label>
+      <DispensingDrawerField
+        inputId={`dispensing-drawer-${order.id}-dose`}
+        label="용량"
+      >
+        <DoseInput
+          key={order.id}
+          id={`dispensing-drawer-${order.id}-dose`}
+          initialDose={order.dose}
+        />
+      </DispensingDrawerField>
       <div className="mt-auto flex justify-end gap-2 border-t pt-4">
         <Button variant="outline">변경 이력</Button>
         <Button>수정 저장</Button>
@@ -834,11 +877,18 @@ export function DispensingDrawer() {
   );
 }
 
-function DoseInput({ initialDose }: { initialDose: string }) {
+function DoseInput({
+  id,
+  initialDose,
+}: {
+  id: string;
+  initialDose: string;
+}) {
   const [doseValue, setDoseValue] = useState(initialDose);
 
   return (
     <Input
+      id={id}
       value={doseValue}
       onValueChange={setDoseValue}
       className="h-8 bg-card text-foreground"

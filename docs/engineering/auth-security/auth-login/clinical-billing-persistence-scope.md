@@ -121,12 +121,15 @@ Audit payloads must include stable ids and before/after summaries when practical
 13. DEN-80: add full outpatient chart/order/billing persistence regression.
 14. DEN-81: produce audit/security readiness handoff and Project 04 closeout.
 
+DEN-81 output is captured in `docs/engineering/auth-security/auth-login/clinical-billing-audit-security-handoff.md` and the representative-facing HTML closeout report under `docs/completed/clinical-billing/`.
+
 ## Remaining Risks
 
 - Local Supabase SQL runtime replay depends on Docker/local Supabase availability.
 - Project 04 should avoid mixing clinical authoring, operational work completion, and final billing approval into one route or permission.
 - Billing amount integrity must be server-calculated from stored service price/order data; client-submitted totals are display hints only.
 - Remote/staging/live Supabase remains approval-gated.
+- Project 05 should begin with audit/security review and RLS readiness over the DEN-81 mutation matrix before broadening into new module persistence.
 
 ## Verification
 

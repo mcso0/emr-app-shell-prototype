@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-124 검사/영상 테이블 UI 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-124 검사/영상 테이블 UI 리포트</h1>
+        <p class="meta">2026-05-20 · Project 03-M2 · Lab/Imaging Table UX</p>
+
+        <h2>요약</h2>
+        <p>
+          임상병리 결과 입력 테이블과 영상 Order 상세 테이블의 overflow, 빈 상태, 긴 텍스트 표시를
+          정리했다. 결과값, 정상범위, 판정, 판독 데이터는 변경하지 않고 테이블을 더 안정적으로 스캔할 수
+          있게 만드는 작업에만 집중했다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li>임상병리 결과 테이블을 가로 스크롤 래퍼와 <code>min-w-[860px]</code> 기반 table layout으로 감싸 좁은 폭에서 컬럼이 과도하게 눌리지 않도록 했다.</li>
+          <li>임상병리 결과 행이 없을 때 <code>표시할 검사 결과가 없습니다.</code> 빈 상태를 테이블 body 안에 추가했다.</li>
+          <li>영상 Order 상세 테이블의 최소 폭을 넓히고 row hover/background를 다른 EMR 테이블 톤에 맞췄다.</li>
+          <li>영상 검사명/영문명은 줄바꿈을 허용하고, 요청자/요청 일시/담당자는 truncate 처리해 긴 이름과 날짜가 테이블 밖으로 밀리지 않게 했다.</li>
+        </ul>
+
+        <h2>화면 리뷰 메모</h2>
+        <ul>
+          <li>검사 결과 input, 정상범위 chart, 판정 badge의 의미와 위치는 유지했다.</li>
+          <li>영상 상세 테이블의 PACS 액션, modality badge, 요청/담당 정보는 기존 정보 구조를 유지했다.</li>
+          <li>좁은 viewport에서는 테이블 영역이 가로 스크롤로 버티고, 긴 한글/영상 용어는 셀 안에서 줄바꿈 또는 말줄임 처리된다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/lab-imaging/module.tsx src/features/lab-imaging/components/status-action.tsx tests/lab-imaging.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/lab-imaging.spec.ts --reporter=line</code> 통과: 5 passed</li>
+        </ul>
+
+        <h2>제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, device/PACS integration, server permission은 변경하지 않았다.</li>
+          <li>검사 결과값, reference range, 영상 판독 로직은 변경하지 않았다.</li>
+          <li>full data-grid replacement는 하지 않았다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: Reusable table recommendations: extract a dense EMR table shell with horizontal overflow,
+          minimum width, header/cell typography, and empty-state colSpan handling; add a reusable long-value cell
+          helper for Korean labels and imaging terms; keep result-specific controls such as range charts and judgment
+          badges feature-local until the same pattern appears in other modules.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

@@ -4,6 +4,10 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  emitLiveMutationAuditEvent,
+  type LiveMutationAuditOptions,
+} from "@/features/audit/server-mutation-audit-core";
 import { mockEncounters } from "@/mocks/emr-domain";
 import type { Encounter, EncounterStatus } from "@/types/emr-domain";
 
@@ -131,12 +135,18 @@ export async function readChartCompletion({
 
 export async function completeChart({
   actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
   gateway = createMockChartCompletionGateway(),
   input,
   permissionAdapter = createDemoChartCompletionPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   gateway?: Pick<ChartCompletionGateway, "completeChart">;
   input: ChartCompletionInput;
   permissionAdapter?: WorkspacePermissionAdapter;
@@ -177,6 +187,27 @@ export async function completeChart({
     if (result.status === 409) return result;
     return { ok: false, status: 500, error: "db_write_failed" };
   }
+
+  const audit = await emitLiveMutationAuditEvent({
+    auditGateway,
+    auditNow,
+    input: {
+      workspaceId,
+      actorUserId,
+      eventType: "chart.completed",
+      targetType: "encounter",
+      targetId: normalizedEncounterId,
+      encounterId: normalizedEncounterId,
+      requestId: auditRequestId,
+      after: {
+        status: result.completion.status,
+        chartCompletedAt: result.completion.chartCompletedAt ?? null,
+        readyForBilling: result.completion.status === "ready_for_billing",
+      },
+      metadata: { source: "chart-completion-persistence" },
+    },
+  });
+  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
 
   return {
     ok: true,

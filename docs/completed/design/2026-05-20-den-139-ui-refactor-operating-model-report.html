@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-139 UI/UX 리팩토링 운영 기준 리포트</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        max-width: 880px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .box {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 16px;
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="meta">Linear: DEN-139 · 완료일: 2026-05-20 · 상태: Human Review 요청 예정</p>
+    <h1>UI/UX 리팩토링 운영 기준 정리</h1>
+
+    <section>
+      <h2>요약</h2>
+      <p>
+        00 프로젝트의 첫 이슈로, 앞으로 진행될 화면 컴포넌트 오딧과 리팩토링이 같은 기준으로 움직이도록 운영 기준을 문서화했다. 이 기준은 새 기능 개발이 아니라 기존 EMR 프론트엔드 화면의 일관성, 유지보수성, 접근성, 반응형 안정성을 높이는 데 초점을 둔다.
+      </p>
+    </section>
+
+    <section>
+      <h2>무엇이 정리됐나</h2>
+      <ul>
+        <li>UI/UX 리팩토링 initiative의 목적과 frontend-only 범위를 명확히 했다.</li>
+        <li>DB, Supabase, RLS, live persistence, server enforcement, payment, email, deploy, role/permission policy 변경을 명시적으로 제외했다.</li>
+        <li>00부터 09까지 프로젝트 진행 순서와, 프로젝트 내부에서 마일스톤 및 제목 prefix 순서를 따르는 규칙을 정리했다.</li>
+        <li>공통 컴포넌트로 올릴 조건, feature-local로 남길 조건, 피해야 할 추상화 기준을 문서화했다.</li>
+        <li>Linear 이슈 작업 시 영어/한국어 사용 구분, 검증, Human Review 종료 기준을 정리했다.</li>
+        <li>App Shell 08-01 중복 의심 항목은 현재 active issue 기준으로 실제 중복이 발견되지 않았고, 08 프로젝트 시작 전 재확인 대상으로 남겼다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>docs/design/system/ui-refactor-operating-model.md</code></li>
+        <li><code>docs/completed/design/2026-05-20-den-139-ui-refactor-operating-model-report.html</code></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>검증 결과</h2>
+      <div class="box">
+        <ul>
+          <li>Linear initiative와 00 프로젝트, 00 프로젝트 이슈 목록을 확인했다.</li>
+          <li><code>docs/agent-start-here.md</code>와 <code>docs/engineering/current-status.md</code>의 MVP/session-only 및 금지 범위를 대조했다.</li>
+          <li>이번 작업은 문서 작업이며 코드, DB, Supabase, RLS, live persistence, server enforcement 작업을 추가하지 않았다.</li>
+          <li><code>npm run docs:check</code> 검증 대상이다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>결정 필요 사항</h2>
+      <p>
+        지금 단계에서 승욱이 추가로 결정해야 할 사항은 없다. 다음 이슈는 같은 프로젝트의 <code>DEN-140 / 00-01</code>로, 실제 UI hardcoding·중복 패턴·재사용 후보 인벤토리를 만드는 작업이다.
+      </p>
+    </section>
+  </body>
+</html>

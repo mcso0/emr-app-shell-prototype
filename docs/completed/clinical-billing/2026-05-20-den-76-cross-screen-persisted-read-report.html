@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-76 차트/수납 공통 읽기 완료 보고</title>
+  </head>
+  <body>
+    <h1>DEN-76 차트/수납 공통 읽기 완료 보고</h1>
+    <p>
+      차트와 수납 화면이 같은 persisted order/action/lifecycle/candidate 상태를 읽도록 연결했다.
+      수납 화면은 candidate overlay를 invoice line에 병합하고 총액을 다시 계산한다.
+    </p>
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li><code>npm run build</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run security:secrets</code>: 통과</li>
+    </ul>
+    <h2>제외 범위</h2>
+    <ul>
+      <li>결제 완료 mutation, chart editor 변경, 외부 모듈 연동은 제외했다.</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터는 사용하지 않았다.</li>
+    </ul>
+  </body>
+</html>

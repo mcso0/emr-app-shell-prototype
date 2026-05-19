@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-142 UI Refactor DoD Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .box {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 16px;
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="meta">Linear: DEN-142 · 완료일: 2026-05-20 · 상태: Human Review 요청 예정</p>
+    <h1>UI 리팩토링 완료 기준</h1>
+
+    <section>
+      <h2>승욱이 리뷰 전에 기대해도 되는 것</h2>
+      <ul>
+        <li>화면 리팩토링은 기존 workflow와 session-only 동작을 깨지 않아야 한다.</li>
+        <li>DB, Supabase, RLS, live persistence, server enforcement, payment, email, deploy, role/permission policy 변경은 UI 리팩토링에 섞이지 않아야 한다.</li>
+        <li>dialog, drawer, popover, icon button, table, tab, filter는 접근 가능한 label/title/focus 상태를 유지해야 한다.</li>
+        <li>데스크톱과 필요한 경우 좁은 화면에서 텍스트 겹침, table overflow, side panel collapse, scroll boundary를 확인해야 한다.</li>
+        <li>공통화한 것, feature-local로 남긴 것, 후속으로 넘긴 것을 한국어 결과 요약에 남겨야 한다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>docs/design/system/ui-refactor-dod.md</code></li>
+        <li><code>docs/design/system/README.md</code></li>
+        <li><code>docs/completed/design/2026-05-20-den-142-ui-refactor-dod-report.html</code></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>검증 결과</h2>
+      <div class="box">
+        <ul>
+          <li><code>package.json</code>의 현재 scripts와 <code>tests/*</code> 화면별 Playwright test 파일을 확인했다.</li>
+          <li><code>DESIGN.md</code>, <code>ui-refactor-operating-model.md</code>, <code>component-ownership-rules.md</code>와 정합성을 맞췄다.</li>
+          <li>검증 수준을 V0~V4로 나눠 모든 이슈에 과한 검증을 강제하지 않도록 했다.</li>
+          <li>구현, visual regression system 구축, 모든 화면 테스트 추가, DB/live/backend 검증은 하지 않았다.</li>
+          <li><code>npm run docs:check</code> 검증 대상이다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>후속 권장</h2>
+      <p>
+        09 프로젝트에서 이 DoD를 바탕으로 최종 cross-screen QA 체크리스트를 만들면 된다. 별도 자동 시각 회귀 시스템은 현재 00 프로젝트 범위 밖이다.
+      </p>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-141 Component Ownership Rules Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .box {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 16px;
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="meta">Linear: DEN-141 · 완료일: 2026-05-20 · 상태: Human Review 요청 예정</p>
+    <h1>컴포넌트 추출 및 소유권 기준</h1>
+
+    <section>
+      <h2>요약</h2>
+      <p>
+        화면 리팩토링 때 UI 코드를 어디에 둘지 판단하는 기준을 만들었다. 핵심은 “가장 작은 안정적인 소유자”를 선택하는 것이다. shadcn/ui는 일반 UI 동작, EMR 컴포넌트는 반복되는 업무 화면 패턴, feature-local 컴포넌트는 아직 한 화면의 workflow 의미가 강한 블록을 맡는다.
+      </p>
+    </section>
+
+    <section>
+      <h2>정책</h2>
+      <ul>
+        <li>기본 primitive는 <code>src/components/ui/*</code>를 우선 사용한다.</li>
+        <li>EMR 화면 전반에 반복되는 안정된 업무 패턴은 <code>src/components/emr/*</code>로 둔다.</li>
+        <li>SOAP, 진단 검색, 접수 등록, 수납 invoice, hospital admin drawer field처럼 workflow 의미가 강하면 먼저 feature-local로 분리한다.</li>
+        <li>두 개 이상의 화면군에서 같은 UI 역할이 안정적으로 반복될 때만 새 EMR 공통 컴포넌트를 만든다.</li>
+        <li>컴포넌트 추출 중 route, drawer, tab, keyboard/focus, test id, session-only behavior는 유지한다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>docs/design/system/component-ownership-rules.md</code></li>
+        <li><code>docs/design/system/README.md</code></li>
+        <li><code>docs/completed/design/2026-05-20-den-141-component-ownership-rules-report.html</code></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>검증 결과</h2>
+      <div class="box">
+        <ul>
+          <li><code>components.json</code>에서 shadcn 설정이 <code>base-nova</code>, Base UI, <code>@/components/ui</code> alias임을 확인했다.</li>
+          <li><code>Button</code>, <code>Dialog</code>, <code>Field</code>, <code>Select</code>, <code>DropdownMenu</code> 등 주요 shadcn/ui primitive와 <code>EmrIconButton</code>, <code>EmrTableCheckbox</code> 등 EMR wrapper를 확인했다.</li>
+          <li><code>ui-debt-inventory.md</code>와 기존 <code>DESIGN.md</code> 방향에 맞춰 규칙을 정리했다.</li>
+          <li>구현 추출, DB, Supabase, RLS, live persistence, server enforcement 변경은 하지 않았다.</li>
+          <li><code>npm run docs:check</code> 검증 대상이다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>결정 필요 사항</h2>
+      <p>
+        현재 추가 승인 필요한 소유권 결정은 없다. 다음 이슈는 <code>DEN-142 / 00-03</code>이며, 여기서 UI 리팩토링 완료 기준과 검증 기준을 확정하면 된다.
+      </p>
+    </section>
+  </body>
+</html>

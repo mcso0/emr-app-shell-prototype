@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-78 수납 상태 저장 완료 보고</title>
+  </head>
+  <body>
+    <h1>DEN-78 수납 상태 저장 완료 보고</h1>
+    <p>
+      결제 수단 선택, 미납 처리, 수납 완료 상태를 route-backed persistence로 연결했다.
+      실제 PG 승인 없이도 포트폴리오 외래 흐름을 저장된 수납 상태로 닫을 수 있게 했다.
+    </p>
+    <h2>작업 내용</h2>
+    <ul>
+      <li><code>GET/PATCH /api/workspaces/[workspaceId]/billing/payment-status</code> 추가</li>
+      <li>active workspace membership, <code>billing:view</code>, <code>billing:issue</code> 확인</li>
+      <li>결제수단, 미납 사유, <code>payment_state</code>, <code>paid_at</code> 저장</li>
+      <li>수납 완료 시 synthetic approved payment row 생성</li>
+      <li>local-first RPC에서 수납 완료 encounter를 <code>completed</code>로 마감</li>
+      <li>수납 화면 결제수단/미납/수납완료 액션을 persisted route로 연결</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/billing-payment-status-persistence-server.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/billing.spec.ts --reporter=line</code>: 통과</li>
+    </ul>
+    <h2>제외 범위</h2>
+    <ul>
+      <li>PG transaction confirmation, refund provider, accounting settlement는 제외했다.</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터는 사용하지 않았다.</li>
+    </ul>
+  </body>
+</html>

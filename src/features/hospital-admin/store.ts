@@ -16,7 +16,7 @@ import {
 } from "@/features/hospital-admin/data";
 
 type HospitalAdminStore = {
-  activeSection: "orders" | "members";
+  activeSection: "orders" | "members" | "audit";
   billingFilter: HospitalOrderBillingFilter;
   orders: HospitalOrderCatalogItem[];
   searchQuery: string;
@@ -29,7 +29,7 @@ type HospitalAdminStore = {
   createOrder: (draft?: Partial<HospitalOrderDraft>) => HospitalOrderCatalogItem;
   deleteOrder: (orderId: string) => void;
   duplicateOrder: (orderId: string) => HospitalOrderCatalogItem | null;
-  setActiveSection: (section: "orders" | "members") => void;
+  setActiveSection: (section: "orders" | "members" | "audit") => void;
   setBillingFilter: (filter: HospitalOrderBillingFilter) => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategoryId: (categoryId: HospitalOrderCategoryId) => void;

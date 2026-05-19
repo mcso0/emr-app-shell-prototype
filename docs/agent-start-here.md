@@ -34,6 +34,7 @@ The active target is Product MVP. The prototype already covers the outpatient fl
 
 - Do not treat client-only permission gating as complete security.
 - Do not implement live Supabase project validation, migrations, RLS, or server enforcement unless a work item explicitly scopes it.
+- Before DB structure or migration work, check `docs/work/` issue docs and relevant `docs/product/` or `docs/engineering/` data-contract docs first.
 - For screen work, check the reference screen index and actual image existence before claiming pixel-level alignment.
 - For Next.js application code, read the relevant `node_modules/next/dist/docs/` guide first.
 

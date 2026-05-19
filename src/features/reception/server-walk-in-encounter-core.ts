@@ -4,6 +4,10 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  emitLiveMutationAuditEvent,
+  type LiveMutationAuditOptions,
+} from "@/features/audit/server-mutation-audit-core";
 import type {
   ReceptionWalkInEncounterInput,
   ReceptionWalkInEncounterRecord,
@@ -71,12 +75,18 @@ export type ReceptionWalkInEncounterResult =
 
 export async function createReceptionWalkInEncounter({
   actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
   gateway = createMockReceptionWalkInEncounterGateway(),
   input,
   permissionAdapter = createDemoReceptionWalkInPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   gateway?: ReceptionWalkInEncounterGateway;
   input: ReceptionWalkInEncounterInput;
   permissionAdapter?: WorkspacePermissionAdapter;
@@ -122,6 +132,29 @@ export async function createReceptionWalkInEncounter({
 
     return { ok: false, status: 500, error: result.error };
   }
+
+  const audit = await emitLiveMutationAuditEvent({
+    auditGateway,
+    auditNow,
+    input: {
+      workspaceId,
+      actorUserId,
+      eventType: "reception.walk_in_created",
+      targetType: "encounter",
+      targetId: result.walkIn.encounter.id,
+      encounterId: result.walkIn.encounter.id,
+      patientId: result.walkIn.encounter.patientId,
+      guardianId: result.walkIn.encounter.guardianId ?? null,
+      requestId: auditRequestId,
+      after: {
+        queueStatus: result.walkIn.queueEntry.status,
+        receptionType: result.walkIn.encounter.receptionType,
+        status: result.walkIn.encounter.status,
+      },
+      metadata: { source: "reception-walk-in-encounter" },
+    },
+  });
+  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
 
   return {
     ok: true,

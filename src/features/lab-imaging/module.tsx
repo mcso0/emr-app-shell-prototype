@@ -15,7 +15,6 @@ import {
 import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
-  CheckIcon,
   ChevronDownIcon,
   ClockIcon,
   DownloadIcon,
@@ -55,15 +54,8 @@ import {
 } from "@/components/emr/side-panel-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -87,6 +79,7 @@ import {
   type LabDetail,
   type LabWorkItem,
 } from "@/features/lab-imaging/data";
+import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
 import {
   getPatientDisplayAge,
@@ -995,43 +988,44 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
       collapsed={collapsed}
       onToggle={() => setCollapsed((current) => !current)}
     >
-      <Table className="table-fixed text-[14px] leading-5 tracking-[0.014em]">
-        <colgroup>
-          <col className="w-[32%]" />
-          <col className="w-[14%]" />
-          <col className="w-[8%]" />
-          <col className="w-[26%]" />
-          <col className="w-[10%]" />
-          <col className="w-[10%]" />
-        </colgroup>
-        <TableHeader className="bg-[var(--emr-surface-muted)]">
-          <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
-              <div className="flex h-6 min-w-0 items-center px-1">항목</div>
-            </TableHead>
-            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
-              <div className="flex h-6 min-w-0 items-center px-1">결과값</div>
-            </TableHead>
-            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
-              <div className="flex h-6 min-w-0 items-center px-1">단위</div>
-            </TableHead>
-            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
-              <div className="flex h-6 min-w-0 items-center justify-center px-1 text-center">정상범위</div>
-            </TableHead>
-            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
-              <div className="flex h-6 min-w-0 items-center px-1">판정</div>
-            </TableHead>
-            <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
-              <div className="flex h-6 min-w-0 items-center px-1">담당자</div>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow
-              key={row.id}
-              className="h-11 border-border bg-card text-foreground hover:!bg-[var(--emr-state-hover)]"
-            >
+      <div className="overflow-x-auto">
+        <Table className="min-w-[860px] table-fixed text-[14px] leading-5 tracking-[0.014em]">
+          <colgroup>
+            <col className="w-[32%]" />
+            <col className="w-[14%]" />
+            <col className="w-[8%]" />
+            <col className="w-[26%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+          </colgroup>
+          <TableHeader className="bg-[var(--emr-surface-muted)]">
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+                <div className="flex h-6 min-w-0 items-center px-1">항목</div>
+              </TableHead>
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+                <div className="flex h-6 min-w-0 items-center px-1">결과값</div>
+              </TableHead>
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+                <div className="flex h-6 min-w-0 items-center px-1">단위</div>
+              </TableHead>
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+                <div className="flex h-6 min-w-0 items-center justify-center px-1 text-center">정상범위</div>
+              </TableHead>
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+                <div className="flex h-6 min-w-0 items-center px-1">판정</div>
+              </TableHead>
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+                <div className="flex h-6 min-w-0 items-center px-1">담당자</div>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow
+                key={row.id}
+                className="h-11 border-border bg-card text-foreground hover:!bg-[var(--emr-state-hover)]"
+              >
               <TableCell className="h-11 px-1 py-2 font-medium whitespace-normal">
                 <div className="flex min-h-6 min-w-0 items-center px-1 leading-5">{row.analyteName}</div>
               </TableCell>
@@ -1079,10 +1073,21 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
                   <span className="truncate text-[13px] text-foreground">{assigneeName}</span>
                 </div>
               </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </TableRow>
+            ))}
+            {!rows.length ? (
+              <TableRow className="border-border bg-card hover:bg-card">
+                <TableCell
+                  colSpan={6}
+                  className="h-24 text-center text-[13px] font-medium text-muted-foreground"
+                >
+                  표시할 검사 결과가 없습니다.
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+      </div>
     </EmrOrderGroupSection>
   );
 }
@@ -1644,76 +1649,6 @@ function LabReceiptCard({
   );
 }
 
-function LabStatusAction({
-  onCancelAssignment,
-  onComplete,
-  onStart,
-  status,
-}: {
-  onCancelAssignment: () => void;
-  onComplete: () => void;
-  onStart: () => void;
-  status: LabAssignmentStatus;
-}) {
-  if (status === "completed") {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled
-        className="border-[var(--emr-status-info-border)] bg-card text-primary"
-      >
-        <CheckIcon data-icon="inline-start" />
-        검사완료
-      </Button>
-    );
-  }
-
-  if (status === "in_progress") {
-    return (
-      <div className="inline-flex items-center">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
-        >
-          검사중
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label="검사 상태 액션"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-sm" }),
-              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
-            )}
-          >
-            <ChevronDownIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36">
-            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onComplete}>
-              <CheckIcon className="size-3" />
-              검사완료
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onCancelAssignment}>
-              담당취소
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  }
-
-  return (
-    <Button type="button" size="sm" onClick={onStart}>
-      담당하기
-      <ChevronDownIcon data-icon="inline-end" />
-    </Button>
-  );
-}
-
 export function LabContent() {
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
@@ -1794,7 +1729,13 @@ export function LabContent() {
                   <PrinterIcon data-icon="inline-start" />
                   출력하기
                 </Button>
-                <LabStatusAction
+                <LabImagingStatusAction
+                  activeLabel="검사중"
+                  activeStatus="in_progress"
+                  completeLabel="검사완료"
+                  completedStatus="completed"
+                  menuAriaLabel="검사 상태 액션"
+                  requestedStatus="requested"
                   status={assignment.status}
                   onStart={startAssignment}
                   onComplete={completeAssignment}
@@ -2009,76 +1950,6 @@ function getImagingDocumentId(study: ImagingStudy) {
   return `IMG-${suffix}`;
 }
 
-function ImagingStatusAction({
-  onCancelAssignment,
-  onComplete,
-  onStart,
-  status,
-}: {
-  onCancelAssignment: () => void;
-  onComplete: () => void;
-  onStart: () => void;
-  status: ImagingReadingStatus;
-}) {
-  if (status === "completed") {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled
-        className="border-[var(--emr-status-info-border)] bg-card text-primary"
-      >
-        <CheckIcon data-icon="inline-start" />
-        판독완료
-      </Button>
-    );
-  }
-
-  if (status === "reading") {
-    return (
-      <div className="inline-flex items-center">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-r-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
-        >
-          판독중
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label="판독 상태 액션"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-sm" }),
-              "-ml-px rounded-l-none border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary"
-            )}
-          >
-            <ChevronDownIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36">
-            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onComplete}>
-              <CheckIcon className="size-3" />
-              판독완료
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="h-8 cursor-pointer" onClick={onCancelAssignment}>
-              담당취소
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  }
-
-  return (
-    <Button type="button" size="sm" onClick={onStart}>
-      담당하기
-      <ChevronDownIcon data-icon="inline-end" />
-    </Button>
-  );
-}
-
 function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
   return (
     <EmrOrderGroupSection
@@ -2092,7 +1963,7 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
       }
     >
       <div className="overflow-x-auto">
-        <Table className="min-w-[720px] table-fixed text-[13px] leading-5">
+        <Table className="min-w-[760px] table-fixed text-[13px] leading-5">
           <colgroup>
             <col className="w-[13%]" />
             <col className="w-[25%]" />
@@ -2112,17 +1983,27 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow>
+            <TableRow className="border-border bg-card hover:bg-[var(--emr-state-hover)]">
               <TableCell className="h-11 px-2 font-medium">
                 <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
                   {detail.study.modality === "X-ray" ? "XR" : "US"}
                 </Badge>
               </TableCell>
-              <TableCell className="h-11 px-2 font-medium">{detail.order?.displayName ?? detail.study.bodyPart}</TableCell>
-              <TableCell className="h-11 px-2 text-muted-foreground">{detail.study.modality} {detail.study.bodyPart}</TableCell>
-              <TableCell className="h-11 px-2">{getStaffName(detail.order?.requestedByUserId) ?? "이수지"}</TableCell>
-              <TableCell className="h-11 px-2">{formatShortDateTime(detail.study.requestedAt)}</TableCell>
-              <TableCell className="h-11 px-2">{detail.radiologistName ?? "미지정"}</TableCell>
+              <TableCell className="h-11 whitespace-normal px-2 font-medium">
+                {detail.order?.displayName ?? detail.study.bodyPart}
+              </TableCell>
+              <TableCell className="h-11 whitespace-normal px-2 text-muted-foreground">
+                {detail.study.modality} {detail.study.bodyPart}
+              </TableCell>
+              <TableCell className="h-11 px-2">
+                <span className="block truncate">{getStaffName(detail.order?.requestedByUserId) ?? "이수지"}</span>
+              </TableCell>
+              <TableCell className="h-11 px-2">
+                <span className="block truncate">{formatShortDateTime(detail.study.requestedAt)}</span>
+              </TableCell>
+              <TableCell className="h-11 px-2">
+                <span className="block truncate">{detail.radiologistName ?? "미지정"}</span>
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>
@@ -2266,7 +2147,13 @@ export function ImagingContent() {
                 <Button variant="outline" size="sm" className="bg-card">
                   PACS
                 </Button>
-                <ImagingStatusAction
+                <LabImagingStatusAction
+                  activeLabel="판독중"
+                  activeStatus="reading"
+                  completeLabel="판독완료"
+                  completedStatus="completed"
+                  menuAriaLabel="판독 상태 액션"
+                  requestedStatus="requested"
                   status={assignment.status}
                   onStart={startAssignment}
                   onComplete={completeAssignment}
