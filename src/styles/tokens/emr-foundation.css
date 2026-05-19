@@ -90,6 +90,8 @@
   --emr-state-drag: oklch(0.78 0.012 286);
   --emr-state-dirty: oklch(0.97 0.035 85);
 
+  --emr-command-primary-hover-bg: oklch(0.28 0.006 285.885);
+
   --emr-status-info-bg: var(--clair-color-atomic-blue-50);
   --emr-status-info-border: var(--clair-color-atomic-blue-200);
   --emr-status-info-text: var(--clair-color-atomic-blue-700);
@@ -100,6 +102,7 @@
   --emr-status-warning-border: var(--clair-color-atomic-orange-200);
   --emr-status-warning-text: var(--clair-color-atomic-orange-700);
   --emr-status-danger-bg: var(--clair-color-atomic-red-50);
+  --emr-status-danger-hover-bg: var(--clair-color-atomic-red-100);
   --emr-status-danger-border: var(--clair-color-atomic-red-200);
   --emr-status-danger-text: var(--clair-color-atomic-red-700);
   --emr-status-neutral-bg: var(--clair-color-atomic-gray-50);

@@ -36,11 +36,11 @@ const states = [
 ] as const;
 
 const forcedHoverClasses = {
-  default: "bg-primary/90",
+  default: "bg-[var(--emr-command-primary-hover-bg)]",
   outline: "bg-accent",
-  secondary: "bg-secondary/80",
+  secondary: "bg-[var(--emr-state-active)]",
   ghost: "bg-accent",
-  destructive: "bg-destructive/10",
+  destructive: "bg-[var(--emr-status-danger-hover-bg)] text-[var(--emr-status-danger-text)]",
 } as const;
 
 function stateClass(

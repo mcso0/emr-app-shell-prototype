@@ -48,6 +48,21 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await page.keyboard.press("Escape");
   await calendarViewTabs.getByRole("button", { name: "일" }).click();
   await expect(page.getByText("영업시간 09:00-19:00")).toBeVisible();
+  const appointmentCardShadow = await page
+    .getByTestId("appointment-card-appointment-coco-260501")
+    .evaluate((card) => {
+      const shadowProbe = document.createElement("span");
+      shadowProbe.style.boxShadow = "var(--clair-shadow-sm)";
+      document.body.appendChild(shadowProbe);
+
+      const result = {
+        actual: getComputedStyle(card).boxShadow,
+        expected: getComputedStyle(shadowProbe).boxShadow,
+      };
+      shadowProbe.remove();
+      return result;
+    });
+  expect(appointmentCardShadow.actual).toContain(appointmentCardShadow.expected);
   await expect
     .poll(async () => {
       const box = await page.getByTestId("schedule-toolbar").boundingBox();

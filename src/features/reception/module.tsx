@@ -1071,7 +1071,7 @@ function ScheduleAppointmentCard({
   return (
     <div
       className={cn(
-        "relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-2 pl-3 shadow-xs",
+        "relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-2 pl-3 shadow-[var(--clair-shadow-sm)]",
         appointment.status === "checked_in" &&
           "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)]",
         appointment.status === "no_show" &&
@@ -1121,11 +1121,7 @@ function ScheduleAppointmentCard({
         </span>
         <Button
           size="sm"
-          className={cn(
-            "h-7 px-2 text-[12px]",
-            canCheckIn &&
-              "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-          )}
+          className="h-7 px-2 text-[12px]"
           variant={canCheckIn ? "default" : "outline"}
           disabled={!canCheckIn}
           onClick={onCheckIn}
@@ -1162,7 +1158,7 @@ function ScheduleWalkInQueueCard({
 
   return (
     <div
-      className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 pl-3 shadow-xs"
+      className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 pl-3 shadow-[var(--clair-shadow-sm)]"
       data-testid={`walkin-card-${draft.encounter.id}`}
     >
       <span
