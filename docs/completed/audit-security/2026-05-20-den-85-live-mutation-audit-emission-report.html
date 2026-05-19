@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-85 Live Mutation Audit Emission Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-85 / Human Review</p>
+    <h1>Live Mutation Audit Emission Report</h1>
+    <p>DEN-84에서 만든 audit 저장 기반을 실제 주요 mutation 흐름에 연결했다. 이제 워크스페이스 구성원 변경, 접수, 차트, 오더, 수납 상태 변경이 안전한 요약 audit event를 남기는 구조가 됐다.</p>
+
+    <h2>연결한 이벤트</h2>
+    <table>
+      <thead><tr><th>영역</th><th>Mutation</th><th>Audit event</th></tr></thead>
+      <tbody>
+        <tr><td>워크스페이스</td><td>구성원 역할 변경</td><td><code>workspace.membership_roles_changed</code></td></tr>
+        <tr><td>워크스페이스</td><td>구성원 상태 변경</td><td><code>workspace.membership_status_changed</code></td></tr>
+        <tr><td>접수</td><td>현장 접수 생성</td><td><code>reception.walk_in_created</code></td></tr>
+        <tr><td>접수</td><td>예약 체크인</td><td><code>reception.appointment_checked_in</code></td></tr>
+        <tr><td>차트</td><td>SOAP 저장</td><td><code>chart.soap_saved</code></td></tr>
+        <tr><td>차트</td><td>차트 완료/수납 handoff</td><td><code>chart.completed</code></td></tr>
+        <tr><td>오더</td><td>오더 확정/청구 후보 요청</td><td><code>order.confirmed</code>, <code>order.billing_candidate_requested</code></td></tr>
+        <tr><td>수납</td><td>결제 상태 변경</td><td><code>billing.payment_state_changed</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>안전 기준</h2>
+    <p>Audit payload에는 actor, workspace, target id, encounter/patient/guardian id, request id, enum 상태 요약만 남긴다. 전체 SOAP 본문, raw request payload, token, password, service role, stack trace, SQL error, 실제 환자/병원 데이터는 남기지 않는다.</p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/live-audit-mutation-emission.spec.ts --reporter=line</code></li>
+      <li><code>npx playwright test tests/auth.spec.ts tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code></li>
+      <li><code>npx tsc --noEmit</code></li>
+      <li><code>npm run build</code></li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <div class="note">다음 이슈 DEN-86은 이 audit event를 사람이 확인할 수 있는 최소 병원관리 리뷰 화면으로 이어가면 된다.</div>
+  </body>
+</html>

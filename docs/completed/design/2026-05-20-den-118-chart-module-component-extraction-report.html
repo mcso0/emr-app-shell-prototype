@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-118 진료/차트 모듈 분리 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-118 진료/차트 모듈 분리 리포트</h1>
+        <p class="meta">2026-05-20 · Project 01-M1 · Chart Module Boundary</p>
+
+        <h2>요약</h2>
+        <p>
+          진료/차트 화면의 거대 <code>module.tsx</code>에서 순수 UI 조각과 Tiptap SOAP editor를
+          feature-local 컴포넌트로 분리했다. 화면 동작이나 저장/서버 경계는 바꾸지 않고, 차트 화면을
+          다음 이슈에서 더 안전하게 고도화할 수 있도록 읽기 단위를 줄이는 작업이다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>ChartSectionTitle</code>을 <code>src/features/chart/components/chart-section-title.tsx</code>로 분리했다.</li>
+          <li><code>ChartLineTabGroup</code>을 <code>src/features/chart/components/chart-line-tab-group.tsx</code>로 분리했다.</li>
+          <li>Tiptap 기반 <code>SoapRichTextEditor</code>와 toolbar/link popover 로직을 <code>src/features/chart/components/soap-rich-text-editor.tsx</code>로 분리했다.</li>
+          <li><code>src/features/chart/module.tsx</code>는 기존 화면 조립과 상태 연결 중심으로 줄었고, 줄 수는 약 3518줄에서 3229줄로 감소했다.</li>
+        </ul>
+
+        <h2>화면 리뷰 메모</h2>
+        <ul>
+          <li>환자 컨텍스트, 차트 이력 aside, SOAP/진단 grid, 오더 영역, action footer의 의도된 구조를 변경하지 않았다.</li>
+          <li>SOAP 선택 toolbar, bold/italic/list/link popover 동작은 기존 접근성 label과 affordance를 유지했다.</li>
+          <li>오더 테이블 구조와 플로우는 DEN-121/DEN-119 범위로 남겼다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx eslint src/features/chart/components/chart-section-title.tsx src/features/chart/components/chart-line-tab-group.tsx src/features/chart/components/soap-rich-text-editor.tsx</code> 통과</li>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx playwright test tests/chart.spec.ts --grep "chart workspace renders|chart SOAP editor" --reporter=line</code> 통과: 2 passed</li>
+          <li><code>npx playwright test tests/chart.spec.ts --grep "chart diagnosis search recommends" --reporter=line</code> 통과: 1 passed</li>
+          <li>전체 <code>tests/chart.spec.ts</code> 실행은 5개 통과 후 dev server 연결 종료로 나머지가 <code>ERR_CONNECTION_REFUSED</code> 처리되었다. 개별 재실행은 통과했으므로 이번 추출의 직접 회귀로 보지는 않았다.</li>
+        </ul>
+
+        <h2>주의 및 제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, server permission, billing sync, clinical data semantics는 변경하지 않았다.</li>
+          <li>기존 <code>src/features/chart/module.tsx</code>에는 이 작업 전부터 다른 live persistence 관련 변경이 섞여 있었다. 이번 작업은 그 변경을 되돌리거나 확장하지 않았다.</li>
+          <li>Focused ESLint를 <code>module.tsx</code>까지 포함하면 기존 hook lint 오류가 남아 있어 실패한다. 새로 분리한 컴포넌트 lint와 전체 typecheck는 통과했다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: DEN-118 only extracted chart-local UI components. Remaining extraction candidates are
+          <code>AssessmentPanel</code>, <code>AssessmentHistory</code>, <code>ChartOrderTable</code>, and
+          <code>OrderArea</code>. Keep order table UX changes for DEN-121 and unfinished interaction cleanup for DEN-119.
+          Do not expand live persistence/server enforcement scope from this refactor.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

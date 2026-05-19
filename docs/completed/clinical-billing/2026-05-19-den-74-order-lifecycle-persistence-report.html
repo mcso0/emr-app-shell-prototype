@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-74 오더 lifecycle 저장 완료 보고</title>
+  </head>
+  <body>
+    <h1>DEN-74 오더 lifecycle 저장 완료 보고</h1>
+    <p>
+      차트 오더의 요청, 진행, 완료, 취소 같은 최소 workflow 상태를 route-backed 저장 흐름에 연결했다.
+      서버에서 encounter/order 소속과 권한, 상태 전환 규칙을 확인한다.
+    </p>
+    <h2>변경 내용</h2>
+    <ul>
+      <li><code>GET/PATCH /api/workspaces/[workspaceId]/chart/order-lifecycle</code> route 추가.</li>
+      <li>server core/gateway, mock fallback, local-first Supabase RPC migration 추가.</li>
+      <li>invalid transition, permission gap, cross-workspace/order mismatch 테스트 추가.</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/chart-order-lifecycle-persistence-server.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li><code>npm run build</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run security:secrets</code>: 통과</li>
+    </ul>
+    <h2>제외 범위</h2>
+    <ul>
+      <li>remote Supabase, 실데이터, production deploy는 하지 않았다.</li>
+      <li>Device/PACS integration, 검사 결과 persistence, workflow automation은 제외했다.</li>
+    </ul>
+  </body>
+</html>

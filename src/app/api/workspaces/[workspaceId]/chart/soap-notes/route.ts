@@ -10,6 +10,11 @@ import {
   type ChartSoapNoteInput,
   type SupabaseChartSoapNoteRpcClient,
 } from "@/features/chart/server-soap-note-persistence";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -95,6 +100,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseChartSoapNoteRpcClient
         )
       : undefined,
+    auditGateway: client
+      ? createSupabaseLiveAuditAppendGateway(
+          client as unknown as SupabaseLiveAuditAppendRpcClient
+        )
+      : undefined,
+    auditRequestId: getAuditRequestId(request),
   });
 
   return Response.json(result, { status: result.status });

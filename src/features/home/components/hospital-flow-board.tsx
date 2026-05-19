@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRightIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { HomePanelCard } from "@/features/home/components/home-panel-card";
 import type { HospitalFlowItem } from "@/features/home/home.types";
 
 type HospitalFlowBoardProps = {
@@ -12,7 +13,7 @@ type HospitalFlowBoardProps = {
 
 export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
   return (
-    <section className="rounded-[var(--clair-radius-md)] border border-border bg-card p-3">
+    <HomePanelCard className="gap-0 p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold leading-5">병원 전체 흐름</h2>
@@ -68,6 +69,6 @@ export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
           })}
         </div>
       </div>
-    </section>
+    </HomePanelCard>
   );
 }

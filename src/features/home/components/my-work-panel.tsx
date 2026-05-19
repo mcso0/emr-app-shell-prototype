@@ -9,6 +9,7 @@ import {
   type SegmentedControlItem,
 } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
+import { HomePanelCard } from "@/features/home/components/home-panel-card";
 import { TaskListItem } from "@/features/home/components/task-list-item";
 import type {
   HomeDomainFilter,
@@ -84,9 +85,9 @@ export function MyWorkPanel({
   const hasTasks = tasks.length > 0;
 
   return (
-    <section
+    <HomePanelCard
       data-testid="home-my-work-panel"
-      className="rounded-[var(--clair-radius-md)] border border-border bg-card p-4 lg:flex lg:h-full lg:min-h-[420px] lg:flex-col"
+      className="gap-0 p-4 lg:flex lg:h-full lg:min-h-[420px] lg:flex-col"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -137,7 +138,7 @@ export function MyWorkPanel({
           </div>
         )}
       </div>
-    </section>
+    </HomePanelCard>
   );
 }
 

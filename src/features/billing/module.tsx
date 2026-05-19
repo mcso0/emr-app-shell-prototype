@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
@@ -40,6 +40,7 @@ import {
   type BillingGuardianGroup,
   type BillingQueueRow,
 } from "@/features/billing/data";
+import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { useBillingStore, type BillingFilter } from "@/features/billing/store";
 import {
   getPatientDisplayAge,
@@ -69,6 +70,79 @@ const paymentMethodItems: Array<{ label: string; value: PaymentMethod }> = [
 const formatAmount = (amount: number) => `${amount.toLocaleString()}원`;
 const formatShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
+
+type BillingInvoiceCandidateSnapshot = {
+  billingCandidateId: string;
+  description: string;
+  invoiceId: string;
+  lineTotal: number;
+  orderId: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type BillingInvoiceCandidateRouteResponse =
+  | {
+      ok: true;
+      candidates: BillingInvoiceCandidateSnapshot[];
+      status: number;
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+      status: number;
+    };
+
+type BillingInvoiceLineRouteResponse =
+  | {
+      ok: true;
+      enforcedBy: "billing-invoice-line-persistence";
+      invoice: BillingPersistedInvoiceSnapshot;
+      lines: InvoiceLine[];
+      status: number;
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+      status: number;
+    };
+
+type BillingPaymentStatusRouteResponse =
+  | {
+      ok: true;
+      enforcedBy: "billing-payment-status-persistence";
+      invoice: BillingPersistedInvoiceSnapshot;
+      payments: Payment[];
+      status: number;
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+      status: number;
+    };
+
+type BillingPersistedInvoiceSnapshot = {
+  createdAt: string;
+  discountAmount: number;
+  encounterId: string;
+  guardianId?: string;
+  id: string;
+  invoiceNo: string;
+  issuedAt?: string;
+  issuedByUserId?: string;
+  paidAt?: string;
+  paymentState?: "none" | "unpaid" | "paid" | "failed" | "refunded";
+  selectedPaymentMethod?: PaymentMethod;
+  status: InvoiceStatus;
+  subtotalAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  unpaidReason?: string;
+  workspaceId: string;
+};
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   draft: "수납대기",
@@ -126,8 +200,234 @@ const getBillingFlowLabel = (lines: InvoiceLine[]) => {
   return categories.length ? categories.join(" / ") : "청구 항목";
 };
 
+function getDemoActorHeader(session: AuthSession | null) {
+  return session && (!("provider" in session) || session.provider !== "supabase")
+    ? {
+        "x-clair-demo-client-session-id": getDemoClientSessionId(),
+        "x-clair-demo-session-user-id": session.id,
+      }
+    : undefined;
+}
+
+function getDemoClientSessionId() {
+  if (typeof window === "undefined") return "server-render";
+
+  const storageKey = "clair-demo-client-session-id";
+  const existing = window.sessionStorage.getItem(storageKey);
+  if (existing) return existing;
+
+  const next =
+    typeof window.crypto?.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : `demo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  window.sessionStorage.setItem(storageKey, next);
+  return next;
+}
+
+async function loadBillingInvoiceCandidates({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<BillingInvoiceCandidateRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/invoice-candidates?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as BillingInvoiceCandidateRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function loadBillingInvoiceLines({
+  actorHeaders,
+  invoiceId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  invoiceId: string;
+  workspaceId: string;
+}): Promise<BillingInvoiceLineRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/invoice-lines?invoiceId=${encodeURIComponent(invoiceId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as BillingInvoiceLineRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function saveBillingInvoiceLines({
+  actorHeaders,
+  confirmBilling = false,
+  invoiceId,
+  lines,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  confirmBilling?: boolean;
+  invoiceId: string;
+  lines: Array<{ invoiceLineId: string; quantity: number }>;
+  workspaceId: string;
+}): Promise<BillingInvoiceLineRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/invoice-lines`,
+      {
+        body: JSON.stringify({ invoiceId, lines, confirmBilling }),
+        cache: "no-store",
+        headers: {
+          "content-type": "application/json",
+          ...actorHeaders,
+        },
+        method: "PATCH",
+      }
+    );
+    const body = (await response.json()) as BillingInvoiceLineRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function loadBillingPaymentStatus({
+  actorHeaders,
+  invoiceId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  invoiceId: string;
+  workspaceId: string;
+}): Promise<BillingPaymentStatusRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/payment-status?invoiceId=${encodeURIComponent(invoiceId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as BillingPaymentStatusRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function saveBillingPaymentStatus({
+  action,
+  actorHeaders,
+  invoiceId,
+  paymentMethod,
+  unpaidReason,
+  workspaceId,
+}: {
+  action: "select_payment_method" | "mark_unpaid" | "complete_payment";
+  actorHeaders?: Record<string, string>;
+  invoiceId: string;
+  paymentMethod: PaymentMethod;
+  unpaidReason?: string;
+  workspaceId: string;
+}): Promise<BillingPaymentStatusRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/payment-status`,
+      {
+        body: JSON.stringify({ action, invoiceId, paymentMethod, unpaidReason }),
+        cache: "no-store",
+        headers: {
+          "content-type": "application/json",
+          ...actorHeaders,
+        },
+        method: "PATCH",
+      }
+    );
+    const body = (await response.json()) as BillingPaymentStatusRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+const mergeInvoiceCandidateLines = (
+  invoiceLines: InvoiceLine[],
+  candidates: BillingInvoiceCandidateSnapshot[]
+) => {
+  let nextLines = invoiceLines;
+
+  for (const candidate of candidates) {
+    const existingLine = nextLines.find(
+      (line) => line.invoiceId === candidate.invoiceId && line.orderId === candidate.orderId
+    );
+    const candidateLine = {
+      id: existingLine?.id ?? `invoice-line-${candidate.billingCandidateId}`,
+      invoiceId: candidate.invoiceId,
+      serviceItemId: existingLine?.serviceItemId,
+      orderId: candidate.orderId,
+      description: candidate.description,
+      quantity: existingLine?.quantity ?? candidate.quantity,
+      unitPrice: existingLine?.unitPrice ?? candidate.unitPrice,
+      lineTotal: existingLine?.lineTotal ?? candidate.lineTotal,
+    } satisfies InvoiceLine;
+
+    nextLines = existingLine
+      ? nextLines.map((line) => line.id === existingLine.id ? candidateLine : line)
+      : [...nextLines, candidateLine];
+  }
+
+  return nextLines;
+};
+
 function useBillingWorkspaceData() {
   const searchParams = useSearchParams();
+  const { session: authSession } = useAuthClient();
+  const applyInvoiceSnapshot = useBillingStore((state) => state.applyInvoiceSnapshot);
+  const applyPaymentStatusSnapshot = useBillingStore((state) => state.applyPaymentStatusSnapshot);
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const invoices = useBillingStore((state) => state.invoices);
   const payments = useBillingStore((state) => state.payments);
@@ -135,18 +435,117 @@ function useBillingWorkspaceData() {
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
   const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
-  const detail =
+  const [persistedCandidates, setPersistedCandidates] = useState<{
+    candidates: BillingInvoiceCandidateSnapshot[];
+    encounterId?: string;
+  }>({ candidates: [] });
+  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
+  const baseDetail =
     getBillingDetail(effectiveInvoiceId, invoices, invoiceLines, payments) ??
     getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
+  const effectiveInvoiceLines =
+    baseDetail && persistedCandidates.encounterId === baseDetail.encounter.id
+      ? mergeInvoiceCandidateLines(invoiceLines, persistedCandidates.candidates)
+      : invoiceLines;
+  const effectiveInvoices = useMemo(
+    () =>
+      invoices.map((invoice) => {
+        const subtotalAmount = effectiveInvoiceLines
+          .filter((line) => line.invoiceId === invoice.id)
+          .reduce((total, line) => total + line.lineTotal, 0);
+
+        return {
+          ...invoice,
+          subtotalAmount,
+          totalAmount: Math.max(0, subtotalAmount - invoice.discountAmount + invoice.taxAmount),
+        };
+      }),
+    [effectiveInvoiceLines, invoices]
+  );
+  const detail =
+    getBillingDetail(effectiveInvoiceId, effectiveInvoices, effectiveInvoiceLines, payments) ??
+    getBillingDetail("invoice-coco-260501", effectiveInvoices, effectiveInvoiceLines, payments);
+  useEffect(() => {
+    if (!baseDetail) return;
+    const encounterId = baseDetail.encounter.id;
+    const workspaceId = baseDetail.encounter.workspaceId;
+    let cancelled = false;
+
+    async function loadPersistedCandidates() {
+      const result = await loadBillingInvoiceCandidates({
+        actorHeaders,
+        encounterId,
+        workspaceId,
+      });
+
+      if (cancelled || !result.ok) return;
+      setPersistedCandidates({
+        candidates: result.candidates,
+        encounterId,
+      });
+    }
+
+    void loadPersistedCandidates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorHeaders, baseDetail?.encounter.id, baseDetail?.encounter.workspaceId]);
+  useEffect(() => {
+    if (!baseDetail) return;
+    const invoiceId = baseDetail.invoice.id;
+    const workspaceId = baseDetail.invoice.workspaceId;
+    let cancelled = false;
+
+    async function loadPersistedInvoiceLines() {
+      const result = await loadBillingInvoiceLines({
+        actorHeaders,
+        invoiceId,
+        workspaceId,
+      });
+
+      if (cancelled || !result.ok) return;
+      applyInvoiceSnapshot(result.invoice, result.lines);
+    }
+
+    void loadPersistedInvoiceLines();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorHeaders, applyInvoiceSnapshot, baseDetail?.invoice.id, baseDetail?.invoice.workspaceId]);
+  useEffect(() => {
+    if (!baseDetail) return;
+    const invoiceId = baseDetail.invoice.id;
+    const workspaceId = baseDetail.invoice.workspaceId;
+    let cancelled = false;
+
+    async function loadPersistedPaymentStatus() {
+      const result = await loadBillingPaymentStatus({
+        actorHeaders,
+        invoiceId,
+        workspaceId,
+      });
+
+      if (cancelled || !result.ok) return;
+      applyPaymentStatusSnapshot(result.invoice, result.payments);
+    }
+
+    void loadPersistedPaymentStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorHeaders, applyPaymentStatusSnapshot, baseDetail?.invoice.id, baseDetail?.invoice.workspaceId]);
   const groups = useMemo(
-    () => getBillingGuardianGroups(invoices, invoiceLines, payments),
-    [invoiceLines, invoices, payments]
+    () => getBillingGuardianGroups(effectiveInvoices, effectiveInvoiceLines, payments),
+    [effectiveInvoiceLines, effectiveInvoices, payments]
   );
 
   return {
     detail,
     groups,
-    invoices,
+    invoices: effectiveInvoices,
     queryInvoiceId,
     selectedInvoiceId,
   };
@@ -423,10 +822,12 @@ function CombinePanel({
 
 function InvoiceLinesTable({
   lines,
+  persistenceState,
   totalAmount,
   onUpdateQuantity,
 }: {
   lines: InvoiceLine[];
+  persistenceState: "idle" | "saving" | "saved" | "error";
   totalAmount: number;
   onUpdateQuantity: (lineId: string, quantity: number) => void;
 }) {
@@ -442,10 +843,18 @@ function InvoiceLinesTable({
             {flowLabel} 항목이 오늘 수납액 {formatAmount(totalAmount)}으로 묶입니다.
           </div>
         </div>
-        <Badge variant="secondary">{sortedLines.length}</Badge>
+        <Badge variant={persistenceState === "error" ? "destructive" : "secondary"}>
+          {persistenceState === "saving"
+            ? "저장 중"
+            : persistenceState === "saved"
+              ? "저장됨"
+              : persistenceState === "error"
+                ? "저장 실패"
+                : sortedLines.length}
+        </Badge>
       </div>
       <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] text-[var(--emr-status-warning-text)]">
-        실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량만 session-only로 조정합니다.
+        실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과 청구 확정만 저장합니다.
       </div>
       <Table className="table-fixed text-[13px]">
         <TableHeader className="bg-muted/50">
@@ -488,6 +897,9 @@ function InvoiceLinesTable({
 
 export function BillingContent() {
   const { detail, groups, invoices, queryInvoiceId, selectedInvoiceId } = useBillingWorkspaceData();
+  const { session: authSession } = useAuthClient();
+  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
+  const applyInvoiceSnapshot = useBillingStore((state) => state.applyInvoiceSnapshot);
   const combinedInvoiceIds = useBillingStore((state) => state.combinedInvoiceIds);
   const selectedInvoiceIds = useBillingStore((state) => state.selectedInvoiceIds);
   const clearCombinedInvoices = useBillingStore((state) => state.clearCombinedInvoices);
@@ -496,6 +908,7 @@ export function BillingContent() {
   const setFilter = useBillingStore((state) => state.setFilter);
   const toggleInvoiceSelection = useBillingStore((state) => state.toggleInvoiceSelection);
   const updateInvoiceLineQuantity = useBillingStore((state) => state.updateInvoiceLineQuantity);
+  const [linePersistenceState, setLinePersistenceState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
@@ -515,6 +928,28 @@ export function BillingContent() {
     );
   }
 
+  async function handleUpdateInvoiceLineQuantity(lineId: string, quantity: number) {
+    if (!detail) return;
+    const safeQuantity = Math.max(1, Math.round(quantity * 1000) / 1000 || 1);
+    updateInvoiceLineQuantity(lineId, safeQuantity);
+    setLinePersistenceState("saving");
+
+    const result = await saveBillingInvoiceLines({
+      actorHeaders,
+      invoiceId: detail.invoice.id,
+      lines: [{ invoiceLineId: lineId, quantity: safeQuantity }],
+      workspaceId: detail.invoice.workspaceId,
+    });
+
+    if (!result.ok) {
+      setLinePersistenceState("error");
+      return;
+    }
+
+    applyInvoiceSnapshot(result.invoice, result.lines);
+    setLinePersistenceState("saved");
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <ScrollArea className="min-h-0 flex-1">
@@ -531,8 +966,9 @@ export function BillingContent() {
           />
           <InvoiceLinesTable
             lines={detail.invoiceLines}
+            persistenceState={linePersistenceState}
             totalAmount={detail.invoice.totalAmount}
-            onUpdateQuantity={updateInvoiceLineQuantity}
+            onUpdateQuantity={handleUpdateInvoiceLineQuantity}
           />
         </div>
       </ScrollArea>
@@ -620,16 +1056,96 @@ function PaymentStatusNote({
 
 export function BillingRightPanel() {
   const { detail } = useBillingWorkspaceData();
+  const { session: authSession } = useAuthClient();
+  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
+  const applyInvoiceSnapshot = useBillingStore((state) => state.applyInvoiceSnapshot);
+  const applyPaymentStatusSnapshot = useBillingStore((state) => state.applyPaymentStatusSnapshot);
   const paymentMethod = useBillingStore((state) => state.paymentMethod);
-  const issueSelectedInvoice = useBillingStore((state) => state.issueSelectedInvoice);
-  const markSelectedInvoicePaid = useBillingStore((state) => state.markSelectedInvoicePaid);
-  const markSelectedInvoiceUnpaid = useBillingStore((state) => state.markSelectedInvoiceUnpaid);
   const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
+  const [confirmationState, setConfirmationState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [paymentState, setPaymentState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   if (!detail) return null;
 
   const balance = getBillingBalance(detail);
   const statusLabel = getInvoiceStatusLabel(detail.invoice.status);
+  const handleIssueInvoice = async () => {
+    setConfirmationState("saving");
+    const result = await saveBillingInvoiceLines({
+      actorHeaders,
+      confirmBilling: true,
+      invoiceId: detail.invoice.id,
+      lines: detail.invoiceLines.map((line) => ({
+        invoiceLineId: line.id,
+        quantity: line.quantity,
+      })),
+      workspaceId: detail.invoice.workspaceId,
+    });
+
+    if (!result.ok) {
+      setConfirmationState("error");
+      return;
+    }
+
+    applyInvoiceSnapshot(result.invoice, result.lines);
+    setConfirmationState("saved");
+  };
+  const handlePaymentMethodChange = async (nextPaymentMethod: PaymentMethod) => {
+    setPaymentMethod(nextPaymentMethod);
+    setPaymentState("saving");
+    const result = await saveBillingPaymentStatus({
+      action: "select_payment_method",
+      actorHeaders,
+      invoiceId: detail.invoice.id,
+      paymentMethod: nextPaymentMethod,
+      workspaceId: detail.invoice.workspaceId,
+    });
+
+    if (!result.ok) {
+      setPaymentState("error");
+      return;
+    }
+
+    applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setPaymentState("saved");
+  };
+  const handleMarkUnpaid = async () => {
+    setPaymentState("saving");
+    const result = await saveBillingPaymentStatus({
+      action: "mark_unpaid",
+      actorHeaders,
+      invoiceId: detail.invoice.id,
+      paymentMethod,
+      unpaidReason: "owner_will_pay_later",
+      workspaceId: detail.invoice.workspaceId,
+    });
+
+    if (!result.ok) {
+      setPaymentState("error");
+      return;
+    }
+
+    applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setPaymentState("saved");
+  };
+  const handleMarkPaid = async () => {
+    setPaymentState("saving");
+    const result = await saveBillingPaymentStatus({
+      action: "complete_payment",
+      actorHeaders,
+      invoiceId: detail.invoice.id,
+      paymentMethod,
+      workspaceId: detail.invoice.workspaceId,
+    });
+
+    if (!result.ok) {
+      setPaymentState("error");
+      return;
+    }
+
+    applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setPaymentState("saved");
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
@@ -664,7 +1180,7 @@ export function BillingRightPanel() {
           <div className="mt-2">
             <PaymentMethodControl
               paymentMethod={paymentMethod}
-              onPaymentMethodChange={setPaymentMethod}
+              onPaymentMethodChange={handlePaymentMethodChange}
             />
           </div>
 
@@ -676,12 +1192,43 @@ export function BillingRightPanel() {
               payments={detail.payments}
             />
           </div>
+          {confirmationState === "error" ? (
+            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+              청구 확정 저장에 실패했습니다.
+            </div>
+          ) : null}
+          {paymentState === "error" ? (
+            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+              수납 상태 저장에 실패했습니다.
+            </div>
+          ) : null}
         </div>
       </ScrollArea>
       <div className="grid shrink-0 grid-cols-2 gap-2 border-t p-4">
-        <Button size="sm" variant="outline" onClick={markSelectedInvoiceUnpaid}>미납 처리</Button>
-        <Button size="sm" variant="outline" onClick={issueSelectedInvoice}>청구 확정</Button>
-        <Button className="col-span-2" size="sm" onClick={markSelectedInvoicePaid}>수납 완료</Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={paymentState === "saving"}
+          onClick={handleMarkUnpaid}
+        >
+          미납 처리
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={confirmationState === "saving"}
+          onClick={handleIssueInvoice}
+        >
+          {confirmationState === "saving" ? "확정 중" : confirmationState === "saved" ? "확정됨" : "청구 확정"}
+        </Button>
+        <Button
+          className="col-span-2"
+          size="sm"
+          disabled={paymentState === "saving"}
+          onClick={handleMarkPaid}
+        >
+          {paymentState === "saving" ? "저장 중" : "수납 완료"}
+        </Button>
       </div>
     </div>
   );

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-121 진료/차트 오더 테이블 UX 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-121 진료/차트 오더 테이블 UX 리포트</h1>
+        <p class="meta">2026-05-20 · Project 01-M2 · Table & Flow Hardening</p>
+
+        <h2>요약</h2>
+        <p>
+          진료/차트 오더 테이블의 읽기성과 밀도를 다듬었다. 기존 shadcn <code>Table</code>과
+          EMR checkbox primitive를 유지하면서, 좁은 화면에서 긴 오더명과 청구서명이 덜 흔들리고
+          선택/변경/빈 상태가 더 명확하게 보이도록 정리했다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li>테이블 wrapper에 EMR radius/border를 적용해 가로 스크롤 경계를 명확히 했다.</li>
+          <li>header를 sticky 처리하고 column width를 재조정해 Order명, 청구서명, 금액 열의 스캔성을 높였다.</li>
+          <li>기존 <code>Checkbox</code> 대신 <code>EmrTableCheckbox</code>를 사용해 shared EMR table selection 표현과 맞췄다.</li>
+          <li>선택 row는 <code>data-state=selected</code>, 변경 row는 <code>data-dirty=true</code>로 상태 surface를 분리했다.</li>
+          <li>단가/청구금액/수량 입력은 right align과 tabular number를 적용해 숫자 비교가 쉬워졌다.</li>
+          <li>긴 그룹명, 오더명, 지시문, 담당자명에는 truncate/title을 적용해 dense table에서 텍스트 충돌을 줄였다.</li>
+          <li>빈 상태는 제목과 설명을 분리해 현재 필터에 표시할 오더가 없다는 맥락을 더 명확히 했다.</li>
+        </ul>
+
+        <h2>리뷰 메모</h2>
+        <ul>
+          <li>오더 계산, draft 저장, row 삭제, 선택 합계, Order 청구/확정 confirmation 의미는 변경하지 않았다.</li>
+          <li>정렬 UI는 구현하지 않았다. 아직 실제 sort state가 없기 때문에 가짜 sort affordance를 추가하지 않는 쪽으로 남겼다.</li>
+          <li>billing tab의 실제 청구 후보 연결은 후속 범위이며, 이번 이슈에서는 empty state만 더 명확히 했다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/chart/components/chart-section-title.tsx src/features/chart/components/chart-line-tab-group.tsx src/features/chart/components/soap-rich-text-editor.tsx</code> 통과</li>
+          <li><code>npx playwright test tests/chart.spec.ts --grep "chart order checkboxes|chart order table edits" --reporter=line</code> 통과: 2 passed</li>
+          <li><code>npm run docs:check</code>는 리포트 추가 후 실행 예정이다.</li>
+        </ul>
+
+        <h2>주의 및 제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, server permission, billing sync, order calculation은 변경하지 않았다.</li>
+          <li><code>npx eslint src/features/chart/module.tsx</code>는 기존 hook lint 오류로 실패한다. 이번 테이블 UX 변경이 새로 추가한 오류는 아니며, 해당 정리는 별도 live persistence/hook cleanup 범위로 분리하는 편이 안전하다.</li>
+          <li>전체 <code>tests/chart.spec.ts</code>는 앞선 DEN-118 검증에서 5개 통과 후 dev server 연결 종료로 중단되었다. DEN-121의 핵심 order table 회귀는 focused Playwright로 통과했다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: DEN-121 kept the existing shadcn Table primitive and reused <code>EmrTableCheckbox</code>.
+          Sorting remains intentionally deferred because no sort state exists yet. Future reusable table work should
+          compare this dense chart table with <code>src/components/emr/emr-data-table.tsx</code>, but avoid replacing
+          the chart table architecture inside this issue. Keep unfinished row action/disabled flow cleanup for DEN-119.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

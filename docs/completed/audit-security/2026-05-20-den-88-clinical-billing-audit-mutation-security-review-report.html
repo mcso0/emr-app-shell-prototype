@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-88 Clinical Billing Audit Mutation Security Review Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-88 / Human Review</p>
+    <h1>Clinical Billing Audit Mutation Security Review Report</h1>
+    <p>차트, 오더, 수납, 감사 로그 경계를 보안 관점에서 점검했다. 코드 수정 없이 source review와 focused regression으로 확인했다.</p>
+
+    <h2>대표 판단 요약</h2>
+    <table>
+      <thead><tr><th>분류</th><th>결론</th></tr></thead>
+      <tbody>
+        <tr><td>High</td><td>새로운 High severity route bug는 발견하지 못했다.</td></tr>
+        <tr><td>Medium</td><td>DEN-83 audit matrix 전체 기준으로는 일부 mutation audit emission이 아직 빠져 있다.</td></tr>
+        <tr><td>Medium</td><td>remote/live 전 clinical/billing domain RLS local replay와 advisor review는 계속 필요하다.</td></tr>
+        <tr><td>Low</td><td>denial UX 문구와 fallback 오해 가능성은 DEN-90 QA에서 추가 확인하면 된다.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>확인한 방어선</h2>
+    <ul>
+      <li>chart/order/billing mutation은 active workspace membership과 domain permission을 확인한다.</li>
+      <li>encounter와 invoice는 workspace ownership을 확인한다.</li>
+      <li>billing amount는 client 제출값이 아니라 server-owned unit price와 quantity로 재계산한다.</li>
+      <li>audit payload는 SOAP 전문, raw payload, secret, stack trace, SQL error를 저장하지 않는 방향으로 제한되어 있다.</li>
+    </ul>
+
+    <h2>후속 후보</h2>
+    <ul>
+      <li><code>diagnosis.changed</code>, <code>order.draft_changed</code>, <code>order.status_changed</code> audit emission 추가</li>
+      <li><code>billing.invoice_candidate_generated</code>, <code>billing.invoice_line_changed</code>, <code>billing.invoice_issued</code> audit emission 추가</li>
+      <li>invoice line edit와 billing confirmation audit fail-closed regression 추가</li>
+    </ul>
+
+    <h2>문서</h2>
+    <p>상세 리뷰: <code>docs/engineering/auth-security/auth-login/clinical-billing-audit-mutation-security-review.md</code></p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test ... --reporter=line</code> focused security regression: 43 passed</li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <div class="note">DEN-88은 code modification 없이 Human Review로 넘긴다. 다음 Project 05 작업은 DEN-89 full live outpatient workflow QA다.</div>
+  </body>
+</html>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { HomePanelCard } from "@/features/home/components/home-panel-card";
 import type { HomePriority, HomeWidget } from "@/features/home/home.types";
 
 type HomeWidgetCardProps = {
@@ -21,7 +22,7 @@ const itemPriorityTone: Record<HomePriority, string> = {
 
 export function HomeWidgetCard({ widget }: HomeWidgetCardProps) {
   return (
-    <section className="min-h-[188px] rounded-[var(--clair-radius-md)] border border-border bg-card p-3">
+    <HomePanelCard className="min-h-[188px] gap-0 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-[14px] font-semibold leading-5">{widget.title}</h3>
@@ -97,6 +98,6 @@ export function HomeWidgetCard({ widget }: HomeWidgetCardProps) {
           </Link>
         </div>
       ) : null}
-    </section>
+    </HomePanelCard>
   );
 }

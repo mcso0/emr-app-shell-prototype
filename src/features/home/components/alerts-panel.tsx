@@ -5,6 +5,7 @@ import { BellIcon, InfoIcon, WarningIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { HomePanelCard } from "@/features/home/components/home-panel-card";
 import type { HomeAlert } from "@/features/home/home.types";
 
 type AlertsPanelProps = {
@@ -25,7 +26,7 @@ const groupTone: Record<HomeAlert["severity"], string> = {
 
 export function AlertsPanel({ alerts }: AlertsPanelProps) {
   return (
-    <aside className="rounded-[var(--clair-radius-md)] border border-border bg-card p-3">
+    <HomePanelCard className="gap-0 p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold leading-5">알림/예외</h2>
@@ -80,6 +81,6 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
           );
         })}
       </div>
-    </aside>
+    </HomePanelCard>
   );
 }

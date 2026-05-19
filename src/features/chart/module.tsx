@@ -13,12 +13,6 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { EditorContent, useEditor, type Editor } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
-import Link from "@tiptap/extension-link";
-import Placeholder from "@tiptap/extension-placeholder";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
 import {
   CdsActionsRotateCcwIcon,
   CdsActionsSaveIcon,
@@ -28,12 +22,6 @@ import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import {
-  CdsContentBoldIcon,
-  CdsContentItalicIcon,
-  CdsContentListIcon,
-  CdsContentLink2Icon,
-} from "@/components/cds-icons/content-and-editor";
 import {
   CdsNavigationChevronsLeftIcon,
   CdsNavigationChevronsRightIcon,
@@ -56,9 +44,9 @@ import {
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
+import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -89,6 +77,9 @@ import {
   type ChartOrderGroup,
 } from "@/features/chart/data";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
+import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
+import { ChartSectionTitle } from "@/features/chart/components/chart-section-title";
+import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
 import {
   getPatientDisplayAge,
@@ -145,6 +136,83 @@ type ChartCompletionRouteResponse =
       denialReason?: string;
       error?: string;
     };
+type ChartDiagnosisRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      diagnoses: Diagnosis[];
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
+type ChartOrderDraftSnapshot = {
+  billingDisplayName: string;
+  encounterId: string;
+  lineTotalSnapshot: number;
+  orderId: string;
+  quantity: number;
+  unitPriceSnapshot: number;
+  updatedAt: string;
+};
+type ChartOrderDraftRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      orderDrafts: ChartOrderDraftSnapshot[];
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
+type ChartOrderActionKind = "bill" | "confirm";
+type ChartOrderActionSnapshot = {
+  billingCandidateId?: string | null;
+  billingCandidateStatus: string;
+  confirmedAt?: string | null;
+  confirmedByUserId?: string | null;
+  encounterId: string;
+  orderConfirmationStatus: string;
+  orderId: string;
+  status: EmrOrderStatus;
+  updatedAt: string;
+};
+type ChartOrderActionRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      orderActions: ChartOrderActionSnapshot[];
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
+type ChartOrderLifecycleSnapshot = {
+  cancellationReason?: string | null;
+  encounterId: string;
+  orderId: string;
+  status: EmrOrderStatus;
+  updatedAt: string;
+  updatedByUserId?: string | null;
+};
+type ChartOrderLifecycleRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      lifecycles: ChartOrderLifecycleSnapshot[];
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
 
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
@@ -167,6 +235,7 @@ const orderTypeMeta: Record<EmrOrderType, { handoff: string; label: string }> = 
 
 const orderStatusLabel: Record<EmrOrderStatus, string> = {
   cancelled: "취소",
+  confirmed: "확정",
   completed: "완료",
   in_progress: "진행중",
   re_requested: "재요청",
@@ -231,6 +300,7 @@ const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
   if (/(위장|구토|식욕|설사|소화)/.test(text)) return "소화기";
   if (/(피부|가려움|발진|재진)/.test(text)) return "피부";
   if (/(예방|접종|건강검진)/.test(text)) return "예방";
+  if (/(탈수|전신|수액)/.test(text)) return "전신";
   if (/(검사|혈액|염증)/.test(text)) return "검사";
 
   return "기타";
@@ -646,21 +716,6 @@ const escapeHtml = (value: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
-function ChartSectionTitle({ subtitle, title }: { subtitle?: string; title: string }) {
-  return (
-    <div className="flex min-w-0 items-baseline gap-2.5">
-      <h2 className="shrink-0 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] text-foreground">
-        {title}
-      </h2>
-      {subtitle ? (
-        <span className="min-w-0 truncate text-[14px] font-medium text-muted-foreground">
-          {subtitle}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
 function buildSoapEditorFields(soapNote?: SoapNote, useDefaultTemplate = true): SoapEditorField[] {
   return soapTemplateRows.map(({ label, valueKey }) => ({
     id: valueKey,
@@ -841,6 +896,257 @@ async function loadChartCompletion({
   }
 }
 
+async function loadChartDiagnoses({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartDiagnosisRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/diagnoses?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as ChartDiagnosisRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function saveChartDiagnosesRoute({
+  actorHeaders,
+  diagnoses,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  diagnoses: EditableDiagnosis[];
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartDiagnosisRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/diagnoses`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({
+          encounterId,
+          diagnoses: diagnoses.map((diagnosis, index) => ({
+            id: diagnosis.id,
+            diagnosisCatalogId: diagnosis.diagnosisCatalogId,
+            diagnosisText: diagnosis.diagnosisText,
+            diagnosisType: diagnosis.diagnosisType,
+            isPrimary: diagnosis.isPrimary,
+            sortOrder: index,
+          })),
+        }),
+      }
+    );
+    const body = (await response.json()) as ChartDiagnosisRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function loadChartOrderDraft({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartOrderDraftRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-drafts?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as ChartOrderDraftRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function saveChartOrderDraftRoute({
+  actorHeaders,
+  encounterId,
+  rows,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  rows: ChartOrderDraftRow[];
+  workspaceId: string;
+}): Promise<ChartOrderDraftRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-drafts`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({
+          encounterId,
+          orders: rows.map((row) => ({
+            orderId: row.order.id,
+            billingDisplayName: row.billingName,
+            quantity: getDraftQuantity(row.quantityInput) ?? 0,
+          })),
+        }),
+      }
+    );
+    const body = (await response.json()) as ChartOrderDraftRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function loadChartOrderActions({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartOrderActionRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-actions?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as ChartOrderActionRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function loadChartOrderLifecycles({
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ChartOrderLifecycleRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-lifecycle?encounterId=${encodeURIComponent(encounterId)}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      }
+    );
+    const body = (await response.json()) as ChartOrderLifecycleRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function saveChartOrderActionRoute({
+  action,
+  actorHeaders,
+  encounterId,
+  orderIds,
+  workspaceId,
+}: {
+  action: ChartOrderActionKind;
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  orderIds: string[];
+  workspaceId: string;
+}): Promise<ChartOrderActionRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-actions`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({
+          action,
+          encounterId,
+          orderIds,
+        }),
+      }
+    );
+    const body = (await response.json()) as ChartOrderActionRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
 async function completeChartRoute({
   actorHeaders,
   encounterId,
@@ -873,15 +1179,6 @@ async function completeChartRoute({
   } catch {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
-}
-
-function normalizeEditorLinkHref(value: string) {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) return "";
-  if (/^(https?:|mailto:|tel:)/i.test(trimmedValue)) return trimmedValue;
-
-  return `https://${trimmedValue}`;
 }
 
 function SoapPanel({
@@ -1351,268 +1648,16 @@ function SoapPanel({
   );
 }
 
-function ChartLineTabGroup<TValue extends string>({
-  "aria-label": ariaLabel,
-  items,
-  onValueChange,
-  value,
-}: {
-  items: Array<{ value: TValue; label: ReactNode; count?: number }>;
-  "aria-label": string;
-  onValueChange: (value: TValue) => void;
-  value: TValue;
-}) {
-  return (
-    <div className="flex min-w-0 items-stretch gap-2.5" role="tablist" aria-label={ariaLabel}>
-      {items.map((item) => (
-        <button
-          key={item.value}
-          type="button"
-          role="tab"
-          aria-selected={value === item.value}
-          className={cn(
-            "group relative inline-flex items-center whitespace-nowrap px-1 py-1 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] tracking-normal text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-            value === item.value && "text-foreground"
-          )}
-          onClick={() => onValueChange(item.value)}
-        >
-          <span>{item.label}</span>
-          {typeof item.count === "number" ? <span className="ml-1 font-semibold tabular-nums">{item.count}</span> : null}
-          <span
-            aria-hidden="true"
-            className={cn(
-              "absolute inset-x-0 bottom-[-1px] h-0.5 bg-foreground opacity-0 transition-opacity",
-              value === item.value && "opacity-100"
-            )}
-          />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const editorToolbarButtonClassName =
-  "text-muted-foreground hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground";
-
-function EditorToolbarButton({
-  active,
-  children,
-  disabled,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  disabled?: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      aria-label={label}
-      aria-pressed={active}
-      className={editorToolbarButtonClassName}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </Button>
-  );
-}
-
-function SoapRichTextEditor({
-  initialContent,
-  label,
-  onContentChange,
-}: {
-  initialContent: string;
-  label: string;
-  onContentChange: (content: string) => void;
-}) {
-  const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [linkValue, setLinkValue] = useState("");
-  const editorAriaLabel = label === "기본 SOAP" ? "기본 SOAP 기록" : `${label} SOAP 기록`;
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-[var(--emr-text-link)] underline underline-offset-2",
-        },
-      }),
-      Placeholder.configure({
-        placeholder: "SOAP 내용을 자유롭게 입력하세요.",
-      }),
-    ],
-    content: initialContent,
-    editorProps: {
-      attributes: {
-        "aria-label": editorAriaLabel,
-        class:
-          "min-h-[180px] px-4 py-3 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--emr-text-placeholder)]",
-      },
-    },
-    onCreate: ({ editor: currentEditor }) => {
-      setActiveEditor(currentEditor);
-    },
-    onUpdate: ({ editor: currentEditor }) => {
-      onContentChange(currentEditor.getHTML());
-    },
-    immediatelyRender: false,
-  });
-
-  const runEditorCommand = (command: (editor: Editor) => void) => {
-    if (!activeEditor) return;
-
-    command(activeEditor);
-  };
-  const openLinkEditor = () => {
-    if (!activeEditor) return;
-
-    setLinkValue((activeEditor.getAttributes("link").href as string | undefined) ?? "");
-    setLinkOpen(true);
-  };
-  const applyLink = () => {
-    if (!activeEditor) return;
-
-    const href = normalizeEditorLinkHref(linkValue);
-
-    if (!href) {
-      runEditorCommand((currentEditor) => currentEditor.chain().focus().unsetLink().run());
-    } else {
-      runEditorCommand((currentEditor) =>
-        currentEditor.chain().focus().extendMarkRange("link").setLink({ href }).run()
-      );
-    }
-
-    setLinkOpen(false);
-  };
-  const removeLink = () => {
-    runEditorCommand((currentEditor) => currentEditor.chain().focus().unsetLink().run());
-    setLinkValue("");
-    setLinkOpen(false);
-  };
-  return (
-    <>
-      {editor ? (
-        <BubbleMenu
-          editor={editor}
-          updateDelay={0}
-          appendTo={() => document.body}
-          options={{
-            placement: "top",
-            offset: 10,
-            shift: { padding: 8 },
-          }}
-          shouldShow={({ editor: currentEditor, state }) =>
-            linkOpen || (currentEditor.isEditable && !state.selection.empty)
-          }
-          role="toolbar"
-          aria-label={`${label} 선택 서식 도구`}
-          className="z-50 flex items-center gap-1 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-2 py-1.5 shadow-lg"
-        >
-            <EditorToolbarButton
-              active={activeEditor?.isActive("bold") ?? false}
-              disabled={!activeEditor}
-              label={`${label} 굵게`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBold().run())}
-            >
-              <CdsContentBoldIcon className="size-4" />
-            </EditorToolbarButton>
-            <EditorToolbarButton
-              active={activeEditor?.isActive("italic") ?? false}
-              disabled={!activeEditor}
-              label={`${label} 기울임`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleItalic().run())}
-            >
-              <CdsContentItalicIcon className="size-4" />
-            </EditorToolbarButton>
-            <EditorToolbarButton
-              active={activeEditor?.isActive("underline") ?? false}
-              disabled={!activeEditor}
-              label={`${label} 밑줄`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleUnderline().run())}
-            >
-              U
-            </EditorToolbarButton>
-            <EditorToolbarButton
-              active={activeEditor?.isActive("bulletList") ?? false}
-              disabled={!activeEditor}
-              label={`${label} 글머리 목록`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBulletList().run())}
-            >
-              <CdsContentListIcon className="size-4" />
-            </EditorToolbarButton>
-            <EditorToolbarButton
-              active={activeEditor?.isActive("orderedList") ?? false}
-              disabled={!activeEditor}
-              label={`${label} 번호 목록`}
-              onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleOrderedList().run())}
-            >
-              1.
-            </EditorToolbarButton>
-            <Popover open={linkOpen} onOpenChange={setLinkOpen}>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`${label} 링크`}
-                    aria-pressed={activeEditor?.isActive("link") ?? false}
-                    className={editorToolbarButtonClassName}
-                    disabled={!activeEditor}
-                    onClick={openLinkEditor}
-                  >
-                    <CdsContentLink2Icon className="size-4" />
-                  </Button>
-                }
-              />
-              <PopoverContent align="start" className="w-72 gap-2 p-3" initialFocus={false}>
-                <div className="grid gap-1.5">
-                  <div className="text-[12px] font-semibold text-foreground">링크 추가</div>
-                  <Input
-                    aria-label="링크 URL"
-                    value={linkValue}
-                    placeholder="https://example.com"
-                    onChange={(event) => setLinkValue(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        applyLink();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex justify-end gap-1.5">
-                  <Button type="button" variant="ghost" size="xs" onClick={removeLink}>
-                    해제
-                  </Button>
-                  <Button type="button" size="xs" onClick={applyLink}>
-                    적용
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-        </BubbleMenu>
-      ) : null}
-      <EditorContent editor={editor} className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)]" />
-    </>
-  );
-}
-
 function AssessmentPanel({
   diagnosisRows,
+  onDiagnosisRowsChange,
+  saveStatusText,
   setDiagnosisRows,
   soapNote,
 }: {
   diagnosisRows: EditableDiagnosis[];
+  onDiagnosisRowsChange: (rows: EditableDiagnosis[]) => void;
+  saveStatusText: string;
   setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>>;
   soapNote?: SoapNote;
 }) {
@@ -1628,27 +1673,30 @@ function AssessmentPanel({
     normalizedSearchQuery.length > 0 &&
     !diagnosisCatalog.some((item) => normalizeDiagnosisQuery(item.name) === normalizedSearchQuery);
   const resultModeLabel = normalizedSearchQuery ? "검색 결과" : "SOAP/주호소 기반 추천";
+  const commitDiagnosisRows = (nextRows: EditableDiagnosis[]) => {
+    setDiagnosisRows(nextRows);
+    onDiagnosisRowsChange(nextRows);
+  };
 
   const addDiagnosisFromCatalog = (item: DiagnosisCatalogItem) => {
-    setDiagnosisRows((currentRows) => {
-      if (currentRows.some((row) => row.diagnosisText === item.name)) return currentRows;
+    if (diagnosisRows.some((row) => row.diagnosisText === item.name)) return;
 
-      return [
-        ...currentRows,
-        {
-          catalogMatched: true,
-          createdAt: new Date().toISOString(),
-          createdByUserId: "user-vet-suji",
-          diagnosisCatalogId: item.id,
-          diagnosisText: item.name,
-          diagnosisType: item.defaultType,
-          encounterId: soapNote?.encounterId ?? "session-only-encounter",
-          id: `diagnosis-session-${item.id}`,
-          isPrimary: currentRows.length === 0,
-          systemLabel: item.systemLabel,
-        },
-      ];
-    });
+    commitDiagnosisRows([
+      ...diagnosisRows,
+      {
+        catalogMatched: true,
+        createdAt: new Date().toISOString(),
+        createdByUserId: "user-vet-suji",
+        diagnosisCatalogId: item.id,
+        diagnosisText: item.name,
+        diagnosisType: item.defaultType,
+        encounterId: soapNote?.encounterId ?? "session-only-encounter",
+        id: `diagnosis-session-${item.id}`,
+        isPrimary: diagnosisRows.length === 0,
+        sortOrder: diagnosisRows.length,
+        systemLabel: item.systemLabel,
+      },
+    ]);
     setSearchQuery("");
     setSearchOpen(false);
   };
@@ -1657,40 +1705,39 @@ function AssessmentPanel({
     const diagnosisText = searchQuery.trim();
     if (!diagnosisText) return;
 
-    setDiagnosisRows((currentRows) => {
-      if (currentRows.some((row) => normalizeDiagnosisQuery(row.diagnosisText) === normalizedSearchQuery)) {
-        return currentRows;
-      }
+    if (diagnosisRows.some((row) => normalizeDiagnosisQuery(row.diagnosisText) === normalizedSearchQuery)) {
+      return;
+    }
 
-      return [
-        ...currentRows,
-        {
-          catalogMatched: false,
-          createdAt: new Date().toISOString(),
-          createdByUserId: "user-vet-suji",
+    commitDiagnosisRows([
+      ...diagnosisRows,
+      {
+        catalogMatched: false,
+        createdAt: new Date().toISOString(),
+        createdByUserId: "user-vet-suji",
+        diagnosisText,
+        diagnosisType: "suspected",
+        encounterId: soapNote?.encounterId ?? "session-only-encounter",
+        id: `diagnosis-session-free-${normalizedSearchQuery.replace(/\s+/g, "-")}`,
+        isPrimary: diagnosisRows.length === 0,
+        sortOrder: diagnosisRows.length,
+        systemLabel: getDiagnosisSystemLabel({
+          createdAt: "",
+          createdByUserId: "",
           diagnosisText,
           diagnosisType: "suspected",
-          encounterId: soapNote?.encounterId ?? "session-only-encounter",
-          id: `diagnosis-session-free-${normalizedSearchQuery.replace(/\s+/g, "-")}`,
-          isPrimary: currentRows.length === 0,
-          systemLabel: getDiagnosisSystemLabel({
-            createdAt: "",
-            createdByUserId: "",
-            diagnosisText,
-            diagnosisType: "suspected",
-            encounterId: "",
-            id: "",
-          }),
-        },
-      ];
-    });
+          encounterId: "",
+          id: "",
+        }),
+      },
+    ]);
     setSearchQuery("");
     setSearchOpen(false);
   };
 
   const toggleConfirmedDiagnosis = (diagnosisId: string) => {
-    setDiagnosisRows((currentRows) =>
-      currentRows.map((row) =>
+    commitDiagnosisRows(
+      diagnosisRows.map((row) =>
         row.id === diagnosisId
           ? { ...row, diagnosisType: row.diagnosisType === "confirmed" ? "suspected" : "confirmed" }
           : row
@@ -1699,13 +1746,13 @@ function AssessmentPanel({
   };
 
   const togglePrimaryDiagnosis = (diagnosisId: string) => {
-    setDiagnosisRows((currentRows) =>
-      currentRows.map((row) => (row.id === diagnosisId ? { ...row, isPrimary: !row.isPrimary } : row))
+    commitDiagnosisRows(
+      diagnosisRows.map((row) => (row.id === diagnosisId ? { ...row, isPrimary: !row.isPrimary } : row))
     );
   };
 
   const removeDiagnosis = (diagnosisId: string) => {
-    setDiagnosisRows((currentRows) => currentRows.filter((row) => row.id !== diagnosisId));
+    commitDiagnosisRows(diagnosisRows.filter((row) => row.id !== diagnosisId));
   };
 
   return (
@@ -1714,7 +1761,12 @@ function AssessmentPanel({
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"
     >
       <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
-        <ChartSectionTitle title="진단명" />
+        <span className="flex min-w-0 items-center gap-2">
+          <ChartSectionTitle title="진단명" />
+          <span data-testid="chart-diagnosis-save-status" className="text-[12px] font-medium text-muted-foreground">
+            {saveStatusText}
+          </span>
+        </span>
         <Button
           variant="outline"
           size="sm"
@@ -1983,6 +2035,73 @@ const getChartOrderDraftRows = (orderGroups: ChartOrderGroup[]): ChartOrderDraft
     })
   );
 
+const applyPersistedOrderDrafts = (
+  rows: ChartOrderDraftRow[],
+  snapshots: ChartOrderDraftSnapshot[]
+): ChartOrderDraftRow[] => {
+  const snapshotByOrderId = new Map(snapshots.map((snapshot) => [snapshot.orderId, snapshot]));
+
+  return rows
+    .filter((row) => snapshotByOrderId.has(row.order.id))
+    .map((row) => {
+      const snapshot = snapshotByOrderId.get(row.order.id);
+      if (!snapshot) return row;
+
+      const quantityInput = String(snapshot.quantity);
+
+      return {
+        ...row,
+        billingName: snapshot.billingDisplayName,
+        committedBillingName: snapshot.billingDisplayName,
+        committedQuantityInput: quantityInput,
+        quantityInput,
+        unitPrice: snapshot.unitPriceSnapshot,
+      };
+    });
+};
+
+const applyPersistedOrderActions = (
+  rows: ChartOrderDraftRow[],
+  snapshots: ChartOrderActionSnapshot[]
+): ChartOrderDraftRow[] => {
+  const snapshotByOrderId = new Map(snapshots.map((snapshot) => [snapshot.orderId, snapshot]));
+
+  return rows.map((row) => {
+    const snapshot = snapshotByOrderId.get(row.order.id);
+    if (!snapshot) return row;
+
+    return {
+      ...row,
+      order: {
+        ...row.order,
+        status: snapshot.status,
+        updatedAt: snapshot.updatedAt,
+      },
+    };
+  });
+};
+
+const applyPersistedOrderLifecycles = (
+  rows: ChartOrderDraftRow[],
+  snapshots: ChartOrderLifecycleSnapshot[]
+): ChartOrderDraftRow[] => {
+  const snapshotByOrderId = new Map(snapshots.map((snapshot) => [snapshot.orderId, snapshot]));
+
+  return rows.map((row) => {
+    const snapshot = snapshotByOrderId.get(row.order.id);
+    if (!snapshot) return row;
+
+    return {
+      ...row,
+      order: {
+        ...row.order,
+        status: snapshot.status,
+        updatedAt: snapshot.updatedAt,
+      },
+    };
+  });
+};
+
 const getDraftQuantity = (quantityInput: string) => {
   const quantity = Number(quantityInput);
 
@@ -2027,12 +2146,12 @@ function ChartOrderTable({
   someVisibleSelected: boolean;
 }) {
   return (
-    <div className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <Table className="min-w-[1180px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
-        <TableHeader className="bg-[var(--emr-surface-muted)]">
+    <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+      <Table className="min-w-[1160px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
+        <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
             <TableHead className="w-10 px-3 text-muted-foreground">
-              <Checkbox
+              <EmrTableCheckbox
                 aria-label="오더 전체 선택"
                 checked={allVisibleSelected}
                 indeterminate={someVisibleSelected}
@@ -2040,16 +2159,16 @@ function ChartOrderTable({
                 onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
               />
             </TableHead>
-            <TableHead className="w-[140px] text-[12px] text-muted-foreground">그룹</TableHead>
-            <TableHead className="w-[68px] text-[12px] text-muted-foreground">분류</TableHead>
-            <TableHead className="w-[72px] text-[12px] text-muted-foreground">상태</TableHead>
-            <TableHead className="w-[240px] text-[12px] text-muted-foreground">Order명</TableHead>
+            <TableHead className="w-[132px] text-[12px] text-muted-foreground">그룹</TableHead>
+            <TableHead className="w-[72px] text-[12px] text-muted-foreground">분류</TableHead>
+            <TableHead className="w-[76px] text-[12px] text-muted-foreground">상태</TableHead>
+            <TableHead className="w-[260px] text-[12px] text-muted-foreground">Order명</TableHead>
             <TableHead className="w-[220px] text-[12px] text-muted-foreground">청구서명</TableHead>
-            <TableHead className="w-16 text-[12px] text-muted-foreground">수량</TableHead>
-            <TableHead className="w-20 text-[12px] text-muted-foreground">단가</TableHead>
-            <TableHead className="w-[88px] text-[12px] text-muted-foreground">청구금액</TableHead>
-            <TableHead className="w-20 text-[12px] text-muted-foreground">수의사</TableHead>
-            <TableHead className="w-[132px] text-right text-[12px] text-muted-foreground">작업</TableHead>
+            <TableHead className="w-[68px] text-right text-[12px] text-muted-foreground">수량</TableHead>
+            <TableHead className="w-[84px] text-right text-[12px] text-muted-foreground">단가</TableHead>
+            <TableHead className="w-[96px] text-right text-[12px] text-muted-foreground">청구금액</TableHead>
+            <TableHead className="w-[76px] text-[12px] text-muted-foreground">수의사</TableHead>
+            <TableHead className="w-[116px] text-right text-[12px] text-muted-foreground">작업</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -2058,32 +2177,49 @@ function ChartOrderTable({
             const dirty = isChartOrderDraftRowDirty(row);
             const invalidQuantity = invalidOrderIds.has(order.id);
             const lineTotal = getDraftLineTotal(row);
+            const selected = selectedOrderIds.has(order.id);
 
             return (
               <TableRow
                 key={order.id}
                 data-dirty={dirty ? "true" : undefined}
-                className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40"
+                data-state={selected ? "selected" : undefined}
+                className="h-11 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40 data-[state=selected]:bg-[var(--emr-state-selected)]"
               >
                 <TableCell className="px-3">
-                  <Checkbox
+                  <EmrTableCheckbox
                     aria-label={`${order.displayName} 선택`}
-                    checked={selectedOrderIds.has(order.id)}
+                    checked={selected}
                     onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
                   />
                 </TableCell>
-                <TableCell className="truncate text-[12px] font-medium text-muted-foreground">{groupTitle}</TableCell>
-                <TableCell><Badge variant="outline">{orderTypeMeta[order.orderType].label}</Badge></TableCell>
-                <TableCell><EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" /></TableCell>
-                <TableCell className="min-w-0">
-                  <div className="truncate font-medium">{order.displayName}</div>
-                  <div className="truncate text-[12px] text-muted-foreground">{order.instruction ?? orderTypeMeta[order.orderType].handoff}</div>
+                <TableCell className="truncate text-[12px] font-medium text-muted-foreground" title={groupTitle}>
+                  {groupTitle}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="max-w-full truncate">
+                    {orderTypeMeta[order.orderType].label}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" />
+                </TableCell>
+                <TableCell className="min-w-0 whitespace-normal py-2">
+                  <div className="truncate font-medium" title={order.displayName}>
+                    {order.displayName}
+                  </div>
+                  <div
+                    className="truncate text-[12px] text-muted-foreground"
+                    title={order.instruction ?? orderTypeMeta[order.orderType].handoff}
+                  >
+                    {order.instruction ?? orderTypeMeta[order.orderType].handoff}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Input
                     aria-label={`${order.displayName} 청구서명 수정`}
                     value={row.billingName}
-                    className="h-7 bg-[var(--emr-surface-panel)] px-2 text-[12px]"
+                    className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-[12px]"
                     onChange={(event) => onUpdateBillingName(order.id, event.target.value)}
                   />
                 </TableCell>
@@ -2092,23 +2228,40 @@ function ChartOrderTable({
                     aria-label={`${order.displayName} 수량 수정`}
                     aria-invalid={invalidQuantity}
                     inputMode="decimal"
+                    title={invalidQuantity ? "수량은 숫자로 입력해 주세요." : undefined}
                     value={row.quantityInput}
                     className={cn(
-                      "h-7 bg-[var(--emr-surface-panel)] px-2 text-right text-[12px]",
+                      "h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-right text-[12px] tabular-nums",
                       invalidQuantity && "border-[var(--emr-status-danger-border)]"
                     )}
                     onChange={(event) => onUpdateQuantity(order.id, event.target.value)}
                   />
                 </TableCell>
-                <TableCell>{row.unitPrice !== undefined ? row.unitPrice.toLocaleString() : "-"}</TableCell>
-                <TableCell>{lineTotal !== undefined ? lineTotal.toLocaleString() : "-"}</TableCell>
-                <TableCell className="truncate">{getChartStaffName(order.requestedByUserId) ?? "미정"}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.unitPrice !== undefined ? row.unitPrice.toLocaleString() : "-"}
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">
+                  {lineTotal !== undefined ? lineTotal.toLocaleString() : "-"}
+                </TableCell>
+                <TableCell className="truncate" title={getChartStaffName(order.requestedByUserId) ?? "미정"}>
+                  {getChartStaffName(order.requestedByUserId) ?? "미정"}
+                </TableCell>
                 <TableCell>
-                  <div className="flex justify-end gap-1.5">
-                    <Button variant="outline" size="xs" className="bg-card">
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="bg-card"
+                      onClick={() => toast.info(`${order.displayName} 이력은 후속 상세 화면에서 연결됩니다.`)}
+                    >
                       이력
                     </Button>
-                    <Button variant="outline" size="xs" className="bg-card">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="bg-card"
+                      onClick={() => toast.info(`${order.displayName} 요청 흐름은 후속 작업에서 연결됩니다.`)}
+                    >
                       요청
                     </Button>
                     <Button
@@ -2117,6 +2270,7 @@ function ChartOrderTable({
                       size="icon-xs"
                       className="bg-card text-destructive"
                       disabled={!hasCommittedRows}
+                      title={hasCommittedRows ? `${order.displayName} 오더 삭제` : "마지막 오더는 삭제할 수 없습니다."}
                       onClick={() => onDeleteOrder(order.id)}
                     >
                       <CdsActionsTrash2Icon data-icon="inline-start" />
@@ -2128,15 +2282,23 @@ function ChartOrderTable({
           })}
           {!rows.length ? (
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
-              <TableCell colSpan={11} className="h-24 text-center text-[13px] text-muted-foreground">
-                표시할 오더가 없습니다.
+              <TableCell colSpan={11} className="h-28 text-center text-[13px] text-muted-foreground">
+                <span className="grid gap-1">
+                  <span className="font-semibold text-foreground">표시할 오더가 없습니다.</span>
+                  <span>현재 선택한 분류에 해당하는 오더가 없어요.</span>
+                </span>
               </TableCell>
             </TableRow>
           ) : null}
           <TableRow className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
             <TableCell />
             <TableCell colSpan={10}>
-              <Button variant="ghost" size="sm" className="w-fit justify-start">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-fit justify-start"
+                onClick={() => toast.info("Order 추가는 오더 카탈로그 연결 범위에서 제공됩니다.")}
+              >
                 + Order 추가하기
               </Button>
             </TableCell>
@@ -2149,7 +2311,15 @@ function ChartOrderTable({
 
 type OrderActionDialogType = "bill" | "confirm";
 
-function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: ChartOrderGroup[] }) {
+function OrderArea({
+  actorHeaders,
+  bundle,
+  orderGroups,
+}: {
+  actorHeaders?: Record<string, string>;
+  bundle: ChartBundle;
+  orderGroups: ChartOrderGroup[];
+}) {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const initialDraftRows = useMemo(() => getChartOrderDraftRows(orderGroups), [orderGroups]);
   const [committedRows, setCommittedRows] = useState<ChartOrderDraftRow[]>(initialDraftRows);
@@ -2157,6 +2327,8 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(() => new Set());
   const [orderActionDialog, setOrderActionDialog] = useState<OrderActionDialogType | null>(null);
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [orderDraftSaveState, setOrderDraftSaveState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("idle");
+  const draftTouchedRef = useRef(false);
   const allOrders = useMemo(() => draftRows.map(({ order }) => order), [draftRows]);
   const orderCountByType = allOrders.reduce<Record<EmrOrderType, number>>(
     (counts, order) => ({
@@ -2228,6 +2400,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
     });
   };
   const updateDraftRow = (orderId: string, nextFields: Partial<Pick<ChartOrderDraftRow, "billingName" | "quantityInput">>) => {
+    draftTouchedRef.current = true;
     setDraftRows((currentRows) =>
       currentRows.map((row) =>
         row.order.id === orderId
@@ -2240,6 +2413,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
     );
   };
   const resetDraftRows = () => {
+    draftTouchedRef.current = false;
     setDraftRows(committedRows);
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -2254,19 +2428,114 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
       return next;
     });
   };
-  const commitDraftRows = () => {
-    const nextCommittedRows = draftRows.map((row) => ({
-      ...row,
-      committedBillingName: row.billingName,
-      committedQuantityInput: row.quantityInput,
-    }));
+  useEffect(() => {
+    let cancelled = false;
+    draftTouchedRef.current = false;
+    setOrderDraftSaveState("loading");
 
+    async function loadPersistedOrderDrafts() {
+      const result = await loadChartOrderDraft({
+        actorHeaders,
+        encounterId: bundle.encounter.id,
+        workspaceId: bundle.encounter.workspaceId,
+      });
+
+      if (cancelled) return;
+
+      if (result.ok) {
+        let nextRows = applyPersistedOrderDrafts(initialDraftRows, result.orderDrafts);
+        const actionResult = await loadChartOrderActions({
+          actorHeaders,
+          encounterId: bundle.encounter.id,
+          workspaceId: bundle.encounter.workspaceId,
+        });
+
+        if (actionResult.ok) {
+          nextRows = applyPersistedOrderActions(nextRows, actionResult.orderActions);
+        }
+        const lifecycleResult = await loadChartOrderLifecycles({
+          actorHeaders,
+          encounterId: bundle.encounter.id,
+          workspaceId: bundle.encounter.workspaceId,
+        });
+
+        if (lifecycleResult.ok) {
+          nextRows = applyPersistedOrderLifecycles(nextRows, lifecycleResult.lifecycles);
+        }
+
+        if (cancelled) return;
+
+        setCommittedRows(nextRows);
+        if (!draftTouchedRef.current) {
+          setDraftRows(nextRows);
+        }
+        setOrderDraftSaveState("idle");
+        return;
+      }
+
+      setOrderDraftSaveState("error");
+    }
+
+    void loadPersistedOrderDrafts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorHeaders, bundle.encounter.id, bundle.encounter.workspaceId, initialDraftRows]);
+  const commitDraftRows = async () => {
+    setOrderDraftSaveState("saving");
+    const result = await saveChartOrderDraftRoute({
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      rows: draftRows,
+      workspaceId: bundle.encounter.workspaceId,
+    });
+
+    if (!result.ok) {
+      setOrderDraftSaveState("error");
+      toast.error(
+        result.denialReason === "permission_missing"
+          ? "오더 수정 권한이 없어 저장하지 못했어요."
+          : "오더 변경을 저장하지 못했어요."
+      );
+      return;
+    }
+
+    const nextCommittedRows = applyPersistedOrderDrafts(draftRows, result.orderDrafts);
+    draftTouchedRef.current = false;
     setCommittedRows(nextCommittedRows);
     setDraftRows(nextCommittedRows);
+    setOrderDraftSaveState("saved");
+    toast.success("Order 업데이트를 저장했어요.");
+  };
+  const commitOrderAction = async (action: ChartOrderActionKind) => {
+    const orderIds = Array.from(selectedOrderIds);
+    const result = await saveChartOrderActionRoute({
+      action,
+      actorHeaders,
+      encounterId: bundle.encounter.id,
+      orderIds,
+      workspaceId: bundle.encounter.workspaceId,
+    });
+
+    if (!result.ok) {
+      toast.error(
+        result.denialReason === "permission_missing"
+          ? "오더 작업 권한이 없어 저장하지 못했어요."
+          : "오더 작업 상태를 저장하지 못했어요."
+      );
+      return;
+    }
+
+    setCommittedRows((currentRows) => applyPersistedOrderActions(currentRows, result.orderActions));
+    setDraftRows((currentRows) => applyPersistedOrderActions(currentRows, result.orderActions));
+    setOrderActionDialog(null);
+    toast.success(action === "confirm" ? "Order 확정 상태를 저장했어요." : "Order 청구 후보를 저장했어요.");
   };
   const confirmDeleteOrder = () => {
     if (!deleteOrderId) return;
 
+    draftTouchedRef.current = true;
     setDraftRows((currentRows) => currentRows.filter(({ order }) => order.id !== deleteOrderId));
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -2295,7 +2564,13 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
   const draftStatusText = hasDraftChanges
     ? ` · 변경 대기 ${changedDraftOrderCount}건${invalidOrderIds.size ? ` · 수량 확인 필요 ${invalidOrderIds.size}건` : ""}`
-    : "";
+    : orderDraftSaveState === "saving"
+      ? " · 저장 중"
+      : orderDraftSaveState === "saved"
+        ? " · 저장됨"
+        : orderDraftSaveState === "error"
+          ? " · 저장 실패"
+          : "";
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
@@ -2307,10 +2582,20 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           onValueChange={setOrderFilter}
         />
         <div className="flex items-center gap-2 py-2">
-          <Button variant="outline" size="sm" className="bg-card">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-card"
+            onClick={() => toast.info("Order 출력은 문서/프린트 연결 범위에서 제공됩니다.")}
+          >
             Order 출력
           </Button>
-          <Button variant="outline" size="sm" className="bg-card">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-card"
+            onClick={() => toast.info("Order 추가는 오더 카탈로그 연결 범위에서 제공됩니다.")}
+          >
             + Order
           </Button>
         </div>
@@ -2361,7 +2646,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
             size="sm"
             className="bg-card"
             disabled={!canUpdateOrders}
-            onClick={commitDraftRows}
+            onClick={() => void commitDraftRows()}
           >
             <CdsActionsSaveIcon data-icon="inline-start" />
             Order 업데이트
@@ -2385,9 +2670,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           title={`${orderActionLabel} 확인`}
           description={
             <span className="grid gap-3">
-              <span>
-                현재 환자와 선택 오더를 확인한 뒤 진행합니다. 이 prototype에서는 실제 청구/확정 상태를 변경하지 않습니다.
-              </span>
+              <span>현재 환자와 선택 오더를 확인한 뒤 서버 draft 상태에 저장합니다.</span>
               <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
                 <span>환자: {bundle.patient.name} · 보호자 {guardianName}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
@@ -2399,7 +2682,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
           cancelLabel="다시 확인"
           confirmLabel={orderActionLabel}
           onCancel={() => setOrderActionDialog(null)}
-          onConfirm={() => setOrderActionDialog(null)}
+          onConfirm={() => orderActionDialog && void commitOrderAction(orderActionDialog)}
         />
       </Dialog>
       <Dialog open={deleteOrderId !== null} onOpenChange={(open) => !open && setDeleteOrderId(null)}>
@@ -2409,7 +2692,7 @@ function OrderArea({ bundle, orderGroups }: { bundle: ChartBundle; orderGroups: 
             description={
               <span className="grid gap-3">
                 <span>
-                  {deleteTargetOrder.displayName} 오더를 현재 차트의 session draft에서 제외합니다. 실제 서버 데이터는 변경하지 않습니다.
+                  {deleteTargetOrder.displayName} 오더를 현재 차트의 draft에서 제외합니다. 저장 시 서버 draft에도 반영됩니다.
                 </span>
                 <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
                   삭제 후 `Order 업데이트`를 눌러 현재 세션 변경으로 확정할 수 있습니다.
@@ -2532,6 +2815,10 @@ export function ChartContent() {
     encounterId: bundle?.encounter.id,
     rows: bundle ? bundle.diagnoses.map(toEditableDiagnosis) : [],
   }));
+  const [diagnosisPersistenceState, setDiagnosisPersistenceState] = useState<{
+    encounterId?: string;
+    status: "idle" | "loading" | "saving" | "saved" | "error";
+  }>({ status: "idle" });
 
   if (diagnosisState.encounterId !== activeEncounterId) {
     setDiagnosisState({
@@ -2556,7 +2843,7 @@ export function ChartContent() {
   };
   const orderGroups = useMemo(
     () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
-    [bundle]
+    [bundle?.encounter.id]
   );
   const allOrders = useMemo(() => orderGroups.flatMap(({ orders }) => orders), [orderGroups]);
   const getChartSplitBounds = () => {
@@ -2677,6 +2964,46 @@ export function ChartContent() {
     setChartCompleteDialogOpen(false);
     toast.success("차트 작성완료 상태를 저장했어요.");
   };
+  const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
+    if (!activeEncounterId || !activeWorkspaceId) {
+      toast.error("진료 차트를 먼저 선택해 주세요.");
+      return;
+    }
+
+    setDiagnosisPersistenceState({
+      encounterId: activeEncounterId,
+      status: "saving",
+    });
+
+    const result = await saveChartDiagnosesRoute({
+      actorHeaders,
+      diagnoses: nextRows,
+      encounterId: activeEncounterId,
+      workspaceId: activeWorkspaceId,
+    });
+
+    if (!result.ok) {
+      setDiagnosisPersistenceState({
+        encounterId: activeEncounterId,
+        status: "error",
+      });
+      toast.error(
+        result.denialReason === "permission_missing"
+          ? "진단명 저장 권한이 없어 저장하지 못했어요."
+          : "진단명을 저장하지 못했어요."
+      );
+      return;
+    }
+
+    setDiagnosisState({
+      encounterId: activeEncounterId,
+      rows: result.diagnoses.map(toEditableDiagnosis),
+    });
+    setDiagnosisPersistenceState({
+      encounterId: activeEncounterId,
+      status: "saved",
+    });
+  };
 
   useEffect(() => {
     hydrateAuthSession();
@@ -2703,6 +3030,49 @@ export function ChartContent() {
     }
 
     void loadPersistedSoap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
+
+  useEffect(() => {
+    if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
+
+    let cancelled = false;
+    setDiagnosisPersistenceState({
+      encounterId: activeEncounterId,
+      status: "loading",
+    });
+
+    async function loadPersistedDiagnoses() {
+      const result = await loadChartDiagnoses({
+        actorHeaders,
+        encounterId: activeEncounterId!,
+        workspaceId: activeWorkspaceId!,
+      });
+
+      if (cancelled) return;
+
+      if (result.ok) {
+        setDiagnosisState({
+          encounterId: activeEncounterId,
+          rows: result.diagnoses.map(toEditableDiagnosis),
+        });
+        setDiagnosisPersistenceState({
+          encounterId: activeEncounterId,
+          status: "idle",
+        });
+        return;
+      }
+
+      setDiagnosisPersistenceState({
+        encounterId: activeEncounterId,
+        status: "error",
+      });
+    }
+
+    void loadPersistedDiagnoses();
 
     return () => {
       cancelled = true;
@@ -2770,6 +3140,16 @@ export function ChartContent() {
 
   const currentBundle = effectiveBundle;
   const chartCompletionStatusText = getChartCompletionStatusText(currentBundle.encounter);
+  const diagnosisSaveStatusText =
+    diagnosisPersistenceState.encounterId === activeEncounterId
+      ? diagnosisPersistenceState.status === "saving"
+        ? "저장 중"
+        : diagnosisPersistenceState.status === "saved"
+          ? "저장됨"
+          : diagnosisPersistenceState.status === "error"
+            ? "저장 실패"
+            : "저장 대기"
+      : "저장 대기";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
@@ -2857,6 +3237,8 @@ export function ChartContent() {
           <AssessmentPanel
             key={`chart-assessment-${bundle.encounter.id}`}
             diagnosisRows={diagnosisRows}
+            onDiagnosisRowsChange={handleDiagnosisRowsChange}
+            saveStatusText={diagnosisSaveStatusText}
             setDiagnosisRows={setDiagnosisRows}
             soapNote={effectiveLatestSoap}
           />
@@ -2885,7 +3267,12 @@ export function ChartContent() {
           <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
         </button>
         <div className="min-h-0 min-w-0">
-          <OrderArea key={bundle.encounter.id} bundle={bundle} orderGroups={orderGroups} />
+          <OrderArea
+            key={bundle.encounter.id}
+            actorHeaders={actorHeaders}
+            bundle={bundle}
+            orderGroups={orderGroups}
+          />
         </div>
       </div>
     </div>

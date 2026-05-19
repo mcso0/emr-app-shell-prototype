@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project 04 Chart, Order & Billing Persistence 수행 보고서</title>
+    <style>
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #171717; background: #f7f8fa; line-height: 1.6; }
+      main { max-width: 1040px; margin: 0 auto; padding: 48px 28px 72px; }
+      section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-top: 20px; }
+      h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.2; }
+      h2 { margin: 0 0 12px; font-size: 20px; }
+      h3 { margin: 18px 0 8px; font-size: 16px; }
+      p { margin: 8px 0; }
+      ul { margin: 8px 0 0 20px; padding: 0; }
+      li { margin: 6px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+      th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #f3f4f6; font-weight: 700; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #f3f4f6; border-radius: 4px; padding: 2px 4px; }
+      .eyebrow { color: #525252; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+      .summary { font-size: 18px; color: #262626; }
+      .ok { color: #166534; font-weight: 700; }
+      .warn { color: #92400e; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">DEN-81 / Project 04 Closeout</p>
+      <h1>Project 04 Chart, Order & Billing Persistence 수행 보고서</h1>
+      <p class="summary">접수에서 이어진 외래 진료 흐름이 차트, 오더, 수납까지 끊기지 않도록 핵심 저장 경계를 만들고 검증했다.</p>
+
+      <section>
+        <h2>대표 관점 요약</h2>
+        <ul>
+          <li><span class="ok">완료:</span> SOAP, 차트 작성완료, 진단, 오더 작성/확정/상태, 청구 후보, 청구 항목, 미납/수납 완료 상태를 저장 경계에 연결했다.</li>
+          <li><span class="ok">검증:</span> 외래 한 건이 SOAP 저장부터 수납 완료까지 이어지는 회귀 테스트를 추가했고 기존 접수/차트/수납 화면 테스트와 같이 통과했다.</li>
+          <li><span class="warn">유의:</span> 실제 결제, 실제 환자 데이터, 원격 Supabase, 운영 배포는 하지 않았다. 지금 결과는 synthetic demo-data와 local-first 경계 검증이다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>완료한 이슈</h2>
+        <table>
+          <thead>
+            <tr><th>Linear</th><th>결과</th><th>상태</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>DEN-67</td><td>차트/오더/수납 persistence 범위와 encounter 의존성 확정</td><td>Human Review</td></tr>
+            <tr><td>DEN-68</td><td>clinical/order/billing 최소 schema migration 작성</td><td>Human Review</td></tr>
+            <tr><td>DEN-99</td><td>가상 병원 demo dataset foundation 정리</td><td>Human Review</td></tr>
+            <tr><td>DEN-100</td><td>chart-applied order snapshot bridge 추가</td><td>Human Review</td></tr>
+            <tr><td>DEN-69</td><td>SOAP field save와 autosave metadata persistence 연결</td><td>Human Review</td></tr>
+            <tr><td>DEN-70</td><td>차트 작성완료 상태 persistence 연결</td><td>Human Review</td></tr>
+            <tr><td>DEN-71</td><td>진단 row 저장, 자유 입력/카탈로그 row 구분</td><td>Human Review</td></tr>
+            <tr><td>DEN-72</td><td>오더 draft table 수정/삭제/금액 재계산 저장</td><td>Human Review</td></tr>
+            <tr><td>DEN-73</td><td>오더 확정과 청구 제출 hook 저장</td><td>Human Review</td></tr>
+            <tr><td>DEN-74</td><td>오더 lifecycle 상태 변경 저장</td><td>Human Review</td></tr>
+            <tr><td>DEN-75</td><td>확정 오더를 수납 invoice candidate로 동기화</td><td>Human Review</td></tr>
+            <tr><td>DEN-76</td><td>차트와 수납이 같은 persisted order/invoice state를 읽도록 연결</td><td>Human Review</td></tr>
+            <tr><td>DEN-77</td><td>청구 항목 수정과 청구 확정 저장</td><td>Human Review</td></tr>
+            <tr><td>DEN-78</td><td>결제 수단, 미납, 수납 완료 상태 저장</td><td>Human Review</td></tr>
+            <tr><td>DEN-79</td><td>수납 권한과 금액 변조 방지 회귀 테스트 추가</td><td>Human Review</td></tr>
+            <tr><td>DEN-80</td><td>외래 chart/order/billing 전체 persistence 회귀 테스트 추가</td><td>Human Review</td></tr>
+            <tr><td>DEN-81</td><td>감사/보안 readiness handoff와 closeout 보고서 작성</td><td>Human Review</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>감사/보안 인수인계 매트릭스</h2>
+        <table>
+          <thead>
+            <tr><th>업무</th><th>저장 행동</th><th>후속 audit event 후보</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>SOAP</td><td>필드 저장과 자동저장</td><td><code>chart.soap_saved</code></td></tr>
+            <tr><td>차트 완료</td><td>진료 완료 후 수납 대기 handoff</td><td><code>chart.completed</code></td></tr>
+            <tr><td>진단</td><td>진단 row 추가/수정/삭제/정렬</td><td><code>diagnosis.changed</code></td></tr>
+            <tr><td>오더</td><td>draft 수정, 확정, lifecycle 변경</td><td><code>order.draft_changed</code>, <code>order.confirmed</code>, <code>order.status_changed</code></td></tr>
+            <tr><td>수납 후보</td><td>확정 오더를 청구 후보로 생성</td><td><code>billing.invoice_candidate_generated</code></td></tr>
+            <tr><td>청구서</td><td>청구 항목 수정과 청구 확정</td><td><code>billing.invoice_line_changed</code>, <code>billing.invoice_issued</code></td></tr>
+            <tr><td>결제 상태</td><td>결제 수단, 미납, 수납 완료</td><td><code>billing.payment_state_changed</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx playwright test tests/outpatient-persistence-regression.spec.ts tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code>: 통과</li>
+          <li><code>npx tsc --noEmit</code>: 통과</li>
+          <li><code>npm run build</code>: 통과</li>
+          <li><code>npm run docs:check</code>: 통과</li>
+          <li><code>npm run security:secrets</code>: 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 프로젝트에 넘길 위험</h2>
+        <ul>
+          <li>최종 RLS 정책과 remote Supabase 검증은 아직 하지 않았다.</li>
+          <li>감사 로그는 hook 후보만 정리했고 append-only audit persistence는 Project 05 범위다.</li>
+          <li>검사/영상/조제/처치의 전체 live persistence는 별도 프로젝트로 봐야 한다.</li>
+          <li>PG 결제 승인, 정산, 환불, 회계 연동은 아직 synthetic workflow 밖이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

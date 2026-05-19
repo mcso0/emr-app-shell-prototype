@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-119 진료/차트 테이블 플로우 보완 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-119 진료/차트 테이블 플로우 보완 리포트</h1>
+        <p class="meta">2026-05-20 · Project 01-M2 · Table Interaction Flow</p>
+
+        <h2>요약</h2>
+        <p>
+          진료/차트 오더 테이블에서 눌러도 반응이 없던 action affordance를 정리했다. 새 임상/청구
+          workflow를 추가하지 않고, 현재 UI-only 범위에서 후속 연결 예정임을 toast feedback으로 알려
+          사용자가 “고장난 버튼”으로 느끼지 않게 했다.
+        </p>
+
+        <h2>완료한 인터랙션</h2>
+        <ul>
+          <li>row action <code>이력</code> 클릭 시 후속 상세 화면 연결 예정 toast를 표시한다.</li>
+          <li>row action <code>요청</code> 클릭 시 요청 흐름은 후속 작업에서 연결된다는 toast를 표시한다.</li>
+          <li>상단 <code>Order 출력</code> 클릭 시 문서/프린트 연결 범위임을 toast로 표시한다.</li>
+          <li>상단 <code>+ Order</code>와 table footer <code>+ Order 추가하기</code> 클릭 시 오더 카탈로그 연결 범위임을 toast로 표시한다.</li>
+          <li>수량 입력 오류 상태에는 title을 추가해 숫자 입력 필요성을 보조한다.</li>
+          <li>삭제 icon button은 기존 비활성 조건을 유지하면서 마지막 오더 삭제 불가 title을 추가했다.</li>
+        </ul>
+
+        <h2>의도적으로 미룬 항목</h2>
+        <ul>
+          <li>실제 오더 이력 상세 화면 연결</li>
+          <li>실제 재요청/request workflow</li>
+          <li>오더 카탈로그 기반 신규 오더 추가</li>
+          <li>문서/프린트 출력 연결</li>
+          <li>서버 저장, billing sync, audit persistence, role/server enforcement 변경</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/chart/components/chart-section-title.tsx src/features/chart/components/chart-line-tab-group.tsx src/features/chart/components/soap-rich-text-editor.tsx</code> 통과</li>
+          <li><code>npx playwright test tests/chart.spec.ts --grep "chart order checkboxes|chart order table edits" --reporter=line</code> 통과: 2 passed</li>
+          <li>임시 dev server에서 row <code>이력</code>, row <code>요청</code>, 상단 <code>+ Order</code> toast feedback을 수동 확인했다.</li>
+          <li>첫 수동 확인 시도는 auth session 없이 접근해 login redirect로 실패했고, mock localStorage session을 주입한 재시도는 통과했다.</li>
+        </ul>
+
+        <h2>주의 및 제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, server permission, billing sync, order calculation은 변경하지 않았다.</li>
+          <li><code>npx eslint src/features/chart/module.tsx</code>는 기존 hook lint 오류로 실패한다. 이번 이슈의 toast/affordance 변경이 새로 추가한 오류는 아니다.</li>
+          <li>Playwright 실행 중 기존 Tiptap duplicate extension warning이 관찰되었다. 이 이슈에서는 editor extension 구성을 변경하지 않았다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: DEN-119 clarified unfinished table actions with UI-only toast feedback. Deferred flows should become
+          separate scoped issues if needed: order history detail, request/re-request workflow, catalog-backed add order,
+          and print/export. Do not treat these toasts as completed clinical/billing workflows.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

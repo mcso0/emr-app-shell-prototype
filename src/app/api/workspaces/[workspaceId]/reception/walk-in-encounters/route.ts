@@ -8,6 +8,11 @@ import {
   createSupabaseReceptionWalkInEncounterGateway,
   type SupabaseReceptionWalkInEncounterRpcClient,
 } from "@/features/reception/server-walk-in-encounter";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import type { ReceptionWalkInEncounterInput } from "@/features/reception/walk-in-encounter";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -57,6 +62,12 @@ export async function POST(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseReceptionWalkInEncounterRpcClient
         )
       : undefined,
+    auditGateway: client
+      ? createSupabaseLiveAuditAppendGateway(
+          client as unknown as SupabaseLiveAuditAppendRpcClient
+        )
+      : undefined,
+    auditRequestId: getAuditRequestId(request),
   });
 
   return Response.json(result, { status: result.status });

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-80 외래 persistence 회귀 테스트 완료 보고</title>
+  </head>
+  <body>
+    <h1>DEN-80 외래 persistence 회귀 테스트 완료 보고</h1>
+    <p>
+      차트 SOAP 저장, 오더 확정, 청구 후보 생성, 수납 완료까지 이어지는 핵심 외래 persistence path를
+      route-backed readback checkpoint로 고정했다.
+    </p>
+    <h2>검증한 흐름</h2>
+    <ul>
+      <li>SOAP 저장 후 같은 encounter로 다시 읽기</li>
+      <li>오더 확정 후 order action 다시 읽기</li>
+      <li>invoice candidate sync 후 후보 라인 다시 읽기</li>
+      <li>수납 완료 후 payment status 다시 읽기</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/outpatient-persistence-regression.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code>: 통과</li>
+    </ul>
+    <h2>남은 gap</h2>
+    <ul>
+      <li>검사/영상/조제/처치 전체 live E2E와 성능/load test는 후속 범위다.</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터는 사용하지 않았다.</li>
+    </ul>
+  </body>
+</html>

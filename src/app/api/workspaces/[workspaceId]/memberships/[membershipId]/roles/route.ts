@@ -4,6 +4,14 @@ import {
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
 import { authorizeWorkspaceRoleUpdate } from "@/features/auth/server-role-update-enforcement";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import {
+  emitLiveMutationAuditEvent,
+  getAuditRequestId,
+} from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -72,14 +80,34 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
       return Response.json({ ok: false, denialReason }, { status });
     }
 
+    const updatedRoles = Array.isArray((data as { roles?: unknown }).roles)
+      ? (data as { roles: unknown[] }).roles
+      : nextRoles;
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway: createSupabaseLiveAuditAppendGateway(
+        client as unknown as SupabaseLiveAuditAppendRpcClient
+      ),
+      input: {
+        workspaceId,
+        actorUserId: identity.actorUserId,
+        eventType: "workspace.membership_roles_changed",
+        targetType: "membership",
+        targetId: membershipId,
+        requestId: getAuditRequestId(request),
+        after: { roles: updatedRoles },
+        metadata: { source: "workspace-membership-role-route" },
+      },
+    });
+    if (!audit.ok) {
+      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
+    }
+
     return Response.json(
       {
         ok: true,
         workspaceId,
         targetMembershipId: membershipId,
-        updatedRoles: Array.isArray((data as { roles?: unknown }).roles)
-          ? (data as { roles: unknown[] }).roles
-          : nextRoles,
+        updatedRoles,
         enforcedBy: "server-permission-resolver",
       },
       { status: 200 }
@@ -92,6 +120,24 @@ export async function POST(request: Request, { params }: RoleUpdateRouteContext)
     targetMembershipId: membershipId,
     nextRoles,
   });
+
+  if (result.ok) {
+    const audit = await emitLiveMutationAuditEvent({
+      input: {
+        workspaceId,
+        actorUserId: identity.actorUserId,
+        eventType: "workspace.membership_roles_changed",
+        targetType: "membership",
+        targetId: membershipId,
+        requestId: getAuditRequestId(request),
+        after: { roles: result.updatedRoles },
+        metadata: { source: "workspace-membership-role-route" },
+      },
+    });
+    if (!audit.ok) {
+      return Response.json({ ok: false, error: "audit_write_failed" }, { status: 500 });
+    }
+  }
 
   return Response.json(result, { status: result.status });
 }

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project 04-05 Work Execution Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      .decision { font-size: 28px; font-weight: 800; color: #136f3f; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+      .warn { border-left: 4px solid #d9822b; padding: 10px 14px; background: #fff8ef; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 04 + Project 05 / Human Review</p>
+    <h1>Project 04-05 Work Execution Report</h1>
+    <p>Project 04와 Project 05의 모든 활성 이슈 작업 결과를 대표 검토용으로 묶어 정리했다.</p>
+
+    <h2>대표 결론</h2>
+    <p class="decision">두 프로젝트 모두 Human Review까지 완료</p>
+    <p>차트/오더/수납 persistence와 audit/security/MVP readiness 점검이 끝났고, 다음 작업은 Project 06 병원어드민/입원 컴포넌트 오딧으로 넘어갈 수 있다.</p>
+    <div class="warn">Linear Done 이동은 하지 않았다. 실서버, remote Supabase, 실제 환자/병원 데이터, production deploy도 사용하지 않았다.</div>
+
+    <h2>Project 04 결과</h2>
+    <table>
+      <thead><tr><th>범위</th><th>완료한 일</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>Scope/Data Contract</td><td>DEN-67, DEN-68, DEN-99, DEN-100: clinical billing persistence 범위, schema/data contract, demo-data, chart-applied order snapshot bridge 정리</td><td>Human Review</td></tr>
+        <tr><td>Chart Save</td><td>DEN-69, DEN-70: SOAP 저장/autosave metadata, chart completion state persistence 연결</td><td>Human Review</td></tr>
+        <tr><td>Diagnosis/Order</td><td>DEN-71, DEN-72, DEN-73: diagnosis rows, order draft, order confirmation persistence 연결</td><td>Human Review</td></tr>
+        <tr><td>Order/Billing Sync</td><td>DEN-74, DEN-75, DEN-76: order lifecycle, invoice candidate sync, chart/billing persisted read 연결</td><td>Human Review</td></tr>
+        <tr><td>Billing/Regression</td><td>DEN-77, DEN-78, DEN-79, DEN-80: invoice line, payment state, amount/permission regression, outpatient persistence regression</td><td>Human Review</td></tr>
+        <tr><td>Closeout</td><td>DEN-81: audit/security handoff와 clinical billing closeout 작성</td><td>Human Review</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Project 05 결과</h2>
+    <table>
+      <thead><tr><th>범위</th><th>완료한 일</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>Readiness/Audit Contract</td><td>DEN-82, DEN-83: pilot readiness 기준과 live MVP audit event matrix 정의</td><td>Human Review</td></tr>
+        <tr><td>Audit Implementation</td><td>DEN-84, DEN-85, DEN-86: audit schema/helper, selected mutation emission, admin review surface</td><td>Human Review</td></tr>
+        <tr><td>Security Review</td><td>DEN-87, DEN-88: auth/RLS/workspace threat model과 clinical/billing/audit mutation review</td><td>Human Review</td></tr>
+        <tr><td>QA/Pilot</td><td>DEN-89, DEN-90, DEN-91: outpatient workflow QA, role/workspace denial QA, representative rehearsal</td><td>Human Review</td></tr>
+        <tr><td>Closeout/Backlog</td><td>DEN-92, DEN-93: Product MVP live transition closeout, Post-MVP backlog와 next initiative 후보 분리</td><td>Human Review</td></tr>
+      </tbody>
+    </table>
+
+    <h2>핵심 판단</h2>
+    <ul>
+      <li>대표 local-first 파일럿 리뷰는 가능하다.</li>
+      <li>remote/live pilot은 아직 승인 대상이 아니다.</li>
+      <li>remote/live 전에는 clinical/billing RLS validation, DEN-88 audit completeness gap, production secrets/data handling approval이 필요하다.</li>
+      <li>실제 의료 자문이 아니라 synthetic demo-data 기반 업무 흐름 재현으로 설명해야 한다.</li>
+    </ul>
+
+    <h2>주요 산출물</h2>
+    <ul>
+      <li><code>docs/completed/clinical-billing/2026-05-20-den-81-project-04-clinical-billing-closeout-report.html</code></li>
+      <li><code>docs/completed/audit-security/2026-05-20-den-92-product-mvp-live-transition-closeout-report.html</code></li>
+      <li><code>docs/completed/audit-security/2026-05-20-den-93-post-mvp-backlog-next-initiative-candidates-report.html</code></li>
+    </ul>
+
+    <h2>검증 요약</h2>
+    <ul>
+      <li>Project 04 focused tests, typecheck, build, docs check, secret scan 통과 기록 있음</li>
+      <li>Project 05 QA/security smoke, docs check, secret scan 통과 기록 있음</li>
+      <li>마지막 확인: Project 4/5 모든 활성 Linear 이슈는 Human Review 상태</li>
+    </ul>
+
+    <div class="note">다음 실행 대상은 Project 06 `병원어드민 및 입원 (Admin/Inpatient) 컴포넌트 오딧`이며, 순서는 DEN-129 다음 DEN-131이다.</div>
+  </body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-92 Product MVP Live Transition Closeout Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      .decision { font-size: 28px; font-weight: 800; color: #136f3f; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+      .warn { border-left: 4px solid #d9822b; padding: 10px 14px; background: #fff8ef; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-92 / Human Review</p>
+    <h1>Product MVP Live Transition Closeout Report</h1>
+    <p>CLAiR EMR 제품 MVP 라이브 전환 흐름을 대표 의사결정용으로 정리했다.</p>
+
+    <h2>대표 결론</h2>
+    <p class="decision">대표 local-first 파일럿 리뷰는 진행 가능</p>
+    <div class="warn">하지만 remote/live pilot, production deploy, 실제 환자/병원 데이터 사용은 아직 승인 아님.</div>
+
+    <h2>무엇이 됐나</h2>
+    <table>
+      <thead><tr><th>영역</th><th>확보한 것</th></tr></thead>
+      <tbody>
+        <tr><td>권한/워크스페이스</td><td>verified session seam, active membership, role permission boundary</td></tr>
+        <tr><td>접수</td><td>encounter/check-in/walk-in/read persistence와 reload regression</td></tr>
+        <tr><td>차트/오더/수납</td><td>SOAP, 진단, 오더, invoice, payment state의 route-backed persistence</td></tr>
+        <tr><td>감사</td><td>audit matrix, append helper, selected mutation emission, admin review surface</td></tr>
+        <tr><td>보안/QA</td><td>threat model, mutation security review, workflow QA, denial QA, representative rehearsal</td></tr>
+      </tbody>
+    </table>
+
+    <h2>아직 live로 말하면 안 되는 것</h2>
+    <ul>
+      <li>원격 Supabase/production deploy/실제 데이터 사용</li>
+      <li>lab, imaging, dispensing, treatment, inpatient 전체 live persistence</li>
+      <li>KakaoTalk, PACS/device, payment provider, email, accounting settlement</li>
+      <li>compliance export/dashboard, retention automation, real clinic data migration</li>
+    </ul>
+
+    <h2>판단 표</h2>
+    <table>
+      <thead><tr><th>분류</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>Blocker for remote/live</td><td>clinical/billing RLS validation, DEN-88 audit completeness, production secrets/data approval</td></tr>
+        <tr><td>Follow-up</td><td>mock role label 정리, denial copy, Tiptap warning, Node listener warning, pilot reset checklist</td></tr>
+        <tr><td>Post-MVP</td><td>외부 연동, downstream persistence, compliance/audit expansion, performance/load, real data migration</td></tr>
+      </tbody>
+    </table>
+
+    <h2>다음 투자 선택지</h2>
+    <ul>
+      <li>실제 pilot 전에 live safety gate 닫기</li>
+      <li>대표 데모 반복성을 위한 pilot runbook/reset kit 만들기</li>
+      <li>검사/영상/조제/처치 downstream persistence 확장</li>
+      <li>provider integration과 compliance/audit expansion은 pilot scope 이후 판단</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+      <li>Linear issue/project report link 생성</li>
+    </ul>
+
+    <div class="note">DEN-92는 Human Review로 넘기고, 다음은 DEN-93 Post-MVP backlog와 다음 Initiative 후보 분리다.</div>
+  </body>
+</html>

@@ -4,6 +4,10 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  emitLiveMutationAuditEvent,
+  type LiveMutationAuditOptions,
+} from "@/features/audit/server-mutation-audit-core";
 import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
 import { getReceptionMutationPermissionContract } from "@/features/reception/reception-mutation-permissions";
 import { mockAppointments, mockEncounters } from "@/mocks/emr-domain";
@@ -45,12 +49,18 @@ export type ReceptionAppointmentCheckInResult =
 
 export async function createReceptionAppointmentCheckIn({
   actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
   appointmentId,
   gateway = createMockReceptionAppointmentCheckInGateway(),
   permissionAdapter = createDemoReceptionAppointmentCheckInPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   appointmentId: string;
   gateway?: ReceptionAppointmentCheckInGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
@@ -84,6 +94,32 @@ export async function createReceptionAppointmentCheckIn({
 
     return { ok: false, status: 500, error: result.error };
   }
+
+  const audit = await emitLiveMutationAuditEvent({
+    auditGateway,
+    auditNow,
+    input: {
+      workspaceId,
+      actorUserId,
+      eventType: "reception.appointment_checked_in",
+      targetType: "encounter",
+      targetId: result.checkIn.encounter.id,
+      encounterId: result.checkIn.encounter.id,
+      patientId: result.checkIn.encounter.patientId,
+      guardianId: result.checkIn.encounter.guardianId ?? null,
+      requestId: auditRequestId,
+      after: {
+        appointmentStatus: result.checkIn.appointment.status,
+        queueStatus: result.checkIn.queueEntry.status,
+        receptionType: result.checkIn.encounter.receptionType,
+      },
+      metadata: {
+        appointmentId: result.checkIn.appointment.id,
+        source: "reception-appointment-check-in",
+      },
+    },
+  });
+  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
 
   return {
     ok: true,

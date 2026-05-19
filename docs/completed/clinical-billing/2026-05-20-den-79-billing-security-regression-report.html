@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-79 수납 권한/금액 무결성 회귀 테스트 완료 보고</title>
+  </head>
+  <body>
+    <h1>DEN-79 수납 권한/금액 무결성 회귀 테스트 완료 보고</h1>
+    <p>
+      수납 mutation에서 권한 없는 사용자를 차단하고, 클라이언트가 보낸 금액을 믿지 않고,
+      서버가 저장된 단가와 수량으로 금액을 다시 계산한다는 점을 자동 테스트로 고정했다.
+    </p>
+    <h2>보호한 위험</h2>
+    <ul>
+      <li>수의사 role 같은 unauthorized actor의 billing mutation 차단</li>
+      <li>승인된 billing/admin role의 정상 mutation path 보존</li>
+      <li>client가 <code>lineTotal</code>, <code>unitPrice</code>, <code>totalAmount</code>를 조작해 보내도 서버 계산값 유지</li>
+      <li><code>payment_state</code>가 <code>none</code>, <code>unpaid</code>, <code>paid</code>로 명시적으로 전환되는지 확인</li>
+    </ul>
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/billing-security-regression.spec.ts --reporter=line</code>: 통과</li>
+      <li><code>npx playwright test tests/billing.spec.ts --reporter=line</code>: 통과</li>
+    </ul>
+    <h2>남은 gap</h2>
+    <ul>
+      <li>실제 PG 승인, 환불 provider, 회계 export 검증은 후속 범위다.</li>
+      <li>remote Supabase, 실서버, 실제 환자/병원 데이터는 사용하지 않았다.</li>
+    </ul>
+  </body>
+</html>

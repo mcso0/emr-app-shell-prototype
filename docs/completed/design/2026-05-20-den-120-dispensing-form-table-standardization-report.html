@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-120 조제/처치 폼 및 테이블 표준화 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-120 조제/처치 폼 및 테이블 표준화 리포트</h1>
+        <p class="meta">2026-05-20 · Project 02-M2 · Forms & Tables</p>
+
+        <h2>요약</h2>
+        <p>
+          조제/처치 drawer의 필드 라벨 구조와 오더 테이블의 빈 상태를 기존 shadcn/EMR 패턴에 맞춰
+          정리했다. 화면의 업무 흐름, 오더 상태 변경, 담당자 배정, session-only 동작은 변경하지 않았다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>DispensingDrawerField</code>를 추가해 drawer의 라벨과 입력 필드를 <code>Label</code> + <code>Input</code> 조합으로 연결했다.</li>
+          <li>읽기 필드와 용량 입력에 안정적인 <code>id</code>/<code>htmlFor</code> 연결을 부여해 접근성과 폼 구조를 개선했다.</li>
+          <li><code>EmrDataTable</code>에 행이 없을 때의 테이블 빈 상태를 추가했다.</li>
+          <li>오더 그룹 필터 결과가 비었을 때 표시할 그룹 빈 상태를 추가했다.</li>
+        </ul>
+
+        <h2>화면 리뷰 메모</h2>
+        <ul>
+          <li>drawer의 라벨 크기, 입력 높이, footer action 정렬은 기존 dense workspace 톤을 유지했다.</li>
+          <li>테이블 빈 상태는 실제 행 영역 안에 배치해 헤더/컬럼 구조가 유지되도록 했다.</li>
+          <li>오더 그룹 빈 상태는 필터 영역 아래의 작업 영역에만 노출되며, 정상 데이터가 있을 때는 기존 UI와 동일하다.</li>
+          <li>검증/에러 메시지는 현재 조제 drawer가 server submit form이 아닌 session-only 편집 표면이라 새로 만들지 않았다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/components/emr/emr-data-table.tsx src/features/dispensing/module.tsx tests/app-shell.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts -g "dispensing shell supports panels and drawer|dispensing table supports hover selection and bulk completion|dispensing assignee cell changes technician" --reporter=line</code> 통과: 3 passed</li>
+        </ul>
+
+        <h2>제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, server permissions, API submit shape, order lifecycle는 변경하지 않았다.</li>
+          <li>공용 table system 자체를 재설계하지 않았다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: Reusable component opportunities: a shared EMR drawer field primitive could absorb the
+          label/hint/required/read-only layout now repeated in dispensing, hospital-admin, and reception drawer/form
+          surfaces. A future table empty-state helper could also standardize colSpan, height, and text tone across
+          EMR data tables. Keep those as follow-up candidates; DEN-120 intentionally avoided broad shared component
+          redesign.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-123 임상병리/영상 컴포넌트 경계 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-123 임상병리/영상 컴포넌트 경계 리포트</h1>
+        <p class="meta">2026-05-20 · Project 03-M1 · Lab/Imaging Component Boundary</p>
+
+        <h2>요약</h2>
+        <p>
+          임상병리와 영상 판독 화면에 중복으로 존재하던 상태 액션 UI를 feature-local 컴포넌트로 분리했다.
+          검사중/판독중, 완료, 담당취소, 담당하기 흐름은 그대로 유지하면서 모듈 본문에서 반복되던
+          shadcn <code>Button</code>/<code>DropdownMenu</code> 조합을 한 곳으로 모았다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>src/features/lab-imaging/components/status-action.tsx</code>에 <code>LabImagingStatusAction</code>을 추가했다.</li>
+          <li><code>LabStatusAction</code>과 <code>ImagingStatusAction</code>의 중복 구현을 제거하고, 라벨/상태값만 넘겨 같은 feature-local 액션 컴포넌트를 재사용하도록 바꿨다.</li>
+          <li><code>src/features/lab-imaging/module.tsx</code>의 상태 액션 관련 import와 중복 로직을 정리했다.</li>
+          <li>검사/판독 assignment store update, URL/query 기반 detail 선택, queue/history/right panel 렌더링은 변경하지 않았다.</li>
+        </ul>
+
+        <h2>화면 리뷰 메모</h2>
+        <ul>
+          <li>검사중/판독중 split button의 색상, 높이, dropdown menu 폭, 담당취소 항목은 기존 화면과 동일하게 유지했다.</li>
+          <li>검사완료/판독완료 disabled 버튼과 담당하기 primary action의 문구 및 아이콘 배치는 변경하지 않았다.</li>
+          <li>임상병리 결과 입력, 장비 수신내역, 영상 판독/종합소견, attachment/media 영역은 이번 경계 정리에서 레이아웃을 바꾸지 않았다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/lab-imaging/module.tsx src/features/lab-imaging/components/status-action.tsx tests/lab-imaging.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/lab-imaging.spec.ts -g "담당하기|lab|imaging|임상병리|영상" --reporter=line</code> 통과: 5 passed</li>
+        </ul>
+
+        <h2>제외 범위</h2>
+        <ul>
+          <li>DB, Supabase, RLS, live persistence, device/PACS integration, server permission은 변경하지 않았다.</li>
+          <li>검사 결과값, 영상 판독 데이터, 임상 workflow semantics는 변경하지 않았다.</li>
+          <li>전체 lab/imaging layout 재구성은 하지 않았다.</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: Remaining extraction candidates include queue group/card pairs for lab and imaging, history aside
+          group rendering, lab result document sections, attachment/media strips, imaging reading section grids, and
+          right-panel summary blocks. Shared EMR candidates should be considered only after comparing those patterns
+          against chart, dispensing, and billing screens; for now they should remain feature-local.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

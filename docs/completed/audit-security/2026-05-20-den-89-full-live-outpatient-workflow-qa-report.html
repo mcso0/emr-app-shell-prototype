@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-89 Full Live Outpatient Workflow QA Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      .score { font-size: 28px; font-weight: 800; color: #136f3f; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-89 / Human Review</p>
+    <h1>Full Live Outpatient Workflow QA Report</h1>
+    <p>로그인부터 접수, 차트, 오더, 수납, reload checkpoint까지 핵심 외래 흐름을 QA했다. 코드 수정 없이 관련 Playwright suite로 확인했다.</p>
+
+    <h2>대표 판단</h2>
+    <p class="score">92 / 100</p>
+    <p>local-first 파일럿 검토 기준으로는 Green이다. 이번 QA에서 blocker는 발견하지 못했다.</p>
+
+    <h2>통과한 흐름</h2>
+    <table>
+      <thead><tr><th>영역</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>로그인/워크스페이스</td><td>login redirect, next URL, default workspace, session persistence, role display 통과</td></tr>
+        <tr><td>접수</td><td>queue/calendar persisted read, check-in reload, walk-in reload, cross-workspace denial 통과</td></tr>
+        <tr><td>차트</td><td>SOAP manual save reload, chart completion reload, Kong scenario continuity 통과</td></tr>
+        <tr><td>오더/수납</td><td>order confirmation readback, invoice candidate sync readback, payment completion readback 통과</td></tr>
+        <tr><td>골든패스</td><td>home → reception → chart → lab → imaging → dispensing → billing scenario query continuity 통과</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Blocker</h2>
+    <p>이번 DEN-89 범위에서 blocker는 없다.</p>
+
+    <h2>Follow-up</h2>
+    <ul>
+      <li>Tiptap duplicate extension warning 정리</li>
+      <li>대량 Playwright 실행 중 Node listener warning 정리</li>
+      <li>DEN-88 audit completeness follow-up 유지</li>
+      <li>remote/live Supabase 검증은 별도 승인 전 계속 제외</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/auth.spec.ts tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts tests/outpatient-persistence-regression.spec.ts tests/sales-demo-flow.spec.ts --reporter=line</code> → 82 passed</li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <div class="note">DEN-89는 Human Review로 넘기고, 다음은 DEN-90 role/workspace boundary와 denial UX QA다.</div>
+  </body>
+</html>

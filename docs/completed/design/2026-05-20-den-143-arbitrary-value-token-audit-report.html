@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-143 Arbitrary Value Token Audit Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        max-width: 920px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .box {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 16px;
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="meta">Linear: DEN-143 · 완료일: 2026-05-20 · 상태: Human Review 요청 예정</p>
+    <h1>Arbitrary Tailwind 값 및 토큰 승격 후보 오딧</h1>
+
+    <section>
+      <h2>핵심 요약</h2>
+      <p>
+        가장 중요한 styling debt는 색상보다 typography와 dense UI rhythm이다. <code>text-[12px]</code>, <code>text-[13px]</code>, <code>text-[11px]</code>가 압도적으로 많고, side-panel badge/meta row의 높이·line-height·tracking 값도 반복된다. 반면 table column width와 calendar/grid 값은 업무 화면 가독성을 위한 의도적 local 제약일 가능성이 높아 기계적으로 제거하면 안 된다.
+      </p>
+    </section>
+
+    <section>
+      <h2>우선순위 후보</h2>
+      <ul>
+        <li>P1: dense typography role 정의 또는 component class 흡수</li>
+        <li>P1: side-panel badge/meta rhythm을 EMR 컴포넌트가 소유하도록 정리</li>
+        <li>P1: 남은 direct Clair sky selected surface를 EMR selected/info alias로 교체</li>
+        <li>P2: command palette shadow/elevation을 shell-local constant 또는 EMR elevation alias 후보로 정리</li>
+        <li>P2: table column width는 토큰화보다 화면별 의도와 overflow wrapper를 문서화</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>결정 필요 사항</h2>
+      <p>
+        지금은 audit-only라 추가 결정은 없다. 단, 후속 구현 이슈에서 새 <code>--emr-*</code> 토큰명을 추가하려면 그때 승인을 받는 편이 좋다.
+      </p>
+    </section>
+
+    <section>
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>docs/design/system/arbitrary-value-token-audit.md</code></li>
+        <li><code>docs/design/system/README.md</code></li>
+        <li><code>docs/completed/design/2026-05-20-den-143-arbitrary-value-token-audit-report.html</code></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>검증 결과</h2>
+      <div class="box">
+        <ul>
+          <li><code>rg</code>로 arbitrary Tailwind values, raw colors, direct Clair token references를 스캔했다.</li>
+          <li><code>src/styles/tokens/emr-foundation.css</code>, <code>shadcn.css</code>, <code>clair.css</code>의 역할을 확인했다.</li>
+          <li>직접 색상 잔여 항목을 PWA metadata 예외, shell overlay 후보, selected surface 후보로 분리했다.</li>
+          <li>토큰 변경 적용, generated asset rewrite, DB/live/backend 변경은 하지 않았다.</li>
+          <li><code>npm run docs:check</code> 검증 대상이다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>다음 단계</h2>
+      <p>
+        00 프로젝트는 이 이슈로 기준 수립을 마무리할 수 있다. 다음 프로젝트로 넘어가기 전, 00 프로젝트 전체가 Human Review 상태임을 확인하고 01 진료/차트 프로젝트 시작 여부를 보고하면 된다.
+      </p>
+    </section>
+  </body>
+</html>

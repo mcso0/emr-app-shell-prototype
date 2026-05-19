@@ -86,7 +86,7 @@ export type PermissionId = `${PermissionResource}:${PermissionAction}`;
 export type OrderGroupType = "dispensing" | "treatment" | "lab" | "imaging" | "mixed";
 export type OrderGroupStatus = "requested" | "in_progress" | "completed" | "cancelled";
 export type EmrOrderType = "dispensing" | "treatment" | "lab" | "imaging";
-export type EmrOrderStatus = "requested" | "re_requested" | "in_progress" | "completed" | "cancelled";
+export type EmrOrderStatus = "requested" | "re_requested" | "in_progress" | "confirmed" | "completed" | "cancelled";
 export type EmrOrderWorkStatus = "pending" | "completed";
 export type OrderAssignmentStatus = "active" | "cancelled" | "completed";
 export type OrderEventType =
@@ -100,6 +100,7 @@ export type OrderEventType =
   | "result_entered";
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "refund_requested" | "refunded" | "voided";
+export type InvoicePaymentState = "none" | "unpaid" | "paid" | "failed" | "refunded";
 export type PaymentMethod = "card" | "cash" | "transfer" | "other";
 export type PaymentStatus = "approved" | "cancelled" | "refunded" | "failed";
 
@@ -276,8 +277,12 @@ export type Diagnosis = {
   diagnosisCatalogId?: EmrId;
   diagnosisText: string;
   diagnosisType: DiagnosisType;
+  isPrimary?: boolean;
+  sortOrder?: number;
   createdByUserId: EmrId;
+  updatedByUserId?: EmrId;
   createdAt: IsoDateTime;
+  updatedAt?: IsoDateTime;
 };
 
 export type Prescription = {
@@ -423,6 +428,11 @@ export type Invoice = {
   taxAmount: number;
   totalAmount: number;
   issuedAt?: IsoDateTime;
+  issuedByUserId?: EmrId;
+  paidAt?: IsoDateTime;
+  paymentState?: InvoicePaymentState;
+  selectedPaymentMethod?: PaymentMethod;
+  unpaidReason?: string;
   createdAt: IsoDateTime;
 };
 

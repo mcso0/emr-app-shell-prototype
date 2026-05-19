@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CdsActionsCopyIcon,
   CdsActionsSettingsIcon,
@@ -21,6 +21,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +56,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchIcon, SlidersIcon } from "@/components/icons";
+import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import {
   deliveryLabels,
   formatHospitalOrderAmount,
@@ -101,6 +109,19 @@ const drawerTabs = [
 
 type DrawerTab = (typeof drawerTabs)[number]["value"];
 
+const hospitalOrderTableMinWidthClass = "min-w-[1060px]";
+const hospitalOrderTableColumnClasses = {
+  select: "w-10",
+  type: "w-[72px]",
+  standardName: "w-[180px]",
+  inHospitalName: "w-[170px]",
+  billingName: "w-[160px]",
+  status: "w-[86px]",
+  price: "w-[110px]",
+  target: "w-[96px]",
+  actions: "w-[80px]",
+} as const;
+
 type OrderMenuChild = {
   label: string;
   categoryId?: HospitalOrderCategoryId;
@@ -117,6 +138,7 @@ type OrderMenuGroup = {
 const hospitalAdminMenuItems = [
   { label: "병원기본설정", icon: CdsActionsSettingsIcon },
   { label: "병원구성원 관리", icon: CdsFilesFileTextIcon },
+  { label: "감사 로그", icon: CdsFilesFileTextIcon },
   { label: "근무표", icon: CdsFilesCalendarIcon },
   { label: "역할별 업무 관리", icon: CdsFilesGridIcon },
   { label: "공간/시간 관리", icon: CdsFilesGridIcon },
@@ -205,6 +227,42 @@ const defaultOrderTypeTabs = [
   { label: "원내 항목", value: "in-house" },
   { label: "외부 항목", value: "external" },
 ];
+
+const auditEventFilterItems = [
+  { label: "전체", value: "all" },
+  { label: "구성원 역할 변경", value: "workspace.membership_roles_changed" },
+  { label: "구성원 상태 변경", value: "workspace.membership_status_changed" },
+  { label: "현장 접수", value: "reception.walk_in_created" },
+  { label: "예약 체크인", value: "reception.appointment_checked_in" },
+  { label: "SOAP 저장", value: "chart.soap_saved" },
+  { label: "차트 완료", value: "chart.completed" },
+  { label: "오더 확정", value: "order.confirmed" },
+  { label: "결제 상태", value: "billing.payment_state_changed" },
+];
+
+const auditEventLabels: Record<string, string> = {
+  "workspace.membership_roles_changed": "구성원 역할 변경",
+  "workspace.membership_status_changed": "구성원 상태 변경",
+  "reception.walk_in_created": "현장 접수",
+  "reception.appointment_checked_in": "예약 체크인",
+  "chart.soap_saved": "SOAP 저장",
+  "chart.completed": "차트 완료",
+  "order.confirmed": "오더 확정",
+  "order.billing_candidate_requested": "오더 청구 요청",
+  "billing.payment_state_changed": "결제 상태 변경",
+};
+
+type AuditReviewEventRow = {
+  id: string;
+  actorUserId?: string | null;
+  eventType: string;
+  targetType: string;
+  targetId: string;
+  encounterId?: string | null;
+  occurredAt: string;
+  after?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+};
 
 function getVisibleOrders(
   orders: HospitalOrderCatalogItem[],
@@ -295,14 +353,21 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
           {hospitalAdminMenuItems.map((item) => {
             const Icon = item.icon;
             const isMembers = item.label === "병원구성원 관리";
+            const isAudit = item.label === "감사 로그";
 
             return (
               <EmrTextSideNavButton
                 key={item.label}
-                active={isMembers && activeSection === "members"}
-                disabled={!isMembers}
+                active={(isMembers && activeSection === "members") || (isAudit && activeSection === "audit")}
+                disabled={!isMembers && !isAudit}
                 icon={<Icon className="size-4 shrink-0" />}
-                onClick={isMembers ? () => setActiveSection("members") : undefined}
+                onClick={
+                  isMembers
+                    ? () => setActiveSection("members")
+                    : isAudit
+                      ? () => setActiveSection("audit")
+                      : undefined
+                }
               >
                 {item.label}
               </EmrTextSideNavButton>
@@ -447,6 +512,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     return <WorkspaceMembershipManagement workspaceId={workspaceId} />;
   }
 
+  if (activeSection === "audit") {
+    return <HospitalAdminAuditReview workspaceId={workspaceId} />;
+  }
+
   const openDrawer = (order: HospitalOrderCatalogItem) => {
     if (selectedOrderIds.length > 0) return;
 
@@ -564,10 +633,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       </section>
       <div className="min-h-0 flex-1 overflow-hidden">
         <ScrollArea className="h-full">
-          <Table className="min-w-[1060px] table-fixed text-[13px]">
+          <Table className={cn(hospitalOrderTableMinWidthClass, "table-fixed text-[13px]")}>
             <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10">
+                <TableHead className={hospitalOrderTableColumnClasses.select}>
                   <Checkbox
                     aria-label="보이는 오더 전체 선택"
                     checked={allVisibleSelected}
@@ -577,14 +646,14 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     }
                   />
                 </TableHead>
-                <TableHead className="w-[72px]">유형</TableHead>
-                <TableHead className="w-[180px]">표준 Order명</TableHead>
-                <TableHead className="w-[170px]">원내 Order명</TableHead>
-                <TableHead className="w-[160px]">청구서명</TableHead>
-                <TableHead className="w-[86px]">사용여부</TableHead>
-                <TableHead className="w-[110px] text-right">판매금액</TableHead>
-                <TableHead className="w-[96px]">대상</TableHead>
-                <TableHead className="w-[80px] text-right">작업</TableHead>
+                <TableHead className={hospitalOrderTableColumnClasses.type}>유형</TableHead>
+                <TableHead className={hospitalOrderTableColumnClasses.standardName}>표준 Order명</TableHead>
+                <TableHead className={hospitalOrderTableColumnClasses.inHospitalName}>원내 Order명</TableHead>
+                <TableHead className={hospitalOrderTableColumnClasses.billingName}>청구서명</TableHead>
+                <TableHead className={hospitalOrderTableColumnClasses.status}>사용여부</TableHead>
+                <TableHead className={cn(hospitalOrderTableColumnClasses.price, "text-right")}>판매금액</TableHead>
+                <TableHead className={hospitalOrderTableColumnClasses.target}>대상</TableHead>
+                <TableHead className={cn(hospitalOrderTableColumnClasses.actions, "text-right")}>작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -670,6 +739,208 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   );
 }
 
+function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
+  const { hydrated, hydrate, session } = useAuthClient();
+  const [eventType, setEventType] = useState("all");
+  const [query, setQuery] = useState("");
+  const [events, setEvents] = useState<AuditReviewEventRow[]>([]);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "denied" | "error">("idle");
+  const canReview = session?.role === "hospital_admin" || session?.role === "supabase";
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const controller = new AbortController();
+    let canceled = false;
+
+    const loadEvents = async () => {
+      await Promise.resolve();
+      if (canceled) return;
+
+      if (!session || !canReview) {
+        setStatus("denied");
+        setEvents([]);
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set("limit", "50");
+      if (eventType !== "all") params.set("eventType", eventType);
+      if (query.trim()) params.set("query", query.trim());
+      setStatus("loading");
+
+      try {
+        const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/audit/events?${params.toString()}`, {
+          headers: getAuditActorHeaders(session),
+          signal: controller.signal,
+        });
+        const body = await response.json() as {
+          ok: boolean;
+          events?: AuditReviewEventRow[];
+        };
+        if (canceled) return;
+
+        if (!response.ok || !body.ok) {
+          setStatus(response.status === 401 || response.status === 403 ? "denied" : "error");
+          setEvents([]);
+          return;
+        }
+
+        setEvents(body.events ?? []);
+        setStatus("ready");
+      } catch (error: unknown) {
+        if ((error as { name?: string }).name === "AbortError") return;
+        setStatus("error");
+        setEvents([]);
+      }
+    };
+
+    void loadEvents();
+
+    return () => {
+      canceled = true;
+      controller.abort();
+    };
+  }, [canReview, eventType, hydrated, query, session, workspaceId]);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="hospital-admin-audit-review">
+      <section className="border-b bg-card px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[20px] font-semibold leading-7">감사 로그</h1>
+              <Badge variant="secondary">{events.length}</Badge>
+            </div>
+            <div className="mt-1 max-w-2xl text-[13px] leading-5 text-muted-foreground">
+              병원관리 / 감사 로그 / 주요 변경 이력
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 border-b bg-card px-4 py-2">
+        <div className="flex h-8 min-w-0 flex-1 items-center rounded-lg border bg-card px-2.5 sm:min-w-[280px]">
+          <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          <Input
+            aria-label="감사 로그 검색"
+            className="h-8 border-0 bg-transparent px-2 text-[13px] shadow-none focus-visible:ring-0"
+            placeholder="actor, target, encounter 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <Select value={eventType} onValueChange={(value) => setEventType(value ?? "all")}>
+          <SelectTrigger aria-label="감사 이벤트 필터" size="sm" className="w-[188px] bg-card">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {auditEventFilterItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </section>
+      <section className="min-h-0 flex-1 overflow-hidden">
+        {status === "denied" ? (
+          <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center">
+            <h2 className="text-[16px] font-semibold">감사 로그 접근 제한</h2>
+            <p className="max-w-md text-[13px] leading-5 text-muted-foreground">
+              병원관리자만 workspace-scoped audit event를 볼 수 있습니다.
+            </p>
+          </div>
+        ) : status === "error" ? (
+          <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center">
+            <h2 className="text-[16px] font-semibold">감사 로그를 불러오지 못했습니다</h2>
+            <p className="max-w-md text-[13px] leading-5 text-muted-foreground">
+              서버 audit review reader를 다시 확인해 주세요.
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="h-full">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="h-9 w-[170px] px-4 text-[12px]">시간</TableHead>
+                  <TableHead className="h-9 w-[180px] px-2 text-[12px]">이벤트</TableHead>
+                  <TableHead className="h-9 w-[150px] px-2 text-[12px]">Actor</TableHead>
+                  <TableHead className="h-9 w-[220px] px-2 text-[12px]">Target</TableHead>
+                  <TableHead className="h-9 px-2 text-[12px]">요약</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((event) => (
+                  <TableRow key={event.id} data-testid={`audit-review-row-${event.id}`} className="h-12 border-border bg-card text-[13px]">
+                    <TableCell className="px-4 font-medium">{formatAuditTime(event.occurredAt)}</TableCell>
+                    <TableCell className="px-2">
+                      <Badge variant="outline" className="rounded-md">{auditEventLabels[event.eventType] ?? event.eventType}</Badge>
+                    </TableCell>
+                    <TableCell className="px-2">{event.actorUserId ?? "system"}</TableCell>
+                    <TableCell className="px-2">
+                      <span className="font-medium">{event.targetType}</span>
+                      <span className="ml-2 text-muted-foreground">{event.targetId}</span>
+                    </TableCell>
+                    <TableCell className="px-2 text-muted-foreground">{buildAuditSummary(event)}</TableCell>
+                  </TableRow>
+                ))}
+                {status === "loading" ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-[13px] text-muted-foreground">불러오는 중</TableCell>
+                  </TableRow>
+                ) : events.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-[13px] text-muted-foreground">표시할 감사 로그가 없습니다.</TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function getAuditActorHeaders(session: AuthSession): HeadersInit {
+  if (session.role === "supabase") return {};
+
+  const actorByRole: Partial<Record<AuthSession["role"], string>> = {
+    hospital_admin: "user-admin",
+    vet: "user-vet",
+    front_desk: "user-front-desk",
+    nurse: "user-tech",
+    billing_admin: "user-tech",
+  };
+  const actorUserId = actorByRole[session.role] ?? session.id;
+  return { "x-clair-demo-session-user-id": actorUserId };
+}
+
+function formatAuditTime(value: string) {
+  return value.replace("T", " ").replace("+09:00", "");
+}
+
+function buildAuditSummary(event: AuditReviewEventRow) {
+  const after = event.after ?? {};
+  const status = typeof after.status === "string" ? after.status : undefined;
+  const paymentState = typeof after.paymentState === "string" ? after.paymentState : undefined;
+  const noteStatus = typeof after.noteStatus === "string" ? after.noteStatus : undefined;
+  const mode = typeof after.mode === "string" ? after.mode : undefined;
+  const confirmation = typeof after.orderConfirmationStatus === "string" ? after.orderConfirmationStatus : undefined;
+
+  return [
+    event.encounterId ? `encounter ${event.encounterId}` : null,
+    status ? `status ${status}` : null,
+    paymentState ? `payment ${paymentState}` : null,
+    noteStatus ? `SOAP ${noteStatus}` : null,
+    mode ? `mode ${mode}` : null,
+    confirmation ? `order ${confirmation}` : null,
+  ].filter(Boolean).join(" · ") || "safe audit summary";
+}
+
 function DrawerField({
   children,
   hint,
@@ -682,16 +953,19 @@ function DrawerField({
   required?: boolean;
 }) {
   return (
-    <div className="grid gap-2 md:grid-cols-[150px_minmax(0,1fr)] md:gap-5">
-      <label className="pt-2 text-[14px] font-bold text-foreground">
+    <Field
+      orientation="responsive"
+      className="gap-2 md:grid md:grid-cols-[150px_minmax(0,1fr)] md:items-start md:gap-5"
+    >
+      <FieldLabel className="pt-2 text-[14px] font-bold text-foreground">
         {label}
         {required ? <span className="ml-1 text-[var(--emr-text-danger)]">*</span> : null}
-      </label>
-      <div className="min-w-0">
+      </FieldLabel>
+      <FieldContent className="min-w-0 gap-1.5">
         {children}
-        {hint ? <div className="mt-1.5 text-[12px] text-muted-foreground">{hint}</div> : null}
-      </div>
-    </div>
+        {hint ? <FieldDescription className="text-[12px] leading-4">{hint}</FieldDescription> : null}
+      </FieldContent>
+    </Field>
   );
 }
 
@@ -808,7 +1082,7 @@ export function HospitalAdminDrawer() {
         </Button>
       </header>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="grid gap-5 px-8 py-6 pb-28">
+        <FieldGroup className="px-8 py-6">
           <DrawerField label="분류">
             <div className="flex h-9 items-center rounded-lg border bg-[var(--emr-surface-muted)] px-3 text-[13px] font-semibold">
               {category?.label} / {subcategory?.label}
@@ -964,11 +1238,11 @@ export function HospitalAdminDrawer() {
               </Table>
             </div>
           )}
-        </div>
+        </FieldGroup>
       </ScrollArea>
-      <footer className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t bg-card/95 px-6 py-4 shadow-sm">
+      <footer className="flex shrink-0 items-center justify-between border-t bg-card px-6 py-4 shadow-sm">
         <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <Button variant="outline" className="border-[var(--emr-status-danger-border)] text-[var(--emr-status-danger-text)]" onClick={() => setConfirmDeleteOpen(true)}>
+          <Button variant="destructive" onClick={() => setConfirmDeleteOpen(true)}>
             삭제
           </Button>
           {confirmDeleteOpen ? (

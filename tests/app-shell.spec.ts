@@ -354,12 +354,12 @@ test("dispensing order groups support assignment status actions without add or d
   await page.getByRole("button", { name: "담당하기" }).first().click();
   await expect(page.getByRole("button", { name: "조제중" }).first()).toBeVisible();
   await expect(page.getByText("송하윤").first()).toBeVisible();
-  await expect(row.getByRole("combobox", { name: /담당 변경/ })).toHaveValue("tech-sh");
+  await expect(row.getByRole("combobox", { name: /담당 변경/ })).toContainText("송하윤");
 
   await page.getByRole("button", { name: "항생제 세트 A 상태 액션" }).first().click();
   await page.getByText("담당취소").click();
   await expect(page.getByRole("button", { name: "담당하기" }).first()).toBeVisible();
-  await expect(row.getByRole("combobox", { name: /담당 변경/ })).toHaveValue("");
+  await expect(row.getByRole("combobox", { name: /담당 변경/ })).toContainText("미지정");
 
   await page.getByRole("button", { name: "담당하기" }).first().click();
   await page.getByRole("button", { name: "항생제 세트 A 상태 액션" }).first().click();
@@ -392,10 +392,11 @@ test("dispensing assignee cell changes technician without opening drawer", async
   const assigneeSelect = row.getByRole("combobox", { name: /담당 변경/ });
 
   await assigneeSelect.scrollIntoViewIfNeeded();
-  await assigneeSelect.selectOption("tech-jh");
+  await assigneeSelect.click();
+  await page.getByRole("option", { name: "박준호" }).click();
 
   await expect(page.getByRole("button", { name: "상세 닫기" })).toBeHidden();
-  await expect(assigneeSelect).toHaveValue("tech-jh");
+  await expect(assigneeSelect).toContainText("박준호");
   await expect(page.getByText("박준호").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "상세 닫기" })).toBeHidden();
 

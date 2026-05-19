@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-90 Role Workspace Boundary And Denial UX QA Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #17202a; line-height: 1.55; }
+      h1, h2 { color: #0f3b5f; }
+      .badge { display: inline-block; padding: 4px 8px; border: 1px solid #8bb7d8; border-radius: 6px; background: #eef7fd; font-size: 12px; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #d7e2ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f3f7fa; }
+      code { background: #f5f7f9; padding: 2px 4px; border-radius: 4px; }
+      .pass { font-size: 26px; font-weight: 800; color: #136f3f; }
+      .note { border-left: 4px solid #2f80ed; padding: 10px 14px; background: #f4f9ff; }
+    </style>
+  </head>
+  <body>
+    <p class="badge">Project 05 / DEN-90 / Human Review</p>
+    <h1>Role Workspace Boundary And Denial UX QA Report</h1>
+    <p>역할별 접근, workspace boundary, denial UX를 QA했다. 코드 수정 없이 권한 resolver, server route, UI 회귀 테스트로 확인했다.</p>
+
+    <h2>대표 판단</h2>
+    <p class="pass">Pass with UX follow-ups</p>
+    <p>이번 DEN-90 범위에서 unauthorized mutation이나 cross-workspace access blocker는 발견하지 못했다.</p>
+
+    <h2>Role Matrix</h2>
+    <table>
+      <thead><tr><th>역할</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>hospital_admin</td><td>전체 권한, 멤버/역할 관리, 감사 로그 접근, last-admin 보호 통과</td></tr>
+        <tr><td>vet</td><td>차트 작성 권한 통과, admin/member 관리 권한 없음 확인</td></tr>
+        <tr><td>technician</td><td>차트 view-only와 지원 업무 권한 경계 확인</td></tr>
+        <tr><td>front_desk</td><td>접수 mutation 가능, chart view-only와 admin 차단 확인</td></tr>
+        <tr><td>multi-role</td><td>권한은 additive union이고 admin 권한은 자동 상승하지 않음 확인</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Follow-up</h2>
+    <ul>
+      <li>mock UI role label을 canonical MVP roles와 맞춰 DEN-91 전에 설명 혼란을 줄이기</li>
+      <li>권한 실패 화면 문구를 더 쉬운 한국어로 정리하되 server denial code는 유지</li>
+      <li>DEN-88 audit completeness와 remote/live RLS validation gate 유지</li>
+      <li>Tiptap/Node listener warning 정리</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test ... --reporter=line</code> role/workspace/security QA bundle → 124 passed</li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <div class="note">DEN-90은 Human Review로 넘기고, 다음은 DEN-91 representative pilot rehearsal and defect triage다.</div>
+  </body>
+</html>

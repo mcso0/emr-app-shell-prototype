@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-131 입원 테이블/상태 배지 표준화 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f4f4f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        margin: 0 0 24px;
+        color: #667085;
+        font-size: 13px;
+      }
+      .note {
+        border-left: 4px solid #71717a;
+        background: #fafafa;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-131 입원 테이블/상태 배지 표준화 리포트</h1>
+        <p class="meta">2026-05-20 · Project 06-M2 · Inpatient Table & Status</p>
+
+        <h2>요약</h2>
+        <p>
+          입원 현황판의 병동 테이블과 상태/주의 배지를 같은 규칙으로 읽히도록 정리했다. 긴 진단명과 메모가
+          테이블 폭을 흔들지 않게 하고, 좁은 화면에서는 가로 스크롤로 안정적으로 보이게 유지했다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li>입원 table column 폭을 local recipe 상수로 모아 관리하게 했다.</li>
+          <li>table을 <code>table-fixed</code>로 맞추고 진단명/입실 메모는 predictable truncate와 title을 적용했다.</li>
+          <li>입원 상태, 주의 tag, 요약 card tone을 semantic EMR status tone 이름으로 정리했다.</li>
+          <li><code>EmrStatusBadge</code>는 현재 label 기반 범위가 좁아 inpatient에는 적용하지 않고, local mapper 유지로 결정했다.</li>
+          <li>focused Playwright 테스트에 table recipe와 overflow 확인을 추가했다.</li>
+        </ul>
+
+        <h2>유지한 범위</h2>
+        <p class="note">
+          row 선택, 상세 drawer, 검색, 입원실 그룹 필터, 기준일 선택, 퇴실 버튼 mock 동작은 유지했다.
+          입원 lifecycle persistence, 퇴실 workflow 구현, 진단/병동 데이터 모델, 서버 검증, audit log, Supabase/DB/RLS는 변경하지 않았다.
+        </p>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/features/inpatient/module.tsx tests/inpatient.spec.ts</code></li>
+          <li><code>npx tsc --noEmit</code></li>
+          <li><code>npx playwright test tests/inpatient.spec.ts --reporter=line</code> · 3 passed</li>
+          <li>desktop/narrow viewport browser QA · 상세 drawer와 table overflow 확인</li>
+          <li><code>npm run build</code></li>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+        </ul>
+
+        <h2>Human Review 체크포인트</h2>
+        <ul>
+          <li>입원 현황판은 조밀한 표가 맞는 화면이라 고정 min-width를 유지했다.</li>
+          <li>입원 상태 배지는 아직 feature-local mapper가 더 안전하다.</li>
+          <li>퇴실 실제 workflow와 저장 구조는 별도 제품/DB 이슈로 분리해야 한다.</li>
+        </ul>
+      </article>
+    </main>
+  </body>
+</html>

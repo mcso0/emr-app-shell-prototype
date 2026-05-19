@@ -4,6 +4,10 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import {
+  emitLiveMutationAuditEvent,
+  type LiveMutationAuditOptions,
+} from "@/features/audit/server-mutation-audit-core";
 import { mockEncounters, mockSoapNotes } from "@/mocks/emr-domain";
 import type { Encounter, SoapNote } from "@/types/emr-domain";
 
@@ -131,12 +135,18 @@ export async function readChartSoapNote({
 
 export async function saveChartSoapNote({
   actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
   gateway = createMockChartSoapNoteGateway(),
   input,
   permissionAdapter = createDemoChartSoapPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   gateway?: Pick<ChartSoapNoteGateway, "saveSoapNote">;
   input: ChartSoapNoteInput;
   permissionAdapter?: WorkspacePermissionAdapter;
@@ -189,6 +199,27 @@ export async function saveChartSoapNote({
   if (!result.soapNote) {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
+
+  const audit = await emitLiveMutationAuditEvent({
+    auditGateway,
+    auditNow,
+    input: {
+      workspaceId,
+      actorUserId,
+      eventType: "chart.soap_saved",
+      targetType: "soap_note",
+      targetId: result.soapNote.id,
+      encounterId: normalized.encounterId,
+      requestId: auditRequestId,
+      after: {
+        mode: normalized.mode,
+        noteStatus: result.soapNote.status,
+        updatedAt: result.soapNote.updatedAt,
+      },
+      metadata: { source: "chart-soap-note-persistence" },
+    },
+  });
+  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
 
   return {
     ok: true,
