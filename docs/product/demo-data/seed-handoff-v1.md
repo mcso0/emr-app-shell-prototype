@@ -34,6 +34,21 @@ The 동물 등록 and 동물 정보 drawer references need enough synthetic data
 | Seed Field | Source Doc | Target Shape |
 | --- | --- | --- |
 | `guardian_id` | `patient-guardian-data-v1.md` | deterministic guardian ID |
+| `guardian_code` | `patient-guardian-data-v1.md` | staff-facing synthetic guardian code |
+| `guardian_name` | `patient-guardian-data-v1.md` | name with validation metadata |
+| `guardian_birth_date` | `patient-guardian-data-v1.md` | optional birth date |
+| `guardian_mobile_phone_normalized` | `patient-guardian-data-v1.md` | hyphen-free phone value for search and duplicate checks |
+| `guardian_additional_phone_numbers` | `patient-guardian-data-v1.md` | optional extra contact numbers |
+| `guardian_address_parts` | `patient-guardian-data-v1.md` | postal code, base address, and detail address |
+| `guardian_email_parts` | `patient-guardian-data-v1.md` | local part, domain mode, domain, and normalized email |
+| `cash_receipt_type`, `cash_receipt_number` | `patient-guardian-data-v1.md` | default none or conditional required number for deduction types |
+| `resident_registration_masked`, `resident_registration_token` | `patient-guardian-data-v1.md` | synthetic masked display and non-real placeholder identity token |
+| `vehicle_number` | `patient-guardian-data-v1.md` | optional vehicle number |
+| `guardian_memo` | `patient-guardian-data-v1.md` | internal note with 1500-character demo limit |
+| `guardian_referral_sources` | `patient-guardian-data-v1.md` | multi-select referral tags plus optional other text |
+| `guardian_consent_rows` | `patient-guardian-data-v1.md` | personal data, third-party sharing, and marketing consent rows |
+| `duplicate_guardian_candidate_ids` | `patient-guardian-data-v1.md` | candidate IDs when name plus mobile phone match existing guardians |
+| `duplicate_override_accepted` | `patient-guardian-data-v1.md` | audit marker when staff intentionally registers a duplicate candidate |
 | `patient_id` | `patient-guardian-data-v1.md` | deterministic animal-patient ID |
 | `patient_no` | `patient-guardian-data-v1.md` | staff-facing patient number |
 | `patient_name` | `patient-guardian-data-v1.md` | animal name; one-character names are valid |
@@ -47,12 +62,14 @@ The 동물 등록 and 동물 정보 drawer references need enough synthetic data
 | `microchip_number`, `microchip_type`, `registration_number` | `patient-guardian-data-v1.md` | identifiers kept reserved after soft delete |
 | `patient_memo` | `patient-guardian-data-v1.md` | internal profile memo |
 | `patient_guardian_id`, `relationship_label`, `is_primary` | `patient-guardian-data-v1.md` | guardian-patient relationship data |
+| `patient_guardian_link_audit_fields` | `patient-guardian-data-v1.md` | linked, unlinked, and primary-change staff/time metadata |
 | `message_consent_status`, `guardian_phone_available` | `patient-guardian-data-v1.md` | messaging eligibility and refusal handling |
 | `patient_staff_assignments` | `patient-guardian-data-v1.md` | attending vet rows with staff, department, role, sort order |
 | `patient_activity_labels` | `patient-guardian-data-v1.md` | derived labels from appointment, encounter, inpatient, surgery/anesthesia, deceased, and deleted sources |
 | `patient_status` | `patient-guardian-data-v1.md` | `active`, `deceased`, or `soft_deleted` |
 | `deceased_at`, `deleted_at`, `restored_at` | `patient-guardian-data-v1.md` | status/audit timestamps |
 | `deletion_lock_reasons` | `patient-guardian-data-v1.md` | active work reasons that block deletion |
+| `guardian_deletion_lock_reasons` | `patient-guardian-data-v1.md` | primary-active-patient and financial-balance reasons that block guardian deletion |
 | `has_chart`, `last_chart_id` | `patient-guardian-data-v1.md` | chart navigation target state |
 | `kakao_patient_code` | `patient-guardian-data-v1.md` | synthetic messaging/display code |
 

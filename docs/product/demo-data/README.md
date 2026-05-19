@@ -75,6 +75,8 @@ Order-related demo data should be organized into five data families.
 These rules affect storage, calculation, or downstream linkage and should be preserved before detailed UI work:
 
 - Patient/guardian records should be workspace-scoped synthetic master data. Deletion is soft delete and must preserve identifiers and history.
+- Guardian registration should store normalized phones, conditional cash-receipt fields, consent rows, referral-source tags, duplicate-check audit state, and synthetic masked identifiers.
+- Patient-guardian links should be separate relationship rows so changing the main guardian or removing an additional guardian does not rewrite patient or guardian master records.
 - Animal profile status labels should be derived from appointment, encounter, inpatient, surgery/anesthesia, deceased, and deleted state records.
 - Master presets and chart-applied rows are separate. Chart rows keep an applied snapshot so future admin edits do not rewrite past chart/order/billing records.
 - Order sets are managed in a separate hospital-admin Order 세트 surface. They can appear together with individual orders only when staff search/apply orders from the chart.
@@ -87,6 +89,7 @@ These rules affect storage, calculation, or downstream linkage and should be pre
 ## Portfolio Proof Points
 
 - Patient and guardian data should be rich enough to support registration, profile drawer review, status labels, message consent, soft deletion, restoration, and chart/reception navigation without real data.
+- Guardian data should support duplicate confirmation, cash-receipt validation, consent/referral tracking, existing guardian linking, main/additional guardian switching, relationship-only deletion, and guardian deletion locks.
 - Order management should look like real hospital administration data, not only a simple service-name list.
 - Individual orders and order sets should be managed in separate hospital-admin surfaces because sets have their own included-order, amount-basis, and child-billing rules.
 - Chart order search can still show individual orders, order sets, and templates together so staff can apply them in one workflow.
@@ -132,4 +135,5 @@ The following can wait until screen implementation because they do not change th
 - 2026-05-19: Added a five-family order data structure map and data-affecting rule summary for master orders, order sets, lab test items, chart-applied orders, and billing/calculation data.
 - 2026-05-19: Recorded the product decision that Order 세트 is managed separately from individual Order 관리, while chart-side search/application can still combine individual orders and sets.
 - 2026-05-19: Added patient/guardian data contract from 동물 등록 and 동물 정보 drawer references, including registration fields, breed/species rules, staff assignment, status labels, messaging consent, soft delete, and restoration data.
+- 2026-05-19: Added guardian registration/detail reference data for normalized contact fields, cash receipt rules, consent/referral rows, duplicate detection, patient relationship management, guardian deletion locks, and change-history metadata.
 - 2026-05-19: Created DEN-99 synthetic virtual hospital demo dataset foundation.

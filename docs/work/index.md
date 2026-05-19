@@ -96,6 +96,9 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | RECEPTION-LIVE-PR-013 | human_review | reception | P0 | Project 04 / DEN-66 | `docs/work/reception/RECEPTION-LIVE-PR-013-chart-order-billing-handoff-closeout.md` |
 | CLINICAL-BILLING-PR-001 | human_review | clinical-billing | P0 | Project 04 / DEN-67 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-001-scope-encounter-dependency.md` |
 | CLINICAL-BILLING-PR-002 | human_review | clinical-billing | P0 | Project 04 / DEN-68 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-002-schema-migration.md` |
+| CLINICAL-BILLING-PR-003 | human_review | clinical-billing | P0 | Project 04 / DEN-100 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-003-chart-order-snapshot-bridge.md` |
+| CLINICAL-BILLING-PR-004 | human_review | clinical-billing | P0 | Project 04 / DEN-69 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-004-soap-note-persistence.md` |
+| CLINICAL-BILLING-PR-005 | human_review | clinical-billing | P0 | Project 04 / DEN-70 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-005-chart-completion-persistence.md` |
 | DEMO-DATA-PR-001 | human_review | demo-data | P0 | Project 04 / DEN-99 | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md` |
 | CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
 | CHART-PR-002 | done | chart | P1 | PR 2 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md` |
@@ -126,7 +129,10 @@ Recommended next shaping target:
 - DEN-67 `00-01 Confirm clinical billing persistence scope and encounter dependency` is ready for Human Review.
 - DEN-68 `00-02 Implement clinical order billing schema migration` is ready for Human Review.
 - DEN-99 `00-03 Define portfolio virtual hospital demo dataset foundation` is ready for Human Review.
-- Next recommended Linear Project 04 implementation issue is DEN-69 `01-01 Persist SOAP field saves and autosave metadata`.
+- DEN-100 `00-04 Align chart-applied order snapshot schema with DEN-99 data contracts` is ready for Human Review.
+- DEN-69 `01-01 Persist SOAP field saves and autosave metadata` is ready for Human Review.
+- DEN-70 `01-02 Persist chart completion state` is ready for Human Review.
+- Next recommended Linear Project 04 implementation issue after DEN-70 is DEN-71 `01-03 Persist diagnosis/assessment rows`; DEN-72/73/75 should consume the DEN-100 order snapshot contract.
 - DEN-69+ should use `docs/product/demo-data/` as an added product data reference before continuing schema/UI work.
 - Keep Project 04 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
 

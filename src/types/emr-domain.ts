@@ -235,6 +235,8 @@ export type Encounter = {
   checkedInAt?: IsoDateTime;
   checkedInByUserId?: EmrId;
   startedAt?: IsoDateTime;
+  chartCompletedAt?: IsoDateTime;
+  chartCompletedByUserId?: EmrId;
   completedAt?: IsoDateTime;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
@@ -262,6 +264,7 @@ export type SoapNote = {
   assessment?: string;
   plan?: string;
   status: SoapNoteStatus;
+  autosavedAt?: IsoDateTime;
   signedAt?: IsoDateTime;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;

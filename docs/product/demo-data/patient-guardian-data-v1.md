@@ -27,6 +27,74 @@ This document keeps data and state rules separate from detailed drawer/modal UX.
 | Patient activity/status data | Appointment, reception, chart, inpatient, surgery/anesthesia, deceased, and deleted state labels |
 | Soft-delete and restoration data | Deletion lock, deleted list visibility, restore eligibility, and linked guardian deletion choices |
 
+## Guardian Registration Contract
+
+The 보호자 등록 layer creates a guardian master record. All examples are synthetic demo-data and should never use real owner identifiers.
+
+| Field | Required | Demo Meaning |
+| --- | --- | --- |
+| `guardianId` | yes | Internal deterministic guardian ID |
+| `workspaceId` | yes | Workspace scope |
+| `guardianCode` | yes | Staff-facing synthetic guardian code, such as `C01234` |
+| `name` | yes | Guardian name; trim whitespace before save |
+| `birthDate` | no | Date picker or direct input value |
+| `mobilePhoneRaw` | yes | Entered mobile phone digits before normalization |
+| `mobilePhoneNormalized` | yes | Hyphen-free phone value used for search and duplicate checks |
+| `additionalPhoneNumbers` | no | Up to two extra phone numbers; can include landline-style values |
+| `postalCode` | no | Address search result postal code |
+| `addressLine1` | no | Base address from address search |
+| `addressLine2` | no | Detail address |
+| `emailLocalPart` | no | Email ID before `@` |
+| `emailDomainMode` | no | `preset` or `direct_input` |
+| `emailDomain` | no | Selected or directly entered domain |
+| `email` | no | Normalized email when both local part and domain exist |
+| `cashReceiptType` | yes | `none`, `personal_income_deduction`, or `business_income_deduction`; default is `none` |
+| `cashReceiptNumber` | conditional | Required when `cashReceiptType` is not `none` |
+| `residentRegistrationNumberMasked` | no | Display-safe resident-number value for synthetic examples |
+| `residentRegistrationNumberToken` | no | Non-real placeholder/token used instead of storing a real identifier |
+| `vehicleNumber` | no | Vehicle number text |
+| `memo` | no | Internal note; demo limit is 1500 characters |
+| `referralSources` | no | List such as homepage, blog/cafe/article, YouTube, Instagram, KakaoTalk channel, offline lecture, nearby, referral, other hospital, other |
+| `referralSourceOtherText` | no | Free text when referral source is `other` |
+| `createdByStaffId` | yes | Staff who registered the guardian |
+| `createdAt` | yes | Registration timestamp |
+| `lastUpdatedAt`, `lastUpdatedByStaffId` | no | Last saved edit metadata |
+
+## Guardian Validation And Duplicate Rules
+
+| Situation | Data Rule |
+| --- | --- |
+| Name length | Store validation metadata for minimum 2 and maximum 40 characters |
+| Phone input | Store normalized digits for mobile phone search; hyphen formatting is display-only |
+| Cash receipt type is `none` | `cashReceiptNumber` can be empty and registration can proceed |
+| Cash receipt type is personal or business deduction | `cashReceiptNumber` becomes required |
+| Resident-number display | Editable view can show the entered synthetic value; read-only view should mask back digits |
+| Required fields are valid | Registration can create the guardian |
+| Same name plus same normalized mobile phone exists | Show duplicate candidate confirmation before creating another guardian |
+| Duplicate is intentionally accepted | Store `duplicateOverrideAccepted`, `duplicateCandidateGuardianIds`, and actor/time for audit-style review |
+| Kakao ID | Do not model as a V1 field; the referenced UI removed it |
+
+## Guardian Consent And Referral Data
+
+Consent should be stored as rows, not only as a combined checkbox state.
+
+| Field | Demo Meaning |
+| --- | --- |
+| `guardianConsentId` | Stable consent row ID |
+| `guardianId` | Guardian link |
+| `consentType` | `personal_data_collection`, `third_party_sharing`, or `marketing_messages` |
+| `consentStatus` | `granted`, `refused`, or `unknown` |
+| `consentedAt`, `refusedAt` | Timestamp for the latest status |
+| `sourceSurface` | `guardian_registration`, `guardian_detail_edit`, or future signing surface |
+| `documentVersion` | Synthetic policy/document version for demo traceability |
+
+Data rules:
+
+- `전체동의` is a derived helper action. It should update individual consent rows rather than become the only stored value.
+- If one individual consent is changed after `전체동의`, derive the all-consent display state from the individual rows.
+- Marketing/message eligibility should check both guardian-level consent and patient/relationship-level message consent.
+- Referral sources are multi-select demo tags plus optional free text; they are not clinical data.
+
 ## Patient Registration Contract
 
 The 신규 동물 등록 layer creates a patient and links it to a guardian.
@@ -87,6 +155,33 @@ The 동물 정보 drawer should read from patient, guardian relationship, consen
 | `lastChartId` | Latest chart opened when using chart navigation |
 | `unsavedChanges` | Dirty-state marker used before navigation or close |
 
+## Guardian Detail Drawer Contract
+
+The 보호자 정보 drawer reads from guardian master data, relationship rows, linked patients, consents, and change history.
+
+| Field | Demo Meaning |
+| --- | --- |
+| `headerDisplayName` | Guardian name shown in the drawer header |
+| `activeTab` | `guardian`, `patient`, `cs_history`, or `latest` |
+| `guardianStatus` | `active` or `soft_deleted` |
+| `linkedPatientCount` | Number of active patient relationships |
+| `needsPatientRegistrationPrompt` | True when a newly registered guardian has no linked patient yet |
+| `primaryPatientId` | Optional patient to open first when returning from guardian registration |
+| `guardianCode` | Staff-facing synthetic guardian code |
+| `createdAt`, `createdByStaffId` | Registration history row |
+| `lastUpdatedAt`, `lastUpdatedByStaffId` | Last modification history row |
+| `changeHistoryCount` | Enables or disables change-history review |
+| `deletedAt`, `deletedByStaffId` | Soft-delete audit fields |
+| `restoredAt`, `restoredByStaffId` | Restore audit fields |
+| `unsavedChanges` | Dirty-state marker used before navigation or close |
+
+Read/edit rules:
+
+- 보호자 정보 read view should mask sensitive synthetic identifiers.
+- Edit mode can expose editable synthetic fields, but the stored dataset must remain fake and resettable.
+- Closing, tab navigation, or moving to another page with dirty fields needs an unsaved-change state; exact modal UX is deferred.
+- A guardian with no linked animals needs data to drive the "register an animal" prompt until at least one active patient relationship exists.
+
 ## Guardian Relationship Contract
 
 | Field | Demo Meaning |
@@ -101,8 +196,18 @@ The 동물 정보 drawer should read from patient, guardian relationship, consen
 | `messageRefusedAt` | Timestamp when refusal was selected |
 | `guardianPhoneAvailable` | Whether messaging consent can have actual effect |
 | `sortOrder` | Display order in guardian/patient panels |
+| `linkedAt`, `linkedByStaffId` | When and by whom the guardian was linked to the patient |
+| `unlinkedAt`, `unlinkedByStaffId` | Relationship soft-delete fields; guardian and patient remain intact |
+| `primaryChangedAt`, `primaryChangedByStaffId` | Audit fields when the main guardian is changed |
 
 Data rule: if the guardian has no phone number, `messageConsentStatus = granted` should not create a sendable message target.
+
+Additional relationship rules:
+
+- The first guardian linked to a patient should become `isPrimary = true` by default.
+- Changing an additional guardian to primary should flip the previous primary to additional and reorder rows.
+- Removing an additional guardian from a patient should soft-delete only the relationship row, not the guardian or patient master records.
+- Search-adding an existing guardian should create a new relationship only when the guardian is not already linked to that patient.
 
 ## Staff Assignment Contract
 
@@ -142,9 +247,22 @@ Data-affecting label rules:
 - `deceased` and `soft_deleted` are master patient states; they should not be mixed with active care-stage labels.
 - Same status repeated multiple times should collapse into one visible label while keeping source records.
 
+## Existing Guardian Link Rules
+
+The 동물 패널 can add a new guardian or link an existing guardian.
+
+| Situation | Data Rule |
+| --- | --- |
+| New guardian is registered from a patient panel | Create guardian master row and patient-guardian relationship row |
+| Existing guardian is searched and selected | Create only a relationship row |
+| Existing guardian is already linked to the same patient | Block duplicate relationship creation |
+| Additional guardian relationship is deleted | Set relationship `unlinkedAt`; keep guardian and patient records |
+| Main guardian is changed | Update `isPrimary`, `relationshipLabel`, `sortOrder`, and primary-change audit fields |
+| Linked guardians are listed in compact patient panel | Store enough label/status data to derive `primary`, `additional`, and action availability |
+
 ## Deletion And Restoration Rules
 
-Patient deletion is soft delete for portfolio data.
+Patient and guardian deletion are soft delete for portfolio data.
 
 | Rule | Data Needed |
 | --- | --- |
@@ -155,6 +273,12 @@ Patient deletion is soft delete for portfolio data.
 | Permanent identifier | Keep `patientId`, `patientNo`, `microchipNumber`, and `registrationNumber` reserved after soft delete |
 | Patient is the only patient for a guardian | Offer a data path to soft-delete patient only or patient plus guardian |
 | Patient plus guardian delete | Soft-delete patient, guardian, and active relationship rows together |
+| Guardian is primary guardian of an active patient | Block guardian deletion |
+| Guardian is only an additional guardian, or linked patients are deceased/inactive/soft-deleted | Guardian can be soft-deleted if financial locks do not apply |
+| Guardian has deposit, prepayment, or unpaid balance | Block guardian deletion |
+| Guardian is soft-deleted | Hide from simple search and normal lists; keep visible in deleted records review |
+| Guardian identifier preservation | Keep `guardianId`, `guardianCode`, normalized phone, and synthetic identifier tokens reserved after soft delete |
+| Guardian restore | Restore guardian when workspace ownership and duplicate checks still pass |
 
 Never hard-delete synthetic patient/guardian history in the portfolio demo.
 
@@ -170,6 +294,10 @@ Header/footer actions do not need deep UX documentation now, but some actions ne
 | 카카오톡 발송 | `patientId`, eligible guardian message target, `messageConsentStatus`, `guardianPhoneAvailable` |
 | 정보 수정 / 저장 | dirty fields, last updated staff/time |
 | 삭제 | deletion lock reasons and soft-delete audit fields |
+| 보호자 등록 완료 | `guardianId`, optional `targetPatientId`, `linkedPatientCount`, duplicate override audit, toast action target |
+| 기존 보호자 추가 | selected existing `guardianId`, `patientId`, duplicate relationship check, created relationship row |
+| 주 보호자로 변경 | `patientGuardianId`, previous primary relationship row, new sort order, actor/time |
+| 추가 보호자 연결 삭제 | `patientGuardianId`, relationship soft-delete audit; guardian/patient master records remain |
 
 ## Deferred Screen-Implementation Notes
 
@@ -179,6 +307,8 @@ Header/footer actions do not need deep UX documentation now, but some actions ne
 - Drawer tab spacing, read-only frame styling, and collapsed/expanded vet list visuals.
 - Snackbar text and animation timing.
 - Figma-specific component names such as CDS selection list, infobox, or modal variants.
+- Exact protector/guardian registration modal copy and duplicate-confirmation wording.
+- Row-size visual changes, button icon choices, and panel layout when there are multiple guardians.
 
 ## Out Of Scope For V1
 

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-69 SOAP 저장/autosave persistence 결과 보고</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #111827; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      ul { padding-left: 22px; }
+      code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+      .note { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-69 SOAP 저장/autosave persistence 결과 보고</h1>
+    <p class="note">
+      이번 작업은 차트 SOAP 기록을 화면 안 임시 상태가 아니라 서버 route를 통해 저장하고,
+      다시 열었을 때 같은 encounter 기준으로 읽어오게 만든 첫 chart persistence 단위다.
+    </p>
+
+    <h2>무엇이 바뀌었나</h2>
+    <ul>
+      <li><code>GET/PATCH /api/workspaces/[workspaceId]/chart/soap-notes</code> route를 추가했다.</li>
+      <li>SOAP <code>subjective</code>, <code>objective</code>, <code>assessment</code>, <code>plan</code> field와 autosave timestamp를 저장/조회한다.</li>
+      <li>서버 core에서 active workspace membership, <code>chart:view</code>/<code>chart:update</code>, encounter workspace scope를 확인한다.</li>
+      <li>차트 SOAP editor에 수동 <code>SOAP 저장</code>과 autosave route 호출을 연결했다.</li>
+      <li>local-first Supabase RPC migration boundary를 추가했지만 remote Supabase에는 접근하지 않았다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      DEN-69로 차트 화면이 “새로고침하면 사라지는 기록”에서 벗어나기 시작했다.
+      아직 전체 EMR live persistence는 아니지만, Project 04의 chart/order/billing route-owned 저장 패턴을 하나 고정했다.
+    </p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/app/api/workspaces/[workspaceId]/chart/soap-notes/route.ts</code></li>
+      <li><code>src/features/chart/server-soap-note-persistence-core.ts</code></li>
+      <li><code>src/features/chart/server-soap-note-persistence.ts</code></li>
+      <li><code>src/features/chart/module.tsx</code></li>
+      <li><code>src/types/emr-domain.ts</code></li>
+      <li><code>supabase/migrations/20260519180000_chart_soap_note_persistence_rpc.sql</code></li>
+      <li><code>tests/chart-soap-note-persistence-server.spec.ts</code></li>
+      <li><code>tests/chart.spec.ts</code></li>
+      <li><code>docs/work/clinical-billing/CLINICAL-BILLING-PR-004-soap-note-persistence.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/clinical-order-billing-schema-migration.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/chart-soap-note-persistence-server.spec.ts --reporter=line</code></li>
+      <li><code>npx playwright test tests/chart.spec.ts --reporter=line</code></li>
+      <li><code>npx tsc --noEmit</code></li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <h2>남은 범위와 다음 작업</h2>
+    <ul>
+      <li>Diagnosis, order, billing persistence는 아직 시작하지 않았다.</li>
+      <li>Remote Supabase, 실서버, 실제 환자/병원 데이터는 사용하지 않았다.</li>
+      <li>다음 권장 작업은 DEN-70 chart completion state persistence다.</li>
+    </ul>
+  </body>
+</html>

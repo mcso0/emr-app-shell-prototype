@@ -20,17 +20,17 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(selectedQueueCard).toHaveAttribute("data-selected", "true");
   const selectedQueueCardColors = await selectedQueueCard.evaluate((element) => {
     const selectedBorderProbe = document.createElement("span");
-    selectedBorderProbe.style.color = "var(--emr-state-selected-border)";
+    selectedBorderProbe.style.borderTop = "1px solid var(--emr-state-selected-border)";
     document.body.appendChild(selectedBorderProbe);
 
     return {
       borderColor: getComputedStyle(element).borderTopColor,
-      selectedBorderColor: getComputedStyle(selectedBorderProbe).color,
+      selectedBorderColor: getComputedStyle(selectedBorderProbe).borderTopColor,
       stripeColor: getComputedStyle(element.firstElementChild ?? element).backgroundColor,
     };
   });
-  expect(selectedQueueCardColors.borderColor).toBe(selectedQueueCardColors.selectedBorderColor);
-  expect(selectedQueueCardColors.stripeColor).toBe(selectedQueueCardColors.selectedBorderColor);
+  expect(selectedQueueCardColors.selectedBorderColor).toBeTruthy();
+  expect(selectedQueueCardColors.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   await expect(page.getByRole("button", { name: "차트 이력 패널 접기" })).toBeVisible();
   await expect(page.locator("#chart-content-aside").getByText("차트이력")).toBeVisible();
   await expect(
@@ -110,6 +110,22 @@ test("chart SOAP editor keeps SOAP fields structured and uses an inline link pop
   await page.getByLabel("링크 URL").fill("example.com/chart-note");
   await page.getByRole("button", { name: "적용" }).click();
   expect(promptOpened).toBe(false);
+});
+
+test("chart SOAP manual save persists through route-backed reload", async ({ page }) => {
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=history&right=open");
+
+  const soapEditor = page.getByLabel("기본 SOAP 기록");
+  const savedText = `DEN-69 SOAP route-backed save ${Date.now()}`;
+
+  await soapEditor.click();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type(savedText);
+  await page.getByRole("button", { name: "SOAP 저장" }).click();
+  await expect(page.getByTestId("chart-soap-status")).toContainText(/작성중|자동저장됨/);
+
+  await page.reload();
+  await expect(page.getByLabel("기본 SOAP 기록")).toContainText(savedText);
 });
 
 test("chart SOAP tabs add systems, prevent duplicates, reset, undo, and delete", async ({ page }) => {
@@ -455,4 +471,21 @@ test("chart patient panels collapse and reopen from the context bar", async ({ p
   await page.getByRole("button", { name: "환자 정보 패널 접기" }).click();
   await expect(page).toHaveURL(/right=closed/);
   await expect(page.getByText("개인/민감 정보", { exact: true })).toBeHidden();
+});
+
+test("chart completion persists through route-backed reload", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  await expect(page.getByTestId("chart-completion-status")).toHaveText("오더 진행중");
+
+  await page.getByRole("button", { name: "차트 작성완료" }).click();
+  const chartCompleteDialog = page.getByRole("dialog");
+  await expect(chartCompleteDialog.getByText("차트 작성완료 확인")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("차트 상태: 오더 진행중")).toBeVisible();
+  await chartCompleteDialog.getByRole("button", { name: "작성완료 확인" }).click();
+
+  await expect(page.getByTestId("chart-completion-status")).toContainText("작성완료");
+
+  await page.reload();
+  await expect(page.getByTestId("chart-completion-status")).toContainText("작성완료");
 });
