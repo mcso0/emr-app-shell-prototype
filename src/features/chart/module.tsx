@@ -2387,9 +2387,13 @@ export function ChartContent() {
           data-testid="chart-soap-diagnosis-grid"
           className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
         >
-          <SoapPanel key={latestSoap?.id ?? selectedEncounterId} diagnoses={diagnosisRows} soapNote={latestSoap} />
+          <SoapPanel
+            key={`chart-soap-${latestSoap?.id ?? selectedEncounterId}`}
+            diagnoses={diagnosisRows}
+            soapNote={latestSoap}
+          />
           <AssessmentPanel
-            key={bundle.encounter.id}
+            key={`chart-assessment-${bundle.encounter.id}`}
             diagnosisRows={diagnosisRows}
             setDiagnosisRows={setDiagnosisRows}
             soapNote={latestSoap}
