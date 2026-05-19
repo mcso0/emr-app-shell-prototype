@@ -16,6 +16,7 @@ This document maps the product demo-data docs to future app mock, seed, and pers
 | --- | --- | --- |
 | `virtual-hospital-profile.md` | workspace, staff, rooms, role memberships | Use `vip-cheongdam-demo` as portfolio workspace |
 | `demo-scenarios-v1.md` | guardians, patients, appointments, encounters, queue rows | Each scenario must have deterministic IDs |
+| `patient-guardian-data-v1.md` | guardians, patients, patient_guardians, consents, patient staff assignments, patient status labels, soft-delete audit fields | Synthetic profile/drawer data only |
 | `order-catalog-v1.md` | service categories, service items, prices, order catalog | Separate standard preset from workspace override |
 | `order-sets-and-templates-v1.md` | order sets, set items, clinical templates | Template expansion should create draft orders only |
 | `chart-order-application-v1.md` | chart order lines, applied snapshots, confirmation state, billing footer summaries | Encounter-owned applied data created from catalog or set presets |
@@ -25,6 +26,35 @@ This document maps the product demo-data docs to future app mock, seed, and pers
 | `hospital-admin-preset-reference-archive-v1.md` | product/reference trace only | Archive observations before promoting them to seed fields |
 | `diagnosis-catalog-v1.md` | diagnosis systems, diagnosis catalog, diagnosis aliases | Free-text diagnosis remains allowed |
 | `staff-roles-workflow-v1.md` | role permissions, task ownership, audit seed | Existing role model should remain source of auth truth |
+
+## Patient And Guardian Seed Fields
+
+The 동물 등록 and 동물 정보 drawer references need enough synthetic data to render realistic profile state without real owner or patient data.
+
+| Seed Field | Source Doc | Target Shape |
+| --- | --- | --- |
+| `guardian_id` | `patient-guardian-data-v1.md` | deterministic guardian ID |
+| `patient_id` | `patient-guardian-data-v1.md` | deterministic animal-patient ID |
+| `patient_no` | `patient-guardian-data-v1.md` | staff-facing patient number |
+| `patient_name` | `patient-guardian-data-v1.md` | animal name; one-character names are valid |
+| `species` | `patient-guardian-data-v1.md` | `dog`, `cat`, or `other` |
+| `primary_breed_id`, `primary_breed_name` | `patient-guardian-data-v1.md` | main breed selected or derived from breed-first input |
+| `is_mixed_breed` | `patient-guardian-data-v1.md` | whether additional breed rows are shown/stored |
+| `additional_breed_ids` | `patient-guardian-data-v1.md` | up to two additional breeds for registration demo |
+| `sex`, `neutered` | `patient-guardian-data-v1.md` | sex/neuter display state |
+| `birth_date`, `estimated_age_fields`, `age_is_estimated` | `patient-guardian-data-v1.md` | birth/age data used in drawer display |
+| `weight_kg`, `color` | `patient-guardian-data-v1.md` | profile display fields |
+| `microchip_number`, `microchip_type`, `registration_number` | `patient-guardian-data-v1.md` | identifiers kept reserved after soft delete |
+| `patient_memo` | `patient-guardian-data-v1.md` | internal profile memo |
+| `patient_guardian_id`, `relationship_label`, `is_primary` | `patient-guardian-data-v1.md` | guardian-patient relationship data |
+| `message_consent_status`, `guardian_phone_available` | `patient-guardian-data-v1.md` | messaging eligibility and refusal handling |
+| `patient_staff_assignments` | `patient-guardian-data-v1.md` | attending vet rows with staff, department, role, sort order |
+| `patient_activity_labels` | `patient-guardian-data-v1.md` | derived labels from appointment, encounter, inpatient, surgery/anesthesia, deceased, and deleted sources |
+| `patient_status` | `patient-guardian-data-v1.md` | `active`, `deceased`, or `soft_deleted` |
+| `deceased_at`, `deleted_at`, `restored_at` | `patient-guardian-data-v1.md` | status/audit timestamps |
+| `deletion_lock_reasons` | `patient-guardian-data-v1.md` | active work reasons that block deletion |
+| `has_chart`, `last_chart_id` | `patient-guardian-data-v1.md` | chart navigation target state |
+| `kakao_patient_code` | `patient-guardian-data-v1.md` | synthetic messaging/display code |
 
 ## Order Management Seed Fields
 
@@ -213,19 +243,20 @@ The order detail drawer needs shared metadata that applies across lab, imaging, 
 ## Implementation Order
 
 1. Add static demo-data seeds to mock domain data.
-2. Add order catalog lookup that supports separately managed individual orders, order sets, templates, availability status, and target species.
-3. Add hospital admin order-management table fixtures using the field contract above.
-4. Add order set drawer fixtures for billing reflection, care guide, internal instruction, scheduler, amount basis, and included order rows.
-5. Add lab test item fixtures for categories, input types, units, ordering, delete locks, and order-to-result-item links.
-6. Add order detail drawer fixtures for routing, billing reflection, guide/instruction delivery, lab result linkage, and change history.
-7. Add medication detail fixtures for species prescription rules, auto-calculation metadata, unit display, rounding, and storage method.
-8. Add pricing rule fixtures for price basis, range rows, child billing reflection, and applied snapshots.
-9. Add chart order application fixtures for applied rows, set hierarchy, confirmation state, and billing footer totals.
-10. Add diagnosis catalog lookup and catalog-linked/free-text distinction.
-11. Connect chart order add UI to catalog source.
-12. Connect confirmed orders to destination work queues.
-13. Connect confirmed orders to billing invoice candidates.
-14. Add resettable portfolio scenario launcher.
+2. Add patient/guardian profile fixtures for registration, profile drawer, consent, status labels, soft delete, and restore scenarios.
+3. Add order catalog lookup that supports separately managed individual orders, order sets, templates, availability status, and target species.
+4. Add hospital admin order-management table fixtures using the field contract above.
+5. Add order set drawer fixtures for billing reflection, care guide, internal instruction, scheduler, amount basis, and included order rows.
+6. Add lab test item fixtures for categories, input types, units, ordering, delete locks, and order-to-result-item links.
+7. Add order detail drawer fixtures for routing, billing reflection, guide/instruction delivery, lab result linkage, and change history.
+8. Add medication detail fixtures for species prescription rules, auto-calculation metadata, unit display, rounding, and storage method.
+9. Add pricing rule fixtures for price basis, range rows, child billing reflection, and applied snapshots.
+10. Add chart order application fixtures for applied rows, set hierarchy, confirmation state, and billing footer totals.
+11. Add diagnosis catalog lookup and catalog-linked/free-text distinction.
+12. Connect chart order add UI to catalog source.
+13. Connect confirmed orders to destination work queues.
+14. Connect confirmed orders to billing invoice candidates.
+15. Add resettable portfolio scenario launcher.
 
 ## Data Safety
 
@@ -241,6 +272,7 @@ The order detail drawer needs shared metadata that applies across lab, imaging, 
 | Suggested Issue | Project Placement | Purpose |
 | --- | --- | --- |
 | `00-04 Add demo data seed contract to clinical billing schema` | Project 04 / 00 milestone | Align schema with standard/workspace order catalog and diagnosis catalog |
+| `00-04A Add patient guardian profile fixture coverage` | Project 04 / 00 milestone | Cover registration, drawer status labels, messaging consent, soft delete, and restore states |
 | `00-05 Add hospital admin order catalog fixture coverage` | Project 04 / 00 milestone | Ensure admin table rows include standard name, in-hospital name, billing name, status, price, unit, and target species |
 | `00-06 Add order set drawer fixture coverage` | Project 04 / 00 milestone | Cover amount basis, billing reflection, care guide, scheduler, and included order rows |
 | `00-07 Add lab test item fixture coverage` | Project 04 / 00 milestone | Cover result item categories, input types, units, ordering, delete locks, and order linkage |
