@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[var(--clair-shadow-sm)] hover:bg-[oklch(0.28_0.006_285.885)] hover:shadow-[var(--clair-shadow-md)] active:shadow-[var(--clair-shadow-xs)] aria-expanded:bg-[oklch(0.28_0.006_285.885)] aria-expanded:shadow-[var(--clair-shadow-xs)] disabled:shadow-none",
+          "bg-primary text-primary-foreground shadow-[var(--clair-shadow-sm)] hover:bg-[var(--emr-command-primary-hover-bg)] hover:shadow-[var(--clair-shadow-md)] active:shadow-[var(--clair-shadow-xs)] aria-expanded:bg-[var(--emr-command-primary-hover-bg)] aria-expanded:shadow-[var(--clair-shadow-xs)] disabled:shadow-none",
         outline:
           "border-input bg-background text-foreground shadow-[var(--clair-shadow-xs)] hover:bg-accent hover:text-accent-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none aria-expanded:bg-accent aria-expanded:text-accent-foreground aria-expanded:shadow-none disabled:shadow-none",
         secondary:
@@ -17,7 +17,7 @@ const buttonVariants = cva(
         ghost:
           "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-[var(--emr-status-danger-text)] focus-visible:ring-destructive/20",
+          "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)] hover:bg-[var(--emr-status-danger-hover-bg)] active:bg-[var(--emr-status-danger-hover-bg)] aria-expanded:bg-[var(--emr-status-danger-hover-bg)] focus-visible:ring-destructive/20",
       },
       size: {
         default:

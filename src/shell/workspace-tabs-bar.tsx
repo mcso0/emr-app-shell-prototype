@@ -281,7 +281,7 @@ export function WorkspaceTabsBar({
   const topIconButtonClassName =
     "rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)] [&_svg]:size-4";
   const historyButtonClassName =
-    "rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card text-muted-foreground shadow-none hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground disabled:border-[var(--emr-line-subtle)] disabled:bg-transparent disabled:opacity-100 disabled:text-[var(--emr-text-disabled)] disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)]";
+    "rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card text-muted-foreground shadow-[var(--clair-shadow-xs)] hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none disabled:border-[var(--emr-line-subtle)] disabled:bg-transparent disabled:opacity-100 disabled:text-[var(--emr-text-disabled)] disabled:shadow-none disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)]";
   const previewContext = {
     selectedBillingInvoiceId,
     selectedChartEncounterId,

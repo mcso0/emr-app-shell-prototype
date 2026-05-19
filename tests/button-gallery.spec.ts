@@ -24,14 +24,11 @@ test("button gallery exposes Figma-aligned text button sizing and states", async
       return Array.from(context.getImageData(0, 0, 1, 1).data).join(",");
     };
 
-    const probe = document.createElement("span");
-    probe.style.backgroundColor = "oklch(0.28 0.006 285.885)";
-    document.body.appendChild(probe);
+    const rootStyle = getComputedStyle(document.documentElement);
     const result = {
       actual: normalizeColor(getComputedStyle(button).backgroundColor),
-      expected: normalizeColor(getComputedStyle(probe).backgroundColor),
+      expected: normalizeColor(rootStyle.getPropertyValue("--emr-command-primary-hover-bg")),
     };
-    probe.remove();
     return result;
   });
   expect(hoverBackground.actual).toBe(hoverBackground.expected);
@@ -40,6 +37,65 @@ test("button gallery exposes Figma-aligned text button sizing and states", async
   await expect(disabledButton).toBeDisabled();
   await expect(disabledButton).toHaveCSS("height", "24px");
   await expect(disabledButton).toHaveCSS("opacity", "0.5");
+
+  const destructiveButton = page.getByTestId("text-default-default-destructive-enable");
+  const destructiveColors = await destructiveButton.evaluate((button) => {
+    const normalizeColor = (color: string) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        throw new Error("Canvas 2D context is unavailable.");
+      }
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data).join(",");
+    };
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const buttonStyle = getComputedStyle(button);
+
+    return {
+      background: normalizeColor(buttonStyle.backgroundColor),
+      backgroundToken: normalizeColor(rootStyle.getPropertyValue("--emr-status-danger-bg")),
+      border: normalizeColor(buttonStyle.borderColor),
+      borderToken: normalizeColor(rootStyle.getPropertyValue("--emr-status-danger-border")),
+      text: normalizeColor(buttonStyle.color),
+      textToken: normalizeColor(rootStyle.getPropertyValue("--emr-status-danger-text")),
+    };
+  });
+  expect(destructiveColors.background).toBe(destructiveColors.backgroundToken);
+  expect(destructiveColors.border).toBe(destructiveColors.borderToken);
+  expect(destructiveColors.text).toBe(destructiveColors.textToken);
+
+  const destructiveHoverButton = page.getByTestId("text-default-default-destructive-hover");
+  const destructiveHoverColors = await destructiveHoverButton.evaluate((button) => {
+    const normalizeColor = (color: string) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        throw new Error("Canvas 2D context is unavailable.");
+      }
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data).join(",");
+    };
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const buttonStyle = getComputedStyle(button);
+
+    return {
+      background: normalizeColor(buttonStyle.backgroundColor),
+      backgroundToken: normalizeColor(rootStyle.getPropertyValue("--emr-status-danger-hover-bg")),
+      text: normalizeColor(buttonStyle.color),
+      textToken: normalizeColor(rootStyle.getPropertyValue("--emr-status-danger-text")),
+    };
+  });
+  expect(destructiveHoverColors.background).toBe(destructiveHoverColors.backgroundToken);
+  expect(destructiveHoverColors.text).toBe(destructiveHoverColors.textToken);
 });
 
 test("button gallery exposes Figma-aligned icon button sizing and roundness", async ({ page }) => {

@@ -64,8 +64,8 @@ export function WorkspaceChromeTabs({
             className={cn(
               "group/workspace-tab relative flex h-8 max-w-[230px] min-w-0 items-center rounded-[var(--emr-radius-control)] border transition-colors",
               active
-                ? "border-[var(--emr-line-default)] bg-card shadow-xs"
-                : "border-[var(--emr-line-subtle)] bg-transparent shadow-none hover:border-[var(--emr-line-default)] hover:bg-[var(--emr-state-hover)]",
+                ? "border-[var(--emr-line-default)] bg-card shadow-[var(--clair-shadow-xs)]"
+                : "border-[var(--emr-line-subtle)] bg-transparent hover:border-[var(--emr-line-default)] hover:bg-[var(--emr-state-hover)] hover:shadow-[var(--clair-shadow-xs)]",
             )}
           >
             <Tooltip>

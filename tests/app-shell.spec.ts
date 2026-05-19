@@ -23,6 +23,17 @@ async function resolveCssColor(page: Page, value: string) {
   }, value);
 }
 
+async function resolveCssBoxShadow(page: Page, value: string) {
+  return page.evaluate((shadowValue) => {
+    const probe = document.createElement("span");
+    probe.style.boxShadow = shadowValue;
+    document.body.appendChild(probe);
+    const shadow = getComputedStyle(probe).boxShadow;
+    probe.remove();
+    return shadow;
+  }, value);
+}
+
 function expectRect(value: Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>): asserts value is NonNullable<typeof value> {
   expect(value).not.toBeNull();
 }
@@ -778,7 +789,11 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
     "동물명 또는 보호자명으로 검색",
   );
   const hoverColor = await resolveCssColor(page, "var(--emr-state-hover)");
+  const shadowXs = await resolveCssBoxShadow(page, "var(--clair-shadow-xs)");
   const searchButton = page.getByRole("button", { name: "전역 통합 검색 열기" });
+  await expect
+    .poll(() => searchButton.evaluate((button) => getComputedStyle(button).boxShadow))
+    .toContain(shadowXs);
   await searchButton.hover();
   await expect(searchButton).toHaveCSS("background-color", hoverColor);
   const newTabButton = page.getByRole("button", { name: "새 업무 탭" });

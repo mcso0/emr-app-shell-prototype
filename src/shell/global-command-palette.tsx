@@ -460,7 +460,7 @@ export function GlobalCommandPalette({
         size={triggerVariant === "icon" ? "icon" : "default"}
         className={cn(
           triggerVariant === "icon"
-            ? "justify-center rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card px-0 text-muted-foreground shadow-none hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:ring-ring/40"
+            ? "justify-center rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card px-0 text-muted-foreground shadow-[var(--clair-shadow-xs)] hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none focus-visible:ring-ring/40"
             : "mx-auto h-8 w-[min(560px,45vw)] min-w-8 rounded-lg border-border bg-card px-3 text-left shadow-sm hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2",
         )}
         aria-label="전역 통합 검색 열기"
