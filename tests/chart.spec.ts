@@ -367,6 +367,13 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
 });
 
 test("chart queue selection changes the selected encounter", async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+
   await page.goto("/w/clair-demo/treatment");
 
   await page.getByTestId("order-queue-item-encounter-haru-260430").click();
@@ -376,6 +383,7 @@ test("chart queue selection changes the selected encounter", async ({ page }) =>
   await expect(page.getByText("예방접종 전 건강 확인").first()).toBeVisible();
   await expect(page.getByText("진단 입력 전입니다.")).toBeVisible();
   await expect(page.getByText("기본 SOAP")).toBeVisible();
+  expect(consoleErrors.filter((message) => message.includes("Encountered two children with the same key"))).toEqual([]);
 });
 
 test("chart scenario query primes the encounter without locking queue selection", async ({ page }) => {
