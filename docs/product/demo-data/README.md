@@ -32,6 +32,11 @@ This folder defines the synthetic demo dataset for the CLAiR EMR portfolio MVP.
 | `demo-scenarios-v1.md` | Representative outpatient scenarios |
 | `order-catalog-v1.md` | Individual order catalog baseline |
 | `order-sets-and-templates-v1.md` | Order sets and clinical templates |
+| `chart-order-application-v1.md` | Applied chart order rows, T-code labels, task states, confirmation, billing footer, and order scheduler handoff |
+| `lab-test-items-v1.md` | Lab result item categories, input types, units, ordering, and deletion locks |
+| `medication-order-details-v1.md` | Medication, injection, dispensing quantity, prescription-rule, and storage metadata |
+| `order-pricing-rules-v1.md` | Synthetic order and order-set pricing basis, range price, billing reflection, and snapshot rules |
+| `hospital-admin-preset-reference-archive-v1.md` | Running archive that separates reference-screen data candidates from UX and operational rules |
 | `diagnosis-catalog-v1.md` | Diagnosis systems and sample diagnoses |
 | `staff-roles-workflow-v1.md` | Staff roles and workflow ownership |
 | `seed-handoff-v1.md` | Handoff from product docs to app mock/seed data |
@@ -44,10 +49,60 @@ The portfolio demo should show:
 2. Role-aware access for desk, vet, technician, billing, and admin users.
 3. Reception creates or checks in an encounter.
 4. Chart uses diagnosis and order catalogs.
-5. Orders fan out into lab, imaging, dispensing, treatment, or billing work.
-6. Results and completion states flow back to the chart.
-7. Billing receives invoice lines from confirmed orders.
-8. Audit-style activity records show who changed what and when.
+5. Hospital admin can manage workspace order presets with standard name, in-hospital name, billing name, availability status, price, unit, and target species.
+6. Chart creates applied order rows from presets and keeps their snapshot separate from master data.
+7. Orders fan out into lab, imaging, dispensing, treatment, or billing work.
+8. Results and completion states flow back to the chart.
+9. Billing receives invoice lines from confirmed orders.
+10. Audit-style activity records show who changed what and when.
+
+## Order Data Structure Map
+
+Order-related demo data should be organized into five data families.
+
+| Data Family | What It Stores | Source Docs |
+| --- | --- | --- |
+| Master order data | Standard order identity, workspace order identity, names, aliases, category/T-code, target species, availability, destination module, guide/instruction text, default task/billing behavior | `order-catalog-v1.md`, `medication-order-details-v1.md` |
+| Order set data | Separately managed set identity, set category/name, included order rows, child billing reflection, sort order, set amount basis, set price/range rows, scheduler and guide/instruction defaults | `order-sets-and-templates-v1.md`, `order-pricing-rules-v1.md` |
+| Lab test item data | Result-sheet categories, item names, input types, units, item order, fallback category, order linkage, deletion lock derivation | `lab-test-items-v1.md` |
+| Chart-applied order data | Encounter-owned order rows, set/child hierarchy, applied snapshots, selected/draft/confirmed state, task links, billing candidate links, staff/timestamp lifecycle | `chart-order-application-v1.md` |
+| Billing and calculation data | Quantity source, unit price, subtotal, discount/surcharge, billing amount, tax marker, billing reflection, invoice line link, footer totals | `order-pricing-rules-v1.md`, `chart-order-application-v1.md`, `seed-handoff-v1.md` |
+
+## Data-Affecting Rules
+
+These rules affect storage, calculation, or downstream linkage and should be preserved before detailed UI work:
+
+- Master presets and chart-applied rows are separate. Chart rows keep an applied snapshot so future admin edits do not rewrite past chart/order/billing records.
+- Order sets are managed in a separate hospital-admin Order 세트 surface. They can appear together with individual orders only when staff search/apply orders from the chart.
+- Lab orders that create result sheets should link at least one lab test item or category before they become active for new chart use.
+- Set expansion should create parent and child chart rows with `sourceSetId`, `setItemId`, `parentChartOrderLineId`, and stable sort order.
+- `Order 청구` creates billing candidates; `Order 확정` creates downstream tasks. These states can happen separately and should not be collapsed into one boolean.
+- Quantity and amount fields should store both the computed value and the source rule, such as days, total count, actual dispense quantity, fixed one, range price, or manual override.
+- Demo prices, units, medication metadata, and vaccine/dose sequence data are workflow examples only, not clinical or fee guidance.
+
+## Portfolio Proof Points
+
+- Order management should look like real hospital administration data, not only a simple service-name list.
+- Individual orders and order sets should be managed in separate hospital-admin surfaces because sets have their own included-order, amount-basis, and child-billing rules.
+- Chart order search can still show individual orders, order sets, and templates together so staff can apply them in one workflow.
+- Billing should use the order's billing name, price, unit, and target species rules rather than relying on chart display text.
+- Order sets should support realistic administration fields such as included order counts, amount basis, set price, billing reflection, care guide, internal instruction, scheduler, and change history.
+- Lab test item management should stay separate from billable orders: orders define what is requested and billed, while test items define result-sheet rows, input types, units, ordering, and delete locks.
+- Order detail drawers should describe routing, billing reflection, guide/instruction delivery, lab result linkage, and medication-specific calculation metadata without turning demo data into clinical guidance.
+- The chart Order section should treat applied rows as encounter-owned records with T-code label display, row hierarchy, independent confirmation/billing state, task links, invoice links, footer totals, device/urgent indicators, and snapshot state.
+- Pricing rules should distinguish master presets from chart-applied snapshots so admin edits do not rewrite historical chart rows.
+- Data contracts should keep source values, calculated values, and calculation sources separate so future fixtures can explain how quantities, totals, delete locks, and invoice candidates were produced.
+- Reference-screen observations should be archived as data candidates and UX/operational rules before they become implementation scope.
+- Demo content must stay clearly synthetic and workflow-oriented; it should not read like clinical advice.
+
+## Deferred UX Notes
+
+The following can wait until screen implementation because they do not change the core data contract:
+
+- Exact table sorting/filtering controls, tab placement, drawer width, and modal layout.
+- Button copy, tooltip wording, confirmation-dialog microcopy, hover states, and visual truncation behavior.
+- Drag handle visuals, row highlight color, icon-only affordances, and detailed empty/loading states.
+- Keyboard interaction design for the expanded chart Order table.
 
 ## Out Of Scope
 
@@ -61,4 +116,13 @@ The portfolio demo should show:
 
 ## Changelog
 
+- 2026-05-19: Added order-management table field guidance from hospital admin preset reference.
+- 2026-05-19: Added lab test item management contract from 검사 항목 reference.
+- 2026-05-19: Added order detail drawer and medication-order detail contracts from preset reference.
+- 2026-05-19: Added pricing rules and reference-archive split for incoming hospital-admin preset screenshots.
+- 2026-05-19: Added chart order application contract from the expanded 진료/차트 Order reference.
+- 2026-05-19: Added chart order cell guidance for T-code labels, NT task states, order name display, device resend errors, and urgent flags.
+- 2026-05-19: Tightened data-first rules for source IDs, applied snapshots, set child rows, lab delete locks, medication quantity sources, pricing calculation order, and chart billing/task lifecycle; moved screen-specific behavior to deferred implementation notes.
+- 2026-05-19: Added a five-family order data structure map and data-affecting rule summary for master orders, order sets, lab test items, chart-applied orders, and billing/calculation data.
+- 2026-05-19: Recorded the product decision that Order 세트 is managed separately from individual Order 관리, while chart-side search/application can still combine individual orders and sets.
 - 2026-05-19: Created DEN-99 synthetic virtual hospital demo dataset foundation.

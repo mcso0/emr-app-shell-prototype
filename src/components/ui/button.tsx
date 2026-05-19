@@ -9,9 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-[oklch(0.28_0.006_285.885)] aria-expanded:bg-[oklch(0.28_0.006_285.885)]",
+          "bg-primary text-primary-foreground shadow-[var(--clair-shadow-sm)] hover:bg-[oklch(0.28_0.006_285.885)] hover:shadow-[var(--clair-shadow-md)] active:shadow-[var(--clair-shadow-xs)] aria-expanded:bg-[oklch(0.28_0.006_285.885)] aria-expanded:shadow-[var(--clair-shadow-xs)] disabled:shadow-none",
         outline:
-          "border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
+          "border-input bg-background text-foreground shadow-[var(--clair-shadow-xs)] hover:bg-accent hover:text-accent-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none aria-expanded:bg-accent aria-expanded:text-accent-foreground aria-expanded:shadow-none disabled:shadow-none",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[var(--emr-state-active)] aria-expanded:bg-[var(--emr-state-active)]",
         ghost:

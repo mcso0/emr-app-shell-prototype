@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-99 오더 관리 테이블 보강 리포트</title>
+    <style>
+      body {
+        margin: 40px;
+        color: #1f2937;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 880px;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: 28px;
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #f3f4f6;
+        padding: 2px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-99 오더 관리 테이블 보강 리포트</h1>
+      <p>
+        포트폴리오용 가상 병원 데이터 문서에 병원관리 Order 관리 화면에서 필요한 테이블
+        필드를 추가했다. 이번 보강은 실제 의료 데이터나 실서버를 다루지 않고, synthetic
+        demo-data가 더 현실적인 병원 운영 화면처럼 보이도록 기준을 정리한 작업이다.
+      </p>
+
+      <h2>요청</h2>
+      <p>
+        제공된 Order 관리 테이블 캡쳐를 기준으로, 오더 카탈로그와 세트오더/템플릿 문서가
+        포트폴리오 설득력에 충분한지 보고 부족한 데이터 항목을 보강한다.
+      </p>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li>
+          <code>order-catalog-v1.md</code>에 표준 Order명, 원내 Order명, 청구서명,
+          사용여부, 판매가격, 판매단위, 대상, 개별/세트 row type 기준을 추가했다.
+        </li>
+        <li>
+          임상병리 카테고리를 CBC검사, 혈액화학검사, 요검사, 세포 검사, 검체 채취 등으로
+          나눠 병원관리 화면의 탭 구조를 더 현실적으로 만들었다.
+        </li>
+        <li>
+          <code>order-sets-and-templates-v1.md</code>에서 세트오더가 실제 개별 오더 ID로
+          확장되는 흐름과 <code>sourceSetId</code> 추적 기준을 보강했다.
+        </li>
+        <li>
+          Order 세트 관리 화면과 드로어 기준으로 포함 Order 수, 금액 기준, 세트가격,
+          청구반영, 케어가이드, 원내지시사항, 스케줄러, 변경이력, 포함 Order row 계약을
+          추가했다.
+        </li>
+        <li>
+          검사 항목 화면 기준으로 <code>lab-test-items-v1.md</code>를 새로 만들고, 청구되는
+          검사 오더와 결과지에 표시되는 검사 항목을 분리했다.
+        </li>
+        <li>
+          오더 상세 드로어 기준으로 전송 여부, 청구반영, 케어가이드, 원내 지시사항,
+          검사항목 연결, 변경이력 계약을 추가했고, 약/주사 상세는
+          <code>medication-order-details-v1.md</code>로 분리했다.
+        </li>
+        <li>
+          <code>seed-handoff-v1.md</code>에 future fixture/seed가 가져야 할 order-management
+          seed fields를 추가했다.
+        </li>
+        <li>
+          <code>hospital-admin-preset-reference-archive-v1.md</code>를 추가해 캡쳐에서 나온 내용을
+          데이터 구조 후보와 UX/운영 규칙으로 나눠 보관하는 기준을 만들었다.
+        </li>
+        <li>
+          <code>order-pricing-rules-v1.md</code>를 추가해 세트 전용 금액, 포함오더 합산,
+          구간 가격, 청구반영, 판매단위, chart-applied snapshot 규칙을 분리했다.
+        </li>
+        <li>
+          <code>chart-order-application-v1.md</code>를 추가해 진료/차트에서 실제로 내려진
+          오더 row, 확정 상태, 청구 footer 합계, 선택 row 기반 액션을 프리셋과 분리했다.
+        </li>
+        <li>
+          진료 오더 테이블 cell 가이드를 반영해 T코드 라벨, NT 작업상태, 상태 버튼 클릭
+          동작, 오더명 말줄임/툴팁, 마약·향정 표시, 장비 오류 재전송, 긴급검사 표시를
+          데이터 필드와 UX 규칙으로 나눴다.
+        </li>
+        <li>
+          추가 보강으로 원본 오더 ID, 병원별 오더 ID, 적용 시점 스냅샷, 세트 하위 row,
+          검사 항목 삭제 잠금 계산값, 약품 수량 계산 출처, 가격 계산 순서, 차트 오더의
+          작업/청구 연결 ID를 더 명확히 했다.
+        </li>
+        <li>
+          정렬, 필터, 말줄임, tooltip, dialog 문구, drawer 사용성처럼 화면 구현 때 정하면
+          되는 내용은 deferred screen-implementation note로 분리했다.
+        </li>
+        <li>
+          오더 관련 데이터를 마스터 데이터, 오더세트 데이터, 검사항목 데이터, 차트에 적용된
+          오더 데이터, 청구/계산 데이터의 5개 묶음으로 다시 정리했다.
+        </li>
+        <li>
+          검사 오더의 최소 검사 항목 연결, 횟수 코드 alias, 총횟수 계산, 판매단위별 수량
+          계산, 백신/차수 정보, 보관/투여경로/복약지도 값을 데이터 규칙으로 추가했다.
+        </li>
+        <li>
+          대표 결정으로 Order 세트는 개별 Order 관리 테이블과 분리된 별도 관리 화면에서
+          관리하는 기준을 추가했다. 단, 차트에서 오더를 추가할 때는 개별 오더와 세트를
+          함께 검색할 수 있다.
+        </li>
+        <li>
+          <code>current-status.md</code>와 DEN-99 work item에 Human Review 보강 내용을
+          최소 반영했다.
+        </li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npm run docs:check</code> 통과</li>
+        <li><code>npm run security:secrets</code> 통과</li>
+      </ul>
+
+      <h2>범위 제외</h2>
+      <ul>
+        <li>remote Supabase, 실서버, 실제 환자/병원 데이터 접근은 하지 않았다.</li>
+        <li>의료 정확성, 진단 추천, 처방 안전성을 보장하는 표현은 추가하지 않았다.</li>
+        <li>Linear 이슈를 Done으로 이동하지 않았다.</li>
+      </ul>
+
+      <h2>다음 결정 포인트</h2>
+      <p>
+        다음에는 오더 관리 화면을 실제 제품 UI에 반영할 때, 세트오더를 별도 탭으로 분리할지
+        아니면 캡쳐처럼 개별 오더와 같은 테이블에서 row type으로 구분할지 결정하면 된다.
+      </p>
+    </main>
+  </body>
+</html>
