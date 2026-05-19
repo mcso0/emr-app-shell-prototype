@@ -30,6 +30,7 @@ This folder defines the synthetic demo dataset for the CLAiR EMR portfolio MVP.
 | `research-notes.md` | Public reference sources and synthesis rules |
 | `virtual-hospital-profile.md` | VIP동물의료센터 청담점 synthetic hospital concept |
 | `demo-scenarios-v1.md` | Representative outpatient scenarios |
+| `patient-guardian-data-v1.md` | Animal patient, guardian relationship, registration, drawer, status label, consent, and soft-delete data |
 | `order-catalog-v1.md` | Individual order catalog baseline |
 | `order-sets-and-templates-v1.md` | Order sets and clinical templates |
 | `chart-order-application-v1.md` | Applied chart order rows, T-code labels, task states, confirmation, billing footer, and order scheduler handoff |
@@ -48,13 +49,14 @@ The portfolio demo should show:
 1. Login into a workspace.
 2. Role-aware access for desk, vet, technician, billing, and admin users.
 3. Reception creates or checks in an encounter.
-4. Chart uses diagnosis and order catalogs.
-5. Hospital admin can manage workspace order presets with standard name, in-hospital name, billing name, availability status, price, unit, and target species.
-6. Chart creates applied order rows from presets and keeps their snapshot separate from master data.
-7. Orders fan out into lab, imaging, dispensing, treatment, or billing work.
-8. Results and completion states flow back to the chart.
-9. Billing receives invoice lines from confirmed orders.
-10. Audit-style activity records show who changed what and when.
+4. Patient and guardian profile drawers show the animal/guardian context, status labels, consent, deletion state, and safe navigation targets.
+5. Chart uses diagnosis and order catalogs.
+6. Hospital admin can manage workspace order presets with standard name, in-hospital name, billing name, availability status, price, unit, and target species.
+7. Chart creates applied order rows from presets and keeps their snapshot separate from master data.
+8. Orders fan out into lab, imaging, dispensing, treatment, or billing work.
+9. Results and completion states flow back to the chart.
+10. Billing receives invoice lines from confirmed orders.
+11. Audit-style activity records show who changed what and when.
 
 ## Order Data Structure Map
 
@@ -72,6 +74,8 @@ Order-related demo data should be organized into five data families.
 
 These rules affect storage, calculation, or downstream linkage and should be preserved before detailed UI work:
 
+- Patient/guardian records should be workspace-scoped synthetic master data. Deletion is soft delete and must preserve identifiers and history.
+- Animal profile status labels should be derived from appointment, encounter, inpatient, surgery/anesthesia, deceased, and deleted state records.
 - Master presets and chart-applied rows are separate. Chart rows keep an applied snapshot so future admin edits do not rewrite past chart/order/billing records.
 - Order sets are managed in a separate hospital-admin Order 세트 surface. They can appear together with individual orders only when staff search/apply orders from the chart.
 - Lab orders that create result sheets should link at least one lab test item or category before they become active for new chart use.
@@ -82,6 +86,7 @@ These rules affect storage, calculation, or downstream linkage and should be pre
 
 ## Portfolio Proof Points
 
+- Patient and guardian data should be rich enough to support registration, profile drawer review, status labels, message consent, soft deletion, restoration, and chart/reception navigation without real data.
 - Order management should look like real hospital administration data, not only a simple service-name list.
 - Individual orders and order sets should be managed in separate hospital-admin surfaces because sets have their own included-order, amount-basis, and child-billing rules.
 - Chart order search can still show individual orders, order sets, and templates together so staff can apply them in one workflow.
@@ -101,6 +106,7 @@ The following can wait until screen implementation because they do not change th
 
 - Exact table sorting/filtering controls, tab placement, drawer width, and modal layout.
 - Button copy, tooltip wording, confirmation-dialog microcopy, hover states, and visual truncation behavior.
+- Exact patient drawer spacing, profile tab layout, snackbar timing, and modal copy for unsaved navigation.
 - Drag handle visuals, row highlight color, icon-only affordances, and detailed empty/loading states.
 - Keyboard interaction design for the expanded chart Order table.
 
@@ -125,4 +131,5 @@ The following can wait until screen implementation because they do not change th
 - 2026-05-19: Tightened data-first rules for source IDs, applied snapshots, set child rows, lab delete locks, medication quantity sources, pricing calculation order, and chart billing/task lifecycle; moved screen-specific behavior to deferred implementation notes.
 - 2026-05-19: Added a five-family order data structure map and data-affecting rule summary for master orders, order sets, lab test items, chart-applied orders, and billing/calculation data.
 - 2026-05-19: Recorded the product decision that Order 세트 is managed separately from individual Order 관리, while chart-side search/application can still combine individual orders and sets.
+- 2026-05-19: Added patient/guardian data contract from 동물 등록 and 동물 정보 drawer references, including registration fields, breed/species rules, staff assignment, status labels, messaging consent, soft delete, and restoration data.
 - 2026-05-19: Created DEN-99 synthetic virtual hospital demo dataset foundation.
