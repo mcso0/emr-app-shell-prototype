@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
@@ -170,6 +170,15 @@ const getInvoiceStatusDescription = (status: InvoiceStatus, balance: number) => 
 
 const billingLineCategoryOrder = ["진료", "검사", "영상", "조제", "처치", "기타"] as const;
 type BillingLineCategory = (typeof billingLineCategoryOrder)[number];
+const billingInvoiceLineColumns = {
+  category: "w-[88px]",
+  description: "min-w-[220px]",
+  unitPrice: "w-[104px]",
+  quantity: "w-[86px]",
+  discount: "w-[96px]",
+  lineTotal: "w-[116px]",
+} as const;
+const billingAmountCellClassName = "whitespace-nowrap text-right tabular-nums";
 
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
@@ -465,10 +474,14 @@ function useBillingWorkspaceData() {
   const detail =
     getBillingDetail(effectiveInvoiceId, effectiveInvoices, effectiveInvoiceLines, payments) ??
     getBillingDetail("invoice-coco-260501", effectiveInvoices, effectiveInvoiceLines, payments);
+  const baseEncounterId = baseDetail?.encounter.id;
+  const baseEncounterWorkspaceId = baseDetail?.encounter.workspaceId;
+  const baseInvoiceId = baseDetail?.invoice.id;
+  const baseInvoiceWorkspaceId = baseDetail?.invoice.workspaceId;
   useEffect(() => {
-    if (!baseDetail) return;
-    const encounterId = baseDetail.encounter.id;
-    const workspaceId = baseDetail.encounter.workspaceId;
+    if (!baseEncounterId || !baseEncounterWorkspaceId) return;
+    const encounterId = baseEncounterId;
+    const workspaceId = baseEncounterWorkspaceId;
     let cancelled = false;
 
     async function loadPersistedCandidates() {
@@ -490,11 +503,11 @@ function useBillingWorkspaceData() {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, baseDetail?.encounter.id, baseDetail?.encounter.workspaceId]);
+  }, [actorHeaders, baseEncounterId, baseEncounterWorkspaceId]);
   useEffect(() => {
-    if (!baseDetail) return;
-    const invoiceId = baseDetail.invoice.id;
-    const workspaceId = baseDetail.invoice.workspaceId;
+    if (!baseInvoiceId || !baseInvoiceWorkspaceId) return;
+    const invoiceId = baseInvoiceId;
+    const workspaceId = baseInvoiceWorkspaceId;
     let cancelled = false;
 
     async function loadPersistedInvoiceLines() {
@@ -513,11 +526,11 @@ function useBillingWorkspaceData() {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, applyInvoiceSnapshot, baseDetail?.invoice.id, baseDetail?.invoice.workspaceId]);
+  }, [actorHeaders, applyInvoiceSnapshot, baseInvoiceId, baseInvoiceWorkspaceId]);
   useEffect(() => {
-    if (!baseDetail) return;
-    const invoiceId = baseDetail.invoice.id;
-    const workspaceId = baseDetail.invoice.workspaceId;
+    if (!baseInvoiceId || !baseInvoiceWorkspaceId) return;
+    const invoiceId = baseInvoiceId;
+    const workspaceId = baseInvoiceWorkspaceId;
     let cancelled = false;
 
     async function loadPersistedPaymentStatus() {
@@ -536,7 +549,7 @@ function useBillingWorkspaceData() {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, applyPaymentStatusSnapshot, baseDetail?.invoice.id, baseDetail?.invoice.workspaceId]);
+  }, [actorHeaders, applyPaymentStatusSnapshot, baseInvoiceId, baseInvoiceWorkspaceId]);
   const groups = useMemo(
     () => getBillingGuardianGroups(effectiveInvoices, effectiveInvoiceLines, payments),
     [effectiveInvoiceLines, effectiveInvoices, payments]
@@ -853,45 +866,69 @@ function InvoiceLinesTable({
                 : sortedLines.length}
         </Badge>
       </div>
-      <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] text-[var(--emr-status-warning-text)]">
+      <BillingScopeNotice>
         실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과 청구 확정만 저장합니다.
-      </div>
-      <Table className="table-fixed text-[13px]">
-        <TableHeader className="bg-muted/50">
-          <TableRow>
-            <TableHead className="w-[88px]">업무</TableHead>
-            <TableHead>항목</TableHead>
-            <TableHead className="w-[104px] text-right">단가</TableHead>
-            <TableHead className="w-[86px] text-center">수량</TableHead>
-            <TableHead className="w-[96px] text-right">할인</TableHead>
-            <TableHead className="w-[116px] text-right">청구금액</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedLines.map((line) => (
-            <TableRow key={line.id}>
-              <TableCell>
-                <Badge variant="outline">{getBillingLineCategory(line)}</Badge>
-              </TableCell>
-              <TableCell className="font-medium">{line.description}</TableCell>
-              <TableCell className="text-right">{formatAmount(line.unitPrice)}</TableCell>
-              <TableCell>
-                <Input
-                  aria-label={`${line.description} 수량`}
-                  className="mx-auto h-8 w-16 text-right"
-                  inputMode="numeric"
-                  type="number"
-                  value={line.quantity}
-                  onChange={(event) => onUpdateQuantity(line.id, Number(event.target.value))}
-                />
-              </TableCell>
-              <TableCell className="text-right text-muted-foreground">0원</TableCell>
-              <TableCell className="text-right font-semibold">{formatAmount(line.lineTotal)}</TableCell>
+      </BillingScopeNotice>
+      <div className="overflow-x-auto">
+        <Table className="min-w-[720px] table-fixed text-[13px]">
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className={billingInvoiceLineColumns.category}>업무</TableHead>
+              <TableHead className={billingInvoiceLineColumns.description}>항목</TableHead>
+              <TableHead className={cn(billingInvoiceLineColumns.unitPrice, billingAmountCellClassName)}>
+                단가
+              </TableHead>
+              <TableHead className={cn(billingInvoiceLineColumns.quantity, "text-center")}>
+                수량
+              </TableHead>
+              <TableHead className={cn(billingInvoiceLineColumns.discount, billingAmountCellClassName)}>
+                할인
+              </TableHead>
+              <TableHead className={cn(billingInvoiceLineColumns.lineTotal, billingAmountCellClassName)}>
+                청구금액
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sortedLines.map((line) => (
+              <TableRow key={line.id}>
+                <TableCell className={billingInvoiceLineColumns.category}>
+                  <Badge variant="outline">{getBillingLineCategory(line)}</Badge>
+                </TableCell>
+                <TableCell className={cn(billingInvoiceLineColumns.description, "truncate font-medium")}>
+                  {line.description}
+                </TableCell>
+                <TableCell className={billingAmountCellClassName}>{formatAmount(line.unitPrice)}</TableCell>
+                <TableCell className={billingInvoiceLineColumns.quantity}>
+                  <Input
+                    aria-label={`${line.description} 수량`}
+                    className="mx-auto h-8 w-16 text-right tabular-nums"
+                    inputMode="numeric"
+                    type="number"
+                    value={line.quantity}
+                    onChange={(event) => onUpdateQuantity(line.id, Number(event.target.value))}
+                  />
+                </TableCell>
+                <TableCell className={cn(billingAmountCellClassName, "text-muted-foreground")}>
+                  0원
+                </TableCell>
+                <TableCell className={cn(billingAmountCellClassName, "font-semibold")}>
+                  {formatAmount(line.lineTotal)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </section>
+  );
+}
+
+function BillingScopeNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] text-[var(--emr-status-warning-text)]">
+      {children}
+    </div>
   );
 }
 
@@ -1193,43 +1230,71 @@ export function BillingRightPanel() {
             />
           </div>
           {confirmationState === "error" ? (
-            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-              청구 확정 저장에 실패했습니다.
-            </div>
+            <BillingPaymentErrorMessage>청구 확정 저장에 실패했습니다.</BillingPaymentErrorMessage>
           ) : null}
           {paymentState === "error" ? (
-            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-              수납 상태 저장에 실패했습니다.
-            </div>
+            <BillingPaymentErrorMessage>수납 상태 저장에 실패했습니다.</BillingPaymentErrorMessage>
           ) : null}
         </div>
       </ScrollArea>
-      <div className="grid shrink-0 grid-cols-2 gap-2 border-t p-4">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={paymentState === "saving"}
-          onClick={handleMarkUnpaid}
-        >
-          미납 처리
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={confirmationState === "saving"}
-          onClick={handleIssueInvoice}
-        >
-          {confirmationState === "saving" ? "확정 중" : confirmationState === "saved" ? "확정됨" : "청구 확정"}
-        </Button>
-        <Button
-          className="col-span-2"
-          size="sm"
-          disabled={paymentState === "saving"}
-          onClick={handleMarkPaid}
-        >
-          {paymentState === "saving" ? "저장 중" : "수납 완료"}
-        </Button>
-      </div>
+      <BillingPaymentActionFooter
+        confirmationState={confirmationState}
+        paymentState={paymentState}
+        onIssueInvoice={handleIssueInvoice}
+        onMarkPaid={handleMarkPaid}
+        onMarkUnpaid={handleMarkUnpaid}
+      />
+    </div>
+  );
+}
+
+function BillingPaymentErrorMessage({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+      {children}
+    </div>
+  );
+}
+
+function BillingPaymentActionFooter({
+  confirmationState,
+  paymentState,
+  onIssueInvoice,
+  onMarkPaid,
+  onMarkUnpaid,
+}: {
+  confirmationState: "idle" | "saving" | "saved" | "error";
+  paymentState: "idle" | "saving" | "saved" | "error";
+  onIssueInvoice: () => void;
+  onMarkPaid: () => void;
+  onMarkUnpaid: () => void;
+}) {
+  return (
+    <div className="grid shrink-0 grid-cols-2 gap-2 border-t p-4">
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={paymentState === "saving"}
+        onClick={onMarkUnpaid}
+      >
+        미납 처리
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={confirmationState === "saving"}
+        onClick={onIssueInvoice}
+      >
+        {confirmationState === "saving" ? "확정 중" : confirmationState === "saved" ? "확정됨" : "청구 확정"}
+      </Button>
+      <Button
+        className="col-span-2"
+        size="sm"
+        disabled={paymentState === "saving"}
+        onClick={onMarkPaid}
+      >
+        {paymentState === "saving" ? "저장 중" : "수납 완료"}
+      </Button>
     </div>
   );
 }

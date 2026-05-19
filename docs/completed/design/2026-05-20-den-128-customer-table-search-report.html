@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-128 고객관리 테이블 및 검색 UI 정리 리포트</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 920px; margin: 0 auto; padding: 48px 28px; }
+      article { background: #fff; border: 1px solid #e4e7ec; border-radius: 12px; padding: 32px; box-shadow: 0 8px 28px rgb(15 23 42 / 0.06); }
+      h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.25; }
+      h2 { margin: 28px 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { border-radius: 5px; background: #f4f4f5; padding: 2px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+      .meta { margin: 0 0 24px; color: #667085; font-size: 13px; }
+      .note { border-left: 4px solid #71717a; background: #fafafa; padding: 12px 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-128 고객관리 테이블 및 검색 UI 정리 리포트</h1>
+        <p class="meta">2026-05-20 · Project 05-M2 · Customer Table/Search Pass</p>
+
+        <h2>요약</h2>
+        <p>
+          고객관리 화면의 table min-width inline style을 local class recipe로 바꾸고, 검색 입력을
+          <code>CustomerSearchInput</code>으로 분리했다. 긴 동물명/보호자명, 전화번호, 동의 상태,
+          등록일시는 truncate 또는 nowrap 기준을 더 명확히 해 dense table에서 흔들림을 줄였다.
+        </p>
+
+        <h2>List/Table/Drawer 개선</h2>
+        <ul>
+          <li><code>customerTableWidthClassNames</code>로 동물/보호자 table 폭 기준을 local recipe로 모았다.</li>
+          <li><code>style={{ minWidth }}</code>를 제거하고 Tailwind class 기반 min-width로 전환했다.</li>
+          <li><code>CustomerSearchInput</code>을 추가해 검색 icon, clear button, placeholder, aria-label을 한 곳에서 관리한다.</li>
+          <li>동물명/보호자명은 truncate, 전화번호/수신 여부/등록일시는 nowrap 기준을 적용했다.</li>
+          <li>환자/보호자 row click과 공용 drawer 진입은 기존 동작을 유지했다.</li>
+        </ul>
+
+        <h2>의도적으로 제외한 placeholder</h2>
+        <ul>
+          <li>스케줄 관리, 발송 관리, 서류 관리, CS내역, 진료의뢰수신 하위 항목은 계속 disabled visual-only navigation으로 남겼다.</li>
+          <li>새 고객 workflow, 외부 메시징, 문서/CS/진료의뢰 연동은 구현하지 않았다.</li>
+        </ul>
+
+        <h2>후속 추천</h2>
+        <ul>
+          <li>고객관리 table recipe가 병원관리/수납 table과 더 겹치면 shared EMR data table sizing rule로 승격할 수 있다.</li>
+          <li>placeholder 영역은 제품 범위가 확정된 뒤 별도 이슈로 각 업무 화면을 연결하는 편이 안전하다.</li>
+        </ul>
+
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npx eslint src/features/customer/module.tsx tests/customer.spec.ts</code> 통과</li>
+          <li><code>npx playwright test tests/customer.spec.ts --reporter=line</code> 통과: 4 passed</li>
+        </ul>
+
+        <h2>Agent Notes</h2>
+        <p class="note">
+          English: Customer table sizing remains feature-local because the column set is master-data specific.
+          Existing common patient/guardian drawer entry points were preserved. Placeholder navigation remains
+          disabled and should not imply implemented scheduling, messaging, document, CS, or referral workflows.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>
