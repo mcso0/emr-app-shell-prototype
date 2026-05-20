@@ -53,6 +53,14 @@ type CommandSection = {
 };
 
 const MAX_ITEMS_PER_SECTION = 6;
+const COMMAND_DIALOG_CLASS_NAME =
+  "h-[min(680px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-[var(--clair-shadow-xl)] sm:max-w-[720px]";
+const COMMAND_RESULT_ROW_CLASS_NAME =
+  "grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] px-2.5 py-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50";
+const COMMAND_RESULT_ICON_CLASS_NAME =
+  "flex size-8 items-center justify-center rounded-[8px] bg-[var(--emr-state-hover)] text-muted-foreground";
+const COMMAND_RESULT_BADGE_CLASS_NAME =
+  "inline-flex max-w-[120px] items-center rounded-full border border-border bg-card px-2 py-0.5 text-[11px] leading-4 text-muted-foreground";
 
 const commandFilterItems: Array<SegmentedControlItem<CommandFilter>> = [
   { value: "all", label: "전체" },
@@ -487,7 +495,7 @@ export function GlobalCommandPalette({
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="h-[min(680px,calc(100vh-120px))] w-[min(720px,calc(100vw-32px))] grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-[12px] border border-[var(--emr-line-subtle)] bg-card p-0 shadow-[0_34px_110px_rgba(0,0,0,0.28),0_14px_38px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] sm:max-w-[720px]"
+          className={COMMAND_DIALOG_CLASS_NAME}
           overlayClassName="bg-transparent backdrop-blur-none [-webkit-backdrop-filter:none] [backdrop-filter:none] supports-backdrop-filter:backdrop-blur-none"
           showCloseButton={false}
         >
@@ -520,7 +528,7 @@ export function GlobalCommandPalette({
               onValueChange={handleFilterChange}
             />
           </div>
-          <div className="min-h-0 overflow-y-auto px-2 py-2">
+          <div className="min-h-0 overflow-y-auto px-2 py-2" role="listbox" aria-label="통합 검색 결과">
             {sections.length ? (
               sections.map((section, sectionIndex) => (
                 <div key={section.id}>
@@ -585,9 +593,10 @@ function CommandSectionView({
           return (
             <button
               key={item.id}
+              id={`command-result-${item.id}`}
               type="button"
               className={cn(
-                "grid w-full grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] px-2.5 py-2 text-left outline-none transition-colors",
+                COMMAND_RESULT_ROW_CLASS_NAME,
                 active
                   ? "bg-muted text-foreground"
                   : "text-[var(--emr-text-secondary)] hover:bg-muted/50"
@@ -596,7 +605,7 @@ function CommandSectionView({
               onClick={() => onRunCommand(item)}
               onMouseEnter={() => onSetActiveIndex(itemIndex)}
             >
-              <span className="flex size-8 items-center justify-center rounded-[8px] bg-[var(--clair-color-atomic-black-alpha-4)] text-muted-foreground">
+              <span className={COMMAND_RESULT_ICON_CLASS_NAME}>
                 <Icon className="size-4" aria-hidden="true" />
               </span>
               <span className="min-w-0">
@@ -605,7 +614,7 @@ function CommandSectionView({
                   {item.subtitle}
                 </span>
               </span>
-              <span className="inline-flex max-w-[120px] items-center rounded-full border border-border bg-card px-2 py-0.5 text-[11px] leading-4 text-muted-foreground">
+              <span className={COMMAND_RESULT_BADGE_CLASS_NAME}>
                 <span className="truncate">{item.badge}</span>
               </span>
             </button>

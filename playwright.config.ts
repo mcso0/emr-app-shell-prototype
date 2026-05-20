@@ -14,6 +14,7 @@ const mockAuthSession = {
 export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
+  workers: 1,
   expect: {
     timeout: 5_000,
   },

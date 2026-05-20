@@ -586,7 +586,7 @@ function QueueItem({
         variant="outline"
         className={
           selected
-            ? "border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] shadow-xs hover:bg-[var(--clair-color-atomic-sky-50)]"
+            ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] shadow-xs hover:bg-[var(--emr-state-selected)]"
             : undefined
         }
         title={`${row.patient?.name ?? "환자 미상"} · ${row.invoice.invoiceNo}`}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-110 Customer Management Persistence Regression Handoff</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      ul { margin: 0; padding-left: 20px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Project 06 / DEN-110 / 2026-05-20</p>
+      <h1>고객관리 Persistence 회귀·인수인계</h1>
+      <p>고객관리 Project 06의 범위, 스키마, 보호자/동물 프로필, 관계, 삭제·복구 잠금을 하나의 회귀 묶음으로 정리했다.</p>
+      <span class="badge">Status: Human Review</span>
+      <section>
+        <h2>완료 범위</h2>
+        <table>
+          <tr><th>이슈</th><th>결과</th></tr>
+          <tr><td>DEN-101</td><td>민감정보와 live 전환 범위 확정</td></tr>
+          <tr><td>DEN-102</td><td>고객관리 schema delta plan 작성</td></tr>
+          <tr><td>DEN-105</td><td>local-first migration과 synthetic seed 추가</td></tr>
+          <tr><td>DEN-106</td><td>보호자 프로필 저장 경계</td></tr>
+          <tr><td>DEN-107</td><td>동물 프로필 저장 경계</td></tr>
+          <tr><td>DEN-108</td><td>보호자-동물 관계 변경 경계</td></tr>
+          <tr><td>DEN-109</td><td>soft delete/restore와 삭제 잠금 경계</td></tr>
+        </table>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>tests/customer-management-schema-migration.spec.ts</code></li>
+          <li><code>tests/customer-guardian-profile-server.spec.ts</code></li>
+          <li><code>tests/customer-patient-profile-server.spec.ts</code></li>
+          <li><code>tests/customer-relationship-management-server.spec.ts</code></li>
+          <li><code>tests/customer-soft-delete-restore-server.spec.ts</code></li>
+          <li><code>tests/customer.spec.ts</code></li>
+          <li><code>npx tsc --noEmit --pretty false</code></li>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

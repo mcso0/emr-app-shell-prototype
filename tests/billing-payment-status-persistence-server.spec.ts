@@ -130,7 +130,11 @@ test("payment status core blocks unauthorized billing mutations and cross-worksp
 });
 
 test("payment status core persists method, unpaid, and completed states without external provider confirmation", async () => {
-  const gateway = createMockBillingPaymentStatusGateway(undefined, () => "2026-05-20T11:00:00.000Z");
+  const gateway = createMockBillingPaymentStatusGateway(
+    undefined,
+    () => "2026-05-20T11:00:00.000Z",
+    "billing-payment-status-core-test"
+  );
 
   const selected = await saveBillingPaymentStatus({
     actorUserId: "user-tech",

@@ -34,11 +34,17 @@ const crossModuleQueryKeys = [
   "right",
 ] as const;
 
-function getCrossModuleNavigationSearch(search: string) {
+function getCrossModuleNavigationSearch(
+  search: string,
+  currentModuleLayout: { hasContentAside: boolean; hasRightPanel: boolean }
+) {
   const currentParams = new URLSearchParams(search);
   const nextParams = new URLSearchParams();
 
   crossModuleQueryKeys.forEach((key) => {
+    if ((key === "aside" || key === "context") && !currentModuleLayout.hasContentAside) return;
+    if (key === "right" && !currentModuleLayout.hasRightPanel) return;
+
     const value = currentParams.get(key);
     if (value) {
       nextParams.set(key, value);
@@ -54,7 +60,14 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
-  const navigationSearch = useMemo(() => getCrossModuleNavigationSearch(search), [search]);
+  const navigationSearch = useMemo(
+    () =>
+      getCrossModuleNavigationSearch(search, {
+        hasContentAside: Boolean(moduleDefinition.contentAside),
+        hasRightPanel: Boolean(moduleDefinition.rightPanel),
+      }),
+    [moduleDefinition.contentAside, moduleDefinition.rightPanel, search]
+  );
   const currentRoute = `${pathname}${search ? `?${search}` : ""}`;
   const pendingUrlStateRef = useRef<PendingUrlState | null>(null);
   const pendingTabRouteRef = useRef<string | null>(null);

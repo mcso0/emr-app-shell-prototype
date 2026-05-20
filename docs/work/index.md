@@ -125,6 +125,14 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | CLINICAL-BILLING-PR-015 | human_review | clinical-billing | P0 | Project 04 / DEN-80 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-015-outpatient-persistence-regression.md` |
 | CLINICAL-BILLING-PR-016 | human_review | clinical-billing | P0 | Project 04 / DEN-81 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-016-audit-security-readiness-handoff.md` |
 | DEMO-DATA-PR-001 | human_review | demo-data | P0 | Project 04 / DEN-99 | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md` |
+| CUSTOMER-LIVE-PR-001 | human_review | customer | P0 | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md` |
+| CUSTOMER-LIVE-PR-002 | human_review | customer | P0 | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md` |
+| CUSTOMER-LIVE-PR-003 | human_review | customer | P0 | Project 06 / DEN-105 | `docs/work/customer/CUSTOMER-LIVE-PR-003-customer-schema-migration.md` |
+| CUSTOMER-LIVE-PR-004 | human_review | customer | P0 | Project 06 / DEN-106 | `docs/work/customer/CUSTOMER-LIVE-PR-004-guardian-profile-persistence.md` |
+| CUSTOMER-LIVE-PR-005 | human_review | customer | P0 | Project 06 / DEN-107 | `docs/work/customer/CUSTOMER-LIVE-PR-005-patient-profile-persistence.md` |
+| CUSTOMER-LIVE-PR-006 | human_review | customer | P0 | Project 06 / DEN-108 | `docs/work/customer/CUSTOMER-LIVE-PR-006-relationship-management-persistence.md` |
+| CUSTOMER-LIVE-PR-007 | human_review | customer | P0 | Project 06 / DEN-109 | `docs/work/customer/CUSTOMER-LIVE-PR-007-soft-delete-restore-persistence.md` |
+| CUSTOMER-LIVE-PR-008 | human_review | customer | P0 | Project 06 / DEN-110 | `docs/work/customer/CUSTOMER-LIVE-PR-008-customer-management-regression-handoff.md` |
 | CHART-PR-001 | done | chart | P1 | PR 1 | `docs/work/chart/CHART-PR-001-workspace-restructure.md` |
 | CHART-PR-002 | done | chart | P1 | PR 2 | `docs/work/chart/CHART-PR-002-soap-order-scroll-boundary.md` |
 | CHART-PR-003 | done | chart | P1 | PR 3 | `docs/work/chart/CHART-PR-003-chart-safety-mvp-ux.md` |
@@ -135,6 +143,15 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | LAB-PR-001 | done | lab | P1 | PR 1 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md` |
 | IMAGING-PR-001 | done | imaging | P1 | PR 1 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md` |
 | HOSPITAL-ADMIN-PR-001 | done | hospital-admin | P1 | PR 1 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md` |
+| HOSPITAL-ADMIN-LIVE-PR-001 | human_review | hospital-admin | P0 | Project 07 / DEN-103 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-001-order-catalog-persistence-scope.md` |
+| HOSPITAL-ADMIN-LIVE-PR-002 | human_review | hospital-admin | P0 | Project 07 / DEN-104 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-002-order-catalog-schema-plan.md` |
+| HOSPITAL-ADMIN-LIVE-PR-003 | human_review | hospital-admin | P0 | Project 07 / DEN-111 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-003-order-catalog-schema-migration.md` |
+| HOSPITAL-ADMIN-LIVE-PR-004 | human_review | hospital-admin | P0 | Project 07 / DEN-112 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-004-order-catalog-read-boundary.md` |
+| HOSPITAL-ADMIN-LIVE-PR-005 | human_review | hospital-admin | P0 | Project 07 / DEN-113 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-005-order-catalog-admin-mutations.md` |
+| HOSPITAL-ADMIN-LIVE-PR-006 | human_review | hospital-admin | P0 | Project 07 / DEN-114 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-006-order-set-persistence.md` |
+| HOSPITAL-ADMIN-LIVE-PR-007 | human_review | hospital-admin | P0 | Project 07 / DEN-115 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-007-lab-test-item-linkage.md` |
+| HOSPITAL-ADMIN-LIVE-PR-008 | human_review | hospital-admin | P0 | Project 07 / DEN-116 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-008-medication-vaccine-pricing.md` |
+| HOSPITAL-ADMIN-LIVE-PR-009 | human_review | hospital-admin | P0 | Project 07 / DEN-117 | `docs/work/hospital-admin/HOSPITAL-ADMIN-LIVE-PR-009-order-catalog-regression-handoff.md` |
 | BILLING-PR-001 | done | billing | P1 | PR 1 | `docs/work/billing/BILLING-PR-001-billing-workspace-restructure.md` |
 | INPATIENT-PR-001 | done | inpatient | P1 | PR 1 | `docs/work/inpatient/INPATIENT-PR-001-ward-workspace.md` |
 | CUSTOMER-PR-001 | done | customer | P1 | PR 1 | `docs/work/customer/CUSTOMER-PR-001-customer-management-workspace.md` |
@@ -150,39 +167,10 @@ The docs restructure and docs operations sequence is complete. Product MVP imple
 
 Recommended next shaping target:
 
-- Project 04 has completed its active issue sequence through DEN-81 and is ready for representative Human Review.
-- DEN-67 `00-01 Confirm clinical billing persistence scope and encounter dependency` is ready for Human Review.
-- DEN-68 `00-02 Implement clinical order billing schema migration` is ready for Human Review.
-- DEN-99 `00-03 Define portfolio virtual hospital demo dataset foundation` is ready for Human Review.
-- DEN-100 `00-04 Align chart-applied order snapshot schema with DEN-99 data contracts` is ready for Human Review.
-- DEN-69 `01-01 Persist SOAP field saves and autosave metadata` is ready for Human Review.
-- DEN-70 `01-02 Persist chart completion state` is ready for Human Review.
-- DEN-71 `02-01 Persist diagnosis selection and free text rows` is ready for Human Review.
-- DEN-72 `02-02 Persist editable order draft table changes` is ready for Human Review.
-- DEN-73 `02-03 Persist order confirmation and selected order submit action` is ready for Human Review.
-- DEN-74 `03-01 Implement persisted order lifecycle status changes` is ready for Human Review.
-- DEN-75 `03-02 Sync confirmed order items to billing invoice candidates` is ready for Human Review.
-- DEN-76 `03-03 Read persisted order and invoice candidate state across chart and billing` is ready for Human Review.
-- DEN-77 `04-01 Persist invoice line edits and billing confirmation` is ready for Human Review.
-- DEN-78 `04-02 Persist payment method unpaid and completed payment states` is ready for Human Review.
-- DEN-79 `04-03 Add billing permission and amount integrity regression coverage` is ready for Human Review.
-- DEN-80 `05-01 Add full outpatient chart order billing persistence regression` is ready for Human Review.
-- DEN-81 `05-02 Produce Audit Security Readiness handoff and clinical billing closeout` is ready for Human Review.
-- DEN-82 `00-01 Define MVP pilot readiness criteria and blocker policy` is ready for Human Review.
-- DEN-83 `00-02 Define audit event matrix for live MVP mutations` is ready for Human Review.
-- DEN-84 `01-01 Implement audit log schema and append helper for live mutations` is ready for Human Review.
-- DEN-85 `01-02 Emit audit events from workspace encounter chart order and billing mutations` is ready for Human Review.
-- DEN-86 `01-03 Add minimal audit review surface for hospital admins` is ready for Human Review.
-- DEN-87 `02-01 Threat model live auth DB RLS and workspace boundaries` is ready for Human Review.
-- DEN-88 `02-02 Security review clinical billing and audit mutation boundaries` is ready for Human Review.
-- DEN-89 `03-01 QA full live outpatient workflow across reload checkpoints` is ready for Human Review.
-- DEN-90 `03-02 QA role workspace boundary and denial UX` is ready for Human Review.
-- DEN-91 `03-03 Run representative pilot rehearsal and defect triage` is ready for Human Review.
-- DEN-92 `04-01 Produce Product MVP live transition closeout report` is ready for Human Review.
-- DEN-93 `04-02 Split remaining work into Post-MVP backlog and next initiative candidates` is ready for Human Review.
-- Project 05 has completed its active issue sequence through DEN-93 and is ready for representative Human Review.
-- DEN-69+ should use `docs/product/demo-data/` as an added product data reference before continuing schema/UI work.
-- Keep Project 04 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
+- Project 04 and Project 05 have completed their active issue sequences and were accepted for `Done` in Linear on 2026-05-20.
+- Project 06 `Customer Management Persistence` has completed its active issue sequence through DEN-110 and is ready for representative Human Review.
+- Project 07 `Hospital Admin Order Catalog Persistence` has completed its active issue sequence through DEN-117 and is ready for representative Human Review.
+- Keep Project 06 and Project 07 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
 
 ## Inbox
 

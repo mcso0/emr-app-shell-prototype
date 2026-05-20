@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-138 Global Command Palette 정리 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+      section { margin-top: 16px; border: 1px solid #d9dde5; border-radius: 10px; background: white; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      h2 { margin: 0 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.65; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-138 Global Command Palette 정리 보고</h1>
+      <p>통합 검색의 mock search/navigation semantics는 유지하면서 dialog와 result row chrome을 local recipe로 정리했다.</p>
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>src/shell/global-command-palette.tsx</code>에 command dialog, result row, result icon, result badge class 상수를 추가했다.</li>
+          <li>검색 결과 리스트 영역에 <code>aria-label</code>을 추가해 영역 의미를 명확히 했다.</li>
+          <li>Command result는 기존 테스트와 사용자 interaction contract를 지키기 위해 button semantics를 유지했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>범위 제외</h2>
+        <p>Real global search API, search indexing architecture, route/workflow behavior, permission-filtered search result는 변경하지 않았다.</p>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/shell/global-command-palette.tsx tests/app-shell.spec.ts</code> 통과</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts -g "global command" --reporter=line</code> 통과</li>
+        </ul>
+      </section>
+      <section>
+        <h2>후속 후보</h2>
+        <p>검색 result row와 badge는 향후 다른 EMR search surface가 생기면 <code>src/components/emr/*</code> 승격 후보로 다시 평가하면 된다.</p>
+      </section>
+    </main>
+  </body>
+</html>

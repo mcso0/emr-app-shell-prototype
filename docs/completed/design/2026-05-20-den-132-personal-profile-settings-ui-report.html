@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-132 개인 프로필 설정 UI 구조 개선 보고</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      section {
+        margin-top: 16px;
+        border: 1px solid #d9dde5;
+        border-radius: 10px;
+        background: white;
+        padding: 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.65;
+      }
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-132 개인 프로필 설정 UI 구조 개선 보고</h1>
+      <p>개인 프로필 설정 화면의 field error, 저장 상태, layout intent를 정리해 로그인/워크스페이스 폼과 같은 UI 기준에 더 가깝게 맞췄다.</p>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>src/features/auth/personal-profile-settings.tsx</code>의 field error 표시를 shadcn <code>FieldError</code>로 통일했다.</li>
+          <li>저장 성공과 저장 실패 notice를 success/error tone으로 분리해 색상만으로 의미를 숨기지 않게 했다.</li>
+          <li>저장 중에는 입력 필드, checkbox, 저장 버튼을 비활성화하고 버튼 문구를 <code>저장 중</code>으로 바꿨다.</li>
+          <li>프로필 화면 grid class와 notice tone class를 local 상수로 모아 의도적인 responsive layout 제약을 확인하기 쉽게 했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 제외</h2>
+        <p>실제 개인 프로필 persistence 정책, 계정 보안 설정, 비밀번호/MFA/identity provider, 권한/역할 정책은 변경하지 않았다. 현재 서버 PATCH와 browser/session 표시 상태 흐름은 그대로 유지했다.</p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/features/auth/personal-profile-settings.tsx tests/auth.spec.ts</code> 통과</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npx playwright test tests/auth.spec.ts -g "profile" --reporter=line</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>리뷰 포인트</h2>
+        <p>저장 중 disabled 상태와 success/error notice tone이 화면 감각에 맞는지 확인하면 된다.</p>
+      </section>
+    </main>
+  </body>
+</html>

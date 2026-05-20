@@ -43,6 +43,11 @@ const RAIL_LAYOUT_TRANSITION: Transition = {
 };
 
 const RAIL_REDUCED_TRANSITION: Transition = { duration: 0 };
+const RAIL_ROOT_CLASS_NAME =
+  "flex min-h-0 min-w-12 max-w-12 flex-col items-center rounded-lg bg-primary p-2 text-primary-foreground/70";
+const RAIL_ITEM_CLASS_NAME =
+  "flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
+const RAIL_ICON_FRAME_CLASS_NAME = "flex size-[26px] items-center justify-center";
 const RAIL_TOOLTIP_SIDE_OFFSET = 16;
 const RAIL_TOP_ENTER_TRANSITION: Transition = {
   duration: 0.22,
@@ -86,7 +91,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
   );
 
   return (
-    <nav className="flex min-h-0 min-w-[48px] max-w-[48px] flex-col items-center rounded-lg bg-primary p-2 text-primary-foreground/70">
+    <nav className={RAIL_ROOT_CLASS_NAME} aria-label="워크스페이스 주요 메뉴">
       <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-2 overflow-y-auto">
         <AnimatePresence initial={false}>
           {!modulePanelOpen ? (
@@ -103,7 +108,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
                   render={
                     <button
                       type="button"
-                      className="flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className={RAIL_ITEM_CLASS_NAME}
                       onClick={() => setModulePanelOpen(true)}
                       aria-label="사이드 패널 펼치기"
                     >
@@ -245,7 +250,7 @@ function RailModuleItem({
             <Link
               href={href}
               className={cn(
-                "flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+                RAIL_ITEM_CLASS_NAME,
                 active && "bg-primary-foreground/15 text-primary-foreground"
               )}
               aria-current={active ? "page" : undefined}
@@ -285,7 +290,7 @@ function RailActionItem({
           render={
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={RAIL_ITEM_CLASS_NAME}
               aria-label={label}
             >
               <IconFrame>
@@ -304,7 +309,7 @@ function RailActionItem({
 
 function IconFrame({ children }: { children: ReactNode }) {
   return (
-    <span className="flex size-[26px] items-center justify-center" aria-hidden="true">
+    <span className={RAIL_ICON_FRAME_CLASS_NAME} aria-hidden="true">
       {children}
     </span>
   );

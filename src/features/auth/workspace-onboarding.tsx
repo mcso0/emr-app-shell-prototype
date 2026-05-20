@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BuildingIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
@@ -193,11 +193,12 @@ export function WorkspaceOnboarding() {
                 name="hospitalName"
                 placeholder="Hanbit Animal Hospital"
                 aria-invalid={Boolean(fieldErrors.hospitalName)}
+                disabled={!canCreateWorkspace || isSubmitting}
               />
               {fieldErrors.hospitalName ? (
-                <p role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.hospitalName}
-                </p>
+                </FieldError>
               ) : null}
             </Field>
 
@@ -208,11 +209,12 @@ export function WorkspaceOnboarding() {
                 name="adminDisplayName"
                 placeholder="김승욱"
                 aria-invalid={Boolean(fieldErrors.adminDisplayName)}
+                disabled={!canCreateWorkspace || isSubmitting}
               />
               {fieldErrors.adminDisplayName ? (
-                <p role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.adminDisplayName}
-                </p>
+                </FieldError>
               ) : null}
             </Field>
 
@@ -224,11 +226,12 @@ export function WorkspaceOnboarding() {
                 name="contactEmail"
                 placeholder="owner@hospital.com"
                 aria-invalid={Boolean(fieldErrors.contactEmail)}
+                disabled={!canCreateWorkspace || isSubmitting}
               />
               {fieldErrors.contactEmail ? (
-                <p role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.contactEmail}
-                </p>
+                </FieldError>
               ) : null}
             </Field>
 
@@ -238,6 +241,7 @@ export function WorkspaceOnboarding() {
                 id="workspace-contact-phone"
                 name="contactPhone"
                 placeholder="010-1234-5678"
+                disabled={!canCreateWorkspace || isSubmitting}
               />
             </Field>
 

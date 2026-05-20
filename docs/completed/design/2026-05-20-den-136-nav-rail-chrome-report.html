@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-136 App Shell Nav Rail 최적화 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+      section { margin-top: 16px; border: 1px solid #d9dde5; border-radius: 10px; background: white; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      h2 { margin: 0 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.65; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-136 App Shell Nav Rail 최적화 보고</h1>
+      <p>Nav Rail의 반복 sizing/focus class를 local chrome recipe로 묶고, 메뉴 영역의 접근성 라벨을 명시했다.</p>
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>src/shell/nav-rail.tsx</code>에 rail root, item, icon frame class 상수를 추가해 48px rail과 32px item rhythm을 한 곳에서 관리하도록 했다.</li>
+          <li>module panel toggle, module link, action item의 hover/focus class 중복을 같은 recipe로 정리했다.</li>
+          <li>Nav rail에 <code>aria-label="워크스페이스 주요 메뉴"</code>를 추가했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>의도적 예외</h2>
+        <p>GNB icon별 픽셀 크기는 asset alignment를 맞추기 위한 값이라 <code>module-nav-icons.tsx</code>에 유지했다. Route semantics, panel open/close state, navigation search propagation은 변경하지 않았다.</p>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/shell/nav-rail.tsx tests/app-shell.spec.ts</code> 통과</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts -g "nav|side|module|shell" --reporter=line</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

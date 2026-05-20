@@ -5,6 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -143,7 +152,7 @@ export function WorkspaceMembershipManagement({
   const [deactivatingMembership, setDeactivatingMembership] =
     useState<SessionWorkspaceMembership | null>(null);
   const [deactivationError, setDeactivationError] = useState<string | null>(null);
-  const canManageMembers = session?.role === "hospital_admin" || session?.role === "supabase";
+const canManageMembers = session?.role === "hospital_admin" || session?.role === "supabase";
 
   useEffect(() => {
     hydrate();
@@ -558,11 +567,8 @@ export function WorkspaceMembershipManagement({
       </section>
 
       <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[360px_minmax(0,1fr)]">
-        <form
-          className="border-b bg-card p-4 lg:border-b-0 lg:border-r"
-          onSubmit={handleSubmit}
-        >
-          <div className="grid gap-4">
+        <form className="border-b bg-card p-4 lg:border-b-0 lg:border-r" onSubmit={handleSubmit}>
+          <FieldGroup>
             <div>
               <h2 className="text-[15px] font-semibold">직원 초대</h2>
               <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
@@ -596,24 +602,28 @@ export function WorkspaceMembershipManagement({
               </p>
             ) : null}
 
-            <label className="grid gap-1.5 text-[13px] font-medium">
-              초대 이메일
+            <Field>
+              <FieldLabel htmlFor="workspace-invitation-email">초대 이메일</FieldLabel>
               <Input
+                id="workspace-invitation-email"
                 name="email"
                 type="email"
                 placeholder="staff@hospital.com"
-                disabled={!canManageMembers}
+                disabled={!canManageMembers || submittingInvitation}
                 aria-invalid={Boolean(fieldErrors.email)}
               />
               {fieldErrors.email ? (
-                <span role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.email}
-                </span>
+                </FieldError>
               ) : null}
-            </label>
+            </Field>
 
-            <div className="grid gap-2">
-              <div className="text-[13px] font-medium">역할</div>
+            <FieldSet className="gap-2">
+              <FieldLegend className="mb-0 text-[13px]">역할</FieldLegend>
+              <FieldDescription className="text-[12px]">
+                여러 역할을 선택하면 권한은 합산됩니다.
+              </FieldDescription>
               <div className="grid gap-2">
                 {SESSION_WORKSPACE_ROLES.map((role) => (
                   <label
@@ -623,7 +633,7 @@ export function WorkspaceMembershipManagement({
                     <Checkbox
                       aria-label={role.label}
                       checked={selectedRoles.includes(role.id)}
-                      disabled={!canManageMembers}
+                      disabled={!canManageMembers || submittingInvitation}
                       onCheckedChange={(checked) => handleRoleToggle(role.id, Boolean(checked))}
                     />
                     {role.label}
@@ -631,26 +641,36 @@ export function WorkspaceMembershipManagement({
                 ))}
               </div>
               {fieldErrors.roles ? (
-                <span role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.roles}
-                </span>
+                </FieldError>
               ) : null}
-            </div>
+            </FieldSet>
 
-            <label className="grid gap-1.5 text-[13px] font-medium">
-              직책
-              <Input name="title" placeholder="진료팀장" disabled={!canManageMembers} />
-            </label>
+            <Field>
+              <FieldLabel htmlFor="workspace-invitation-title">직책</FieldLabel>
+              <Input
+                id="workspace-invitation-title"
+                name="title"
+                placeholder="진료팀장"
+                disabled={!canManageMembers || submittingInvitation}
+              />
+            </Field>
 
-            <label className="grid gap-1.5 text-[13px] font-medium">
-              부서
-              <Input name="department" placeholder="진료팀" disabled={!canManageMembers} />
-            </label>
+            <Field>
+              <FieldLabel htmlFor="workspace-invitation-department">부서</FieldLabel>
+              <Input
+                id="workspace-invitation-department"
+                name="department"
+                placeholder="진료팀"
+                disabled={!canManageMembers || submittingInvitation}
+              />
+            </Field>
 
             <Button type="submit" disabled={!canManageMembers || submittingInvitation}>
               {submittingInvitation ? "초대 저장 중" : "초대 만들기"}
             </Button>
-          </div>
+          </FieldGroup>
         </form>
 
         <ScrollArea className="min-h-0 bg-[var(--emr-surface-workspace)]">
@@ -754,7 +774,7 @@ export function WorkspaceMembershipManagement({
                 })}
                 {workspaceRows.length === 0 ? (
                   <TableRow className="bg-card">
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                       아직 이 워크스페이스에 표시할 구성원이 없습니다.
                     </TableCell>
                   </TableRow>

@@ -778,3 +778,155 @@ set
   unit_price = excluded.unit_price,
   discount_amount = excluded.discount_amount,
   updated_at = now();
+
+-- DEN-105: customer management synthetic seed contract.
+-- Uses local-only portfolio fixture values and masked placeholders.
+
+select 'customer_management_seed_contract_version:2026-05-20-den-105' as customer_management_seed_contract_version;
+
+update public.guardians
+set
+  guardian_code = 'C-SEED-0001',
+  additional_phone_numbers = '["010-1111-3333"]'::jsonb,
+  postal_code = '06000',
+  address_line1 = 'Synthetic Cheongdam demo address',
+  address_line2 = 'Synthetic suite 101',
+  email_local_part = 'guardian.reception.seed',
+  email_domain_mode = 'direct_input',
+  email_domain = 'example.test',
+  cash_receipt_type = 'personal_income_deduction',
+  cash_receipt_number = 'cash-receipt-demo-placeholder',
+  resident_registration_number_masked = '900101-1******',
+  resident_registration_number_token = 'masked-demo-rrn-token',
+  vehicle_number = 'DEMO-1234',
+  status = 'active',
+  last_updated_by_user_id = '00000000-0000-4000-8000-000000000004',
+  updated_at = now()
+where id = '20000000-0000-4000-8000-000000000001';
+
+update public.patients
+set
+  primary_breed_id = 'breed-demo-mixed',
+  primary_breed_name = 'Mixed',
+  is_mixed_breed = true,
+  additional_breed_ids = '["breed-demo-poodle"]'::jsonb,
+  estimated_age_years = 5,
+  estimated_age_months = 4,
+  estimated_age_days = 0,
+  age_is_estimated = true,
+  weight_kg = 6.20,
+  color = 'Synthetic cream',
+  microchip_type = 'internal',
+  profile_memo = 'DEN-105 synthetic customer profile memo.',
+  primary_attending_vet_id = '00000000-0000-4000-8000-000000000002',
+  message_consent_status = 'granted',
+  kakao_patient_code = 'KAKAO-DEMO-PATIENT-001',
+  last_updated_by_user_id = '00000000-0000-4000-8000-000000000004',
+  updated_at = now()
+where id = '21000000-0000-4000-8000-000000000001';
+
+update public.patient_guardians
+set
+  relationship_label = 'primary',
+  message_consent_status = 'granted',
+  guardian_phone_available = true,
+  sort_order = 0,
+  linked_by_user_id = '00000000-0000-4000-8000-000000000004',
+  updated_at = now()
+where id = '22000000-0000-4000-8000-000000000001';
+
+update public.consents
+set
+  source_surface = 'guardian_registration',
+  document_version = 'customer-profile-demo-v1',
+  consented_at = coalesce(consented_at, signed_at, now()),
+  updated_at = now()
+where guardian_id = '20000000-0000-4000-8000-000000000001';
+
+insert into public.guardian_referral_sources (
+  id,
+  workspace_id,
+  guardian_id,
+  source_type,
+  source_other_text
+)
+values
+  (
+    '31000000-0000-4000-8000-000000000001',
+    'clair-demo',
+    '20000000-0000-4000-8000-000000000001',
+    'homepage',
+    null
+  ),
+  (
+    '31000000-0000-4000-8000-000000000002',
+    'clair-demo',
+    '20000000-0000-4000-8000-000000000001',
+    'referral',
+    null
+  )
+on conflict (workspace_id, guardian_id, source_type) do update
+set
+  source_other_text = excluded.source_other_text,
+  updated_at = now();
+
+insert into public.patient_staff_assignments (
+  id,
+  workspace_id,
+  patient_id,
+  staff_id,
+  staff_display_name,
+  department_label,
+  assignment_role,
+  sort_order,
+  is_active
+)
+values (
+  '32000000-0000-4000-8000-000000000001',
+  'clair-demo',
+  '21000000-0000-4000-8000-000000000001',
+  '00000000-0000-4000-8000-000000000002',
+  '이수지',
+  'Internal medicine demo',
+  'primary',
+  0,
+  true
+)
+on conflict (id) do update
+set
+  staff_id = excluded.staff_id,
+  staff_display_name = excluded.staff_display_name,
+  department_label = excluded.department_label,
+  assignment_role = excluded.assignment_role,
+  sort_order = excluded.sort_order,
+  is_active = excluded.is_active,
+  updated_at = now();
+
+insert into public.customer_profile_change_logs (
+  id,
+  workspace_id,
+  subject_type,
+  subject_id,
+  change_type,
+  changed_by_user_id,
+  before_value,
+  after_value,
+  reason
+)
+values (
+  '33000000-0000-4000-8000-000000000001',
+  'clair-demo',
+  'guardian',
+  '20000000-0000-4000-8000-000000000001',
+  'update',
+  '00000000-0000-4000-8000-000000000004',
+  '{}'::jsonb,
+  '{"guardianCode":"C-SEED-0001","cashReceipt":"masked"}'::jsonb,
+  'DEN-105 synthetic customer profile seed'
+)
+on conflict (id) do update
+set
+  changed_by_user_id = excluded.changed_by_user_id,
+  before_value = excluded.before_value,
+  after_value = excluded.after_value,
+  reason = excluded.reason;

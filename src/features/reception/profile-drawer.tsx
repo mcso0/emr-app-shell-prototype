@@ -65,6 +65,14 @@ import type {
   ReceptionPatientGuardianRegistrationInput,
   ReceptionPatientGuardianRegistrationResponse,
 } from "@/features/reception/patient-guardian-registration";
+import type {
+  CustomerGuardianProfileUpdateInput,
+  CustomerGuardianProfileUpdateResult,
+} from "@/features/customer/server-guardian-profile";
+import type {
+  CustomerPatientProfileUpdateInput,
+  CustomerPatientProfileUpdateResult,
+} from "@/features/customer/server-patient-profile";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import {
@@ -1307,6 +1315,9 @@ function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
 }
 
 export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
+  const authSession = useMockAuthStore((state) => state.session);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
@@ -1317,6 +1328,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   );
   const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
     Pick<Patient, "allergyNote" | "breed" | "handlingCautionNote" | "microchipNo" | "name" | "specialNote">
   >({
@@ -1343,17 +1355,45 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
     });
     setEditing(true);
   };
-  const cancelEdit = () => setEditing(false);
-  const saveEdit = () => {
-    updatePatient(bundle.patient.id, {
+  const cancelEdit = () => {
+    if (saving) return;
+    setEditing(false);
+  };
+  const saveEdit = async () => {
+    if (saving) return;
+    const patch: CustomerPatientProfileUpdateInput = {
       allergyNote: draft.allergyNote || undefined,
       breed: draft.breed || undefined,
       handlingCautionNote: draft.handlingCautionNote || undefined,
       microchipNo: draft.microchipNo || undefined,
       name: draft.name,
       specialNote: draft.specialNote || undefined,
+    };
+
+    setSaving(true);
+    const result = await submitPatientProfileUpdate({
+      actorRole: authSession?.role,
+      input: patch,
+      patientId: bundle.patient.id,
+      workspaceId,
+    });
+    setSaving(false);
+
+    if (!result.ok) {
+      toast.error(getPatientProfileUpdateErrorMessage(result));
+      return;
+    }
+
+    updatePatient(bundle.patient.id, {
+      allergyNote: result.profile.allergyNote,
+      breed: result.profile.breed,
+      handlingCautionNote: result.profile.handlingCautionNote,
+      microchipNo: result.profile.microchipNo,
+      name: result.profile.name,
+      specialNote: result.profile.specialNote,
     });
     setEditing(false);
+    toast.success("환자 정보가 저장되었습니다.");
   };
   const showMockAction = (label: string) => {
     toast.info(`${bundle.patient.name} ${label}은 mock 동작입니다.`);
@@ -1411,8 +1451,8 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
       </ScrollArea>
       {editing ? (
         <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button variant="outline" onClick={cancelEdit}>취소</Button>
-          <Button onClick={saveEdit}>저장</Button>
+          <Button variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
+          <Button onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
         </div>
       ) : null}
     </div>
@@ -1521,6 +1561,9 @@ function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
 }
 
 export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
+  const authSession = useMockAuthStore((state) => state.session);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
@@ -1533,6 +1576,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   );
   const [activeTab, setActiveTab] = useState<ProfileTab>("summary");
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
     Pick<Guardian, "address" | "email" | "memo" | "mobilePhone" | "name" | "phone">
   >({
@@ -1559,17 +1603,45 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     });
     setEditing(true);
   };
-  const cancelEdit = () => setEditing(false);
-  const saveEdit = () => {
-    updateGuardian(bundle.guardian.id, {
+  const cancelEdit = () => {
+    if (saving) return;
+    setEditing(false);
+  };
+  const saveEdit = async () => {
+    if (saving) return;
+    const patch: CustomerGuardianProfileUpdateInput = {
       address: draft.address || undefined,
       email: draft.email || undefined,
       memo: draft.memo || undefined,
       mobilePhone: draft.mobilePhone || undefined,
       name: draft.name,
       phone: draft.phone || undefined,
+    };
+
+    setSaving(true);
+    const result = await submitGuardianProfileUpdate({
+      actorRole: authSession?.role,
+      guardianId: bundle.guardian.id,
+      input: patch,
+      workspaceId,
+    });
+    setSaving(false);
+
+    if (!result.ok) {
+      toast.error(getGuardianProfileUpdateErrorMessage(result));
+      return;
+    }
+
+    updateGuardian(bundle.guardian.id, {
+      address: result.profile.address,
+      email: result.profile.email,
+      memo: result.profile.memo,
+      mobilePhone: result.profile.mobilePhone,
+      name: result.profile.name,
+      phone: result.profile.phone,
     });
     setEditing(false);
+    toast.success("보호자 정보가 저장되었습니다.");
   };
   const showMockAction = (label: string) => {
     toast.info(`${bundle.guardian.name} 보호자 ${label}은 mock 동작입니다.`);
@@ -1648,8 +1720,8 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       </ScrollArea>
       {editing ? (
         <div className="flex justify-end gap-2 border-t bg-card p-4">
-          <Button variant="outline" onClick={cancelEdit}>취소</Button>
-          <Button onClick={saveEdit}>저장</Button>
+          <Button variant="outline" onClick={cancelEdit} disabled={saving}>취소</Button>
+          <Button onClick={saveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
         </div>
       ) : null}
     </div>
@@ -2578,6 +2650,128 @@ function getReceptionRegistrationDemoActorId(role?: string) {
   return "user-front-desk";
 }
 
+async function submitGuardianProfileUpdate({
+  actorRole,
+  guardianId,
+  input,
+  workspaceId,
+}: {
+  actorRole?: string;
+  guardianId: string;
+  input: CustomerGuardianProfileUpdateInput;
+  workspaceId: string;
+}): Promise<CustomerGuardianProfileUpdateResult> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/customer/guardians/${encodeURIComponent(guardianId)}/profile`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clair-demo-session-user-id": getReceptionRegistrationDemoActorId(actorRole),
+        },
+        body: JSON.stringify(input),
+      }
+    );
+    const body = (await response.json()) as CustomerGuardianProfileUpdateResult;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status } as CustomerGuardianProfileUpdateResult;
+      return { ok: false, status: 500, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+function getGuardianProfileUpdateErrorMessage(
+  result: Extract<CustomerGuardianProfileUpdateResult, { ok: false }>
+) {
+  const error = "error" in result ? result.error : undefined;
+  const denialReason = "denialReason" in result ? result.denialReason : undefined;
+
+  if (String(error) === "rate_limited") {
+    return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  if (result.status === 400 && error === "invalid_input") {
+    return Object.values(result.fieldErrors ?? {})[0] ?? "보호자 정보를 확인해 주세요.";
+  }
+  if (denialReason === "guardian_not_found") {
+    return "보호자 정보를 찾을 수 없습니다.";
+  }
+  if (
+    denialReason === "permission_missing" ||
+    denialReason === "inactive_user" ||
+    denialReason === "workspace_membership_missing" ||
+    denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 보호자 정보를 수정할 권한이 없습니다.";
+  }
+
+  return "보호자 정보 저장에 실패했습니다.";
+}
+
+async function submitPatientProfileUpdate({
+  actorRole,
+  input,
+  patientId,
+  workspaceId,
+}: {
+  actorRole?: string;
+  input: CustomerPatientProfileUpdateInput;
+  patientId: string;
+  workspaceId: string;
+}): Promise<CustomerPatientProfileUpdateResult> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/customer/patients/${encodeURIComponent(patientId)}/profile`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clair-demo-session-user-id": getReceptionRegistrationDemoActorId(actorRole),
+        },
+        body: JSON.stringify(input),
+      }
+    );
+    const body = (await response.json()) as CustomerPatientProfileUpdateResult;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status } as CustomerPatientProfileUpdateResult;
+      return { ok: false, status: 500, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+function getPatientProfileUpdateErrorMessage(
+  result: Extract<CustomerPatientProfileUpdateResult, { ok: false }>
+) {
+  const error = "error" in result ? result.error : undefined;
+  const denialReason = "denialReason" in result ? result.denialReason : undefined;
+
+  if (String(error) === "rate_limited") return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (result.status === 400 && error === "invalid_input") {
+    return Object.values(result.fieldErrors ?? {})[0] ?? "환자 정보를 확인해 주세요.";
+  }
+  if (denialReason === "patient_not_found") return "환자 정보를 찾을 수 없습니다.";
+  if (
+    denialReason === "permission_missing" ||
+    denialReason === "inactive_user" ||
+    denialReason === "workspace_membership_missing" ||
+    denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 환자 정보를 수정할 권한이 없습니다.";
+  }
+
+  return "환자 정보 저장에 실패했습니다.";
+}
+
 async function submitRegistration({
   actorRole,
   input,
@@ -2897,7 +3091,7 @@ function PatientGuardianRegistrationButton({
       return;
     }
 
-    let guardianId = mode === "new_guardian_patient" ? "draft-guardian" : selectedGuardian?.id;
+    const guardianId = mode === "new_guardian_patient" ? "draft-guardian" : selectedGuardian?.id;
 
     if (mode === "new_guardian_patient") {
       if (!validateGuardianStep()) {
