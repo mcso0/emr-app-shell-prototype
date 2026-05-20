@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-190 Staging DB Foundation Runbook Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        color: #1f2933;
+      }
+      h1, h2, h3 {
+        line-height: 1.25;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 16px 0 24px;
+      }
+      th, td {
+        border: 1px solid #d8dee4;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f6f8fa;
+      }
+      code {
+        background: #f6f8fa;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+      .ok {
+        color: #166534;
+        font-weight: 700;
+      }
+      .blocked {
+        color: #9a3412;
+        font-weight: 700;
+      }
+      .gate {
+        color: #1d4ed8;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-190 Staging DB Foundation Runbook Report</h1>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+    <p><strong>Linear:</strong> DEN-190 <code>01-02 Apply staging DB foundation, synthetic seed, and baseline RLS replay</code></p>
+    <p><strong>대상:</strong> <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      staging Supabase 프로젝트는 정상 작동 중이지만 아직 CLAiR EMR 앱의 DB 기초 공사,
+      RLS 정책, synthetic seed가 적용되지 않은 빈 프로젝트 상태다. 그래서 DEN-190은
+      실제 DB 변경을 실행하지 않고, 승욱이 승인하면 바로 실행자가 따라갈 수 있는
+      안전한 순서와 멈춤 조건을 정리했다.
+    </p>
+
+    <h2>결론</h2>
+    <table>
+      <tr><th>질문</th><th>판단</th></tr>
+      <tr>
+        <td>DEN-190이 실제 DB foundation 실행 단계까지 갈 수 있는가?</td>
+        <td>
+          <span class="blocked">아직 바로 실행 불가.</span>
+          별도 승인 전에는 migration push, direct SQL mutation, RLS/schema 변경,
+          synthetic seed 실행을 하면 안 된다.
+        </td>
+      </tr>
+      <tr>
+        <td>승인만 있으면 무엇을 시작할 수 있는가?</td>
+        <td>
+          <span class="gate">Staging 전용 project</span> <code>qmerxgzrwaaahpkhjqlc</code>에
+          repo migration 33개를 적용하는 dry-run/review-first 절차를 시작할 수 있다.
+          seed는 migration/RLS 검증 후 별도 dataset approval이 필요하다.
+        </td>
+      </tr>
+      <tr>
+        <td>DEN-186으로 넘어갈 수 있는가?</td>
+        <td>
+          env inventory와 secret handling checklist 범위는 가능하다. 다만 staging app smoke,
+          demo bypass proof, route-backed auth smoke는 DB foundation과 RLS replay가 통과된 뒤가 안전하다.
+        </td>
+      </tr>
+    </table>
+
+    <h2>DEN-184와 DEN-185 대조</h2>
+    <table>
+      <tr><th>근거</th><th>핵심 내용</th><th>DEN-190 판단</th></tr>
+      <tr>
+        <td>DEN-184 approval gate</td>
+        <td>
+          Remote Supabase 작업은 target, credential owner, allowed operations,
+          stop condition, real data 금지, secret 비노출을 명시해야 한다.
+        </td>
+        <td>DEN-190 승인 문구에 target과 허용 작업 범위를 정확히 포함해야 한다.</td>
+      </tr>
+      <tr>
+        <td>DEN-185 read-only inspection</td>
+        <td>
+          Project는 <code>ACTIVE_HEALTHY</code>지만 remote migrations 0개,
+          app tables 0개, RLS policies 0개, app functions 0개였다.
+        </td>
+        <td>현재 staging은 앱 DB foundation을 새로 적용해야 하는 빈 project로 취급한다.</td>
+      </tr>
+      <tr>
+        <td>DEN-185 security advisor</td>
+        <td>
+          <code>public.rls_auto_enable()</code>이 <code>anon</code> 및
+          <code>authenticated</code>에서 실행 가능한 WARN 2건이 남아 있다.
+        </td>
+        <td>migration replay 전 또는 같은 승인 범위 안에서 revoke/repair 방식을 결정해야 한다.</td>
+      </tr>
+    </table>
+
+    <h2>Read-only로 재확인한 항목</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th><th>판단</th></tr>
+      <tr>
+        <td>Supabase project metadata</td>
+        <td>
+          <code>clair-emr-staging</code>, ref <code>qmerxgzrwaaahpkhjqlc</code>,
+          region <code>ap-southeast-2</code>, Postgres <code>17.6.1.121</code>,
+          status <code>ACTIVE_HEALTHY</code>, created <code>2026-05-20T14:21:57Z</code>.
+        </td>
+        <td class="ok">확인됨</td>
+      </tr>
+      <tr>
+        <td>Remote migration list</td>
+        <td><code>_list_migrations</code> 결과 0개.</td>
+        <td class="blocked">앱 migration 미적용</td>
+      </tr>
+      <tr>
+        <td>Remote tables</td>
+        <td><code>public</code>, <code>private</code> schema 대상 <code>_list_tables</code> 결과 0개.</td>
+        <td class="blocked">앱 schema 없음</td>
+      </tr>
+      <tr>
+        <td>Security advisors</td>
+        <td><code>public.rls_auto_enable()</code> security definer executable WARN 2건.</td>
+        <td class="blocked">migration 전 보안 조치 필요</td>
+      </tr>
+      <tr>
+        <td>Performance advisors</td>
+        <td>0건.</td>
+        <td class="ok">확인됨</td>
+      </tr>
+      <tr>
+        <td>Local CLI availability</td>
+        <td>
+          전역 <code>supabase</code> 명령은 없음. <code>npx supabase --version</code>은
+          <code>2.100.1</code>로 확인됨. <code>npx supabase db --help</code>에서
+          <code>push</code>, <code>reset</code>, <code>query</code>, <code>advisors</code> 확인됨.
+        </td>
+        <td>실행자는 CLI를 순차 실행하고, 전역 설치 또는 <code>npx</code> 사용 방식을 명시해야 함.</td>
+      </tr>
+    </table>
+
+    <h2>Repo 기준 적용 범위</h2>
+    <table>
+      <tr><th>범위</th><th>로컬 repo 기준</th><th>staging 현재 상태</th></tr>
+      <tr><td>Migration files</td><td><code>supabase/migrations/*.sql</code> 33개</td><td>0개 적용</td></tr>
+      <tr><td>Tables</td><td>40개 <code>create table</code></td><td>0개</td></tr>
+      <tr><td>Functions/RPC/helpers</td><td>45개 <code>create function</code></td><td>app function 0개</td></tr>
+      <tr><td>RLS enabled tables</td><td>40개 <code>enable row level security</code></td><td>0개</td></tr>
+      <tr><td>Workspace auth policies</td><td>18개 <code>create policy</code></td><td>0개</td></tr>
+      <tr><td>Seed</td><td><code>supabase/seed.sql</code> 932줄</td><td>미실행</td></tr>
+    </table>
+
+    <h3>Migration/RLS/schema 범위</h3>
+    <ul>
+      <li>Workspace auth foundation: users, workspaces, memberships, invitations, permission policies, last-admin guard, membership RLS helper grants.</li>
+      <li>Reception foundation: guardians, patients, patient_guardians, consents, appointments, encounters, waiting queue, reception RPCs.</li>
+      <li>Clinical/order/billing foundation: service catalog, SOAP, diagnoses, orders, invoice/payment tables and persistence RPCs.</li>
+      <li>Audit foundation: audit events table and review/append RPC boundaries.</li>
+      <li>Customer management delta and hospital-admin order catalog persistence schema.</li>
+    </ul>
+
+    <h2>CLI와 MCP 역할 분리</h2>
+    <table>
+      <tr><th>도구</th><th>역할</th><th>DEN-190 기준</th></tr>
+      <tr>
+        <td>Supabase CLI</td>
+        <td>
+          승인 후 <code>supabase link --project-ref qmerxgzrwaaahpkhjqlc</code>,
+          <code>supabase db push --dry-run</code>, 승인된 <code>supabase db push</code>,
+          선택 승인된 <code>supabase db push --include-seed</code> 또는 seed command 실행.
+        </td>
+        <td>Mutation 담당. 승욱 별도 승인 전 실행 금지.</td>
+      </tr>
+      <tr>
+        <td>Supabase MCP</td>
+        <td>
+          Project metadata, migration list, table inventory, advisors, post-change read-only verification.
+        </td>
+        <td>Read-only 검증 담당. DDL/DML mutation에는 사용하지 않음.</td>
+      </tr>
+      <tr>
+        <td>Repo/local commands</td>
+        <td>
+          migration inventory, secret scan, docs check, focused tests, SQL static inspection.
+        </td>
+        <td>외부 시스템 변경 없이 실행 가능.</td>
+      </tr>
+    </table>
+
+    <h2>실행 가능한 순서</h2>
+    <ol>
+      <li>승욱이 아래 migration/RLS/schema approval 문구를 승인한다.</li>
+      <li>실행자가 target이 <code>qmerxgzrwaaahpkhjqlc</code>인지 확인하고 production ref가 아니면 계속한다.</li>
+      <li>실행 전 <code>npm run security:secrets</code>, <code>npm run docs:check</code>, relevant SQL/RLS/static tests를 통과시킨다.</li>
+      <li>CLI를 순차 실행한다. 전역 CLI가 없으면 <code>npx supabase</code>를 사용한다.</li>
+      <li><code>supabase link --project-ref qmerxgzrwaaahpkhjqlc</code>를 실행한다. 이 단계도 승인 범위에 포함되어야 한다.</li>
+      <li><code>supabase db push --dry-run</code>으로 적용 예정 migration 목록을 캡처하고 DEN-190 또는 follow-up에 남긴다.</li>
+      <li>dry-run 결과가 repo migration 33개와 일치하고 unexpected remote drift가 없으면 실제 <code>supabase db push</code>를 별도 최종 확인 후 실행한다.</li>
+      <li>적용 후 MCP/read-only로 migration count, table count, function count, RLS enabled count, policy count, advisor 결과를 확인한다.</li>
+      <li><code>public.rls_auto_enable()</code> WARN이 남으면 revoke/repair 승인 전 seed/replay로 넘어가지 않는다.</li>
+      <li>승욱이 별도 seed approval을 승인한 뒤 synthetic seed 실행을 진행한다.</li>
+      <li>seed 후 synthetic-only admin/member/non-member/foreign workspace denial replay를 수행한다.</li>
+      <li>결과를 Linear comment/document와 repo report로 남기고 blocker를 launch blocker/non-blocker로 분류한다.</li>
+    </ol>
+
+    <h2>필요 credential과 승인</h2>
+    <table>
+      <tr><th>항목</th><th>필요 여부</th><th>규칙</th></tr>
+      <tr>
+        <td>Supabase target</td>
+        <td>필수</td>
+        <td><code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>만 허용. production 접근 금지.</td>
+      </tr>
+      <tr>
+        <td>Supabase CLI auth</td>
+        <td>필수</td>
+        <td>개인 access token 또는 OAuth login은 secure local credential store로만 처리. chat/Linear/docs/git diff에 값 금지.</td>
+      </tr>
+      <tr>
+        <td>DB password / connection string</td>
+        <td>CLI flow에 따라 필요할 수 있음</td>
+        <td>값 노출 금지. 필요한 경우 승욱이 직접 입력하거나 secret manager/secure prompt 사용.</td>
+      </tr>
+      <tr>
+        <td>Service role / secret key</td>
+        <td>DEN-190 기본 실행에는 불필요</td>
+        <td>사용 금지. 별도 승인 없이는 조회도 문서화도 하지 않음.</td>
+      </tr>
+      <tr>
+        <td>Seed actor/test identities</td>
+        <td>seed 전 필수</td>
+        <td><code>@clair.local</code>, <code>example.test</code> 등 synthetic-only 계정만 허용.</td>
+      </tr>
+    </table>
+
+    <h2>Synthetic seed approval 조건</h2>
+    <ul>
+      <li>Seed는 <code>supabase/seed.sql</code> 기준으로 실행 범위를 고정한다.</li>
+      <li>현재 seed는 workspace auth, reception, clinical/order/billing, customer profile fixture를 포함한다.</li>
+      <li>실제 병원명, 보호자, 환자, 직원, 결제, 신원 데이터는 금지한다.</li>
+      <li>승욱이 seed dataset이 중형 병원 staging rehearsal 목적에 충분한지 승인해야 한다.</li>
+      <li>DEN-191 synthetic medium hospital dataset contract가 확정되기 전에는 seed를 "기존 local fixture replay"로만 취급한다.</li>
+      <li>Seed 실행은 migration/RLS/advisor 검증 통과 후 별도 승인으로만 한다.</li>
+    </ul>
+
+    <h2>Stop condition</h2>
+    <ul>
+      <li>Target ref가 <code>qmerxgzrwaaahpkhjqlc</code>가 아니거나 production으로 보이면 즉시 중단한다.</li>
+      <li>dry-run 결과가 repo migration 33개와 다르거나 remote drift가 있으면 중단한다.</li>
+      <li>real clinic/customer/guardian/patient/staff/billing/identity data가 발견되면 중단한다.</li>
+      <li>secret/service role key/DB password가 chat, Linear, docs, git diff, logs에 노출될 위험이 있으면 중단한다.</li>
+      <li>RLS disabled table, missing policy, helper grant mismatch, cross-workspace leak, last-admin guard failure가 있으면 seed/replay를 중단한다.</li>
+      <li><code>public.rls_auto_enable()</code> advisor WARN을 해소 또는 명시 수용하기 전에는 seed/replay로 넘어가지 않는다.</li>
+      <li>Email/deploy/payment/provider action이 필요해지는 순간 DEN-190 범위를 벗어나 중단한다.</li>
+    </ul>
+
+    <h2>Rollback/repair report 기준</h2>
+    <ul>
+      <li>Staging rollback은 기본적으로 forward-fix migration을 우선한다.</li>
+      <li>Backup/restore가 필요하면 실행 전에 승욱이 backup/restore owner와 허용 방식을 별도 승인해야 한다.</li>
+      <li>부분 적용, failed migration, migration history mismatch가 있으면 <code>supabase migration list</code>와 remote read-only inventory를 캡처한다.</li>
+      <li>Repair가 필요한 경우 <code>supabase migration repair</code> 또는 direct SQL mutation은 별도 승인 전 실행하지 않는다.</li>
+      <li>Repair report에는 target ref, 적용된 migration, 실패 지점, 데이터 영향, RLS/advisor 상태, 다음 조치가 포함되어야 한다.</li>
+    </ul>
+
+    <h2>Blockers</h2>
+    <table>
+      <tr><th>Blocker</th><th>Severity</th><th>해제 조건</th></tr>
+      <tr>
+        <td>Remote staging DB foundation 미적용</td>
+        <td>Launch blocker</td>
+        <td>승인된 CLI migration apply와 read-only verification 통과.</td>
+      </tr>
+      <tr>
+        <td><code>public.rls_auto_enable()</code> security definer external executable WARN</td>
+        <td>Security blocker</td>
+        <td>승인된 revoke/repair 적용 또는 승욱의 명시적 risk acceptance.</td>
+      </tr>
+      <tr>
+        <td>Synthetic medium hospital dataset contract 미확정</td>
+        <td>Seed blocker</td>
+        <td>DEN-191 또는 별도 seed approval에서 dataset 범위 승인.</td>
+      </tr>
+      <tr>
+        <td>Remote CLI credential/DB password handling 방식 미확정</td>
+        <td>Execution blocker</td>
+        <td>secure local credential path와 secret 비노출 방식 확정.</td>
+      </tr>
+      <tr>
+        <td>DEN-186 full smoke dependency</td>
+        <td>Dependency blocker</td>
+        <td>DB foundation/RLS replay 통과 후 staging env smoke로 확장.</td>
+      </tr>
+    </table>
+
+    <h2>승욱 승인 문구</h2>
+    <h3>Migration/RLS/schema 적용 승인</h3>
+    <blockquote>
+      DEN-190에서 Supabase staging project <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>에
+      repo <code>supabase/migrations</code>의 앱 DB foundation migration 33개를 Supabase CLI 방식으로 적용해도 된다.
+      허용 작업은 target 확인, CLI link, <code>db push --dry-run</code>, dry-run 결과 보고,
+      별도 최종 확인 후 <code>db push</code>, 그리고 MCP/read-only post-change verification까지다.
+      production project 접근, real data 사용, secret/service role key 노출, email 발송, deploy 실행은 금지한다.
+      seed 실행은 이 승인에 포함하지 않는다.
+    </blockquote>
+
+    <h3>Synthetic seed 실행 승인</h3>
+    <blockquote>
+      DEN-190에서 migration/RLS/schema 적용과 read-only verification이 통과된 뒤,
+      <code>supabase/seed.sql</code>의 synthetic-only dataset을 staging에 적용해도 된다.
+      실제 clinic/customer/guardian/patient/staff/billing/identity data 사용은 금지하고,
+      <code>@clair.local</code>, <code>example.test</code>, deterministic demo UUID 등 synthetic fixture만 허용한다.
+      seed 후 admin/member/non-member/foreign workspace denial replay와 read-only 검증 결과를 Linear와 repo report에 남긴다.
+    </blockquote>
+
+    <h2>검증</h2>
+    <ul>
+      <li>Linear DEN-184, DEN-185, DEN-186, DEN-190, initiative, project context 확인.</li>
+      <li>Supabase MCP read-only: project metadata, migration list, table list, security/performance advisors 확인.</li>
+      <li>Repo inventory: migration 33개, table 40개, function 45개, policy 18개, RLS enable 40개, seed 932줄 확인.</li>
+      <li>Supabase CLI help: 전역 CLI 없음, <code>npx supabase 2.100.1</code> 확인, <code>db --help</code> 확인.</li>
+      <li>실행하지 않은 작업: migration push, SQL mutation, schema/RLS 변경, seed 실행, email, deploy, production 접근.</li>
+    </ul>
+
+    <h2>참고한 기준</h2>
+    <ul>
+      <li><code>AGENTS.md</code></li>
+      <li><code>docs/agent-start-here.md</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/_meta/agent-rag-map.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/live-supabase-readiness-execution-mode.md</code></li>
+      <li><code>docs/engineering/auth-security/auth-login/auth-db-env-secret-verification-gates.md</code></li>
+      <li><code>docs/product/domain/workspace-auth-permissions.md</code></li>
+      <li><code>docs/engineering/data-model/emr-saas-db-structure-spec.ko.md</code></li>
+      <li>Supabase docs: CLI migrations, <code>db push</code>, RLS/API security, seed command, security advisor lint 0028/0029.</li>
+    </ul>
+  </body>
+</html>

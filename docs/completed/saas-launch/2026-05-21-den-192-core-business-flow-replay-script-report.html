@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-192 Core Business Flow Replay Script Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #1f2933; }
+      h1, h2 { line-height: 1.25; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0 24px; }
+      th, td { border: 1px solid #d8dee4; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f6f8fa; }
+      code { background: #f6f8fa; padding: 1px 4px; border-radius: 4px; }
+      .blocked { color: #9a3412; font-weight: 700; }
+      .ok { color: #166534; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-192 Core Business Flow Replay Script Report</h1>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      staging과 synthetic dataset이 준비되면 누구나 같은 순서로 CLAiR EMR의 핵심 업무 흐름을 리허설할 수 있도록
+      접수/예약, 진료, 오더, 검사/처치, 결과 확인, 수납 또는 입원 연결 순서를 정의했다.
+    </p>
+
+    <h2>Replay Roles</h2>
+    <table>
+      <tr><th>역할</th><th>Replay 책임</th></tr>
+      <tr><td><code>front_desk</code></td><td>보호자/환자 검색 또는 등록, 예약/워크인 접수, 체크인, 수납</td></tr>
+      <tr><td><code>vet</code></td><td>encounter 진입, SOAP, diagnosis, order, 결과 확인, 진료 종료</td></tr>
+      <tr><td><code>technician</code></td><td>lab/imaging/dispensing/treatment work item 처리와 결과 입력</td></tr>
+      <tr><td><code>hospital_admin</code></td><td>권한/tenant/audit 확인, go/no-go review</td></tr>
+    </table>
+
+    <h2>Happy Path Script</h2>
+    <ol>
+      <li>Front desk가 synthetic guardian/patient를 검색한다.</li>
+      <li>예약 환자는 appointment check-in, 워크인 환자는 walk-in encounter 생성으로 시작한다.</li>
+      <li>Reception queue와 calendar에 encounter 상태가 반영되는지 확인한다.</li>
+      <li>Vet가 encounter를 열고 SOAP draft, vitals, assessment, diagnosis를 작성한다.</li>
+      <li>Vet가 order group을 생성하고 lab/imaging/dispensing/treatment order를 확정한다.</li>
+      <li>Technician이 각 queue에서 work item을 시작/완료하고 manual result 또는 completion note를 입력한다.</li>
+      <li>Vet가 결과를 확인하고 open order가 없으면 encounter를 billing-ready로 보낸다.</li>
+      <li>Front desk가 invoice candidate를 확인하고 line edit/recalculation 후 paid 또는 approved unpaid closure를 기록한다.</li>
+      <li>Hospital admin이 audit event summary와 role/tenant boundary evidence를 확인한다.</li>
+    </ol>
+
+    <h2>Scenario Coverage</h2>
+    <table>
+      <tr><th>Scenario</th><th>주요 증거</th><th>완료 조건</th></tr>
+      <tr><td>예약 기반 구토/설사 강아지</td><td>appointment -> encounter -> multi-order -> billing</td><td class="ok">모듈 간 handoff와 invoice line trace 확인</td></tr>
+      <tr><td>워크인 고양이 배뇨 문제</td><td>walk-in -> cat-friendly note -> lab/imaging -> billing</td><td class="ok">워크인과 검사 결과 흐름 확인</td></tr>
+      <tr><td>피부/알러지 재진</td><td>guardian/patient history -> diagnosis-driven orders</td><td class="ok">재진 맥락과 order template 확인</td></tr>
+      <tr><td>예방접종/건강검진</td><td>wellness -> vaccine -> next appointment -> billing</td><td class="ok">반복 방문/예약 연결 확인</td></tr>
+      <tr><td>슬개골/재활 상담</td><td>imaging -> treatment plan -> billing or inpatient consult</td><td class="ok">수납 또는 입원 전환 판단 확인</td></tr>
+    </table>
+
+    <h2>Negative Scenario</h2>
+    <ul>
+      <li>Non-member 또는 다른 workspace member는 protected workspace data를 볼 수 없어야 한다.</li>
+      <li><code>front_desk</code>는 SOAP/diagnosis mutation을 할 수 없어야 한다.</li>
+      <li><code>technician</code>은 chart authoring 대신 assigned operational work만 완료해야 한다.</li>
+      <li>Open order가 남아 있으면 billing closure가 block되거나 reason이 필요해야 한다.</li>
+      <li>Client-side amount tampering은 trusted total로 반영되면 안 된다.</li>
+      <li>실패/denial은 안전한 401/403 또는 stable error로 남고 상태를 바꾸지 않아야 한다.</li>
+    </ul>
+
+    <h2>Evidence 기준</h2>
+    <ul>
+      <li>각 scenario는 시작 전 fixture ID, actor role, workspace ID를 기록한다.</li>
+      <li>각 transition은 screenshot 또는 short screen recording으로 남긴다.</li>
+      <li>Readback/reload checkpoint: reception queue, encounter, orders, invoice, audit summary.</li>
+      <li>Evidence에는 secret, real data, raw token, service role key, 실제 개인정보를 포함하지 않는다.</li>
+    </ul>
+
+    <h2>Blockers</h2>
+    <ul>
+      <li class="blocked">DEN-190 migration/RLS/schema apply가 credential blocker로 dry-run 전 중단됨.</li>
+      <li class="blocked">DEN-191 dataset contract는 정의됐지만 실제 seed 구현/적용은 별도 이슈 필요.</li>
+      <li class="blocked">DEN-186 env/secret wiring과 demo bypass disablement proof 전에는 staging app smoke 불가.</li>
+      <li>Lab/imaging/dispensing full live persistence는 current-status상 아직 완료 claim 금지 영역이다.</li>
+    </ul>
+
+    <h2>DEN-189 Go/No-Go로 넘어갈 조건</h2>
+    <ul>
+      <li>Staging DB foundation migration apply와 RLS read-only verification 통과.</li>
+      <li>Synthetic seed 적용과 fixture readback 통과.</li>
+      <li>DEN-186 env/secret wiring과 demo bypass proof 통과.</li>
+      <li>Core replay happy path 2개 이상, negative scenario 3개 이상 evidence 확보.</li>
+      <li>Launch blockers가 없거나 representative가 명시 수용한 non-blocker로 분류됨.</li>
+    </ul>
+  </body>
+</html>

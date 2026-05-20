@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-191 Synthetic Medium Hospital Dataset Contract Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #1f2933; }
+      h1, h2 { line-height: 1.25; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0 24px; }
+      th, td { border: 1px solid #d8dee4; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f6f8fa; }
+      code { background: #f6f8fa; padding: 1px 4px; border-radius: 4px; }
+      .gate { color: #1d4ed8; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-191 Synthetic Medium Hospital Dataset Contract Report</h1>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      중형 동물병원 하나가 CLAiR EMR staging에서 실제처럼 돌아가 보이기 위한 synthetic dataset 계약을 정의했다.
+      이 계약은 실제 고객 데이터가 아니라 가상의 병원, 직원, 보호자, 환자, 예약, 진료, 오더, 결과, 수납/입원 데이터를 만드는 기준이다.
+    </p>
+
+    <h2>Demo Hospital Profile</h2>
+    <table>
+      <tr><th>항목</th><th>계약</th></tr>
+      <tr><td>Workspace ID</td><td><code>clair-demo</code> 또는 staging seed 전용 <code>clair-staging-medium-hospital</code></td></tr>
+      <tr><td>Hospital name</td><td><code>CLAiR Medium Animal Hospital</code> 같은 명백한 synthetic 이름</td></tr>
+      <tr><td>규모</td><td>수의사 3명, 테크니션 4명, 데스크 3명, 병원관리자 1명 이상</td></tr>
+      <tr><td>운영 범위</td><td>예약/워크인, 외래진료, 검사/영상, 조제/처치, 수납, 일부 입원 연결</td></tr>
+    </table>
+
+    <h2>Staff Persona</h2>
+    <table>
+      <tr><th>Role</th><th>필수 persona</th><th>데모 목적</th></tr>
+      <tr><td><code>hospital_admin</code></td><td>운영관리자 1명</td><td>멤버/권한, audit review, go/no-go 판단</td></tr>
+      <tr><td><code>vet</code></td><td>내과/외과/고양이 친화 진료 수의사 3명</td><td>SOAP, diagnosis, order, result review</td></tr>
+      <tr><td><code>technician</code></td><td>lab/imaging/treatment 담당 4명</td><td>검사/영상/처치/조제 queue 처리</td></tr>
+      <tr><td><code>front_desk</code></td><td>접수/수납 담당 3명</td><td>예약, 접수, 보호자/환자 등록, 수납</td></tr>
+    </table>
+
+    <h2>Guardian / Patient Fixture</h2>
+    <ul>
+      <li>최소 8-12명의 synthetic guardian, 10-15마리 patient.</li>
+      <li>각 patient는 species, breed, age, weight, sex/neuter, allergy/주의메모를 가진다.</li>
+      <li>동명이인, 다환자 보호자, 전화번호 검색, 재진 history, duplicate review case를 포함한다.</li>
+      <li>이름, 전화번호, 이메일, 주소, 주민/사업자/결제 정보는 모두 fake-only 값이어야 한다.</li>
+    </ul>
+
+    <h2>Scenario Fixture</h2>
+    <table>
+      <tr><th>Scenario</th><th>Flow</th><th>필수 데이터</th></tr>
+      <tr><td>구토/설사 강아지</td><td>예약 접수 -> 진료 -> lab/imaging/treatment/dispensing -> billing</td><td>CBC, ultrasound, injection, medication, invoice lines</td></tr>
+      <tr><td>고양이 배뇨 문제</td><td>워크인 -> cat-friendly 진료 -> lab/imaging -> billing</td><td>urinalysis, x-ray, pain/treatment order</td></tr>
+      <tr><td>피부/알러지</td><td>예약 -> chart -> skin test/treatment/dispensing -> billing</td><td>cytology, ear cleaning, medication</td></tr>
+      <tr><td>예방접종/건강검진</td><td>예약 -> wellness chart -> vaccine -> next appointment -> billing</td><td>vaccine item, reminder, simple invoice</td></tr>
+      <tr><td>슬개골/재활 상담</td><td>워크인 -> imaging -> rehab treatment plan -> billing or admission consult</td><td>x-ray, rehab plan, treatment package candidate</td></tr>
+    </table>
+
+    <h2>Seed Scope</h2>
+    <ul>
+      <li>Workspace auth and membership: canonical roles, active memberships, permission policies.</li>
+      <li>Reception: guardians, patients, patient_guardians, consents, appointments, encounters, waiting queue.</li>
+      <li>Clinical: SOAP drafts/signed samples, diagnoses, order groups, orders, order events.</li>
+      <li>Work completion: lab/imaging/treatment/dispensing pending, in-progress, completed fixtures.</li>
+      <li>Billing: invoice candidates, invoice lines, paid/unpaid synthetic states.</li>
+      <li>Audit: safe event summaries for key transitions without raw sensitive payloads.</li>
+    </ul>
+
+    <h2>Naming And Data Rules</h2>
+    <ul>
+      <li>Email domains: <code>@clair.local</code>, <code>example.test</code>.</li>
+      <li>IDs: deterministic demo UUIDs or readable synthetic IDs.</li>
+      <li>Memo text must include <code>synthetic</code>, <code>demo</code>, or issue marker where useful.</li>
+      <li>No real clinic, guardian, patient, staff, billing, identity, or clinical record data.</li>
+      <li>Reports and screenshots must not include secrets or real personal data.</li>
+    </ul>
+
+    <h2>Seed 구현으로 넘어갈 조건</h2>
+    <ul>
+      <li class="gate">DEN-190 migration/RLS/schema apply and read-only verification 통과.</li>
+      <li class="gate">승욱이 이 dataset 규모와 scenario 구성을 승인.</li>
+      <li>Seed 구현 이슈에서 reset/replay 가능성과 idempotency를 포함.</li>
+      <li>DEN-192 replay script와 fixture ID가 서로 맞아야 함.</li>
+    </ul>
+
+    <h2>검증 기준</h2>
+    <ul>
+      <li>Outpatient workflow state model의 appointment -> encounter -> orders -> results -> billing 흐름과 일치.</li>
+      <li>EMR entity map의 workspace/guardian/patient/encounter/order/invoice/audit 관계를 유지.</li>
+      <li>Mock/live boundary와 persistence data security checklist의 synthetic-only, workspace-scoped 기준 준수.</li>
+    </ul>
+  </body>
+</html>
