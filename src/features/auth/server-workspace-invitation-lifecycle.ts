@@ -9,9 +9,22 @@ import {
 import type {
   SessionWorkspaceInvitationStatus,
   SessionWorkspaceMembership,
+  SessionWorkspaceRole,
 } from "@/features/auth/workspace-session";
 
 export type WorkspaceInvitationLifecycleAction = "resend" | "cancel" | "accept";
+
+export type WorkspaceInvitationLifecycleAuditEvent = {
+  type:
+    | "workspace.invitation_resent"
+    | "workspace.invitation_canceled"
+    | "workspace.invitation_accepted";
+  workspaceId: string;
+  invitationId: string;
+  actorUserId: string;
+  occurredAt: string;
+  metadata: Record<string, string | number | null>;
+};
 
 export type WorkspaceInvitationLifecycleWrite = {
   workspaceId: string;
@@ -39,7 +52,10 @@ export type WorkspaceInvitationLifecycleGatewayResult =
   | {
       ok: false;
       status: 409;
-      denialReason: "invitation_not_pending" | "active_membership_exists";
+      denialReason:
+        | "invitation_not_pending"
+        | "invitation_expired"
+        | "active_membership_exists";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
 
@@ -62,6 +78,7 @@ export type WorkspaceInvitationLifecycleResult =
       canceledAt?: string | null;
       acceptedAt?: string | null;
       membership?: SessionWorkspaceMembership;
+      auditEvents: WorkspaceInvitationLifecycleAuditEvent[];
       enforcedBy: "workspace-invitation-lifecycle-server-route";
     }
   | {
@@ -77,7 +94,10 @@ export type WorkspaceInvitationLifecycleResult =
   | {
       ok: false;
       statusCode: 409;
-      denialReason: "invitation_not_pending" | "active_membership_exists";
+      denialReason:
+        | "invitation_not_pending"
+        | "invitation_expired"
+        | "active_membership_exists";
     }
   | { ok: false; statusCode: 500; error: "db_write_failed" | "supabase_client_missing" };
 
@@ -165,6 +185,12 @@ export async function mutateWorkspaceInvitationLifecycle({
     canceledAt: persisted.canceledAt,
     acceptedAt: persisted.acceptedAt,
     membership: persisted.membership,
+    auditEvents: [
+      createLifecycleAuditEvent({
+        write: { actorUserId, workspaceId, invitationId, action, now },
+        persisted,
+      }),
+    ],
     enforcedBy: "workspace-invitation-lifecycle-server-route",
   };
 }
@@ -204,6 +230,10 @@ export function createSupabaseWorkspaceInvitationLifecycleGateway(
           return { ok: false, status: 409, denialReason: "invitation_not_pending" };
         }
 
+        if (error.message?.includes("invitation_expired")) {
+          return { ok: false, status: 409, denialReason: "invitation_expired" };
+        }
+
         if (error.message?.includes("active_membership_exists")) {
           return { ok: false, status: 409, denialReason: "active_membership_exists" };
         }
@@ -220,6 +250,8 @@ export function createSupabaseWorkspaceInvitationLifecycleGateway(
 }
 
 function createDemoInvitationLifecyclePermissionAdapter(workspaceId: string) {
+  const demoMembershipWorkspaceId = workspaceId === "workspace-b" ? "workspace-a" : workspaceId;
+
   return createMockWorkspacePermissionAdapter({
     now: new Date().toISOString(),
     users: [
@@ -229,14 +261,14 @@ function createDemoInvitationLifecyclePermissionAdapter(workspaceId: string) {
     memberships: [
       {
         id: "membership-admin",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-admin",
         roles: ["hospital_admin"],
         status: "active",
       },
       {
         id: "membership-vet",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-vet",
         roles: ["vet"],
         status: "active",
@@ -252,6 +284,32 @@ function createMockLifecycleResult({
   action,
   now,
 }: WorkspaceInvitationLifecycleWrite): WorkspaceInvitationLifecycleResult {
+  const state = resolveMockInvitationLifecycleState(invitationId);
+
+  if (state === "missing") {
+    return {
+      ok: false,
+      statusCode: 404,
+      denialReason: "target_invitation_missing",
+    };
+  }
+
+  if (state === "expired") {
+    return {
+      ok: false,
+      statusCode: 409,
+      denialReason: "invitation_expired",
+    };
+  }
+
+  if (state === "canceled" || state === "accepted") {
+    return {
+      ok: false,
+      statusCode: 409,
+      denialReason: "invitation_not_pending",
+    };
+  }
+
   if (action === "resend") {
     return {
       ok: true,
@@ -262,6 +320,17 @@ function createMockLifecycleResult({
       status: "pending",
       resentAt: now,
       resendCount: 1,
+      auditEvents: [
+        createLifecycleAuditEvent({
+          write: { actorUserId, workspaceId, invitationId, action, now },
+          persisted: {
+            ok: true,
+            status: "pending",
+            resentAt: now,
+            resendCount: 1,
+          },
+        }),
+      ],
       enforcedBy: "workspace-invitation-lifecycle-server-route",
     };
   }
@@ -275,9 +344,17 @@ function createMockLifecycleResult({
       action,
       status: "canceled",
       canceledAt: now,
+      auditEvents: [
+        createLifecycleAuditEvent({
+          write: { actorUserId, workspaceId, invitationId, action, now },
+          persisted: { ok: true, status: "canceled", canceledAt: now },
+        }),
+      ],
       enforcedBy: "workspace-invitation-lifecycle-server-route",
     };
   }
+
+  const acceptedRoles = resolveMockInvitationRoles(invitationId);
 
   return {
     ok: true,
@@ -293,7 +370,7 @@ function createMockLifecycleResult({
       userSessionId: actorUserId,
       displayName: actorUserId,
       email: null,
-      roles: ["vet"],
+      roles: acceptedRoles,
       status: "active",
       title: null,
       department: null,
@@ -301,7 +378,60 @@ function createMockLifecycleResult({
       activatedAt: now,
       deactivatedAt: null,
     },
+    auditEvents: [
+      createLifecycleAuditEvent({
+        write: { actorUserId, workspaceId, invitationId, action, now },
+        persisted: { ok: true, status: "accepted", acceptedAt: now },
+      }),
+    ],
     enforcedBy: "workspace-invitation-lifecycle-server-route",
+  };
+}
+
+function resolveMockInvitationLifecycleState(invitationId: string) {
+  if (invitationId === "invitation-pending") return "pending";
+  if (invitationId === "invitation-admin-pending") return "pending";
+  if (invitationId === "invitation-expired") return "expired";
+  if (invitationId === "invitation-canceled") return "canceled";
+  if (invitationId === "invitation-accepted") return "accepted";
+  if (invitationId.includes(":invite:")) return "pending";
+  if (invitationId.startsWith("workspace-") && invitationId.includes("invite")) return "pending";
+
+  return "missing";
+}
+
+function resolveMockInvitationRoles(invitationId: string): SessionWorkspaceRole[] {
+  if (invitationId === "invitation-admin-pending") return ["hospital_admin"];
+  return ["vet"];
+}
+
+function createLifecycleAuditEvent({
+  write,
+  persisted,
+}: {
+  write: WorkspaceInvitationLifecycleWrite;
+  persisted: Extract<WorkspaceInvitationLifecycleGatewayResult, { ok: true }>;
+}): WorkspaceInvitationLifecycleAuditEvent {
+  const type =
+    write.action === "resend"
+      ? "workspace.invitation_resent"
+      : write.action === "cancel"
+        ? "workspace.invitation_canceled"
+        : "workspace.invitation_accepted";
+
+  return {
+    type,
+    workspaceId: write.workspaceId,
+    invitationId: write.invitationId,
+    actorUserId: write.actorUserId,
+    occurredAt: write.now,
+    metadata: {
+      status: persisted.status,
+      resendCount: persisted.resendCount ?? null,
+      resentAt: persisted.resentAt ?? null,
+      canceledAt: persisted.canceledAt ?? null,
+      acceptedAt: persisted.acceptedAt ?? null,
+    },
   };
 }
 

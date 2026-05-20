@@ -1,6 +1,6 @@
 # Auth Login Status
 
-Updated: 2026-05-18
+Updated: 2026-05-20
 
 ## 목표
 
@@ -480,6 +480,402 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - `npm run docs:check`
 
 검증 결과와 세부 결정은 `docs/completed/auth/2026-05-18-den-53-project-02-workspace-persistence-closeout-report.html`에 남긴다.
+
+2026-05-20 DEN-148 SaaS Launch Foundation Scope Audit:
+
+- Audited existing Linear initiatives/projects/issues and local auth/workspace docs/code before starting SaaS launch implementation.
+- Confirmed the new `CLAiR EMR SaaS Launch Foundation` should reuse existing login, workspace membership, invitation lifecycle, RLS, permission resolver, and local-first persistence foundation instead of rebuilding it.
+- Identified new launch gaps: CLAiR operator tenant approval, first admin invite, public invite-link onboarding, account creation/linking, staging/email/deploy approval gates, shared production rate limit store, route-wide request id/safe logging helper adoption, Supabase advisor/RPC review, and production log redaction.
+- Did not implement code, DB migration, remote Supabase operations, email delivery, or production deploy.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-148-saas-launch-scope-audit-report.html`에 남긴다.
+
+2026-05-20 DEN-149 Invite-Only B2B SaaS Launch Architecture:
+
+- Fixed the launch architecture as an approved-hospital-only B2B SaaS flow rather than public self-service signup.
+- Defined the actor boundaries for CLAiR operator, hospital admin, invited staff, Supabase Auth user, and app membership records.
+- Documented the launch flow: CLAiR hospital approval, workspace creation/approval, first `hospital_admin` invitation, admin account setup, staff invitation, staff acceptance, workspace entry, and audit/safety coverage.
+- Split responsibility between Supabase Auth identity/session, app DB membership/permission source, server route/RPC enforcement, client UX, and CLAiR operations.
+- Defined first vertical slice acceptance criteria and confirmed public signup may later become request-access only, not active workspace creation.
+- Did not implement UI, DB migration, remote Supabase operations, real email delivery, production deploy, payment/subscription, or role-policy changes.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-149-invite-only-b2b-saas-launch-architecture-report.html`에 남긴다.
+
+2026-05-20 DEN-150 SaaS Launch Approval Gates:
+
+- Defined explicit representative approval gates for remote Supabase staging/live, DB/RLS execution, real email delivery, production deploy, role/permission policy changes, real data, and payment/subscription work.
+- Clarified that project or issue approval does not implicitly approve high-risk execution.
+- Added required approval inputs: target environment, operation, affected files/settings/routes, secret/input source, preflight verification, post-change verification, rollback/stop condition, user/data impact, and explicit non-touched scope.
+- Split launch blockers from non-blockers for local-first implementation.
+- Reused DEN-29/DEN-30 local-first Supabase and secret-handling rules, DEN-96 API error/telemetry, DEN-97 rate limiting, and DEN-98 remote/staging blockers.
+- Did not execute remote Supabase, DB/RLS changes, email delivery, production deploy, role-policy changes, payment/subscription work, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-150-saas-launch-approval-gates-report.html`에 남긴다.
+
+2026-05-20 DEN-151 Auth Runtime Mode And Session Contract:
+
+- Added `getAuthRuntimeMode()` to make auth mode, provider selection, client session source, server session source, and missing-config behavior explicit.
+- Updated `useAuthClient()` to consume the shared runtime mode helper instead of recomputing provider/config state locally.
+- Added regression coverage for `mock`, `auto` without Supabase env, `auto` with Supabase env, explicit `supabase` without env, explicit `supabase` with env, and invalid mode fallback.
+- Documented the runtime mode table, client contract, server contract, verified coverage, and remaining staging/live blockers.
+- Confirmed Next.js `NEXT_PUBLIC_` values are browser-bundled at build time, so staging/live builds need target-correct public env values.
+- Red: `npx playwright test tests/auth.spec.ts -g "auth runtime mode matrix" --reporter=line` failed before `getAuthRuntimeMode()` existed.
+- `npx playwright test tests/auth.spec.ts -g "auth runtime mode matrix" --reporter=line`
+- `npm run lint` (passed with existing warnings only)
+- `npx tsc --noEmit`
+- `npx playwright test tests/auth.spec.ts tests/server-session-reader.spec.ts --reporter=line` (`34 passed`)
+- `npm run docs:check`
+- `npm run build`
+- `npm run security:secrets`
+- Did not perform remote Supabase work, DB/RLS changes, email delivery, production deploy, role-policy changes, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-151-auth-runtime-session-contract-report.html`에 남긴다.
+
+2026-05-20 DEN-152 Login Logout And Stale Session UX:
+
+- Added login-screen contextual auth state notices for `session_required`, `signed_out`, and `unauthorized`.
+- Updated `AuthGate` to redirect unauthenticated protected workspace access with `reason=session_required` while preserving safe `next`.
+- Updated shell logout redirects in `TopMenu` and `WorkspaceTabsBar` to `/login?reason=signed_out`.
+- Added regression coverage for session-required redirect copy, signed-out copy, and unsafe external `next` fallback.
+- Preserved mock/local demo auth behavior and DEN-151 runtime provider selection.
+- Red: `npx playwright test tests/auth.spec.ts -g "workspace routes require login|login ignores unsafe next|logout clears mock session" --reporter=line` failed before session reason UX existed.
+- `npx playwright test tests/auth.spec.ts -g "workspace routes require login|login ignores unsafe next|logout clears mock session" --reporter=line` (`3 passed`)
+- `npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts --reporter=line` (`60 passed`)
+- `npm run lint` (passed with existing warnings only)
+- `npx tsc --noEmit`
+- `npm run docs:check`
+- `npm run build`
+- `npm run security:secrets`
+- `git diff --check`
+- Did not implement a new auth provider, MFA, password reset, remote Supabase work, DB/RLS changes, email delivery, production deploy, role-policy changes, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-152-login-logout-stale-session-ux-report.html`에 남긴다.
+
+2026-05-20 DEN-153 Workspace Selector Active Membership Runtime:
+
+- Added active-membership runtime guarding to protected workspace entry by passing `workspaceId` into `AuthGate`.
+- Session-only workspace access now checks the current session id against the requested workspace membership and allows only `active`.
+- Added `pending` to the session workspace membership status contract so pending/inactive/suspended/missing states are explicit.
+- Split persisted workspace list row mapping into `server-workspace-list-core.ts` and defensively filters non-active rows out of the selector path.
+- Added regression coverage for inactive session workspace denial, active-only session access contract, and active-only persisted list mapping.
+- Membership access table: `active` is listed/allowed; `pending`, `inactive`, `suspended`, and missing membership are excluded/blocked; missing session redirects with `reason=session_required`.
+- Remaining route/server hardening: page shell entry guard does not replace server-side active membership checks on reception, clinical, billing, admin, or audit data routes.
+- Red: `npx playwright test tests/workspace-list-server.spec.ts -g "active memberships only" --reporter=line` failed before the active-only mapper existed.
+- Red: `npx playwright test tests/auth.spec.ts -g "workspace route blocks session workspaces|session workspace access contract" --reporter=line` failed before workspace entry checked active membership.
+- Green: both focused test commands passed after implementation.
+- `npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts tests/workspace-list-server.spec.ts tests/permission-resolver.spec.ts --reporter=line` (`72 passed`)
+- `npx tsc --noEmit`
+- `npm run docs:check`
+- `npm run lint` (passed with existing warnings only)
+- `npm run build`
+- `npm run security:secrets`
+- `git diff --check`
+- Did not implement hospital approval admin, invite acceptance screen, clinical data RLS validation, remote Supabase work, email delivery, production deploy, role-policy changes, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-153-workspace-selector-active-membership-runtime-report.html`에 남긴다.
+
+2026-05-20 DEN-154 Password Reset And Account Recovery Policy:
+
+- Added `docs/engineering/auth-security/auth-login/account-recovery-and-invite-account-policy.md`.
+- Defined the launch policy that Supabase Auth owns password reset, recovery redirect, authenticated password update, session, email verification, and future MFA, while CLAiR app DB/server owns tenant approval, invitation, app users, membership, roles, permission, duplicate handling, and audit.
+- Confirmed public self-signup remains excluded from launch account creation and workspace membership activation.
+- Defined existing-account invitation behavior: verified email links to a pending invitation; active same-workspace membership blocks duplicate membership; other-workspace membership can receive another valid workspace membership.
+- Defined inactive/suspended/reinvite policy: inactive can be explicitly reactivated while preserving membership history; suspended cannot self-reactivate through invite acceptance.
+- Proposed follow-up issues for forgot/reset password UX, public invite acceptance account linking, account recovery regression, and audited reactivation route.
+- Checked Supabase changelog and current Supabase Auth docs for password reset, passwordless email, Auth Admin secret-key boundary, invite links, and generated links.
+- `npm run docs:check`
+- `npm run security:secrets`
+- Did not implement password reset UI, email provider setup, MFA, remote Supabase work, DB/RLS changes, real email delivery, production deploy, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-154-account-recovery-policy-report.html`에 남긴다.
+
+2026-05-20 DEN-155 CLAiR Operator Access Model And Admin Guard:
+
+- Added `docs/engineering/auth-security/auth-login/clair-operator-access-model-and-admin-guard.md`.
+- Defined CLAiR operator authority as a separate server-owned source, not a normal hospital workspace role.
+- Kept canonical MVP hospital roles unchanged: `hospital_admin`, `vet`, `technician`, and `front_desk`.
+- Defined the operator guard sequence: `readServerSession()`, server-owned operator allowlist/table, active operator status, required operator permission, tenant state validation, duplicate/safety guards, safe audit event, and safe response envelope.
+- Added recommended ops route families, denial reasons, audit event requirements, break-glass exclusions, and implementation blockers for DEN-156 through DEN-158.
+- Recorded MFA/strong-auth as a staging/live readiness requirement for CLAiR operators, without implementing MFA in DEN-155.
+- Checked existing permission resolver contracts and confirmed CLAiR operator guard does not replace workspace-scoped membership/permission enforcement.
+- Checked Supabase changelog, MFA docs, and product security docs.
+- Did not implement ops admin UI, DB/RLS migration, remote Supabase work, real email delivery, production deploy, role-policy changes, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-155-clair-operator-access-model-report.html`에 남긴다.
+
+2026-05-20 DEN-156 Tenant Application Approval Workspace Model:
+
+- Added `src/features/ops/tenant-application-model.ts` with tenant application statuses `pending_review`, `on_hold`, `approved`, and `rejected`.
+- Added workspace gate logic so unapproved applications are blocked with `tenant_not_approved`, rejected applications are blocked with `tenant_rejected`, approved applications without a workspace are eligible, and existing workspaces are blocked with `tenant_workspace_exists`.
+- Added synthetic local seed data in `src/features/ops/tenant-approval-data.ts`.
+- Added `/ops/tenant-approvals` as a local/mock read-only CLAiR ops surface wrapped by the existing `AuthGate`.
+- The surface shows pending/held/approved/workspace-connected tenants, workspace readiness, first admin invite placeholder, state machine, and audit hook points.
+- Kept mock fallback intentionally. DEN-157 must connect server operator guard, persistence action, workspace creation, and first `hospital_admin` invitation before mutation behavior is considered secure.
+- Added `tests/ops-tenant-approval.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/tenant-application-approval-workspace-model.md`.
+- Red: `npx playwright test tests/ops-tenant-approval.spec.ts --reporter=line` failed before the tenant model and ops route existed.
+- Green: `npx playwright test tests/ops-tenant-approval.spec.ts --reporter=line` (`2 passed`)
+- `npx playwright test tests/ops-tenant-approval.spec.ts tests/auth.spec.ts --reporter=line` (`33 passed`)
+- `npx tsc --noEmit`
+- `npm run lint` (passed with existing warnings only)
+- `npm run docs:check`
+- `npm run build`
+- `npm run security:secrets`
+- `git diff --check`
+- Local Playwright browser smoke confirmed the `/ops/tenant-approvals` heading and pending row workspace gate.
+- Did not implement public application form, DB/RLS migration, remote Supabase work, real email delivery, payment/subscription integration, production data import, or live operator mutation.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-156-tenant-application-approval-surface-report.html`에 남긴다.
+
+2026-05-20 DEN-157 Approved Workspace Creation And First Admin Invite Action:
+
+- Added `POST /api/ops/tenant-applications/[applicationId]/workspace`.
+- Added `src/features/ops/server-tenant-workspace-action-core.ts` and server-only wrapper `src/features/ops/server-tenant-workspace-action.ts`.
+- The route resolves actor identity through `readServerSession()` and accepts demo actor header only in mock fallback.
+- Added a server-owned mock operator adapter requiring active CLAiR operator status and `tenant_approval:manage`.
+- Approved tenant applications without an existing workspace can now return a local-first workspace record and first pending `hospital_admin` invitation record.
+- Denial scenarios include `unauthenticated`, `operator_missing`, `operator_inactive`, `operator_permission_missing`, `invalid_input`, `target_tenant_application_missing`, `tenant_not_approved`, `tenant_rejected`, `tenant_workspace_exists`, and `first_admin_invitation_exists`.
+- Added audit hook events `ops.workspace_created_for_tenant` and `ops.first_admin_invitation_created`.
+- Email delivery remains `not_sent_approval_gated`; no real email provider or outbound email was enabled.
+- Added `tests/ops-tenant-workspace-action.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/approved-tenant-workspace-first-admin-invite-action.md`.
+- Checked Supabase changelog, product security docs, and Auth users docs for relevant security guidance.
+- Red: `npx playwright test tests/ops-tenant-workspace-action.spec.ts --reporter=line` failed before the action module and route existed.
+- Green: `npx playwright test tests/ops-tenant-workspace-action.spec.ts --reporter=line` (`4 passed`)
+- `npx playwright test tests/ops-tenant-workspace-action.spec.ts tests/ops-tenant-approval.spec.ts tests/auth.spec.ts --reporter=line` (`37 passed`)
+- `npx tsc --noEmit`
+- `npm run lint` (passed with existing warnings only)
+- `npm run docs:check`
+- `npm run build`
+- `npm run security:secrets`
+- `git diff --check`
+- Did not implement remote Supabase persistence, DB/RLS migration, real email delivery, full staff invite flow, production Supabase execution, role-policy changes, payment/subscription integration, or real data operations.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-157-approved-workspace-first-admin-invite-report.html`에 남긴다.
+
+2026-05-20 DEN-158 Tenant Status Management And Ops Audit Handoff:
+
+- Added `src/features/ops/tenant-status-policy.ts`.
+- Defined tenant operational statuses: `trial`, `active`, `suspended`, and `archived`.
+- `trial` and `active` allow workspace entry, first admin invite, and staff invites; `suspended` and `archived` block those actions.
+- Billing enforcement remains `not_enforced` because subscription enforcement is out of Project 02.
+- Added allowed transition rules and safe denial reasons `invalid_tenant_status_transition` and `tenant_status_unchanged`.
+- Added `ops.tenant_status_changed` audit event contract.
+- Updated `/ops/tenant-approvals` to show tenant status policy and Project 03 invite handoff criteria.
+- Added `tests/ops-tenant-status-policy.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/tenant-status-management-ops-audit-handoff.md`.
+- Project 03 handoff: staff invite creation should require approved tenant application, tenant status `trial` or `active`, existing workspace, first `hospital_admin` invitation/account path, active hospital admin actor, duplicate checks, and continued real-email approval gate.
+- Red: `npx playwright test tests/ops-tenant-status-policy.spec.ts --reporter=line` failed before the tenant status policy module existed.
+- Green: `npx playwright test tests/ops-tenant-status-policy.spec.ts --reporter=line` (`4 passed`)
+- Regression: `npx playwright test tests/ops-tenant-status-policy.spec.ts tests/ops-tenant-workspace-action.spec.ts tests/ops-tenant-approval.spec.ts tests/auth.spec.ts --reporter=line` (`41 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement production support console, billing subscription enforcement, customer data mutation, tenant status DB persistence, remote Supabase work, real email delivery, or production deploy.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-158-tenant-status-ops-audit-handoff-report.html`에 남긴다.
+
+2026-05-20 DEN-159 Hospital Admin Staff Invitation Creation Contract:
+
+- Strengthened `POST /api/workspaces/[workspaceId]/invitations` as the Project 03 staff invitation creation contract.
+- Success responses now explicitly report `emailDelivery: not_sent_approval_gated` and `inviteLink: not_generated_approval_gated`.
+- The route response avoids raw invite tokens, OTPs, magic links, provider payloads, auth headers, and secret keys.
+- Added mock fallback server duplicate checks for pending invitation email and active member email.
+- Preserved server actor resolution, mutation rate limiting, `role_permission:manage` authorization, role validation, and safe denial categories.
+- Added `docs/engineering/auth-security/auth-login/hospital-admin-staff-invitation-creation-contract.md`.
+- Red: `npx playwright test tests/workspace-invitation-server.spec.ts --reporter=line` failed before email/link gate and mock duplicate server checks were implemented.
+- Green: `npx playwright test tests/workspace-invitation-server.spec.ts --reporter=line` (`4 passed`)
+- Focused regression: `npx playwright test tests/workspace-invitation-server.spec.ts tests/auth.spec.ts -g "workspace invitation|route-backed member invitations|pending invitations can be canceled|non-admin roles cannot manage workspace invitations|hospital admin can manage route-backed member invitations" --reporter=line` (`8 passed`)
+- Regression: `npx playwright test tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/auth.spec.ts --reporter=line` (`38 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement invite acceptance UI, real email delivery, raw invite link/token generation, billing seat count, DB/RLS migration, remote Supabase work, production deploy, or real staff data.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-159-hospital-admin-staff-invitation-contract-report.html`에 남긴다.
+
+2026-05-20 DEN-160 Invite Acceptance Account Linking Screen:
+
+- Added public local-first invite acceptance page at `/invite/[invitationId]`.
+- Added `src/features/auth/invite-acceptance-model.ts` for deterministic pending/expired/canceled/accepted/missing invite states.
+- Added `src/features/auth/invite-acceptance-screen.tsx` with new-account and existing-account linking modes.
+- Pending invites call the existing server accept route, persist a local mock session for `invitee:[email]`, store an active membership, and redirect only to the invited workspace reception route.
+- Expired, canceled, already accepted, and missing invitations do not expose account creation actions and do not create local session or workspace state.
+- Red: `npx playwright test tests/invite-acceptance.spec.ts --reporter=line` failed before the invite acceptance page existed.
+- Green: `npx playwright test tests/invite-acceptance.spec.ts --reporter=line` (`3 passed`)
+- Regression: `npx playwright test tests/invite-acceptance.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/workspace-invitation-server.spec.ts tests/auth.spec.ts --reporter=line` (`41 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement real Supabase signup/password/account linking, production invite token verification, email templates/delivery, MFA, DB/RLS migration, remote Supabase work, production deploy, or real staff data.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-160-invite-acceptance-account-linking-screen-report.html`에 남긴다.
+
+2026-05-20 DEN-161 Invitation Resend Cancel And Expiration Lifecycle:
+
+- Strengthened invitation lifecycle state handling in `src/features/auth/server-workspace-invitation-lifecycle.ts`.
+- Pending invitations now return safe audit hook events for `workspace.invitation_resent`, `workspace.invitation_canceled`, and `workspace.invitation_accepted`.
+- Resend returns `resentAt` and `resendCount`; cancel returns `canceledAt`; accept returns active membership plus `acceptedAt`.
+- Expired invitations return `invitation_expired` and do not create membership.
+- Canceled and already accepted invitations return `invitation_not_pending` and do not create duplicate membership.
+- Unknown invitations return `target_invitation_missing`.
+- Dynamic mock invitation ids created by the admin UI remain treated as pending for local-first resend/cancel/accept compatibility.
+- Added `docs/engineering/auth-security/auth-login/invitation-resend-cancel-expiration-lifecycle.md`.
+- Red: `npx playwright test tests/workspace-invitation-lifecycle-server.spec.ts --reporter=line` failed before audit events and expired/closed invite denial existed.
+- Green: `npx playwright test tests/workspace-invitation-lifecycle-server.spec.ts --reporter=line` (`4 passed`)
+- Regression: `npx playwright test tests/workspace-invitation-lifecycle-server.spec.ts tests/invite-acceptance.spec.ts tests/workspace-invitation-server.spec.ts tests/auth.spec.ts --reporter=line` (`42 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement real email delivery, seat billing, full notification center, DB/RLS migration, remote Supabase work, production execution, or real staff/customer data.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-161-invitation-resend-cancel-expiration-lifecycle-report.html`에 남긴다.
+
+2026-05-20 DEN-162 Invite-Based Onboarding Regression And Handoff:
+
+- Added `tests/invite-onboarding-regression-handoff.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/invite-based-onboarding-regression-handoff.md`.
+- Verified the accepted invite user can enter the invited workspace but is denied from another workspace by URL mutation.
+- Recorded happy path, invalid invite, unauthorized inviter, and workspace isolation regression coverage.
+- Recorded remaining launch blockers: production email delivery, invite token/link policy, real Supabase Auth signup/account linking, remote validation, tenant DB/RLS replay, production demo-header disablement proof, real onboarding/legal review, and payment/subscription decisions.
+- Project 04 handoff: tenant boundary validation should focus on workspace id isolation, cross-workspace route denial, admin action scope, and audit review scope.
+- Red: `npx playwright test tests/invite-onboarding-regression-handoff.spec.ts --reporter=line` failed before handoff coverage existed.
+- Green: `npx playwright test tests/invite-onboarding-regression-handoff.spec.ts --reporter=line` (`2 passed`)
+- Regression: `npx playwright test tests/invite-onboarding-regression-handoff.spec.ts tests/invite-acceptance.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/workspace-invitation-server.spec.ts tests/auth.spec.ts --reporter=line` (`44 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement production email delivery, real customer onboarding, payment/subscription, remote Supabase work, production deploy, or real data.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-162-invite-based-onboarding-regression-handoff-report.html`에 남긴다.
+
+2026-05-20 DEN-163 SaaS Launch Role Permission Matrix:
+
+- Added `docs/engineering/auth-security/auth-login/saas-launch-role-permission-matrix.md`.
+- Froze SaaS launch canonical roles as `hospital_admin`, `vet`, `technician`, and `front_desk`.
+- Confirmed `nurse` is not a canonical SaaS launch role and remains only a legacy/mock compatibility name for `technician`.
+- Confirmed `billing_admin` is not a canonical SaaS launch role; billing authority must stay inside approved canonical roles until a separate billing role is approved.
+- Linked the launch matrix from `docs/product/domain/role-permission-source-map.md`.
+- Added `tests/saas-launch-role-permission-matrix.spec.ts` to keep product source, resolver, DB adapter, and seed role names aligned.
+- Recorded follow-up work for mock/demo role label cleanup, seed permission id reconciliation, DEN-164 route inventory, and DEN-165 cross-tenant denial fixtures.
+- Red: `npx playwright test tests/saas-launch-role-permission-matrix.spec.ts --reporter=line` failed before the launch role matrix existed.
+- Green: `npx playwright test tests/saas-launch-role-permission-matrix.spec.ts --reporter=line` (`2 passed`)
+- Regression: `npx playwright test tests/saas-launch-role-permission-matrix.spec.ts tests/permission-resolver.spec.ts tests/db-workspace-permission-adapter.spec.ts tests/server-permission-enforcement.spec.ts tests/workspace-role-status-write-server.spec.ts tests/workspace-role-management-regression.spec.ts tests/workspace-invitation-server.spec.ts --reporter=line` (`25 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not change role policy code, add custom roles, run remote Supabase, change migrations/RLS, implement payment/refund policy, or deploy.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-163-saas-launch-role-permission-matrix-report.html`에 남긴다.
+
+2026-05-20 DEN-164 Launch Route Permission Enforcement Inventory:
+
+- Added `docs/engineering/auth-security/auth-login/launch-route-permission-enforcement-inventory.md`.
+- Added `tests/launch-route-permission-enforcement.spec.ts`.
+- Recorded launch-critical route coverage for CLAiR ops tenant workspace action, workspace create/list, invitation create/resend/cancel/accept, membership list/role/status, personal profile, and audit review events.
+- Confirmed those route handlers keep a server session boundary with mock-mode-only demo actor header handling.
+- Confirmed launch admin/member mutations require server-owned permission or operator authority checks such as `tenant_approval:manage` or `role_permission:manage`.
+- Recorded safe 401/403 response categories and remaining enforcement gaps.
+- Remaining gaps: remote/staging Supabase permission replay, production disablement proof for demo actor headers, broad clinical/billing/customer inventory, seed permission id reconciliation, and abuse/rate-limit coverage.
+- Red: `npx playwright test tests/launch-route-permission-enforcement.spec.ts --reporter=line` failed before the inventory existed.
+- Green: `npx playwright test tests/launch-route-permission-enforcement.spec.ts --reporter=line` (`2 passed`)
+- Regression: `npx playwright test tests/launch-route-permission-enforcement.spec.ts tests/ops-tenant-workspace-action.spec.ts tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/workspace-membership-status-server.spec.ts tests/server-permission-enforcement.spec.ts tests/workspace-role-status-write-server.spec.ts tests/personal-profile-server.spec.ts tests/audit-review-surface.spec.ts tests/permission-resolver.spec.ts --reporter=line` (`38 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not rewrite production route code, change role policy, run remote Supabase, change migrations/RLS, add provider integrations, or deploy.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-164-launch-route-permission-enforcement-report.html`에 남긴다.
+
+2026-05-20 DEN-165 Cross-Tenant Denial Regression Fixtures:
+
+- Added `tests/cross-tenant-denial-regression.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/cross-tenant-denial-regression-fixtures.md`.
+- Fixed mock fallback tenant fixtures so the default `user-admin` fixture can manage `workspace-a` but is denied from `workspace-b` for invitation creation, membership status reads, and invitation lifecycle admin actions.
+- Added clinical handoff smoke coverage for `patient:view`, `encounter:view`, and reception patient lookup denial across workspaces.
+- Confirmed the existing Korean unauthorized login notice remains the user-facing denial UX for unauthorized workspace entry.
+- Remaining gaps: remote/staging Supabase replay, production demo-header disablement proof, full clinical/billing/customer/lab/imaging/dispensing/audit tenant replay, and final live domain RLS replay.
+- Red: `npx playwright test tests/cross-tenant-denial-regression.spec.ts --reporter=line` failed because a `workspace-b` invitation create returned 201.
+- Green: `npx playwright test tests/cross-tenant-denial-regression.spec.ts --reporter=line` (`3 passed`)
+- Regression: `npx playwright test tests/cross-tenant-denial-regression.spec.ts tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/workspace-membership-status-server.spec.ts tests/server-permission-enforcement.spec.ts tests/reception-patient-guardian-lookup-server.spec.ts tests/permission-resolver.spec.ts tests/workspace-membership-rls-migration.spec.ts tests/auth.spec.ts --reporter=line` (`67 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not run remote Supabase, change migrations/RLS, use real data, add production deploy work, or implement broad route inventory beyond this fixture slice.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-165-cross-tenant-denial-regression-report.html`에 남긴다.
+
+2026-05-20 DEN-166 Last-Admin Role-Change Launch Safety:
+
+- Added `tests/last-admin-role-change-launch-safety.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/last-admin-role-change-launch-safety.md`.
+- Added the local-first `invitation-admin-pending` fixture so hospital-admin invite acceptance creates an active `hospital_admin` membership.
+- Confirmed route-level last-admin demotion and deactivation return `409 last_admin_protected`.
+- Confirmed the guard permits demoting one admin only after another active `hospital_admin` remains.
+- Recorded allowed/denied role-change table and Project 05 operator override follow-up.
+- Red: `npx playwright test tests/last-admin-role-change-launch-safety.spec.ts --reporter=line` failed because the admin invite fixture was missing.
+- Green: `npx playwright test tests/last-admin-role-change-launch-safety.spec.ts --reporter=line` (`4 passed`)
+- Regression: `npx playwright test tests/last-admin-role-change-launch-safety.spec.ts tests/workspace-role-status-write-server.spec.ts tests/server-permission-enforcement.spec.ts tests/workspace-role-management-regression.spec.ts tests/permission-resolver.spec.ts tests/invite-acceptance.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/cross-tenant-denial-regression.spec.ts --reporter=line` (`31 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement production support override, billing owner policy, custom roles, remote Supabase replay, production deploy, or real staff data.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-166-last-admin-role-change-launch-safety-report.html`에 남긴다.
+
+2026-05-20 DEN-167 Launch Audit Coverage Matrix:
+
+- Added `tests/launch-audit-coverage-matrix.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/launch-audit-coverage-matrix.md`.
+- Added safe `workspace.created` audit hooks to workspace creation responses.
+- Added safe `workspace.invitation_created` audit hooks to staff invitation creation responses.
+- Confirmed tenant workspace action, first admin invite, invitation lifecycle, role/status mutation, and audit review surfaces are represented in launch audit coverage.
+- Recorded remaining audit gaps: remote/staging Supabase append replay, production append wiring for workspace/staff invitation hooks, retention/SIEM/alerting/immutable storage, and production demo-header disablement proof.
+- Red: `npx playwright test tests/launch-audit-coverage-matrix.spec.ts --reporter=line` failed because workspace creation audit hooks were missing.
+- Green: `npx playwright test tests/launch-audit-coverage-matrix.spec.ts --reporter=line` (`4 passed`)
+- Regression: `npx playwright test tests/launch-audit-coverage-matrix.spec.ts tests/ops-tenant-workspace-action.spec.ts tests/ops-tenant-approval.spec.ts tests/ops-tenant-status-policy.spec.ts tests/workspace-creation-server.spec.ts tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/live-audit-log-persistence.spec.ts tests/live-audit-mutation-emission.spec.ts tests/audit-review-surface.spec.ts tests/last-admin-role-change-launch-safety.spec.ts --reporter=line` (`40 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement remote Supabase replay, long-term retention, SIEM export, alerting, immutable storage, production deploy, or real data audit ingestion.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-167-launch-audit-coverage-report.html`에 남긴다.
+
+2026-05-20 DEN-168 Launch Rate Limit And Abuse Handling:
+
+- Added `tests/launch-rate-limit-abuse-handling.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/launch-rate-limit-abuse-handling.md`.
+- Added `enforceWorkspaceMutationRateLimit(...)` to `POST /api/ops/tenant-applications/[applicationId]/workspace`.
+- Confirmed launch-critical workspace, invite, ops, membership role/status, and profile mutation routes share the rate-limit boundary.
+- Confirmed exceeded requests return safe `429`, `Retry-After`, and `{ ok: false, error: "rate_limited" }`.
+- Confirmed duplicate invite handling remains safe `409 duplicate_pending_invitation` without raw invite tokens, magic links, secrets, stack traces, or SQL errors.
+- Red: `npx playwright test tests/launch-rate-limit-abuse-handling.spec.ts --reporter=line` failed because the ops tenant workspace action was missing the limiter.
+- Green: `npx playwright test tests/launch-rate-limit-abuse-handling.spec.ts --reporter=line` (`3 passed`)
+- Regression: `npx playwright test tests/launch-rate-limit-abuse-handling.spec.ts tests/workspace-rate-limit-server.spec.ts tests/ops-tenant-workspace-action.spec.ts tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/server-permission-enforcement.spec.ts tests/last-admin-role-change-launch-safety.spec.ts --reporter=line` (`27 passed`)
+- `npx tsc --noEmit`, `npm run docs:check`, `npm run build`, `npm run security:secrets`, and `git diff --check` passed.
+- `npm run lint` passed with existing warnings only.
+- Did not implement external WAF, production shared rate-limit store, enterprise monitoring, production deploy, or real traffic logging.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-168-launch-rate-limit-abuse-handling-report.html`에 남긴다.
+
+2026-05-20 DEN-169 Staging Secret And Deployment Readiness Checklist:
+
+- Added `tests/launch-staging-readiness-checklist.spec.ts`.
+- Added `docs/engineering/auth-security/auth-login/staging-secret-deployment-readiness-checklist.md`.
+- Created a non-developer READY/BLOCKED summary for staging env, secret handling, Supabase staging validation, email sender readiness, deploy preflight, and rollback stop conditions.
+- Separated public browser env (`NEXT_PUBLIC_AUTH_MODE`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) from server-only secrets.
+- Linked the checklist back to the existing env/secret gates, SaaS launch approval gates, Supabase readiness, and launch rate-limit docs.
+- Red: `npx playwright test tests/launch-staging-readiness-checklist.spec.ts --reporter=line` failed because the checklist did not exist.
+- Green: `npx playwright test tests/launch-staging-readiness-checklist.spec.ts --reporter=line` (`3 passed`)
+- `npm run security:secrets`, `npm run docs:check`, `npx tsc --noEmit`, `npm run build`, and `git diff --check` passed.
+- `git ls-files '.env*' '.vercel/.env*' '**/.env*'` returned no tracked env files.
+- `npm run lint` passed with existing warnings only.
+- Did not create real env files, store secrets, run remote Supabase, change email sender settings, deploy, or use real data.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-169-staging-secret-deployment-readiness-report.html`에 남긴다.
+
+2026-05-20 DEN-170 SaaS Launch Pilot Rehearsal Closeout:
+
+- Added `docs/engineering/auth-security/auth-login/saas-launch-pilot-rehearsal-closeout.md`.
+- Wrote the local-first pilot rehearsal closeout for the full SaaS Launch Foundation.
+- Selected regression covered CLAiR operator approved workspace action, invite acceptance, staff invitation creation/lifecycle, cross-tenant denial, last-admin protection, audit coverage, rate-limit abuse handling, staging readiness checklist, and base auth regression.
+- Decision: representative review is `READY`; local/mock SaaS foundation rehearsal is `READY`; real staging/live pilot remains `BLOCKED` until approval gates and blockers are cleared.
+- Remaining blockers: remote Supabase staging approval/replay, real email provider approval, shared production rate-limit store, demo actor header production disablement proof, request id/safe logging and production log redaction, Supabase advisor/security-definer RPC review, real data/legal/compliance approval, and deploy rollback/forward-fix approval.
+- Selected regression: `npx playwright test tests/ops-tenant-workspace-action.spec.ts tests/invite-acceptance.spec.ts tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/cross-tenant-denial-regression.spec.ts tests/last-admin-role-change-safety.spec.ts tests/launch-audit-coverage-matrix.spec.ts tests/launch-rate-limit-abuse-handling.spec.ts tests/launch-staging-readiness-checklist.spec.ts tests/auth.spec.ts --reporter=line` (`63 passed`)
+- Final gates passed: `npx tsc --noEmit`; `npm run lint` with 5 pre-existing warnings; `npm run docs:check`; `npm run build`; `npm run security:secrets`; `git diff --check`.
+- Did not execute staging/manual remote rehearsal, production deploy, real hospital data import, payment/subscription launch, or post-MVP enterprise SSO work.
+
+검증 결과와 세부 결정은 `docs/completed/saas-launch/2026-05-20-den-170-saas-launch-pilot-rehearsal-closeout-report.html`에 남긴다.
 
 2026-05-18 DEN-54 Reception Encounter Persistence Contract:
 

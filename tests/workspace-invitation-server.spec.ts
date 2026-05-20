@@ -49,6 +49,36 @@ test("workspace invitation route creates pending invitation for hospital admin",
     status: "pending",
     invitedBySessionId: "user-admin",
   });
+  expect(json.emailDelivery).toBe("not_sent_approval_gated");
+  expect(json.inviteLink).toBe("not_generated_approval_gated");
+  expect(JSON.stringify(json)).not.toMatch(/token|otp|magic.?link/i);
+});
+
+test("workspace invitation route blocks duplicate pending and active member email on the server", async ({
+  request,
+}) => {
+  const duplicateWorkspaceId = "workspace-den159-duplicates";
+  const duplicate = await postInvitation(request, {
+    actor: "user-admin",
+    email: "PENDING.STAFF@HANBIT.TEST",
+    workspaceId: duplicateWorkspaceId,
+  });
+  expect(duplicate.status()).toBe(409);
+  await expectJson(duplicate, {
+    ok: false,
+    denialReason: "duplicate_pending_invitation",
+  });
+
+  const activeMember = await postInvitation(request, {
+    actor: "user-admin",
+    email: "active.member@hanbit.test",
+    workspaceId: duplicateWorkspaceId,
+  });
+  expect(activeMember.status()).toBe(409);
+  await expectJson(activeMember, {
+    ok: false,
+    denialReason: "active_membership_exists",
+  });
 });
 
 test("workspace invitation route denies missing, unauthorized, and invalid requests", async ({
@@ -98,6 +128,9 @@ test("workspace invitation persistence boundary stays server-only", () => {
   expect(routeSource).toContain("readServerSession");
   expect(serverSource).toContain('import "server-only"');
   expect(serverSource).not.toMatch(/sessionStorage|localStorage|window\\./);
+  expect(serverSource).toContain("not_sent_approval_gated");
+  expect(serverSource).toContain("not_generated_approval_gated");
+  expect(serverSource).not.toMatch(/inviteToken|rawToken|magicLink|otp/i);
   expect(migrationSource).toContain("clair_create_workspace_invitation");
   expect(migrationSource).toContain("role_permission:manage");
   expect(migrationSource).toContain("duplicate_pending_invitation");

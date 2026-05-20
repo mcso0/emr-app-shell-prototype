@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { getAuthRuntimeMode } from "../src/lib/supabase/config";
 import {
   canEditOrders,
   canManageHospital,
@@ -22,6 +23,7 @@ import {
   createSessionWorkspace,
   createSessionWorkspaceInvitation,
   deactivateSessionWorkspaceMembership,
+  resolveSessionWorkspaceAccess,
   updateSessionWorkspaceMembershipRoles,
   validateWorkspaceInvitationInput,
   validateWorkspaceCreationInput,
@@ -36,8 +38,111 @@ const authUiFiles = [
   "src/shell/auth-profile-menu.tsx",
   "src/shell/top-menu.tsx",
 ];
+const originalAuthEnv = {
+  mode: process.env.NEXT_PUBLIC_AUTH_MODE,
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  publishableKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+};
 
 test.use({ storageState: { cookies: [], origins: [] } });
+
+function withAuthRuntimeEnv(
+  env: {
+    mode?: string;
+    url?: string;
+    publishableKey?: string;
+  },
+  run: () => void
+) {
+  setOptionalEnv("NEXT_PUBLIC_AUTH_MODE", env.mode);
+  setOptionalEnv("NEXT_PUBLIC_SUPABASE_URL", env.url);
+  setOptionalEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", env.publishableKey);
+
+  try {
+    run();
+  } finally {
+    setOptionalEnv("NEXT_PUBLIC_AUTH_MODE", originalAuthEnv.mode);
+    setOptionalEnv("NEXT_PUBLIC_SUPABASE_URL", originalAuthEnv.url);
+    setOptionalEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", originalAuthEnv.publishableKey);
+  }
+}
+
+function setOptionalEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
+
+test("auth runtime mode matrix keeps mock fallback and Supabase session sources explicit", () => {
+  withAuthRuntimeEnv(
+    {
+      mode: "mock",
+      url: "https://example.supabase.co",
+      publishableKey: "sb_publishable_mock",
+    },
+    () => {
+      expect(getAuthRuntimeMode()).toEqual({
+        authMode: "mock",
+        authProvider: "mock",
+        supabaseConfigured: true,
+        clientSessionSource: "mock_storage",
+        serverSessionSource: "mock_fallback",
+        missingConfigBehavior: "none",
+      });
+    }
+  );
+
+  withAuthRuntimeEnv({ mode: "auto" }, () => {
+    expect(getAuthRuntimeMode()).toEqual({
+      authMode: "auto",
+      authProvider: "mock",
+      supabaseConfigured: false,
+      clientSessionSource: "mock_storage",
+      serverSessionSource: "mock_fallback",
+      missingConfigBehavior: "auto_mock_fallback",
+    });
+  });
+
+  withAuthRuntimeEnv(
+    {
+      mode: "auto",
+      url: "https://example.supabase.co",
+      publishableKey: "sb_publishable_mock",
+    },
+    () => {
+      expect(getAuthRuntimeMode()).toEqual({
+        authMode: "auto",
+        authProvider: "supabase",
+        supabaseConfigured: true,
+        clientSessionSource: "supabase_cookie",
+        serverSessionSource: "supabase_claims",
+        missingConfigBehavior: "none",
+      });
+    }
+  );
+
+  withAuthRuntimeEnv({ mode: "supabase" }, () => {
+    expect(getAuthRuntimeMode()).toEqual({
+      authMode: "supabase",
+      authProvider: "supabase",
+      supabaseConfigured: false,
+      clientSessionSource: "supabase_cookie",
+      serverSessionSource: "supabase_claims",
+      missingConfigBehavior: "supabase_configuration_error",
+    });
+  });
+
+  withAuthRuntimeEnv({ mode: "invalid" }, () => {
+    expect(getAuthRuntimeMode()).toMatchObject({
+      authMode: "auto",
+      authProvider: "mock",
+      missingConfigBehavior: "auto_mock_fallback",
+    });
+  });
+});
 
 test("root starts at login", async ({ page }) => {
   await page.goto("/");
@@ -58,6 +163,10 @@ test("workspace routes require login and preserve the requested URL", async ({ p
   await expect(page).toHaveURL(/\/login\?next=/);
   expect(new URL(page.url()).searchParams.get("next")).toBe(
     "/w/clair-demo/billing?modulePanel=open&aside=closed"
+  );
+  expect(new URL(page.url()).searchParams.get("reason")).toBe("session_required");
+  await expect(page.getByTestId("auth-session-notice")).toContainText(
+    "로그인이 필요하거나 세션이 만료되었습니다."
   );
 });
 
@@ -93,6 +202,16 @@ test("login creates a localStorage-backed session and opens the requested worksp
   await expect(page.getByTestId("mock-session-status")).toContainText("브라우저에 유지");
 });
 
+test("login ignores unsafe next redirects and opens the MVP default workspace", async ({ page }) => {
+  await page.goto("/login?next=https%3A%2F%2Fevil.example%2Fsteal");
+
+  await page.getByRole("button", { name: /프론트 데스크/ }).click();
+  await page.getByRole("button", { name: "로그인" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await expect(page).not.toHaveURL(/evil\.example/);
+});
+
 test("login without next opens the MVP default workspace", async ({ page }) => {
   await page.goto("/login");
 
@@ -117,7 +236,10 @@ test("logout clears mock session from both browser stores", async ({ page }) => 
   await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
   await page.getByTestId("top-menu-mock-user").click();
   await page.getByRole("menuitem", { name: "로그아웃" }).click();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/login\?reason=signed_out/);
+  await expect(page.getByTestId("auth-session-notice")).toContainText(
+    "안전하게 로그아웃되었습니다."
+  );
 
   await page.goto("/login");
   await page.evaluate(
@@ -355,6 +477,73 @@ test("hospital admin can create and select a route-backed workspace", async ({
       },
     ],
   });
+});
+
+test("workspace route blocks session workspaces without active membership", async ({
+  page,
+}) => {
+  await page.goto("/login");
+
+  await page.getByRole("button", { name: /병원 관리자/ }).click();
+  await page.getByLabel("브라우저에 유지").check();
+  await page.getByRole("button", { name: "로그인" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+
+  const session = await page.evaluate((key) => {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }, storageKey);
+  expect(session?.id).toBeTruthy();
+
+  await page.evaluate(
+    ([key, sessionId]) => {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({
+          currentWorkspaceId: "hanbit-animal-hospital",
+          workspaces: [
+            {
+              id: "hanbit-animal-hospital",
+              displayName: "Hanbit Animal Hospital",
+              representativeName: "김승욱",
+              contactEmail: "owner@hanbit.test",
+              contactPhone: null,
+              subscriptionStatus: "trialing",
+              createdBySessionId: sessionId,
+              createdAt: "2026-05-20T00:00:00.000Z",
+            },
+          ],
+          memberships: [
+            {
+              id: "membership-inactive",
+              workspaceId: "hanbit-animal-hospital",
+              userSessionId: sessionId,
+              displayName: "김승욱",
+              email: "owner@hanbit.test",
+              roles: ["hospital_admin"],
+              status: "inactive",
+              createdAt: "2026-05-20T00:00:00.000Z",
+              deactivatedAt: "2026-05-20T01:00:00.000Z",
+            },
+          ],
+          invitations: [],
+          updatedAt: "2026-05-20T01:00:00.000Z",
+        })
+      );
+    },
+    [SESSION_WORKSPACES_STORAGE_KEY, session.id]
+  );
+
+  await page.goto("/w/hanbit-animal-hospital/reception?modulePanel=open&aside=closed");
+
+  await expect(page).toHaveURL(/\/login\?/);
+  expect(new URL(page.url()).searchParams.get("reason")).toBe("unauthorized");
+  expect(new URL(page.url()).searchParams.get("next")).toBe(
+    "/w/hanbit-animal-hospital/reception?modulePanel=open&aside=closed"
+  );
+  await expect(page.getByTestId("auth-session-notice")).toContainText(
+    "이 워크스페이스에 접근할 권한이 없습니다."
+  );
 });
 
 test("hospital admin can manage route-backed member invitations", async ({
@@ -883,6 +1072,81 @@ test("workspace invitation contract blocks duplicate pending and active membersh
       email: "이미 활성 멤버로 등록된 이메일입니다.",
     },
   });
+});
+
+test("session workspace access contract allows only active membership for the current session", () => {
+  const creation = createSessionWorkspace(
+    {
+      hospitalName: "Hanbit Animal Hospital",
+      adminDisplayName: "김승욱",
+      contactEmail: "owner@hanbit.test",
+      contactPhone: "010-1234-5678",
+      subscriptionStatus: "trialing",
+    },
+    {
+      sessionId: "admin-session",
+      storageMode: "local",
+    },
+    "2026-05-17T00:00:00.000Z"
+  );
+  const baseState = {
+    currentWorkspaceId: creation.workspace.id,
+    workspaces: [creation.workspace],
+    memberships: [
+      creation.membership,
+      {
+        id: "membership-pending",
+        workspaceId: creation.workspace.id,
+        userSessionId: "pending-session",
+        displayName: "pending",
+        email: "pending@hanbit.test",
+        roles: ["vet" as const],
+        status: "pending" as const,
+        createdAt: "2026-05-17T01:00:00.000Z",
+      },
+      {
+        id: "membership-suspended",
+        workspaceId: creation.workspace.id,
+        userSessionId: "suspended-session",
+        displayName: "suspended",
+        email: "suspended@hanbit.test",
+        roles: ["front_desk" as const],
+        status: "suspended" as const,
+        createdAt: "2026-05-17T01:00:00.000Z",
+      },
+      {
+        id: "membership-inactive",
+        workspaceId: creation.workspace.id,
+        userSessionId: "inactive-session",
+        displayName: "inactive",
+        email: "inactive@hanbit.test",
+        roles: ["technician" as const],
+        status: "inactive" as const,
+        createdAt: "2026-05-17T01:00:00.000Z",
+      },
+    ],
+    invitations: [],
+    updatedAt: "2026-05-17T00:00:00.000Z",
+  };
+
+  expect(resolveSessionWorkspaceAccess(baseState, creation.workspace.id, "admin-session")).toBe(
+    "active"
+  );
+  expect(resolveSessionWorkspaceAccess(baseState, creation.workspace.id, "pending-session")).toBe(
+    "pending"
+  );
+  expect(resolveSessionWorkspaceAccess(baseState, creation.workspace.id, "inactive-session")).toBe(
+    "inactive"
+  );
+  expect(resolveSessionWorkspaceAccess(baseState, creation.workspace.id, "suspended-session")).toBe(
+    "suspended"
+  );
+  expect(resolveSessionWorkspaceAccess(baseState, creation.workspace.id, "missing-session")).toBe(
+    "missing"
+  );
+  expect(resolveSessionWorkspaceAccess(baseState, "missing-workspace", "admin-session")).toBe(
+    "missing"
+  );
 });
 
 test("workspace membership role mutation contract protects the last active hospital admin", () => {

@@ -14,7 +14,7 @@ export default async function WorkspaceModulePage({
   const { workspaceId, module } = await params;
 
   return (
-    <AuthGate>
+    <AuthGate workspaceId={workspaceId}>
       <AppShell workspaceId={workspaceId} moduleId={module} />
     </AuthGate>
   );

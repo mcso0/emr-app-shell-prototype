@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-166 Last-Admin Role-Change Launch Safety 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-166 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>Last-Admin Role-Change Launch Safety 보고</h1>
+      <p>
+        병원이 마지막 active <code>hospital_admin</code>을 잃지 않도록 role demotion,
+        membership deactivation, invited admin acceptance, server/DB guard surface를 launch flow 기준으로 재검증했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>Role Change 표</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Requested change</th>
+              <th>Decision</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>마지막 active admin demotion</td><td>Denied</td><td><code>409 last_admin_protected</code></td></tr>
+            <tr><td>마지막 active admin deactivation</td><td>Denied</td><td><code>409 last_admin_protected</code></td></tr>
+            <tr><td>두 명 이상의 active admin 중 한 명 demotion</td><td>Allowed</td><td>다른 active admin이 남음</td></tr>
+            <tr><td>pending hospital-admin invite acceptance</td><td>Allowed</td><td>두 번째 active admin onboarding 가능</td></tr>
+            <tr><td>non-admin role/status mutation</td><td>Denied</td><td><code>role_permission:manage</code> 없음</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>tests/last-admin-role-change-launch-safety.spec.ts</code>를 추가했다.</li>
+          <li><code>invitation-admin-pending</code> local-first fixture를 추가해 병원관리자 초대 수락 경로를 고정했다.</li>
+          <li>mock invitation lifecycle accept가 admin invite fixture에서는 <code>hospital_admin</code> membership을 반환하도록 보강했다.</li>
+          <li><code>docs/engineering/auth-security/auth-login/last-admin-role-change-launch-safety.md</code>에 guard surface와 operator override 후속 여부를 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Operator Override</h2>
+        <p>
+          DEN-166에서는 production support override를 구현하지 않았다. Project 05 security review에서
+          break-glass 필요 여부, 이중 승인, audit reason, tenant isolation 불변 조건을 별도로 결정해야 한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/last-admin-role-change-launch-safety.spec.ts --reporter=line</code> 실패 확인: admin invite fixture가 없어 초대 수락 화면이 열리지 않았다.</li>
+          <li>Green: 같은 테스트 통과: 4 passed</li>
+          <li>Regression: role/status/invite/cross-tenant safety regression 통과: 31 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 경고 5개만 남음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

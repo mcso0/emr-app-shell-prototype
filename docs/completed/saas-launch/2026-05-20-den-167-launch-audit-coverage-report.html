@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-167 Launch Audit Coverage 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-167 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>Launch Audit Coverage 보고</h1>
+      <p>
+        tenant approval, workspace creation, first admin invite, staff invitation,
+        invitation lifecycle, role/status mutation의 audit coverage matrix를 고정하고
+        누락된 workspace/staff invitation audit hook을 보강했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>Audit Coverage Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Mutation</th>
+              <th>Actor</th>
+              <th>Audit event</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Tenant workspace action</td><td>CLAiR operator</td><td><code>ops.workspace_created_for_tenant</code>, <code>ops.first_admin_invitation_created</code></td></tr>
+            <tr><td>Workspace creation</td><td>creator user</td><td><code>workspace.created</code></td></tr>
+            <tr><td>Staff invitation create</td><td>hospital admin</td><td><code>workspace.invitation_created</code></td></tr>
+            <tr><td>Invitation resend/cancel/accept</td><td>hospital admin or invited member</td><td><code>workspace.invitation_resent</code>, <code>workspace.invitation_canceled</code>, <code>workspace.invitation_accepted</code></td></tr>
+            <tr><td>Membership role/status mutation</td><td>hospital admin</td><td><code>workspace.membership_roles_changed</code>, <code>workspace.membership_status_changed</code></td></tr>
+            <tr><td>Audit review</td><td>hospital admin</td><td>workspace-scoped admin reader</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>tests/launch-audit-coverage-matrix.spec.ts</code>를 추가했다.</li>
+          <li>workspace creation 응답에 safe <code>workspace.created</code> audit hook을 추가했다.</li>
+          <li>staff invitation creation 응답에 safe <code>workspace.invitation_created</code> audit hook을 추가했다.</li>
+          <li><code>docs/engineering/auth-security/auth-login/launch-audit-coverage-matrix.md</code>에 actor/target/event coverage와 남은 audit gap을 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 Audit Gap</h2>
+        <ul>
+          <li>remote/staging Supabase append replay는 승인 gate 밖이다.</li>
+          <li>workspace creation/staff invitation audit hook의 full production append wiring은 future live-readiness gate다.</li>
+          <li>long-term retention, SIEM export, alerting, immutable storage policy는 이번 범위 밖이다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/launch-audit-coverage-matrix.spec.ts --reporter=line</code> 실패 확인: workspace creation audit hook이 없었다.</li>
+          <li>Green: 같은 테스트 통과: 4 passed</li>
+          <li>Regression: launch audit/ops/invite/role-status/audit review regression 통과: 40 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 경고 5개만 남음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

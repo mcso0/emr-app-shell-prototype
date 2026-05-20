@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-153 워크스페이스 active membership 런타임 검증 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-153 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>워크스페이스 active membership 런타임 검증 보고</h1>
+      <p>
+        로그인만 된 사용자가 아무 병원 워크스페이스에 들어가지 못하도록, 워크스페이스 진입과 selector 표시 기준을
+        active membership 중심으로 보강했다. 이제 권한 기준은 화면의 역할 라벨이 아니라 membership 상태다.
+      </p>
+      <span class="badge">Status: Active Membership Runtime Guarded</span>
+
+      <section>
+        <h2>Membership 상태별 접근표</h2>
+        <table>
+          <tr><th>상태</th><th>Selector</th><th>직접 진입</th><th>결과</th></tr>
+          <tr><td><code>active</code></td><td>표시</td><td>허용</td><td>워크스페이스 진입 가능</td></tr>
+          <tr><td><code>pending</code></td><td>제외</td><td>차단</td><td>초대 수락/활성화 전 접근 불가</td></tr>
+          <tr><td><code>inactive</code></td><td>제외</td><td>차단</td><td>비활성 멤버 접근 불가</td></tr>
+          <tr><td><code>suspended</code></td><td>제외</td><td>차단</td><td>정지 멤버 접근 불가</td></tr>
+          <tr><td>membership 없음</td><td>제외</td><td>차단</td><td>해당 병원 소속이 아님</td></tr>
+          <tr><td>session 없음</td><td>N/A</td><td>차단</td><td><code>reason=session_required</code> 로그인 이동</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>AuthGate</code>가 workspace id를 받아 active membership이 없는 workspace entry를 <code>reason=unauthorized</code>로 차단한다.</li>
+          <li>Session-only workspace state에 <code>pending</code> 상태를 추가하고, 현재 session id 기준 active membership 판정 함수를 추가했다.</li>
+          <li>Persisted workspace list mapper를 core 파일로 분리하고 non-active rows를 방어적으로 제거한다.</li>
+          <li>페이지 shell route에서 <code>AuthGate workspaceId</code>를 전달하도록 연결했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/workspace-list-server.spec.ts -g "active memberships only" --reporter=line</code> 실패 확인</li>
+          <li>Red: <code>npx playwright test tests/auth.spec.ts -g "workspace route blocks session workspaces|session workspace access contract" --reporter=line</code> 실패 확인</li>
+          <li>Green: 위 focused tests 통과</li>
+          <li><code>npx playwright test tests/auth.spec.ts tests/app-shell.spec.ts tests/workspace-list-server.spec.ts tests/permission-resolver.spec.ts --reporter=line</code> 통과: 72 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run lint</code> 통과. 기존 warning 5개는 남아 있고 이번 변경의 error는 없다.</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 보강점</h2>
+        <ul>
+          <li>이 변경은 page shell 진입 guard다. 각 clinical/reception/billing/admin API route의 server-side active membership enforcement는 계속 별도 보안 경계로 유지해야 한다.</li>
+          <li>향후 production UX에서는 로그인 화면 notice 대신 전용 access denied 또는 request access 화면을 둘 수 있다.</li>
+          <li>remote Supabase staging/live, email delivery, production deploy, role-policy 변경은 계속 승인 gate 밖에서 진행하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/auth/auth-gate.tsx</code></li>
+          <li><code>src/app/w/[workspaceId]/[module]/page.tsx</code></li>
+          <li><code>src/features/auth/workspace-session.ts</code></li>
+          <li><code>src/features/auth/server-workspace-list.ts</code></li>
+          <li><code>src/features/auth/server-workspace-list-core.ts</code></li>
+          <li><code>tests/auth.spec.ts</code></li>
+          <li><code>tests/workspace-list-server.spec.ts</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/workspace-selector-active-membership-runtime.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

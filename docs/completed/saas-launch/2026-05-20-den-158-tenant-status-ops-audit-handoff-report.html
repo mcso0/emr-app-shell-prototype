@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-158 Tenant Status 및 Ops Audit Handoff 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-158 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>Tenant Status 및 Ops Audit Handoff 보고</h1>
+      <p>
+        병원 tenant의 운영 상태 정책을 <code>trial</code>, <code>active</code>, <code>suspended</code>, <code>archived</code>로 정리하고,
+        Project 03 초대 기반 가입 플로우가 어떤 입력 조건에서 시작해야 하는지 명확히 했다.
+      </p>
+      <span class="badge">Status: Project 02 Handoff Ready</span>
+
+      <section>
+        <h2>Tenant Status 정책</h2>
+        <table>
+          <tr><th>Status</th><th>Workspace</th><th>First admin invite</th><th>Staff invites</th></tr>
+          <tr><td><code>trial</code></td><td>허용</td><td>허용</td><td>허용</td></tr>
+          <tr><td><code>active</code></td><td>허용</td><td>허용</td><td>허용</td></tr>
+          <tr><td><code>suspended</code></td><td>차단</td><td>차단</td><td>차단</td></tr>
+          <tr><td><code>archived</code></td><td>차단</td><td>차단</td><td>차단</td></tr>
+        </table>
+        <p>Billing/subscription enforcement는 Project 02 범위 밖이므로 아직 적용하지 않았다.</p>
+      </section>
+
+      <section>
+        <h2>Audit Coverage</h2>
+        <ul>
+          <li><code>ops.tenant_application_approved</code></li>
+          <li><code>ops.tenant_application_rejected</code></li>
+          <li><code>ops.tenant_application_held</code></li>
+          <li><code>ops.workspace_created_for_tenant</code></li>
+          <li><code>ops.first_admin_invitation_created</code></li>
+          <li><code>ops.tenant_status_changed</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Project 03 Handoff</h2>
+        <ul>
+          <li>tenant application은 approved 상태여야 한다.</li>
+          <li>tenant operational status는 <code>trial</code> 또는 <code>active</code>여야 한다.</li>
+          <li>workspace와 최초 <code>hospital_admin</code> 초대 record가 있어야 한다.</li>
+          <li>직원 초대 생성은 active hospital admin actor가 수행해야 한다.</li>
+          <li><code>suspended</code>/<code>archived</code> tenant는 직원 초대를 만들 수 없다.</li>
+          <li>real email delivery는 여전히 별도 승인 gate 뒤에 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/ops-tenant-status-policy.spec.ts --reporter=line</code>가 tenant status policy module 부재로 실패</li>
+          <li>Green: 같은 테스트 통과: 4 passed</li>
+          <li>Regression: <code>npx playwright test tests/ops-tenant-status-policy.spec.ts tests/ops-tenant-workspace-action.spec.ts tests/ops-tenant-approval.spec.ts tests/auth.spec.ts --reporter=line</code> 통과: 41 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 warning 5개만 유지</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+          <li>production support console, billing enforcement, customer data mutation, tenant status DB persistence는 구현하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/ops/tenant-status-policy.ts</code></li>
+          <li><code>src/features/ops/tenant-approval-surface.tsx</code></li>
+          <li><code>tests/ops-tenant-status-policy.spec.ts</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/tenant-status-management-ops-audit-handoff.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-158-tenant-status-ops-audit-handoff-report.html</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

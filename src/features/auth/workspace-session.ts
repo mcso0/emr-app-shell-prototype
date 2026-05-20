@@ -2,8 +2,15 @@ import type { MockSessionStorageMode } from "@/features/auth/mock-session";
 
 export type SessionWorkspaceSubscriptionStatus = "trialing" | "active" | "none";
 export type SessionWorkspaceRole = "hospital_admin" | "vet" | "technician" | "front_desk";
-export type SessionWorkspaceMembershipStatus = "active" | "inactive" | "suspended";
+export type SessionWorkspaceMembershipStatus = "pending" | "active" | "inactive" | "suspended";
 export type SessionWorkspaceInvitationStatus = "pending" | "accepted" | "canceled" | "expired";
+export type SessionWorkspaceAccessStatus =
+  | "unknown"
+  | "active"
+  | "pending"
+  | "inactive"
+  | "suspended"
+  | "missing";
 
 export type WorkspaceCreationInput = {
   hospitalName: string;
@@ -560,6 +567,23 @@ export function getSessionWorkspaceDisplayName(
   return state?.workspaces.find((workspace) => workspace.id === workspaceId)?.displayName ?? workspaceId;
 }
 
+export function resolveSessionWorkspaceAccess(
+  state: SessionWorkspacesState | null,
+  workspaceId: string,
+  userSessionId: string | null | undefined
+): SessionWorkspaceAccessStatus {
+  if (workspaceId === DEMO_WORKSPACE_ID) return "active";
+  if (!state) return "unknown";
+  if (!userSessionId) return "missing";
+  if (!state.workspaces.some((workspace) => workspace.id === workspaceId)) return "missing";
+
+  const membership = state.memberships.find(
+    (item) => item.workspaceId === workspaceId && item.userSessionId === userSessionId
+  );
+
+  return membership?.status ?? "missing";
+}
+
 function isSessionWorkspace(value: unknown): value is SessionWorkspace {
   const workspace = value as Partial<SessionWorkspace>;
 
@@ -585,7 +609,8 @@ function isSessionWorkspaceMembership(value: unknown): value is SessionWorkspace
     Array.isArray(membership.roles) &&
     membership.roles.length > 0 &&
     membership.roles.every(isSessionWorkspaceRole) &&
-    (membership.status === "active" ||
+    (membership.status === "pending" ||
+      membership.status === "active" ||
       membership.status === "inactive" ||
       membership.status === "suspended") &&
     typeof membership.createdAt === "string"

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { mapActiveWorkspaceListData } from "../src/features/auth/server-workspace-list-core";
 
 test("workspace list server route requires an actor and preserves mock fallback", async ({
   request,
@@ -34,6 +35,49 @@ test("workspace list route defines persisted membership reader boundary", () => 
   expect(migrationSource).toContain("create or replace function public.clair_list_active_workspaces_for_current_user");
   expect(migrationSource).toContain("auth.uid()");
   expect(migrationSource).toContain("grant execute on function public.clair_list_active_workspaces_for_current_user");
+});
+
+test("workspace list gateway exposes active memberships only even if the persistence layer returns stale states", () => {
+  expect(
+    mapActiveWorkspaceListData([
+      {
+        id: "workspace-active",
+        displayName: "Active Hospital",
+        membershipId: "membership-active",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "workspace-pending",
+        displayName: "Pending Hospital",
+        membershipId: "membership-pending",
+        roles: ["vet"],
+        status: "pending",
+      },
+      {
+        id: "workspace-inactive",
+        displayName: "Inactive Hospital",
+        membershipId: "membership-inactive",
+        roles: ["front_desk"],
+        status: "inactive",
+      },
+      {
+        id: "workspace-suspended",
+        displayName: "Suspended Hospital",
+        membershipId: "membership-suspended",
+        roles: ["technician"],
+        status: "suspended",
+      },
+    ])
+  ).toEqual([
+      {
+        id: "workspace-active",
+        displayName: "Active Hospital",
+        membershipId: "membership-active",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+    ]);
 });
 
 async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {

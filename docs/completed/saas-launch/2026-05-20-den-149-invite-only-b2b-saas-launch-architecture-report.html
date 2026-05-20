@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-149 초대 기반 B2B SaaS 런치 아키텍처 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-149 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>초대 기반 B2B SaaS 런치 아키텍처 보고</h1>
+      <p>
+        CLAiR EMR의 런치 가입 흐름을 공개 회원가입이 아니라 승인된 병원만 들어오는 B2B 초대 모델로 고정했다.
+        핵심은 CLAiR 내부 승인, 최초 병원 관리자 초대, 병원 관리자 주도의 직원 초대, 그리고 서버 기준 membership/permission enforcement다.
+      </p>
+      <span class="badge">Status: Architecture Decision Complete</span>
+
+      <section>
+        <h2>핵심 결정</h2>
+        <ul>
+          <li>공개 회원가입은 workspace, tenant, membership, EMR 사용 계정을 만들 수 없다.</li>
+          <li>CLAiR 운영자가 승인된 병원 tenant/workspace를 만들고 첫 <code>hospital_admin</code> 초대를 생성한다.</li>
+          <li>이후 병원 관리자가 기존 invitation lifecycle을 재사용해 staff를 초대한다.</li>
+          <li>Supabase Auth는 identity/session을 맡고, 앱 DB는 workspace membership과 permission source를 맡는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>행위자 구분</h2>
+        <table>
+          <tr><th>행위자</th><th>역할</th><th>권한 경계</th></tr>
+          <tr><td>CLAiR operator</td><td>내부 운영자</td><td>병원 tenant 승인과 최초 관리자 초대. 병원 관리자보다 강한 권한이므로 별도 guard와 audit이 필요하다.</td></tr>
+          <tr><td>Hospital admin</td><td>병원 관리자</td><td>자기 병원 workspace 안에서 staff 초대, 역할, 상태를 관리한다.</td></tr>
+          <tr><td>Staff member</td><td>초대받은 실무자</td><td>초대 수락 후 active membership과 역할에 따라 workspace를 사용한다.</td></tr>
+          <tr><td>Supabase Auth user</td><td>로그인 identity</td><td>session과 password/OAuth/MFA/reset 기능을 담당하지만 권한 source는 아니다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>런치 플로우</h2>
+        <ol>
+          <li>CLAiR가 병원 신청 또는 영업 검토를 통해 병원을 승인한다.</li>
+          <li>CLAiR 운영자가 승인된 병원의 workspace를 생성하거나 승인한다.</li>
+          <li>CLAiR 운영자가 첫 병원 관리자 초대를 만든다.</li>
+          <li>병원 관리자는 Supabase Auth로 로그인 또는 계정 생성을 완료하고 초대를 수락한다.</li>
+          <li>병원 관리자가 직원에게 역할이 포함된 초대를 보낸다.</li>
+          <li>직원은 초대 링크로 계정을 만들거나 기존 계정에 연결하고 active membership을 얻는다.</li>
+          <li>workspace selector와 서버 route는 active membership과 permission resolver를 기준으로 접근을 허용한다.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>책임 분리</h2>
+        <table>
+          <tr><th>영역</th><th>담당</th><th>담당하지 않음</th></tr>
+          <tr><td>Supabase Auth</td><td>identity, session, password, verified claims, MFA/reset when enabled</td><td>workspace 권한, tenant 승인, role policy</td></tr>
+          <tr><td>App DB</td><td>users, workspaces, memberships, invitations, permission policies, audit, tenant state</td><td>password 검증, OAuth 내부 동작</td></tr>
+          <tr><td>Server routes/RPC</td><td>actor 검증, operator/admin guard, invite validation, duplicate/last-admin protection, safe errors</td><td>client-only trust</td></tr>
+          <tr><td>Client UI</td><td>폼, 오류/대기 상태, 초대 수락 UX, selector 표시</td><td>최종 보안 판단</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>첫 Vertical Slice 기준</h2>
+        <ul>
+          <li>CLAiR operator-only path로 한 병원 workspace를 승인/생성할 수 있다.</li>
+          <li>첫 병원 관리자 초대가 공개 signup 없이 만들어진다.</li>
+          <li>초대받은 관리자는 로그인 후 해당 workspace에만 진입한다.</li>
+          <li>관리자는 staff를 역할과 함께 초대할 수 있고, staff는 valid invite를 수락해 active membership을 얻는다.</li>
+          <li>만료, 취소, 중복, 이미 수락됨, 다른 workspace invite는 안전한 오류로 거절된다.</li>
+          <li>마지막 active <code>hospital_admin</code> 보호가 유지된다.</li>
+          <li>remote Supabase, real email, production deploy, payment, role policy 변경은 별도 승인 전까지 막혀 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>공개 회원가입 제외 이유</h2>
+        <p>
+          EMR은 tenant와 임상 데이터 경계가 중요한 제품이다. 공개 signup이 workspace나 membership을 만들면
+          가짜 병원, 중복 tenant, 권한 혼선, support/billing 책임 불명확성, cross-tenant 데이터 사고 가능성이 커진다.
+          나중에 public form을 열더라도 request-access record만 만들고 active workspace는 만들지 않는 방향이 맞다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>DEN-148 scope audit과 auth/workspace 기준 문서를 재확인했다.</li>
+          <li>기존 Supabase Auth, workspace creation, invitation lifecycle, RLS, permission foundation을 재사용하는 구조로 정리했다.</li>
+          <li>코드 구현, DB migration, remote Supabase, real email delivery, production deploy, real data access는 수행하지 않았다.</li>
+          <li><code>npm run docs:check</code>로 문서 링크 무결성을 확인했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/engineering/auth-security/auth-login/invite-only-b2b-saas-launch-architecture.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-149-invite-only-b2b-saas-launch-architecture-report.html</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

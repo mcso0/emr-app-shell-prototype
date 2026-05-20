@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-163 SaaS Launch Role Permission Matrix 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-163 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>SaaS Launch Role Permission Matrix 보고</h1>
+      <p>
+        SaaS launch 기준 역할을 <code>hospital_admin</code>, <code>vet</code>,
+        <code>technician</code>, <code>front_desk</code> 네 개로 고정하고,
+        기존 <code>nurse</code>/<code>billing_admin</code>는 canonical launch role이 아닌
+        compatibility/deprecation 대상으로 정리했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>최종 Role Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Launch 의미</th>
+              <th>관리 권한</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>hospital_admin</code></td><td>병원 운영, 구성원/권한, 카탈로그 관리</td><td>있음</td></tr>
+            <tr><td><code>vet</code></td><td>차트, 진단/SOAP, 오더, 임상 리뷰</td><td>없음</td></tr>
+            <tr><td><code>technician</code></td><td>검사/영상/조제/처치 완료와 지원 업무</td><td>없음</td></tr>
+            <tr><td><code>front_desk</code></td><td>접수, 예약, 보호자 응대, 프론트 수납 처리</td><td>없음</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Alias/Deprecation 결정</h2>
+        <ul>
+          <li><code>nurse</code>는 <code>technician</code>의 legacy/mock compatibility 이름으로만 취급한다.</li>
+          <li><code>billing_admin</code>은 launch canonical role이 아니다. 별도 승인 전까지 수납 권한은 canonical role matrix 안에서만 다룬다.</li>
+          <li>두 legacy role 모두 대표 승인 없이 launch role로 승격하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>후속 이슈</h2>
+        <ul>
+          <li>mock/demo UI에서 <code>nurse</code>를 <code>technician</code>으로 rename/alias 처리</li>
+          <li>launch-facing copy에서 <code>billing_admin</code> 노출 제거 또는 격리</li>
+          <li>seed permission id와 resolver vocabulary 불일치 정리</li>
+          <li>DEN-164 route inventory를 이번 matrix 기준으로 확장</li>
+          <li>DEN-165 cross-tenant denial fixture를 canonical role 기준으로 작성</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/saas-launch-role-permission-matrix.spec.ts --reporter=line</code> 실패 확인</li>
+          <li>Green: 같은 테스트 통과: 2 passed</li>
+          <li>Regression: permission/role/invitation regression 통과: 25 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 경고 5개만 남음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/engineering/auth-security/auth-login/saas-launch-role-permission-matrix.md</code></li>
+          <li><code>docs/product/domain/role-permission-source-map.md</code></li>
+          <li><code>tests/saas-launch-role-permission-matrix.spec.ts</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-163-saas-launch-role-permission-matrix-report.html</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

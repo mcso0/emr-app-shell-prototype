@@ -27,8 +27,19 @@ test("invitation resend and cancel routes require admin permission", async ({ re
     invitationId,
     action: "resend",
     status: "pending",
+    resendCount: 1,
     enforcedBy: "workspace-invitation-lifecycle-server-route",
   });
+  const resendBody = await resend.json();
+  expect(resendBody.resentAt).toEqual(expect.any(String));
+  expect(resendBody.auditEvents).toEqual([
+    expect.objectContaining({
+      type: "workspace.invitation_resent",
+      workspaceId,
+      invitationId,
+      actorUserId: "user-admin",
+    }),
+  ]);
 
   const cancel = await postLifecycle(request, "cancel", { actor: "user-admin" });
   expect(cancel.status()).toBe(200);
@@ -40,6 +51,16 @@ test("invitation resend and cancel routes require admin permission", async ({ re
     status: "canceled",
     enforcedBy: "workspace-invitation-lifecycle-server-route",
   });
+  const cancelBody = await cancel.json();
+  expect(cancelBody.canceledAt).toEqual(expect.any(String));
+  expect(cancelBody.auditEvents).toEqual([
+    expect.objectContaining({
+      type: "workspace.invitation_canceled",
+      workspaceId,
+      invitationId,
+      actorUserId: "user-admin",
+    }),
+  ]);
 
   const denied = await postLifecycle(request, "cancel", { actor: "user-vet" });
   expect(denied.status()).toBe(403);
@@ -66,6 +87,50 @@ test("invitation accept route creates active membership for invited actor", asyn
     roles: ["vet"],
     status: "active",
   });
+  expect(body.auditEvents).toEqual([
+    expect.objectContaining({
+      type: "workspace.invitation_accepted",
+      workspaceId,
+      invitationId,
+      actorUserId: "user-vet",
+    }),
+  ]);
+});
+
+test("invitation lifecycle blocks expired canceled accepted and unknown invite acceptance", async ({
+  request,
+}) => {
+  const expired = await postLifecycle(request, "accept", {
+    actor: "user-vet",
+    invitationId: "invitation-expired",
+  });
+  expect(expired.status()).toBe(409);
+  await expectJson(expired, { ok: false, denialReason: "invitation_expired" });
+  expect((await expired.json()).membership).toBeUndefined();
+
+  const canceled = await postLifecycle(request, "accept", {
+    actor: "user-vet",
+    invitationId: "invitation-canceled",
+  });
+  expect(canceled.status()).toBe(409);
+  await expectJson(canceled, { ok: false, denialReason: "invitation_not_pending" });
+  expect((await canceled.json()).membership).toBeUndefined();
+
+  const accepted = await postLifecycle(request, "accept", {
+    actor: "user-vet",
+    invitationId: "invitation-accepted",
+  });
+  expect(accepted.status()).toBe(409);
+  await expectJson(accepted, { ok: false, denialReason: "invitation_not_pending" });
+  expect((await accepted.json()).membership).toBeUndefined();
+
+  const unknown = await postLifecycle(request, "accept", {
+    actor: "user-vet",
+    invitationId: "unknown-invitation",
+  });
+  expect(unknown.status()).toBe(404);
+  await expectJson(unknown, { ok: false, denialReason: "target_invitation_missing" });
+  expect((await unknown.json()).membership).toBeUndefined();
 });
 
 test("invitation lifecycle route validates session and keeps server-owned DB functions", async ({
@@ -91,6 +156,10 @@ test("invitation lifecycle route validates session and keeps server-owned DB fun
   expect(resendRoute).toContain("mutateWorkspaceInvitationLifecycle");
   expect(serverSource).toContain('import "server-only"');
   expect(serverSource).not.toMatch(/sessionStorage|localStorage|window\\./);
+  expect(serverSource).toContain("workspace.invitation_resent");
+  expect(serverSource).toContain("workspace.invitation_canceled");
+  expect(serverSource).toContain("workspace.invitation_accepted");
+  expect(serverSource).toContain("invitation_expired");
   expect(migrationSource).toContain("clair_resend_workspace_invitation");
   expect(migrationSource).toContain("clair_cancel_workspace_invitation");
   expect(migrationSource).toContain("clair_accept_workspace_invitation");

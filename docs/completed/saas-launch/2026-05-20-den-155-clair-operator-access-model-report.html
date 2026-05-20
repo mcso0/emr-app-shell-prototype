@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-155 CLAiR 운영자 접근 모델 및 어드민 가드 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #fff3df; color: #8a4b00; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-155 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>CLAiR 운영자 접근 모델 및 어드민 가드 보고</h1>
+      <p>
+        CLAiR 내부 운영 어드민은 병원관리자보다 강한 권한을 가진다. 그래서 일반 병원 워크스페이스 역할로 처리하지 않고,
+        검증된 세션과 서버 소유 operator source를 통과해야만 tenant 승인과 최초 관리자 초대를 할 수 있도록 기준을 고정했다.
+      </p>
+      <span class="badge">Status: Operator Guard Model Defined</span>
+
+      <section>
+        <h2>핵심 결정</h2>
+        <ul>
+          <li>CLAiR operator는 <code>hospital_admin</code>이 아니라 별도의 서버 소유 권한 source다.</li>
+          <li>기존 canonical 병원 역할은 <code>hospital_admin</code>, <code>vet</code>, <code>technician</code>, <code>front_desk</code> 그대로 유지한다.</li>
+          <li>운영 어드민 route는 <code>readServerSession()</code> 이후 operator allowlist/table을 확인해야 한다.</li>
+          <li>client-only guard, browser storage, profile metadata, workspace role만으로 운영자 권한을 인정하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>구현 전 보안 블로커</h2>
+        <table>
+          <tr><th>블로커</th><th>이유</th></tr>
+          <tr><td>operator source 부재</td><td>누가 CLAiR 내부 운영자인지 서버가 판단할 기준이 없다.</td></tr>
+          <tr><td>client-only guard</td><td>화면에서 버튼을 숨기는 것은 tenant approval 보안이 아니다.</td></tr>
+          <tr><td>서비스 키의 브라우저 노출</td><td>운영 어드민 작업은 server-only boundary를 통과해야 한다.</td></tr>
+          <tr><td>audit 누락</td><td>tenant 승인, workspace 생성, 최초 관리자 초대는 추적 가능해야 한다.</td></tr>
+          <tr><td>MFA/strong-auth 미검토</td><td>staging/live 운영자 mutation 전에는 강한 인증 요구사항을 다시 확인해야 한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>다음 구현 이슈에 주는 기준</h2>
+        <ul>
+          <li><code>DEN-156</code>: tenant application model은 operator guard가 참조할 상태와 audit hook을 포함해야 한다.</li>
+          <li><code>DEN-157</code>: workspace 생성과 최초 hospital admin 초대는 approved tenant와 operator guard를 모두 통과해야 한다.</li>
+          <li><code>DEN-158</code>: tenant status 변경은 별도 상태 전환 규칙과 operator audit event가 필요하다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>기존 permission resolver, workspace/member route contract, invite-only launch architecture와 충돌 여부를 확인했다.</li>
+          <li>Supabase changelog, MFA 문서, product security 문서를 확인했다.</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li>운영 어드민 UI, DB/RLS migration, remote Supabase, real email delivery, production deploy, role-policy 변경은 구현하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/engineering/auth-security/auth-login/clair-operator-access-model-and-admin-guard.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-155-clair-operator-access-model-report.html</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
