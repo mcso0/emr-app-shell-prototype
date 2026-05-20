@@ -319,7 +319,7 @@ export function WorkspaceTabsBar({
 
   async function handleLogout() {
     await signOut();
-    router.replace("/login");
+    router.replace("/login?reason=signed_out");
   }
   const profileHref = `/profile?${new URLSearchParams({ returnTo: pathname }).toString()}`;
 

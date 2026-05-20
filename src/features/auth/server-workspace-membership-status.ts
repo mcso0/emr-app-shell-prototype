@@ -127,6 +127,8 @@ export function createSupabaseWorkspaceMembershipStatusGateway(
 }
 
 function createDemoMembershipStatusPermissionAdapter(workspaceId: string) {
+  const demoMembershipWorkspaceId = workspaceId === "workspace-b" ? "workspace-a" : workspaceId;
+
   return createMockWorkspacePermissionAdapter({
     now: new Date().toISOString(),
     users: [
@@ -136,14 +138,14 @@ function createDemoMembershipStatusPermissionAdapter(workspaceId: string) {
     memberships: [
       {
         id: "membership-admin",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-admin",
         roles: ["hospital_admin"],
         status: "active",
       },
       {
         id: "membership-vet",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-vet",
         roles: ["vet"],
         status: "active",

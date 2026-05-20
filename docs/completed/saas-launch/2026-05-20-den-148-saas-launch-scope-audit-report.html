@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-148 SaaS Launch Foundation 범위 감사 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-148 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>SaaS Launch Foundation 범위 감사 보고</h1>
+      <p>
+        새 SaaS 런치 이니셔티브가 기존 auth/workspace 작업을 반복하지 않도록, Linear와 로컬 문서,
+        코드 경로를 교차 확인했다. 결론은 명확하다. 새 작업은 로그인·멤버십 기반을 다시 만드는
+        일이 아니라, 승인제 병원 운영 흐름과 파일럿 런치 게이트를 닫는 일이어야 한다.
+      </p>
+      <span class="badge">Status: Scope Audit Complete</span>
+
+      <section>
+        <h2>핵심 판단</h2>
+        <ul>
+          <li>기존 Product MVP live transition은 Supabase Auth, workspace membership, invitation, role/status, RLS, local-first persistence 기반을 이미 상당 부분 갖고 있다.</li>
+          <li>새 이니셔티브에서 새로 집중할 영역은 CLAiR 운영자 승인, 최초 관리자 초대, 공개 초대 링크/계정 연결 UX, staging/live 승인 게이트다.</li>
+          <li>초대 생성·재발송·취소·수락의 서버/RPC 기반은 이미 있으므로, Project 03은 이를 재사용하고 public invite onboarding 경험을 보강해야 한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>재사용할 기존 기반</h2>
+        <table>
+          <tr><th>영역</th><th>기존 결과물</th><th>판단</th></tr>
+          <tr><td>역할/권한 모델</td><td><code>workspace-auth-permissions.md</code>, DEN-18~27</td><td>canonical role과 permission matrix는 재정의하지 않고 확인 후 재사용한다.</td></tr>
+          <tr><td>Supabase Auth/DB/RLS 기반</td><td>Project 01, DEN-29~41</td><td>server session, schema, RLS, DB adapter, last-admin guard, cross-workspace denial을 재사용한다.</td></tr>
+          <tr><td>Workspace/member persistence</td><td>Project 02, DEN-42~53, DEN-94~98</td><td>workspace 생성, selector, invitation lifecycle, role/status, profile, rate limit, secret scan을 재사용한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>새로 필요한 작업</h2>
+        <table>
+          <tr><th>Gap</th><th>이유</th><th>연결 프로젝트</th></tr>
+          <tr><td>CLAiR operator 접근 모델</td><td>CLAiR 내부 운영자는 병원 관리자보다 강한 권한을 갖는다.</td><td>Project 02</td></tr>
+          <tr><td>병원 신청/승인 모델</td><td>승인제 B2B SaaS에서는 일반 워크스페이스 생성과 tenant approval을 분리해야 한다.</td><td>Project 02</td></tr>
+          <tr><td>공개 초대 링크와 계정 연결 UX</td><td>기존 invitation lifecycle은 있지만 실제 이메일 링크 기반 직원 가입 경험은 별도다.</td><td>Project 03</td></tr>
+          <tr><td>계정 복구/비밀번호 재설정 정책</td><td>파일럿 운영에서는 직원 계정 복구 흐름이 필요하다.</td><td>Project 01</td></tr>
+          <tr><td>staging/live readiness</td><td>remote Supabase, email delivery, deploy는 승인 gate와 운영 체크리스트가 필요하다.</td><td>Project 05</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>승인 없이 하면 안 되는 일</h2>
+        <ul>
+          <li>remote Supabase link, migration push, SQL execution, dashboard 변경, project secret 사용</li>
+          <li>실제 초대 이메일 발송 provider 설정 또는 outbound email 발송</li>
+          <li>production deploy</li>
+          <li>payment/subscription provider 연동</li>
+          <li>역할/권한 제품 정책 변경</li>
+          <li>실제 병원, 직원, 보호자, 환자 데이터 import</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 권장 순서</h2>
+        <ol>
+          <li><code>DEN-149</code>에서 승인제 B2B SaaS 아키텍처를 이 audit 기준으로 고정한다.</li>
+          <li><code>DEN-150</code>에서 Supabase, email, deploy, role policy 승인 gate를 명문화한다.</li>
+          <li>Project 01~03 구현 이슈는 “새로 만들기”보다 “검증·재사용·보강” 중심으로 범위를 좁힌다.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Linear search로 기존 initiative, project, issue, document를 확인했다.</li>
+          <li><code>docs/engineering/auth-security/auth-login/**</code>, <code>docs/work/auth/**</code>, <code>docs/product/domain/workspace-auth-permissions.md</code>를 확인했다.</li>
+          <li><code>rg</code>와 <code>rg --files</code>로 auth/workspace/invitation 코드와 테스트, Supabase migration 경로를 확인했다.</li>
+          <li>코드 구현, DB migration, remote Supabase 작업, email provider 설정, production deploy는 수행하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/engineering/auth-security/auth-login/saas-launch-foundation-scope-audit.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-148-saas-launch-scope-audit-report.html</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

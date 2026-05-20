@@ -35,6 +35,20 @@ export type WorkspaceInvitationWrite = {
   now: string;
 };
 
+export type WorkspaceInvitationCreatedAuditEvent = {
+  type: "workspace.invitation_created";
+  workspaceId: string;
+  invitationId: string;
+  actorUserId: string;
+  targetType: "workspace_invitation";
+  targetId: string;
+  at: string;
+  metadata: {
+    invitedRoles: SessionWorkspaceRole[];
+    invitedEmailDomain: string | null;
+  };
+};
+
 export type WorkspaceInvitationGatewayResult =
   | { ok: true; invitation: SessionWorkspaceInvitation }
   | {
@@ -56,6 +70,9 @@ export type WorkspaceInvitationResult =
       status: 201;
       workspaceId: string;
       invitation: SessionWorkspaceInvitation;
+      auditEvents: WorkspaceInvitationCreatedAuditEvent[];
+      emailDelivery: "not_sent_approval_gated";
+      inviteLink: "not_generated_approval_gated";
       enforcedBy: "workspace-invitation-server-route";
     }
   | {
@@ -85,7 +102,7 @@ export async function createWorkspaceInvitation({
   workspaceId,
   input,
   permissionAdapter = createDemoWorkspaceInvitationPermissionAdapter(workspaceId),
-  gateway,
+  gateway = createDemoWorkspaceInvitationGateway(),
   now = new Date().toISOString(),
 }: {
   actorUserId: string | null;
@@ -144,16 +161,6 @@ export async function createWorkspaceInvitation({
     now,
   };
 
-  if (!gateway) {
-    return {
-      ok: true,
-      status: 201,
-      workspaceId,
-      invitation: { ...invitation, expiresAt: write.expiresAt },
-      enforcedBy: "workspace-invitation-server-route",
-    };
-  }
-
   const persisted = await gateway.createInvitation(write);
 
   if (!persisted.ok) {
@@ -173,6 +180,14 @@ export async function createWorkspaceInvitation({
     status: 201,
     workspaceId,
     invitation: persisted.invitation,
+    auditEvents: createWorkspaceInvitationCreatedAuditEvents({
+      workspaceId,
+      invitation: persisted.invitation,
+      actorUserId,
+      at: now,
+    }),
+    emailDelivery: "not_sent_approval_gated",
+    inviteLink: "not_generated_approval_gated",
     enforcedBy: "workspace-invitation-server-route",
   };
 }
@@ -255,7 +270,49 @@ function validateInvitationInput(input: WorkspaceInvitationInput) {
   return { valid: true as const, fieldErrors: {} };
 }
 
+function createDemoWorkspaceInvitationGateway(): WorkspaceInvitationGateway {
+  return {
+    async createInvitation(write) {
+      const pendingEmails = new Set(["pending.staff@hanbit.test"]);
+      const activeMemberEmails = new Set(["active.member@hanbit.test"]);
+
+      if (pendingEmails.has(write.email)) {
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "duplicate_pending_invitation",
+        };
+      }
+
+      if (activeMemberEmails.has(write.email)) {
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "active_membership_exists",
+        };
+      }
+
+      return {
+        ok: true,
+        invitation: createSessionWorkspaceInvitation(
+          {
+            email: write.email,
+            roles: write.roles,
+            title: write.title ?? "",
+            department: write.department ?? "",
+          },
+          write.workspaceId,
+          { sessionId: write.invitedByUserId, storageMode: "cookie" },
+          write.now
+        ),
+      };
+    },
+  };
+}
+
 function createDemoWorkspaceInvitationPermissionAdapter(workspaceId: string) {
+  const demoMembershipWorkspaceId = workspaceId === "workspace-b" ? "workspace-a" : workspaceId;
+
   return createMockWorkspacePermissionAdapter({
     now: new Date().toISOString(),
     users: [
@@ -267,28 +324,28 @@ function createDemoWorkspaceInvitationPermissionAdapter(workspaceId: string) {
     memberships: [
       {
         id: "membership-admin",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-admin",
         roles: ["hospital_admin"],
         status: "active",
       },
       {
         id: "membership-vet",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-vet",
         roles: ["vet"],
         status: "active",
       },
       {
         id: "membership-desk",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-desk",
         roles: ["front_desk"],
         status: "active",
       },
       {
         id: "membership-tech",
-        workspaceId,
+        workspaceId: demoMembershipWorkspaceId,
         userId: "user-tech",
         roles: ["technician"],
         status: "active",
@@ -325,6 +382,34 @@ function mapInvitationRpcData(
     createdAt: value.createdAt ?? fallback.now,
     updatedAt: value.updatedAt ?? fallback.now,
   };
+}
+
+function createWorkspaceInvitationCreatedAuditEvents({
+  workspaceId,
+  invitation,
+  actorUserId,
+  at,
+}: {
+  workspaceId: string;
+  invitation: SessionWorkspaceInvitation;
+  actorUserId: string;
+  at: string;
+}): WorkspaceInvitationCreatedAuditEvent[] {
+  return [
+    {
+      type: "workspace.invitation_created",
+      workspaceId,
+      invitationId: invitation.id,
+      actorUserId,
+      targetType: "workspace_invitation",
+      targetId: invitation.id,
+      at,
+      metadata: {
+        invitedRoles: invitation.invitedRoles,
+        invitedEmailDomain: invitation.email.split("@")[1] ?? null,
+      },
+    },
+  ];
 }
 
 function isValidDate(value: string) {

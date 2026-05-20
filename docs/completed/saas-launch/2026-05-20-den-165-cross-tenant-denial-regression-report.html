@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-165 Cross-Tenant Denial Regression 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-165 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>Cross-Tenant Denial Regression 보고</h1>
+      <p>
+        병원 A 관리자 fixture가 URL의 <code>workspaceId</code>를 병원 B로 바꿔도 초대, 구성원,
+        초대 lifecycle, 환자/진료 handoff 경계에 접근하지 못하도록 회귀 테스트와 mock fallback tenant fixture를 보강했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>Denial Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Boundary</th>
+              <th>Cross-tenant attempt</th>
+              <th>Expected denial</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Invitation create</td><td><code>user-admin</code> posts to <code>workspace-b</code></td><td><code>403 workspace_membership_missing</code></td></tr>
+            <tr><td>Membership list</td><td><code>user-admin</code> reads <code>workspace-b</code> memberships</td><td><code>403 workspace_membership_missing</code></td></tr>
+            <tr><td>Invitation lifecycle</td><td><code>user-admin</code> resends a <code>workspace-b</code> invite</td><td><code>403 workspace_membership_missing</code></td></tr>
+            <tr><td>Clinical handoff smoke</td><td><code>patient:view</code>, <code>encounter:view</code>, and reception lookup against <code>workspace-b</code></td><td><code>workspace_membership_missing</code></td></tr>
+            <tr><td>User-facing denial UX</td><td>unauthorized workspace entry notice</td><td>existing Korean unauthorized login notice remains visible</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>tests/cross-tenant-denial-regression.spec.ts</code>를 추가했다.</li>
+          <li>초대 생성, 초대 lifecycle, 구성원 status mock fallback에서 <code>workspace-b</code>를 foreign tenant fixture로 고정했다.</li>
+          <li><code>docs/engineering/auth-security/auth-login/cross-tenant-denial-regression-fixtures.md</code>에 denial matrix와 남은 tenant boundary risk를 남겼다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 위험</h2>
+        <ul>
+          <li>remote/staging Supabase replay는 승인 gate 밖이다.</li>
+          <li>전체 clinical/billing/customer/lab/imaging/dispensing/audit route tenant replay는 후속 범위다.</li>
+          <li>production에서 demo actor header가 비활성화된다는 proof는 아직 launch blocker다.</li>
+          <li>모든 live domain table의 최종 RLS replay는 별도 live-readiness gate가 필요하다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/cross-tenant-denial-regression.spec.ts --reporter=line</code> 실패 확인: <code>workspace-b</code> invite create가 201로 열려 있었다.</li>
+          <li>Green: 같은 테스트 통과: 3 passed</li>
+          <li>Regression: cross-tenant/auth/invite/member/reception/RLS static regression 통과: 67 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 경고 5개만 남음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

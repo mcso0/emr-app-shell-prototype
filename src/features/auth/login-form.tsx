@@ -54,6 +54,34 @@ function getSafeNextHref(value: string | null) {
   return value;
 }
 
+function getAuthSessionNotice(reason: string | null) {
+  if (reason === "session_required") {
+    return {
+      title: "로그인이 필요하거나 세션이 만료되었습니다.",
+      description: "계정 확인 후 요청한 워크스페이스로 다시 이동합니다.",
+      tone: "warning",
+    } as const;
+  }
+
+  if (reason === "signed_out") {
+    return {
+      title: "안전하게 로그아웃되었습니다.",
+      description: "다시 접속하려면 계정 정보로 로그인하세요.",
+      tone: "success",
+    } as const;
+  }
+
+  if (reason === "unauthorized") {
+    return {
+      title: "이 워크스페이스에 접근할 권한이 없습니다.",
+      description: "다른 계정으로 로그인하거나 병원 관리자에게 초대를 요청하세요.",
+      tone: "danger",
+    } as const;
+  }
+
+  return null;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,6 +100,7 @@ export function LoginForm() {
     supabaseConfigured,
   } = useAuthClient();
   const usesSupabaseProvider = authProvider === "supabase";
+  const authSessionNotice = getAuthSessionNotice(searchParams.get("reason"));
 
   useEffect(() => {
     hydrate();
@@ -139,6 +168,26 @@ export function LoginForm() {
                     병원 워크스페이스에 접속하려면 계정 정보를 입력하세요.
                   </p>
                 </div>
+
+                {authSessionNotice ? (
+                  <div
+                    role="status"
+                    data-testid="auth-session-notice"
+                    className={cn(
+                      "rounded-[var(--clair-radius-md)] border px-3 py-2 text-[13px] leading-5",
+                      authSessionNotice.tone === "success"
+                        ? "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]"
+                        : authSessionNotice.tone === "danger"
+                          ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
+                          : "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]"
+                    )}
+                  >
+                    <p className="font-semibold">{authSessionNotice.title}</p>
+                    <p className="mt-0.5 text-[12px] opacity-90">
+                      {authSessionNotice.description}
+                    </p>
+                  </div>
+                ) : null}
 
                 <Field>
                   <FieldLabel htmlFor="mock-email">이메일</FieldLabel>

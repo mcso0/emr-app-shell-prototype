@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-151 Auth Runtime Session Contract 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-151 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>Auth Runtime Session Contract 보고</h1>
+      <p>
+        로그인 런타임이 mock/local demo 경로와 Supabase Auth 경로를 어떻게 구분하는지 테스트와 문서로 고정했다.
+        이 작업으로 staging 준비 전에 “어떤 모드에서 무엇이 진짜 session source인가”가 더 명확해졌다.
+      </p>
+      <span class="badge">Status: Runtime Contract Verified</span>
+
+      <section>
+        <h2>핵심 결과</h2>
+        <ul>
+          <li><code>getAuthRuntimeMode()</code> helper를 추가해 provider, client session source, server session source, missing config behavior를 한 곳에서 설명하게 했다.</li>
+          <li><code>useAuthClient()</code>가 같은 helper를 사용하도록 정리했다.</li>
+          <li><code>NEXT_PUBLIC_AUTH_MODE</code>별 동작을 테스트로 고정했다.</li>
+          <li>명시적 <code>supabase</code> 모드에서 env가 없으면 mock fallback으로 위장하지 않고 configuration error 경로로 남긴다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Runtime Mode 요약</h2>
+        <table>
+          <tr><th>Mode</th><th>Env</th><th>Provider</th><th>Session source</th><th>의미</th></tr>
+          <tr><td><code>mock</code></td><td>무관</td><td>Mock</td><td>Browser mock storage / server mock fallback</td><td>local/demo regression</td></tr>
+          <tr><td><code>auto</code></td><td>없음</td><td>Mock</td><td>Browser mock storage / server mock fallback</td><td>안전한 local default</td></tr>
+          <tr><td><code>auto</code></td><td>있음</td><td>Supabase</td><td>Supabase cookie / <code>auth.getClaims()</code></td><td>configured runtime path</td></tr>
+          <tr><td><code>supabase</code></td><td>없음</td><td>Supabase</td><td>Supabase expected</td><td>safe configuration failure</td></tr>
+          <tr><td><code>supabase</code></td><td>있음</td><td>Supabase</td><td>Supabase cookie / <code>auth.getClaims()</code></td><td>intended staging/live identity path</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>남은 Staging/Live Blocker</h2>
+        <ul>
+          <li>DEN-150 approval gate를 통한 target Supabase project와 public env 승인</li>
+          <li>정확한 <code>NEXT_PUBLIC_</code> 값으로 staging build 생성</li>
+          <li>password reset/account recovery 정책</li>
+          <li>invite acceptance public route와 account-linking behavior</li>
+          <li>tenant approval, workspace membership, invite route의 target environment 검증</li>
+          <li>shared production rate-limit store, request id/safe logging, Supabase advisor/RPC review, production log redaction</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/auth.spec.ts -g "auth runtime mode matrix" --reporter=line</code> 실패 확인</li>
+          <li>Green: <code>npx playwright test tests/auth.spec.ts -g "auth runtime mode matrix" --reporter=line</code> 통과</li>
+          <li><code>npm run lint</code> 통과. 기존 warning 5개는 남아 있고 이번 변경의 error는 없다.</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npx playwright test tests/auth.spec.ts tests/server-session-reader.spec.ts --reporter=line</code> 통과: 34 passed</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li>remote Supabase, DB/RLS 변경, 실제 이메일, production deploy, role policy 변경, real data 작업은 수행하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/lib/supabase/config.ts</code></li>
+          <li><code>src/features/auth/auth-client.ts</code></li>
+          <li><code>tests/auth.spec.ts</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/auth-runtime-session-contract.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-151-auth-runtime-session-contract-report.html</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

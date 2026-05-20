@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-159 병원관리자 직원 초대 생성 Contract 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-159 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>병원관리자 직원 초대 생성 Contract 보고</h1>
+      <p>
+        병원 실무진이 공개 가입으로 워크스페이스에 들어오지 못하도록,
+        병원관리자 서버 route 기반 직원 초대 생성 계약을 보강했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>구현 요약</h2>
+        <ul>
+          <li><code>POST /api/workspaces/[workspaceId]/invitations</code> 성공 응답에 email/link approval gate를 명시했다.</li>
+          <li>성공 응답은 <code>emailDelivery: not_sent_approval_gated</code>와 <code>inviteLink: not_generated_approval_gated</code>를 반환한다.</li>
+          <li>mock fallback 서버 gateway에서도 pending invitation 중복과 active member email을 차단한다.</li>
+          <li>raw invite token, OTP, magic link, provider payload는 응답/로그 계약에 포함하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>차단 시나리오</h2>
+        <table>
+          <tr><th>상황</th><th>응답</th></tr>
+          <tr><td>인증되지 않은 actor</td><td><code>401 unauthenticated</code></td></tr>
+          <tr><td>권한 없는 actor</td><td><code>403 permission_missing</code></td></tr>
+          <tr><td>잘못된 이메일/역할</td><td><code>400 invalid_input</code></td></tr>
+          <tr><td>pending invitation 중복</td><td><code>409 duplicate_pending_invitation</code></td></tr>
+          <tr><td>이미 active member인 이메일</td><td><code>409 active_membership_exists</code></td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/workspace-invitation-server.spec.ts --reporter=line</code> 실패: email/link gate와 mock duplicate server check 부재</li>
+          <li>Green: 같은 테스트 통과: 4 passed</li>
+          <li>Focused regression: invitation/auth 관련 테스트 통과: 8 passed</li>
+          <li>Regression: <code>npx playwright test tests/workspace-invitation-server.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/auth.spec.ts --reporter=line</code> 통과: 38 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 warning 5개만 유지</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <ul>
+          <li>초대 수락/계정 연결 화면</li>
+          <li>실제 이메일 발송</li>
+          <li>raw invite link/token 생성</li>
+          <li>seat billing</li>
+          <li>remote Supabase, DB/RLS migration, production deploy</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/auth/server-workspace-invitation.ts</code></li>
+          <li><code>tests/workspace-invitation-server.spec.ts</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/hospital-admin-staff-invitation-creation-contract.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-159-hospital-admin-staff-invitation-contract-report.html</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

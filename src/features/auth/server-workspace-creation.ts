@@ -26,6 +26,19 @@ export type WorkspaceCreationWrite = {
   now: string;
 };
 
+export type WorkspaceCreationAuditEvent = {
+  type: "workspace.created";
+  workspaceId: string;
+  actorUserId: string;
+  targetType: "workspace";
+  targetId: string;
+  at: string;
+  metadata: {
+    subscriptionStatus: "trialing";
+    creatorMembershipId: string;
+  };
+};
+
 export type WorkspaceCreationGatewayResult =
   | { ok: true; creation: SessionWorkspaceCreation }
   | { ok: false; status: 409; denialReason: "duplicate_workspace" }
@@ -43,6 +56,7 @@ export type WorkspaceCreationResult =
       status: 201;
       workspace: SessionWorkspaceCreation["workspace"];
       membership: SessionWorkspaceCreation["membership"];
+      auditEvents: WorkspaceCreationAuditEvent[];
       enforcedBy: "workspace-creation-server-route";
     }
   | {
@@ -112,6 +126,7 @@ export async function createWorkspaceWithCreator({
       status: 201,
       workspace: mockCreation.workspace,
       membership: mockCreation.membership,
+      auditEvents: createWorkspaceCreationAuditEvents(mockCreation, actorUserId, now),
       enforcedBy: "workspace-creation-server-route",
     };
   }
@@ -138,6 +153,7 @@ export async function createWorkspaceWithCreator({
     status: 201,
     workspace: persisted.creation.workspace,
     membership: persisted.creation.membership,
+    auditEvents: createWorkspaceCreationAuditEvents(persisted.creation, actorUserId, now),
     enforcedBy: "workspace-creation-server-route",
   };
 }
@@ -219,4 +235,25 @@ function mapWorkspaceCreationRpcData(
       deactivatedAt: null,
     },
   };
+}
+
+function createWorkspaceCreationAuditEvents(
+  creation: SessionWorkspaceCreation,
+  actorUserId: string,
+  at: string
+): WorkspaceCreationAuditEvent[] {
+  return [
+    {
+      type: "workspace.created",
+      workspaceId: creation.workspace.id,
+      actorUserId,
+      targetType: "workspace",
+      targetId: creation.workspace.id,
+      at,
+      metadata: {
+        subscriptionStatus: "trialing",
+        creatorMembershipId: creation.membership.id,
+      },
+    },
+  ];
 }

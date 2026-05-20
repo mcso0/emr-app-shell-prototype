@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-164 Launch Route Permission Enforcement 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 9px 7px; text-align: left; vertical-align: top; }
+      th { background: #f8fafc; color: #495568; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-164 / SaaS Launch Foundation / 2026-05-20</p>
+      <h1>Launch Route Permission Enforcement 보고</h1>
+      <p>
+        CLAiR operator, workspace, invitation, membership, profile, audit review에 해당하는
+        launch-critical route의 서버 권한 경계를 inventory로 고정하고 static regression을 추가했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>Route Coverage</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Route group</th>
+              <th>Boundary</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>CLAiR ops tenant workspace action</td><td>server session + operator permission</td><td>Covered</td></tr>
+            <tr><td>Workspace create/list</td><td>server session + creator/list reader contract</td><td>Covered</td></tr>
+            <tr><td>Invitation create/resend/cancel/accept</td><td>server session + membership/permission/invite state</td><td>Covered</td></tr>
+            <tr><td>Membership list/role/status</td><td>server session + <code>role_permission:manage</code> + last-admin guard</td><td>Covered</td></tr>
+            <tr><td>Personal profile</td><td>own-user write + authority field rejection</td><td>Covered</td></tr>
+            <tr><td>Audit events review</td><td>admin permission in core/mock and DB RPC boundary in live path</td><td>Covered</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>남은 Enforcement Gap</h2>
+        <ul>
+          <li>remote/staging Supabase permission replay는 아직 승인 gate 밖이다.</li>
+          <li>demo actor header가 live mode에서 통하지 않는다는 production disablement proof가 필요하다.</li>
+          <li>전체 clinical/billing/customer route inventory는 이번 issue 범위 밖이다.</li>
+          <li>seed permission id와 resolver vocabulary reconciliation은 후속 작업으로 남겼다.</li>
+          <li>auth/invite abuse rate-limit coverage는 DEN-168 범위로 남겼다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Red: <code>npx playwright test tests/launch-route-permission-enforcement.spec.ts --reporter=line</code> 실패 확인</li>
+          <li>Green: 같은 테스트 통과: 2 passed</li>
+          <li>Regression: launch auth/ops/member/profile/audit route regression 통과: 38 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 경고 5개만 남음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/engineering/auth-security/auth-login/launch-route-permission-enforcement-inventory.md</code></li>
+          <li><code>tests/launch-route-permission-enforcement.spec.ts</code></li>
+          <li><code>docs/engineering/auth-security/auth-login/status.md</code></li>
+          <li><code>docs/completed/saas-launch/2026-05-20-den-164-launch-route-permission-enforcement-report.html</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

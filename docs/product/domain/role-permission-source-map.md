@@ -54,6 +54,7 @@ Known legacy or compatibility names:
 Use these docs instead of rediscovering the same policy:
 
 - [Workspace Auth and Permission Domain](workspace-auth-permissions.md)
+- [SaaS Launch Role Permission Matrix](../../engineering/auth-security/auth-login/saas-launch-role-permission-matrix.md)
 - [SaaS Operating Map](../service/clair-emr-saas-operating-map.md)
 - [Product MVP Scope](../roadmap/product-mvp-scope.md)
 - [SaaS Launch Approval Gates](../../engineering/auth-security/auth-login/saas-launch-approval-gates.md)
@@ -71,4 +72,3 @@ Before any role/permission change, answer:
 5. Is explicit 승욱 approval required by launch gates?
 
 If the change alters policy, stop and ask before implementation.
-

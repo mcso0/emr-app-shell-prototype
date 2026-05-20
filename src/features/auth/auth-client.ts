@@ -10,9 +10,7 @@ import {
 import { useMockAuthStore } from "@/features/auth/session-store";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
-  getAuthMode,
-  hasSupabasePublicConfig,
-  shouldUseSupabaseAuth,
+  getAuthRuntimeMode,
   type AuthMode,
 } from "@/lib/supabase/config";
 
@@ -83,9 +81,8 @@ export function useAuthClient(): AuthClient {
   const mockLogout = useMockAuthStore((state) => state.logout);
   const [supabaseHydrated, setSupabaseHydrated] = useState(false);
   const [supabaseSession, setSupabaseSession] = useState<SupabaseAuthSession | null>(null);
-  const authMode = getAuthMode();
-  const supabaseConfigured = hasSupabasePublicConfig();
-  const useSupabase = shouldUseSupabaseAuth();
+  const runtimeMode = getAuthRuntimeMode();
+  const useSupabase = runtimeMode.authProvider === "supabase";
 
   const hydrate = useCallback(() => {
     if (!useSupabase) {
@@ -108,9 +105,9 @@ export function useAuthClient(): AuthClient {
   }, [mockHydrate, useSupabase]);
 
   return {
-    authMode,
-    authProvider: useSupabase ? "supabase" : "mock",
-    supabaseConfigured,
+    authMode: runtimeMode.authMode,
+    authProvider: runtimeMode.authProvider,
+    supabaseConfigured: runtimeMode.supabaseConfigured,
     hydrated: useSupabase ? supabaseHydrated : mockHydrated,
     session: useSupabase ? supabaseSession : mockSession,
     hydrate,
