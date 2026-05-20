@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-190 Approved Preflight Blocked Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #1f2933; }
+      h1, h2 { line-height: 1.25; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0 24px; }
+      th, td { border: 1px solid #d8dee4; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f6f8fa; }
+      code { background: #f6f8fa; padding: 1px 4px; border-radius: 4px; }
+      .blocked { color: #9a3412; font-weight: 700; }
+      .ok { color: #166534; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-190 Approved Preflight Blocked Report</h1>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+    <p><strong>대상:</strong> <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      승욱이 migration/RLS/schema 적용과 synthetic seed 실행 조건을 승인했지만,
+      Supabase CLI가 staging project에 연결하려면 secure access token이 필요해서 실제 dry-run 전 단계에서 멈췄다.
+      DB 변경, seed 실행, email, deploy, production 접근은 하지 않았다.
+    </p>
+
+    <h2>승인 적용 상태</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>Migration/RLS/schema approval</td><td class="ok">승인 확인됨</td></tr>
+      <tr><td>Seed approval</td><td class="ok">조건부 승인 확인됨. Migration/RLS/schema 적용과 read-only verification 후에만 가능.</td></tr>
+      <tr><td>Actual DB mutation</td><td class="blocked">미실행</td></tr>
+      <tr><td>CLI link</td><td class="blocked"><code>SUPABASE_ACCESS_TOKEN</code> 부재로 실패</td></tr>
+    </table>
+
+    <h2>Preflight 결과</h2>
+    <table>
+      <tr><th>검증</th><th>결과</th></tr>
+      <tr><td><code>npm run docs:check</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>npm run security:secrets</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>npx supabase --version</code></td><td class="ok"><code>2.100.1</code></td></tr>
+      <tr><td><code>npx supabase db push --help</code></td><td class="ok"><code>--dry-run</code>, <code>--include-seed</code>, <code>--password</code> flags 확인</td></tr>
+      <tr><td>Supabase MCP project check</td><td class="ok"><code>ACTIVE_HEALTHY</code>, Postgres <code>17.6.1.121</code></td></tr>
+      <tr><td>Remote migrations/tables</td><td class="blocked">migrations 0개, tables 0개</td></tr>
+    </table>
+
+    <h2>실패 지점</h2>
+    <p>
+      실행 명령 <code>npx supabase link --project-ref qmerxgzrwaaahpkhjqlc</code>는 아래 사유로 실패했다.
+    </p>
+    <pre><code>Access token not provided. Supply an access token by running supabase login or setting the SUPABASE_ACCESS_TOKEN environment variable.</code></pre>
+
+    <h2>다음 조건</h2>
+    <ul>
+      <li>승욱이 Supabase CLI login을 로컬 secure flow로 완료하거나 <code>SUPABASE_ACCESS_TOKEN</code>을 terminal/session secret으로만 주입해야 한다.</li>
+      <li>토큰 값은 chat, Linear, docs, git diff에 절대 기록하지 않는다.</li>
+      <li>credential이 준비되면 먼저 <code>db push --dry-run</code>만 실행하고, 실제 <code>db push</code> 전에는 dry-run 결과를 보고한 뒤 다시 최종 확인을 받아야 한다.</li>
+      <li>Seed는 migration apply와 read-only post-change verification 통과 후에만 실행한다.</li>
+    </ul>
+
+    <h2>수행하지 않은 작업</h2>
+    <ul>
+      <li>Migration push 없음</li>
+      <li>Direct SQL mutation 없음</li>
+      <li>Schema/RLS 변경 없음</li>
+      <li>Seed 실행 없음</li>
+      <li>Email/deploy 없음</li>
+      <li>Production project 접근 없음</li>
+      <li>Secret/service role key 노출 없음</li>
+    </ul>
+  </body>
+</html>
