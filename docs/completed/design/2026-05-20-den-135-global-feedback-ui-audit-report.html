@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-135 전역 피드백 UI 점검 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+      section { margin-top: 16px; border: 1px solid #d9dde5; border-radius: 10px; background: white; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      h2 { margin: 0 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.65; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-135 전역 피드백 UI 점검 보고</h1>
+      <p>Loading, empty, error, toast, confirmation UI의 현재 기준을 문서화했다. shared primitive code 변경은 만들지 않았다.</p>
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>docs/design/system/global-feedback-ui-audit.md</code>를 추가했다.</li>
+          <li><code>docs/design/system/README.md</code>에 새 audit 문서를 연결했다.</li>
+          <li>Skeleton, Sonner toaster, FieldError, EmrConfirmDialogContent의 현재 사용 기준과 후속 후보를 정리했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>범위 제외</h2>
+        <p>Error tracking, server error architecture, persistence/audit logging, workflow behavior changes는 다루지 않았다.</p>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+        </ul>
+      </section>
+      <section>
+        <h2>후속 후보</h2>
+        <p>Project 09에서 반복 empty state와 status notice를 더 확인한 뒤 <code>EmrEmptyState</code>, <code>EmrStatusNotice</code> 승격 여부를 판단하면 된다.</p>
+      </section>
+    </main>
+  </body>
+</html>

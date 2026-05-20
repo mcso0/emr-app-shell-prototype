@@ -2430,10 +2430,11 @@ function OrderArea({
   };
   useEffect(() => {
     let cancelled = false;
-    draftTouchedRef.current = false;
-    setOrderDraftSaveState("loading");
 
     async function loadPersistedOrderDrafts() {
+      draftTouchedRef.current = false;
+      setOrderDraftSaveState("loading");
+
       const result = await loadChartOrderDraft({
         actorHeaders,
         encounterId: bundle.encounter.id,
@@ -3040,12 +3041,13 @@ export function ChartContent() {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
 
     let cancelled = false;
-    setDiagnosisPersistenceState({
-      encounterId: activeEncounterId,
-      status: "loading",
-    });
 
     async function loadPersistedDiagnoses() {
+      setDiagnosisPersistenceState({
+        encounterId: activeEncounterId!,
+        status: "loading",
+      });
+
       const result = await loadChartDiagnoses({
         actorHeaders,
         encounterId: activeEncounterId!,
@@ -3083,13 +3085,14 @@ export function ChartContent() {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
 
     let cancelled = false;
-    setChartCompletionState((current) => ({
-      completion: current.encounterId === activeEncounterId ? current.completion : null,
-      encounterId: activeEncounterId,
-      status: "loading",
-    }));
 
     async function loadPersistedCompletion() {
+      setChartCompletionState((current) => ({
+        completion: current.encounterId === activeEncounterId ? current.completion : null,
+        encounterId: activeEncounterId!,
+        status: "loading",
+      }));
+
       const result = await loadChartCompletion({
         actorHeaders,
         encounterId: activeEncounterId!,

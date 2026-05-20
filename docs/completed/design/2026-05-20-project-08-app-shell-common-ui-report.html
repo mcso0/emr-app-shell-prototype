@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project 08 App Shell 및 전역 공통 시스템 작업 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 0; padding-left: 20px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid #e2e7ef; padding: 10px 8px; text-align: left; vertical-align: top; }
+      th { color: #495568; background: #f8fafc; font-weight: 700; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">UX/UI Initiative / Project 08 / 2026-05-20</p>
+      <h1>App Shell 및 전역 공통 시스템 정리 보고</h1>
+      <p>모든 화면의 골격이 되는 Nav Rail, Workspace Tabs, Global Command Palette, 전역 feedback UI 기준을 정리했다. 화면 chrome을 다듬되 tab history, route, panel ownership 동작은 보존했다.</p>
+      <span class="badge">Status: Human Review</span>
+
+      <section>
+        <h2>이슈별 결과</h2>
+        <table>
+          <thead>
+            <tr><th>Linear</th><th>상태</th><th>작업 내용</th><th>개별 보고서</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DEN-135</td>
+              <td>Human Review</td>
+              <td>전역 loading, empty, validation, alert, toast, confirmation feedback 기준 문서를 추가했다.</td>
+              <td><code>docs/completed/design/2026-05-20-den-135-global-feedback-ui-audit-report.html</code></td>
+            </tr>
+            <tr>
+              <td>DEN-136</td>
+              <td>Human Review</td>
+              <td>Nav Rail chrome class contract와 active/disabled/tooltip 상태를 정리했다.</td>
+              <td><code>docs/completed/design/2026-05-20-den-136-nav-rail-chrome-report.html</code></td>
+            </tr>
+            <tr>
+              <td>DEN-137</td>
+              <td>Human Review</td>
+              <td>Workspace Tabs chrome을 정리하고 tab history/store 동작이 유지되는지 확인했다.</td>
+              <td><code>docs/completed/design/2026-05-20-den-137-workspace-tabs-chrome-report.html</code></td>
+            </tr>
+            <tr>
+              <td>DEN-138</td>
+              <td>Human Review</td>
+              <td>Global Command Palette의 검색 결과, keyboard path, result row semantics를 리뷰하고 follow-up을 분리했다.</td>
+              <td><code>docs/completed/design/2026-05-20-den-138-global-command-palette-report.html</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>추가로 잡은 안정성 이슈</h2>
+        <p>검증 중 Home처럼 해당 layout slot을 소유하지 않는 모듈을 거쳐 이동할 때 stale <code>aside/right</code> query가 다음 모듈로 새는 문제를 확인했고, <code>src/shell/app-shell.tsx</code>에서 현재 모듈이 소유한 slot 상태만 전파하도록 정리했다.</p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/shell/app-shell.tsx tests/app-shell.spec.ts</code> 통과</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts --workers=1 --reporter=line</code> 통과</li>
+          <li><code>npm run docs:check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 판단</h2>
+        <p>대표 리뷰에서는 탭 chrome, nav rail 대비, 전역 검색 결과의 정보 밀도, feedback-state 문서 기준을 확인하면 된다. 승인되면 Project 08은 Done으로 옮길 수 있다.</p>
+      </section>
+    </main>
+  </body>
+</html>

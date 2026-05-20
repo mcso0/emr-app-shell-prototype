@@ -84,7 +84,11 @@ test("client-submitted invoice amounts are ignored and server recalculates from 
 });
 
 test("payment status transition preserves the explicit state model", async () => {
-  const gateway = createMockBillingPaymentStatusGateway(undefined, () => "2026-05-20T12:00:00.000Z");
+  const gateway = createMockBillingPaymentStatusGateway(
+    undefined,
+    () => "2026-05-20T12:00:00.000Z",
+    "billing-security-regression-explicit-state"
+  );
   const selected = await saveBillingPaymentStatus({
     actorUserId: "user-admin",
     workspaceId,

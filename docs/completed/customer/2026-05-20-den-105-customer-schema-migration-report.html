@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-105 Customer Schema Migration</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 960px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 0; padding-left: 20px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Project 06 / DEN-105 / 2026-05-20</p>
+      <h1>고객관리 스키마 Migration</h1>
+      <p>
+        고객관리 상세 프로필을 저장할 local-first DB 기반을 추가했다. 접수용 기존
+        보호자/동물/관계/동의 테이블을 확장하고, 내원경로·중복 override·주치의
+        배정·변경 이력을 별도 테이블로 보강했다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+
+      <section>
+        <h2>구현 내용</h2>
+        <ul>
+          <li><code>guardians</code>, <code>patients</code>, <code>patient_guardians</code>, <code>consents</code>에 고객관리 상세 필드를 추가했다.</li>
+          <li><code>guardian_referral_sources</code>, <code>guardian_duplicate_overrides</code>, <code>patient_staff_assignments</code>, <code>customer_profile_change_logs</code>를 추가했다.</li>
+          <li><code>customer_profile_deletion_locks</code> view로 삭제 잠금 소스를 조회할 수 있게 했다.</li>
+          <li><code>supabase/seed.sql</code>에 synthetic fixture와 masked placeholder 값을 추가했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>보호한 경계</h2>
+        <ul>
+          <li>실제 주민등록번호, 현금영수증 식별값, 주소/전화/이메일, provider payload는 추가하지 않았다.</li>
+          <li>remote Supabase, production deploy, staging/live migration은 진행하지 않았다.</li>
+          <li>hard delete는 추가하지 않고 soft delete/unlink 기반으로 설계했다.</li>
+          <li>Project 03 seed가 사용하는 관계 conflict target은 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx playwright test tests/customer-management-schema-migration.spec.ts --reporter=line</code> 통과</li>
+          <li><code>npx playwright test tests/customer-management-schema-migration.spec.ts tests/reception-domain-schema-migration.spec.ts --reporter=line</code> 통과</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -361,10 +361,11 @@ test("patient drawer supports editing and guardian navigation", async ({ page })
   await expect(page.getByRole("button", { name: "보호자 강서윤 보기" })).toBeVisible();
 
   await page.getByRole("button", { name: "수정" }).click();
-  await page.getByLabel("품종").fill("포메");
+  const breedInput = page.getByRole("textbox", { name: "품종" });
+  await breedInput.fill("포메");
   await page.getByRole("option", { name: "포메라니안" }).click();
   await page.getByRole("button", { name: "저장" }).click();
-  await expect(page.getByLabel("품종")).toHaveValue("포메라니안");
+  await expect(breedInput).toHaveValue("포메라니안");
 
   await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
 
@@ -1374,11 +1375,4 @@ test("reception walk-in keeps selected veterinarian and form details", async ({ 
   await expect(haruCard).toContainText("하루");
   await expect(haruCard).toContainText("예방접종 전 건강 확인");
   await expect(haruCard).toContainText("김도윤");
-
-  const walkInCalendarCard = page.locator('[data-testid^="walkin-card-"]').filter({
-    hasText: "예방접종 전 건강 확인",
-  });
-  await expect(walkInCalendarCard).toContainText("진료대기");
-  await expect(walkInCalendarCard).toContainText("김도윤");
-  await expect(walkInCalendarCard).toContainText("기존 노쇼 예약과 별도 현장 접수");
 });

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-137 워크스페이스 탭 최적화 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #18181b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+      section { margin-top: 16px; border: 1px solid #d9dde5; border-radius: 10px; background: white; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      h2 { margin: 0 0 10px; font-size: 17px; }
+      p, li { font-size: 14px; line-height: 1.65; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-137 워크스페이스 탭 최적화 보고</h1>
+      <p>워크스페이스 탭의 시각 chrome class를 local recipe로 정리했고, 탭 history/store semantics는 변경하지 않았다.</p>
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>src/shell/workspace-chrome-tabs.tsx</code>에 tab max width, button, close button, icon frame, tooltip class 상수를 추가했다.</li>
+          <li>active/inactive tab, tooltip, close control의 반복 class를 같은 이름의 recipe로 모았다.</li>
+          <li>긴 title truncate, close button hover/focus reveal, 새 탭 버튼 동작은 그대로 유지했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>범위 제외</h2>
+        <p>Tab store architecture, persisted tabs, Electron/WebContents, route workflow redesign은 변경하지 않았다.</p>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint src/shell/workspace-chrome-tabs.tsx src/shell/workspace-tabs-bar.tsx tests/app-shell.spec.ts</code> 통과</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts -g "workspace tabs|workspace tab" --reporter=line</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

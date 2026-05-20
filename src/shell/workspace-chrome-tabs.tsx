@@ -25,6 +25,15 @@ type WorkspaceChromeTabsProps = {
   onNewTab: () => void;
 };
 
+const WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME = "max-w-[230px]";
+const workspaceTabButtonClassName =
+  "h-8 min-w-0 flex-1 justify-start gap-0 truncate rounded-[var(--emr-radius-control)] border-transparent bg-transparent py-0 pl-2 pr-2.5 text-left text-[13px] font-semibold tracking-normal shadow-none hover:bg-transparent";
+const workspaceTabCloseClassName =
+  "absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-transparent text-[var(--emr-text-placeholder)] transition-none hover:bg-transparent hover:text-[var(--emr-text-tertiary)]";
+const workspaceTabIconFrameClassName = "flex size-4 shrink-0 items-center justify-center";
+const workspaceTabTooltipClassName =
+  "max-w-[260px] flex-col items-start gap-0.5 px-2.5 py-2 text-left";
+
 export function WorkspaceChromeTabs({
   activeTabId,
   tabs,
@@ -62,7 +71,8 @@ export function WorkspaceChromeTabs({
             onMouseEnter={() => setHoveredTabId(tab.id)}
             onMouseLeave={() => setHoveredTabId(null)}
             className={cn(
-              "group/workspace-tab relative flex h-8 max-w-[230px] min-w-0 items-center rounded-[var(--emr-radius-control)] border transition-colors",
+              "group/workspace-tab relative flex h-8 min-w-0 items-center rounded-[var(--emr-radius-control)] border transition-colors",
+              WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME,
               active
                 ? "border-[var(--emr-line-default)] bg-card shadow-[var(--clair-shadow-xs)]"
                 : "border-[var(--emr-line-subtle)] bg-transparent hover:border-[var(--emr-line-default)] hover:bg-[var(--emr-state-hover)] hover:shadow-[var(--clair-shadow-xs)]",
@@ -78,8 +88,7 @@ export function WorkspaceChromeTabs({
                     size="default"
                     aria-selected={active}
                     className={cn(
-                      "h-8 min-w-0 flex-1 justify-start gap-0 truncate rounded-[var(--emr-radius-control)] border-transparent bg-transparent py-0 pl-2 text-left text-[13px] font-semibold tracking-normal shadow-none hover:bg-transparent",
-                      "pr-2.5",
+                      workspaceTabButtonClassName,
                       active
                         ? "text-[var(--emr-text-primary)] hover:text-[var(--emr-text-primary)]"
                         : "text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-secondary)] group-hover/workspace-tab:text-[var(--emr-text-secondary)]",
@@ -90,7 +99,7 @@ export function WorkspaceChromeTabs({
                       {TabIcon ? (
                         <span
                           className={cn(
-                            "flex size-4 shrink-0 items-center justify-center",
+                            workspaceTabIconFrameClassName,
                             showCloseButton && "opacity-0",
                           )}
                           aria-hidden="true"
@@ -113,7 +122,7 @@ export function WorkspaceChromeTabs({
                 side="bottom"
                 align="start"
                 sideOffset={8}
-                className="max-w-[260px] flex-col items-start gap-0.5 px-2.5 py-2 text-left"
+                className={workspaceTabTooltipClassName}
               >
                 <span className="max-w-full truncate text-[12px] font-semibold">
                   {tab.tooltipTitle ?? tab.title}
@@ -132,7 +141,7 @@ export function WorkspaceChromeTabs({
                 size="icon-xs"
                 aria-label={`${tab.title} 탭 닫기`}
                 className={cn(
-                  "absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-transparent text-[var(--emr-text-placeholder)] transition-none hover:bg-transparent hover:text-[var(--emr-text-tertiary)]",
+                  workspaceTabCloseClassName,
                   showCloseButton ? "opacity-100" : "opacity-0",
                 )}
                 onClick={handleCloseTab}

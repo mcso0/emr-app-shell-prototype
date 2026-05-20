@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-109 Customer Soft Delete Restore Persistence</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 960px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 0; padding-left: 20px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Project 06 / DEN-109 / 2026-05-20</p>
+      <h1>고객관리 삭제·복구 잠금 경계</h1>
+      <p>동물과 보호자 master record를 hard delete하지 않고 soft delete/restore로 처리하는 서버 경계를 추가했다. 예약, 진료, 미수금, 예치금, 주 보호자 관계가 남아 있으면 서버가 삭제를 막는다.</p>
+      <span class="badge">Status: Human Review</span>
+      <section>
+        <h2>작업 내용</h2>
+        <ul>
+          <li>동물/보호자 archive route와 active/deleted 목록 route를 추가했다.</li>
+          <li>동물 삭제 잠금: 활성 예약, 활성 encounter, open invoice.</li>
+          <li>보호자 삭제 잠금: 주 보호자 관계, 활성 연결 동물, open invoice, 예치금성 잔액/hold.</li>
+          <li>삭제와 복구 모두 audit hook payload를 반환하도록 했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx playwright test tests/customer-soft-delete-restore-server.spec.ts --reporter=line</code> 통과</li>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

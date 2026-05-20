@@ -93,7 +93,7 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
   await expect(page.locator('input[value="Atorvastatin 20mg"]')).toBeVisible();
 
   await page.getByRole("button", { name: "상세 닫기" }).click();
-  await expect(page.getByText("상세 정보")).toBeHidden();
+  await expect(page.locator('input[value="Atorvastatin 20mg"]')).toBeHidden();
 
   await page.getByTestId("order-queue-item-dispensing-queue-1").click();
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();

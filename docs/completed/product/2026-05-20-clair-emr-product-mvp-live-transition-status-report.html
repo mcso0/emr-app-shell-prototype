@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>CLAiR EMR 제품 MVP 라이브 전환 전체 현황 보고</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1080px; margin: 0 auto; padding: 48px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+      h2 { margin: 0 0 12px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      ul { margin: 0; padding-left: 20px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { border-bottom: 1px solid #e2e7ef; padding: 10px 8px; text-align: left; vertical-align: top; }
+      th { color: #495568; background: #f8fafc; font-weight: 700; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .warn { display: inline-block; margin-top: 14px; border-radius: 999px; background: #fff4d8; color: #8a5200; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Product MVP Live Transition Initiative / 2026-05-20</p>
+      <h1>CLAiR EMR 제품 MVP 라이브 전환 전체 현황 보고</h1>
+      <p>이 이니셔티브는 아직 전체 완료가 아니다. 앞선 핵심 프로젝트는 완료 또는 Human Review까지 진행됐지만, 고객관리 persistence의 마지막 두 이슈와 병원관리 Order catalog persistence 프로젝트가 남아 있어 파일럿 가능 완료로 판단할 수 없다.</p>
+      <span class="warn">Status: At Risk / Not Complete</span>
+
+      <section>
+        <h2>프로젝트별 현황</h2>
+        <table>
+          <thead>
+            <tr><th>프로젝트</th><th>Linear 상태</th><th>판단</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>01 Live Auth & Supabase DB/RLS Foundation</td>
+              <td>Completed</td>
+              <td>기반 인증, DB/RLS 방향의 작업 단위는 완료 처리되어 있다.</td>
+            </tr>
+            <tr>
+              <td>02 Workspace & Membership Live Persistence</td>
+              <td>Completed</td>
+              <td>워크스페이스 생성, 멤버십, 프로필 persistence 흐름은 완료 처리되어 있다.</td>
+            </tr>
+            <tr>
+              <td>03 Reception & Encounter Persistence</td>
+              <td>Completed</td>
+              <td>접수/encounter persistence vertical slice는 완료 처리되어 있다.</td>
+            </tr>
+            <tr>
+              <td>04 Chart, Order & Billing Persistence</td>
+              <td>Completed</td>
+              <td>차트, 오더, 수납 persistence 흐름은 완료 처리되어 있다.</td>
+            </tr>
+            <tr>
+              <td>05 Audit, Security & MVP Readiness</td>
+              <td>Completed</td>
+              <td>기존 live transition closeout 축은 완료 처리되어 있으나, 이후 Project 06/07이 추가되어 전체 이니셔티브 완료 판단은 보류해야 한다.</td>
+            </tr>
+            <tr>
+              <td>06 Customer Management Persistence</td>
+              <td>In Progress</td>
+              <td>DEN-101, 102, 105, 106, 107, 108은 Human Review. DEN-109는 In Progress, DEN-110은 Todo라 아직 완료가 아니다.</td>
+            </tr>
+            <tr>
+              <td>07 Hospital Admin Order Catalog Persistence</td>
+              <td>Backlog</td>
+              <td>DEN-103, 104, 111, 112, 113, 114, 115, 116, 117이 Todo라 아직 시작되지 않았다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>남아 있는 이슈</h2>
+        <table>
+          <thead>
+            <tr><th>순서</th><th>Linear</th><th>상태</th><th>해야 할 일</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>DEN-109</td><td>In Progress</td><td>고객관리 보호자/동물 soft delete, restore, deletion lock persistence 구현</td></tr>
+            <tr><td>2</td><td>DEN-110</td><td>Todo</td><td>고객관리 persistence regression과 handoff 정리</td></tr>
+            <tr><td>3</td><td>DEN-103</td><td>Todo</td><td>병원관리 Order catalog persistence 범위와 Project 04 경계 확정</td></tr>
+            <tr><td>4</td><td>DEN-104</td><td>Todo</td><td>Order catalog schema plan 작성</td></tr>
+            <tr><td>5</td><td>DEN-111</td><td>Todo</td><td>Order catalog schema migration 구현</td></tr>
+            <tr><td>6</td><td>DEN-112</td><td>Todo</td><td>Admin/Chart가 공유하는 order catalog read boundary 구현</td></tr>
+            <tr><td>7</td><td>DEN-113</td><td>Todo</td><td>개별 order admin mutation persistence 구현</td></tr>
+            <tr><td>8</td><td>DEN-114</td><td>Todo</td><td>Order set admin data와 chart expansion contract 구현</td></tr>
+            <tr><td>9</td><td>DEN-115</td><td>Todo</td><td>Lab test item catalog linkage와 delete lock 구현</td></tr>
+            <tr><td>10</td><td>DEN-116</td><td>Todo</td><td>Medication/vaccine metadata와 pricing rule persistence 구현</td></tr>
+            <tr><td>11</td><td>DEN-117</td><td>Todo</td><td>Order catalog persistence regression과 handoff 작성</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>왜 바로 전체 완료 처리하면 안 되는가</h2>
+        <ul>
+          <li>이니셔티브 완성 기준에는 live persistence, reload 유지, 서버/DB 권한 차단, audit, QA closeout이 포함된다.</li>
+          <li>Project 06은 고객관리 삭제/복구와 regression이 남아 있어 고객 master data 흐름이 완전히 닫히지 않았다.</li>
+          <li>Project 07은 병원관리 Order catalog master data가 아직 Todo라 chart-applied snapshot과 admin catalog source의 장기 안정성이 닫히지 않았다.</li>
+          <li>남은 이슈 대부분은 <code>risk:supabase</code>, <code>risk:data</code>, <code>risk:permissions</code> 범위라 대표 승인 없이 Done 처리하거나 임의 축소하면 안 된다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>권장 다음 순서</h2>
+        <p>다음 작업은 DEN-109를 마무리한 뒤 DEN-110으로 Project 06을 닫고, 그 다음 DEN-103부터 DEN-117까지 Project 07을 제목 순서대로 진행하는 것이다. 특히 DEN-103과 DEN-104는 구현 전에 범위와 schema를 고정하는 planning gate라 먼저 처리해야 한다.</p>
+      </section>
+
+      <section>
+        <h2>검증 및 출처</h2>
+        <ul>
+          <li>Linear initiative: <code>CLAiR EMR 제품 MVP 라이브 전환</code>, health <code>atRisk</code></li>
+          <li>Linear project statuses and issue statuses checked on 2026-05-20</li>
+          <li>관련 로컬 문서: <code>docs/engineering/current-status.md</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

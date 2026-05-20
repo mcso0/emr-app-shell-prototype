@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-102 Customer Schema Delta Plan</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin-top: 14px;
+        border-radius: 999px;
+        background: #e8f2ff;
+        color: #07569f;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Project 06 / DEN-102 / 2026-05-20</p>
+      <h1>고객관리 스키마 Delta 계획</h1>
+      <p>
+        Project 03의 접수용 최소 DB를 고객관리 프로필 저장소로 확장하기 위한
+        마이그레이션 기준을 정리했다. 이 문서는 다음 이슈 DEN-105가 구현해야 할
+        컬럼, 신규 테이블, 삭제 잠금 소스, 제외 데이터를 고정한다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+
+      <section>
+        <h2>핵심 결정</h2>
+        <ul>
+          <li>
+            별도 customer master table을 만들지 않고 기존 <code>guardians</code>,
+            <code>patients</code>, <code>patient_guardians</code>,
+            <code>consents</code>를 확장한다.
+          </li>
+          <li>보호자/동물의 1:1 프로필 값은 기존 master row 컬럼으로 추가한다.</li>
+          <li>내원경로, 중복 override, 주치의 배정, 고객 프로필 변경 이력은 별도 row table로 둔다.</li>
+          <li>보호자-동물 관계는 hard delete하지 않고 <code>unlinked_at</code>으로 soft unlink한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>민감정보 경계</h2>
+        <ul>
+          <li>실제 주민등록번호, 실제 현금영수증 식별값, 실제 주소/전화/이메일은 저장하지 않는다.</li>
+          <li>현금영수증 번호와 주민등록번호는 synthetic placeholder 또는 masked display 값만 허용한다.</li>
+          <li>Kakao/SMS/email provider payload와 실제 동의서 파일 저장은 Project 06 범위가 아니다.</li>
+          <li>remote Supabase, staging/live migration, production deploy는 별도 승인 전까지 제외한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>DEN-105 구현 대상</h2>
+        <ul>
+          <li><code>guardians</code>: guardian code, 주소/이메일 parts, cash receipt demo fields, soft delete/restore audit.</li>
+          <li><code>patients</code>: breed split, mixed breed, estimated age parts, weight/color, message consent, primary vet, soft delete/restore audit.</li>
+          <li><code>patient_guardians</code>: 관계 label, message consent, sort order, unlink audit, primary-change audit.</li>
+          <li><code>consents</code>: source surface, document version, granted/refused/unknown status, consent/refusal timestamps.</li>
+          <li>신규 테이블: referral sources, duplicate overrides, patient staff assignments, customer profile change logs.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

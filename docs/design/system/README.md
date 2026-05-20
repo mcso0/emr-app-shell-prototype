@@ -13,3 +13,4 @@ Current files:
 - `component-ownership-rules.md`: rules for shadcn/ui, EMR shared, feature-local, and inline UI ownership.
 - `ui-refactor-dod.md`: Definition of Done and verification levels for UI refactor issues.
 - `arbitrary-value-token-audit.md`: arbitrary Tailwind value audit and EMR token promotion candidate guidance.
+- `global-feedback-ui-audit.md`: loading, empty, error, toast, and confirmation UI baseline for remaining refactors.

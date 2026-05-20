@@ -55,7 +55,7 @@ test("neutral command token contract is exposed on the app shell", async ({ page
       ring: resolveColor("var(--ring)"),
       expectedRing: resolveColor("oklch(0.705 0.015 286.067)"),
       emrSurfaceApp: resolveColor("var(--emr-surface-app)"),
-      expectedEmrSurfaceApp: resolveColor("#FBFCFD"),
+      expectedEmrSurfaceApp: resolveColor("var(--emr-surface-0)"),
       emrSurfaceSelected: resolveColor("var(--emr-surface-selected)"),
       expectedEmrSurfaceSelected: resolveColor("oklch(0.97 0.006 286)"),
       emrStateSelectedBorder: resolveColor("var(--emr-state-selected-border)"),

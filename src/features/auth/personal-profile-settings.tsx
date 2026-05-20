@@ -10,6 +10,7 @@ import {
   Field,
   FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -25,8 +26,17 @@ import {
   validatePersonalProfileInput,
   type PersonalProfileFieldErrors,
 } from "@/features/auth/personal-profile-session";
+import { cn } from "@/lib/utils";
 
 const defaultReturnHref = "/w/clair-demo/reception?modulePanel=open&aside=closed";
+const profileShellClassName =
+  "mx-auto grid w-full max-w-[1120px] gap-6 lg:grid-cols-[minmax(0,0.78fr)_minmax(440px,1fr)]";
+const profileNoticeClassNames = {
+  error:
+    "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
+  success:
+    "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
+} as const;
 
 function getBrowserProfileState() {
   if (typeof window === "undefined") return null;
@@ -42,7 +52,11 @@ export function PersonalProfileSettings() {
   const searchParams = useSearchParams();
   const { hydrated, session, hydrate } = useAuthClient();
   const [fieldErrors, setFieldErrors] = useState<PersonalProfileFieldErrors>({});
-  const [saveMessage, setSaveMessage] = useState("");
+  const [saveNotice, setSaveNotice] = useState<{
+    tone: keyof typeof profileNoticeClassNames;
+    message: string;
+  } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const profileSession = useMemo(
     () => (session ? createPersonalProfileSession(session) : null),
     [session]
@@ -74,11 +88,12 @@ export function PersonalProfileSettings() {
 
     if (!validation.valid) {
       setFieldErrors(validation.fieldErrors);
-      setSaveMessage("");
+      setSaveNotice(null);
       return;
     }
 
     let persistedInput = input;
+    setIsSaving(true);
 
     try {
       const response = await fetch("/api/users/me/profile", {
@@ -104,7 +119,10 @@ export function PersonalProfileSettings() {
 
       if (!response.ok || !result.ok) {
         setFieldErrors(result.fieldErrors ?? {});
-        setSaveMessage("프로필 저장 권한 또는 서버 상태를 확인해 주세요.");
+        setSaveNotice({
+          tone: "error",
+          message: "프로필 저장 권한 또는 서버 상태를 확인해 주세요.",
+        });
         return;
       }
 
@@ -117,8 +135,13 @@ export function PersonalProfileSettings() {
         };
       }
     } catch {
-      setSaveMessage("프로필 저장 권한 또는 서버 상태를 확인해 주세요.");
+      setSaveNotice({
+        tone: "error",
+        message: "프로필 저장 권한 또는 서버 상태를 확인해 주세요.",
+      });
       return;
+    } finally {
+      setIsSaving(false);
     }
 
     const currentState = getBrowserProfileState() ?? createEmptyPersonalProfilesState();
@@ -131,7 +154,7 @@ export function PersonalProfileSettings() {
     );
     window.dispatchEvent(new Event("clair.personalProfiles.v1"));
     setFieldErrors({});
-    setSaveMessage("프로필이 저장되었습니다.");
+    setSaveNotice({ tone: "success", message: "프로필이 저장되었습니다." });
   }
 
   if (!hydrated || !session || !profileSession || !profile) {
@@ -149,7 +172,7 @@ export function PersonalProfileSettings() {
 
   return (
     <main className="min-h-svh bg-[var(--emr-surface-app)] px-5 py-8 text-foreground">
-      <section className="mx-auto grid w-full max-w-[1120px] gap-6 lg:grid-cols-[minmax(0,0.78fr)_minmax(440px,1fr)]">
+      <section className={profileShellClassName}>
         <div className="flex flex-col gap-5">
           <span className="flex size-11 items-center justify-center rounded-[var(--clair-radius-md)] bg-primary text-primary-foreground">
             <UserIcon aria-hidden="true" />
@@ -189,12 +212,15 @@ export function PersonalProfileSettings() {
               </p>
             </div>
 
-            {saveMessage ? (
+            {saveNotice ? (
               <p
-                role="status"
-                className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]"
+                role={saveNotice.tone === "error" ? "alert" : "status"}
+                className={cn(
+                  "rounded-[var(--clair-radius-md)] border px-3 py-2 text-[13px] leading-5",
+                  profileNoticeClassNames[saveNotice.tone]
+                )}
               >
-                {saveMessage}
+                {saveNotice.message}
               </p>
             ) : null}
 
@@ -205,11 +231,12 @@ export function PersonalProfileSettings() {
                 name="displayName"
                 defaultValue={profile.displayName}
                 aria-invalid={Boolean(fieldErrors.displayName)}
+                disabled={isSaving}
               />
               {fieldErrors.displayName ? (
-                <p role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.displayName}
-                </p>
+                </FieldError>
               ) : null}
             </Field>
 
@@ -221,11 +248,12 @@ export function PersonalProfileSettings() {
                 defaultValue={profile.initials}
                 aria-invalid={Boolean(fieldErrors.initials)}
                 maxLength={6}
+                disabled={isSaving}
               />
               {fieldErrors.initials ? (
-                <p role="alert" className="text-[12px] text-[var(--emr-status-danger-text)]">
+                <FieldError className="text-[12px] text-[var(--emr-status-danger-text)]">
                   {fieldErrors.initials}
-                </p>
+                </FieldError>
               ) : null}
             </Field>
 
@@ -236,6 +264,7 @@ export function PersonalProfileSettings() {
                 name="phone"
                 defaultValue={profile.phone ?? ""}
                 placeholder="010-0000-0000"
+                disabled={isSaving}
               />
             </Field>
 
@@ -245,6 +274,7 @@ export function PersonalProfileSettings() {
                 name="notificationOptIn"
                 type="checkbox"
                 defaultChecked={profile.notificationOptIn}
+                disabled={isSaving}
                 className="peer mt-0.5 size-4 shrink-0 rounded-[4px] border border-input accent-primary"
               />
               <FieldContent>
@@ -264,7 +294,9 @@ export function PersonalProfileSettings() {
               <Link href={returnHref} className={buttonVariants({ variant: "outline" })}>
                 워크스페이스로 돌아가기
               </Link>
-              <Button type="submit">저장</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "저장 중" : "저장"}
+              </Button>
             </div>
           </FieldGroup>
         </form>

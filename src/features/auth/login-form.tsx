@@ -6,6 +6,8 @@ import { CheckIcon, WorkspaceLogoMarkIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -38,6 +40,10 @@ const storageOptions: Array<{
 ];
 
 const defaultWorkspaceHref = "/w/clair-demo/reception?modulePanel=open&aside=closed";
+const loginPanelClassName =
+  "flex min-h-[520px] flex-col bg-card px-6 py-6 md:px-10 md:py-8";
+const loginFormClassName = "flex w-full max-w-[380px] flex-col gap-6";
+const loginControlsClassName = "flex w-full max-w-[456px] flex-col gap-6";
 
 function getSafeNextHref(value: string | null) {
   if (!value) return defaultWorkspaceHref;
@@ -111,7 +117,7 @@ export function LoginForm() {
   return (
     <main className="min-h-svh bg-[var(--emr-surface-app)] text-foreground">
       <section className="grid min-h-svh lg:grid-cols-2">
-        <div className="flex min-h-[520px] flex-col bg-card px-6 py-6 md:px-10 md:py-8">
+        <div className={loginPanelClassName}>
           <div className="flex items-center gap-2 text-[13px] font-semibold leading-5">
             <span className="flex size-7 items-center justify-center rounded-[var(--clair-radius-md)] bg-primary text-primary-foreground">
               <WorkspaceLogoMarkIcon aria-hidden="true" />
@@ -122,7 +128,7 @@ export function LoginForm() {
           <div className="flex flex-1 items-center justify-center py-12">
             <form
               onSubmit={handleSubmit}
-              className="flex w-full max-w-[380px] flex-col gap-6"
+              className={loginFormClassName}
             >
               <FieldGroup>
                 <div className="flex flex-col gap-2">
@@ -142,7 +148,12 @@ export function LoginForm() {
                     name="email"
                     placeholder="name@hospital.com"
                     autoComplete="email"
+                    disabled={isSubmitting}
+                    aria-describedby="mock-email-description"
                   />
+                  <FieldDescription id="mock-email-description" className="text-[12px]">
+                    Mock 모드에서는 역할 선택으로 로그인하고, Supabase 모드에서는 계정 정보를 확인합니다.
+                  </FieldDescription>
                 </Field>
 
                 <Field>
@@ -153,16 +164,14 @@ export function LoginForm() {
                     name="password"
                     placeholder="비밀번호"
                     autoComplete="current-password"
+                    disabled={isSubmitting}
                   />
                 </Field>
 
                 {loginError ? (
-                  <p
-                    role="alert"
-                    className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]"
-                  >
+                  <FieldError className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]">
                     {loginError}
-                  </p>
+                  </FieldError>
                 ) : null}
 
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
@@ -174,7 +183,7 @@ export function LoginForm() {
         </div>
 
         <aside className="flex min-h-[520px] items-center justify-center border-t border-border bg-[var(--emr-surface-muted)] px-5 py-8 md:px-10 lg:border-l lg:border-t-0">
-          <div className="flex w-full max-w-[456px] flex-col gap-6">
+          <div className={loginControlsClassName}>
             <div className="flex flex-col gap-2">
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
                 Development controls
@@ -200,10 +209,12 @@ export function LoginForm() {
                       key={role.id}
                       type="button"
                       aria-pressed={selected}
+                      aria-label={`${role.label} 역할 선택`}
+                      disabled={isSubmitting}
                       onClick={() => setSelectedRole(role.id)}
                       className={cn(
                         "flex min-h-[68px] items-start gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3 text-left transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                         selected
                           ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
                           : "border-border hover:bg-[var(--emr-state-hover)]"
@@ -252,6 +263,7 @@ export function LoginForm() {
                       name="mock-session-storage"
                       value={option.id}
                       checked={storageMode === option.id}
+                      disabled={isSubmitting}
                       onChange={() => setStorageMode(option.id)}
                       className="mt-1 size-4 accent-[var(--emr-state-selected-border)]"
                     />
