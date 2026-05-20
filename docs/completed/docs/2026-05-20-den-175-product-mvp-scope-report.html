@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-175 작업 보고서 - Product MVP Scope</title>
+    <style>
+      body {
+        margin: 0;
+        color: #172033;
+        background: #f7f8fb;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      article {
+        background: #ffffff;
+        border: 1px solid #dfe3eb;
+        border-radius: 8px;
+        padding: 36px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2f7;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        margin-bottom: 28px;
+        color: #5b667a;
+      }
+
+      .callout {
+        margin-top: 20px;
+        padding: 14px 16px;
+        border-left: 4px solid #2563eb;
+        background: #eff6ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-175 작업 보고서 - Product MVP Scope</h1>
+        <p class="meta">작성일: 2026-05-20 / Linear: DEN-175</p>
+
+        <h2>요청</h2>
+        <p>
+          Product MVP에서 할 것, 하지 않을 것, 후속으로 미룰 것, 대표 승인이
+          필요한 범위를 별도 기준 문서로 고정한다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li>
+            <code>docs/product/roadmap/product-mvp-scope.md</code>를 추가했다.
+          </li>
+          <li>
+            In scope, out of scope, deferred, approval-gated 범위를 분리했다.
+          </li>
+          <li>
+            mock/session-only, local-first, remote staging, production/live claim
+            기준을 정리했다.
+          </li>
+          <li>
+            새 요청이 MVP 후보인지, 승인 게이트인지, deferred roadmap인지
+            판단하는 routing table을 추가했다.
+          </li>
+        </ul>
+
+        <h2>왜 중요한가</h2>
+        <p>
+          앞으로 기능 요청이 들어왔을 때 “지금 MVP에 넣을 일인지”를 매번 다시
+          판단하지 않아도 된다. 특히 remote Supabase, real data, email,
+          payment, production deploy처럼 위험한 작업은 명시적 승인 없이는
+          진행하지 않는 기준이 더 선명해졌다.
+        </p>
+
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/product/roadmap/product-mvp-scope.md</code></li>
+          <li><code>docs/product/roadmap/README.md</code></li>
+          <li><code>docs/product/README.md</code></li>
+          <li><code>docs/product/service/clair-emr-saas-operating-map.md</code></li>
+          <li><code>docs/engineering/current-status.md</code></li>
+          <li><code>docs/SUMMARY.md</code></li>
+          <li><code>docs/index.md</code></li>
+          <li>
+            <code>docs/completed/docs/2026-05-20-den-175-product-mvp-scope-report.html</code>
+          </li>
+        </ul>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li>
+            MVP scope 문서, operating map, <code>docs/SUMMARY.md</code> 상대
+            링크 확인 통과
+          </li>
+        </ul>
+
+        <h2>범위 밖</h2>
+        <ul>
+          <li>제품 정책 자체 변경</li>
+          <li>live Supabase 또는 DB/RLS 작업 승인</li>
+          <li>기능 구현</li>
+          <li>가격, 결제, 이메일, 배포, real data 작업</li>
+        </ul>
+
+        <div class="callout">
+          <strong>다음 권장 작업:</strong> DEN-176에서 outpatient workflow state
+          model을 정의해 접수부터 수납까지의 상태 전이를 더 구체적으로 고정한다.
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

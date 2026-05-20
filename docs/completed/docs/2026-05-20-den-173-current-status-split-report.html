@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-173 작업 보고서 - Current Status 요약/히스토리 분리</title>
+    <style>
+      body {
+        margin: 0;
+        color: #172033;
+        background: #f7f8fb;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      article {
+        background: #ffffff;
+        border: 1px solid #dfe3eb;
+        border-radius: 8px;
+        padding: 36px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2f7;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        margin-bottom: 28px;
+        color: #5b667a;
+      }
+
+      .metric {
+        display: inline-block;
+        margin: 4px 8px 4px 0;
+        padding: 8px 10px;
+        border: 1px solid #dfe3eb;
+        border-radius: 6px;
+        background: #f8fafc;
+      }
+
+      .callout {
+        margin-top: 20px;
+        padding: 14px 16px;
+        border-left: 4px solid #2563eb;
+        background: #eff6ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-173 작업 보고서 - Current Status 요약/히스토리 분리</h1>
+        <p class="meta">작성일: 2026-05-20 / Linear: DEN-173</p>
+
+        <h2>요청</h2>
+        <p>
+          새 작업을 시작할 때 항상 읽는 <code>current-status.md</code>가 너무
+          길어졌기 때문에, 현재 판단에 필요한 요약과 긴 변경 이력을 분리한다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li>
+            <code>docs/engineering/current-status.md</code>를 시작용 현재 상태
+            요약 문서로 줄였다.
+          </li>
+          <li>
+            기존 상세 본문은 삭제하지 않고
+            <code>docs/engineering/current-status-history.md</code>로 보존했다.
+          </li>
+          <li>
+            GitBook 사이드바, 문서 홈, Agent RAG Map에 history 문서 연결과
+            기본 읽기 제외 규칙을 반영했다.
+          </li>
+        </ul>
+
+        <h2>토큰 절약 효과</h2>
+        <p>
+          시작 문서가 긴 날짜별 로그 중심에서 현재 목표, 완료/미완료 범위,
+          guardrail, 다음 작업 중심으로 바뀌었다.
+        </p>
+        <p>
+          <span class="metric">요약 문서: 125줄</span>
+          <span class="metric">히스토리 문서: 404줄</span>
+        </p>
+
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/engineering/current-status.md</code></li>
+          <li><code>docs/engineering/current-status-history.md</code></li>
+          <li><code>docs/_meta/agent-rag-map.md</code></li>
+          <li><code>docs/SUMMARY.md</code></li>
+          <li><code>docs/index.md</code></li>
+          <li>
+            <code>docs/completed/docs/2026-05-20-den-173-current-status-split-report.html</code>
+          </li>
+        </ul>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>docs/SUMMARY.md</code> 상대 링크 존재 확인 통과</li>
+          <li>
+            <code>wc -l</code>로 요약 문서와 히스토리 문서 길이 확인
+          </li>
+        </ul>
+
+        <h2>범위 밖</h2>
+        <ul>
+          <li>현재 제품 상태의 의미 변경</li>
+          <li>완료 이력 삭제</li>
+          <li>제품/기술 정책 변경</li>
+          <li>앱 코드, DB, Supabase, RLS, 배포 관련 변경</li>
+        </ul>
+
+        <div class="callout">
+          <strong>다음 권장 작업:</strong> DEN-174에서 SaaS 운영 지도를 만들면
+          문서 체계가 제품/업무/기술 기준점으로 확장된다.
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

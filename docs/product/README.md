@@ -17,6 +17,11 @@ Planned subareas:
 
 Current canonical product docs:
 
+- Service operating map: `docs/product/service/clair-emr-saas-operating-map.md`
+- Product MVP scope: `docs/product/roadmap/product-mvp-scope.md`
+- Outpatient workflow state model: `docs/product/domain/outpatient-workflow-state-model.md`
+- EMR domain entity map: `docs/product/domain/emr-domain-entity-map.md`
+- Role and permission source map: `docs/product/domain/role-permission-source-map.md`
 - PRD: `docs/product/prd/clair-emr-saas-prd.md`
 - Legacy all-in-one MVP feature spec: `docs/product/features/legacy-mvp-feature-spec.md`
 - User flow: `docs/product/user-flows/emr-saas-userflow.md`

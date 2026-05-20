@@ -14,17 +14,23 @@ Use this file as the compact routing guide for new chats, sub-agents, and future
 
 1. `AGENTS.md`
 2. `docs/engineering/current-status.md`
-3. `docs/README.md`
-4. `docs/_meta/README.md`
-5. `docs/_meta/intake-rules.md`
-6. `docs/work/index.md`
-7. The specific work item for the task
+3. The active Linear issue or `docs/work/` item for the task
+4. `docs/_meta/agent-rag-map.md` to choose only the task-specific source docs needed next
+
+For docs, planning, or work-routing changes, also read:
+
+- `docs/README.md`
+- `docs/_meta/README.md`
+- `docs/_meta/intake-rules.md`
+- `docs/work/index.md`
 
 For auth, Supabase, permission, or RLS work, also read:
 
 - `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
 - `docs/engineering/auth-security/auth-login/README.md`
 - The relevant auth-login work order or status document
+
+Do not read `docs/archive/**`, `docs/completed/**`, long history logs, or unrelated work items by default. Open them only when the active issue or `docs/_meta/agent-rag-map.md` calls for them.
 
 ## Current Product Target
 
@@ -42,8 +48,8 @@ The active target is Product MVP. The prototype already covers the outpatient fl
 
 1. Find or create the PR-sized work item in `docs/work/`.
 2. Confirm the PR creation gate from `docs/README.md`.
-3. Route planning or docs changes through `docs/_meta/intake-rules.md`.
-4. Read the work item's source docs.
+3. Use `docs/_meta/agent-rag-map.md` to pick the smallest task-specific source docs.
+4. Route planning or docs changes through `docs/_meta/intake-rules.md`.
 5. Keep changes inside the work item's scope.
 6. Run the work item's verification commands.
 7. Update the work item and any affected source-of-truth docs.

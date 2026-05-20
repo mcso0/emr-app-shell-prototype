@@ -4,9 +4,12 @@ This folder is the source of truth for product planning, implementation context,
 
 Start here:
 
-1. `docs/agent-start-here.md`
-2. `docs/work/index.md`
-3. The linked work item and its source documents
+1. `docs/index.md` for the human-facing GitBook/docs portal.
+2. `docs/agent-start-here.md` for Codex startup routing.
+3. `docs/work/index.md` for PR-sized work tracking.
+4. The linked work item and its source documents.
+
+For GitBook, use `docs/SUMMARY.md` as the sidebar map. The repository `docs/` folder remains the source of truth; GitBook is a readable portal, not the editing source.
 
 ## Operating Model
 
