@@ -1,0 +1,73 @@
+# Summary
+
+## Start Here
+
+- [Docs Portal](index.md)
+- [Agent Start Here](agent-start-here.md)
+- [MVP Current Status](engineering/current-status.md)
+- [Work Index](work/index.md)
+- [Work Inbox](work/inbox.md)
+
+## Operating Rules
+
+- [Docs Home](README.md)
+- [Docs Meta](_meta/README.md)
+- [Taxonomy](_meta/taxonomy.md)
+- [Lifecycle](_meta/lifecycle.md)
+- [Intake Rules](_meta/intake-rules.md)
+- [Documentation Depth Rules](_meta/documentation-depth-rules.md)
+- [Agent RAG Map](_meta/agent-rag-map.md)
+- [Result Review Rules](_meta/result-review-rules.md)
+
+## Product
+
+- [Product Docs](product/README.md)
+- [SaaS Operating Map](product/service/clair-emr-saas-operating-map.md)
+- [Product MVP Scope](product/roadmap/product-mvp-scope.md)
+- [Product PRD](product/prd/clair-emr-saas-prd.md)
+- [Legacy MVP Feature Spec](product/features/legacy-mvp-feature-spec.md)
+- [Product User Flow](product/user-flows/emr-saas-userflow.md)
+- [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md)
+- [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md)
+- [Workspace Auth and Permissions](product/domain/workspace-auth-permissions.md)
+- [Role Permission Source Map](product/domain/role-permission-source-map.md)
+- [Decision Log Index](product/decisions/decision-log-index.md)
+- [Demo Data](product/demo-data/README.md)
+
+## Design
+
+- [Design Docs](design/README.md)
+- [Design System](design/system/DESIGN.md)
+- [Reference Screen Index](design/reference-screen-index.md)
+- [UI QA](design/qa/README.md)
+
+## Engineering
+
+- [Engineering Docs](engineering/README.md)
+- [App Shell Layout Contract](engineering/architecture/app-shell-layout-contract.md)
+- [Mock Live Boundary Map](engineering/architecture/mock-live-boundary-map.md)
+- [API Boundary Integration Guide](engineering/api-boundaries/api-boundary-integration-guide.md)
+- [API Boundary Selectors](engineering/api-boundaries/api-boundary-selectors.md)
+- [Data Model](engineering/data-model/README.md)
+- [DB Structure Spec KO](engineering/data-model/emr-saas-db-structure-spec.ko.md)
+- [Auth Security](engineering/auth-security/auth-login/README.md)
+- [MVP Auth Transition Roadmap](engineering/auth-security/mvp-auth-transition-roadmap.md)
+- [Testing Gap Analysis](engineering/testing/mvp-gap-analysis.md)
+- [Product MVP QA Scenarios](engineering/testing/product-mvp-qa-scenario-pack.md)
+- [Operations](engineering/operations/README.md)
+- [Launch Readiness Checklist](engineering/operations/launch-readiness-checklist.md)
+- [Persistence Data Security Checklist](engineering/auth-security/persistence-data-security-checklist.md)
+- [Manual Linear Operations](engineering/agent-orchestration/manual-linear-operations.md)
+
+## Work
+
+- [Work Docs](work/README.md)
+- [Work Index](work/index.md)
+- [Work Inbox](work/inbox.md)
+- [Open Questions](work/open-questions.md)
+
+## Completion And History
+
+- [MVP Current Status History](engineering/current-status-history.md)
+- [Completed Work](completed/README.md)
+- [Archive](archive/README.md)

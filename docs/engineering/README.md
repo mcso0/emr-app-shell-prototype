@@ -17,11 +17,15 @@ Current canonical engineering docs:
 
 - Current status: `docs/engineering/current-status.md`
 - App shell layout: `docs/engineering/architecture/app-shell-layout-contract.md`
+- Mock/live boundary map: `docs/engineering/architecture/mock-live-boundary-map.md`
 - Data model: `docs/engineering/data-model/`
 - Auth/security: `docs/engineering/auth-security/`
+- Persistence and data security checklist: `docs/engineering/auth-security/persistence-data-security-checklist.md`
 - API boundaries: `docs/engineering/api-boundaries/`
 - Agent orchestration: `docs/engineering/agent-orchestration/`
 - Gap analysis/testing context: `docs/engineering/testing/mvp-gap-analysis.md`
+- Product MVP QA scenarios: `docs/engineering/testing/product-mvp-qa-scenario-pack.md`
+- Launch readiness checklist: `docs/engineering/operations/launch-readiness-checklist.md`
 - Changelog: `docs/engineering/changelog.md`
 
 DB-related implementation planning belongs here when it describes actual schema, ERD, migrations, RLS, indexes, or persistence contracts. User-facing data requirements belong in `docs/product/domain/`.

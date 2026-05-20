@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR 문서 운영 체계 구축 최종 보고서</title>
+    <style>
+      body { margin: 0; color: #172033; background: #f7f8fb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 1040px; margin: 0 auto; padding: 48px 24px 72px; }
+      article { background: #fff; border: 1px solid #dfe3eb; border-radius: 8px; padding: 36px; }
+      h1, h2 { line-height: 1.25; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { margin: 32px 0 12px; font-size: 19px; }
+      p { margin: 0 0 12px; }
+      table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+      th, td { border: 1px solid #dfe3eb; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #f1f5f9; }
+      ul { margin: 0; padding-left: 20px; }
+      li + li { margin-top: 6px; }
+      code { padding: 2px 5px; border-radius: 4px; background: #eef2f7; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
+      .meta { margin-bottom: 28px; color: #5b667a; }
+      .callout { margin-top: 20px; padding: 14px 16px; border-left: 4px solid #2563eb; background: #eff6ff; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>CLAiR EMR 문서 운영 체계 구축 최종 보고서</h1>
+        <p class="meta">작성일: 2026-05-20 / Linear Project: CLAiR EMR 문서 운영 체계 구축 / DEN-171-DEN-183</p>
+
+        <h2>요약</h2>
+        <p>
+          이번 작업으로 repo docs를 기준 원본으로 두고, GitBook을 읽기 좋은 포털로 사용하며,
+          Linear를 작업 시작점과 Human Review 상태 관리 도구로 쓰는 문서 운영 체계를 만들었다.
+          Codex는 이제 전체 문서를 무작정 읽지 않고, 작업 유형별 기준 문서만 골라 읽도록 설계되어 있다.
+        </p>
+
+        <h2>완료한 이슈</h2>
+        <table>
+          <thead><tr><th>Issue</th><th>결과</th><th>핵심 산출물</th></tr></thead>
+          <tbody>
+            <tr><td>DEN-171</td><td>GitBook 문서 홈과 사이드바 지도</td><td><code>docs/index.md</code>, <code>docs/SUMMARY.md</code></td></tr>
+            <tr><td>DEN-172</td><td>Codex RAG/시작 읽기 규칙</td><td><code>docs/_meta/agent-rag-map.md</code></td></tr>
+            <tr><td>DEN-173</td><td>현재 상태 요약과 히스토리 분리</td><td><code>docs/engineering/current-status.md</code>, <code>current-status-history.md</code></td></tr>
+            <tr><td>DEN-174</td><td>SaaS 운영 지도</td><td><code>docs/product/service/clair-emr-saas-operating-map.md</code></td></tr>
+            <tr><td>DEN-175</td><td>Product MVP 범위와 non-goals</td><td><code>docs/product/roadmap/product-mvp-scope.md</code></td></tr>
+            <tr><td>DEN-176</td><td>외래 workflow 상태 모델</td><td><code>docs/product/domain/outpatient-workflow-state-model.md</code></td></tr>
+            <tr><td>DEN-177</td><td>EMR domain entity map</td><td><code>docs/product/domain/emr-domain-entity-map.md</code></td></tr>
+            <tr><td>DEN-178</td><td>Role/permission source map</td><td><code>docs/product/domain/role-permission-source-map.md</code></td></tr>
+            <tr><td>DEN-179</td><td>Mock/live boundary map</td><td><code>docs/engineering/architecture/mock-live-boundary-map.md</code></td></tr>
+            <tr><td>DEN-180</td><td>Persistence/data security checklist</td><td><code>docs/engineering/auth-security/persistence-data-security-checklist.md</code></td></tr>
+            <tr><td>DEN-181</td><td>Product MVP QA scenario pack</td><td><code>docs/engineering/testing/product-mvp-qa-scenario-pack.md</code></td></tr>
+            <tr><td>DEN-182</td><td>Launch readiness checklist</td><td><code>docs/engineering/operations/launch-readiness-checklist.md</code></td></tr>
+            <tr><td>DEN-183</td><td>Decision log index와 GitBook handoff</td><td><code>docs/product/decisions/decision-log-index.md</code>, 이 최종 보고서</td></tr>
+          </tbody>
+        </table>
+
+        <h2>운영 방식</h2>
+        <ul>
+          <li>편집 원본은 repo <code>docs/</code>다. GitBook은 읽기 포털이다.</li>
+          <li>작업 시작점은 Linear issue다. 의미 있는 작업은 <code>Human Review</code>에서 멈춘다.</li>
+          <li>Codex는 <code>agent-start-here</code>, <code>current-status</code>, active Linear issue, <code>agent-rag-map</code>만 기본으로 읽고, 나머지는 작업 유형별로 추가한다.</li>
+          <li>Production, remote Supabase, real data, email, payment, role policy 변경은 별도 명시 승인 없이는 하지 않는다.</li>
+        </ul>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li>GitBook sidebar용 <code>docs/SUMMARY.md</code>와 신규 기준 문서 상대 링크 확인 통과</li>
+        </ul>
+
+        <h2>주의사항</h2>
+        <ul>
+          <li>이 작업은 문서/운영 체계 구축이며 앱 기능 구현, DB/RLS 실행, Supabase remote 작업, 배포는 수행하지 않았다.</li>
+          <li>현재 변경은 로컬에 있으며 GitBook 반영은 GitHub main에 커밋/푸시/머지된 뒤 동기화된다.</li>
+          <li>기존 auth/ops 관련 미완료 워크트리 변경은 건드리지 않았다.</li>
+        </ul>
+
+        <div class="callout">
+          <strong>다음 추천:</strong> 승욱이 Human Review 상태의 문서들을 훑어보고,
+          승인되면 이 문서 묶음을 커밋/푸시해 GitBook 동기화 대상으로 만드는 것이 좋다.
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

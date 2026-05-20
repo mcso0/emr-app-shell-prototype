@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-174 작업 보고서 - SaaS Operating Map</title>
+    <style>
+      body {
+        margin: 0;
+        color: #172033;
+        background: #f7f8fb;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      article {
+        background: #ffffff;
+        border: 1px solid #dfe3eb;
+        border-radius: 8px;
+        padding: 36px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2f7;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        margin-bottom: 28px;
+        color: #5b667a;
+      }
+
+      .callout {
+        margin-top: 20px;
+        padding: 14px 16px;
+        border-left: 4px solid #2563eb;
+        background: #eff6ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-174 작업 보고서 - SaaS Operating Map</h1>
+        <p class="meta">작성일: 2026-05-20 / Linear: DEN-174</p>
+
+        <h2>요청</h2>
+        <p>
+          CLAiR EMR이 누구의 어떤 업무 문제를 해결하는 B2B SaaS인지,
+          현재 Product MVP가 어디까지 제품으로 볼 수 있는지 한눈에 보는
+          운영 지도를 만든다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li>
+            <code>docs/product/service/clair-emr-saas-operating-map.md</code>를
+            추가했다.
+          </li>
+          <li>
+            구매자, workspace admin, clinical user, front desk, billing
+            operator, CLAiR operator를 구분했다.
+          </li>
+          <li>
+            핵심 workflow spine, Product MVP 의미, mock/local-first/live claim
+            기준, 구현 전 체크리스트를 정리했다.
+          </li>
+          <li>
+            GitBook 사이드바, 문서 홈, product/service README에서 바로 접근할
+            수 있게 링크를 추가했다.
+          </li>
+        </ul>
+
+        <h2>왜 중요한가</h2>
+        <p>
+          기능을 화면 단위로만 추가하면 제품 기준이 흐려진다. 이번 문서는
+          구현 전 질문을 “어떤 화면을 만들까?”에서 “어떤 병원 업무 상태,
+          권한, 데이터 소유권, 감사 경로가 바뀌는가?”로 바꾸는 기준점이다.
+        </p>
+
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/product/service/clair-emr-saas-operating-map.md</code></li>
+          <li><code>docs/product/service/README.md</code></li>
+          <li><code>docs/product/README.md</code></li>
+          <li><code>docs/SUMMARY.md</code></li>
+          <li><code>docs/index.md</code></li>
+          <li>
+            <code>docs/completed/docs/2026-05-20-den-174-saas-operating-map-report.html</code>
+          </li>
+        </ul>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li>새 운영 지도와 <code>docs/SUMMARY.md</code> 상대 링크 확인 통과</li>
+        </ul>
+
+        <h2>범위 밖</h2>
+        <ul>
+          <li>가격 정책 확정</li>
+          <li>실제 세일즈 카피 작성</li>
+          <li>기능 구현</li>
+          <li>role/permission 정책 변경</li>
+          <li>Supabase, DB, RLS, 배포, 결제, 이메일 관련 실행</li>
+        </ul>
+
+        <div class="callout">
+          <strong>다음 권장 작업:</strong> DEN-175에서 MVP scope와 non-goals를
+          이 operating map 아래에 더 구체적으로 고정한다.
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

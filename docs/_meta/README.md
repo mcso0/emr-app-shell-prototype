@@ -8,6 +8,7 @@ Read these files when routing new planning, design, engineering, or work-managem
 - `docs/_meta/lifecycle.md`: status values and transition rules for documents and work
 - `docs/_meta/intake-rules.md`: how to classify chat instructions into source docs, work items, decisions, closeouts, or archive records
 - `docs/_meta/documentation-depth-rules.md`: how much to record, and when GitHub PR/Issue records are enough
+- `docs/_meta/agent-rag-map.md`: minimal reading map for Codex task startup and token-efficient source-doc selection
 - `docs/_meta/coding-discipline.md`: concise implementation discipline for non-trivial coding work
 - `docs/_meta/result-review-rules.md`: required concise user review after work is completed
 - `docs/_meta/templates/`: reusable document templates

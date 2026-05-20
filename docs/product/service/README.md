@@ -4,3 +4,6 @@ Service docs describe the product as a whole: target workflows, product boundari
 
 Use feature docs for feature-specific detail and domain docs for product-facing data requirements.
 
+Current service-level sources:
+
+- [CLAiR EMR SaaS Operating Map](clair-emr-saas-operating-map.md)
