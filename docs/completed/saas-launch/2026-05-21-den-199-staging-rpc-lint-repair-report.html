@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-199 Staging RPC Lint Repair Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { line-height: 1.25; }
+      code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+      table { border-collapse: collapse; margin: 16px 0; width: 100%; }
+      th, td { border: 1px solid #d8dee9; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #eef2f7; }
+      .ok { color: #0f7b3a; font-weight: 700; }
+      .warn { color: #8a5a00; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-199 Staging RPC Lint Repair Report</h1>
+    <p><strong>Linear:</strong> DEN-199 <code>01-04 Repair staging post-push DB lint blockers before seed and replay</code></p>
+    <p><strong>대상:</strong> <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+
+    <h2>요약</h2>
+    <p>
+      DEN-193 staging migration apply 이후 발견된 reception RPC DB lint blocker를 repair migration으로 수정했다.
+      Seed, direct SQL mutation, production 접근, email/deploy는 실행하지 않았다.
+      적용 후 remote migration은 35개이며, app table 40개는 rows 0 상태를 유지한다.
+    </p>
+
+    <h2>Root Cause</h2>
+    <table>
+      <tr><th>문제</th><th>원인</th><th>수정</th></tr>
+      <tr>
+        <td><code>clair_check_in_reception_appointment</code> log insert 실패</td>
+        <td><code>appointment_change_logs</code> 실제 컬럼은 <code>changed_by_user_id</code>, <code>change_type</code>인데 함수가 <code>actor_user_id</code>, <code>action</code>을 사용했다.</td>
+        <td class="ok">두 repair migration으로 함수 정의를 재작성했다.</td>
+      </tr>
+      <tr>
+        <td><code>clair_list_reception_queue</code> membership helper type mismatch</td>
+        <td>helper는 <code>private.clair_is_active_workspace_member(text)</code>인데 queue reader는 <code>uuid</code> workspace id를 받았다.</td>
+        <td class="ok"><code>uuid</code> signature를 제거하고 <code>text</code> signature reader로 재작성했다.</td>
+      </tr>
+    </table>
+
+    <h2>Applied Migrations</h2>
+    <ul>
+      <li><code>20260521010000_reception_rpc_lint_blocker_repair.sql</code></li>
+      <li><code>20260521011000_reception_appointment_log_change_type_repair.sql</code></li>
+    </ul>
+
+    <h2>Post-check</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>Remote migrations</td><td class="ok">35개, latest <code>20260521011000_reception_appointment_log_change_type_repair</code></td></tr>
+      <tr><td>Remote tables</td><td class="ok">public app table 40개, listed tables RLS enabled, rows 0</td></tr>
+      <tr><td><code>npx supabase db lint --linked --schema public --level warning --fail-on none --output-format json</code></td><td class="ok">DEN-199 blocker error 0개. Remaining warning 3개.</td></tr>
+      <tr><td>Remaining warnings</td><td class="warn"><code>p_actor_user_id</code> unused 2건, <code>v_log_id</code> never read 1건. Seed/replay blocker는 아님.</td></tr>
+      <tr><td>Additional CLI retry note</td><td class="warn">후속 <code>fail-on error</code> 재시도 중 Supabase pooler temp-role circuit breaker가 발생해 중단. 직전 successful lint result 기준으로 error 0개 확인.</td></tr>
+    </table>
+
+    <h2>Verification</h2>
+    <table>
+      <tr><th>명령</th><th>결과</th></tr>
+      <tr><td><code>npx playwright test tests/reception-rpc-lint-repair-migration.spec.ts tests/reception-appointment-check-in-server.spec.ts tests/reception-queue-read-server.spec.ts --reporter=line</code></td><td class="ok">15 passed</td></tr>
+      <tr><td><code>npm run docs:check</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>npm run security:secrets</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>git diff --check</code></td><td class="ok">passed</td></tr>
+    </table>
+
+    <h2>North-star Impact</h2>
+    <p>
+      Reception appointment check-in과 reception queue reader의 DB lint blocker가 해소되어,
+      synthetic seed와 core business flow replay로 넘어갈 수 있는 staging DB foundation 상태가 개선됐다.
+      다음 단계는 synthetic medium hospital seed dataset 구현 및 readback/reset 검증이다.
+    </p>
+  </body>
+</html>

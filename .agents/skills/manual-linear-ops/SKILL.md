@@ -11,6 +11,7 @@ Use this repo's manual Linear workflow as a lightweight Symphony replacement. Ke
 
 - Keep `DEN` as the Linear team key; manage work order through sortable title prefixes like `00-01`.
 - Ask 승욱 before creating a new project, moving work between projects, adding or changing milestones, or choosing new project vs existing project.
+- Use Linear milestones for multi-issue projects when work has clear phases, quality gates, or review checkpoints; keep one-off issues milestone-free unless grouping improves execution.
 - Default to one Linear issue, one Codex owner, one branch, and one PR.
 - Stop meaningful issue work at `Human Review`; move to `Done` only when 승욱 explicitly accepts or asks.
 - Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo, link, or wording fixes.
@@ -22,11 +23,31 @@ Use this repo's manual Linear workflow as a lightweight Symphony replacement. Ke
 2. Check current Linear projects, issues, statuses, and labels before creating anything.
 3. If project placement is ambiguous, ask 승욱 with a clear recommendation.
 4. Shape PR-sized issues with goal, background, tasks, out-of-scope, done criteria, verification, and final report expectations.
-5. Use title prefixes for ordered issue lists, for example `00-01`, `01-01`, and `05-02`.
-6. Start scoped work by moving the issue to `In Progress` or `Security Review`.
-7. Verify with the narrowest useful command set, expanding only when risk requires it.
-8. Create a Korean HTML report for meaningful work.
-9. Attach or summarize the report in Linear and move the issue to `Human Review`.
+5. For multi-issue projects, propose milestones before issue creation or before linking issues to milestones.
+6. Use title prefixes for ordered issue lists, for example `00-01`, `01-01`, and `05-02`.
+7. Start scoped work by moving the issue to `In Progress` or `Security Review`.
+8. Verify with the narrowest useful command set, expanding only when risk requires it.
+9. Create a Korean HTML report for meaningful work.
+10. Attach or summarize the report in Linear and move the issue to `Human Review`.
+
+## Milestone Use
+
+Use milestones as project execution phases, not as labels. Prefer them when a Linear project has:
+
+- 3 or more PR-sized issues.
+- sequential phases such as scope, foundation, module adoption, QA, and closeout.
+- explicit design, security, launch-readiness, or quality gates.
+- a review point where 승욱 should inspect progress before the next phase expands scope.
+
+Milestone rules:
+
+- Ask 승욱 before adding, renaming, deleting, or substantially changing milestones.
+- Keep milestone names short and sortable, for example `00 Scope & Metrics`, `01 Shared Foundations`, and `04 Final QA & Closeout`.
+- Align issue title prefixes with milestone phases when possible: `00-01` belongs in the `00` milestone, `01-02` belongs in the `01` milestone.
+- Put each issue in exactly one milestone when milestones are used.
+- Do not create milestones for a single isolated issue, tiny wording fixes, or exploratory backlog ideas unless 승욱 asks.
+- Use milestone progress to explain project status in reviews, for example "foundation is complete; module adoption is next."
+- If the Linear tool cannot create or link milestones, state the limitation and propose manual UI steps instead of pretending the milestone exists.
 
 ## Read Full Manual When
 
@@ -46,6 +67,7 @@ Read `docs/engineering/agent-orchestration/manual-linear-operations.md` before:
 - Mutate only after scope and placement are clear.
 - Use Korean for user-facing and Linear-facing text; preserve technical identifiers, commands, file paths, branch names, labels, statuses, and URLs.
 - Do not silently create projects, add milestones, or mark work `Done`.
+- When milestones are available in the Linear tool, create or update milestones first, then link issues to the intended milestone during issue creation or issue update.
 
 ## Placement Question
 

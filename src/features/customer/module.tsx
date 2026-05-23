@@ -9,7 +9,6 @@ import {
   CdsFilesCalendarIcon,
   CdsFilesDocumentAltFillIcon,
   CdsFilesFileTextIcon,
-  CdsFilesMoreVerticalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
   CdsPeopleUserIcon,
@@ -17,6 +16,8 @@ import {
   CdsPeopleUserXIcon,
 } from "@/components/cds-icons/people-and-places";
 import { EmrPageHeader } from "@/components/emr/page-header";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import {
@@ -31,9 +32,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -128,40 +127,53 @@ type CustomerDataTableProps<TRow extends { id: string }> = {
 function CustomerRowActionMenu({
   label,
   onOpen,
+  onUnavailableAction,
 }: {
   label: string;
   onOpen: () => void;
+  onUnavailableAction: (feedback: CustomerRowActionFeedback) => void;
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={`${label} 행 작업`}
-        className={buttonVariants({
-          variant: "ghost",
-          size: "icon-sm",
-          className: "text-muted-foreground",
-        })}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <CdsFilesMoreVerticalIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem
-          className="h-8 cursor-pointer"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpen();
-          }}
-        >
-          상세 보기
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="h-8 cursor-pointer">차트 보러가기</DropdownMenuItem>
-        <DropdownMenuItem className="h-8 cursor-pointer">카카오톡 발송</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <EmrRowActionMenu
+      ariaLabel={`${label} 행 작업`}
+      contentClassName="w-56"
+      items={[
+        {
+          key: "open",
+          label: "상세 보기",
+          description: "프로필 drawer 열기",
+          onSelect: onOpen,
+        },
+        {
+          key: "chart",
+          label: "차트 보러가기",
+          description: "진료/차트 화면 연결 전",
+          onSelect: () =>
+            onUnavailableAction({
+              title: "차트 보기는 아직 직접 연결되지 않았어",
+              body: `${label}의 차트 이동은 진료/차트 화면의 환자 선택 흐름에서 확인해. 여기서는 프로필 drawer와 고객 정보만 열 수 있어.`,
+            }),
+        },
+        {
+          key: "kakao",
+          label: "카카오톡 발송",
+          description: "외부 발송 미연동",
+          onSelect: () =>
+            onUnavailableAction({
+              title: "카카오톡 발송은 아직 연결되지 않았어",
+              body: "실제 카카오톡, 문자, 이메일 발송은 이번 MVP 범위 밖이야. 동의 상태와 연락처만 이 화면에서 확인해.",
+            }),
+        },
+      ]}
+      testId={`customer-row-action-${label}`}
+    />
   );
 }
+
+type CustomerRowActionFeedback = {
+  body: ReactNode;
+  title: string;
+};
 
 function CustomerDataTable<TRow extends { id: string }>({
   columns,
@@ -177,6 +189,7 @@ function CustomerDataTable<TRow extends { id: string }>({
   testId,
 }: CustomerDataTableProps<TRow>) {
   const [rowSelection, setRowSelection] = useState<Set<string>>(() => new Set());
+  const [rowActionFeedback, setRowActionFeedback] = useState<CustomerRowActionFeedback | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(columns.map((column) => [column.key, column.defaultVisible !== false]))
   );
@@ -263,6 +276,21 @@ function CustomerDataTable<TRow extends { id: string }>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {rowActionFeedback ? (
+        <EmrInlineAlert
+          severity="info"
+          title={rowActionFeedback.title}
+          className="mx-4 my-3 text-[12px]"
+          action={
+            <Button size="sm" variant="outline" onClick={() => setRowActionFeedback(null)}>
+              확인
+            </Button>
+          }
+          testId="customer-row-action-feedback"
+        >
+          {rowActionFeedback.body}
+        </EmrInlineAlert>
+      ) : null}
       <Table className={cn("text-[14px]", minTableWidthClassName)}>
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
@@ -351,7 +379,11 @@ function CustomerDataTable<TRow extends { id: string }>({
                     </TableCell>
                   ))}
                   <TableCell className="w-12">
-                    <CustomerRowActionMenu label={rowLabel} onOpen={() => onOpenRow(row)} />
+                    <CustomerRowActionMenu
+                      label={rowLabel}
+                      onOpen={() => onOpenRow(row)}
+                      onUnavailableAction={setRowActionFeedback}
+                    />
                   </TableCell>
                 </TableRow>
               );

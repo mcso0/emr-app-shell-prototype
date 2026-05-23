@@ -137,7 +137,7 @@ export function EmrSidePanelCollapsibleGroup({
       <AnimatePresence initial={false}>
         {collapsed ? null : (
           <motion.div
-            className={cn("flex flex-col gap-1 overflow-hidden p-1 -m-1", contentClassName)}
+            className={cn("flex flex-col gap-2 overflow-hidden p-1 -m-1", contentClassName)}
             initial={{ height: 0, opacity: 0, y: -4 }}
             animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
             exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}

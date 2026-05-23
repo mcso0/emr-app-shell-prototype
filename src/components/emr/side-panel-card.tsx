@@ -19,6 +19,12 @@ type EmrSidePanelCardProps = {
 
 const sidePanelBadgeIconClassName =
   "flex size-3.5 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:text-[var(--emr-text-tertiary)]";
+export const emrSidePanelCardHoverActionButtonClassName =
+  "size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-panel)] p-0 text-[var(--emr-text-secondary)] opacity-0 transition-opacity hover:bg-[var(--emr-surface-muted)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-state-selected)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-4";
+export const emrSidePanelCardActionButtonClassName = cn(
+  emrSidePanelCardHoverActionButtonClassName,
+  "group-data-[selected=true]/emr-side-panel-card:!opacity-100"
+);
 
 export function EmrSidePanelCard({
   children,
@@ -101,7 +107,7 @@ export function EmrSidePanelCardAction({
       type="button"
       variant="outline"
       size="icon-xs"
-      className="size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-panel)] p-0 text-[var(--emr-text-secondary)] opacity-0 transition-opacity hover:bg-[var(--emr-surface-muted)] focus-visible:opacity-100 group-hover/emr-side-panel-card:opacity-100 group-focus-within/emr-side-panel-card:opacity-100 group-data-[selected=true]/emr-side-panel-card:opacity-100 [&_svg]:size-4"
+      className={emrSidePanelCardActionButtonClassName}
       aria-label={ariaLabel}
       data-testid={testId}
       onClick={(event) => event.stopPropagation()}

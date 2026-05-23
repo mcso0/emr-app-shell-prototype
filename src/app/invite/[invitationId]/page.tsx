@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { InviteAcceptanceScreen } from "@/features/auth/invite-acceptance-screen";
+import { readServerInviteAcceptanceRecord } from "@/features/auth/server-invite-acceptance";
 
 export const metadata: Metadata = {
   title: "Invite Acceptance",
@@ -21,12 +22,18 @@ export default async function InviteAcceptancePage({
   searchParams,
 }: InviteAcceptancePageProps) {
   const [{ invitationId }, query] = await Promise.all([params, searchParams]);
+  const initialRecord = await readServerInviteAcceptanceRecord({
+    invitationId,
+    workspaceId: query.workspaceId ?? null,
+    email: query.email ?? null,
+  });
 
   return (
     <InviteAcceptanceScreen
       invitationId={invitationId}
       workspaceId={query.workspaceId ?? null}
       email={query.email ?? null}
+      initialRecord={initialRecord}
     />
   );
 }

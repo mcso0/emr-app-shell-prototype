@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-205 EmrDialogShell 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f1f5f9;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-205</p>
+        <h1>EmrDialogShell 보고서</h1>
+        <p>
+          Product MVP의 확인, 폼, 넓은 폼 다이얼로그가 서로 다른 폭과 footer 규칙으로 보이는 문제를 줄이기 위해
+          공통 <code>EmrDialogShell</code> foundation과 migration 기준을 추가했다.
+        </p>
+        <p>
+          이번 작업은 화면 반영 전 foundation 단계다. 기존 다이얼로그 call site는 바꾸지 않았고,
+          실제 앱 화면에서 확인 가능한 변화는 후속 screen-level 이슈에서 시작한다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">화면 미반영 foundation</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>Variant 규격</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Variant</th>
+              <th>폭</th>
+              <th>용도</th>
+              <th>동작 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>confirm</code></td>
+              <td>420px</td>
+              <td>짧은 확인, 상태 변경, destructive-feeling session action</td>
+              <td>compact body, secondary → primary action order</td>
+            </tr>
+            <tr>
+              <td><code>form</code></td>
+              <td>520px</td>
+              <td>작은 등록/수정 폼, membership-like form</td>
+              <td>viewport 내 grid shell, scrollable body, footer 고정</td>
+            </tr>
+            <tr>
+              <td><code>wide-form</code></td>
+              <td>680px</td>
+              <td>접수/프로필 같은 multi-section form</td>
+              <td>넓은 body padding, scroll containment, footer 고정</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/components/emr/dialog-shell.tsx</code>: 공통 shell과 variant layout 정의</li>
+          <li><code>docs/design/system/dialog-shell-rules.md</code>: action order, width, scroll, migration 규칙 문서화</li>
+          <li><code>docs/design/system/component-ownership-rules.md</code>: 기존 confirm dialog와 새 shell의 역할 경계 갱신</li>
+          <li><code>docs/design/system/README.md</code>, <code>docs/design/changelog.md</code>: 문서 인덱스와 변경 이력 갱신</li>
+          <li><code>tests/design-tokens.spec.ts</code>: shared EMR component semantic token guard에 새 shell 포함</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>호환 계획</h2>
+        <ul>
+          <li><code>EmrConfirmDialogContent</code>는 기존 simple confirmation에 계속 유효하다.</li>
+          <li>새 확인 다이얼로그나 migration 대상은 <code>EmrDialogShell variant="confirm"</code>을 우선 사용한다.</li>
+          <li>차트 작성완료, 수납 financial CTA, 접수/프로필 form dialog는 각 후속 이슈에서 화면 QA와 함께 이 shell로 옮긴다.</li>
+          <li>route state, test ID, scroll containment, close/Escape behavior는 screen-level 이슈에서 보존 확인한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>화면마다 다른 dialog 폭과 padding이 반복되는 문제를 variant 선택 문제로 낮췄다.</li>
+          <li>primary/secondary action order를 고정해 사용자가 화면마다 다른 결정 규칙을 학습하지 않게 했다.</li>
+          <li>form/wide-form의 scroll containment 기준을 문서화해 긴 접수/프로필 폼의 후속 QA 기준을 만들었다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위와 스크린샷</h2>
+        <ul>
+          <li>이번 이슈에서는 앱 화면에 visible adoption을 적용하지 않았다.</li>
+          <li>따라서 대표 스크린샷은 캡처하지 않았다. 화면 반영은 DEN-209, DEN-208, 접수/프로필 후속 이슈에서 시작한다.</li>
+          <li>Base UI/shadcn 전체 교체, 서버 검증, mutation policy 변경, live Supabase, payment/email/provider 작업은 포함하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>:
+            <span class="ok">통과</span> (기존 warning은 별도 범위)
+          </li>
+          <li><code>npx tsc --noEmit</code>: <span class="ok">통과</span></li>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+          <li>
+            <code>npx playwright test tests/design-tokens.spec.ts --grep "shared EMR component source uses semantic color tokens"</code>:
+            <span class="ok">통과</span>
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

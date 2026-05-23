@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-186 Staging Env Demo Bypass Proof Report</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-186 Staging Env Demo Bypass Proof Report</h1>
+      <p>
+        staging 환경 변수와 demo/test bypass 경계를 검토했다. 실제 secret 값은 읽거나 문서화하지 않았고,
+        deploy platform secret mutation도 실행하지 않았다.
+      </p>
+
+      <h2>비개발자 요약</h2>
+      <ul>
+        <li>브라우저에 노출해도 되는 값과 절대 노출하면 안 되는 server-only secret 목록은 기존 checklist로 분리되어 있다.</li>
+        <li><code>NEXT_PUBLIC_AUTH_MODE=supabase</code>에서 Supabase public env가 없으면 mock으로 조용히 넘어가지 않고 misconfigured로 막히는 테스트가 통과했다.</li>
+        <li>데모 actor 헤더 <code>x-clair-demo-session-user-id</code>는 mock mode에서만 actor로 인정되고, Supabase session이 있으면 실제 session user가 우선한다는 테스트가 통과했다.</li>
+        <li>tracked env 파일은 없고, secret scan/build/typecheck/security gate가 통과했다.</li>
+      </ul>
+
+      <h2>Env / Secret Checklist Result</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Public env</td><td><code>NEXT_PUBLIC_AUTH_MODE</code>, <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>만 browser-safe로 분리됨.</td></tr>
+          <tr><td>Server-only secret</td><td>secret key, service role, DB password, Postgres URL, CLI token, email provider key는 repo/docs/Linear에 값 저장 금지로 분리됨.</td></tr>
+          <tr><td>Tracked env files</td><td><code>git ls-files '.env*' '.vercel/.env*' '**/.env*'</code> 결과 tracked env file 없음.</td></tr>
+          <tr><td>Local ignored provider env</td><td><code>.vercel/.env.production.local</code> 파일 존재는 확인했지만, secret 노출 방지를 위해 내용을 읽거나 복사하지 않음.</td></tr>
+          <tr><td>Deploy platform mutation</td><td>실행하지 않음. 실제 staging platform secret 입력은 DEN-188 전 platform/owner 확인 후 진행해야 함.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Demo Bypass Disablement Proof</h2>
+      <ul>
+        <li><code>src/features/auth/server-session-contract.ts</code>: <code>mock</code>은 mock fallback, <code>auto</code>+missing env는 mock fallback, <code>supabase</code>+missing env는 <code>misconfigured</code>로 분리.</li>
+        <li><code>src/features/auth/server-role-update-identity.ts</code>: server session이 authenticated이면 demo header를 무시하고 Supabase session user를 actor로 사용.</li>
+        <li>동일 파일에서 demo header는 server session status가 <code>mock_mode</code>일 때만 actor source <code>demo_header_mock_mode</code>로 허용.</li>
+        <li><code>tests/server-session-reader.spec.ts</code>와 <code>tests/server-permission-enforcement.spec.ts</code>가 위 경계를 회귀 테스트로 고정.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npx playwright test tests/server-session-reader.spec.ts tests/server-permission-enforcement.spec.ts tests/launch-staging-readiness-checklist.spec.ts tests/permission-resolver.spec.ts tests/db-workspace-permission-adapter.spec.ts --reporter=line</code> passed: 24 tests.</li>
+        <li><code>npm run lint</code> completed with 0 errors and 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code> passed.</li>
+        <li><code>npm run build</code> passed.</li>
+        <li><code>npm run security:secrets</code> passed.</li>
+        <li><code>npm run docs:check</code> passed.</li>
+        <li><code>git diff --check</code> passed.</li>
+      </ul>
+
+      <h2>Remaining Blocker</h2>
+      <p>
+        DEN-186 can prove the code and repo-side env/secret boundary, but actual staging secret wiring is not fully
+        complete until the deploy platform/project is named and the public/secret env values are entered in that platform
+        without exposing values in repo, docs, Linear, screenshots, or logs.
+      </p>
+
+      <h2>DEN-188 Readiness</h2>
+      <p>
+        Proceed to DEN-188 only after confirming the staging deploy target and secret owner. The next smoke should verify
+        real staging URL login/session, workspace entry, tenant isolation denial, audit review, and no demo-header bypass
+        in Supabase auth mode.
+      </p>
+
+      <h2>Out of Scope</h2>
+      <ul>
+        <li>production env or production deploy</li>
+        <li>real secret values in repo/docs/chat/Linear</li>
+        <li>remote DB mutation</li>
+        <li>email send or provider setup</li>
+      </ul>
+    </main>
+  </body>
+</html>

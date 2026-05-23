@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-198 Demo UX Sales Readiness Package Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { line-height: 1.25; }
+      code { font-family: "SFMono-Regular", Consolas, monospace; background: #f6f8fa; padding: 1px 4px; border-radius: 4px; }
+      table { border-collapse: collapse; margin: 16px 0; width: 100%; }
+      th, td { border: 1px solid #d8dee9; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #eef2f7; }
+      .ok { color: #0f7b3a; font-weight: 700; }
+      .warn { color: #8a5a00; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-198 Demo UX Sales Readiness Package Report</h1>
+    <p><strong>Linear:</strong> DEN-198 <code>05-01 Assemble demo UX sales readiness package and known limitations</code></p>
+    <p><strong>작성일:</strong> 2026-05-22</p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      실제 병원 관계자에게 staging demo를 보여줄 때 사용할 대표 스크립트, talking point, 증거 링크,
+      known limitations, 말하면 안 되는 claim을 한 문서로 묶었다.
+      이제 승욱은 "무엇을 보여줄지"뿐 아니라 "어디까지 약속해도 되는지"를 같은 문서에서 확인할 수 있다.
+    </p>
+
+    <h2>생성/수정한 문서</h2>
+    <table>
+      <tr><th>파일</th><th>내용</th></tr>
+      <tr>
+        <td><code>docs/business/sales/staging-pilot-demo-package.md</code></td>
+        <td>7분 데모 순서, 화면별 talking point, evidence index, known limitations, do-not-claim list, objection handling.</td>
+      </tr>
+      <tr>
+        <td><code>docs/business/sales/README.md</code></td>
+        <td>active sales package 목록에 staging pilot demo package를 연결.</td>
+      </tr>
+      <tr>
+        <td><code>docs/business/changelog.md</code></td>
+        <td>DEN-198 business/sales 문서 추가 기록.</td>
+      </tr>
+    </table>
+
+    <h2>데모 판단</h2>
+    <table>
+      <tr><th>범위</th><th>판단</th></tr>
+      <tr><td>승욱/팀 내부 guided synthetic staging demo</td><td class="ok">Go</td></tr>
+      <tr><td>외부 병원 관계자에게 synthetic data로 보여주는 guided sales conversation</td><td class="ok">Conditional Go</td></tr>
+      <tr><td>실제 이메일 초대, 실제 병원 데이터, production, 결제/구독, provider integration claim</td><td class="warn">No-Go 또는 별도 승인 필요</td></tr>
+    </table>
+
+    <h2>근거로 연결한 Evidence</h2>
+    <ul>
+      <li>DEN-189: synthetic staging go/no-go report</li>
+      <li>DEN-188: Vercel Preview + Supabase staging smoke</li>
+      <li>DEN-196: core business flow replay evidence and screenshots</li>
+      <li>DEN-197: role/tenant/audit isolation report</li>
+      <li>DEN-202: reception queue/calendar read smoke</li>
+    </ul>
+
+    <h2>중요한 제한</h2>
+    <ul>
+      <li>DEN-187 real email invite dry-run은 아직 남아 있다.</li>
+      <li>실제 이메일 발송, production, real customer/patient data, payment/provider claim은 이 문서가 승인하지 않는다.</li>
+      <li>이 패키지는 guided representative walkthrough 기준이며 self-serve trial claim은 아니다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과.</li>
+      <li><code>git diff --check</code> 통과.</li>
+      <li>DEN-189에서 이어진 selected regression evidence: 54 passed + 10 passed.</li>
+    </ul>
+
+    <h2>추천 다음 단계</h2>
+    <p>
+      DEN-198은 Human Review로 넘긴다. 다음 남은 launch gate는 DEN-187 real email invite dry-run이며,
+      이 작업은 실제 발송 범위가 있으므로 provider/from domain/test recipient를 명확히 승인받은 뒤 진행해야 한다.
+    </p>
+  </body>
+</html>

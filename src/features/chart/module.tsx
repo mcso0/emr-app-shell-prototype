@@ -37,6 +37,8 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -2129,6 +2131,7 @@ function ChartOrderTable({
   onToggleOrder,
   onUpdateBillingName,
   onUpdateQuantity,
+  onUnavailableAction,
   rows,
   selectedOrderIds,
   someVisibleSelected,
@@ -2141,6 +2144,7 @@ function ChartOrderTable({
   onToggleOrder: (orderId: string, checked: boolean) => void;
   onUpdateBillingName: (orderId: string, billingName: string) => void;
   onUpdateQuantity: (orderId: string, quantityInput: string) => void;
+  onUnavailableAction: (action: ChartUnavailableAction, targetName?: string) => void;
   rows: ChartOrderDraftRow[];
   selectedOrderIds: Set<string>;
   someVisibleSelected: boolean;
@@ -2252,7 +2256,7 @@ function ChartOrderTable({
                       variant="outline"
                       size="xs"
                       className="bg-card"
-                      onClick={() => toast.info(`${order.displayName} 이력은 후속 상세 화면에서 연결됩니다.`)}
+                      onClick={() => onUnavailableAction("order-history", order.displayName)}
                     >
                       이력
                     </Button>
@@ -2260,7 +2264,7 @@ function ChartOrderTable({
                       variant="outline"
                       size="xs"
                       className="bg-card"
-                      onClick={() => toast.info(`${order.displayName} 요청 흐름은 후속 작업에서 연결됩니다.`)}
+                      onClick={() => onUnavailableAction("order-request", order.displayName)}
                     >
                       요청
                     </Button>
@@ -2297,7 +2301,7 @@ function ChartOrderTable({
                 variant="ghost"
                 size="sm"
                 className="w-fit justify-start"
-                onClick={() => toast.info("Order 추가는 오더 카탈로그 연결 범위에서 제공됩니다.")}
+                onClick={() => onUnavailableAction("order-add")}
               >
                 + Order 추가하기
               </Button>
@@ -2310,6 +2314,66 @@ function ChartOrderTable({
 }
 
 type OrderActionDialogType = "bill" | "confirm";
+type ChartUnavailableAction =
+  | "chart-share"
+  | "order-add"
+  | "order-history"
+  | "order-print"
+  | "order-request";
+
+const chartUnavailableActionCopy = {
+  "chart-share": {
+    title: "차트 공유는 아직 연결되지 않았어",
+    body: "실제 공유, 이메일, 카카오톡, 외부 문서 전송은 이번 MVP 범위 밖이야. 현재 화면에서 차트 상태를 확인해.",
+  },
+  "order-add": {
+    title: "Order 추가는 카탈로그 연결 후 제공돼",
+    body: "오더 카탈로그 선택과 신규 처방 추가 흐름은 후속 작업 범위야. 현재는 기존 오더의 청구명, 수량, 확정 상태만 조정해.",
+  },
+  "order-history": {
+    title: "Order 이력 상세는 아직 연결되지 않았어",
+    body: "선택 오더의 상세 이력 화면은 후속 상세 화면 범위야. 현재 테이블의 상태와 갱신 시간을 기준으로 확인해.",
+  },
+  "order-print": {
+    title: "Order 출력은 아직 연결되지 않았어",
+    body: "실제 문서 생성, 프린트, PDF 출력 연동은 이번 MVP 범위 밖이야. 화면의 오더 목록을 기준으로 데모를 진행해.",
+  },
+  "order-request": {
+    title: "Order 요청 흐름은 아직 연결되지 않았어",
+    body: "검사실, 영상실, 처치실 같은 외부/부서 요청 전송은 후속 연동 범위야. 현재는 차트 내부 상태만 저장해.",
+  },
+} as const satisfies Record<ChartUnavailableAction, { body: string; title: string }>;
+
+function ChartUnavailableAlert({
+  action,
+  className,
+  targetName,
+  onDismiss,
+}: {
+  action: ChartUnavailableAction;
+  className?: string;
+  onDismiss: () => void;
+  targetName?: string;
+}) {
+  const copy = chartUnavailableActionCopy[action];
+
+  return (
+    <EmrInlineAlert
+      severity="info"
+      title={copy.title}
+      className={cn("text-[12px]", className)}
+      action={
+        <Button size="sm" variant="outline" onClick={onDismiss}>
+          확인
+        </Button>
+      }
+      testId="chart-unavailable-action-alert"
+    >
+      {targetName ? `${targetName}: ` : null}
+      {copy.body}
+    </EmrInlineAlert>
+  );
+}
 
 function OrderArea({
   actorHeaders,
@@ -2327,6 +2391,10 @@ function OrderArea({
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(() => new Set());
   const [orderActionDialog, setOrderActionDialog] = useState<OrderActionDialogType | null>(null);
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [unavailableAction, setUnavailableAction] = useState<{
+    action: ChartUnavailableAction;
+    targetName?: string;
+  } | null>(null);
   const [orderDraftSaveState, setOrderDraftSaveState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("idle");
   const draftTouchedRef = useRef(false);
   const allOrders = useMemo(() => draftRows.map(({ order }) => order), [draftRows]);
@@ -2587,7 +2655,7 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="bg-card"
-            onClick={() => toast.info("Order 출력은 문서/프린트 연결 범위에서 제공됩니다.")}
+            onClick={() => setUnavailableAction({ action: "order-print" })}
           >
             Order 출력
           </Button>
@@ -2595,12 +2663,20 @@ function OrderArea({
             variant="outline"
             size="sm"
             className="bg-card"
-            onClick={() => toast.info("Order 추가는 오더 카탈로그 연결 범위에서 제공됩니다.")}
+            onClick={() => setUnavailableAction({ action: "order-add" })}
           >
             + Order
           </Button>
         </div>
       </div>
+      {unavailableAction ? (
+        <ChartUnavailableAlert
+          action={unavailableAction.action}
+          targetName={unavailableAction.targetName}
+          className="mx-3 mt-2 shrink-0"
+          onDismiss={() => setUnavailableAction(null)}
+        />
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] px-3 pt-2 pb-0">
         <ChartOrderTable
           allVisibleSelected={allVisibleSelected}
@@ -2609,6 +2685,7 @@ function OrderArea({
           onDeleteOrder={setDeleteOrderId}
           onToggleAll={toggleAllVisibleOrders}
           onToggleOrder={toggleOrder}
+          onUnavailableAction={(action, targetName) => setUnavailableAction({ action, targetName })}
           onUpdateBillingName={(orderId, billingName) => updateDraftRow(orderId, { billingName })}
           onUpdateQuantity={(orderId, quantityInput) => updateDraftRow(orderId, { quantityInput })}
           rows={filteredOrderRows}
@@ -2761,6 +2838,23 @@ function ChartInstructionInfo({
   );
 }
 
+function ChartPreflightLine({
+  emphasis = false,
+  label,
+  value,
+}: {
+  emphasis?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex min-h-7 items-center justify-between gap-3 text-[12px]">
+      <span className="text-[var(--emr-text-tertiary)]">{label}</span>
+      <span className={cn("text-right font-medium", emphasis && "text-primary")}>{value}</span>
+    </div>
+  );
+}
+
 function EmptyChartState() {
   return (
     <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
@@ -2809,6 +2903,8 @@ export function ChartContent() {
   const [chartTopPercent, setChartTopPercent] = useState(CHART_TOP_DEFAULT_PERCENT);
   const [isChartResizing, setIsChartResizing] = useState(false);
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
+  const [chartUnavailableAction, setChartUnavailableAction] =
+    useState<ChartUnavailableAction | null>(null);
   const [diagnosisState, setDiagnosisState] = useState<{
     encounterId?: string;
     rows: EditableDiagnosis[];
@@ -3176,7 +3272,11 @@ export function ChartContent() {
             }
             actions={
               <>
-                <Button variant="outline" className="bg-card">
+                <Button
+                  variant="outline"
+                  className="bg-card"
+                  onClick={() => setChartUnavailableAction("chart-share")}
+                >
                   차트 공유
                 </Button>
                 <Button onClick={() => setChartCompleteDialogOpen(true)}>
@@ -3189,28 +3289,66 @@ export function ChartContent() {
         orderInfo={<ChartInstructionInfo bundle={currentBundle} latestSoap={effectiveLatestSoap} />}
       />
       <Dialog open={chartCompleteDialogOpen} onOpenChange={setChartCompleteDialogOpen}>
-        <EmrConfirmDialogContent
+        <EmrDialogShell
+          variant="confirm"
           title="차트 작성완료 확인"
-          description={
-            <span className="grid gap-3">
-              <span>
-                진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 작성완료 상태를 저장합니다.
-              </span>
-              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
-                <span>환자: {currentBundle.patient.name} · 보호자 {currentBundle.primaryGuardian?.name ?? "보호자 미지정"}</span>
-                <span>차트번호: {currentBundle.encounter.encounterNo}</span>
-                <span>진단명: {diagnosisRows.length}건 · 오더: {allOrders.length}건</span>
-                <span>차트 상태: {chartCompletionStatusText}</span>
-                <span>SOAP 상태: {getSoapStatusText(effectiveLatestSoap)}</span>
-              </span>
-            </span>
+          description="진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 작성완료 상태를 저장해."
+          footerMeta="작성완료는 local-first/server route 저장 상태만 바꾸며 외부 전송이나 청구 확정은 별도 흐름이야."
+          primaryAction={
+            <Button
+              size="sm"
+              disabled={chartCompletionState.status === "saving"}
+              onClick={() => void handleChartCompletionConfirm()}
+            >
+              {chartCompletionState.status === "saving" ? "저장 중" : "작성완료 저장"}
+            </Button>
           }
-          cancelLabel="계속 작성"
-          confirmLabel={chartCompletionState.status === "saving" ? "저장 중" : "작성완료 확인"}
-          onCancel={() => setChartCompleteDialogOpen(false)}
-          onConfirm={handleChartCompletionConfirm}
-        />
+          secondaryAction={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={chartCompletionState.status === "saving"}
+              onClick={() => setChartCompleteDialogOpen(false)}
+            >
+              계속 작성
+            </Button>
+          }
+        >
+          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
+            <ChartPreflightLine
+              label="환자 / 보호자"
+              value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
+            />
+            <ChartPreflightLine label="차트번호" value={currentBundle.encounter.encounterNo} />
+            <ChartPreflightLine label="진단명 / 오더" value={`${diagnosisRows.length}건 / ${allOrders.length}건`} />
+            <ChartPreflightLine label="차트 상태" value={chartCompletionStatusText} emphasis />
+            <ChartPreflightLine label="SOAP 상태" value={getSoapStatusText(effectiveLatestSoap)} />
+          </div>
+          {chartCompletionState.status === "error" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="차트 작성완료가 저장되지 않았어"
+              className="mt-3 text-[12px]"
+              action={
+                <Button size="sm" variant="outline" onClick={() => void handleChartCompletionConfirm()}>
+                  작성완료 다시 시도
+                </Button>
+              }
+              testId="chart-completion-error-alert"
+            >
+              현재 차트 내용은 화면에 남아 있지만 작성완료 상태는 확정되지 않았어. 권한 또는 서버 저장 상태를
+              확인한 뒤 다시 시도해.
+            </EmrInlineAlert>
+          ) : null}
+        </EmrDialogShell>
       </Dialog>
+      {chartUnavailableAction ? (
+        <ChartUnavailableAlert
+          action={chartUnavailableAction}
+          className="mt-2 shrink-0"
+          onDismiss={() => setChartUnavailableAction(null)}
+        />
+      ) : null}
       <div
         ref={chartWorkspaceRef}
         data-slot="chart-workspace"

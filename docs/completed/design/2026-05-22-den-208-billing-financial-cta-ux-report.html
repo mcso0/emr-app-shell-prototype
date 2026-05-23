@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-208 Billing Financial CTA UX 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-208</p>
+        <h1>Billing Financial CTA UX 보고서</h1>
+        <p>
+          청구/수납 화면의 <code>청구 확정</code>, <code>미납 처리</code>, <code>수납 완료</code> CTA를
+          financial risk taxonomy에 맞춰 저장 전 preflight 확인 단계로 감쌌다. 금액, 보호자/환자,
+          결제 수단, 변경 후 상태, MVP 결제 경계를 저장 전에 확인할 수 있다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">앱 화면 반영</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            <code>EmrDialogShell variant="confirm"</code> 기반의 청구/미납/수납 financial preflight dialog를 추가했다.
+          </li>
+          <li>
+            preflight body에 청구서, 보호자/환자, 청구 항목 수, 확인 금액, 결제 수단, 변경 후 상태를 표시한다.
+          </li>
+          <li>
+            실패 시 다이얼로그를 닫고 <code>EmrInlineAlert severity="error"</code>로 저장 안 됨, MVP 경계,
+            다시 시도 action을 수납 패널 안에 남긴다.
+          </li>
+          <li>
+            결제 수단 저장 실패와 수납 상태 저장 실패를 구분해 복구 action label을 다르게 보여준다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Before / After Evidence</h2>
+        <ul>
+          <li>Before baseline: <code>output/ui-audit-2026-05-22/screenshots/09-billing-confirm-feedback.png</code></li>
+          <li>
+            After screenshot:
+            <code>output/ui-audit-2026-05-22/screenshots/den-208-billing-financial-preflight-after.png</code>
+          </li>
+        </ul>
+        <p class="meta">
+          After screenshot은 수납 화면에서 <code>청구 확정</code>을 눌러 financial preflight dialog가 열린 상태다.
+        </p>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>UXA-02: 청구/수납의 financial CTA가 동일한 confirm shell, action order, width 규격을 따른다.</li>
+          <li>UXA-03: 저장 실패가 토스트성 문구가 아니라, 수납 패널 내부의 복구 가능한 inline alert로 남는다.</li>
+          <li>UXA-04: 금전 상태 변경 전에 금액과 상태 변경 결과를 확인해 accidental commit 위험을 낮춘다.</li>
+          <li>UXA-08: 실제 PG, VAT, 영수증, 환불, 정산 미연동 경계를 preflight와 failure copy에서 반복 확인한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>실제 PG, VAT, 영수증, 환불, 부분 결제, 정산 또는 회계 연동</li>
+          <li>billing persistence server route, DB schema, migration, RLS 변경</li>
+          <li>금액 정책, 할인 정책, 세금 계산 정책 변경</li>
+          <li>role/permission policy 변경</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>:
+            <span class="ok">통과</span> (기존 warning 5건은 별도 범위)
+          </li>
+          <li><code>npx tsc --noEmit</code>: <span class="ok">통과</span></li>
+          <li><code>npx playwright test tests/billing.spec.ts</code>: <span class="ok">통과</span></li>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

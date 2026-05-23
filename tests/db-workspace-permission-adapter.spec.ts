@@ -5,6 +5,10 @@ import {
   loadWorkspacePermissionAdapterFromDb,
 } from "../src/features/auth/db-workspace-permission-adapter-core";
 import { resolveWorkspacePermission } from "../src/features/auth/permission-resolver";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "../src/features/auth/supabase-workspace-permission-gateway-core";
 
 test("DB-backed permission adapter maps membership and role policy rows into resolver input", async () => {
   const adapter = createWorkspacePermissionAdapterFromDbRows({
@@ -99,6 +103,92 @@ test("DB-backed permission loader uses a narrow gateway and keeps server-only bo
     "src/features/auth/db-workspace-permission-adapter.ts",
     "utf8"
   );
+  const supabaseGatewaySource = readFileSync(
+    "src/features/auth/supabase-workspace-permission-gateway.ts",
+    "utf8"
+  );
   expect(source).toContain('import "server-only"');
+  expect(supabaseGatewaySource).toContain('import "server-only"');
   expect(source).not.toMatch(/sessionStorage|localStorage|window\\./);
+  expect(supabaseGatewaySource).not.toMatch(/sessionStorage|localStorage|window\\./);
+});
+
+test("Supabase workspace permission gateway reads scoped membership, users, and policies", async () => {
+  const calls: string[] = [];
+  const client = {
+    from(table: "user_memberships" | "users" | "permission_policies") {
+      const filters: string[] = [];
+      const builder = {
+        select(columns: string) {
+          calls.push(`${table}:select:${columns}`);
+          return builder;
+        },
+        eq(column: string, value: string) {
+          filters.push(`${column}=${value}`);
+          calls.push(`${table}:eq:${column}=${value}`);
+          return builder;
+        },
+        in(column: string, values: string[]) {
+          filters.push(`${column}=${values.join(",")}`);
+          calls.push(`${table}:in:${column}=${values.join(",")}`);
+          return builder;
+        },
+        then(resolve: (value: { data: unknown[]; error: null }) => unknown) {
+          if (table === "user_memberships") {
+            return Promise.resolve(
+              resolve({
+                data: [
+                  {
+                    id: "membership-live",
+                    workspace_id: "clair-demo",
+                    user_id: "user-live",
+                    roles: ["hospital_admin"],
+                    status: "active",
+                  },
+                ],
+                error: null,
+              })
+            );
+          }
+
+          if (table === "users") {
+            return Promise.resolve(
+              resolve({
+                data: [{ id: "user-live", status: "active", display_name: "Live Admin" }],
+                error: null,
+              })
+            );
+          }
+
+          return Promise.resolve(
+            resolve({
+              data: [
+                {
+                  workspace_id: "clair-demo",
+                  scope: "role",
+                  target_role: "hospital_admin",
+                  permissions: { allowed: ["*"] },
+                },
+              ],
+              error: null,
+            })
+          );
+        },
+      };
+
+      return builder;
+    },
+  };
+  const gateway = createSupabaseWorkspacePermissionGateway(
+    client as unknown as SupabaseWorkspacePermissionClient
+  );
+
+  await expect(gateway.listMemberships("clair-demo", "user-live")).resolves.toHaveLength(1);
+  await expect(gateway.listUsers(["user-live"])).resolves.toHaveLength(1);
+  await expect(gateway.listPermissionPolicies("clair-demo")).resolves.toHaveLength(1);
+
+  expect(calls).toContain("user_memberships:eq:workspace_id=clair-demo");
+  expect(calls).toContain("user_memberships:eq:user_id=user-live");
+  expect(calls).toContain("users:in:id=user-live");
+  expect(calls).toContain("permission_policies:eq:workspace_id=clair-demo");
 });

@@ -63,6 +63,14 @@ function getAuthSessionNotice(reason: string | null) {
     } as const;
   }
 
+  if (reason === "invite_existing_account") {
+    return {
+      title: "초대받은 이메일로 로그인하세요.",
+      description: "로그인 후 초대 화면으로 돌아가 워크스페이스 멤버십을 활성화합니다.",
+      tone: "warning",
+    } as const;
+  }
+
   if (reason === "signed_out") {
     return {
       title: "안전하게 로그아웃되었습니다.",
@@ -101,6 +109,8 @@ export function LoginForm() {
   } = useAuthClient();
   const usesSupabaseProvider = authProvider === "supabase";
   const authSessionNotice = getAuthSessionNotice(searchParams.get("reason"));
+  const inviteEmail = searchParams.get("inviteEmail");
+  const isInviteLogin = searchParams.get("reason") === "invite_existing_account";
 
   useEffect(() => {
     hydrate();
@@ -165,7 +175,9 @@ export function LoginForm() {
                     CLAiR EMR에 로그인
                   </h1>
                   <p className="text-[14px] leading-6 text-muted-foreground">
-                    병원 워크스페이스에 접속하려면 계정 정보를 입력하세요.
+                    {isInviteLogin
+                      ? "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요."
+                      : "병원 워크스페이스에 접속하려면 계정 정보를 입력하세요."}
                   </p>
                 </div>
 
@@ -196,12 +208,15 @@ export function LoginForm() {
                     type="email"
                     name="email"
                     placeholder="name@hospital.com"
+                    defaultValue={inviteEmail ?? undefined}
                     autoComplete="email"
                     disabled={isSubmitting}
                     aria-describedby="mock-email-description"
                   />
                   <FieldDescription id="mock-email-description" className="text-[12px]">
-                    Mock 모드에서는 역할 선택으로 로그인하고, Supabase 모드에서는 계정 정보를 확인합니다.
+                    {isInviteLogin && inviteEmail
+                      ? `${inviteEmail} 계정으로 로그인해야 이 초대를 수락할 수 있습니다.`
+                      : "Mock 모드에서는 역할 선택으로 로그인하고, Supabase 모드에서는 계정 정보를 확인합니다."}
                   </FieldDescription>
                 </Field>
 
@@ -233,101 +248,105 @@ export function LoginForm() {
 
         <aside className="flex min-h-[520px] items-center justify-center border-t border-border bg-[var(--emr-surface-muted)] px-5 py-8 md:px-10 lg:border-l lg:border-t-0">
           <div className={loginControlsClassName}>
-            <div className="flex flex-col gap-2">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
-                Development controls
-              </p>
-              <h2 className="text-[24px] font-semibold leading-8 tracking-normal">
-                MVP 테스트 옵션
-              </h2>
-              <p className="text-[14px] leading-6 text-muted-foreground">
-                {usesSupabaseProvider
-                  ? "Supabase Auth로 로그인합니다. MVP 테스트 옵션은 local demo 확인용으로 유지합니다."
-                  : "현재는 Supabase Auth 연결 전 mock session으로 진입합니다."}
-              </p>
-            </div>
+            {usesSupabaseProvider ? (
+              <InviteLoginContext inviteEmail={inviteEmail} />
+            ) : (
+              <>
+                <div className="flex flex-col gap-2">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
+                    Development controls
+                  </p>
+                  <h2 className="text-[24px] font-semibold leading-8 tracking-normal">
+                    MVP 테스트 옵션
+                  </h2>
+                  <p className="text-[14px] leading-6 text-muted-foreground">
+                    현재는 Supabase Auth 연결 전 mock session으로 진입합니다.
+                  </p>
+                </div>
 
-            <FieldSet className="gap-3">
-              <FieldLegend className="mb-0 text-[13px]">역할 선택</FieldLegend>
-              <div className="grid gap-2">
-                {MOCK_AUTH_ROLES.map((role) => {
-                  const selected = selectedRole === role.id;
+                <FieldSet className="gap-3">
+                  <FieldLegend className="mb-0 text-[13px]">역할 선택</FieldLegend>
+                  <div className="grid gap-2">
+                    {MOCK_AUTH_ROLES.map((role) => {
+                      const selected = selectedRole === role.id;
 
-                  return (
-                    <button
-                      key={role.id}
-                      type="button"
-                      aria-pressed={selected}
-                      aria-label={`${role.label} 역할 선택`}
-                      disabled={isSubmitting}
-                      onClick={() => setSelectedRole(role.id)}
-                      className={cn(
-                        "flex min-h-[68px] items-start gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3 text-left transition-colors",
-                        "disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                        selected
-                          ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-                          : "border-border hover:bg-[var(--emr-state-hover)]"
-                      )}
-                    >
-                      <span
+                      return (
+                        <button
+                          key={role.id}
+                          type="button"
+                          aria-pressed={selected}
+                          aria-label={`${role.label} 역할 선택`}
+                          disabled={isSubmitting}
+                          onClick={() => setSelectedRole(role.id)}
+                          className={cn(
+                            "flex min-h-[68px] items-start gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3 text-left transition-colors",
+                            "disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                            selected
+                              ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                              : "border-border hover:bg-[var(--emr-state-hover)]"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border",
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border text-transparent"
+                            )}
+                            aria-hidden="true"
+                          >
+                            <CheckIcon />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-[14px] font-semibold leading-5">
+                              {role.label}
+                            </span>
+                            <span className="mt-1 block text-[12px] leading-4 text-muted-foreground">
+                              {role.description}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FieldSet>
+
+                <FieldSet className="gap-3">
+                  <FieldLegend className="mb-0 text-[13px]">로그인 유지</FieldLegend>
+                  <div className="grid gap-2">
+                    {storageOptions.map((option) => (
+                      <label
+                        key={option.id}
                         className={cn(
-                          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border",
-                          selected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border text-transparent"
+                          "flex min-h-[64px] cursor-pointer gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3",
+                          storageMode === option.id
+                            ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                            : "border-border"
                         )}
-                        aria-hidden="true"
                       >
-                        <CheckIcon />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-[14px] font-semibold leading-5">
-                          {role.label}
+                        <input
+                          type="radio"
+                          name="mock-session-storage"
+                          value={option.id}
+                          checked={storageMode === option.id}
+                          disabled={isSubmitting}
+                          onChange={() => setStorageMode(option.id)}
+                          className="mt-1 size-4 accent-[var(--emr-state-selected-border)]"
+                        />
+                        <span>
+                          <span className="block text-[13px] font-semibold leading-5">
+                            {option.label}
+                          </span>
+                          <span className="mt-0.5 block text-[12px] leading-4 text-muted-foreground">
+                            {option.description}
+                          </span>
                         </span>
-                        <span className="mt-1 block text-[12px] leading-4 text-muted-foreground">
-                          {role.description}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </FieldSet>
-
-            <FieldSet className="gap-3">
-              <FieldLegend className="mb-0 text-[13px]">로그인 유지</FieldLegend>
-              <div className="grid gap-2">
-                {storageOptions.map((option) => (
-                  <label
-                    key={option.id}
-                    className={cn(
-                      "flex min-h-[64px] cursor-pointer gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3",
-                      storageMode === option.id
-                        ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-                        : "border-border"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="mock-session-storage"
-                      value={option.id}
-                      checked={storageMode === option.id}
-                      disabled={isSubmitting}
-                      onChange={() => setStorageMode(option.id)}
-                      className="mt-1 size-4 accent-[var(--emr-state-selected-border)]"
-                    />
-                    <span>
-                      <span className="block text-[13px] font-semibold leading-5">
-                        {option.label}
-                      </span>
-                      <span className="mt-0.5 block text-[12px] leading-4 text-muted-foreground">
-                        {option.description}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </FieldSet>
+                      </label>
+                    ))}
+                  </div>
+                </FieldSet>
+              </>
+            )}
 
             <div
               className="rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-subpanel)] p-3"
@@ -383,5 +402,36 @@ export function LoginForm() {
         </aside>
       </section>
     </main>
+  );
+}
+
+function InviteLoginContext({ inviteEmail }: { inviteEmail: string | null }) {
+  return (
+    <div className="flex flex-col gap-4 rounded-[var(--clair-radius-lg)] border border-border bg-card p-5 shadow-sm">
+      <div className="flex flex-col gap-2">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
+          Invitation login
+        </p>
+        <h2 className="text-[24px] font-semibold leading-8 tracking-normal">
+          초대 계정 확인
+        </h2>
+        <p className="text-[14px] leading-6 text-muted-foreground">
+          이 로그인은 초대받은 워크스페이스 멤버십을 활성화하기 위한 단계입니다.
+        </p>
+      </div>
+
+      <dl className="grid gap-3 text-[13px]">
+        <div>
+          <dt className="text-[12px] text-muted-foreground">초대 이메일</dt>
+          <dd className="mt-0.5 font-medium">{inviteEmail ?? "초대 링크에서 확인 중"}</dd>
+        </div>
+        <div>
+          <dt className="text-[12px] text-muted-foreground">다음 단계</dt>
+          <dd className="mt-0.5 font-medium">
+            로그인 성공 후 초대 수락 화면으로 돌아갑니다.
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }

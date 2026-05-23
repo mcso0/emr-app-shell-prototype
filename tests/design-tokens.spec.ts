@@ -248,10 +248,13 @@ test("shared EMR component source uses semantic color tokens instead of direct l
   const sources = await Promise.all(
     [
       "src/components/emr/content-history-list.tsx",
+      "src/components/emr/dialog-shell.tsx",
       "src/components/emr/emr-data-table.tsx",
+      "src/components/emr/inline-alert.tsx",
       "src/components/emr/order-queue-side-panel.tsx",
       "src/components/emr/order-queue-summary.tsx",
       "src/components/emr/patient-context-bar.tsx",
+      "src/components/emr/row-action-menu.tsx",
       "src/components/emr/subpanel.tsx",
     ].map((path) => fs.promises.readFile(path, "utf8")),
   );

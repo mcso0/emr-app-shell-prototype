@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-188 Staging Deploy Smoke Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { line-height: 1.25; }
+      code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+      table { border-collapse: collapse; margin: 16px 0; width: 100%; }
+      th, td { border: 1px solid #d8dee9; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #eef2f7; }
+      .ok { color: #0f7b3a; font-weight: 700; }
+      .warn { color: #8a5a00; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-188 Staging Deploy Smoke Report</h1>
+    <p><strong>Linear:</strong> DEN-188 <code>04-01 Deploy staging and run SaaS launch smoke test</code></p>
+    <p><strong>대상:</strong> Vercel Preview + Supabase staging <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+
+    <h2>요약</h2>
+    <p>
+      DEN-188은 최초에는 build quota, 외부 URL, Vercel env 입력 경로가 확정되지 않아 blocked 상태였다.
+      승욱이 Vercel Preview env를 직접 입력하고 1회 추가 build quota 사용을 승인한 뒤,
+      Supabase synthetic login blocker(DEN-201)와 reception queue/calendar read blocker(DEN-202)를 해결했다.
+      새 Preview에서 로그인 세션, 워크스페이스 진입, 접수/고객/감사 read, tenant isolation denial smoke를 재개했고,
+      현재 배포 smoke 기준은 통과했다.
+    </p>
+
+    <h2>배포 정보</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>Preview URL</td><td class="ok"><code>https://emr-app-shell-prototype-7vspe6a9q-mcso0s-projects.vercel.app</code></td></tr>
+      <tr><td>Deployment ID</td><td class="ok"><code>dpl_G8Bt1WjhQ1Bugp5NAGx9ytx7j6JX</code></td></tr>
+      <tr><td>Build status</td><td class="ok">READY</td></tr>
+      <tr><td>Auth mode</td><td class="ok">Supabase staging Preview env</td></tr>
+      <tr><td>Production deploy</td><td class="ok">미실행</td></tr>
+      <tr><td>Real email delivery</td><td class="ok">미실행, DEN-187 범위로 유지</td></tr>
+    </table>
+
+    <h2>Browser Smoke</h2>
+    <table>
+      <tr><th>체크</th><th>결과</th></tr>
+      <tr>
+        <td>Login/session persistence</td>
+        <td class="ok">
+          <code>admin@clair.local</code> 세션으로 Preview workspace routes를 이동해도 로그인 화면으로 돌아가지 않음.
+        </td>
+      </tr>
+      <tr>
+        <td>Workspace entry</td>
+        <td class="ok">
+          <code>/w/clair-demo/home?modulePanel=open</code> 진입. Auth guard가 해제되고 workspace home shell 표시.
+        </td>
+      </tr>
+      <tr>
+        <td>Reception read</td>
+        <td class="ok">
+          <code>/w/clair-demo/reception?modulePanel=open</code>에서 대기열 4건, <code>콩이</code>,
+          <code>예약 코코</code> 등 캘린더 데이터 표시.
+          <code>서버 대기열을 불러오지 못했습니다</code>와
+          <code>서버 캘린더를 불러오지 못했습니다</code>는 미표시.
+        </td>
+      </tr>
+      <tr>
+        <td>Customer read</td>
+        <td class="ok">
+          <code>/w/clair-demo/customer?modulePanel=open</code>에서 고객관리 목록과 synthetic 보호자/환자 데이터 표시.
+        </td>
+      </tr>
+      <tr>
+        <td>Audit read</td>
+        <td class="ok">
+          <code>/api/workspaces/clair-demo/audit/events</code>가 로그인 세션에서 <code>{"ok":true}</code>와 audit events를 반환.
+        </td>
+      </tr>
+      <tr>
+        <td>Tenant isolation denial</td>
+        <td class="ok">
+          <code>/w/not-clair-demo/reception?modulePanel=open</code> 접근 시
+          <code>/login?...reason=unauthorized</code>로 이동하고
+          <code>이 워크스페이스에 접근할 권한이 없습니다.</code> 안내 표시.
+        </td>
+      </tr>
+      <tr><td>Browser console error</td><td class="ok">현재 smoke 중 console error 없음.</td></tr>
+    </table>
+
+    <h2>Local Regression Verification</h2>
+    <table>
+      <tr><th>명령</th><th>결과</th></tr>
+      <tr><td><code>npx playwright test tests/db-workspace-permission-adapter.spec.ts tests/reception-queue-read-server.spec.ts tests/reception-calendar-read-server.spec.ts --reporter=line</code></td><td class="ok">13 passed</td></tr>
+      <tr><td><code>npx playwright test tests/launch-rate-limit-abuse-handling.spec.ts tests/audit-review-surface.spec.ts tests/ops-tenant-workspace-action.spec.ts tests/cross-tenant-denial-regression.spec.ts --reporter=line</code></td><td class="ok">14 passed</td></tr>
+      <tr><td><code>npx tsc --noEmit</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>npm run security:secrets</code></td><td class="ok">passed, 1622 tracked files checked</td></tr>
+      <tr><td><code>git diff --check</code></td><td class="ok">passed</td></tr>
+    </table>
+
+    <h2>범위 밖 / 남은 게이트</h2>
+    <ul>
+      <li>실제 email delivery는 DEN-187 범위라 이번 smoke에서 발송하지 않았다.</li>
+      <li>Production deploy, real customer data, payment/subscription launch, enterprise SSO는 제외했다.</li>
+      <li>첫 real pilot go/no-go는 DEN-189에서 synthetic hospital rehearsal 결과까지 묶어 판단해야 한다.</li>
+    </ul>
+
+    <h2>판단</h2>
+    <p>
+      DEN-188 관점의 staging deploy smoke는 <strong class="ok">통과</strong>로 본다.
+      다만 북극성 전체 완료는 아직 아니다. 남은 큰 게이트는 real email dry-run(DEN-187)과
+      synthetic hospital rehearsal/go-no-go(DEN-189)다.
+    </p>
+  </body>
+</html>

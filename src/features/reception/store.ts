@@ -38,8 +38,10 @@ type ReceptionStore = {
   calendarReadStatus: ReceptionQueueReadStatus;
   queueReadError?: string;
   queueReadStatus: ReceptionQueueReadStatus;
+  readRetryNonce: number;
   applyPersistedReceptionCalendar: (records: ReceptionCalendarReadRecord[]) => void;
   applyPersistedReceptionQueue: (queue: ReceptionQueueReadRecord[]) => void;
+  requestReceptionReadRetry: () => void;
   setSearchQuery: (query: string) => void;
   setReceptionCalendarReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
   setReceptionQueueReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
@@ -172,6 +174,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
   persistedCalendarAppointments: [],
   calendarReadStatus: "idle",
   queueReadStatus: "idle",
+  readRetryNonce: 0,
   applyPersistedReceptionCalendar: (records) =>
     set((state) => {
       const persistedCalendarAppointments = records.flatMap((record) =>
@@ -236,6 +239,10 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       };
     }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+  requestReceptionReadRetry: () =>
+    set((state) => ({
+      readRetryNonce: state.readRetryNonce + 1,
+    })),
   setReceptionCalendarReadStatus: (calendarReadStatus, calendarReadError) =>
     set({ calendarReadError, calendarReadStatus }),
   setReceptionQueueReadStatus: (queueReadStatus, queueReadError) =>

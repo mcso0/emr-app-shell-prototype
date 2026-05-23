@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-195 Staging Readback Reset Contract Report</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-195 Staging Readback Reset Contract Report</h1>
+      <p>
+        DEN-194 synthetic medium hospital seed가 staging에서 반복 리허설 가능한 상태인지
+        readback, duplicate, synthetic guard, invoice integrity, reset/replay 경로로 검증했다.
+      </p>
+
+      <h2>비개발자 요약</h2>
+      <ul>
+        <li>staging에 들어간 데모 병원 데이터가 기대 수량대로 모두 읽히는지 확인했다.</li>
+        <li>같은 seed를 다시 실행해도 보호자 번호, 환자 번호, 청구서 번호 중복이 생기지 않음을 확인했다.</li>
+        <li>반복 리허설 때 사용할 read-only 확인 SQL과 seed replay 절차를 문서화했다.</li>
+        <li>따라서 DEN-192 앱 화면 리허설은 fixture 관점에서는 시작 가능하다.</li>
+      </ul>
+
+      <h2>Remote Readback Result</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Workspace</td><td><code>CLAiR Medium Animal Hospital</code></td></tr>
+          <tr><td>Staff</td><td>hospital_admin 1, vet 3, technician 4, front_desk 3</td></tr>
+          <tr><td>Core fixture counts</td><td>20 count groups passed</td></tr>
+          <tr><td>Scenarios</td><td>5/5 scenario audit checks passed</td></tr>
+          <tr><td>Invoice integrity</td><td>5/5 invoice totals matched line totals</td></tr>
+          <tr><td>Duplicate checks</td><td>guardian_code, patient_no, invoice_no duplicate groups all 0</td></tr>
+          <tr><td>Synthetic guard checks</td><td>guardian names, guardian emails, patient names all passed</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Reset / Replay Finding</h2>
+      <p>
+        <code>npx supabase db push --include-seed</code> successfully applied the seed during DEN-194.
+        However, when the remote schema is already up to date, the CLI can finish without re-running
+        <code>supabase/seed.sql</code>. For repeated rehearsal reset, the documented approved path is:
+      </p>
+      <pre><code>npx supabase db query --linked --file supabase/seed.sql --output json
+npx supabase db query --linked --file supabase/snippets/den-195_staging_synthetic_dataset_readback.sql --output json</code></pre>
+      <p>
+        This path was executed once after the initial seed apply. Readback still passed and duplicate checks remained 0.
+      </p>
+
+      <h2>Files Changed</h2>
+      <ul>
+        <li><code>supabase/snippets/den-195_staging_synthetic_dataset_readback.sql</code>: reusable read-only staging readback SQL.</li>
+        <li><code>docs/engineering/operations/staging-pilot-readback-reset-contract.md</code>: reset/replay contract and pass criteria.</li>
+        <li><code>tests/staging-synthetic-readback-contract.spec.ts</code>: static guard that the readback SQL is read-only and complete enough.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npx playwright test tests/staging-synthetic-readback-contract.spec.ts --reporter=line</code> passed: 3 tests.</li>
+        <li><code>npx supabase db query --linked --file supabase/snippets/den-195_staging_synthetic_dataset_readback.sql --output json</code> passed before seed replay.</li>
+        <li><code>npx supabase db query --linked --file supabase/seed.sql --output json</code> completed approved staging seed replay.</li>
+        <li><code>npx supabase db query --linked --file supabase/snippets/den-195_staging_synthetic_dataset_readback.sql --output json</code> passed after seed replay.</li>
+      </ul>
+
+      <h2>Out of Scope</h2>
+      <ul>
+        <li>production database access</li>
+        <li>real clinic/customer/patient/staff/billing data</li>
+        <li>destructive remote database reset</li>
+        <li>email, deploy, payment provider, or external provider work</li>
+      </ul>
+
+      <h2>Recommended Next Step</h2>
+      <p>
+        Proceed to DEN-192 or the next active staging replay issue for app-level pilot rehearsal:
+        verify that the UI/API paths can use these fixtures across reception, chart, orders, billing, and audit.
+      </p>
+    </main>
+  </body>
+</html>

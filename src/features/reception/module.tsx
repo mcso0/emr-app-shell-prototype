@@ -29,13 +29,14 @@ import {
 } from "@/components/emr/subpanel";
 import {
   EmrSidePanelCard,
-  EmrSidePanelCardAction,
   EmrSidePanelIdentityLine,
   EmrSidePanelMetaBadge,
   EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
+  emrSidePanelCardActionButtonClassName,
 } from "@/components/emr/side-panel-card";
-import { ChevronLeftIcon, ChevronRightIcon, ExcelFileIcon } from "@/components/icons";
+import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
+import { ChevronLeftIcon, ChevronRightIcon, CircleCloseFillIcon, ExcelFileIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -64,6 +65,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   Select,
   SelectContent,
@@ -500,6 +502,29 @@ function getAppointmentCheckInRouteErrorMessage(
   return "예약 접수 처리에 실패했습니다.";
 }
 
+function getReceptionReadFailureMessage(
+  result: Extract<ReceptionQueueReadResponse | ReceptionCalendarReadResponse, { ok: false }>
+) {
+  if (
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return "접수 보기 권한 또는 workspace membership을 확인해야 해. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+  }
+
+  if (result.denialReason === "unauthenticated") {
+    return "로그인 세션을 확인하지 못했어. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+  }
+
+  if (result.error === "supabase_client_missing") {
+    return "live Supabase read 연결이 구성되지 않았어. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+  }
+
+  return "서버 read 결과를 반영하지 못했어. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+}
+
 const recentPatientWeightKgByPatientId: Record<string, string> = {
   "patient-coco": "4.20",
   "patient-kong": "5.10",
@@ -779,10 +804,12 @@ const getAppointmentTone = (status: Appointment["status"]) => {
 };
 
 function PatientCard({
+  onUnavailableAction,
   selected,
   summary,
   onSelect,
 }: {
+  onUnavailableAction: (feedback: ReceptionCardActionFeedback) => void;
   selected: boolean;
   summary: ReceptionPatientSummary;
   onSelect: () => void;
@@ -833,7 +860,42 @@ function PatientCard({
         patientName={summary.patient.name}
         guardianName={guardianName}
         typeBadge={<EmrSidePanelTypeBadge label={receptionType} />}
-        action={<EmrSidePanelCardAction ariaLabel={`${summary.patient.name} 더보기`} />}
+        action={
+          <EmrRowActionMenu
+            ariaLabel={`${summary.patient.name} 카드 작업`}
+            contentClassName="w-56"
+            items={[
+              {
+                key: "open",
+                label: "접수 상세 보기",
+                description: "현재 drawer 열기",
+                onSelect,
+              },
+              {
+                key: "chart",
+                label: "차트 보러가기",
+                description: "진료/차트 탭에서 선택",
+                onSelect: () =>
+                  onUnavailableAction({
+                    title: "차트 보기는 진료/차트 탭에서 이어가",
+                    body: `${summary.patient.name}의 차트 이동은 현재 접수 drawer를 연 뒤 진료/차트 탭에서 확인하는 흐름으로 유지돼.`,
+                  }),
+              },
+              {
+                key: "message",
+                label: "카카오톡 발송",
+                description: "외부 발송 미연동",
+                onSelect: () =>
+                  onUnavailableAction({
+                    title: "카카오톡 발송은 아직 연결되지 않았어",
+                    body: "실제 카카오톡, 문자, 이메일 발송은 이번 MVP 범위 밖이야. 접수 카드에서는 환자/보호자 맥락만 확인해.",
+                  }),
+              },
+            ]}
+            testId={`reception-card-action-${summary.patient.id}`}
+            triggerClassName={emrSidePanelCardActionButtonClassName}
+          />
+        }
       />
       <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
         <span className="min-w-0 flex-1 truncate">{visitText}</span>
@@ -856,6 +918,11 @@ function PatientCard({
   );
 }
 
+type ReceptionCardActionFeedback = {
+  body: ReactNode;
+  title: string;
+};
+
 export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
@@ -863,6 +930,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
   const [listMode, setListMode] = useState<ReceptionSideListMode>("reception");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [cardActionFeedback, setCardActionFeedback] = useState<ReceptionCardActionFeedback | null>(null);
   const searchQuery = useReceptionStore((state) => state.searchQuery);
   const selectAppointment = useReceptionStore((state) => state.selectAppointment);
   const selectEncounter = useReceptionStore((state) => state.selectEncounter);
@@ -873,6 +941,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const requestReceptionReadRetry = useReceptionStore((state) => state.requestReceptionReadRetry);
   const setSearchQuery = useReceptionStore((state) => state.setSearchQuery);
   const scenario = getDemoScenarioFromParams(searchParams);
   const querySelectedPatientId = searchParams.get("patientId") ?? scenario?.patientId;
@@ -913,9 +982,34 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         <ReceptionPanelStateMessage>대기열 불러오는 중</ReceptionPanelStateMessage>
       ) : null}
       {queueReadStatus === "error" ? (
-        <ReceptionPanelStateMessage tone="danger">
-          {queueReadError ?? "대기열을 불러오지 못했습니다."}
-        </ReceptionPanelStateMessage>
+        <EmrInlineAlert
+          className="mx-3 my-2"
+          severity="warning"
+          title="서버 대기열을 불러오지 못했어"
+          action={
+            <Button size="sm" variant="outline" onClick={requestReceptionReadRetry}>
+              대기열 다시 시도
+            </Button>
+          }
+          testId="reception-queue-read-alert"
+        >
+          {queueReadError ?? "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼."}
+        </EmrInlineAlert>
+      ) : null}
+      {cardActionFeedback ? (
+        <EmrInlineAlert
+          className="mx-3 my-2"
+          severity="info"
+          title={cardActionFeedback.title}
+          action={
+            <Button size="sm" variant="outline" onClick={() => setCardActionFeedback(null)}>
+              확인
+            </Button>
+          }
+          testId="reception-card-action-feedback"
+        >
+          {cardActionFeedback.body}
+        </EmrInlineAlert>
       ) : null}
       <EmrListHeader
         label={sideListLabel}
@@ -954,6 +1048,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
               key={summary.patient.id}
               summary={summary}
               selected={isReceptionSideCardSelected(summary, activeDrawer, querySelectedPatientId)}
+              onUnavailableAction={setCardActionFeedback}
               onSelect={() => {
                 selectPatient(summary.patient.id);
                 if (summary.activeEncounter) {
@@ -1581,6 +1676,66 @@ function ScheduleToolbar({
   );
 }
 
+function EmptyReceptionSlotButton({
+  affordanceSuspended,
+  ariaLabel,
+  onAffordancePointerMove,
+  testId,
+  onCreateWalkIn,
+}: {
+  affordanceSuspended: boolean;
+  ariaLabel: string;
+  onAffordancePointerMove: () => void;
+  testId: string;
+  onCreateWalkIn: () => void;
+}) {
+  const [affordanceSuppressed, setAffordanceSuppressed] = useState(false);
+  const affordanceHidden = affordanceSuppressed || affordanceSuspended;
+
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      className={cn(
+        "group/empty-slot min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent text-[var(--emr-text-tertiary)] outline-none transition-colors",
+        !affordanceHidden &&
+          "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
+      )}
+      data-testid={testId}
+      onClick={() => {
+        setAffordanceSuppressed(true);
+        onCreateWalkIn();
+      }}
+      onPointerMove={() => {
+        if (affordanceSuspended) onAffordancePointerMove();
+      }}
+      onPointerLeave={() => setAffordanceSuppressed(false)}
+    >
+      <span
+        className={cn(
+          "flex h-full min-h-12 items-center justify-center gap-1.5 opacity-0 transition-opacity",
+          !affordanceHidden &&
+            "group-hover/empty-slot:!opacity-100 group-focus/empty-slot:!opacity-100 group-focus-visible/empty-slot:!opacity-100"
+        )}
+        data-testid={`${testId}-affordance`}
+      >
+        <CdsActionsPlusIcon
+          className="size-3.5 text-[var(--emr-status-info-text)]"
+          aria-hidden="true"
+          data-testid={`${testId}-icon`}
+        />
+        <span
+          className="whitespace-nowrap text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]"
+          aria-hidden="true"
+          data-testid={`${testId}-label`}
+        >
+          접수
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function ReceptionVisitContextBanner({
   appointment,
   encounter,
@@ -1631,8 +1786,10 @@ function ReceptionVisitContextBanner({
 }
 
 function DayScheduleBoard({
+  emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  onEmptySlotAffordancePointerMove,
   onCheckIn,
   onCreateWalkIn,
   onSelectPatient,
@@ -1640,8 +1797,10 @@ function DayScheduleBoard({
   selectedAppointmentId,
   selectedVeterinarians,
 }: {
+  emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
@@ -1803,15 +1962,13 @@ function DayScheduleBoard({
                           ))}
                         </>
                       ) : (
-                        <button
-                          type="button"
-                          aria-label={`${getScheduleHourLabel(hour)} ${veterinarian.name} 빈 시간 접수 생성`}
-                          className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                          data-testid={`day-empty-slot-${hour}-${veterinarian.id}`}
-                          onClick={onCreateWalkIn}
-                        >
-                          <span className="sr-only">진료 접수 생성</span>
-                        </button>
+                        <EmptyReceptionSlotButton
+                          affordanceSuspended={emptySlotAffordanceSuspended}
+                          ariaLabel={`${getScheduleHourLabel(hour)} ${veterinarian.name} 빈 시간 접수 생성`}
+                          onAffordancePointerMove={onEmptySlotAffordancePointerMove}
+                          testId={`day-empty-slot-${hour}-${veterinarian.id}`}
+                          onCreateWalkIn={onCreateWalkIn}
+                        />
                       )}
                     </div>
                   );
@@ -1826,16 +1983,20 @@ function DayScheduleBoard({
 }
 
 function WeekScheduleBoard({
+  emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  onEmptySlotAffordancePointerMove,
   onCheckIn,
   onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
   selectedAppointmentId,
 }: {
+  emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
@@ -1951,15 +2112,13 @@ function WeekScheduleBoard({
                     />
                   ))}
                   {hourAppointments.length || hourWalkIns.length ? null : (
-                    <button
-                      type="button"
-                      aria-label={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
-                      className="min-h-12 min-w-0 flex-1 rounded-md border border-dashed border-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                      data-testid={`week-empty-slot-${day.day}-${hour}`}
-                      onClick={onCreateWalkIn}
-                    >
-                      <span className="sr-only">진료 접수 생성</span>
-                    </button>
+                    <EmptyReceptionSlotButton
+                      affordanceSuspended={emptySlotAffordanceSuspended}
+                      ariaLabel={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
+                      onAffordancePointerMove={onEmptySlotAffordancePointerMove}
+                      testId={`week-empty-slot-${day.day}-${hour}`}
+                      onCreateWalkIn={onCreateWalkIn}
+                    />
                   )}
                 </div>
               );
@@ -2015,8 +2174,10 @@ function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) 
 }
 
 function ReceptionScheduleBoard({
+  emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  onEmptySlotAffordancePointerMove,
   onCheckIn,
   onCreateWalkIn,
   onSelectPatient,
@@ -2025,8 +2186,10 @@ function ReceptionScheduleBoard({
   selectedVeterinarians,
   view,
 }: {
+  emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
@@ -2044,8 +2207,10 @@ function ReceptionScheduleBoard({
         <ScrollArea className="h-full">
           {view === "day" ? (
             <DayScheduleBoard
+              emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
+              onEmptySlotAffordancePointerMove={onEmptySlotAffordancePointerMove}
               selectedAppointmentId={selectedAppointmentId}
               selectedVeterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
@@ -2056,8 +2221,10 @@ function ReceptionScheduleBoard({
           ) : null}
           {view === "week" ? (
             <WeekScheduleBoard
+              emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
+              onEmptySlotAffordancePointerMove={onEmptySlotAffordancePointerMove}
               selectedAppointmentId={selectedAppointmentId}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
@@ -2079,6 +2246,7 @@ export function ReceptionContent() {
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const [calendarView, setCalendarView] = useState<ReceptionCalendarView>("day");
+  const [emptySlotAffordanceSuspended, setEmptySlotAffordanceSuspended] = useState(false);
   const [walkInInitialPatientId, setWalkInInitialPatientId] = useState<string | undefined>();
   const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
@@ -2107,6 +2275,8 @@ export function ReceptionContent() {
   const setReceptionQueueReadStatus = useReceptionStore(
     (state) => state.setReceptionQueueReadStatus
   );
+  const readRetryNonce = useReceptionStore((state) => state.readRetryNonce);
+  const requestReceptionReadRetry = useReceptionStore((state) => state.requestReceptionReadRetry);
   const persistedCalendarAppointments = useReceptionStore(
     (state) => state.persistedCalendarAppointments
   );
@@ -2233,7 +2403,7 @@ export function ReceptionContent() {
       if (cancelled) return;
 
       if (!result.ok) {
-        setReceptionCalendarReadStatus("error", "서버 캘린더를 불러오지 못했습니다.");
+        setReceptionCalendarReadStatus("error", getReceptionReadFailureMessage(result));
         return;
       }
 
@@ -2248,6 +2418,7 @@ export function ReceptionContent() {
   }, [
     applyPersistedReceptionCalendar,
     authSession?.id,
+    readRetryNonce,
     setReceptionCalendarReadStatus,
     workspaceId,
   ]);
@@ -2264,7 +2435,7 @@ export function ReceptionContent() {
       if (cancelled) return;
 
       if (!result.ok) {
-        setReceptionQueueReadStatus("error", "서버 대기열을 불러오지 못했습니다.");
+        setReceptionQueueReadStatus("error", getReceptionReadFailureMessage(result));
         return;
       }
 
@@ -2276,7 +2447,13 @@ export function ReceptionContent() {
     return () => {
       cancelled = true;
     };
-  }, [applyPersistedReceptionQueue, authSession?.id, setReceptionQueueReadStatus, workspaceId]);
+  }, [
+    applyPersistedReceptionQueue,
+    authSession?.id,
+    readRetryNonce,
+    setReceptionQueueReadStatus,
+    workspaceId,
+  ]);
 
   if (!selectedPatient) {
     return (
@@ -2309,12 +2486,16 @@ export function ReceptionContent() {
           workspaceId={workspaceId}
           onOpenChange={(nextOpen) => {
             setWalkInDialogOpen(nextOpen);
-            if (!nextOpen) setWalkInInitialPatientId(undefined);
+            if (!nextOpen) {
+              setWalkInInitialPatientId(undefined);
+              setEmptySlotAffordanceSuspended(true);
+            }
           }}
           onCreate={(input, walkIn) => {
             applyWalkInCheckIn({ ...input, walkIn });
             setWalkInInitialPatientId(undefined);
             setWalkInDialogOpen(false);
+            setEmptySlotAffordanceSuspended(true);
           }}
         />
       ) : null}
@@ -2340,13 +2521,25 @@ export function ReceptionContent() {
         <ReceptionPanelStateMessage>저장된 예약을 불러오는 중</ReceptionPanelStateMessage>
       ) : null}
       {calendarReadStatus === "error" ? (
-        <ReceptionPanelStateMessage tone="warning">
-          {calendarReadError ?? "저장된 예약을 불러오지 못했습니다."}
-        </ReceptionPanelStateMessage>
+        <EmrInlineAlert
+          className="border-x-0 border-t-0 rounded-none px-4"
+          severity="warning"
+          title="서버 캘린더를 불러오지 못했어"
+          action={
+            <Button size="sm" variant="outline" onClick={requestReceptionReadRetry}>
+              캘린더 다시 시도
+            </Button>
+          }
+          testId="reception-calendar-read-alert"
+        >
+          {calendarReadError ?? "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼."}
+        </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard
+        emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
         appointments={visibleAppointments}
         draftCheckIns={draftCheckIns}
+        onEmptySlotAffordancePointerMove={() => setEmptySlotAffordanceSuspended(false)}
         selectedAppointmentId={selectedAppointmentId}
         selectedVeterinarians={selectedVeterinarians}
         view={calendarView}
@@ -2405,6 +2598,7 @@ function WalkInReceptionDialog({
   const [receptionVeterinarianId, setReceptionVeterinarianId] = useState(
     unassignedVeterinarianValue
   );
+  const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<ReceptionPatientGuardianLookupItem[]>([]);
   const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">("idle");
@@ -2421,7 +2615,15 @@ function WalkInReceptionDialog({
     [lookupResults]
   );
   const selectablePatientSummaries = lookupActive ? lookupPatientSummaries : patientSummaries;
-  const selectedSummary = selectablePatientSummaries.find(
+  const patientSummaryOptions = useMemo(() => {
+    const summaries = [...lookupPatientSummaries, ...patientSummaries];
+    const uniqueSummaries = new Map<string, ReceptionPatientSummary>();
+
+    summaries.forEach((summary) => uniqueSummaries.set(summary.patient.id, summary));
+
+    return Array.from(uniqueSummaries.values());
+  }, [lookupPatientSummaries, patientSummaries]);
+  const selectedSummary = patientSummaryOptions.find(
     (summary) => summary.patient.id === receptionPatientId
   );
   const patient = selectedSummary?.patient;
@@ -2433,6 +2635,7 @@ function WalkInReceptionDialog({
   const patientOptionText = selectedSummary ? getReceptionPatientOptionLabel(selectedSummary) : "";
   const patientWeightKg = getRecentPatientWeightKg(patient);
   const purposeChips = [...receptionPurposeChips, ...customPurposeTags];
+  const patientSearchPlaceholder = "동물명 또는 보호자명으로 검색";
   const lookupHelper =
     lookupActive && lookupState === "loading"
       ? "DB 환자 검색 중입니다."
@@ -2443,6 +2646,11 @@ function WalkInReceptionDialog({
             ? `DB 검색 결과 ${lookupPatientSummaries.length}건`
             : "검색 결과가 없습니다."
           : patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다.";
+  const selectReceptionPatient = (summary: ReceptionPatientSummary) => {
+    setReceptionPatientId(summary.patient.id);
+    setLookupQuery(getReceptionPatientOptionLabel(summary));
+    setPatientLookupOpen(false);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -2596,57 +2804,93 @@ function WalkInReceptionDialog({
                   required
                   helper={lookupHelper}
                 >
-                  <ReceptionSearchInput
-                    aria-label="검색어 입력"
-                    className="mb-2"
-                    inputClassName="h-10 bg-card"
-                    placeholder="환자명, 보호자명, 전화번호 검색"
-                    value={lookupQuery}
-                    onValueChange={setLookupQuery}
-                  />
-                  <Select
-                    value={receptionPatientId}
-                    onValueChange={(value) => setReceptionPatientId(value ?? "")}
+                  <div
+                    className="relative"
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) {
+                        setPatientLookupOpen(false);
+                      }
+                    }}
                   >
-                    <SelectTrigger
-                      aria-label="환자 검색"
-                      className="h-10 w-full bg-card"
-                    >
                       <CdsActionsSearchIcon
-                        className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
+                        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
                         aria-hidden="true"
                       />
-                      <span className="flex flex-1 items-center gap-1.5 truncate text-left data-placeholder:text-[var(--emr-text-placeholder)]">
-                        {patientOptionText || "동물명 또는 보호자명으로 검색"}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
+                      <Input
+                        aria-label="환자 검색"
+                        autoComplete="off"
+                        className="h-10 bg-card pl-9 pr-9"
+                        placeholder={patientSearchPlaceholder}
+                        value={lookupQuery}
+                        onFocus={() => setPatientLookupOpen(true)}
+                        onValueChange={(value) => {
+                          setLookupQuery(value);
+                          setPatientLookupOpen(true);
+                        }}
+                      />
+                      {lookupQuery ? (
+                        <button
+                          type="button"
+                          className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                          aria-label="검색어 초기화"
+                          onClick={() => {
+                            setLookupQuery("");
+                            setReceptionPatientId("");
+                            setPatientLookupOpen(true);
+                          }}
+                        >
+                          <CircleCloseFillIcon className="size-4" aria-hidden="true" />
+                        </button>
+                      ) : null}
+                    {patientLookupOpen ? (
+                      <div
+                        role="listbox"
+                        aria-label="검색 결과"
+                        className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                      >
                         {lookupActive && lookupState === "loading" ? (
-                          <SelectItem disabled value="lookup-loading">
+                          <div className="px-2.5 py-2 text-[13px] text-muted-foreground">
                             DB 환자 검색 중입니다.
-                          </SelectItem>
+                          </div>
                         ) : null}
                         {lookupActive && lookupState === "error" ? (
-                          <SelectItem disabled value="lookup-error">
+                          <div className="px-2.5 py-2 text-[13px] text-[var(--emr-status-danger-text)]">
                             환자 검색을 불러오지 못했습니다.
-                          </SelectItem>
+                          </div>
                         ) : null}
                         {lookupActive &&
                         lookupState === "idle" &&
                         selectablePatientSummaries.length === 0 ? (
-                          <SelectItem disabled value="lookup-empty">
+                          <div className="px-2.5 py-2 text-[13px] text-muted-foreground">
                             검색 결과가 없습니다.
-                          </SelectItem>
+                          </div>
                         ) : null}
-                        {selectablePatientSummaries.map((summary) => (
-                          <SelectItem key={summary.patient.id} value={summary.patient.id}>
-                            {getReceptionPatientOptionLabel(summary)}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                        {selectablePatientSummaries.map((summary) => {
+                          const selected = summary.patient.id === receptionPatientId;
+                          const optionLabel = getReceptionPatientOptionLabel(summary);
+
+                          return (
+                            <button
+                              key={summary.patient.id}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => selectReceptionPatient(summary)}
+                            >
+                              <span className="truncate text-[13px] font-semibold text-foreground">
+                                {optionLabel}
+                              </span>
+                              <span className="truncate text-[12px] text-muted-foreground">
+                                {summary.primaryGuardian?.mobilePhone ?? "보호자 연락처 미등록"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 </RegistrationFormField>
 
                 <RegistrationFormField label="체중">
@@ -2750,7 +2994,8 @@ function WalkInReceptionDialog({
                 >
                   <SelectTrigger
                     aria-label="진료과"
-                    className="h-10 w-full bg-card"
+                    size="xl"
+                    className="w-full bg-card"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -2778,7 +3023,8 @@ function WalkInReceptionDialog({
                 >
                   <SelectTrigger
                     aria-label="담당의"
-                    className="h-10 w-full bg-card"
+                    size="xl"
+                    className="w-full bg-card"
                   >
                     <CdsActionsSearchIcon
                       className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
@@ -2841,7 +3087,8 @@ function WalkInReceptionDialog({
                 >
                   <SelectTrigger
                     aria-label="예상시간"
-                    className="h-10 w-full bg-card"
+                    size="xl"
+                    className="w-full bg-card"
                   >
                     <SelectValue />
                   </SelectTrigger>

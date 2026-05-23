@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-206 CTA Risk Taxonomy 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f1f5f9;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-206</p>
+        <h1>CTA Risk Taxonomy 보고서</h1>
+        <p>
+          차트 작성완료, 청구 확정, 수납 완료, 삭제, 미연결 기능 CTA가 화면마다 다른 규칙처럼 보이는 문제를 줄이기 위해
+          CTA risk taxonomy와 확인/preflight/feedback 기준을 정의했다.
+        </p>
+        <p>
+          이번 작업은 화면 반영 전 foundation 단계다. 앱 화면에서 확인 가능한 CTA 변경은 DEN-208, DEN-209 등
+          후속 screen-level 이슈에서 시작한다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">화면 미반영 docs foundation</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>Risk Taxonomy</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Risk</th>
+              <th>정의</th>
+              <th>기본 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>safe</code></td>
+              <td>보기, 필터, 패널 열기, preview처럼 상태를 커밋하지 않는 action</td>
+              <td>확인 불필요, 결과가 보이지 않을 때만 toast</td>
+            </tr>
+            <tr>
+              <td><code>state-changing</code></td>
+              <td>진료/운영 workflow 상태를 session/local-first 경계 안에서 바꾸는 action</td>
+              <td>완료/확정/다중 객체 변경이면 confirmation 필요</td>
+            </tr>
+            <tr>
+              <td><code>financial</code></td>
+              <td>청구, 수납, 금액, 보호자-facing money state를 바꾸는 action</td>
+              <td>항상 preflight summary와 confirmation 필요</td>
+            </tr>
+            <tr>
+              <td><code>destructive</code></td>
+              <td>삭제, 취소, 초기화, 입력 폐기, 숨김/복원 action</td>
+              <td>destructive confirmation과 affected object identity 필요</td>
+            </tr>
+            <tr>
+              <td><code>unavailable</code></td>
+              <td>MVP에서 미연결, provider 의존, future scope, 권한 차단 action</td>
+              <td>조용히 실패 금지, unavailable 이유와 다음 행동 안내 필요</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>대표 CTA 매핑</h2>
+        <ul>
+          <li><code>차트 작성완료</code>: <code>state-changing</code>, patient/encounter context와 clinical artifact summary 필요</li>
+          <li><code>Order 확정</code>: <code>state-changing</code>, selected-order summary 필요</li>
+          <li><code>청구 확정</code>: <code>financial</code>, invoice/guardian/amount preflight와 실패 복구 필요</li>
+          <li><code>수납 완료</code>: <code>financial</code>, payment-state boundary와 실제 PG 미연동 copy 필요</li>
+          <li><code>삭제</code>/<code>초기화</code>: <code>destructive</code>, affected object identity와 destructive confirm 필요</li>
+          <li><code>출력</code>, external-provider tools: <code>unavailable</code>, 지원 범위와 MVP boundary 안내 필요</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/design/system/cta-risk-taxonomy.md</code>: CTA risk, confirmation, preflight, feedback, copy rules 정의</li>
+          <li><code>docs/design/system/README.md</code>: design system docs index 갱신</li>
+          <li><code>docs/design/changelog.md</code>: DEN-206 변경 이력 추가</li>
+          <li><code>docs/completed/design/2026-05-22-den-206-cta-risk-taxonomy-report.html</code>: 완료 보고서 추가</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>financial/state-changing CTA의 확인 기준을 한 곳에서 판정할 수 있게 했다.</li>
+          <li>청구/수납처럼 신뢰도가 중요한 action에 preflight summary를 필수 기준으로 고정했다.</li>
+          <li>unavailable action이 조용히 실패하거나 실제 provider 연동처럼 보이지 않도록 기준을 만들었다.</li>
+          <li>후속 DEN-208, DEN-209가 같은 taxonomy를 기준으로 화면을 바꿀 수 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>모든 CTA call site migration</li>
+          <li>실제 결제/PG/VAT/영수증/환불/정산/회계 연동</li>
+          <li>role/permission policy 변경</li>
+          <li>live Supabase, DB/RLS, server enforcement, production deploy</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+        </ul>
+        <p class="meta">
+          화면 동작을 변경하지 않았기 때문에 Playwright interaction test와 screenshot review는 후속 screen-level 이슈에서 수행한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

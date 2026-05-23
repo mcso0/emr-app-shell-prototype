@@ -7,19 +7,28 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
+import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import {
+  EmrSidePanelCard,
+  emrSidePanelCardHoverActionButtonClassName,
+} from "@/components/emr/side-panel-card";
+import {
+  EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
-  EmrListItem,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -54,10 +63,10 @@ import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type { InvoiceLine, InvoiceStatus, Payment, PaymentMethod } from "@/types/emr-domain";
 
-const filterItems: Array<{ label: string; value: BillingFilter }> = [
-  { label: "대기", value: "waiting" },
-  { label: "미납", value: "unpaid" },
-  { label: "종료", value: "closed" },
+const billingQueueGroups: Array<{ colorToken: string; label: string; value: BillingFilter }> = [
+  { label: "대기", value: "waiting", colorToken: "--emr-status-info-text" },
+  { label: "미납", value: "unpaid", colorToken: "--emr-status-warning-text" },
+  { label: "종료", value: "closed", colorToken: "--emr-status-success-text" },
 ];
 
 const paymentMethodItems: Array<{ label: string; value: PaymentMethod }> = [
@@ -70,6 +79,11 @@ const paymentMethodItems: Array<{ label: string; value: PaymentMethod }> = [
 const formatAmount = (amount: number) => `${amount.toLocaleString()}원`;
 const formatShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
+const getBillingPaymentMethodLabel = (method: PaymentMethod) =>
+  paymentMethodItems.find((item) => item.value === method)?.label ?? method;
+
+type BillingFinancialAction = "issue_invoice" | "mark_unpaid" | "mark_paid";
+type BillingPaymentFailureContext = "payment_method" | "mark_unpaid" | "mark_paid";
 
 type BillingInvoiceCandidateSnapshot = {
   billingCandidateId: string;
@@ -580,54 +594,76 @@ function QueueItem({
   const balance = Math.max(0, row.invoice.totalAmount - row.paidAmount);
 
   return (
-    <div data-testid={`billing-queue-item-${row.invoice.id}`}>
-      <EmrListItem
-        selected={selected}
-        variant="outline"
-        className={
-          selected
-            ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] shadow-xs hover:bg-[var(--emr-state-selected)]"
-            : undefined
-        }
-        title={`${row.patient?.name ?? "환자 미상"} · ${row.invoice.invoiceNo}`}
-        subtitle={`${row.guardian?.name ?? "보호자 미지정"} · ${row.encounter.encounterNo}`}
-        meta={balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
-        itemBadge={<EmrStatusBadge label={getInvoiceStatusLabel(row.invoice.status)} marker="none" />}
-        footer={
-          <>
-            <span>{formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}</span>
-            <span>{formatAmount(row.invoice.totalAmount)}</span>
-          </>
-        }
-        onSelect={onSelect}
-      />
-    </div>
+    <EmrSidePanelCard
+      selected={selected}
+      selectionVariant="modulePanel"
+      testId={`billing-queue-item-${row.invoice.id}`}
+      onSelect={onSelect}
+    >
+      <div className="flex min-h-6 items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold leading-5 text-[var(--emr-text-primary)]">
+            {row.patient?.name ?? "환자 미상"} · {row.invoice.invoiceNo}
+          </div>
+          <div className="truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)]">
+            {row.guardian?.name ?? "보호자 미지정"} · {row.encounter.encounterNo}
+          </div>
+        </div>
+        <EmrRowActionMenu
+          ariaLabel={`${row.patient?.name ?? "환자 미상"} ${row.invoice.invoiceNo} 수납 작업`}
+          contentClassName="w-52"
+          items={[
+            {
+              key: "open",
+              label: "수납 상세 보기",
+              description: "현재 청구서 열기",
+              onSelect,
+            },
+          ]}
+          testId={`billing-queue-action-${row.invoice.id}`}
+          triggerClassName={emrSidePanelCardHoverActionButtonClassName}
+        />
+      </div>
+      <div className="mt-1 min-w-0 truncate text-[12px] leading-4 text-muted-foreground">
+        {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
+      </div>
+      <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 text-[11px] text-muted-foreground">
+        <span>{formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}</span>
+        <span>{formatAmount(row.invoice.totalAmount)}</span>
+      </div>
+    </EmrSidePanelCard>
   );
 }
 
 export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
-  const filter = useBillingStore((state) => state.filter);
   const invoices = useBillingStore((state) => state.invoices);
   const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const selectInvoice = useBillingStore((state) => state.selectInvoice);
-  const setFilter = useBillingStore((state) => state.setFilter);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const rows = useMemo(
-    () => getBillingQueueRows(invoices, payments, filter),
-    [filter, invoices, payments]
-  );
-  const counts = useMemo(
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<BillingFilter>>(() => new Set());
+  const groupedRows = useMemo(
     () =>
-      filterItems.reduce<Record<BillingFilter, number>>(
-        (next, item) => ({
-          ...next,
-          [item.value]: invoices.filter((invoice) => getBillingFilterForInvoice(invoice) === item.value).length,
-        }),
-        { waiting: 0, unpaid: 0, closed: 0 }
-      ),
-    [invoices]
+      billingQueueGroups.map((group) => ({
+        ...group,
+        rows: getBillingQueueRows(invoices, payments, group.value),
+      })),
+    [invoices, payments]
   );
+  const totalRowCount = groupedRows.reduce((total, group) => total + group.rows.length, 0);
+  const toggleGroup = (groupId: BillingFilter) => {
+    setCollapsedGroupIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+
+      return next;
+    });
+  };
 
   return (
     <EmrSubpanel>
@@ -635,20 +671,11 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
         title={moduleLabel}
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
-        tabs={
-          <SegmentedControl
-            aria-label="수납 목록 필터"
-            value={filter}
-            items={filterItems.map((item) => ({ ...item, count: counts[item.value] }))}
-            variant="tabs"
-            className="shrink-0"
-            onValueChange={setFilter}
-          />
-        }
       />
+      <EmrDateNavigator dateLabel="26.05.01 (금)" todayLabel="오늘" />
       <EmrListHeader
-        label={`${filterItems.find((item) => item.value === filter)?.label ?? "수납"} 청구서`}
-        count={rows.length}
+        label="전체"
+        count={totalRowCount}
         headerActions={
           <>
             <EmrListHeaderIconButton ariaLabel="정렬">
@@ -664,16 +691,60 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       <EmrSubpanelBody>
-        {rows.map((row) => (
-          <QueueItem
-            key={row.invoice.id}
-            row={row}
-            selected={row.invoice.id === selectedInvoiceId}
-            onSelect={() => selectInvoice(row.invoice.id)}
+        {groupedRows.map((group) => (
+          <BillingQueueGroup
+            key={group.value}
+            collapsed={collapsedGroupIds.has(group.value)}
+            colorToken={group.colorToken}
+            label={group.label}
+            rows={group.rows}
+            selectedInvoiceId={selectedInvoiceId}
+            onSelectInvoice={selectInvoice}
+            onToggle={() => toggleGroup(group.value)}
           />
         ))}
       </EmrSubpanelBody>
     </EmrSubpanel>
+  );
+}
+
+function BillingQueueGroup({
+  collapsed,
+  colorToken,
+  label,
+  rows,
+  selectedInvoiceId,
+  onSelectInvoice,
+  onToggle,
+}: {
+  collapsed: boolean;
+  colorToken: string;
+  label: string;
+  rows: BillingQueueRow[];
+  selectedInvoiceId: string;
+  onSelectInvoice: (invoiceId: string) => void;
+  onToggle: () => void;
+}) {
+  return (
+    <EmrSidePanelCollapsibleGroup
+      collapsed={collapsed}
+      count={rows.length}
+      countBadgeColorToken={colorToken}
+      dataTestId={`billing-queue-group-${label}`}
+      indicatorColorToken={colorToken}
+      indicatorVisible={false}
+      label={label}
+      onToggle={onToggle}
+    >
+      {rows.map((row) => (
+        <QueueItem
+          key={row.invoice.id}
+          row={row}
+          selected={row.invoice.id === selectedInvoiceId}
+          onSelect={() => onSelectInvoice(row.invoice.id)}
+        />
+      ))}
+    </EmrSidePanelCollapsibleGroup>
   );
 }
 
@@ -1101,6 +1172,10 @@ export function BillingRightPanel() {
   const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
   const [confirmationState, setConfirmationState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [paymentState, setPaymentState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [paymentFailureContext, setPaymentFailureContext] =
+    useState<BillingPaymentFailureContext | null>(null);
+  const [pendingFinancialAction, setPendingFinancialAction] =
+    useState<BillingFinancialAction | null>(null);
 
   if (!detail) return null;
 
@@ -1121,11 +1196,12 @@ export function BillingRightPanel() {
 
     if (!result.ok) {
       setConfirmationState("error");
-      return;
+      return false;
     }
 
     applyInvoiceSnapshot(result.invoice, result.lines);
     setConfirmationState("saved");
+    return true;
   };
   const handlePaymentMethodChange = async (nextPaymentMethod: PaymentMethod) => {
     setPaymentMethod(nextPaymentMethod);
@@ -1139,12 +1215,15 @@ export function BillingRightPanel() {
     });
 
     if (!result.ok) {
+      setPaymentFailureContext("payment_method");
       setPaymentState("error");
-      return;
+      return false;
     }
 
     applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setPaymentFailureContext(null);
     setPaymentState("saved");
+    return true;
   };
   const handleMarkUnpaid = async () => {
     setPaymentState("saving");
@@ -1158,12 +1237,15 @@ export function BillingRightPanel() {
     });
 
     if (!result.ok) {
+      setPaymentFailureContext("mark_unpaid");
       setPaymentState("error");
-      return;
+      return false;
     }
 
     applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setPaymentFailureContext(null);
     setPaymentState("saved");
+    return true;
   };
   const handleMarkPaid = async () => {
     setPaymentState("saving");
@@ -1176,12 +1258,27 @@ export function BillingRightPanel() {
     });
 
     if (!result.ok) {
+      setPaymentFailureContext("mark_paid");
       setPaymentState("error");
-      return;
+      return false;
     }
 
     applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setPaymentFailureContext(null);
     setPaymentState("saved");
+    return true;
+  };
+  const handleConfirmFinancialAction = async () => {
+    if (!pendingFinancialAction) return;
+    if (pendingFinancialAction === "issue_invoice") {
+      await handleIssueInvoice();
+    } else if (pendingFinancialAction === "mark_unpaid") {
+      await handleMarkUnpaid();
+    } else {
+      await handleMarkPaid();
+    }
+
+    setPendingFinancialAction(null);
   };
 
   return (
@@ -1230,28 +1327,194 @@ export function BillingRightPanel() {
             />
           </div>
           {confirmationState === "error" ? (
-            <BillingPaymentErrorMessage>청구 확정 저장에 실패했습니다.</BillingPaymentErrorMessage>
+            <BillingPaymentErrorMessage
+              title="청구 확정이 저장되지 않았어"
+              actionLabel="청구 확정 다시 시도"
+              onRetry={() => setPendingFinancialAction("issue_invoice")}
+            >
+              금액과 항목은 화면에 남아 있지만 서버 저장은 완료되지 않았어. 실제 PG, VAT, 영수증
+              연동은 아직 없는 MVP 범위야.
+            </BillingPaymentErrorMessage>
           ) : null}
           {paymentState === "error" ? (
-            <BillingPaymentErrorMessage>수납 상태 저장에 실패했습니다.</BillingPaymentErrorMessage>
+            <BillingPaymentErrorMessage
+              title={
+                paymentFailureContext === "payment_method"
+                  ? "결제 수단이 저장되지 않았어"
+                  : "수납 상태가 저장되지 않았어"
+              }
+              actionLabel={
+                paymentFailureContext === "payment_method"
+                  ? "결제 수단 다시 저장"
+                  : paymentFailureContext === "mark_unpaid"
+                    ? "미납 처리 다시 시도"
+                    : "수납 완료 다시 시도"
+              }
+              onRetry={() => {
+                if (paymentFailureContext === "payment_method") {
+                  void handlePaymentMethodChange(paymentMethod);
+                  return;
+                }
+
+                setPendingFinancialAction(
+                  paymentFailureContext === "mark_unpaid" ? "mark_unpaid" : "mark_paid"
+                );
+              }}
+            >
+              수납 상태는 아직 확정되지 않았어. 결제 수단과 금액을 확인한 뒤 다시 시도해.
+            </BillingPaymentErrorMessage>
           ) : null}
         </div>
       </ScrollArea>
       <BillingPaymentActionFooter
         confirmationState={confirmationState}
         paymentState={paymentState}
-        onIssueInvoice={handleIssueInvoice}
-        onMarkPaid={handleMarkPaid}
-        onMarkUnpaid={handleMarkUnpaid}
+        onIssueInvoice={() => setPendingFinancialAction("issue_invoice")}
+        onMarkPaid={() => setPendingFinancialAction("mark_paid")}
+        onMarkUnpaid={() => setPendingFinancialAction("mark_unpaid")}
+      />
+      <BillingFinancialPreflightDialog
+        action={pendingFinancialAction}
+        balance={balance}
+        detail={detail}
+        paymentMethod={paymentMethod}
+        confirmationState={confirmationState}
+        paymentState={paymentState}
+        onConfirm={handleConfirmFinancialAction}
+        onOpenChange={(open) => {
+          if (!open) setPendingFinancialAction(null);
+        }}
       />
     </div>
   );
 }
 
-function BillingPaymentErrorMessage({ children }: { children: ReactNode }) {
+function BillingPaymentErrorMessage({
+  actionLabel,
+  children,
+  onRetry,
+  title,
+}: {
+  actionLabel: string;
+  children: ReactNode;
+  onRetry: () => void;
+  title: string;
+}) {
   return (
-    <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+    <EmrInlineAlert
+      severity="error"
+      title={title}
+      className="mt-3 text-[12px]"
+      action={
+        <Button size="sm" variant="outline" onClick={onRetry}>
+          {actionLabel}
+        </Button>
+      }
+      testId="billing-financial-error-alert"
+    >
       {children}
+    </EmrInlineAlert>
+  );
+}
+
+function BillingFinancialPreflightDialog({
+  action,
+  balance,
+  confirmationState,
+  detail,
+  onConfirm,
+  onOpenChange,
+  paymentMethod,
+  paymentState,
+}: {
+  action: BillingFinancialAction | null;
+  balance: number;
+  confirmationState: "idle" | "saving" | "saved" | "error";
+  detail: BillingDetail;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  paymentMethod: PaymentMethod;
+  paymentState: "idle" | "saving" | "saved" | "error";
+}) {
+  const isIssueAction = action === "issue_invoice";
+  const isSaving = isIssueAction ? confirmationState === "saving" : paymentState === "saving";
+  const amount = isIssueAction ? detail.invoice.totalAmount : balance;
+  const lineCount = detail.invoiceLines.length;
+  const dialogTitle =
+    action === "issue_invoice"
+      ? "청구 확정 전 확인"
+      : action === "mark_unpaid"
+        ? "미납 처리 전 확인"
+        : "수납 완료 전 확인";
+  const primaryLabel =
+    action === "issue_invoice"
+      ? "청구 확정 저장"
+      : action === "mark_unpaid"
+        ? "미납 처리 저장"
+        : "수납 완료 저장";
+  const savingLabel =
+    action === "issue_invoice"
+      ? "확정 중"
+      : action === "mark_unpaid"
+        ? "미납 저장 중"
+        : "수납 저장 중";
+  const nextStateLabel =
+    action === "issue_invoice" ? "청구확정" : action === "mark_unpaid" ? "미납" : "수납완료";
+
+  return (
+    <Dialog open={action !== null} onOpenChange={onOpenChange}>
+      <EmrDialogShell
+        variant="confirm"
+        title={dialogTitle}
+        description="금액 상태가 바뀌는 financial CTA라서 저장 전에 보호자, 청구서, 금액, MVP 경계를 확인해."
+        footerMeta="실제 PG, VAT, 영수증, 환불, 정산 연동은 이번 MVP 범위 밖이야."
+        primaryAction={
+          <Button type="button" size="sm" disabled={isSaving} onClick={onConfirm}>
+            {isSaving ? savingLabel : primaryLabel}
+          </Button>
+        }
+        secondaryAction={
+          <Button type="button" size="sm" variant="outline" disabled={isSaving} onClick={() => onOpenChange(false)}>
+            취소
+          </Button>
+        }
+      >
+        <div className="grid gap-2 rounded-md border bg-[var(--emr-surface-muted)] px-3 py-2">
+          <BillingPreflightLine label="청구서" value={detail.invoice.invoiceNo} />
+          <BillingPreflightLine
+            label="보호자 / 환자"
+            value={`${detail.guardian?.name ?? "보호자 미지정"} / ${detail.patient?.name ?? "환자 미상"}`}
+          />
+          <BillingPreflightLine label="청구 항목" value={`${lineCount}건`} />
+          <BillingPreflightLine label="확인 금액" value={formatAmount(amount)} emphasis />
+          <BillingPreflightLine label="결제 수단" value={getBillingPaymentMethodLabel(paymentMethod)} />
+          <BillingPreflightLine label="변경 후 상태" value={nextStateLabel} emphasis />
+        </div>
+        <EmrInlineAlert
+          severity="warning"
+          title="저장 실패 시 상태는 확정되지 않아"
+          className="mt-3 text-[12px]"
+        >
+          실패하면 이 패널에 다시 시도 안내를 남기고, 실제 결제나 영수증 발행이 된 것처럼 표시하지 않아.
+        </EmrInlineAlert>
+      </EmrDialogShell>
+    </Dialog>
+  );
+}
+
+function BillingPreflightLine({
+  emphasis = false,
+  label,
+  value,
+}: {
+  emphasis?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex min-h-7 items-center justify-between gap-3 text-[12px]">
+      <span className="text-[var(--emr-text-tertiary)]">{label}</span>
+      <span className={cn("text-right font-medium", emphasis && "text-primary")}>{value}</span>
     </div>
   );
 }

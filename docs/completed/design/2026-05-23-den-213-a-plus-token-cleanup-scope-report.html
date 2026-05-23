@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-213 A+ Token Cleanup Scope Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #5f687a;
+        --line: #d9dee8;
+        --panel: #ffffff;
+        --canvas: #f6f8fb;
+        --soft: #edf2f7;
+        --accent: #2457d6;
+        --ok: #0f7b4f;
+        --warn: #a35f00;
+        --risk: #b42318;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family:
+          Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      header,
+      section {
+        margin-bottom: 24px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 12px;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 21px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 16px;
+        letter-spacing: 0;
+      }
+
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef1f6;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #2f394c;
+        font-weight: 700;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--soft);
+        padding: 4px 10px;
+        color: #2f394c;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+
+      .risk {
+        color: var(--risk);
+        font-weight: 700;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .tile {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fbfcfe;
+        padding: 16px;
+      }
+
+      .tile strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .callout {
+        border-left: 4px solid var(--accent);
+        border-radius: 10px;
+        background: #f5f8ff;
+        padding: 14px 16px;
+      }
+
+      .callout p:last-child {
+        margin-bottom: 0;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 18px;
+        }
+
+        .summary {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>DEN-213 A+ Token Cleanup Scope &amp; Measurable Gates</h1>
+        <p>
+          A 등급 이후 남은 전역 spacing/font arbitrary utility, token/variant 전환,
+          responsive QA, screenshot regression 후보를 같은 기준으로 판단할 수 있게 범위와
+          측정 gate를 고정했다. 이 문서는 다음 구현 이슈가 시작되기 전 승욱이 확인할
+          scope matrix다.
+        </p>
+        <div class="meta">
+          <span class="badge">Linear: DEN-213</span>
+          <span class="badge">Project 11</span>
+          <span class="badge">Milestone: 00 A+ Scope &amp; Metrics</span>
+          <span class="badge">Status target: Human Review</span>
+          <span class="badge">Docs-only</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>비개발자 요약</h2>
+        <div class="summary">
+          <article class="tile">
+            <strong>무엇을 정했나</strong>
+            <p>
+              A+는 화면을 새로 디자인하는 일이 아니라, 이미 A까지 올라온 대표 workflow를
+              해치지 않으면서 반복되는 임의 간격, 폰트, 폭, radius 값을 token이나 variant로
+              줄이는 작업으로 정의했다.
+            </p>
+          </article>
+          <article class="tile">
+            <strong>왜 중요한가</strong>
+            <p>
+              후속 이슈가 각각 다른 기준으로 “정리했다”고 말하지 않도록, 수치 기준,
+              예외 기준, responsive blocker 기준, screenshot 후보 기준을 먼저 고정했다.
+            </p>
+          </article>
+          <article class="tile">
+            <strong>무엇은 하지 않나</strong>
+            <p>
+              DEN-213은 구현 작업이 아니다. 화면 코드, live Supabase, DB migration, RLS,
+              결제, 이메일, 외부 연동, full mobile redesign은 전부 제외한다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>기준 자료</h2>
+        <ul>
+          <li>
+            최종 A 판정:
+            <a href="./2026-05-22-den-212-final-visual-qa-a-grade-closeout-report.html">
+              docs/completed/design/2026-05-22-den-212-final-visual-qa-a-grade-closeout-report.html
+            </a>
+          </li>
+          <li>
+            기준 UI/UX 감사:
+            <a href="./2026-05-22-ui-ux-consistency-audit-report.html">
+              docs/completed/design/2026-05-22-ui-ux-consistency-audit-report.html
+            </a>
+          </li>
+          <li>
+            증거 산출물:
+            <a href="../../../output/ui-audit-2026-05-22/">output/ui-audit-2026-05-22/</a>
+          </li>
+        </ul>
+        <div class="callout">
+          <p>
+            기준 감사는 <code>text-[13px]</code>, <code>w-[116px]</code>,
+            <code>max-w-[460px]</code> 같은 arbitrary utility를 약 1,978회로 기록했다.
+            DEN-212는 대표 workflow의 A gate를 통과했지만, 앱 전체 token migration은
+            A+ blocker로 남겼다.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>A+ Scope Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Scope</th>
+              <th>포함 기준</th>
+              <th>측정 방법</th>
+              <th>담당 후속 이슈</th>
+              <th>명시적 제외</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Baseline scan &amp; classification</td>
+              <td>
+                <code>src/**/*.{ts,tsx}</code>의 arbitrary spacing/font/width/radius/grid utility를
+                최신 코드 기준으로 재스캔하고 token, variant, shared component, local exception으로
+                분류한다.
+              </td>
+              <td>
+                DEN-214의 scan output을 A+ baseline으로 삼는다. Top repeated patterns는
+                100% 분류되어야 한다.
+              </td>
+              <td>DEN-214</td>
+              <td>대량 치환 구현, lint rule 강제 도입</td>
+            </tr>
+            <tr>
+              <td>Typography token/variant cleanup</td>
+              <td>
+                반복되는 <code>text-[...]</code>, <code>leading-[...]</code>,
+                <code>tracking-[...]</code>, density 관련 값을 shared typography variant 또는
+                tokenized class로 정리한다.
+              </td>
+              <td>
+                DEN-214 baseline 대비 text/leading/tracking high-confidence 후보의 40% 이상 감소
+                또는 top typography 후보 전부 처리/예외화.
+              </td>
+              <td>DEN-215, DEN-218, DEN-219, DEN-220</td>
+              <td>브랜드 폰트 변경, 모든 arbitrary text utility 일괄 삭제</td>
+            </tr>
+            <tr>
+              <td>Control, form, radius variants</td>
+              <td>
+                Input, Select, Button, segmented control, form row의 height, radius, padding,
+                alignment 반복값을 기존 UI/EMR variant 우선으로 정리한다.
+              </td>
+              <td>
+                control height/radius/form spacing high-confidence 후보는 0 open 상태이거나
+                explicit exception으로 남아야 한다.
+              </td>
+              <td>DEN-216, DEN-218, DEN-220</td>
+              <td>field validation behavior, 서버 저장/권한 변경</td>
+            </tr>
+            <tr>
+              <td>Panel, queue, table, list density</td>
+              <td>
+                side panel, queue card, table, list, section spacing의 반복 <code>gap-*</code>,
+                <code>px-*</code>, <code>py-*</code>, fixed table width 후보를 shared EMR primitive나
+                documented local exception으로 정리한다.
+              </td>
+              <td>
+                touched module에서 shared primitive/variant adoption evidence가 있어야 하며,
+                dense table readability와 overflow wrapper contract가 유지되어야 한다.
+              </td>
+              <td>DEN-217, DEN-218, DEN-219, DEN-220</td>
+              <td>table engine 교체, 데이터 구조 변경, 전체 화면 redesign</td>
+            </tr>
+            <tr>
+              <td>Module-level adoption</td>
+              <td>
+                reception/customer, chart/order, billing/lab/imaging/dispensing/admin의
+                high-confidence 후보만 module 단위로 적용한다.
+              </td>
+              <td>
+                각 module report는 changed files, affected surfaces, before/after screenshot,
+                remaining exceptions를 포함해야 한다.
+              </td>
+              <td>DEN-218, DEN-219, DEN-220</td>
+              <td>persistence, RLS, payment provider, external provider/device integration</td>
+            </tr>
+            <tr>
+              <td>Responsive QA and blocker fix</td>
+              <td>
+                1280px 이하, 1024px tablet-like width, 짧은 laptop height에서 overflow,
+                clipping, drawer/dialog overlap을 audit하고 high-confidence blocker만 수정한다.
+              </td>
+              <td>
+                representative viewport에서 blocker 0개. Low-risk debt는 screenshot과 함께
+                남기되 A+ blocker인지 명시한다.
+              </td>
+              <td>DEN-221, DEN-222</td>
+              <td>full mobile redesign, information architecture 변경, full browser matrix</td>
+            </tr>
+            <tr>
+              <td>Screenshot regression candidates</td>
+              <td>
+                A/A+ 대표 UI 상태를 URL, setup, locator, viewport, expected state, flake risk와
+                함께 후보 pack으로 정리한다.
+              </td>
+              <td>
+                stable candidate와 flaky/blocked candidate가 분리되어야 한다. Framework나 CI 도입은
+                별도 승인 전까지 하지 않는다.
+              </td>
+              <td>DEN-223, DEN-224</td>
+              <td>screenshot framework 신규 도입, CI integration, 대량 snapshot 생성</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Measurable A+ Gates</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Gate</th>
+              <th>A+ 통과 기준</th>
+              <th>실패 기준</th>
+              <th>증거</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Arbitrary utility reduction</td>
+              <td>
+                DEN-214 baseline 대비 in-scope arbitrary spacing/font/width/radius/grid 후보가
+                전체 25% 이상 감소하고, top repeated high-confidence 후보는 모두 처리 또는
+                예외화된다.
+              </td>
+              <td>
+                Top repeated 후보가 미분류로 남거나, touched files에서 새 arbitrary value가
+                이유 없이 증가한다.
+              </td>
+              <td>DEN-214 scan summary, 후속 issue before/after scan summary</td>
+            </tr>
+            <tr>
+              <td>Token/variant adoption</td>
+              <td>
+                반복 스타일은 기존 <code>src/components/ui/*</code> primitive,
+                <code>src/components/emr/*</code> primitive, EMR token, feature-local variant 순서로
+                판단한다. 새 shared component는 두 개 이상 screen family에 안정 역할이 있을 때만 허용한다.
+              </td>
+              <td>
+                shared component가 한 화면의 데이터/정책을 누출하거나, className-only API로 같은
+                문제를 call site에 다시 떠넘긴다.
+              </td>
+              <td>changed files, component ownership note, adoption surface list</td>
+            </tr>
+            <tr>
+              <td>Responsive overflow and clipping</td>
+              <td>
+                1440x900 baseline, 1280x880, 1024x768, tablet-like width에서 대표 화면의
+                primary action, dialog footer, drawer fields, table headers/actions가 접근 가능하다.
+              </td>
+              <td>
+                incoherent overlap, unreachable primary action, dialog/drawer action clipping,
+                page-level horizontal scroll leak, table text crush가 발견된다.
+              </td>
+              <td>DEN-221/222 screenshots and blocker/debt table</td>
+            </tr>
+            <tr>
+              <td>Representative screenshot regression 후보</td>
+              <td>
+                reception overview/error/empty slot, chart completion dialog, billing financial
+                preflight/failure, customer row menu feedback, responsive dense layout 후보가
+                stable/flaky로 분리된다.
+              </td>
+              <td>
+                후보가 screenshot path만 있고 URL, setup, locator, viewport, expected state가 없어
+                재현할 수 없다.
+              </td>
+              <td>DEN-223 candidate pack, DEN-224 final review</td>
+            </tr>
+            <tr>
+              <td>Exception discipline</td>
+              <td>
+                예외는 owner, reason, affected module, user impact, revisit trigger를 포함한다.
+                dense clinical/billing table min-width, icon alignment, viewport containment
+                <code>calc()</code>, generated tokens는 정당화되면 허용한다.
+              </td>
+              <td>
+                “나중에 정리”만 적고 이유나 재검토 기준 없이 arbitrary 값을 남긴다.
+              </td>
+              <td>각 issue report의 remaining exceptions section</td>
+            </tr>
+            <tr>
+              <td>13px and odd-pixel typography/spacing</td>
+              <td>
+                <code>13px</code>, <code>15px</code> 같은 dense UI용 홀수 font size나 optical alignment용
+                홀수 간격은 금지 대상이 아니다. 다만 one-off arbitrary utility가 아니라
+                metadata, dense table body, menu item, compact label 같은 semantic role로 설명되고
+                token/variant 또는 documented local exception으로 남아야 한다.
+              </td>
+              <td>
+                <code>text-[13px]</code> 자체를 제거 목표로 오해해 dense 화면의 가독성이나 수직 rhythm을
+                망가뜨린다. 또는 홀수 간격을 이유 없이 여러 call site에 새로 흩뿌린다.
+              </td>
+              <td>DEN-214 classification, DEN-215 typography report, 각 module exception notes</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>후속 이슈 충돌 점검</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>역할</th>
+              <th>DEN-213 matrix와의 관계</th>
+              <th>판정</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DEN-214</td>
+              <td>최신 arbitrary utility rescan과 후보 분류</td>
+              <td>정량 baseline provider다. DEN-213은 수치를 직접 생성하지 않는다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-215</td>
+              <td>Typography and density variant foundation</td>
+              <td>Typography gate의 구현 foundation이다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-216</td>
+              <td>Control height, radius, form spacing variants</td>
+              <td>Control/form/radius gate의 구현 foundation이다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-217</td>
+              <td>Panel, queue, table, list spacing variants</td>
+              <td>Dense surface gate의 구현 foundation이다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-218</td>
+              <td>Reception/customer adoption</td>
+              <td>Module-level adoption gate의 high-frequency 화면 적용 이슈다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-219</td>
+              <td>Chart/order adoption</td>
+              <td>Dense clinical table/queue exception 기준을 같이 적용해야 한다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-220</td>
+              <td>Billing, lab/imaging, dispensing, admin adoption</td>
+              <td>High-confidence 후보만 적용하고 risky 후보는 deferred로 남기는 gate와 일치한다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-221</td>
+              <td>Responsive QA audit</td>
+              <td>Responsive blocker를 분류하는 audit 이슈다. fix 구현과 분리되어 있다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-222</td>
+              <td>High-confidence responsive blocker fix</td>
+              <td>DEN-221에서 확정된 blocker만 좁게 고치는 구조라 scope가 맞다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-223</td>
+              <td>Screenshot regression candidate pack</td>
+              <td>후보 정의까지이며 framework/CI 도입은 제외하므로 matrix와 맞다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+            <tr>
+              <td>DEN-224</td>
+              <td>Final A+ QA and closeout</td>
+              <td>00~04 결과를 종합해 A+ 후보 여부를 판정한다. 새 blocker 직접 구현은 제외다.</td>
+              <td><span class="ok">충돌 없음</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Out Of Scope</h2>
+        <ul>
+          <li>DEN-213 안에서 실제 token migration, UI component refactor, 화면 코드 수정은 하지 않는다.</li>
+          <li>live Supabase validation, DB migration, RLS, server enforcement, role/permission policy 변경은 제외한다.</li>
+          <li>결제, VAT, 영수증, 환불, 정산, 이메일, KakaoTalk, PACS, 장비, 외부 provider 연동은 제외한다.</li>
+          <li>전체 visual redesign, mobile-only redesign, IA 변경, table engine 교체는 제외한다.</li>
+          <li>승욱 승인 전에는 Linear 이슈를 <code>Done</code>으로 이동하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><span class="ok">통과</span> <code>npm run docs:check</code></li>
+          <li>
+            <span class="warn">생략</span> <code>npm run lint</code>,
+            <code>npx tsc --noEmit</code>, Playwright: 이번 작업은 docs-only scope/gate 정의이며
+            Next.js application code를 수정하지 않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>리뷰 요청</h2>
+        <p>
+          다음 구현 이슈로 넘어가기 전에 승욱이 이 matrix에서 두 가지만 확인하면 된다.
+          첫째, A+ 후보 기준을 “baseline 대비 25% 이상 감소 + top repeated high-confidence 후보
+          처리/예외화”로 두는 것이 충분한지. 둘째, responsive blocker 기준을 “대표 viewport blocker
+          0개, low-risk debt 문서화 허용”으로 두는 것이 맞는지다. 추가로 dense UI에서
+          <code>13px</code> 같은 홀수 font size와 optical alignment용 홀수 간격은 금지가 아니라
+          semantic role과 예외 사유를 요구하는 것으로 해석한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

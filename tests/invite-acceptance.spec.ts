@@ -107,3 +107,35 @@ test("unknown invite link is denied without creating local session state", async
   expect(storage.auth).toBeNull();
   expect(storage.workspaces).toBeNull();
 });
+
+test("invite account setup pages preserve invite context", async ({ page }) => {
+  const invitePath =
+    "/invite/invitation-pending?workspaceId=workspace-a&email=vet%40hanbit.test";
+
+  await page.goto(
+    `/login?reason=invite_existing_account&inviteEmail=vet%40hanbit.test&next=${encodeURIComponent(invitePath)}`
+  );
+  await expect(page.getByRole("heading", { name: "CLAiR EMR에 로그인" })).toBeVisible();
+  await expect(page.getByTestId("auth-session-notice")).toContainText(
+    "초대받은 이메일로 로그인하세요."
+  );
+  await expect(page.getByLabel("이메일")).toHaveValue("vet@hanbit.test");
+  await expect(
+    page.getByText("vet@hanbit.test 계정으로 로그인해야 이 초대를 수락할 수 있습니다.")
+  ).toBeVisible();
+
+  await page.goto(
+    `/signup?reason=invite_new_account&inviteEmail=vet%40hanbit.test&next=${encodeURIComponent(invitePath)}`
+  );
+  await expect(page.getByRole("heading", { name: "초대 계정 생성 준비 중" })).toBeVisible();
+  await expect(page.getByText("vet@hanbit.test")).toBeVisible();
+  await expect(page.getByText("signup_not_ready")).toBeVisible();
+  await expect(page.getByRole("link", { name: "기존 계정으로 로그인" })).toHaveAttribute(
+    "href",
+    new RegExp("/login\\?")
+  );
+  await expect(page.getByRole("link", { name: "초대 화면으로 돌아가기" })).toHaveAttribute(
+    "href",
+    /\/invite\/invitation-pending\?workspaceId=workspace-a&email=vet(@|%40)hanbit\.test/
+  );
+});

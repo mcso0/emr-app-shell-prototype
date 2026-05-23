@@ -156,6 +156,8 @@ test("reception queue read route stays server-owned and avoids secret-shaped val
 
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
   expect(serverSource).toContain('import "server-only"');
   expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });

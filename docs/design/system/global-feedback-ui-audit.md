@@ -17,6 +17,7 @@ This audit records the feedback UI baseline for the UI/UX refactor initiative.
 
 - `src/components/ui/skeleton.tsx` provides a generic pulsing skeleton. It is suitable for route or panel placeholder blocks when a screen has no domain-specific loading copy.
 - `src/components/ui/sonner.tsx` configures global toast icons and base colors. It should remain the default for transient mock/session-only action feedback.
+- `src/components/emr/inline-alert.tsx` provides the persistent inline alert primitive for read failures, degraded demo/live state, permission blockers, financial preflight warnings, and local success confirmations.
 - `src/components/emr/confirm-dialog-content.tsx` provides the standard simple confirmation dialog for destructive or irreversible-feeling session actions.
 - `src/components/ui/field.tsx` provides `FieldError`, which should be preferred for validation errors inside forms.
 
@@ -31,7 +32,7 @@ This audit records the feedback UI baseline for the UI/UX refactor initiative.
 ## Rules For Remaining UI Refactors
 
 - Use `Skeleton` for non-specific loading blocks. Use local loading copy when the user needs to know which domain state is loading.
-- Use `FieldError` for form validation. Keep broader server or permission errors in a bordered status panel with `role="alert"`.
+- Use `FieldError` for form validation. Keep broader server or permission errors in `EmrInlineAlert` with a recovery action when one exists.
 - Use `EmrConfirmDialogContent` for simple confirmations. Keep large workflow dialogs feature-local.
 - Toasts should say when an action is mock, session-only, or future scope. Avoid implying live persistence unless that issue explicitly implemented it.
 - Empty states should include the missing object and the next useful action when one exists.
