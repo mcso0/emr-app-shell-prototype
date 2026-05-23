@@ -10,6 +10,8 @@ related_work:
   - DEN-238
   - DEN-239
   - DEN-240
+  - DEN-241
+  - DEN-242
 supersedes: []
 superseded_by: []
 last_updated: 2026-05-23
@@ -19,7 +21,7 @@ last_updated: 2026-05-23
 
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
-`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. Remote staging migration remains gated by dry-run and explicit approval.
+`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. `DEN-241` adds end-to-end replay coverage. `DEN-242` closes out the project and records staging readiness boundaries. Remote staging migration remains gated by dry-run and explicit approval.
 
 ## Current Inventory
 

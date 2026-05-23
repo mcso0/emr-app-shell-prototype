@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Project 08 Clinical Fulfillment Handoff Closeout</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1120px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+      .warn { background: #fff8e6; color: #6d4b00; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / Project 08 / 2026-05-23</p>
+      <h1>Project 08 closeout 및 staging readiness</h1>
+      <p>
+        Project 08은 chart에서 확정된 order가 lab, imaging, dispensing, treatment 업무 queue로 생성되고,
+        각 부서의 처리 상태가 다시 order lifecycle과 billing candidate readback으로 이어지는 local-first persistence handoff를 완성했다.
+        대표 검수 기준으로는 Human Review 준비가 되었고, remote Supabase staging replay와 production claim은 별도 승인 gate가 남아 있다.
+      </p>
+      <span class="badge">Status: Project Human Review Ready</span>
+      <span class="badge warn">Remote staging mutation not run</span>
+
+      <section>
+        <h2>비개발자용 요약</h2>
+        <ul>
+          <li>진료실에서 order를 확정하면 후속 부서 업무 항목이 생기는 서버 경계가 생겼다.</li>
+          <li>검사, 영상, 조제, 처치 화면이 해당 업무 항목을 읽고 상태 변경을 보낼 수 있다.</li>
+          <li>후속 업무 완료는 진료 order lifecycle과 수납 후보로 다시 이어진다.</li>
+          <li>Kong synthetic scenario로 chart confirmation부터 billing readback까지 replay 검증을 통과했다.</li>
+          <li>아직 실제 staging Supabase DB에 migration push/replay를 하지는 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>완료 이슈와 PR</h2>
+        <table>
+          <tr><th>Issue</th><th>결과</th><th>PR / Merge</th></tr>
+          <tr><td>DEN-235</td><td>Product/engineering fulfillment handoff contract</td><td>PR #76 / <code>5e85649</code></td></tr>
+          <tr><td>DEN-236</td><td>Fulfillment work item route/core/gateway and migration contract</td><td>PR #77 / <code>42b5eaa</code></td></tr>
+          <tr><td>DEN-237</td><td>Chart order confirmation to fulfillment sync</td><td>PR #78 / <code>402f325</code></td></tr>
+          <tr><td>DEN-238</td><td>Lab/imaging queue read and status mutation</td><td>PR #79 / <code>906e846</code></td></tr>
+          <tr><td>DEN-239</td><td>Dispensing/treatment queue read and status mutation</td><td>PR #80 / <code>d60dbc6</code></td></tr>
+          <tr><td>DEN-240</td><td>Fulfillment lifecycle and billing candidate sync</td><td>PR #81 / <code>0670ea5</code></td></tr>
+          <tr><td>DEN-241</td><td>End-to-end handoff replay and regression coverage</td><td>PR #82 / <code>07baff5</code></td></tr>
+          <tr><td>DEN-242</td><td>Project closeout and staging readiness report</td><td>Current PR</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>구현된 흐름</h2>
+        <table>
+          <tr><th>구간</th><th>구현 상태</th></tr>
+          <tr><td>Chart confirmation</td><td><code>PATCH /chart/order-actions</code> confirm 후 fulfillment work item sync.</td></tr>
+          <tr><td>Fulfillment routes</td><td><code>GET/POST/PATCH /fulfillment/work-items</code> route, mock fallback, Supabase RPC gateway contract.</td></tr>
+          <tr><td>Lab/imaging screens</td><td>서버 queue status context read와 status mutation 연결.</td></tr>
+          <tr><td>Dispensing/treatment screens</td><td>서버 queue status context read와 status mutation 연결.</td></tr>
+          <tr><td>Lifecycle sync</td><td><code>accepted/in_progress/completed/returned/cancelled</code>를 order lifecycle로 sync.</td></tr>
+          <tr><td>Billing sync</td><td>완료된 billable work item을 server-owned invoice line snapshot으로 billing candidate sync.</td></tr>
+          <tr><td>Audit</td><td>Order status change와 billing candidate generation audit event emission.</td></tr>
+          <tr><td>Replay</td><td>Lab, imaging, dispensing, treatment 전체 queue가 chart confirmation부터 billing readback까지 통과.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증 Evidence</h2>
+        <ul>
+          <li><code>tests/fulfillment-work-item-server.spec.ts</code>: fulfillment route/core/RPC/migration, lifecycle/billing downstream sync.</li>
+          <li><code>tests/lab-imaging.spec.ts</code>: lab/imaging 화면 fulfillment read/status mutation.</li>
+          <li><code>tests/dispensing-fulfillment.spec.ts</code>: dispensing/treatment 화면 fulfillment read/status mutation.</li>
+          <li><code>tests/fulfillment-handoff-replay.spec.ts</code>: chart confirmation -> all downstream queues -> lifecycle -> billing candidate replay.</li>
+          <li><code>tests/sales-demo-flow.spec.ts</code>: 기존 demo-visible golden path 보존.</li>
+          <li><code>npm run docs:check</code>, <code>npm run security:secrets</code>, <code>npm run lint</code>, <code>npm run build</code>: DEN-239~DEN-241 PR에서 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>현재 Claim</h2>
+        <table>
+          <tr><th>Claim 가능</th><th>아직 Claim 금지</th></tr>
+          <tr>
+            <td>
+              Local-first/server-backed representative fulfillment handoff가 repo와 PR checks 기준으로 검증됨.
+              Chart order confirmation, queue read/status mutation, lifecycle sync, billing candidate sync, replay evidence가 있음.
+            </td>
+            <td>
+              Production readiness, real hospital/customer/patient data, external provider/device/PACS/payment integration,
+              legal/compliance certification, remote Supabase staging DB replay 완료 claim.
+            </td>
+          </tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>Staging readiness</h2>
+        <ul>
+          <li>Repo migration file과 static migration contract는 준비되어 있다.</li>
+          <li>Remote Supabase staging migration push는 실행하지 않았다.</li>
+          <li>승인 후에만 <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code> 대상으로 dry-run -> repo migration match -> db push 순서를 진행해야 한다.</li>
+          <li>Staging Preview에서 synthetic-only replay를 실행하려면 별도 승인과 환경 변수/배포 상태 확인이 필요하다.</li>
+          <li>Production 접근, production env 수정, 실데이터 사용, 대량 이메일 발송은 계속 금지다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 리스크</h2>
+        <ul>
+          <li>Remote Supabase RLS/RPC replay는 아직 미실행이다.</li>
+          <li>Provider/device/PACS/payment integration은 제품 외부 연동 프로젝트로 남아 있다.</li>
+          <li>Lab/imaging result persistence와 dispensing/treatment execution record의 full live detail persistence는 별도 후속 범위다.</li>
+          <li>Project 08 이슈들은 Human Review 상태이며, Done 전환은 승욱의 명시적 승인 후 진행해야 한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

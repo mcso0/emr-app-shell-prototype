@@ -131,6 +131,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | CLINICAL-FULFILLMENT-PR-005 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-239 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-005-dispensing-treatment-queue-adoption.md` |
 | CLINICAL-FULFILLMENT-PR-006 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-240 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-006-lifecycle-billing-sync.md` |
 | CLINICAL-FULFILLMENT-PR-007 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-241 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-007-handoff-replay-regression.md` |
+| CLINICAL-FULFILLMENT-PR-008 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-242 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-008-project-closeout-staging-readiness.md` |
 | DEMO-DATA-PR-001 | human_review | demo-data | P0 | Project 04 / DEN-99 | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md` |
 | CUSTOMER-LIVE-PR-001 | human_review | customer | P0 | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md` |
 | CUSTOMER-LIVE-PR-002 | human_review | customer | P0 | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md` |
@@ -177,7 +178,7 @@ Recommended next shaping target:
 - Project 04 and Project 05 have completed their active issue sequences and were accepted for `Done` in Linear on 2026-05-20.
 - Project 06 `Customer Management Persistence` has completed its active issue sequence through DEN-110 and is ready for representative Human Review.
 - Project 07 `Hospital Admin Order Catalog Persistence` has completed its active issue sequence through DEN-117 and is ready for representative Human Review.
-- Project 08 `Clinical Order Fulfillment Handoff Persistence` has completed DEN-235 through DEN-241 through Human Review. Start next from DEN-242 / closeout and staging readiness report.
+- Project 08 `Clinical Order Fulfillment Handoff Persistence` has completed DEN-235 through DEN-242 through Human Review. Representative approval is needed before moving issues to `Done` or running remote staging validation.
 - Keep Project 06 and Project 07 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
 
 ## Inbox
