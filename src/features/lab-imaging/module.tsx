@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -243,6 +243,21 @@ type LabResultTab = "all" | "cbc" | "chemistry";
 type LabQueueView = "order" | "chart";
 type ImagingQueueView = "order" | "chart";
 type ImagingReadingStatus = "requested" | "reading" | "completed";
+type FulfillmentQueueType = "lab" | "imaging";
+type FulfillmentWorkItemStatus =
+  | "requested"
+  | "accepted"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "returned";
+type FulfillmentWorkItem = {
+  assignedToUserId?: string | null;
+  id: string;
+  orderId: string;
+  queueType: FulfillmentQueueType;
+  status: FulfillmentWorkItemStatus;
+};
 
 const labResultTabItems = [
   { value: "all" as const, label: "전체" },
@@ -259,6 +274,124 @@ const imagingQueueViewItems = [
   { value: "order" as const, label: "오더별" },
   { value: "chart" as const, label: "차트별" },
 ];
+
+function useWorkspaceIdFromPath() {
+  if (typeof window === "undefined") return "clair-demo";
+
+  const match = window.location.pathname.match(/^\/w\/([^/]+)/);
+  return match?.[1] ?? "clair-demo";
+}
+
+function useFulfillmentQueue(queueType: FulfillmentQueueType) {
+  const workspaceId = useWorkspaceIdFromPath();
+  const [workItems, setWorkItems] = useState<FulfillmentWorkItem[]>([]);
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}`,
+        { headers: { "x-clair-demo-session-user-id": "user-tech" } }
+      );
+      const body = await response.json() as { ok?: boolean; workItems?: FulfillmentWorkItem[] };
+      setWorkItems(response.ok && body.ok && Array.isArray(body.workItems) ? body.workItems : []);
+    } catch {
+      setWorkItems([]);
+    }
+  }, [queueType, workspaceId]);
+
+  useEffect(() => {
+    // Fetching the server queue is an external sync; fixture fallback stays in place on failure.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
+  }, [refresh]);
+
+  const updateStatus = useCallback(async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
+    for (const status of statuses) {
+      const response = await fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          "x-clair-demo-session-user-id": "user-tech",
+        },
+        body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
+      });
+      if (!response.ok) break;
+    }
+    await refresh();
+  }, [refresh, workspaceId]);
+
+  return { updateStatus, workItems };
+}
+
+function getWorkItemsByOrderId(workItems: FulfillmentWorkItem[]) {
+  return new Map(workItems.map((item) => [item.orderId, item]));
+}
+
+function applyFulfillmentToLabItems(
+  items: LabWorkItem[],
+  workItems: FulfillmentWorkItem[]
+): LabWorkItem[] {
+  const workItemsByOrderId = getWorkItemsByOrderId(workItems);
+
+  return items.map((item) => {
+    const workItem = item.order ? workItemsByOrderId.get(item.order.id) : undefined;
+    if (!workItem) return item;
+
+    return {
+      ...item,
+      result: {
+        ...item.result,
+        status: mapFulfillmentToLabStatus(workItem.status, item.result.status),
+      },
+      technicianName: getStaffName(workItem.assignedToUserId ?? undefined) ?? item.technicianName,
+    };
+  });
+}
+
+function applyFulfillmentToImagingItems(
+  items: ImagingWorkItem[],
+  workItems: FulfillmentWorkItem[]
+): ImagingWorkItem[] {
+  const workItemsByOrderId = getWorkItemsByOrderId(workItems);
+
+  return items.map((item) => {
+    const workItem = item.order ? workItemsByOrderId.get(item.order.id) : undefined;
+    if (!workItem) return item;
+
+    return {
+      ...item,
+      study: {
+        ...item.study,
+        status: mapFulfillmentToImagingStatus(workItem.status, item.study.status),
+      },
+      radiologistName: getStaffName(workItem.assignedToUserId ?? undefined) ?? item.radiologistName,
+    };
+  });
+}
+
+function mapFulfillmentToLabStatus(
+  status: FulfillmentWorkItemStatus,
+  fallback: LabResult["status"]
+): LabResult["status"] {
+  if (status === "completed") return "completed";
+  if (status === "in_progress") return "entered";
+  if (status === "accepted") return "received";
+  if (status === "requested" || status === "returned") return "pending";
+  if (status === "cancelled") return fallback;
+  return fallback;
+}
+
+function mapFulfillmentToImagingStatus(
+  status: FulfillmentWorkItemStatus,
+  fallback: ImagingStudyStatus
+): ImagingStudyStatus {
+  if (status === "completed") return "reviewed";
+  if (status === "in_progress") return "reading";
+  if (status === "accepted") return "captured";
+  if (status === "requested" || status === "returned") return "requested";
+  if (status === "cancelled") return fallback;
+  return fallback;
+}
 
 const imagingStatusOrder: ImagingStudyStatus[] = ["requested", "captured", "reading", "read", "reviewed"];
 
@@ -762,7 +895,12 @@ export function LabSidePanel() {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [queueView, setQueueView] = useState<LabQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<LabResult["status"]>>(() => new Set());
-  const items = useMemo(() => getLabWorkItems(), []);
+  const fulfillmentQueue = useFulfillmentQueue("lab");
+  const baseItems = useMemo(() => getLabWorkItems(), []);
+  const items = useMemo(
+    () => applyFulfillmentToLabItems(baseItems, fulfillmentQueue.workItems),
+    [baseItems, fulfillmentQueue.workItems]
+  );
   const latestLabDate = items[0]?.result.receivedAt ?? items[0]?.result.collectedAt;
   const dateLabel = latestLabDate ? `${latestLabDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getLabChartGroups(items), [items]);
@@ -852,7 +990,12 @@ export function ImagingSidePanel() {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [queueView, setQueueView] = useState<ImagingQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<ImagingStudyStatus>>(() => new Set());
-  const items = useMemo(() => getImagingWorkItems(), []);
+  const fulfillmentQueue = useFulfillmentQueue("imaging");
+  const baseItems = useMemo(() => getImagingWorkItems(), []);
+  const items = useMemo(
+    () => applyFulfillmentToImagingItems(baseItems, fulfillmentQueue.workItems),
+    [baseItems, fulfillmentQueue.workItems]
+  );
   const latestImagingDate = items[0]?.study.capturedAt ?? items[0]?.study.requestedAt;
   const dateLabel = latestImagingDate ? `${latestImagingDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getImagingChartGroups(items), [items]);
@@ -1656,6 +1799,11 @@ export function LabContent() {
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(searchParams, selectedLabResultId);
+  const fulfillmentQueue = useFulfillmentQueue("lab");
+  const fulfillmentWorkItem = useMemo(
+    () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
+    [detail?.order?.id, fulfillmentQueue.workItems]
+  );
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
   const initialAssignment = {
     assigneeName: detail?.technicianName ?? "미지정",
@@ -1664,25 +1812,37 @@ export function LabContent() {
   };
   const [assignmentState, setAssignmentState] = useState(initialAssignment);
   const assignment = assignmentState.resultId === initialAssignment.resultId ? assignmentState : initialAssignment;
-  const startAssignment = () =>
+  const startAssignment = () => {
+    if (fulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["accepted", "in_progress"]);
+    }
     setAssignmentState({
       assigneeName: currentLabAssignee.name,
       resultId: initialAssignment.resultId,
       status: "in_progress",
     });
-  const completeAssignment = () =>
+  };
+  const completeAssignment = () => {
+    if (fulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["completed"]);
+    }
     setAssignmentState((current) => ({
       assigneeName:
         current.resultId === initialAssignment.resultId ? current.assigneeName : currentLabAssignee.name,
       resultId: initialAssignment.resultId,
       status: "completed",
     }));
-  const cancelAssignment = () =>
+  };
+  const cancelAssignment = () => {
+    if (fulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["returned", "requested"]);
+    }
     setAssignmentState({
       assigneeName: "미지정",
       resultId: initialAssignment.resultId,
       status: "requested",
     });
+  };
 
   useEffect(() => {
     if (queryLabResultId && queryLabResultId !== selectedLabResultId) {
@@ -2080,6 +2240,11 @@ export function ImagingContent() {
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId);
+  const fulfillmentQueue = useFulfillmentQueue("imaging");
+  const fulfillmentWorkItem = useMemo(
+    () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
+    [detail?.order?.id, fulfillmentQueue.workItems]
+  );
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
     status: "requested" as ImagingReadingStatus,
@@ -2087,25 +2252,37 @@ export function ImagingContent() {
   };
   const [assignmentState, setAssignmentState] = useState(initialAssignment);
   const assignment = assignmentState.studyId === initialAssignment.studyId ? assignmentState : initialAssignment;
-  const startAssignment = () =>
+  const startAssignment = () => {
+    if (fulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["accepted", "in_progress"]);
+    }
     setAssignmentState({
       assigneeName: currentLabAssignee.name,
       status: "reading",
       studyId: initialAssignment.studyId,
     });
-  const completeAssignment = () =>
+  };
+  const completeAssignment = () => {
+    if (fulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["completed"]);
+    }
     setAssignmentState((current) => ({
       assigneeName:
         current.studyId === initialAssignment.studyId ? current.assigneeName : currentLabAssignee.name,
       status: "completed",
       studyId: initialAssignment.studyId,
     }));
-  const cancelAssignment = () =>
+  };
+  const cancelAssignment = () => {
+    if (fulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["returned", "requested"]);
+    }
     setAssignmentState({
       assigneeName: "미지정",
       status: "requested",
       studyId: initialAssignment.studyId,
     });
+  };
 
   useEffect(() => {
     if (queryImagingStudyId && queryImagingStudyId !== selectedImagingStudyId) {
