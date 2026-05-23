@@ -15,6 +15,12 @@ import {
   type WorkspaceInvitationFieldErrors,
   type WorkspaceInvitationInput,
 } from "@/features/auth/workspace-session";
+import {
+  createNoopWorkspaceInvitationEmailDelivery,
+  type WorkspaceInvitationEmailDeliveryAdapter,
+  type WorkspaceInvitationEmailDeliveryStatus,
+  type WorkspaceInvitationInviteLinkStatus,
+} from "@/features/auth/workspace-invitation-email-delivery";
 
 export type WorkspaceInvitationRouteInput = {
   email: string;
@@ -71,8 +77,8 @@ export type WorkspaceInvitationResult =
       workspaceId: string;
       invitation: SessionWorkspaceInvitation;
       auditEvents: WorkspaceInvitationCreatedAuditEvent[];
-      emailDelivery: "not_sent_approval_gated";
-      inviteLink: "not_generated_approval_gated";
+      emailDelivery: WorkspaceInvitationEmailDeliveryStatus;
+      inviteLink: WorkspaceInvitationInviteLinkStatus;
       enforcedBy: "workspace-invitation-server-route";
     }
   | {
@@ -103,6 +109,7 @@ export async function createWorkspaceInvitation({
   input,
   permissionAdapter = createDemoWorkspaceInvitationPermissionAdapter(workspaceId),
   gateway = createDemoWorkspaceInvitationGateway(),
+  emailDelivery = createNoopWorkspaceInvitationEmailDelivery(),
   now = new Date().toISOString(),
 }: {
   actorUserId: string | null;
@@ -110,6 +117,7 @@ export async function createWorkspaceInvitation({
   input: WorkspaceInvitationRouteInput;
   permissionAdapter?: WorkspacePermissionAdapter;
   gateway?: WorkspaceInvitationGateway;
+  emailDelivery?: WorkspaceInvitationEmailDeliveryAdapter;
   now?: string;
 }): Promise<WorkspaceInvitationResult> {
   if (!actorUserId) {
@@ -175,6 +183,11 @@ export async function createWorkspaceInvitation({
     return { ok: false, status: 500, error: persisted.error };
   }
 
+  const delivery = await emailDelivery.sendInvitationEmail({
+    workspaceId,
+    invitation: persisted.invitation,
+  });
+
   return {
     ok: true,
     status: 201,
@@ -186,8 +199,8 @@ export async function createWorkspaceInvitation({
       actorUserId,
       at: now,
     }),
-    emailDelivery: "not_sent_approval_gated",
-    inviteLink: "not_generated_approval_gated",
+    emailDelivery: delivery.emailDelivery,
+    inviteLink: delivery.inviteLink,
     enforcedBy: "workspace-invitation-server-route",
   };
 }

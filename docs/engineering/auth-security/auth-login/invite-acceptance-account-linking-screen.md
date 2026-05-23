@@ -73,6 +73,14 @@ This work does not implement:
 - Remote Supabase or production execution.
 - Real hospital staff data.
 
+## Staging Flow Update
+
+For DEN-187 staging email validation, use the current design flow as the UX and scenario-test basis:
+
+- `docs/design/flows/invite-acceptance-account-onboarding-flow.md`
+
+The local-first screen contract above remains useful for mock/demo coverage, but staging Supabase UX should separate `신규 계정으로 시작` and `기존 계정에 연결` into explicit account creation/login paths before membership activation.
+
 ## Source References
 
 - `docs/engineering/auth-security/auth-login/account-recovery-and-invite-account-policy.md`

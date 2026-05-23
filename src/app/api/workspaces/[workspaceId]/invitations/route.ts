@@ -3,11 +3,17 @@ import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   createSupabaseWorkspaceInvitationGateway,
   createWorkspaceInvitation,
   type SupabaseWorkspaceInvitationRpcClient,
 } from "@/features/auth/server-workspace-invitation";
+import { createResendWorkspaceInvitationEmailDelivery } from "@/features/auth/workspace-invitation-email-delivery";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,6 +56,15 @@ export async function POST(request: Request, { params }: WorkspaceInvitationRout
     identity.source === "supabase_session"
       ? await createClient()
       : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await createWorkspaceInvitation({
     actorUserId: identity.actorUserId,
     workspaceId,
@@ -60,11 +75,15 @@ export async function POST(request: Request, { params }: WorkspaceInvitationRout
       department: getBodyString(body.department),
       expiresAt: typeof body.expiresAt === "string" ? body.expiresAt : null,
     },
+    permissionAdapter,
     gateway: client
       ? createSupabaseWorkspaceInvitationGateway(
           client as unknown as SupabaseWorkspaceInvitationRpcClient
         )
       : undefined,
+    emailDelivery: createResendWorkspaceInvitationEmailDelivery({
+      requestOrigin: new URL(request.url).origin,
+    }),
   });
 
   return Response.json(result, { status: result.status });

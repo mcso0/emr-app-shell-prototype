@@ -119,6 +119,10 @@ test("workspace invitation persistence boundary stays server-only", () => {
     "src/features/auth/server-workspace-invitation.ts",
     "utf8"
   );
+  const emailDeliverySource = readFileSync(
+    "src/features/auth/workspace-invitation-email-delivery.ts",
+    "utf8"
+  );
   const migrationSource = readFileSync(
     "supabase/migrations/20260518122000_workspace_invitation_create_transaction.sql",
     "utf8"
@@ -126,10 +130,12 @@ test("workspace invitation persistence boundary stays server-only", () => {
 
   expect(routeSource).toContain("createWorkspaceInvitation");
   expect(routeSource).toContain("readServerSession");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
   expect(serverSource).toContain('import "server-only"');
   expect(serverSource).not.toMatch(/sessionStorage|localStorage|window\\./);
-  expect(serverSource).toContain("not_sent_approval_gated");
-  expect(serverSource).toContain("not_generated_approval_gated");
+  expect(`${serverSource}\n${emailDeliverySource}`).toContain("not_sent_approval_gated");
+  expect(`${serverSource}\n${emailDeliverySource}`).toContain("not_generated_approval_gated");
   expect(serverSource).not.toMatch(/inviteToken|rawToken|magicLink|otp/i);
   expect(migrationSource).toContain("clair_create_workspace_invitation");
   expect(migrationSource).toContain("role_permission:manage");

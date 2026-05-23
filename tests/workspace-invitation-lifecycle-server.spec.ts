@@ -154,6 +154,9 @@ test("invitation lifecycle route validates session and keeps server-owned DB fun
   );
 
   expect(resendRoute).toContain("mutateWorkspaceInvitationLifecycle");
+  expect(resendRoute).toContain("createPermissionAdapterFromMembershipStatus");
+  expect(resendRoute).toContain("createResendWorkspaceInvitationEmailDelivery");
+  expect(resendRoute).toContain("createSupabaseWorkspaceMembershipStatusGateway");
   expect(serverSource).toContain('import "server-only"');
   expect(serverSource).not.toMatch(/sessionStorage|localStorage|window\\./);
   expect(serverSource).toContain("workspace.invitation_resent");
