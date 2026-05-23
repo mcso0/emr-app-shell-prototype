@@ -26,7 +26,7 @@ The demo should make one promise:
 
 | Item | Value |
 | --- | --- |
-| Preview | Latest DEN-187 Preview after logged-in invite acceptance deploy |
+| Preview | `https://emr-app-shell-prototype-lvymhgyla-mcso0s-projects.vercel.app` |
 | Workspace | `clair-demo` |
 | Recommended entry | `/w/clair-demo/home?modulePanel=open` |
 | Golden scenario | 김하늘 / 콩이 / 구토 내원 |
