@@ -1,0 +1,138 @@
+---
+id: PRODUCT-DOMAIN-ORDER-FULFILLMENT-HANDOFF
+status: approved
+area: product
+doc_type: domain-contract
+related_work:
+  - DEN-235
+supersedes: []
+superseded_by: []
+last_updated: 2026-05-23
+---
+
+# Order Fulfillment Handoff
+
+This document defines the product-level handoff from chart-confirmed orders to lab, imaging, dispensing, treatment, and billing work. It is a domain contract, not a schema or migration plan.
+
+## Why This Exists
+
+The staging pilot can show a guided synthetic outpatient flow from reception through chart, lab/imaging, dispensing/treatment, and billing. However, the current product claim must stay narrow: lab, imaging, dispensing, and treatment screens are visible, but full live persistence for every downstream path is not complete.
+
+`DEN-235` establishes the next product contract: after a vet confirms an order, the correct downstream team should receive a work item, update its state, and feed completion back into order lifecycle and billing candidate readiness.
+
+## Boundary
+
+| Boundary | Claim |
+| --- | --- |
+| Current demo-visible path | Synthetic fixtures can show the handoff story in a guided demo. |
+| Current local-first foundation | Chart/order/billing persistence routes exist for selected scoped paths. |
+| Target for Project 08 | Confirmed orders create server-backed fulfillment work items and downstream status changes. |
+| Not claimed yet | Production readiness, real data, provider/device/PACS/payment integration, or full legal/compliance readiness. |
+
+## Product Flow
+
+```mermaid
+flowchart LR
+  Chart["Chart order confirmation"]
+  Fulfillment["Fulfillment work item"]
+  Lab["Lab queue"]
+  Imaging["Imaging queue"]
+  Dispensing["Dispensing queue"]
+  Treatment["Treatment queue"]
+  Lifecycle["Order lifecycle"]
+  Billing["Billing candidate"]
+
+  Chart --> Fulfillment
+  Fulfillment --> Lab
+  Fulfillment --> Imaging
+  Fulfillment --> Dispensing
+  Fulfillment --> Treatment
+  Lab --> Lifecycle
+  Imaging --> Lifecycle
+  Dispensing --> Lifecycle
+  Treatment --> Lifecycle
+  Lifecycle --> Billing
+```
+
+## Objects
+
+| Object | Meaning | Product owner |
+| --- | --- | --- |
+| Order | Encounter-owned request created or confirmed by chart workflow | Vet |
+| Fulfillment work item | Operational task generated from a confirmed order | Technician or responsible queue |
+| Queue item | Screen-specific presentation of fulfillment work | Lab/imaging/dispensing/treatment operator |
+| Result or execution record | Output or completion evidence for the work item | Technician, then vet review where needed |
+| Billing candidate | Server-owned billable handoff from completed or billable work | Billing operator |
+
+## Order Type Mapping
+
+| Order type | Destination | Required display context | Notes |
+| --- | --- | --- | --- |
+| `lab` | Lab queue | patient, encounter, requested test, requesting vet, priority, due time | Result entry and vet review may be separate states. |
+| `imaging` | Imaging queue | patient, encounter, modality/body part, requesting vet, priority | PACS/device integration is not part of this contract. |
+| `dispensing` | Dispensing queue | medication name, route, frequency, quantity, instruction, requesting vet | Inventory, lot/expiry, and label printing are out of scope. |
+| `treatment` | Treatment queue | treatment name/type, body site if any, instruction, expected duration | Technician completion may not equal vet clinical review. |
+| billable-only service | Billing candidate | encounter, service item, server-calculated amount | No downstream clinical queue unless `task_required` is true. |
+
+## State Model
+
+Fulfillment work item states are intentionally operational. They do not replace canonical order, result, invoice, or audit state.
+
+| State | Meaning | Normal next states |
+| --- | --- | --- |
+| `requested` | Work item was generated from a confirmed order | `accepted`, `in_progress`, `cancelled`, `returned` |
+| `accepted` | A team or assignee acknowledged the work | `in_progress`, `completed`, `cancelled`, `returned` |
+| `in_progress` | Work has started | `completed`, `cancelled`, `returned` |
+| `completed` | Work is operationally complete | terminal for the work item |
+| `cancelled` | Work should not proceed | terminal with reason |
+| `returned` | Work was sent back for chart/order correction | `requested`, `cancelled` after chart action |
+
+## Transition Rules
+
+- Chart confirmation creates or updates fulfillment work items only for orders that require downstream work.
+- Creation must be idempotent. Retrying the same confirmation must not create duplicate active work items.
+- Cancelling an order must decide whether active fulfillment work is cancelled, returned, or locked for review.
+- Completing a work item can update order lifecycle, but lab/imaging may still require vet review before the encounter is ready for billing.
+- Billing candidates must use server-owned service item and price snapshots. Client-submitted amount is not trusted.
+- Every mutation must be workspace-scoped and actor-scoped.
+- Unauthorized, cross-workspace, invalid transition, and duplicate mutation attempts must keep state unchanged and return safe errors.
+
+## Role Expectations
+
+| Action | Hospital admin | Vet | Technician | Front desk / billing |
+| --- | --- | --- | --- | --- |
+| Confirm order | Oversight only unless scoped | Yes | No | No |
+| Accept/start fulfillment | Oversight if scoped | Usually no | Yes | No |
+| Complete lab/imaging/treatment/dispensing work | Oversight if scoped | Review if scoped | Yes | No |
+| Return work for correction | Oversight if scoped | Yes | Yes if reasoned | No |
+| Sync billable candidate | Oversight | Indirect through order completion | Indirect through fulfillment completion | Yes for billing action |
+| Issue/payment finalization | Admin oversight | View | No | Yes within billing scope |
+
+## Demo And Claim Language
+
+Safe wording:
+
+- "The representative outpatient workflow is visible end to end."
+- "Project 08 is the track that turns chart-confirmed orders into server-backed downstream work queues."
+- "Payment providers, PACS, device ingestion, and production data remain outside this claim."
+
+Do not say:
+
+- "Every lab/imaging/dispensing/treatment path is fully live."
+- "External devices or PACS are integrated."
+- "Real patient data or production pilots are ready."
+
+## Open Decisions Before Implementation
+
+- Which fulfillment states require vet review before billing readiness.
+- Whether technicians can cancel work items or only return them to chart.
+- Whether billable-only service items skip fulfillment and go directly to billing candidate creation.
+- Whether medication dispensing completion requires inventory or label-printing fields in a later project.
+- Which role names and permissions map to each mutation if the current permission set is insufficient.
+
+## Related Docs
+
+- [Outpatient Workflow State Model](outpatient-workflow-state-model.md)
+- [EMR Domain Entity Map](emr-domain-entity-map.md)
+- [Mock And Live Boundary Map](../../engineering/architecture/mock-live-boundary-map.md)
+- [Order Fulfillment Handoff Engineering Contract](../../engineering/data-model/order-fulfillment-handoff-contract.md)

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-235 Order Fulfillment Handoff Contract</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / DEN-235 / 2026-05-23</p>
+      <h1>오더 후속 업무 handoff 계약 정리</h1>
+      <p>
+        진료실에서 확정한 오더가 검사, 영상, 조제, 처치, 수납으로 이어지는 다음 제품 작업의 범위를 정리했다.
+        이번 작업은 구현이 아니라 계약 확정이며, 어떤 것은 현재 데모로만 보여줄 수 있고 어떤 것은 다음 PR에서 server-backed persistence로 만들어야 하는지 분리했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>핵심 결론</h2>
+        <table>
+          <tr><th>항목</th><th>판단</th></tr>
+          <tr><td>현재 가능한 것</td><td>Chart/order/billing은 scoped server route와 local-first persistence foundation이 있고, lab/imaging/dispensing/treatment는 guided demo fixture로 handoff 이야기를 보여줄 수 있다.</td></tr>
+          <tr><td>아직 부족한 것</td><td>Chart order confirmation 이후 downstream work item이 server route를 통해 자동 생성되고 각 화면에서 상태 변경되는 흐름은 아직 구현되지 않았다.</td></tr>
+          <tr><td>다음 구현 축</td><td><code>DEN-236</code>에서 shared fulfillment work item route/core/gateway와 migration contract를 만든다.</td></tr>
+          <tr><td>승인 gate</td><td>remote Supabase staging migration/push가 필요하면 repo migration, dry-run, 승욱 승인 후 진행한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>생성/수정 문서</h2>
+        <ul>
+          <li><code>docs/product/domain/order-fulfillment-handoff.md</code>: 제품 관점 handoff 계약.</li>
+          <li><code>docs/engineering/data-model/order-fulfillment-handoff-contract.md</code>: route/data/status/permission/migration gate 계약.</li>
+          <li><code>docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-001-scope-data-contract.md</code>: PR-sized work item.</li>
+          <li><code>docs/work/index.md</code>, <code>docs/SUMMARY.md</code>, product/engineering changelog, README index를 갱신했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>후속 이슈 순서</h2>
+        <table>
+          <tr><th>이슈</th><th>역할</th></tr>
+          <tr><td><code>DEN-236</code></td><td>Fulfillment work item schema/route/gateway contract 구현.</td></tr>
+          <tr><td><code>DEN-237</code></td><td>Chart order confirmation에서 fulfillment work item 생성.</td></tr>
+          <tr><td><code>DEN-238</code></td><td>Lab/imaging queue server read와 status mutation.</td></tr>
+          <tr><td><code>DEN-239</code></td><td>Dispensing/treatment queue server read와 status mutation.</td></tr>
+          <tr><td><code>DEN-240</code></td><td>Fulfillment completion을 order lifecycle과 billing candidate에 동기화.</td></tr>
+          <tr><td><code>DEN-241</code></td><td>End-to-end replay와 regression coverage.</td></tr>
+          <tr><td><code>DEN-242</code></td><td>Project closeout과 staging readiness report.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: 통과. 518개 docs/agent markdown file의 내부 참조가 정상이다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>코드 구현, migration 작성, remote Supabase 작업은 하지 않았다.</li>
+          <li>production deploy, production data, 실고객/실환자/실병원 데이터는 사용하지 않았다.</li>
+          <li>PACS, device ingestion, payment provider, KakaoTalk, Excel, external provider integration은 범위 밖이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
