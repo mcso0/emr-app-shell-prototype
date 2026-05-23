@@ -43,6 +43,8 @@ The app currently has usable prototype screens for:
 | Audit | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface |
 | Auth/workspace | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, and local DB/RLS foundations |
 
+Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Remote Supabase staging replay remains gated by explicit approval.
+
 The latest detailed change history before this split is in [MVP Current Status History](current-status-history.md).
 
 ## Not Complete Yet
