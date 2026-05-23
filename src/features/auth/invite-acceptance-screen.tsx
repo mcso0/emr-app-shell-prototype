@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BuildingIcon,
@@ -22,11 +22,11 @@ import {
   type MockAuthRole,
   type MockAuthSession,
 } from "@/features/auth/mock-session";
+import { useAuthClient } from "@/features/auth/auth-client";
 import {
   resolveInviteAcceptanceRecord,
   type InviteAcceptanceRecord,
 } from "@/features/auth/invite-acceptance-model";
-import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
   SESSION_WORKSPACES_STORAGE_KEY,
   createEmptySessionWorkspacesState,
@@ -56,12 +56,24 @@ export function InviteAcceptanceScreen({
   const [accountMode, setAccountMode] = useState<AccountMode>("new");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { authProvider, hydrated, session, hydrate } = useAuthClient();
   const record = useMemo(
     () => initialRecord ?? resolveInviteAcceptanceRecord({ invitationId, workspaceId, email }),
     [email, initialRecord, invitationId, workspaceId]
   );
   const stateCopy = getStateCopy(record);
-  const usesSupabaseProvider = getAuthRuntimeMode().authProvider === "supabase";
+  const usesSupabaseProvider = authProvider === "supabase";
+  const supabaseSessionEmail =
+    session && "provider" in session && session.provider === "supabase" ? session.email : null;
+  const supabaseEmailMatchesInvite =
+    usesSupabaseProvider &&
+    !!record.invitation?.email &&
+    !!supabaseSessionEmail &&
+    supabaseSessionEmail.toLowerCase() === record.invitation.email.toLowerCase();
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   function buildAccountPath(mode: AccountMode) {
     const next = `${window.location.pathname}${window.location.search}`;
@@ -89,8 +101,66 @@ export function InviteAcceptanceScreen({
     if (!record.workspace || !record.invitation || record.status !== "pending") return;
 
     if (usesSupabaseProvider) {
-      router.push(buildAccountPath(accountMode));
-      return;
+      if (!hydrated || !session) {
+        router.push(buildAccountPath(accountMode));
+        return;
+      }
+
+      if (!supabaseEmailMatchesInvite) {
+        setError("초대받은 이메일 계정으로 로그인해야 이 초대를 수락할 수 있습니다.");
+        return;
+      }
+
+      setSubmitting(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `/api/workspaces/${record.workspace.id}/invitations/${record.invitation.id}/accept`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ accountMode }),
+          }
+        );
+        const result = (await response.json()) as {
+          ok?: boolean;
+          denialReason?: string;
+        };
+
+        if (response.ok && result.ok) {
+          router.replace(`/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`);
+          return;
+        }
+
+        if (response.status === 409 && result.denialReason === "active_membership_exists") {
+          router.replace(`/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`);
+          return;
+        }
+
+        if (response.status === 401 || result.denialReason === "unauthenticated") {
+          throw new Error("invite-login-required");
+        }
+
+        if (result.denialReason === "target_invitation_missing") {
+          throw new Error("invite-email-mismatch");
+        }
+
+        throw new Error("invite-accept-failed");
+      } catch (caught) {
+        const message =
+          caught instanceof Error && caught.message === "invite-email-mismatch"
+            ? "현재 로그인한 계정은 이 초대 이메일과 일치하지 않습니다."
+            : caught instanceof Error && caught.message === "invite-login-required"
+              ? "초대받은 이메일 계정으로 로그인한 뒤 다시 수락해 주세요."
+              : "초대 수락 상태를 확인해 주세요.";
+
+        setError(message);
+        setSubmitting(false);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -250,8 +320,10 @@ export function InviteAcceptanceScreen({
                     >
                       {submitting
                         ? "초대 수락 중"
-                        : usesSupabaseProvider
-                          ? "선택한 방식으로 계속하기"
+                        : usesSupabaseProvider && supabaseEmailMatchesInvite
+                          ? "초대 수락하고 워크스페이스 열기"
+                          : usesSupabaseProvider
+                            ? "선택한 방식으로 계속하기"
                           : "초대 수락하고 워크스페이스 열기"}
                     </Button>
                     <p className="text-[12px] leading-5 text-muted-foreground">
@@ -587,8 +659,12 @@ function toMockRole(role: SessionWorkspaceRole): MockAuthRole {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
 }

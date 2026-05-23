@@ -65,6 +65,18 @@
       배포했다. 동일 pending 초대를 <code>gofldi65@gmail.com</code>으로 1회 재발송했고, Resend와 Gmail에서
       최신 메일이 도착했으며 링크 호스트가 새 Preview 도메인임을 확인했다.
     </p>
+    <p>
+      <strong>2026-05-23 로그인 후 초대 수락 루프 수리:</strong> Supabase staging 모드에서 사용자가 초대 이메일로
+      로그인한 뒤 다시 초대 화면으로 돌아와도 계속 로그인/가입 화면으로만 이동하던 루프를 수리했다.
+      이제 로그인된 Supabase 세션 이메일이 초대 이메일과 일치하면 app server의 invitation accept route를 호출하고,
+      이미 활성 멤버인 경우도 워크스페이스로 안전하게 진입시킨다. 이메일이 다르면 수락 mutation 없이 차단한다.
+    </p>
+    <p>
+      <strong>2026-05-23 Preview 배포:</strong> DEN-187 logged-in acceptance 수리만 포함한 깨끗한 worktree에서 새
+      Vercel Preview <code>https://emr-app-shell-prototype-lvymhgyla-mcso0s-projects.vercel.app</code>
+      를 배포했고 deployment <code>dpl_8DWj6ttWc3ofrkupKFZZHby9qdPN</code>가 <code>READY</code>가 됐다.
+      protected Preview curl smoke로 login page와 invite page의 핵심 문구가 렌더링되는 것도 확인했다.
+    </p>
 
     <h2>완료한 작업</h2>
     <table>
@@ -109,6 +121,10 @@
         <td>Invite UX flow hardening</td>
         <td><span class="ok">Implemented and deployed to Preview</span>: 초대 수락 UX 기준 문서를 추가하고, staging Supabase 흐름에서 신규 계정/기존 계정 경로를 명확히 분리했다. 신규 계정 생성은 승인 전 실제 signup 대신 준비중 화면으로 안전하게 막는다. 초대 페이지 UI는 로그인 페이지와 같은 제품 레이아웃, <code>EmrInlineAlert</code>, <code>Badge</code>, 앱 아이콘, 표면/상태 토큰을 사용한다.</td>
       </tr>
+      <tr>
+        <td>Logged-in invite acceptance</td>
+        <td><span class="ok">Implemented and deployed to Preview</span>: Supabase 세션 이메일이 초대 이메일과 일치하면 <code>/api/workspaces/[workspaceId]/invitations/[invitationId]/accept</code>를 호출하고, 성공 또는 이미 활성 멤버 상태에서 워크스페이스로 진입한다. 다른 이메일 세션은 safe denial로 막는다.</td>
+      </tr>
     </table>
 
     <h2>검증</h2>
@@ -144,12 +160,22 @@
       <li>Resend latest email detail: latest message is addressed to <code>gofldi65@gmail.com</code>, shows <code>delivered</code>, and the <code>Open invitation</code> link host is the invite UI refresh Preview domain.</li>
       <li>Gmail latest mail check: 2026-05-23 13:55 KST inbox result shows <code>[CLAiR staging] Workspace invitation</code> from the CLAiR staging sender.</li>
       <li>Earlier note: a previous local typecheck had failed on unrelated dirty work in <code>src/features/hospital-admin/module.tsx</code>; the current focused run now passes with <code>npx tsc --noEmit --pretty false</code>.</li>
+      <li>Logged-in invite acceptance repair: <code>npx playwright test tests/invite-acceptance.spec.ts --reporter=line</code>: 5 passed.</li>
+      <li>Logged-in invite acceptance repair: <code>npx tsc --noEmit --pretty false</code>: passed.</li>
+      <li>Logged-in invite acceptance repair: <code>npm run lint</code>: passed with 5 pre-existing warnings, 0 errors.</li>
+      <li>Logged-in invite acceptance repair: <code>npm run build</code>: passed.</li>
+      <li>Logged-in invite acceptance repair: <code>npm run docs:check</code>: passed.</li>
+      <li>Logged-in invite acceptance repair: <code>npm run security:secrets</code>: passed.</li>
+      <li>Logged-in invite acceptance Preview deploy: <code>https://emr-app-shell-prototype-lvymhgyla-mcso0s-projects.vercel.app</code>, deployment <code>dpl_8DWj6ttWc3ofrkupKFZZHby9qdPN</code>, status <code>READY</code>.</li>
+      <li>Protected Preview smoke via <code>vercel curl</code>: <code>/login</code> returned the CLAiR EMR login page shell.</li>
+      <li>Protected Preview invite smoke via <code>vercel curl</code>: mock invite page contains <code>초대 수락</code>, <code>계정 확인 후 워크스페이스에 입장</code>, <code>vet@hanbit.test</code>, and deterministic date text <code>2026-05-27 00:00</code>.</li>
     </ul>
 
     <h2>남은 승인/실행</h2>
     <ul>
-      <li>staging Supabase 로그인/초대 수락/워크스페이스 진입 확인.</li>
-      <li>Resend 로그와 앱 응답에서 secret, raw token, OTP, magic link가 노출되지 않는지 확인.</li>
+      <li>승인된 test recipient의 최신 메일 재발송은 이번 수리 배포에서 추가 실행하지 않았다. 이전 최신 메일은 <code>m83b1tc4a</code> Preview 도메인을 가리킨다.</li>
+      <li>Resend 로그와 앱 응답에서 secret, raw token, OTP, magic link가 노출되지 않는지 최종 고객 발송 전 다시 확인한다.</li>
+      <li>신규 계정 생성은 아직 self-signup이 아니라 안전한 not-ready 화면이다. 실제 signup 활성화는 별도 승인/정책 이슈가 필요하다.</li>
     </ul>
 
     <h2>Stop Conditions</h2>

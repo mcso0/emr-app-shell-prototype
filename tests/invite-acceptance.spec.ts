@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import {
   MOCK_AUTH_STORAGE_KEY,
   type MockAuthSession,
@@ -138,4 +139,26 @@ test("invite account setup pages preserve invite context", async ({ page }) => {
     "href",
     /\/invite\/invitation-pending\?workspaceId=workspace-a&email=vet(@|%40)hanbit\.test/
   );
+});
+
+test("Supabase invite acceptance calls the server accept route after matching login", async () => {
+  const source = readFileSync("src/features/auth/invite-acceptance-screen.tsx", "utf8");
+
+  expect(source).toContain("useAuthClient");
+  expect(source).toContain("supabaseEmailMatchesInvite");
+  expect(source).toContain("session.email");
+  expect(source).toContain(
+    "`/api/workspaces/${record.workspace.id}/invitations/${record.invitation.id}/accept`"
+  );
+  expect(source).toContain('denialReason === "active_membership_exists"');
+  expect(source).toContain("현재 로그인한 계정은 이 초대 이메일과 일치하지 않습니다.");
+
+  const supabaseBranch = source.slice(
+    source.indexOf("if (usesSupabaseProvider)"),
+    source.indexOf("const actorUserId = `invitee:${record.invitation.email}`")
+  );
+
+  expect(supabaseBranch).toContain("router.push(buildAccountPath(accountMode))");
+  expect(supabaseBranch).toContain("fetch(");
+  expect(supabaseBranch).not.toContain("x-clair-demo-session-user-id");
 });
