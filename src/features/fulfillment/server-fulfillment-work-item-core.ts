@@ -1,0 +1,844 @@
+import {
+  createMockWorkspacePermissionAdapter,
+  resolveWorkspacePermission,
+  type WorkspacePermissionAdapter,
+  type WorkspacePermissionDenialReason,
+} from "@/features/auth/permission-resolver";
+import {
+  mockEncounters,
+  mockGuardians,
+  mockOrders,
+  mockPatients,
+} from "@/mocks/emr-domain";
+import type {
+  EmrOrder,
+  EmrOrderType,
+  Encounter,
+  Guardian,
+  OrderPriority,
+  Patient,
+  PermissionId,
+} from "@/types/emr-domain";
+
+export type FulfillmentQueueType = EmrOrderType;
+export type FulfillmentWorkItemStatus =
+  | "requested"
+  | "accepted"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "returned";
+
+export type FulfillmentSourceSnapshot = {
+  billingReflectionEnabled: boolean;
+  detail: Record<string, unknown>;
+  guardianName?: string;
+  instruction?: string;
+  orderDisplayName: string;
+  patientName?: string;
+  requestingVetName?: string;
+  serviceItemId?: string;
+};
+
+export type FulfillmentWorkItem = {
+  assignedToUserId?: string | null;
+  cancelledAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  dueAt?: string | null;
+  encounterId: string;
+  id: string;
+  orderId: string;
+  orderType: FulfillmentQueueType;
+  priority: OrderPriority;
+  queueType: FulfillmentQueueType;
+  reason?: string | null;
+  requestedByUserId: string;
+  returnedAt?: string | null;
+  sourceSnapshot: FulfillmentSourceSnapshot;
+  status: FulfillmentWorkItemStatus;
+  updatedAt: string;
+  workspaceId: string;
+};
+
+export type FulfillmentWorkItemFilters = {
+  encounterId?: string | null;
+  orderId?: string | null;
+  queueType?: string | null;
+  status?: string | null;
+};
+
+export type FulfillmentSyncInput = {
+  encounterId?: string;
+  orderIds?: string[];
+};
+
+export type FulfillmentWorkItemUpdateInput = {
+  assignedToUserId?: string | null;
+  reason?: string | null;
+  status?: FulfillmentWorkItemStatus;
+};
+
+export type FulfillmentGatewayResult =
+  | { ok: true; workItems: FulfillmentWorkItem[] }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "invalid_transition"
+        | "order_unavailable"
+        | "unsupported_order_type"
+        | "work_item_unavailable";
+    }
+  | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
+type FulfillmentGatewayFailure = Exclude<FulfillmentGatewayResult, { ok: true }>;
+
+export type FulfillmentWorkItemGateway = {
+  listWorkItems(input: {
+    encounterId?: string;
+    orderId?: string;
+    queueType: FulfillmentQueueType;
+    status?: FulfillmentWorkItemStatus;
+    workspaceId: string;
+  }): Promise<FulfillmentGatewayResult>;
+  syncFromOrders(input: {
+    actorUserId: string;
+    encounterId: string;
+    orderIds: string[];
+    workspaceId: string;
+  }): Promise<FulfillmentGatewayResult>;
+  updateWorkItem(input: {
+    actorUserId: string;
+    assignedToUserId?: string | null;
+    reason?: string | null;
+    status: FulfillmentWorkItemStatus;
+    workItemId: string;
+    workspaceId: string;
+  }): Promise<FulfillmentGatewayResult>;
+};
+
+export type FulfillmentWorkItemReadResult =
+  | {
+      ok: true;
+      status: 200;
+      enforcedBy: "fulfillment-work-item-persistence";
+      workItems: FulfillmentWorkItem[];
+    }
+  | {
+      ok: false;
+      status: 400;
+      error: "invalid_input";
+      fieldErrors: Partial<Record<"queueType" | "status", string>>;
+    }
+  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
+  | FulfillmentGatewayFailure;
+
+export type FulfillmentWorkItemSyncResult =
+  | {
+      ok: true;
+      status: 200;
+      enforcedBy: "fulfillment-work-item-persistence";
+      workItems: FulfillmentWorkItem[];
+    }
+  | {
+      ok: false;
+      status: 400;
+      error: "invalid_input";
+      fieldErrors: Partial<Record<"encounterId" | "orderIds", string>>;
+    }
+  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
+  | FulfillmentGatewayFailure;
+
+export type FulfillmentWorkItemUpdateResult =
+  | {
+      ok: true;
+      status: 200;
+      enforcedBy: "fulfillment-work-item-persistence";
+      workItems: FulfillmentWorkItem[];
+    }
+  | {
+      ok: false;
+      status: 400;
+      error: "invalid_input";
+      fieldErrors: Partial<Record<"status" | "workItemId", string>>;
+    }
+  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
+  | FulfillmentGatewayFailure;
+
+const fulfillmentMockStore = new Map<string, FulfillmentWorkItem>();
+
+const fulfillmentStatuses: FulfillmentWorkItemStatus[] = [
+  "requested",
+  "accepted",
+  "in_progress",
+  "completed",
+  "cancelled",
+  "returned",
+];
+
+export async function readFulfillmentWorkItems({
+  actorUserId,
+  filters,
+  gateway = createMockFulfillmentWorkItemGateway(),
+  permissionAdapter = createDemoFulfillmentPermissionAdapter(),
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  filters: FulfillmentWorkItemFilters;
+  gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItems">;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  workspaceId: string;
+}): Promise<FulfillmentWorkItemReadResult> {
+  const normalized = normalizeFilters(filters);
+  const validation = validateReadFilters(normalized);
+  if (!validation.valid) {
+    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+  }
+
+  const queueType = normalized.queueType as FulfillmentQueueType;
+  const permission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: permissionForQueue(queueType, "read"),
+  });
+  if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+
+  const result = await gateway.listWorkItems({
+    encounterId: normalized.encounterId,
+    orderId: normalized.orderId,
+    queueType,
+    status: normalized.status,
+    workspaceId,
+  });
+
+  if (!result.ok) {
+    if (result.status === 409) return result;
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    enforcedBy: "fulfillment-work-item-persistence",
+    workItems: result.workItems,
+  };
+}
+
+export async function syncFulfillmentWorkItemsFromOrders({
+  actorUserId,
+  gateway = createMockFulfillmentWorkItemGateway(),
+  input,
+  permissionAdapter = createDemoFulfillmentPermissionAdapter(),
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  gateway?: Pick<FulfillmentWorkItemGateway, "syncFromOrders">;
+  input: FulfillmentSyncInput;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  workspaceId: string;
+}): Promise<FulfillmentWorkItemSyncResult> {
+  const normalized = normalizeSyncInput(input);
+  const validation = validateSyncInput(normalized);
+  if (!validation.valid) {
+    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+  }
+
+  const permission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: "chart:update",
+  });
+  if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+
+  const result = await gateway.syncFromOrders({
+    actorUserId: actorUserId ?? "",
+    encounterId: normalized.encounterId,
+    orderIds: normalized.orderIds,
+    workspaceId,
+  });
+
+  if (!result.ok) {
+    if (result.status === 409) return result;
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    enforcedBy: "fulfillment-work-item-persistence",
+    workItems: result.workItems,
+  };
+}
+
+export async function updateFulfillmentWorkItem({
+  actorUserId,
+  gateway = createMockFulfillmentWorkItemGateway(),
+  input,
+  permissionAdapter = createDemoFulfillmentPermissionAdapter(),
+  workItemId,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItems" | "updateWorkItem">;
+  input: FulfillmentWorkItemUpdateInput;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  workItemId: string | null | undefined;
+  workspaceId: string;
+}): Promise<FulfillmentWorkItemUpdateResult> {
+  const normalized = normalizeUpdateInput(workItemId, input);
+  const validation = validateUpdateInput(normalized);
+  if (!validation.valid) {
+    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+  }
+
+  const workItem = await findWorkItemForPermission({
+    gateway,
+    workItemId: normalized.workItemId,
+    workspaceId,
+  });
+  if (!workItem.ok) return workItem;
+
+  const permission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: permissionForQueue(workItem.workItem.queueType, "mutate"),
+  });
+  if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+
+  const result = await gateway.updateWorkItem({
+    actorUserId: actorUserId ?? "",
+    assignedToUserId: normalized.assignedToUserId,
+    reason: normalized.reason,
+    status: normalized.status as FulfillmentWorkItemStatus,
+    workItemId: normalized.workItemId,
+    workspaceId,
+  });
+
+  if (!result.ok) {
+    if (result.status === 409) return result;
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    enforcedBy: "fulfillment-work-item-persistence",
+    workItems: result.workItems,
+  };
+}
+
+export function createMockFulfillmentWorkItemGateway(
+  dataset: {
+    encounters?: Encounter[];
+    guardians?: Guardian[];
+    orders?: EmrOrder[];
+    patients?: Patient[];
+  } = {
+    encounters: mockEncounters,
+    guardians: mockGuardians,
+    orders: mockOrders,
+    patients: mockPatients,
+  },
+  now = () => new Date().toISOString()
+): FulfillmentWorkItemGateway {
+  const encounters = dataset.encounters ?? [];
+  const guardians = dataset.guardians ?? [];
+  const orders = dataset.orders ?? [];
+  const patients = dataset.patients ?? [];
+
+  return {
+    async listWorkItems({ encounterId, orderId, queueType, status, workspaceId }) {
+      const seeded = seedWorkItems({ encounters, guardians, orders, patients, workspaceId });
+      const rows = seeded
+        .filter((item) => item.queueType === queueType)
+        .filter((item) => !encounterId || item.encounterId === encounterId)
+        .filter((item) => !orderId || item.orderId === orderId)
+        .filter((item) => !status || item.status === status)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+
+      return { ok: true, workItems: rows };
+    },
+    async syncFromOrders({ actorUserId, encounterId, orderIds, workspaceId }) {
+      const encounter = findEncounter(encounters, workspaceId, encounterId);
+      if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+
+      const selectedOrders = orders.filter(
+        (order) =>
+          order.workspaceId === workspaceId &&
+          order.encounterId === encounterId &&
+          orderIds.includes(order.id)
+      );
+      if (selectedOrders.length !== orderIds.length) {
+        return { ok: false, status: 409, denialReason: "order_unavailable" };
+      }
+
+      const timestamp = now();
+      const workItems = selectedOrders.map((order) => {
+        if (!isSupportedOrderType(order.orderType)) {
+          return null;
+        }
+
+        const existing = fulfillmentMockStore.get(buildWorkItemKey(workspaceId, order.id));
+        const item = existing ?? buildWorkItemFromOrder({
+          actorUserId,
+          encounter,
+          guardians,
+          now: timestamp,
+          order,
+          patients,
+        });
+
+        const next = {
+          ...item,
+          updatedAt: timestamp,
+        } satisfies FulfillmentWorkItem;
+        fulfillmentMockStore.set(buildWorkItemKey(workspaceId, order.id), next);
+        return next;
+      });
+
+      if (workItems.some((item) => item === null)) {
+        return { ok: false, status: 409, denialReason: "unsupported_order_type" };
+      }
+
+      return { ok: true, workItems: workItems as FulfillmentWorkItem[] };
+    },
+    async updateWorkItem({ assignedToUserId, reason, status, workItemId, workspaceId }) {
+      const item = seedWorkItems({ encounters, guardians, orders, patients, workspaceId }).find(
+        (row) => row.id === workItemId
+      );
+      if (!item) return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+      if (!canTransition(item.status, status)) {
+        return { ok: false, status: 409, denialReason: "invalid_transition" };
+      }
+
+      const timestamp = now();
+      const next = {
+        ...item,
+        assignedToUserId: assignedToUserId ?? item.assignedToUserId ?? null,
+        cancelledAt: status === "cancelled" ? timestamp : item.cancelledAt ?? null,
+        completedAt: status === "completed" ? timestamp : item.completedAt ?? null,
+        reason: normalizeOptionalField(reason) ?? item.reason ?? null,
+        returnedAt: status === "returned" ? timestamp : item.returnedAt ?? null,
+        status,
+        updatedAt: timestamp,
+      } satisfies FulfillmentWorkItem;
+      fulfillmentMockStore.set(buildWorkItemKey(workspaceId, next.orderId), next);
+
+      return { ok: true, workItems: [next] };
+    },
+  };
+}
+
+export type SupabaseFulfillmentWorkItemRpcClient = {
+  rpc(
+    functionName: "clair_list_fulfillment_work_items",
+    args: {
+      p_workspace_id: string;
+      p_queue_type: FulfillmentQueueType;
+      p_encounter_id?: string;
+      p_order_id?: string;
+      p_status?: FulfillmentWorkItemStatus;
+    }
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_sync_fulfillment_work_items_from_orders",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_encounter_id: string;
+      p_order_ids: string[];
+    }
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_update_fulfillment_work_item",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_work_item_id: string;
+      p_status: FulfillmentWorkItemStatus;
+      p_assigned_to_user_id?: string | null;
+      p_reason?: string | null;
+    }
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+};
+
+export function createSupabaseFulfillmentWorkItemGateway(
+  client: SupabaseFulfillmentWorkItemRpcClient
+): FulfillmentWorkItemGateway {
+  return {
+    async listWorkItems({ encounterId, orderId, queueType, status, workspaceId }) {
+      const { data, error } = await client.rpc("clair_list_fulfillment_work_items", {
+        p_workspace_id: workspaceId,
+        p_queue_type: queueType,
+        p_encounter_id: normalizeUuidForRpc(encounterId),
+        p_order_id: normalizeUuidForRpc(orderId),
+        p_status: status,
+      });
+      if (error) return mapGatewayError(error.message, "db_read_failed");
+      return { ok: true, workItems: mapWorkItemRows(data) };
+    },
+    async syncFromOrders({ actorUserId, encounterId, orderIds, workspaceId }) {
+      const { data, error } = await client.rpc("clair_sync_fulfillment_work_items_from_orders", {
+        p_workspace_id: workspaceId,
+        p_actor_user_id: actorUserId,
+        p_encounter_id: normalizeUuidForRpc(encounterId) ?? encounterId,
+        p_order_ids: orderIds.map(normalizeUuidForRpc).filter((orderId): orderId is string => Boolean(orderId)),
+      });
+      if (error) return mapGatewayError(error.message, "db_write_failed");
+      return { ok: true, workItems: mapWorkItemRows(data) };
+    },
+    async updateWorkItem({ actorUserId, assignedToUserId, reason, status, workItemId, workspaceId }) {
+      const { data, error } = await client.rpc("clair_update_fulfillment_work_item", {
+        p_workspace_id: workspaceId,
+        p_actor_user_id: actorUserId,
+        p_work_item_id: normalizeUuidForRpc(workItemId) ?? workItemId,
+        p_status: status,
+        p_assigned_to_user_id: normalizeUuidForRpc(assignedToUserId ?? undefined) ?? null,
+        p_reason: normalizeOptionalField(reason) ?? null,
+      });
+      if (error) return mapGatewayError(error.message, "db_write_failed");
+      return { ok: true, workItems: mapWorkItemRows(data) };
+    },
+  };
+}
+
+export function createDemoFulfillmentPermissionAdapter() {
+  return createMockWorkspacePermissionAdapter({
+    users: [
+      { id: "playwright-default-session", status: "active", displayName: "Playwright Admin" },
+      { id: "user-admin", status: "active", displayName: "송민재" },
+      { id: "user-front-desk", status: "active", displayName: "최유나" },
+      { id: "user-vet", status: "active", displayName: "이수지" },
+      { id: "user-tech", status: "active", displayName: "송하윤" },
+    ],
+    memberships: [
+      {
+        id: "membership-playwright-admin",
+        workspaceId: "clair-demo",
+        userId: "playwright-default-session",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-admin",
+        workspaceId: "clair-demo",
+        userId: "user-admin",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-front-desk",
+        workspaceId: "clair-demo",
+        userId: "user-front-desk",
+        roles: ["front_desk"],
+        status: "active",
+      },
+      {
+        id: "membership-vet",
+        workspaceId: "clair-demo",
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
+      {
+        id: "membership-tech",
+        workspaceId: "clair-demo",
+        userId: "user-tech",
+        roles: ["technician"],
+        status: "active",
+      },
+    ],
+  });
+}
+
+async function findWorkItemForPermission({
+  gateway,
+  workItemId,
+  workspaceId,
+}: {
+  gateway: Pick<FulfillmentWorkItemGateway, "listWorkItems">;
+  workItemId: string;
+  workspaceId: string;
+}): Promise<
+  | { ok: true; workItem: FulfillmentWorkItem }
+  | { ok: false; status: 409; denialReason: "work_item_unavailable" }
+  | { ok: false; status: 500; error: "db_read_failed" }
+> {
+  for (const queueType of ["lab", "imaging", "dispensing", "treatment"] satisfies FulfillmentQueueType[]) {
+    const result = await gateway.listWorkItems({ queueType, workspaceId });
+    if (!result.ok) {
+      if (result.status === 409) continue;
+      return { ok: false, status: 500, error: "db_read_failed" };
+    }
+    const workItem = result.workItems.find((item) => item.id === workItemId);
+    if (workItem) return { ok: true, workItem };
+  }
+
+  return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+}
+
+function seedWorkItems({
+  encounters,
+  guardians,
+  orders,
+  patients,
+  workspaceId,
+}: {
+  encounters: Encounter[];
+  guardians: Guardian[];
+  orders: EmrOrder[];
+  patients: Patient[];
+  workspaceId: string;
+}) {
+  const rows = orders
+    .filter((order) => order.workspaceId === workspaceId && order.status !== "cancelled")
+    .map((order) => {
+      const encounter = findEncounter(encounters, workspaceId, order.encounterId);
+      if (!encounter || !isSupportedOrderType(order.orderType)) return null;
+      return fulfillmentMockStore.get(buildWorkItemKey(workspaceId, order.id)) ?? buildWorkItemFromOrder({
+        actorUserId: order.requestedByUserId,
+        encounter,
+        guardians,
+        now: order.updatedAt,
+        order,
+        patients,
+      });
+    })
+    .filter((item): item is FulfillmentWorkItem => Boolean(item));
+
+  return rows;
+}
+
+function buildWorkItemFromOrder({
+  actorUserId,
+  encounter,
+  guardians,
+  now,
+  order,
+  patients,
+}: {
+  actorUserId: string;
+  encounter: Encounter;
+  guardians: Guardian[];
+  now: string;
+  order: EmrOrder;
+  patients: Patient[];
+}): FulfillmentWorkItem {
+  const patient = patients.find((item) => item.id === encounter.patientId);
+  const guardian = guardians.find((item) => item.id === encounter.guardianId);
+
+  return {
+    assignedToUserId: order.currentAssigneeUserId ?? null,
+    cancelledAt: null,
+    completedAt: order.status === "completed" || order.workStatus === "completed" ? order.updatedAt : null,
+    createdAt: order.createdAt,
+    dueAt: order.dueAt ?? null,
+    encounterId: order.encounterId,
+    id: `fulfill-${order.id}`,
+    orderId: order.id,
+    orderType: order.orderType,
+    priority: order.priority,
+    queueType: order.orderType,
+    reason: null,
+    requestedByUserId: actorUserId || order.requestedByUserId,
+    returnedAt: null,
+    sourceSnapshot: {
+      billingReflectionEnabled: true,
+      detail: buildSnapshotDetail(order),
+      guardianName: guardian?.name,
+      instruction: order.instruction,
+      orderDisplayName: order.displayName,
+      patientName: patient?.name,
+      serviceItemId: order.serviceItemId,
+    },
+    status: mapOrderStatusToWorkItemStatus(order.status, order.workStatus),
+    updatedAt: now,
+    workspaceId: order.workspaceId,
+  };
+}
+
+function buildSnapshotDetail(order: EmrOrder) {
+  return {
+    orderType: order.orderType,
+    priority: order.priority,
+    warningMessage: order.warningMessage,
+  };
+}
+
+function mapOrderStatusToWorkItemStatus(
+  orderStatus: EmrOrder["status"],
+  workStatus: EmrOrder["workStatus"]
+): FulfillmentWorkItemStatus {
+  if (orderStatus === "cancelled") return "cancelled";
+  if (orderStatus === "re_requested") return "returned";
+  if (orderStatus === "in_progress") return "in_progress";
+  if (orderStatus === "completed" || workStatus === "completed") return "completed";
+  return "requested";
+}
+
+function canTransition(current: FulfillmentWorkItemStatus, next: FulfillmentWorkItemStatus) {
+  if (current === next) return true;
+  const allowed: Record<FulfillmentWorkItemStatus, FulfillmentWorkItemStatus[]> = {
+    requested: ["accepted", "cancelled", "returned"],
+    accepted: ["in_progress", "cancelled", "returned"],
+    in_progress: ["completed", "cancelled", "returned"],
+    completed: [],
+    cancelled: [],
+    returned: ["requested", "cancelled"],
+  };
+  return allowed[current].includes(next);
+}
+
+function normalizeFilters(input: FulfillmentWorkItemFilters) {
+  return {
+    encounterId: trimToUndefined(input.encounterId),
+    orderId: trimToUndefined(input.orderId),
+    queueType: trimToUndefined(input.queueType) as FulfillmentQueueType | undefined,
+    status: trimToUndefined(input.status) as FulfillmentWorkItemStatus | undefined,
+  };
+}
+
+function validateReadFilters(input: ReturnType<typeof normalizeFilters>) {
+  const fieldErrors: Partial<Record<"queueType" | "status", string>> = {};
+  if (!input.queueType || !isSupportedOrderType(input.queueType)) {
+    fieldErrors.queueType = "업무 queue를 선택해 주세요.";
+  }
+  if (input.status && !isFulfillmentStatus(input.status)) {
+    fieldErrors.status = "업무 상태를 확인해 주세요.";
+  }
+  return Object.keys(fieldErrors).length > 0
+    ? { valid: false as const, fieldErrors }
+    : { valid: true as const, fieldErrors: {} };
+}
+
+function normalizeSyncInput(input: FulfillmentSyncInput) {
+  return {
+    encounterId: trimToUndefined(input.encounterId) ?? "",
+    orderIds: Array.isArray(input.orderIds)
+      ? [...new Set(input.orderIds.map(trimToUndefined).filter((item): item is string => Boolean(item)))]
+      : [],
+  };
+}
+
+function validateSyncInput(input: ReturnType<typeof normalizeSyncInput>) {
+  const fieldErrors: Partial<Record<"encounterId" | "orderIds", string>> = {};
+  if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
+  if (input.orderIds.length < 1 || input.orderIds.length > 100) {
+    fieldErrors.orderIds = "연결할 오더를 확인해 주세요.";
+  }
+  return Object.keys(fieldErrors).length > 0
+    ? { valid: false as const, fieldErrors }
+    : { valid: true as const, fieldErrors: {} };
+}
+
+function normalizeUpdateInput(workItemId: string | null | undefined, input: FulfillmentWorkItemUpdateInput) {
+  return {
+    assignedToUserId: normalizeOptionalField(input.assignedToUserId),
+    reason: normalizeOptionalField(input.reason),
+    status: input.status,
+    workItemId: trimToUndefined(workItemId) ?? "",
+  };
+}
+
+function validateUpdateInput(input: ReturnType<typeof normalizeUpdateInput>) {
+  const fieldErrors: Partial<Record<"status" | "workItemId", string>> = {};
+  if (!input.workItemId) fieldErrors.workItemId = "업무 항목을 선택해 주세요.";
+  if (!input.status || !isFulfillmentStatus(input.status)) {
+    fieldErrors.status = "변경할 상태를 선택해 주세요.";
+  }
+  return Object.keys(fieldErrors).length > 0
+    ? { valid: false as const, fieldErrors }
+    : { valid: true as const, fieldErrors: {} };
+}
+
+function permissionForQueue(queueType: FulfillmentQueueType, action: "mutate" | "read"): PermissionId {
+  if (queueType === "lab") return action === "read" ? "lab:view" : "lab:complete";
+  if (queueType === "imaging") return action === "read" ? "imaging:view" : "imaging:complete";
+  return action === "read" ? "dispensing:view" : "dispensing:complete";
+}
+
+function mapPermissionDenial(denialReason?: WorkspacePermissionDenialReason) {
+  return {
+    ok: false as const,
+    status: denialReason === "unauthenticated" ? 401 as const : 403 as const,
+    denialReason: denialReason ?? "permission_missing" as const,
+  };
+}
+
+function mapGatewayError(message: string | undefined, fallback: "db_read_failed" | "db_write_failed"): FulfillmentGatewayResult {
+  if (message?.includes("encounter_unavailable")) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+  if (message?.includes("invalid_transition")) return { ok: false, status: 409, denialReason: "invalid_transition" };
+  if (message?.includes("order_unavailable")) return { ok: false, status: 409, denialReason: "order_unavailable" };
+  if (message?.includes("unsupported_order_type")) return { ok: false, status: 409, denialReason: "unsupported_order_type" };
+  if (message?.includes("work_item_unavailable")) return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+  return { ok: false, status: 500, error: fallback };
+}
+
+function findEncounter(encounters: Encounter[], workspaceId: string, encounterId: string) {
+  return encounters.find(
+    (encounter) =>
+      encounter.id === encounterId &&
+      encounter.workspaceId === workspaceId &&
+      encounter.status !== "cancelled"
+  );
+}
+
+function buildWorkItemKey(workspaceId: string, orderId: string) {
+  return `${workspaceId}:${orderId}`;
+}
+
+function isSupportedOrderType(value: unknown): value is FulfillmentQueueType {
+  return value === "lab" || value === "imaging" || value === "dispensing" || value === "treatment";
+}
+
+function isFulfillmentStatus(value: unknown): value is FulfillmentWorkItemStatus {
+  return fulfillmentStatuses.includes(value as FulfillmentWorkItemStatus);
+}
+
+function normalizeOptionalField(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function trimToUndefined(value?: string | null) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function normalizeUuidForRpc(value?: string | null) {
+  return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : undefined;
+}
+
+function mapWorkItemRows(value: unknown): FulfillmentWorkItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.reduce<FulfillmentWorkItem[]>((rows, item) => {
+    const row = mapWorkItemRow(item);
+    if (row) rows.push(row);
+    return rows;
+  }, []);
+}
+
+function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Partial<FulfillmentWorkItem>;
+  if (
+    typeof row.id !== "string" ||
+    typeof row.workspaceId !== "string" ||
+    typeof row.encounterId !== "string" ||
+    typeof row.orderId !== "string" ||
+    !isSupportedOrderType(row.orderType) ||
+    !isSupportedOrderType(row.queueType) ||
+    !isFulfillmentStatus(row.status) ||
+    typeof row.priority !== "string" ||
+    typeof row.requestedByUserId !== "string" ||
+    typeof row.createdAt !== "string" ||
+    typeof row.updatedAt !== "string" ||
+    !row.sourceSnapshot ||
+    typeof row.sourceSnapshot !== "object"
+  ) {
+    return null;
+  }
+
+  return row as FulfillmentWorkItem;
+}
