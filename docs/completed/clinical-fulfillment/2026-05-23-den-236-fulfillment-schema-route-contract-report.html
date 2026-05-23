@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-236 Fulfillment Schema Route Contract</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / DEN-236 / 2026-05-23</p>
+      <h1>오더 후속 업무 서버 경계 구현</h1>
+      <p>
+        진료실 오더가 검사, 영상, 조제, 처치 업무 항목으로 넘어갈 수 있도록 shared fulfillment work item 서버 경계를 만들었다.
+        아직 각 화면 UI에 연결한 단계는 아니지만, 다음 PR들이 사용할 route, 상태 전이, 권한, migration 계약이 코드로 고정됐다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>무엇이 가능해졌나</h2>
+        <table>
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>Sync</td><td><code>POST /fulfillment/work-items/sync-from-orders</code>가 encounter/order ids를 받아 work item을 생성 또는 갱신한다.</td></tr>
+          <tr><td>Read</td><td><code>GET /fulfillment/work-items</code>가 queue type, encounter, order, status 기준으로 업무 항목을 조회한다.</td></tr>
+          <tr><td>Mutation</td><td><code>PATCH /fulfillment/work-items/[workItemId]</code>가 requested, accepted, in_progress, completed, cancelled, returned 상태 전이를 검증한다.</td></tr>
+          <tr><td>권한</td><td>Chart sync는 <code>chart:update</code>, queue mutation은 lab/imaging/dispensing complete 권한을 요구한다. Treatment는 현재 permission model상 dispensing 권한 경계를 사용한다.</td></tr>
+          <tr><td>DB 계약</td><td>Repo migration에 <code>order_fulfillment_work_items</code> table과 3개 RPC 계약을 추가했다. Remote staging push는 하지 않았다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>생성/수정 파일</h2>
+        <ul>
+          <li><code>src/features/fulfillment/server-fulfillment-work-item-core.ts</code>: core, mock gateway, Supabase gateway contract.</li>
+          <li><code>src/app/api/workspaces/[workspaceId]/fulfillment/work-items/**</code>: GET/POST/PATCH routes.</li>
+          <li><code>supabase/migrations/20260523094400_order_fulfillment_work_item_contract.sql</code>: local-first schema/RPC contract.</li>
+          <li><code>tests/fulfillment-work-item-server.spec.ts</code>: route/core/RPC/migration coverage.</li>
+          <li><code>docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-002-schema-route-contract.md</code>: work item handoff.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npx playwright test tests/fulfillment-work-item-server.spec.ts</code>: 5개 테스트 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>아직 남은 것</h2>
+        <ul>
+          <li><code>DEN-237</code>: chart order confirmation에서 이 sync route를 호출하도록 연결한다.</li>
+          <li><code>DEN-238</code>, <code>DEN-239</code>: lab/imaging/dispensing/treatment 화면을 server-backed queue로 전환한다.</li>
+          <li><code>DEN-240</code>: fulfillment completion을 order lifecycle과 billing candidate sync에 연결한다.</li>
+          <li>Remote Supabase staging migration은 dry-run과 승욱 승인 전까지 실행하지 않는다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

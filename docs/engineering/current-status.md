@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-20
+Updated: 2026-05-23
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -35,8 +35,8 @@ The app currently has usable prototype screens for:
 | Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, and local-first encounter path foundations |
 | Customer management | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries |
 | Chart | SOAP, diagnosis/search, order draft/confirmation, and local-first persistence checkpoints |
-| Lab and imaging | Workspace screens exist; full live persistence remains outside current MVP completion claims |
-| Dispensing/treatment | Workspace screen exists; full live persistence remains outside current MVP completion claims |
+| Lab and imaging | Workspace screens exist; DEN-236 adds a shared fulfillment work item server route foundation, but screen adoption/full live persistence remains outside current completion claims |
+| Dispensing/treatment | Workspace screen exists; DEN-236 adds a shared fulfillment work item server route foundation, but screen adoption/full live persistence remains outside current completion claims |
 | Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, and amount-integrity regression foundations |
 | Inpatient | Session-only ward board and detail surface |
 | Hospital admin | Order catalog persistence foundation and membership/invitation management surfaces |

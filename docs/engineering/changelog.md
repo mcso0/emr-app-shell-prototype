@@ -4,6 +4,7 @@ Use this file for small engineering-planning changes that do not need a standalo
 
 ## 2026-05-23
 
+- `added`: Added DEN-236 fulfillment work item route/core/gateway and local-first migration contract for downstream lab, imaging, dispensing, and treatment queue persistence.
 - `added`: Added `docs/engineering/data-model/order-fulfillment-handoff-contract.md` for the DEN-235 fulfillment work item route/data/status/permission contract.
 
 ## 2026-05-03

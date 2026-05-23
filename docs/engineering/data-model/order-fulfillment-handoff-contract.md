@@ -5,6 +5,7 @@ area: engineering
 doc_type: data-contract
 related_work:
   - DEN-235
+  - DEN-236
 supersedes: []
 superseded_by: []
 last_updated: 2026-05-23
@@ -14,7 +15,7 @@ last_updated: 2026-05-23
 
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
-No migration or code implementation is performed by `DEN-235`.
+`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract; remote staging migration remains gated by dry-run and explicit approval.
 
 ## Current Inventory
 
@@ -28,6 +29,7 @@ No migration or code implementation is performed by `DEN-235`.
 | Billing payment status | `GET/PATCH /api/workspaces/[workspaceId]/billing/payment-status` | synthetic payment/unpaid state |
 | Lab/imaging screens | `src/features/lab-imaging/data.ts` | mock domain fixtures, no fulfillment server queue route |
 | Dispensing/treatment screen | `src/features/dispensing/data.ts` | module-local fixture rows, no fulfillment server queue route |
+| Shared fulfillment work items | `src/app/api/workspaces/[workspaceId]/fulfillment/work-items/**` | DEN-236 server route/core/gateway foundation, not yet adopted by downstream screens |
 
 ## Target Route Shape
 
