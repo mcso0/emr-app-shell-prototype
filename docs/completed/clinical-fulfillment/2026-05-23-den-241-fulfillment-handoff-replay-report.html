@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-241 Fulfillment Handoff Replay</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / DEN-241 / 2026-05-23</p>
+      <h1>Fulfillment handoff end-to-end replay 증빙</h1>
+      <p>
+        Kong synthetic encounter를 기준으로 chart order confirmation부터 lab, imaging, dispensing, treatment queue 처리,
+        order lifecycle readback, billing candidate readback까지 한 번에 검증하는 replay spec을 추가했다.
+        기존 sales demo golden path도 함께 검증해 demo-visible 흐름이 유지되는지 확인했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>Replay 범위</h2>
+        <table>
+          <tr><th>구간</th><th>검증 내용</th></tr>
+          <tr><td>Chart confirmation</td><td>Vet가 lab, imaging, dispensing, treatment order를 confirm하면 fulfillment work item이 반환된다.</td></tr>
+          <tr><td>Queue handling</td><td>Technician이 각 queue work item을 완료 상태까지 진행한다.</td></tr>
+          <tr><td>Lifecycle readback</td><td>선택된 4개 order가 모두 <code>completed</code>로 읽힌다.</td></tr>
+          <tr><td>Billing readback</td><td>각 order의 server-owned invoice line 금액으로 billing candidate가 읽힌다.</td></tr>
+          <tr><td>Negative checks</td><td>중복 confirm, invalid transition, front desk denial, cross-workspace denial을 검증한다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/fulfillment-handoff-replay.spec.ts</code>: 2개 테스트 통과.</li>
+          <li>Full local quality gate는 PR 생성 전 다시 실행한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 작업</h2>
+        <ul>
+          <li><code>DEN-242</code>: Project 08 closeout과 staging readiness claim을 정리한다.</li>
+          <li>Remote Supabase/staging replay는 별도 승인 gate가 필요하다.</li>
+          <li>Production, real data, external provider/payment integration은 여전히 제외 범위다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
