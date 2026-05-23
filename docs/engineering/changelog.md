@@ -4,6 +4,7 @@ Use this file for small engineering-planning changes that do not need a standalo
 
 ## 2026-05-23
 
+- `added`: Added DEN-241 end-to-end fulfillment handoff replay coverage from chart confirmation through queue completion, lifecycle readback, and billing candidate readback.
 - `changed`: Connected DEN-240 fulfillment status updates back to order lifecycle and billing candidate sync with audit evidence.
 - `changed`: Connected dispensing and treatment screens to fulfillment work item read/status mutation paths for DEN-239 while preserving fixture fallback.
 - `changed`: Connected lab and imaging screens to fulfillment work item read/status mutation paths for DEN-238 while preserving fixture fallback.

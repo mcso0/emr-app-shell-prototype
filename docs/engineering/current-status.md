@@ -75,6 +75,7 @@ Use the active work item for exact verification commands. Recent relevant verifi
 - `npm run docs:check` for docs path/reference changes
 - `npm run lint`, `npx tsc --noEmit`, and `npm run build` for implementation changes
 - focused Playwright specs for touched workflows
+- `tests/fulfillment-handoff-replay.spec.ts` for chart confirmation through downstream fulfillment, lifecycle, and billing readback
 - focused server/API regression specs for auth, workspace, billing, customer, audit, and persistence boundaries
 - secret scans and migration/static checks when auth, DB, RLS, or env handling changes
 
