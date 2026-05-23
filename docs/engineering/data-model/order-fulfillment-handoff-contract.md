@@ -9,6 +9,7 @@ related_work:
   - DEN-237
   - DEN-238
   - DEN-239
+  - DEN-240
 supersedes: []
 superseded_by: []
 last_updated: 2026-05-23
@@ -18,7 +19,7 @@ last_updated: 2026-05-23
 
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
-`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. Remote staging migration remains gated by dry-run and explicit approval.
+`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. Remote staging migration remains gated by dry-run and explicit approval.
 
 ## Current Inventory
 
@@ -36,6 +37,7 @@ This document defines the engineering contract for Project 08, `Clinical Order F
 | Chart-to-fulfillment sync | `PATCH /api/workspaces/[workspaceId]/chart/order-actions` | DEN-237 confirm action calls fulfillment sync after successful order confirmation |
 | Lab/imaging queue adoption | `src/features/lab-imaging/module.tsx` | DEN-238 reads fulfillment work item status context and sends status mutation from existing actions |
 | Dispensing/treatment queue adoption | `src/features/dispensing/module.tsx` | DEN-239 reads fulfillment work item status context and sends status mutation from existing actions |
+| Fulfillment-to-lifecycle/billing sync | `src/features/fulfillment/server-fulfillment-work-item-core.ts` | DEN-240 syncs fulfillment status changes to order lifecycle and completed billable work to billing candidates |
 
 ## Target Route Shape
 
@@ -100,9 +102,9 @@ Type-specific `detail` examples:
 | `requested` | order remains `requested` or `in_progress` depending on chart action | none |
 | `accepted` | order can remain `in_progress` | none |
 | `in_progress` | order should be `in_progress` | none |
-| `completed` | order may become `confirmed` or `completed` based on review policy | billable candidate may be created or refreshed |
-| `cancelled` | order may become `cancelled` or require chart review | remove, void, or exclude candidate by explicit rule |
-| `returned` | order should be `re_requested` or remain open for chart correction | candidate must not advance |
+| `completed` | order becomes `completed` for the local-first fulfillment path | billable candidate is created or refreshed when `billingReflectionEnabled` is not false |
+| `cancelled` | order becomes `cancelled` | candidate is not created from this fulfillment update |
+| `returned` | order becomes `re_requested` | candidate must not advance |
 
 `DEN-235` does not decide every review policy. The implementation issues must preserve explicit decision points for lab/imaging vet review and cancellation after candidate creation.
 

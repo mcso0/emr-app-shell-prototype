@@ -5,6 +5,20 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import {
+  emitLiveMutationAuditEvent,
+  type LiveMutationAuditOptions,
+} from "@/features/audit/server-mutation-audit-core";
+import {
+  createMockInvoiceCandidateSyncGateway,
+  type BillingInvoiceCandidateLine,
+  type InvoiceCandidateSyncGateway,
+} from "@/features/billing/server-invoice-candidate-sync-core";
+import {
+  createMockChartOrderLifecycleGateway,
+  type ChartOrderLifecycleGateway,
+  type ChartOrderLifecycleStatus,
+} from "@/features/chart/server-order-lifecycle-persistence-core";
+import {
   mockEncounters,
   mockGuardians,
   mockOrders,
@@ -77,6 +91,18 @@ export type FulfillmentWorkItemUpdateInput = {
   assignedToUserId?: string | null;
   reason?: string | null;
   status?: FulfillmentWorkItemStatus;
+};
+
+export type FulfillmentDownstreamSyncSummary = {
+  auditEventCount: number;
+  billingCandidateCount: number;
+  billingSkippedReason?:
+    | "billing_reflection_disabled"
+    | "encounter_unavailable"
+    | "not_completed_status"
+    | "invoice_unavailable"
+    | "order_unavailable";
+  lifecycleStatus?: ChartOrderLifecycleStatus;
 };
 
 export type FulfillmentGatewayResult =
@@ -155,6 +181,7 @@ export type FulfillmentWorkItemUpdateResult =
       ok: true;
       status: 200;
       enforcedBy: "fulfillment-work-item-persistence";
+      downstreamSync?: FulfillmentDownstreamSyncSummary;
       workItems: FulfillmentWorkItem[];
     }
   | {
@@ -273,15 +300,25 @@ export async function syncFulfillmentWorkItemsFromOrders({
 
 export async function updateFulfillmentWorkItem({
   actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
+  invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(),
   gateway = createMockFulfillmentWorkItemGateway(),
   input,
+  lifecycleGateway = createMockChartOrderLifecycleGateway(),
   permissionAdapter = createDemoFulfillmentPermissionAdapter(),
   workItemId,
   workspaceId,
 }: {
   actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItems" | "updateWorkItem">;
+  invoiceCandidateGateway?: Pick<InvoiceCandidateSyncGateway, "syncInvoiceCandidates">;
   input: FulfillmentWorkItemUpdateInput;
+  lifecycleGateway?: Pick<ChartOrderLifecycleGateway, "saveOrderLifecycleStatus">;
   permissionAdapter?: WorkspacePermissionAdapter;
   workItemId: string | null | undefined;
   workspaceId: string;
@@ -320,10 +357,24 @@ export async function updateFulfillmentWorkItem({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
+  const downstreamSync = await syncDownstreamFromFulfillmentUpdate({
+    actorUserId,
+    auditGateway,
+    auditNow,
+    auditRequestId,
+    invoiceCandidateGateway,
+    lifecycleGateway,
+    requestedStatus: normalized.status as FulfillmentWorkItemStatus,
+    updatedWorkItem: result.workItems[0],
+    workspaceId,
+  });
+  if (!downstreamSync.ok) return downstreamSync;
+
   return {
     ok: true,
     status: 200,
     enforcedBy: "fulfillment-work-item-persistence",
+    downstreamSync: downstreamSync.summary,
     workItems: result.workItems,
   };
 }
@@ -656,6 +707,228 @@ function buildWorkItemFromOrder({
     updatedAt: now,
     workspaceId: order.workspaceId,
   };
+}
+
+async function syncDownstreamFromFulfillmentUpdate({
+  actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
+  invoiceCandidateGateway,
+  lifecycleGateway,
+  requestedStatus,
+  updatedWorkItem,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  invoiceCandidateGateway: Pick<InvoiceCandidateSyncGateway, "syncInvoiceCandidates">;
+  lifecycleGateway: Pick<ChartOrderLifecycleGateway, "saveOrderLifecycleStatus">;
+  requestedStatus: FulfillmentWorkItemStatus;
+  updatedWorkItem: FulfillmentWorkItem | undefined;
+  workspaceId: string;
+}): Promise<
+  | { ok: true; summary: FulfillmentDownstreamSyncSummary }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "order_unavailable" | "invalid_transition" }
+  | { ok: false; status: 500; error: "db_write_failed" }
+> {
+  const summary: FulfillmentDownstreamSyncSummary = {
+    auditEventCount: 0,
+    billingCandidateCount: 0,
+  };
+  if (!updatedWorkItem) return { ok: true, summary };
+
+  const lifecycleStatus = mapFulfillmentStatusToLifecycleStatus(requestedStatus);
+  if (lifecycleStatus) {
+    const lifecycleResult = await saveLifecycleWithBridge({
+      actorUserId: actorUserId ?? "",
+      lifecycleGateway,
+      status: lifecycleStatus,
+      workItem: updatedWorkItem,
+      workspaceId,
+    });
+    if (!lifecycleResult.ok) {
+      if (lifecycleResult.status === 409) return lifecycleResult;
+      return { ok: false, status: 500, error: "db_write_failed" };
+    }
+    summary.lifecycleStatus = lifecycleStatus;
+  }
+
+  let billingCandidates: BillingInvoiceCandidateLine[] = [];
+  if (requestedStatus === "completed") {
+    if (updatedWorkItem.sourceSnapshot.billingReflectionEnabled === false) {
+      summary.billingSkippedReason = "billing_reflection_disabled";
+    } else {
+      const billingResult = await invoiceCandidateGateway.syncInvoiceCandidates({
+        actorUserId: actorUserId ?? "",
+        encounterId: updatedWorkItem.encounterId,
+        orderIds: [updatedWorkItem.orderId],
+        workspaceId,
+      });
+      if (billingResult.ok) {
+        billingCandidates = billingResult.candidates;
+        summary.billingCandidateCount = billingCandidates.length;
+      } else if (billingResult.status === 409) {
+        summary.billingSkippedReason = billingResult.denialReason;
+      } else {
+        return { ok: false, status: 500, error: "db_write_failed" };
+      }
+    }
+  } else {
+    summary.billingSkippedReason = "not_completed_status";
+  }
+
+  const auditResult = await emitFulfillmentDownstreamAuditEvents({
+    actorUserId,
+    auditGateway,
+    auditNow,
+    auditRequestId,
+    billingCandidates,
+    lifecycleStatus: summary.lifecycleStatus,
+    requestedStatus,
+    workItem: updatedWorkItem,
+    workspaceId,
+  });
+  if (!auditResult.ok) return { ok: false, status: 500, error: "db_write_failed" };
+  summary.auditEventCount = auditResult.eventCount;
+
+  return { ok: true, summary };
+}
+
+async function saveLifecycleWithBridge({
+  actorUserId,
+  lifecycleGateway,
+  status,
+  workItem,
+  workspaceId,
+}: {
+  actorUserId: string;
+  lifecycleGateway: Pick<ChartOrderLifecycleGateway, "saveOrderLifecycleStatus">;
+  status: ChartOrderLifecycleStatus;
+  workItem: FulfillmentWorkItem;
+  workspaceId: string;
+}) {
+  const result = await lifecycleGateway.saveOrderLifecycleStatus({
+    actorUserId,
+    cancellationReason: status === "cancelled" ? workItem.reason ?? "fulfillment_cancelled" : undefined,
+    encounterId: workItem.encounterId,
+    orderId: workItem.orderId,
+    status,
+    workspaceId,
+  });
+  if (result.ok || result.status !== 409 || result.denialReason !== "invalid_transition" || status === "in_progress") {
+    return result;
+  }
+
+  const bridge = await lifecycleGateway.saveOrderLifecycleStatus({
+    actorUserId,
+    encounterId: workItem.encounterId,
+    orderId: workItem.orderId,
+    status: "in_progress",
+    workspaceId,
+  });
+  if (!bridge.ok && (bridge.status !== 409 || bridge.denialReason !== "invalid_transition")) return bridge;
+
+  return lifecycleGateway.saveOrderLifecycleStatus({
+    actorUserId,
+    cancellationReason: status === "cancelled" ? workItem.reason ?? "fulfillment_cancelled" : undefined,
+    encounterId: workItem.encounterId,
+    orderId: workItem.orderId,
+    status,
+    workspaceId,
+  });
+}
+
+async function emitFulfillmentDownstreamAuditEvents({
+  actorUserId,
+  auditGateway,
+  auditNow,
+  auditRequestId,
+  billingCandidates,
+  lifecycleStatus,
+  requestedStatus,
+  workItem,
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  auditGateway?: LiveMutationAuditOptions["auditGateway"];
+  auditNow?: LiveMutationAuditOptions["auditNow"];
+  auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  billingCandidates: BillingInvoiceCandidateLine[];
+  lifecycleStatus?: ChartOrderLifecycleStatus;
+  requestedStatus: FulfillmentWorkItemStatus;
+  workItem: FulfillmentWorkItem;
+  workspaceId: string;
+}) {
+  let eventCount = 0;
+  if (lifecycleStatus) {
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway,
+      auditNow,
+      input: {
+        workspaceId,
+        actorUserId,
+        eventType: "order.status_changed",
+        targetType: "order",
+        targetId: workItem.orderId,
+        encounterId: workItem.encounterId,
+        requestId: auditRequestId,
+        after: {
+          fulfillmentStatus: requestedStatus,
+          orderLifecycleStatus: lifecycleStatus,
+        },
+        metadata: {
+          source: "fulfillment-work-item-persistence",
+          workItemId: workItem.id,
+          queueType: workItem.queueType,
+        },
+      },
+    });
+    if (!audit.ok) return { ok: false as const };
+    eventCount += 1;
+  }
+
+  for (const candidate of billingCandidates) {
+    const audit = await emitLiveMutationAuditEvent({
+      auditGateway,
+      auditNow,
+      input: {
+        workspaceId,
+        actorUserId,
+        eventType: "billing.invoice_candidate_generated",
+        targetType: "invoice",
+        targetId: candidate.invoiceId,
+        encounterId: workItem.encounterId,
+        requestId: auditRequestId,
+        after: {
+          billingCandidateId: candidate.billingCandidateId,
+          lineTotal: candidate.lineTotal,
+          orderId: candidate.orderId,
+        },
+        metadata: {
+          source: "fulfillment-work-item-persistence",
+          workItemId: workItem.id,
+          queueType: workItem.queueType,
+        },
+      },
+    });
+    if (!audit.ok) return { ok: false as const };
+    eventCount += 1;
+  }
+
+  return { ok: true as const, eventCount };
+}
+
+function mapFulfillmentStatusToLifecycleStatus(
+  status: FulfillmentWorkItemStatus
+): ChartOrderLifecycleStatus | null {
+  if (status === "accepted" || status === "in_progress") return "in_progress";
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  if (status === "returned") return "re_requested";
+  return null;
 }
 
 function buildSnapshotDetail(order: EmrOrder) {

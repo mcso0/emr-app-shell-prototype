@@ -4,6 +4,7 @@ Use this file for small engineering-planning changes that do not need a standalo
 
 ## 2026-05-23
 
+- `changed`: Connected DEN-240 fulfillment status updates back to order lifecycle and billing candidate sync with audit evidence.
 - `changed`: Connected dispensing and treatment screens to fulfillment work item read/status mutation paths for DEN-239 while preserving fixture fallback.
 - `changed`: Connected lab and imaging screens to fulfillment work item read/status mutation paths for DEN-238 while preserving fixture fallback.
 - `changed`: Connected chart order confirmation to the DEN-236 fulfillment sync boundary for DEN-237 while keeping billing candidate submission separate.

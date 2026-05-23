@@ -9,6 +9,19 @@ import {
   type FulfillmentWorkItemUpdateInput,
   type SupabaseFulfillmentWorkItemRpcClient,
 } from "@/features/fulfillment/server-fulfillment-work-item";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
+import {
+  createSupabaseInvoiceCandidateSyncGateway,
+  type SupabaseInvoiceCandidateSyncRpcClient,
+} from "@/features/billing/server-invoice-candidate-sync";
+import {
+  createSupabaseChartOrderLifecycleGateway,
+  type SupabaseChartOrderLifecycleRpcClient,
+} from "@/features/chart/server-order-lifecycle-persistence";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -59,6 +72,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseFulfillmentWorkItemRpcClient
         )
       : undefined,
+    lifecycleGateway: client
+      ? createSupabaseChartOrderLifecycleGateway(
+          client as unknown as SupabaseChartOrderLifecycleRpcClient
+        )
+      : undefined,
+    invoiceCandidateGateway: client
+      ? createSupabaseInvoiceCandidateSyncGateway(
+          client as unknown as SupabaseInvoiceCandidateSyncRpcClient
+        )
+      : undefined,
+    auditGateway: client
+      ? createSupabaseLiveAuditAppendGateway(
+          client as unknown as SupabaseLiveAuditAppendRpcClient
+        )
+      : undefined,
+    auditRequestId: getAuditRequestId(request),
   });
 
   return Response.json(result, { status: result.status });
