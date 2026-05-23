@@ -8,6 +8,11 @@ import {
   emitLiveMutationAuditEvent,
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
+import {
+  createMockFulfillmentWorkItemGateway,
+  type FulfillmentWorkItem,
+  type FulfillmentWorkItemGateway,
+} from "@/features/fulfillment/server-fulfillment-work-item-core";
 import { mockEncounters, mockOrders } from "@/mocks/emr-domain";
 import type { EmrOrder, Encounter } from "@/types/emr-domain";
 
@@ -72,6 +77,7 @@ export type ChartOrderActionSaveResult =
       ok: true;
       status: 200;
       orderActions: ChartOrderActionLine[];
+      fulfillmentWorkItems?: FulfillmentWorkItem[];
       enforcedBy: "chart-order-action-persistence";
     }
   | {
@@ -81,7 +87,16 @@ export type ChartOrderActionSaveResult =
       fieldErrors: Partial<Record<"action" | "encounterId" | "orderIds", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "order_unavailable" }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "invalid_transition"
+        | "order_unavailable"
+        | "unsupported_order_type"
+        | "work_item_unavailable";
+    }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockOrderActionStore = new Map<string, ChartOrderActionLine[]>();
@@ -144,6 +159,7 @@ export async function saveChartOrderAction({
   auditGateway,
   auditNow,
   auditRequestId,
+  fulfillmentGateway = createMockFulfillmentWorkItemGateway(),
   gateway = createMockChartOrderActionGateway(),
   input,
   permissionAdapter = createDemoChartOrderActionPermissionAdapter(),
@@ -153,6 +169,7 @@ export async function saveChartOrderAction({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  fulfillmentGateway?: Pick<FulfillmentWorkItemGateway, "syncFromOrders">;
   gateway?: Pick<ChartOrderActionGateway, "saveOrderAction">;
   input: ChartOrderActionInput;
   permissionAdapter?: WorkspacePermissionAdapter;
@@ -197,6 +214,20 @@ export async function saveChartOrderAction({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
+  const fulfillmentResult = normalized.action === "confirm"
+    ? await fulfillmentGateway.syncFromOrders({
+        actorUserId: actorUserId ?? "",
+        encounterId: normalized.encounterId,
+        orderIds: result.orderActions.map((row) => row.orderId),
+        workspaceId,
+      })
+    : null;
+
+  if (fulfillmentResult && !fulfillmentResult.ok) {
+    if (fulfillmentResult.status === 409) return fulfillmentResult;
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+
   for (const row of result.orderActions) {
     const audit = await emitLiveMutationAuditEvent({
       auditGateway,
@@ -227,6 +258,7 @@ export async function saveChartOrderAction({
     ok: true,
     status: 200,
     orderActions: result.orderActions,
+    fulfillmentWorkItems: fulfillmentResult?.workItems,
     enforcedBy: "chart-order-action-persistence",
   };
 }
