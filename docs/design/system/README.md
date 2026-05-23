@@ -14,3 +14,7 @@ Current files:
 - `ui-refactor-dod.md`: Definition of Done and verification levels for UI refactor issues.
 - `arbitrary-value-token-audit.md`: arbitrary Tailwind value audit and EMR token promotion candidate guidance.
 - `global-feedback-ui-audit.md`: loading, empty, error, toast, and confirmation UI baseline for remaining refactors.
+- `inline-alert-feedback-rules.md`: `EmrInlineAlert` severity, placement, and recovery-action rules for persistent workflow feedback.
+- `dialog-shell-rules.md`: `EmrDialogShell` variants, action order, width, scroll, and migration rules for product dialogs.
+- `cta-risk-taxonomy.md`: CTA risk levels, confirmation, financial preflight, destructive, and unavailable-action rules.
+- `row-action-menu-rules.md`: `EmrRowActionMenu` trigger, item copy, unavailable feedback, and close behavior rules.

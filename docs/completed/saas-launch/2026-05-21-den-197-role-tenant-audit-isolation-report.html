@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-197 Role Tenant Audit Isolation Report</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-197 Role Tenant Audit Isolation Report</h1>
+      <p>
+        staging pilot enablement의 북극성인 "대표 리허설 전에 병원/역할/감사 로그 경계가
+        실제 staging에서 깨지지 않는지 확인"을 기준으로 DEN-197을 검증했다.
+      </p>
+
+      <h2>비개발자 요약</h2>
+      <ul>
+        <li>병원 A 관리자는 병원 B 데이터를 볼 수 없고, 병원 B 관리자도 병원 A 데이터를 볼 수 없었다.</li>
+        <li>비활성 직원과 소속 병원이 없는 사용자는 workspace, membership, permission 정보를 볼 수 없었다.</li>
+        <li>staging audit 로그에는 주문/청구/결제 변경 이벤트가 남아 있었고, secret/service role 같은 민감 문자열은 없었다.</li>
+        <li>따라서 tenant isolation과 audit readback 관점에서는 대표 리허설 전 안전 신호가 확인됐다.</li>
+      </ul>
+
+      <h2>Staging Replay Result</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>clair-demo</code> hospital_admin</td><td>자기 병원만 보임. <code>clair-foreign-demo</code> workspace, membership, permission policy 모두 보이지 않음.</td></tr>
+          <tr><td><code>clair-foreign-demo</code> hospital_admin</td><td>외부 fixture 병원만 보임. <code>clair-demo</code> workspace, membership, permission policy 모두 보이지 않음.</td></tr>
+          <tr><td>inactive front_desk</td><td>workspace 0개, membership 0개, permission policy 접근 불가.</td></tr>
+          <tr><td>no-membership user</td><td>workspace 0개, membership 0개, permission policy 접근 불가.</td></tr>
+          <tr><td>permission matrix</td><td><code>hospital_admin</code>, <code>vet</code>, <code>technician</code>, <code>front_desk</code> canonical policy rows read back.</td></tr>
+          <tr><td>audit coverage</td><td><code>billing.invoice_issued</code> 1, <code>billing.payment_state_changed</code> 2, <code>order.confirmed</code> 1, <code>order.status_changed</code> 1.</td></tr>
+          <tr><td>unsafe audit payload scan</td><td><code>secretMentions</code> 0, <code>serviceRoleMentions</code> 0.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>What Changed</h2>
+      <ul>
+        <li><code>supabase/seed.sql</code>: DEN-197 synthetic isolation actors, inactive/no-membership users, and a foreign workspace fixture were added.</li>
+        <li><code>supabase/snippets/den-197_role_tenant_audit_isolation_replay.sql</code>: transaction-scoped read-only RLS replay SQL was added.</li>
+        <li><code>tests/role-tenant-audit-isolation-contract.spec.ts</code>: static guards ensure the seed and replay SQL stay synthetic, read-only, and complete enough.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npx playwright test tests/role-tenant-audit-isolation-contract.spec.ts --reporter=line</code> passed: 3 tests.</li>
+        <li><code>npx supabase db query --linked --file supabase/snippets/den-197_role_tenant_audit_isolation_replay.sql --output json</code> passed against <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>.</li>
+        <li><code>npx playwright test tests/server-session-reader.spec.ts tests/server-permission-enforcement.spec.ts tests/workspace-membership-rls-migration.spec.ts tests/db-workspace-permission-adapter.spec.ts tests/cross-tenant-denial-regression.spec.ts tests/live-audit-log-persistence.spec.ts tests/live-audit-mutation-emission.spec.ts tests/audit-review-surface.spec.ts tests/launch-route-permission-enforcement.spec.ts tests/role-tenant-audit-isolation-contract.spec.ts --reporter=line</code> passed: 37 tests.</li>
+      </ul>
+
+      <h2>Important Caveat</h2>
+      <p>
+        이 리허설은 workspace membership/RLS, server permission boundary, audit reader 경계를 검증한다.
+        다만 chart, order, billing 등 모든 domain RPC가 역할별 세부 permission을 DB 레벨에서 각각 거부하는지까지
+        완전히 증명한 것은 아니다. 현재 확인된 강한 신호는 tenant isolation과 admin/member boundary이며,
+        domain별 역할 세분화는 후속 launch blocker 후보로 계속 추적해야 한다.
+      </p>
+
+      <h2>Out of Scope</h2>
+      <ul>
+        <li>production database access</li>
+        <li>real hospital, guardian, patient, staff, billing, or identity data</li>
+        <li>direct SQL mutation outside approved synthetic staging seed/replay work</li>
+        <li>email, deploy, payment, or external provider work</li>
+      </ul>
+
+      <h2>Recommended Next Step</h2>
+      <p>
+        DEN-197은 Human Review로 넘기고, staging initiative의 다음 항목은 representative pilot rehearsal에서
+        UI/API 화면이 이 fixture와 permission boundary를 실제 사용 흐름으로 통과하는지 확인하는 쪽이 적절하다.
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-202 Reception Queue/Calendar Read Smoke Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { line-height: 1.25; }
+      code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+      table { border-collapse: collapse; margin: 16px 0; width: 100%; }
+      th, td { border: 1px solid #d8dee9; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #eef2f7; }
+      .ok { color: #0f7b3a; font-weight: 700; }
+      .warn { color: #8a5a00; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-202 Reception Queue/Calendar Read Smoke Report</h1>
+    <p><strong>Linear:</strong> DEN-202 <code>03-03 Repair authenticated reception queue/calendar read smoke blocker</code></p>
+    <p><strong>대상:</strong> Vercel Preview + Supabase staging <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+
+    <h2>요약</h2>
+    <p>
+      Synthetic 계정 로그인은 DEN-201에서 복구되었지만, 로그인 후 접수 화면에서
+      <code>서버 대기열을 불러오지 못했습니다</code>와
+      <code>서버 캘린더를 불러오지 못했습니다</code>가 표시됐다.
+      원인은 Supabase 세션 사용자 UUID로 서버 API를 호출하면서도 permission adapter가
+      기존 mock user id 기반 데이터에 머물러 있었기 때문이다.
+      접수 대기열/캘린더 read route가 Supabase 세션일 때 DB-backed workspace permission adapter를 사용하도록 고쳤고,
+      새 Vercel Preview에서 실제 로그인 화면 smoke가 통과했다.
+    </p>
+
+    <h2>변경 사항</h2>
+    <ul>
+      <li>
+        <code>src/features/auth/supabase-workspace-permission-gateway-core.ts</code>:
+        Supabase client로 <code>user_memberships</code>, <code>users</code>, <code>permission_policies</code>를
+        workspace/user scope에 맞게 읽는 permission gateway를 추가했다.
+      </li>
+      <li>
+        <code>src/features/auth/supabase-workspace-permission-gateway.ts</code>:
+        server-only wrapper를 추가해 서버 route에서만 사용할 수 있게 했다.
+      </li>
+      <li>
+        <code>src/app/api/workspaces/[workspaceId]/reception/queue/route.ts</code>,
+        <code>src/app/api/workspaces/[workspaceId]/reception/calendar/day/route.ts</code>:
+        Supabase session 요청에서는 DB-backed permission adapter를 주입해 실제 staging membership/role policy를 기준으로 read 권한을 판단한다.
+      </li>
+      <li>
+        관련 server regression test에 DB-backed permission adapter 연결과 server-only boundary 확인을 추가했다.
+      </li>
+    </ul>
+
+    <h2>배포</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>Vercel Preview</td><td class="ok"><code>https://emr-app-shell-prototype-7vspe6a9q-mcso0s-projects.vercel.app</code></td></tr>
+      <tr><td>Deployment ID</td><td class="ok"><code>dpl_G8Bt1WjhQ1Bugp5NAGx9ytx7j6JX</code></td></tr>
+      <tr><td>Build status</td><td class="ok">READY</td></tr>
+      <tr><td>Production deploy</td><td class="ok">미실행</td></tr>
+    </table>
+
+    <h2>Verification</h2>
+    <table>
+      <tr><th>검증</th><th>결과</th></tr>
+      <tr>
+        <td><code>npx playwright test tests/db-workspace-permission-adapter.spec.ts tests/reception-queue-read-server.spec.ts tests/reception-calendar-read-server.spec.ts --reporter=line</code></td>
+        <td class="ok">13 passed</td>
+      </tr>
+      <tr><td><code>npx tsc --noEmit</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>git diff --check</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>npx vercel@latest deploy --yes</code></td><td class="ok">Preview READY</td></tr>
+      <tr>
+        <td>새 Preview 로그인 smoke</td>
+        <td class="ok">
+          <code>admin@clair.local</code> 세션으로
+          <code>/w/clair-demo/reception?modulePanel=open</code> 진입 확인.
+          대기열 4건과 캘린더 예약이 표시되고, 서버 대기열/캘린더 실패 문구는 미표시.
+          브라우저 콘솔 error log 없음.
+        </td>
+      </tr>
+    </table>
+
+    <h2>남은 리스크와 다음 게이트</h2>
+    <p>
+      DEN-202 범위는 authenticated reception queue/calendar read smoke blocker 해소까지다.
+      이번 smoke는 staging synthetic 대표 계정 기준으로 통과했지만,
+      이니셔티브 북극성 도달 여부는 아직 진행 전/진행 중인 다른 core business replay 이슈와
+      role/tenant/audit isolation evidence를 함께 확인해야 한다.
+      DEN-202는 Human Review로 넘기고, 다음 작업은 남은 staging pilot issue 상태를 다시 훑어 가장 가까운 blocker부터 진행하는 것이 좋다.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-212 Final UI/UX A-Grade Closeout Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #5f6b7a;
+        --line: #d8dee8;
+        --accent: #0f766e;
+        --info-bg: #eaf6ff;
+        --info-border: #8ac7ee;
+        --ok-bg: #e9f7ef;
+        --ok-border: #8bd1a8;
+        --warn-bg: #fff7e6;
+        --warn-border: #f2bf62;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+
+      header,
+      section {
+        margin-bottom: 24px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 28px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      h2 {
+        font-size: 21px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      p,
+      ul,
+      table {
+        margin: 0 0 14px;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef2f7;
+        padding: 2px 6px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f0f3f7;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        margin: 4px 6px 0 0;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #f8fafc;
+        padding: 2px 10px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .grade {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(160px, 220px) 1fr;
+      }
+
+      .grade-mark {
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--ok-border);
+        border-radius: 12px;
+        background: var(--ok-bg);
+        color: var(--accent);
+        font-size: 72px;
+        font-weight: 800;
+        line-height: 1;
+        min-height: 160px;
+      }
+
+      .callout {
+        border: 1px solid var(--info-border);
+        border-radius: 10px;
+        background: var(--info-bg);
+        padding: 14px 16px;
+      }
+
+      .warn {
+        border-color: var(--warn-border);
+        background: var(--warn-bg);
+      }
+
+      .ok {
+        color: #0f7a3a;
+        font-weight: 800;
+      }
+
+      .partial {
+        color: #9a5b00;
+        font-weight: 800;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      figure {
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      figure img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      figcaption {
+        border-top: 1px solid var(--line);
+        padding: 10px 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 20px;
+        }
+
+        .grade {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-212 · CLAiR EMR UI/UX Consistency &amp; Affordance Hardening</p>
+        <h1>Final UI/UX A-Grade Closeout Report</h1>
+        <p>
+          Product MVP의 접수, 진료/차트, 수납, 고객관리 대표 흐름을 기준으로 UI/UX 통일성 개선 결과를 최종 점검했다.
+          기준 감사의 C+ 상태에서 시작했던 dialog, alert, CTA, menu, calendar affordance, mock/live boundary 규칙은
+          핵심 workflow에서 같은 제품 규칙으로 읽히는 수준까지 올라왔다.
+        </p>
+        <p>
+          <span class="badge">최종 판정: A</span>
+          <span class="badge">A+ 미달: 전역 utility/token debt 잔존</span>
+          <span class="badge">Human Review 준비</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>비개발자 요약</h2>
+        <div class="grade">
+          <div class="grade-mark">A</div>
+          <div>
+            <p>
+              사용자는 이제 접수, 차트 작성완료, 청구/수납, 고객 row menu를 오갈 때 화면마다 다른 규칙을 다시 학습하지 않아도 된다.
+              위험한 버튼은 먼저 확인하고, 실패한 작업은 복구 행동을 보여주며, 미연결 기능은 조용히 실패하지 않고 현재 MVP 경계를 설명한다.
+            </p>
+            <p>
+              A+로 보지 않은 이유는 명확하다. 이번 프로젝트는 핵심 workflow의 일관성과 affordance를 고쳤지만,
+              앱 전체의 spacing/font arbitrary utility를 전면 토큰화하는 장기 정리는 아직 남아 있다.
+              이 잔여 부채는 core workflow 신뢰를 막지는 않지만, 전역 디자인 시스템 완성도 측면에서는 후속 작업이다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>A-Grade Gate 판정</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Gate</th>
+              <th>판정</th>
+              <th>근거</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>High matrix item unresolved 없음</td>
+              <td><span class="ok">통과</span></td>
+              <td>UXA-01~04는 scope/matrix, shared component, workflow adoption, focused test evidence로 닫혔다.</td>
+            </tr>
+            <tr>
+              <td>10개 중 8개 이상 완전 통과</td>
+              <td><span class="ok">통과</span></td>
+              <td>UXA-01~10 모두 A gate 기준을 충족한다. 단, UXA-01의 전역 utility debt는 A+ blocker로 남긴다.</td>
+            </tr>
+            <tr>
+              <td>대표 4개 화면 before/after 증거</td>
+              <td><span class="ok">통과</span></td>
+              <td>접수, 차트 dialog, 수납 financial CTA, 고객 row menu evidence를 캡처했다.</td>
+            </tr>
+            <tr>
+              <td>핵심 workflow interaction evidence</td>
+              <td><span class="ok">통과</span></td>
+              <td>접수 empty slot, chart confirmation, billing recovery, customer/reception menu focused Playwright 9개 통과.</td>
+            </tr>
+            <tr>
+              <td>상태/오류/미연결/mock-live 경계 구분</td>
+              <td><span class="ok">통과</span></td>
+              <td>inline alert, dialog preflight, unavailable feedback copy가 색상만이 아니라 제목, 위치, 행동으로 의미를 구분한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Acceptance Matrix 결과</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>결과</th>
+              <th>판정 근거</th>
+              <th>주요 Linear</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>UXA-01</td>
+              <td><span class="ok">A 통과</span></td>
+              <td>Dialog, alert, CTA, menu, queue spacing, control height는 shared component/variant로 정리됐다. 전역 arbitrary utility 청소는 A+ 후속 부채다.</td>
+              <td>DEN-203, DEN-205, DEN-211</td>
+            </tr>
+            <tr>
+              <td>UXA-02</td>
+              <td><span class="ok">통과</span></td>
+              <td><code>EmrDialogShell</code>과 confirm/form/wide-form variants가 chart/billing 흐름에 적용됐다.</td>
+              <td>DEN-205, DEN-208, DEN-209</td>
+            </tr>
+            <tr>
+              <td>UXA-03</td>
+              <td><span class="ok">통과</span></td>
+              <td>접수 read failure와 수납 저장 실패가 persistent inline alert, retry, fallback copy를 제공한다.</td>
+              <td>DEN-204, DEN-207, DEN-208</td>
+            </tr>
+            <tr>
+              <td>UXA-04</td>
+              <td><span class="ok">통과</span></td>
+              <td>state-changing/financial/unavailable CTA가 taxonomy와 preflight/failure recovery 규칙을 따른다.</td>
+              <td>DEN-206, DEN-208, DEN-209</td>
+            </tr>
+            <tr>
+              <td>UXA-05</td>
+              <td><span class="ok">통과</span></td>
+              <td>고객 row menu와 접수 card menu가 shared menu, Escape close, unavailable feedback을 사용한다.</td>
+              <td>DEN-210</td>
+            </tr>
+            <tr>
+              <td>UXA-06</td>
+              <td><span class="ok">통과</span></td>
+              <td>상태/주의/정보 의미가 alert severity, status badge, CTA risk copy로 분리됐다.</td>
+              <td>DEN-204, DEN-207, DEN-211</td>
+            </tr>
+            <tr>
+              <td>UXA-07</td>
+              <td><span class="ok">통과</span></td>
+              <td>접수 calendar empty slot affordance는 기본 상태에서 조용하고 hover/focus에서만 <code>+ 접수</code>를 드러낸다.</td>
+              <td>DEN-211</td>
+            </tr>
+            <tr>
+              <td>UXA-08</td>
+              <td><span class="ok">통과</span></td>
+              <td>local demo, live read failure, 외부 연동 미지원, PG/VAT/영수증 미연동 경계가 화면 안에서 반복적으로 설명된다.</td>
+              <td>DEN-204, DEN-207, DEN-208, DEN-209</td>
+            </tr>
+            <tr>
+              <td>UXA-09</td>
+              <td><span class="ok">통과</span></td>
+              <td>대기열 카드 재사용, 8px queue card gap, shared table/menu primitives가 touched surfaces에서 일관되게 적용됐다.</td>
+              <td>DEN-210, DEN-211</td>
+            </tr>
+            <tr>
+              <td>UXA-10</td>
+              <td><span class="ok">통과</span></td>
+              <td>고위험 흐름은 global help에 의존하지 않고 action 근처 dialog, inline notice, unavailable feedback을 제공한다.</td>
+              <td>DEN-206, DEN-208, DEN-209</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>대표 Evidence</h2>
+        <div class="grid">
+          <figure>
+            <img src="../../../output/ui-audit-2026-05-22/screenshots/den-212-reception-overview-after.png" alt="Reception after UI consistency work" />
+            <figcaption>접수: 오류 복구 안내, 카드 밀도, 캘린더 empty slot 기본 상태가 같은 우선순위 체계를 따른다.</figcaption>
+          </figure>
+          <figure>
+            <img src="../../../output/ui-audit-2026-05-22/screenshots/den-212-chart-completion-dialog-after.png" alt="Chart completion confirmation dialog after" />
+            <figcaption>차트 작성완료: state-changing CTA가 확인 dialog와 요약 정보를 제공한다.</figcaption>
+          </figure>
+          <figure>
+            <img src="../../../output/ui-audit-2026-05-22/screenshots/den-212-billing-financial-preflight-after.png" alt="Billing financial preflight dialog after" />
+            <figcaption>수납: financial CTA가 금액, 상태 변경, 실패 시 처리 기준을 먼저 보여준다.</figcaption>
+          </figure>
+          <figure>
+            <img src="../../../output/ui-audit-2026-05-22/screenshots/den-212-customer-row-menu-feedback-after.png" alt="Customer row action unavailable feedback after" />
+            <figcaption>고객관리: row menu unavailable action이 inline feedback으로 남아 현재 MVP 경계를 설명한다.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><span class="ok">통과</span> <code>npx tsc --noEmit</code></li>
+          <li>
+            <span class="ok">통과</span>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>
+            기존 warning 5건은 이번 프로젝트 이전부터 남아 있는 hook dependency/unused 경고다.
+          </li>
+          <li>
+            <span class="ok">통과</span>
+            <code>npx playwright test tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts tests/customer.spec.ts --grep "reception read failures|reception opens the walk-in form from an empty calendar slot|reception card action menu|chart safety context|chart unavailable order actions|chart workspace renders queue|billing workspace renders|billing financial confirmation failure|customer row action menu"</code>
+            9 passed.
+          </li>
+          <li><span class="ok">통과</span> visual screenshot capture for reception, chart, billing, customer, empty slot states.</li>
+          <li><span class="ok">통과</span> <code>npm run docs:check</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 Risk와 제외 범위</h2>
+        <div class="callout warn">
+          <p>
+            A+를 막는 주된 잔여 부채는 전역 spacing/font arbitrary utility 정리다.
+            기준 감사의 정량 근거였던 arbitrary utility 약 1,978회는 이번 프로젝트의 대표 workflow 안에서 제어 가능한 규칙으로 낮췄지만,
+            앱 전체 token migration 프로젝트로 완전히 제거한 것은 아니다.
+          </p>
+        </div>
+        <ul>
+          <li>이번 판정은 Product MVP 대표 workflow의 UI/UX 통일성 판정이며, live Supabase, RLS, 결제, 영수증, 외부 연동 완성을 의미하지 않는다.</li>
+          <li>모바일/좁은 viewport 전체 재검증은 별도 responsive QA 이슈로 분리하는 편이 맞다.</li>
+          <li>전역 density/token cleanup은 A+ 목표 후속 이슈로 권장한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 추천 작업</h2>
+        <ul>
+          <li><strong>A+ 후보:</strong> 전역 arbitrary spacing/font utility를 token/variant로 줄이는 design-system cleanup.</li>
+          <li><strong>Responsive QA:</strong> 1280px 이하 및 tablet width에서 module panel, drawer, dialog overlap 재검증.</li>
+          <li><strong>Regression pack:</strong> 이번 프로젝트의 대표 UI 상태를 screenshot regression 후보로 묶기.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

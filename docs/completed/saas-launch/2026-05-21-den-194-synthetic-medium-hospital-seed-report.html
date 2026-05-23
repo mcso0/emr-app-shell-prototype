@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-194 Synthetic Medium Hospital Seed Report</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-194 Synthetic Medium Hospital Seed Report</h1>
+      <p>
+        CLAiR EMR staging pilot에서 중형 동물병원 규모의 데모 리플레이가 가능하도록
+        합성 seed 데이터를 확장하고, Supabase staging 프로젝트
+        <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>에 적용했다.
+      </p>
+
+      <h2>비개발자 요약</h2>
+      <ul>
+        <li>staging 병원명을 <strong>CLAiR Medium Animal Hospital</strong>로 맞췄다.</li>
+        <li>관리자 1명, 수의사 3명, 테크니션 4명, 데스크 3명으로 총 11명 규모의 합성 직원 데이터를 준비했다.</li>
+        <li>보호자 12명, 환자 15마리, 진료 시나리오 5개를 연결했다.</li>
+        <li>접수, 진료, 오더, 결과/완료 기록, 청구, 결제, 감사 로그까지 이어지는 대표 흐름을 넣었다.</li>
+        <li>실제 고객/환자 데이터, production, email/deploy, seed 외 직접 SQL mutation은 사용하지 않았다.</li>
+      </ul>
+
+      <h2>Fixture Coverage</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>Staging readback</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Staff roles</td><td>hospital_admin 1, vet 3, technician 4, front_desk 3</td></tr>
+          <tr><td>Guardians / Patients</td><td>12 guardians, 15 patients</td></tr>
+          <tr><td>Reception</td><td>3 appointments, 5 encounters, 5 waiting queue entries</td></tr>
+          <tr><td>Clinical</td><td>5 SOAP notes, 5 diagnoses, 5 order groups, 11 orders, 10 order events</td></tr>
+          <tr><td>Billing</td><td>5 invoices, 11 invoice lines, 2 payments</td></tr>
+          <tr><td>Audit</td><td>5 audit events, one per pilot scenario</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Scenario Map</h2>
+      <ul>
+        <li><code>kong-vomit</code>: appointment, vomiting/diarrhea, lab + imaging + treatment + dispensing, unpaid invoice.</li>
+        <li><code>nabi-urinary</code>: walk-in urinary case, lab + imaging, paid card invoice.</li>
+        <li><code>bori-allergy</code>: revisit allergy case, treatment + dispensing, unpaid invoice.</li>
+        <li><code>mango-wellness</code>: wellness/vaccine case, paid cash invoice.</li>
+        <li><code>choco-rehab</code>: rehab consult, imaging completed and rehab treatment pending.</li>
+      </ul>
+
+      <h2>Remote Readback Evidence</h2>
+      <ul>
+        <li>Workspace display name: <code>CLAiR Medium Animal Hospital</code></li>
+        <li>Invoice total integrity: all 5 <code>INV-DEN194-*</code> invoices matched invoice line totals.</li>
+        <li>Synthetic guard checks: guardian names, guardian emails, and patient names all matched DEN-194 synthetic-only patterns.</li>
+        <li>Scenario audit counts: all 5 scenario codes were present in staging audit evidence.</li>
+      </ul>
+
+      <h2>Files Changed</h2>
+      <ul>
+        <li><code>supabase/seed.sql</code>: added DEN-194 staging seed section and qualified pgcrypto calls for remote Supabase.</li>
+        <li><code>tests/staging-medium-hospital-seed-contract.spec.ts</code>: added seed contract coverage for the medium hospital fixture.</li>
+        <li><code>tests/workspace-auth-seed-contract.spec.ts</code>: added regression coverage for remote-safe <code>extensions.crypt/extensions.gen_salt</code>.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npx playwright test tests/staging-medium-hospital-seed-contract.spec.ts tests/workspace-auth-seed-contract.spec.ts tests/reception-domain-schema-migration.spec.ts tests/clinical-billing-schema-migration.spec.ts tests/customer-management-schema-migration.spec.ts --reporter=line</code> passed: 23 tests.</li>
+        <li><code>npm run security:secrets</code> passed.</li>
+        <li><code>git diff --check</code> passed.</li>
+        <li><code>npx supabase db push --include-seed --dry-run</code> passed.</li>
+        <li><code>npx supabase db push --include-seed</code> completed against staging.</li>
+      </ul>
+
+      <h2>Known Limitations</h2>
+      <ul>
+        <li><code>npx supabase db reset --local</code> could not run because Docker was not running on the local machine.</li>
+        <li>DEN-194 prepares the staging dataset; DEN-195 should continue with formal readback/reset validation and app-level pilot replay checks.</li>
+      </ul>
+    </main>
+  </body>
+</html>

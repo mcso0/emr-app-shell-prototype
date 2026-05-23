@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-189 Synthetic Hospital Rehearsal Go/No-Go Report</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #172033; }
+      h1, h2 { line-height: 1.25; }
+      code, pre { font-family: "SFMono-Regular", Consolas, monospace; }
+      table { border-collapse: collapse; margin: 16px 0; width: 100%; }
+      th, td { border: 1px solid #d8dee9; padding: 10px 12px; text-align: left; vertical-align: top; }
+      th { background: #eef2f7; }
+      .ok { color: #0f7b3a; font-weight: 700; }
+      .warn { color: #8a5a00; font-weight: 700; }
+      .no { color: #a92727; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-189 Synthetic Hospital Rehearsal Go/No-Go Report</h1>
+    <p><strong>Linear:</strong> DEN-189 <code>05-01 Run synthetic hospital rehearsal and produce go no-go review</code></p>
+    <p><strong>대상:</strong> Vercel Preview + Supabase staging <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+    <p><strong>작성일:</strong> 2026-05-22</p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      synthetic 병원 데이터로 대표 리허설을 다시 확인했다. 현재 Preview 배포는 로그인 이후
+      홈, 접수, 진료, 검사, 영상, 조제, 수납, 고객관리 화면을 이동하며 핵심 데모 흐름을 보여줄 수 있다.
+      다른 병원 workspace 접근은 로그인/권한 안내로 막혔다.
+    </p>
+    <p>
+      결론은 <strong class="warn">조건부 Go</strong>다. 승욱이 직접 진행하는 synthetic staging 대표 시연은 가능하다.
+      다만 실제 병원 파일럿이나 외부 초대까지 열려면 real email invite dry-run(DEN-187)과 Human Review 승인이 남아 있다.
+    </p>
+
+    <h2>Go/No-Go 판단</h2>
+    <table>
+      <tr><th>범위</th><th>판단</th><th>근거</th></tr>
+      <tr>
+        <td>승욱/팀 내부 synthetic staging 대표 시연</td>
+        <td class="ok">Go</td>
+        <td>Preview smoke, 핵심 화면 리허설, tenant denial, 회귀 테스트가 통과했다.</td>
+      </tr>
+      <tr>
+        <td>외부 실제 병원 파일럿 초대</td>
+        <td class="warn">Conditional Go</td>
+        <td>실제 이메일 발송/초대 경로는 DEN-187에서 아직 별도 검증이 필요하다.</td>
+      </tr>
+      <tr>
+        <td>Production 전환, real patient/customer data, 결제/구독</td>
+        <td class="no">No-Go</td>
+        <td>이번 이니셔티브 승인 범위 밖이며 검증하지 않았다.</td>
+      </tr>
+    </table>
+
+    <h2>Preview Rehearsal Evidence</h2>
+    <table>
+      <tr><th>체크</th><th>결과</th></tr>
+      <tr><td>Preview URL</td><td class="ok"><code>https://emr-app-shell-prototype-7vspe6a9q-mcso0s-projects.vercel.app</code></td></tr>
+      <tr><td>Home</td><td class="ok"><code>/w/clair-demo/home?modulePanel=open</code> 진입. workspace shell과 병원 맥락 표시.</td></tr>
+      <tr><td>Reception</td><td class="ok">접수/예약 화면에서 <code>콩이</code>, <code>예약 코코</code>, <code>진료 접수</code> 흐름 표시.</td></tr>
+      <tr><td>Treatment chart</td><td class="ok">진료, SOAP, order 맥락 표시.</td></tr>
+      <tr><td>Lab</td><td class="ok">검사 queue/results 맥락 표시.</td></tr>
+      <tr><td>Imaging</td><td class="ok">영상 queue와 X-ray/ultrasound 맥락 표시.</td></tr>
+      <tr><td>Dispensing</td><td class="ok">조제/처치 queue 맥락 표시.</td></tr>
+      <tr><td>Billing</td><td class="ok">수납/invoice 맥락 표시.</td></tr>
+      <tr><td>Customer</td><td class="ok">고객관리에서 synthetic 보호자/환자 데이터 표시.</td></tr>
+      <tr><td>Foreign workspace denial</td><td class="ok"><code>/w/not-clair-demo/reception</code> 접근 시 unauthorized login 안내로 이동.</td></tr>
+      <tr><td>Browser console error</td><td class="ok">리허설 중 console error 없음.</td></tr>
+    </table>
+
+    <h2>Regression Verification</h2>
+    <table>
+      <tr><th>명령</th><th>결과</th></tr>
+      <tr>
+        <td><code>npx playwright test tests/sales-demo-flow.spec.ts tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code></td>
+        <td class="ok">54 passed</td>
+      </tr>
+      <tr>
+        <td><code>npx playwright test tests/audit-review-surface.spec.ts tests/cross-tenant-denial-regression.spec.ts tests/launch-rate-limit-abuse-handling.spec.ts --reporter=line</code></td>
+        <td class="ok">10 passed</td>
+      </tr>
+      <tr><td><code>git diff --check</code></td><td class="ok">passed</td></tr>
+    </table>
+
+    <h2>Related Evidence</h2>
+    <ul>
+      <li>DEN-188: 새 Vercel Preview 배포와 Supabase staging login/session/workspace/audit smoke 통과.</li>
+      <li>DEN-196: local core business flow replay 통과.</li>
+      <li>DEN-197: staging role, tenant, audit isolation replay 통과.</li>
+      <li>DEN-200/DEN-201/DEN-202: synthetic auth와 reception read blocker 수리 후 Preview smoke 재검증.</li>
+    </ul>
+
+    <h2>Launch Blockers</h2>
+    <ul>
+      <li>DEN-187 real email invite dry-run이 남아 있다. 실제 발송은 provider/from/test recipient 승인 전까지 하지 않는다.</li>
+      <li>Human Review 상태의 이슈들은 승욱 검토 후 Done 처리해야 한다.</li>
+      <li>Production, real customer/patient data, 결제/구독, enterprise onboarding은 이번 리허설 범위 밖이다.</li>
+    </ul>
+
+    <h2>Non-Blockers / Caveats</h2>
+    <ul>
+      <li>직접 browser tab으로 audit API URL을 열 때 <code>ERR_BLOCKED_BY_CLIENT</code>가 한 번 발생했다. DEN-188에서 audit API read는 이미 통과했고, 이번 UI 리허설에는 영향이 없었다.</li>
+      <li>local Playwright 로그에 기존 <code>tiptap</code> duplicate extension warning이 표시됐다. 테스트 실패는 아니며, 이번 go/no-go의 launch blocker로 보지 않는다.</li>
+      <li>05 Demo UX Sales Readiness 전체 polish는 아직 별도 트랙으로 남아 있을 수 있다. 현재 판단은 guided synthetic staging rehearsal 기준이다.</li>
+    </ul>
+
+    <h2>Recommended Next Step</h2>
+    <p>
+      DEN-189는 Human Review로 넘긴다. 다음 launch gate는 DEN-187 real email invite dry-run이다.
+      이 작업은 실제 이메일 발송 가능성이 있으므로 provider/from domain/test recipient 범위가 명확히 승인된 뒤 진행하는 것이 안전하다.
+    </p>
+  </body>
+</html>

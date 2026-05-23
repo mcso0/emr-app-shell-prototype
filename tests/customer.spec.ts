@@ -62,6 +62,23 @@ test("customer side panel switches to guardians and search filters rows", async 
   await expect(page).toHaveURL(/drawer=guardian%3Aguardian-kim-haneul|drawer=guardian:guardian-kim-haneul/);
 });
 
+test("customer row action menu closes with Escape and explains unavailable actions", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+
+  const row = page.getByTestId("customer-patient-row-patient-dubu");
+  await row.getByRole("button", { name: "두부 행 작업" }).click();
+  await expect(page.getByRole("menu")).toContainText("차트 보러가기");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+
+  await row.getByRole("button", { name: "두부 행 작업" }).click();
+  await page.getByText("카카오톡 발송", { exact: true }).click();
+  await expect(page.getByTestId("customer-row-action-feedback")).toContainText(
+    "카카오톡 발송은 아직 연결되지 않았어"
+  );
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
 test("customer side panel uses the shared title and collapse header", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 

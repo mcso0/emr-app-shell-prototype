@@ -3,6 +3,11 @@ import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   createSupabaseReceptionQueueReadGateway,
   readReceptionQueue,
@@ -37,8 +42,18 @@ export async function GET(request: Request, { params }: RouteContext) {
   }
 
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await readReceptionQueue({
     actorUserId: identity.actorUserId,
+    permissionAdapter,
     workspaceId,
     gateway: client
       ? createSupabaseReceptionQueueReadGateway(

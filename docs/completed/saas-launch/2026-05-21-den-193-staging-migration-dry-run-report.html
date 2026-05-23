@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-193 Staging Migration Apply Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        color: #172033;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code, pre {
+        font-family: "SFMono-Regular", Consolas, monospace;
+      }
+      pre {
+        background: #f6f8fb;
+        border: 1px solid #d8dee9;
+        border-radius: 8px;
+        overflow-x: auto;
+        padding: 16px;
+      }
+      table {
+        border-collapse: collapse;
+        margin: 16px 0;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d8dee9;
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #eef2f7;
+      }
+      .ok {
+        color: #0f7b3a;
+        font-weight: 700;
+      }
+      .blocked {
+        color: #9a3412;
+        font-weight: 700;
+      }
+      .warn {
+        color: #8a5a00;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-193 Staging Migration Apply Report</h1>
+    <p><strong>Linear:</strong> DEN-193 <code>01-03 Run approved staging migration dry-run after secure CLI credential handoff</code></p>
+    <p><strong>대상:</strong> <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></p>
+    <p><strong>작성일:</strong> 2026-05-21</p>
+
+    <h2>요약</h2>
+    <p>
+      Supabase CLI secure login 이후 staging project link와 <code>db push --dry-run</code>을 완료했고,
+      승욱의 최종 승인 문구를 받은 뒤 실제 <code>npx supabase db push</code>로 repo migration 33개를
+      staging에 적용했다. Seed, direct SQL mutation, production 접근, deploy, email 실행은 하지 않았다.
+      적용 후 remote migration 33개와 app table 40개가 확인됐고, <code>db push --dry-run</code>은
+      <code>Remote database is up to date.</code>를 반환했다.
+    </p>
+
+    <h2>Credential Handling</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>처리 방식</td><td>승욱이 로컬 Supabase CLI secure login flow를 완료했다.</td></tr>
+      <tr><td>토큰/비밀번호 처리</td><td class="ok">chat, Linear, docs, git diff에 secret 값을 기록하지 않았다.</td></tr>
+      <tr><td>CLI link</td><td class="ok"><code>npx supabase link --project-ref qmerxgzrwaaahpkhjqlc</code> 성공.</td></tr>
+    </table>
+
+    <h2>Dry-run 결과</h2>
+    <p>
+      <code>npx supabase db push --dry-run</code>은 실제 database 변경 없이 완료됐다.
+      CLI는 아래 33개 migration을 remote staging에 push할 예정이라고 보고했다.
+    </p>
+    <pre><code>20260518023715_workspace_auth_schema_foundation.sql
+20260518024425_workspace_last_admin_protection_foundation.sql
+20260518024708_workspace_membership_rls_baseline.sql
+20260518113052_workspace_rls_helper_function_grants.sql
+20260518120000_workspace_creation_transaction.sql
+20260518121000_workspace_membership_list_reader.sql
+20260518122000_workspace_invitation_create_transaction.sql
+20260518123000_workspace_invitation_lifecycle_transactions.sql
+20260518124000_workspace_member_status_reader.sql
+20260518125000_workspace_role_status_write_transactions.sql
+20260518130000_personal_profile_persistence.sql
+20260519090000_reception_domain_schema_foundation.sql
+20260519100000_reception_patient_guardian_lookup_reader.sql
+20260519110000_reception_patient_guardian_registration_writer.sql
+20260519120000_reception_walk_in_encounter_writer.sql
+20260519130000_reception_appointment_check_in_writer.sql
+20260519140000_reception_queue_reader.sql
+20260519150000_reception_day_calendar_reader.sql
+20260519160000_clinical_order_billing_schema_foundation.sql
+20260519170000_chart_order_snapshot_bridge.sql
+20260519180000_chart_soap_note_persistence_rpc.sql
+20260519190000_chart_completion_persistence_rpc.sql
+20260519200000_chart_diagnosis_persistence_rpc.sql
+20260519210000_chart_order_draft_persistence_rpc.sql
+20260519220000_chart_order_action_persistence_rpc.sql
+20260519230000_chart_order_lifecycle_persistence_rpc.sql
+20260520090000_billing_invoice_candidate_sync_rpc.sql
+20260520100000_billing_invoice_line_persistence_rpc.sql
+20260520110000_billing_payment_status_persistence_rpc.sql
+20260520120000_live_mvp_audit_events.sql
+20260520130000_live_mvp_audit_event_review_rpc.sql
+20260520140000_customer_management_schema_delta.sql
+20260520152000_hospital_admin_order_catalog_persistence.sql</code></pre>
+
+    <h2>Actual Push 결과</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>최종 승인</td><td class="ok">승욱이 staging 전용 실제 <code>db push</code> 적용을 명시 승인했다.</td></tr>
+      <tr><td>실행 명령</td><td><code>npx supabase db push</code></td></tr>
+      <tr><td>적용 결과</td><td class="ok">33개 migration 모두 적용 완료.</td></tr>
+      <tr><td>다시 실행한 dry-run</td><td class="ok"><code>Remote database is up to date.</code></td></tr>
+      <tr><td>Seed/direct SQL/deploy/email</td><td class="ok">실행하지 않음.</td></tr>
+    </table>
+
+    <h2>Remote Read-only 확인</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th><th>판단</th></tr>
+      <tr>
+        <td>Project metadata</td>
+        <td><code>clair-emr-staging</code>, ref <code>qmerxgzrwaaahpkhjqlc</code>, status <code>ACTIVE_HEALTHY</code>, Postgres <code>17.6.1.121</code>.</td>
+        <td class="ok">target 일치</td>
+      </tr>
+      <tr>
+        <td>Remote migrations</td>
+        <td>33개.</td>
+        <td class="ok">repo migration 적용 확인</td>
+      </tr>
+      <tr>
+        <td>Remote app tables</td>
+        <td><code>public</code> schema app table 40개, 모든 listed table RLS enabled, rows 0.</td>
+        <td class="ok">schema foundation 적용, seed 미실행 상태 확인</td>
+      </tr>
+      <tr>
+        <td>Security advisors</td>
+        <td>RLS enabled/no policy INFO 다수, function search path mutable WARN 2건, SECURITY DEFINER executable WARN 다수.</td>
+        <td class="warn">실제 staging replay 전 별도 trust-boundary review 필요</td>
+      </tr>
+      <tr>
+        <td>Performance advisors</td>
+        <td>Unindexed foreign keys, unused index INFO 다수.</td>
+        <td class="warn">pilot 성능 blocker는 아니지만 별도 최적화 후보</td>
+      </tr>
+    </table>
+
+    <h2>Post-push DB Lint</h2>
+    <p>
+      <code>npx supabase db lint --linked --schema public --level warning --fail-on none --output-format json</code>
+      결과, migration 적용은 완료됐지만 함수 lint blocker 2건과 warning 2건이 확인됐다.
+    </p>
+    <table>
+      <tr><th>함수</th><th>수준</th><th>내용</th><th>판단</th></tr>
+      <tr>
+        <td><code>public.clair_check_in_reception_appointment</code></td>
+        <td class="blocked">error</td>
+        <td><code>appointment_change_logs</code>에는 <code>changed_by_user_id</code>가 있는데 함수가 <code>actor_user_id</code> 컬럼에 insert하려고 한다.</td>
+        <td class="blocked">reception appointment check-in blocker</td>
+      </tr>
+      <tr>
+        <td><code>public.clair_list_reception_queue</code></td>
+        <td class="blocked">error</td>
+        <td><code>private.clair_is_active_workspace_member(text)</code>만 있는데 함수가 <code>uuid</code> 인자로 호출한다.</td>
+        <td class="blocked">reception queue read blocker</td>
+      </tr>
+      <tr>
+        <td><code>public.clair_register_reception_patient_guardian</code></td>
+        <td class="warn">warning extra</td>
+        <td>unused parameter <code>p_actor_user_id</code>.</td>
+        <td class="warn">cleanup candidate</td>
+      </tr>
+      <tr>
+        <td><code>public.clair_create_reception_walk_in_encounter</code></td>
+        <td class="warn">warning extra</td>
+        <td>unused parameter <code>p_actor_user_id</code>.</td>
+        <td class="warn">cleanup candidate</td>
+      </tr>
+    </table>
+
+    <h2>검증</h2>
+    <table>
+      <tr><th>명령/확인</th><th>결과</th></tr>
+      <tr><td><code>npm run docs:check</code></td><td class="ok">passed</td></tr>
+      <tr><td><code>npm run security:secrets</code></td><td class="ok">passed</td></tr>
+      <tr><td>Focused migration Playwright specs</td><td class="ok">31 passed</td></tr>
+      <tr><td><code>npx supabase --version</code></td><td class="ok"><code>2.100.1</code></td></tr>
+      <tr><td>Migration inventory</td><td class="ok">repo migration 33개와 dry-run 예정 migration 33개 일치</td></tr>
+      <tr><td>Supabase MCP read-only checks</td><td class="ok">project, migrations, tables, security/performance advisors 확인</td></tr>
+      <tr><td><code>npx supabase db lint --linked --schema public --level warning --fail-on none --output-format json</code></td><td class="blocked">2 errors, 2 warnings</td></tr>
+    </table>
+
+    <h2>Go / No-go 판단</h2>
+    <p class="blocked">
+      DEN-193 기준 migration apply는 성공했다. 하지만 post-push DB lint에서 reception 핵심 함수 blocker 2건이
+      확인됐으므로, seed/replay로 넘어가기 전 follow-up migration으로 수정해야 한다.
+    </p>
+
+    <h2>수행하지 않은 작업</h2>
+    <ul>
+      <li>Seed 실행 없음.</li>
+      <li>Direct SQL mutation 없음.</li>
+      <li>Production 접근 없음.</li>
+      <li>Email, deploy, provider integration 실행 없음.</li>
+      <li>Secret/service role key/token/DB password 노출 없음.</li>
+    </ul>
+  </body>
+</html>

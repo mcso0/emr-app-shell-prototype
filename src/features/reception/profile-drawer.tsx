@@ -1961,7 +1961,7 @@ export function NewPatientDialog({
                       })
                     }
                   >
-                    <SelectTrigger aria-label="종" className="h-10 w-full bg-card">
+                    <SelectTrigger aria-label="종" size="xl" className="w-full bg-card">
                       <span className="flex flex-1 text-left">
                         {getNewPatientSpeciesLabel(draft.species)}
                       </span>
@@ -2012,7 +2012,7 @@ export function NewPatientDialog({
 	                      setDraft((current) => ({ ...current, sex: sex as NewPatientSexValue }))
 	                    }
 	                  >
-	                    <SelectTrigger aria-label="성별" className="h-10 w-full bg-card">
+	                    <SelectTrigger aria-label="성별" size="xl" className="w-full bg-card">
                       <span className="flex flex-1 text-left">
                         {getNewPatientSexLabel(draft.sex)}
                       </span>
@@ -3591,7 +3591,7 @@ function PatientGuardianRegistrationButton({
                             })
                           }
                         >
-                          <SelectTrigger aria-label="종" className="h-10 w-full bg-card">
+                          <SelectTrigger aria-label="종" size="xl" className="w-full bg-card">
                             <span className="flex flex-1 text-left">
                               {getNewPatientSpeciesLabel(patientDraft.species)}
                             </span>
@@ -3648,7 +3648,7 @@ function PatientGuardianRegistrationButton({
                             }))
                           }
                         >
-                          <SelectTrigger aria-label="성별" className="h-10 w-full bg-card">
+                          <SelectTrigger aria-label="성별" size="xl" className="w-full bg-card">
                             <span className="flex flex-1 text-left">
                               {getNewPatientSexLabel(patientDraft.sex)}
                             </span>

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-210 Row Action Menu & Overlay Close 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-210</p>
+        <h1>Row Action Menu & Overlay Close 보고서</h1>
+        <p>
+          고객관리, 접수/예약, 병원관리의 대표 행/카드 작업 메뉴를 공통
+          <code>EmrRowActionMenu</code> 기준으로 맞췄다. 사용자는 화면마다 다른 메뉴 규칙을 다시 학습하지 않고,
+          미연결 작업도 화면 안의 persistent 안내로 확인할 수 있다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">앱 화면 반영</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            공통 <code>EmrRowActionMenu</code>를 추가해 행/카드 메뉴 trigger, item layout, separator, disabled tone,
+            event propagation 규칙을 한 곳으로 모았다.
+          </li>
+          <li>고객관리 동물/보호자 row menu를 공통 메뉴로 교체하고, 차트/카카오톡 미연결 action은 info alert로 안내한다.</li>
+          <li>접수 side panel 환자 카드 menu를 공통 메뉴로 교체하고, 외부 발송 미연결 상태를 카드 영역 안에서 안내한다.</li>
+          <li>병원관리 Order row menu를 공통 메뉴로 교체하고, 상세 보기와 복제 action의 item copy를 정리했다.</li>
+          <li>Escape, item selection, row click isolation을 대표 화면별 Playwright interaction으로 검증했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Before / After Evidence</h2>
+        <ul>
+          <li>Before customer baseline: <code>output/ui-audit-2026-05-22/screenshots/12-customer-row-menu.png</code></li>
+          <li>Before profile/menu baseline: <code>output/ui-audit-2026-05-22/screenshots/13-profile-menu.png</code></li>
+          <li>Before reception baseline: <code>output/ui-audit-2026-05-22/screenshots/14-reception-card-menu.png</code></li>
+          <li>After customer menu: <code>output/ui-audit-2026-05-22/screenshots/den-210-customer-row-menu-after.png</code></li>
+          <li>
+            After customer feedback:
+            <code>output/ui-audit-2026-05-22/screenshots/den-210-customer-row-menu-feedback-after.png</code>
+          </li>
+          <li>
+            After reception feedback:
+            <code>output/ui-audit-2026-05-22/screenshots/den-210-reception-card-menu-feedback-after.png</code>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>UXA-02: 대표 행/카드 메뉴가 shared component, tokenized spacing/color, 동일 trigger 크기를 따른다.</li>
+          <li>UXA-05: unavailable action이 silent item이나 transient toast에만 의존하지 않고 inline feedback을 남긴다.</li>
+          <li>UXA-06: Escape와 item selection 닫힘 규칙을 고객/접수/병원관리에서 같은 방식으로 검증했다.</li>
+          <li>UXA-08: 카카오톡, 차트 이동 등 미연결 경계를 화면별로 숨기지 않고 현재 MVP 범위로 설명한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>적용 화면</h2>
+        <ul>
+          <li>고객관리: 동물/보호자 table row action menu</li>
+          <li>접수/예약: side panel 환자 카드 action menu</li>
+          <li>병원관리: Order catalog table row action menu</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 메뉴 부채</h2>
+        <ul>
+          <li>프로필 drawer header action은 아직 버튼 row와 mock 안내 패턴을 유지한다.</li>
+          <li>컬럼 표시, 필터, 캘린더 옵션 menu는 각 기능 목적이 달라 이번 대표 범위에서 제외했다.</li>
+          <li>Order queue side panel의 단일 카드 action은 향후 Order queue scope에서 별도 판단이 필요하다.</li>
+          <li>삭제/권한 기반 destructive flow는 기존 confirm/permission 규칙을 유지한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>전체 menu 전수 migration</li>
+          <li>routing 구조 변경</li>
+          <li>role/permission policy 변경</li>
+          <li>live Supabase, DB migration, RLS 변경</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code>: <span class="ok">통과</span></li>
+          <li>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>:
+            <span class="ok">통과</span> (기존 warning 5건은 별도 범위)
+          </li>
+          <li>
+            <code>npx playwright test tests/customer.spec.ts --grep "row action menu"</code>:
+            <span class="ok">통과</span>
+          </li>
+          <li>
+            <code>npx playwright test tests/reception.spec.ts --grep "card action menu"</code>:
+            <span class="ok">통과</span>
+          </li>
+          <li>
+            <code>npx playwright test tests/hospital-admin.spec.ts --grep "row action menu"</code>:
+            <span class="ok">통과</span>
+          </li>
+          <li>
+            <code>npx playwright test tests/design-tokens.spec.ts --grep "shared EMR component source uses semantic color tokens"</code>:
+            <span class="ok">통과</span>
+          </li>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -4,8 +4,27 @@ test("billing workspace renders waiting invoice, guardian group, editable lines,
   await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
 
   const sidePanel = page.locator("aside").first();
-  await expect(sidePanel.getByRole("button", { name: "대기 2", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(sidePanel.getByTestId("billing-queue-item-invoice-coco-260501")).toContainText("코코");
+  await expect(sidePanel.getByRole("button", { name: "대기 2", exact: true })).toHaveCount(0);
+  await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
+  await expect(sidePanel.getByText("전체")).toBeVisible();
+  await expect(sidePanel.getByTestId("billing-queue-group-대기-count")).toHaveText("2");
+  await expect(sidePanel.getByTestId("billing-queue-group-미납-count")).toHaveText("1");
+  await expect(sidePanel.getByTestId("billing-queue-group-종료-count")).toHaveText("1");
+  const cocoQueueItem = sidePanel.getByTestId("billing-queue-item-invoice-coco-260501");
+  await expect(cocoQueueItem).toContainText("코코");
+  await expect(cocoQueueItem).toHaveClass(/group\/emr-side-panel-card/);
+  await expect(cocoQueueItem).toHaveAttribute("data-selected", "true");
+  await expect(cocoQueueItem).not.toContainText("수납대기");
+  const cocoQueueAction = cocoQueueItem.getByRole("button", {
+    name: "코코 INV-260501-0001 수납 작업",
+  });
+  await expect
+    .poll(() => cocoQueueAction.evaluate((button) => getComputedStyle(button).opacity))
+    .toBe("0");
+  await cocoQueueItem.hover();
+  await expect
+    .poll(() => cocoQueueAction.evaluate((button) => getComputedStyle(button).opacity))
+    .toBe("1");
   await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
   await expect(page.getByText("INV-260501-0001 · 코코 · 이지은")).toBeVisible();
   const guardianGroupSection = page.locator("section.rounded-lg").filter({
@@ -28,8 +47,17 @@ test("billing workspace renders waiting invoice, guardian group, editable lines,
   await page.getByRole("button", { name: "계좌이체" }).click();
   await expect(page.getByRole("button", { name: "계좌이체" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "청구 확정" }).click();
+  const issueDialog = page.getByRole("dialog", { name: "청구 확정 전 확인" });
+  await expect(issueDialog).toBeVisible();
+  await expect(issueDialog).toContainText("156,500원");
+  await expect(issueDialog).toContainText("실제 PG, VAT, 영수증");
+  await issueDialog.getByRole("button", { name: "청구 확정 저장" }).click();
   await expect(page.getByText("청구확정").first()).toBeVisible();
-  await page.getByRole("button", { name: "수납 완료" }).click();
+  await page.getByRole("button", { name: "수납 완료", exact: true }).click();
+  const paidDialog = page.getByRole("dialog", { name: "수납 완료 전 확인" });
+  await expect(paidDialog).toBeVisible();
+  await expect(paidDialog).toContainText("계좌이체");
+  await paidDialog.getByRole("button", { name: "수납 완료 저장" }).click();
   await expect(page.getByText("수납완료").first()).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
@@ -38,11 +66,9 @@ test("billing side panel switches between unpaid and closed queues", async ({ pa
   await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
 
   const sidePanel = page.locator("aside").first();
-  await sidePanel.getByRole("button", { name: "미납 1", exact: true }).click();
   await sidePanel.getByTestId("billing-queue-item-invoice-dubu-260501").click();
   await expect(page.getByText("INV-260501-0002 · 두부 · 정하린")).toBeVisible();
 
-  await sidePanel.getByRole("button", { name: "종료 1", exact: true }).click();
   await sidePanel.getByTestId("billing-queue-item-invoice-nabi-260414").click();
   await expect(page.getByText("INV-260414-0007 · 나비 · 오세아")).toBeVisible();
   await expect(page.getByText("수납완료").first()).toBeVisible();
@@ -60,9 +86,40 @@ test("billing opens the kong-vomit invoice from query and explains completion st
   await expect(page.getByText("복부 초음파")).toBeVisible();
   await expect(page.getByText("Maropitant 16mg T")).toBeVisible();
 
-  await page.getByRole("button", { name: "수납 완료" }).click();
+  await page.getByRole("button", { name: "수납 완료", exact: true }).click();
+  const paidDialog = page.getByRole("dialog", { name: "수납 완료 전 확인" });
+  await expect(paidDialog).toBeVisible();
+  await expect(paidDialog).toContainText("156,500원");
+  await paidDialog.getByRole("button", { name: "수납 완료 저장" }).click();
 
   await expect(page.getByText("수납완료").first()).toBeVisible();
   await expect(page.getByText("세션 내 수납 완료")).toBeVisible();
   await expect(page.getByText("정산 완료").first()).toBeVisible();
+});
+
+test("billing financial confirmation failure shows persistent recovery action", async ({ page }) => {
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-lines", async (route) => {
+    if (route.request().method() === "PATCH") {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 500,
+        body: JSON.stringify({ ok: false, error: "db_write_failed", status: 500 }),
+      });
+      return;
+    }
+
+    await route.continue();
+  });
+
+  await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
+
+  await page.getByRole("button", { name: "청구 확정" }).click();
+  const issueDialog = page.getByRole("dialog", { name: "청구 확정 전 확인" });
+  await expect(issueDialog).toBeVisible();
+  await issueDialog.getByRole("button", { name: "청구 확정 저장" }).click();
+
+  await expect(page.getByTestId("billing-financial-error-alert")).toContainText(
+    "청구 확정이 저장되지 않았어"
+  );
+  await expect(page.getByRole("button", { name: "청구 확정 다시 시도" })).toBeVisible();
 });

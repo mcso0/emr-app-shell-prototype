@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-207 Reception Read Failure UX 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-207</p>
+        <h1>Reception Read Failure UX 보고서</h1>
+        <p>
+          접수 화면의 서버 대기열/캘린더 read failure를 작은 상태 문구에서 복구 행동이 있는
+          <code>EmrInlineAlert</code>로 바꿨다. 사용자는 서버 read 실패, 로컬 데모/세션 데이터 유지,
+          재시도 가능성을 같은 자리에서 확인할 수 있다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">앱 화면 반영</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            접수 side panel의 queue read failure를 <code>EmrInlineAlert severity="warning"</code>로 교체하고
+            <code>대기열 다시 시도</code> action을 추가했다.
+          </li>
+          <li>
+            중앙 calendar read failure를 <code>EmrInlineAlert severity="warning"</code>로 교체하고
+            <code>캘린더 다시 시도</code> action을 추가했다.
+          </li>
+          <li>
+            store에 <code>readRetryNonce</code>와 <code>requestReceptionReadRetry</code>를 추가해 두 read effect를
+            동일한 retry trigger로 다시 실행하게 했다.
+          </li>
+          <li>
+            failure copy가 권한/session/Supabase client/read failure를 구분하고, 로컬 데모/세션 데이터 경계를 명시한다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Before / After Evidence</h2>
+        <ul>
+          <li>Before baseline: <code>output/ui-audit-2026-05-22/screenshots/02-reception.png</code></li>
+          <li>After screenshot: <code>output/ui-audit-2026-05-22/screenshots/den-207-reception-read-failure-after.png</code></li>
+        </ul>
+        <p class="meta">
+          After screenshot은 queue/calendar read를 500으로 mock해 failure alert와 retry action을 노출한 상태다.
+        </p>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>UXA-03: read failure가 원인/영향/복구 행동을 함께 보여준다.</li>
+          <li>UXA-08: live read 실패와 로컬 데모/세션 데이터 경계를 같은 문장 구조로 설명한다.</li>
+          <li>오류 안내가 접수 주요 CTA를 가리지 않고, side panel과 calendar 각각의 영향을 분리한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>live Supabase validation 또는 서버 read 구현 변경</li>
+          <li>접수 schema, migration, RLS, server enforcement</li>
+          <li>전체 캘린더 redesign 또는 빈 슬롯 CTA 정리</li>
+          <li>role/permission policy 변경</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>:
+            <span class="ok">통과</span> (기존 warning 5건은 별도 범위)
+          </li>
+          <li><code>npx tsc --noEmit</code>: <span class="ok">통과</span></li>
+          <li>
+            <code>npx playwright test tests/reception.spec.ts --grep "read failures explain local demo fallback"</code>:
+            <span class="ok">통과</span>
+          </li>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

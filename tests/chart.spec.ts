@@ -233,11 +233,11 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(page.getByRole("button", { name: "Order 확정" })).toBeDisabled();
 
   await page.getByRole("button", { name: "차트 작성완료" }).click();
-  const chartCompleteDialog = page.getByRole("dialog");
+  const chartCompleteDialog = page.getByRole("dialog", { name: "차트 작성완료 확인" });
   await expect(chartCompleteDialog.getByText("차트 작성완료 확인")).toBeVisible();
-  await expect(chartCompleteDialog.getByText("환자: 콩이 · 보호자 김하늘")).toBeVisible();
-  await expect(chartCompleteDialog.getByText("차트번호: E-260501-0003")).toBeVisible();
-  await expect(chartCompleteDialog.getByText(/진단명: \d+건 · 오더: 4건/)).toBeVisible();
+  await expect(chartCompleteDialog.getByText("콩이 / 김하늘")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("E-260501-0003")).toBeVisible();
+  await expect(chartCompleteDialog.getByText(/\d+건 \/ 4건/)).toBeVisible();
   await chartCompleteDialog.getByRole("button", { name: "계속 작성" }).click();
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
@@ -508,13 +508,26 @@ test("chart completion persists through route-backed reload", async ({ page }) =
   await expect(page.getByTestId("chart-completion-status")).toHaveText("오더 진행중");
 
   await page.getByRole("button", { name: "차트 작성완료" }).click();
-  const chartCompleteDialog = page.getByRole("dialog");
+  const chartCompleteDialog = page.getByRole("dialog", { name: "차트 작성완료 확인" });
   await expect(chartCompleteDialog.getByText("차트 작성완료 확인")).toBeVisible();
-  await expect(chartCompleteDialog.getByText(/차트 상태: (오더 진행중|작성완료)/)).toBeVisible();
-  await chartCompleteDialog.getByRole("button", { name: "작성완료 확인" }).click();
+  await expect(chartCompleteDialog.getByText("오더 진행중", { exact: true })).toBeVisible();
+  await chartCompleteDialog.getByRole("button", { name: "작성완료 저장" }).click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText("작성완료");
 
   await page.reload();
   await expect(page.getByTestId("chart-completion-status")).toContainText("작성완료");
+});
+
+test("chart unavailable order actions show persistent inline guidance", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+
+  await page.getByRole("button", { name: "Order 출력" }).click();
+  const unavailableAlert = page.getByTestId("chart-unavailable-action-alert");
+  await expect(unavailableAlert).toContainText("Order 출력은 아직 연결되지 않았어");
+  await expect(unavailableAlert).toContainText("문서 생성, 프린트, PDF 출력");
+  await unavailableAlert.getByRole("button", { name: "확인" }).click();
+
+  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await expect(unavailableAlert).toContainText("Order 추가는 카탈로그 연결 후 제공돼");
 });

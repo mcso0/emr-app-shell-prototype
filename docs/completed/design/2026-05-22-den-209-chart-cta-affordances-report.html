@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-209 Chart CTA Affordances 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-209</p>
+        <h1>Chart CTA Affordances 보고서</h1>
+        <p>
+          차트 작성완료 확인을 <code>EmrDialogShell variant="confirm"</code> 기준으로 맞추고,
+          차트/Order 미연결 기능을 <code>EmrInlineAlert severity="info"</code>로 안내하도록 정리했다.
+          사용자는 상태 변경 CTA와 unavailable CTA를 화면에서 다른 규칙으로 구분할 수 있다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">앱 화면 반영</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            <code>차트 작성완료</code> dialog를 공통 <code>EmrDialogShell</code> confirm variant로 옮겼다.
+          </li>
+          <li>
+            작성완료 preflight에 환자/보호자, 차트번호, 진단명/오더 수, 차트 상태, SOAP 상태를 표시한다.
+          </li>
+          <li>
+            작성완료 저장 실패 시 dialog 내부에 <code>EmrInlineAlert severity="error"</code>와 재시도 action을 보여준다.
+          </li>
+          <li>
+            <code>차트 공유</code>, <code>Order 출력</code>, <code>+ Order</code>, row <code>이력</code>, row
+            <code>요청</code>을 unavailable action으로 분류하고 persistent info alert를 남긴다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Before / After Evidence</h2>
+        <ul>
+          <li>Before baseline: <code>output/ui-audit-2026-05-22/screenshots/05-treatment-complete-dialog.png</code></li>
+          <li>
+            After dialog:
+            <code>output/ui-audit-2026-05-22/screenshots/den-209-chart-completion-dialog-after.png</code>
+          </li>
+          <li>
+            After unavailable:
+            <code>output/ui-audit-2026-05-22/screenshots/den-209-chart-unavailable-action-after.png</code>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>UXA-02: chart completion dialog가 shared dialog shell, action order, width 규격을 따른다.</li>
+          <li>UXA-04: state-changing completion CTA가 저장 전 clinical artifact summary를 제공한다.</li>
+          <li>UXA-05: unavailable action이 silent button 또는 transient toast에만 의존하지 않는다.</li>
+          <li>UXA-08: 공유, 출력, 요청, 외부/부서 연동이 아직 미연결임을 화면 안에서 명확히 표시한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 미연결 기능</h2>
+        <ul>
+          <li>실제 차트 공유, 이메일, 카카오톡, 외부 문서 전송</li>
+          <li>Order 출력, PDF, 프린트</li>
+          <li>Order 카탈로그 선택 기반 신규 추가</li>
+          <li>Order row 상세 이력 화면과 요청 전송 workflow</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>SOAP/order persistence 변경</li>
+          <li>외부 출력, 공유, 요청, provider 연동 구현</li>
+          <li>진료 도메인 정책 변경</li>
+          <li>live Supabase, DB migration, RLS, role/permission policy 변경</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>:
+            <span class="ok">통과</span> (기존 warning 5건은 별도 범위)
+          </li>
+          <li><code>npx tsc --noEmit</code>: <span class="ok">통과</span></li>
+          <li><code>npx playwright test tests/chart.spec.ts</code>: <span class="ok">통과</span>, 19 passed</li>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

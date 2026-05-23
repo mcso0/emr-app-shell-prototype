@@ -266,6 +266,9 @@ function OrderQueueCard({
   selected: boolean;
   statusLabel: string;
 }) {
+  const assigneeMetaValue = item.assigneeName ?? item.requesterName;
+  const requesterDuplicated = item.assigneeName === item.requesterName;
+
   return (
     <EmrSidePanelCard
       selectionVariant="modulePanel"
@@ -291,9 +294,18 @@ function OrderQueueCard({
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
       <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
-        <EmrSidePanelMetaBadge label="요청" value={item.requesterName} />
-        {item.assigneeName ? <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} /> : null}
-        <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
+        <EmrSidePanelMetaBadge
+          label={requesterDuplicated ? "수의사" : "요청"}
+          maxWidthClassName="max-w-[120px]"
+          value={requesterDuplicated ? assigneeMetaValue : item.requesterName}
+        />
+        {!requesterDuplicated && item.assigneeName ? (
+          <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} />
+        ) : null}
+        <EmrSidePanelStatusBadge
+          icon={<ClockIcon className="size-3.5" aria-hidden="true" />}
+          maxWidthClassName={requesterDuplicated ? "max-w-none" : undefined}
+        >
           {getQueueTimeLabel(item, statusLabel)}
         </EmrSidePanelStatusBadge>
       </div>

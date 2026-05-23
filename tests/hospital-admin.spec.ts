@@ -74,3 +74,18 @@ test("hospital admin order search filters the visible table", async ({ page }) =
   await expect(page.getByTestId("hospital-order-row-hospital-order-ecg")).toBeVisible();
   await expect(page.getByTestId("hospital-order-row-hospital-order-cbc")).toHaveCount(0);
 });
+
+test("hospital admin row action menu opens details and closes on Escape", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const row = page.getByTestId("hospital-order-row-hospital-order-cbc");
+  await row.getByRole("button", { name: "CBC 검사 Order 행 작업" }).click();
+  await expect(page.getByRole("menu")).toContainText("상세 보기");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+
+  await row.getByRole("button", { name: "CBC 검사 Order 행 작업" }).click();
+  await page.getByText("상세 보기", { exact: true }).click();
+  await expect(page.getByTestId("hospital-order-drawer")).toContainText("CBC 검사");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});

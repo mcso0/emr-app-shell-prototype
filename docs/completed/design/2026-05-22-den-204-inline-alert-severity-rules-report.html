@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-204 Inline Alert Severity Rules 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-204</p>
+        <h1>Inline Alert Severity Rules 보고서</h1>
+        <p>
+          Product MVP 전반에서 오류, 주의, 안내, 성공 피드백을 같은 규칙으로 보여주기 위한
+          공통 <code>EmrInlineAlert</code> 컴포넌트와 severity 판단 기준을 추가했다.
+        </p>
+        <p>
+          이번 작업은 화면별 적용 전 단계의 foundation 작업이며, 접수/수납/차트/메뉴 흐름 적용은 후속
+          이슈에서 진행한다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">A등급 기반 강화</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            <code>src/components/emr/inline-alert.tsx</code>를 추가해
+            <code>error</code>, <code>warning</code>, <code>info</code>, <code>success</code>
+            severity와 기본 ARIA role을 표준화했다.
+          </li>
+          <li>
+            <code>docs/design/system/inline-alert-feedback-rules.md</code>에 persistent inline alert,
+            toast, field error, dialog의 사용 경계를 정리했다.
+          </li>
+          <li>
+            <code>docs/design/system/global-feedback-ui-audit.md</code>와 README/changelog를 갱신해
+            공통 피드백 primitive 기준을 최신화했다.
+          </li>
+          <li>
+            <code>tests/design-tokens.spec.ts</code>의 shared EMR component 토큰 가드에 새 컴포넌트를 포함했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>오류/주의/안내/성공 상태가 화면마다 다른 시각 규칙으로 흩어지는 문제를 줄이는 기반을 만들었다.</li>
+          <li>복구 행동 슬롯을 컴포넌트 계약에 포함해 접수 read failure와 수납 save failure에 적용할 수 있게 했다.</li>
+          <li>mock/live 경계 안내를 info 또는 warning으로 일관되게 표현할 기준을 만들었다.</li>
+          <li>색상만으로 상태를 구분하지 않고 제목, 본문, icon, role, action을 함께 쓰는 규칙을 명시했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>이번 이슈에서는 실제 접수/수납/차트 화면에 전체 적용하지 않았다.</li>
+          <li>live Supabase 검증, 서버 권한 enforcement, 원격 retry 내부 구현, 결제/이메일/provider 연동은 포함하지 않았다.</li>
+          <li>새 toast 시스템이나 dialog shell은 만들지 않았다. 각각 기존/후속 이슈 범위로 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>:
+            <span class="ok">통과</span> (기존 warning 5건은 별도 범위)
+          </li>
+          <li><code>npx tsc --noEmit</code>: <span class="ok">통과</span></li>
+          <li><code>npm run docs:check</code>: <span class="ok">통과</span></li>
+          <li>
+            <code>npx playwright test tests/design-tokens.spec.ts --grep "shared EMR component source uses semantic color tokens"</code>:
+            <span class="ok">통과</span>
+          </li>
+        </ul>
+        <p class="meta">
+          화면 동작에 아직 연결하지 않았기 때문에 Playwright interaction test는 후속 적용 이슈에서 수행한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>다음 적용 지점</h2>
+        <ul>
+          <li>DEN-207: 접수 서버 대기열/캘린더 실패 복구 UX</li>
+          <li>DEN-208: 청구 확정/수납 완료 사전 점검과 실패 복구</li>
+          <li>DEN-209: 차트 작성완료 및 미연결 action affordance</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

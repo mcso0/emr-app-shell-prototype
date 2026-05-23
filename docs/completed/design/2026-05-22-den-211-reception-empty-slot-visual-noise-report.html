@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-211 Reception Empty Slot Visual Noise 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111827;
+        --muted: #6b7280;
+        --line: #d8dee8;
+        --panel: #ffffff;
+        --soft: #f5f7fa;
+        --accent: #1d4ed8;
+        --success: #047857;
+      }
+
+      body {
+        margin: 0;
+        background: var(--soft);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 14px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 22px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-22 · Linear DEN-211</p>
+        <h1>Reception Empty Slot Visual Noise 보고서</h1>
+        <p>
+          접수 캘린더 빈 시간 슬롯의 반복 CTA와 plus 표시를 기본 상태에서 제거하고, hover와 keyboard focus에서만
+          명확한 <code>+ 접수</code> affordance가 드러나도록 정리했다. 기존 사용자는 캘린더 빈 영역을 이미
+          조작 가능한 공간으로 이해하므로, 기본 스캔 상태에서는 예약 카드와 시간축을 방해하지 않는다.
+        </p>
+        <p>
+          <span class="badge">Human Review 준비</span>
+          <span class="badge">앱 화면 반영</span>
+        </p>
+      </header>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            공통 빈 슬롯 CTA인 <code>EmptyReceptionSlotButton</code>을 추가해 일/주 캘린더가 같은 hover, focus,
+            icon, label 규칙을 사용하게 했다.
+          </li>
+          <li>기본 상태에서는 빈 슬롯 affordance wrapper를 숨겨 캘린더 격자 자체만 보이게 했다.</li>
+          <li>hover와 keyboard focus에서는 배경, border, <code>+ 접수</code> label이 함께 드러나 접수 가능 상태를 명확히 보여준다.</li>
+          <li>접수 dialog를 열었다가 취소한 직후에는 underlying slot의 stale hover/focus affordance가 남지 않도록 다음 실제 pointer movement 전까지 빈 슬롯 hover를 억제했다.</li>
+          <li>진료 접수 dialog의 환자 검색을 두 필드 구조에서 단일 검색 input + 결과 listbox 구조로 통합했다.</li>
+          <li>대기열에서 재사용되는 <code>EmrSidePanelCollapsibleGroup</code> 카드 목록 간격을 8px로 표준화했다.</li>
+          <li>화면별 override로 처리했던 진료/차트 대기열 간격은 제거하고, 공통 대기열 그룹 기본값으로 흡수했다.</li>
+          <li>빈 슬롯 클릭 시 기존 진료 접수 dialog가 열리는 동작과 drawer 정리 동작은 유지했다.</li>
+          <li>Playwright에서 기본, hover, focus 상태와 dialog 진입을 함께 검증했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Before / After Evidence</h2>
+        <ul>
+          <li>Before baseline: <code>output/ui-audit-2026-05-22/screenshots/02-reception.png</code></li>
+          <li>
+            After default:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-empty-slot-default-rework-after.png</code>
+          </li>
+          <li>
+            After hover:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-empty-slot-hover-rework-after.png</code>
+          </li>
+          <li>
+            After keyboard focus:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-empty-slot-focus-rework-after.png</code>
+          </li>
+          <li>
+            After dialog cancel suppression:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-empty-slot-cancel-suppressed-after.png</code>
+          </li>
+          <li>
+            After next pointer movement:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-empty-slot-after-pointer-move.png</code>
+          </li>
+          <li>
+            After patient search single field:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-patient-search-single-field-after.png</code>
+          </li>
+          <li>
+            After patient search results:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-reception-patient-search-results-after.png</code>
+          </li>
+          <li>
+            After queue card 8px spacing:
+            <code>output/ui-audit-2026-05-22/screenshots/den-211-treatment-queue-card-gap-8-after.png</code>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>A등급 기준에 주는 효과</h2>
+        <ul>
+          <li>UXA-01: 캘린더의 정보 밀도를 낮춰 실제 예약/접수 카드가 더 먼저 읽힌다.</li>
+          <li>UXA-02: 일/주 빈 슬롯 CTA가 같은 shared component와 tokenized color/spacing 규칙을 따른다.</li>
+          <li>UXA-04: 접수 생성 행동은 hover/focus에서만 명확히 드러나고, 기본 스캔 상태에서는 과잉 CTA나 plus 반복을 만들지 않는다.</li>
+          <li>UXA-05: 환자 검색은 입력과 선택을 한 컨트롤로 합쳐 사용자가 같은 목적의 필드 두 개를 해석하지 않아도 된다.</li>
+          <li>UXA-06: keyboard focus 상태를 시각적으로 구분하고 Playwright로 회귀 검증했다.</li>
+          <li>UXA-07: 대기열 카드 간격은 재사용 그룹 컴포넌트에서 8px로 통일해 화면별 카드 밀도 흔들림을 줄였다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>접근성 및 상호작용</h2>
+        <ul>
+          <li><code>aria-label</code>로 빈 슬롯의 시간/담당의 맥락을 제공한다.</li>
+          <li>hover가 없는 키보드 사용자를 위해 focus-visible 상태에서도 라벨과 border가 표시된다.</li>
+          <li>dialog close 직후 반환 focus나 overlay 아래 hover가 시각적 잔상으로 보이지 않게 억제한다.</li>
+          <li>환자 검색 결과는 <code>listbox</code>/<code>option</code> 역할로 노출하고, 선택 결과는 같은 input 값으로 반영한다.</li>
+          <li>기존 <code>data-testid</code> 체계를 유지해 빈 슬롯 선택 회귀 테스트가 안정적으로 동작한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>캘린더 엔진, 시간축, 드래그 생성 UX 변경</li>
+          <li>서버 캘린더 read 실패, 권한, Supabase/RLS 변경</li>
+          <li>모바일 전용 캘린더 레이아웃 재설계</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><span class="ok">통과</span> <code>npx tsc --noEmit</code></li>
+          <li>
+            <span class="ok">통과</span>
+            <code>npx playwright test tests/reception.spec.ts --grep "empty calendar slot"</code>
+          </li>
+          <li>
+            <span class="ok">통과</span>
+            <code>npx playwright test tests/reception.spec.ts --grep "reception renders the first-path workspace|reception week calendar shows|reception day calendar emphasizes|empty calendar slot"</code>
+          </li>
+          <li>
+            <span class="ok">통과</span>
+            <code>npx playwright test tests/chart.spec.ts --grep "chart workspace renders queue|chart queue selection changes"</code>
+          </li>
+          <li><span class="ok">통과</span> 진료/차트 대기열 카드 사이 실제 측정값: 8px</li>
+          <li>
+            <span class="ok">통과</span>
+            <code>npm run lint -- --ignore-pattern '.worktrees/**'</code>
+            기존 hook dependency/unused 경고 5건은 이번 범위 밖이다.
+          </li>
+          <li><span class="ok">통과</span> <code>npm run docs:check</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

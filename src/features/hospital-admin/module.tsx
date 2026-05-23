@@ -12,6 +12,7 @@ import {
   CdsFilesLayersIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import {
   EmrTextSideNavButton,
@@ -28,12 +29,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -696,15 +691,25 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     </TableCell>
                     <TableCell>{targetLabels[order.target]}</TableCell>
                     <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger render={<Button size="xs" variant="ghost" />}>
-                          더보기
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-32">
-                          <DropdownMenuItem onClick={() => openDrawer(order)}>상세</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => duplicateOrder(order.id)}>복제</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <EmrRowActionMenu
+                        ariaLabel={`${order.standardName} Order 행 작업`}
+                        contentClassName="w-48"
+                        items={[
+                          {
+                            key: "detail",
+                            label: "상세 보기",
+                            description: "Order drawer 열기",
+                            onSelect: () => openDrawer(order),
+                          },
+                          {
+                            key: "duplicate",
+                            label: "복제",
+                            description: "현재 row 기준으로 복사",
+                            onSelect: () => duplicateOrder(order.id),
+                          },
+                        ]}
+                        testId={`hospital-order-action-${order.id}`}
+                      />
                     </TableCell>
                   </TableRow>
                 );

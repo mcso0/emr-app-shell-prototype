@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-196 Core Business Flow Replay Evidence Report</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-196 Core Business Flow Replay Evidence Report</h1>
+      <p>
+        DEN-192 replay script를 기준으로 core business flow evidence를 수집했다. 이번 실행은
+        배포/이메일/프로덕션 없이 로컬 mock auth와 staging synthetic DB readback/role replay 근거를 조합한
+        app-level rehearsal다.
+      </p>
+
+      <h2>비개발자 요약</h2>
+      <ul>
+        <li>접수, 차트, 검사/영상/조제, 수납으로 이어지는 대표 Kong 시나리오가 로컬 앱에서 끊기지 않고 열렸다.</li>
+        <li>수납 금액 조작 방지, 병원 간 접근 차단, 권한 없는 역할의 mutation 차단 등 negative scenario도 통과했다.</li>
+        <li>staging DB에는 synthetic medium hospital fixture, audit, tenant isolation 증거가 이미 확인되어 있다.</li>
+        <li>다만 실제 staging URL 배포 환경 smoke는 DEN-186/DEN-188 전제가 남아 있어, DEN-189 go/no-go로 바로 넘어가기는 아직 이르다.</li>
+      </ul>
+
+      <h2>Replay Scope</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Happy path 1</td><td><code>kong-vomit</code>: home demo launcher -> reception -> chart/treatment -> lab -> imaging -> dispensing -> billing 통과.</td></tr>
+          <tr><td>Happy path 2</td><td>reception, chart, billing canonical local-first flows 54개 E2E에서 예약/워크인/등록/차트/수납 흐름 통과.</td></tr>
+          <tr><td>Negative scenario 1</td><td>non-member, inactive member, cross-workspace actor 접근 차단 통과.</td></tr>
+          <tr><td>Negative scenario 2</td><td><code>front_desk</code> 또는 권한 없는 역할의 chart/order mutation 차단 통과.</td></tr>
+          <tr><td>Negative scenario 3</td><td>billing role gap, cross-workspace invoice access, client-submitted amount tampering 방지 통과.</td></tr>
+          <tr><td>Audit / role evidence</td><td>audit reader, mutation emission, DEN-197 role/tenant replay 통과.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Evidence Files</h2>
+      <ul>
+        <li><code>docs/completed/saas-launch/evidence/den-196-home-demo.png</code></li>
+        <li><code>docs/completed/saas-launch/evidence/den-196-reception-kong.png</code></li>
+        <li><code>docs/completed/saas-launch/evidence/den-196-chart-kong.png</code></li>
+        <li><code>docs/completed/saas-launch/evidence/den-196-billing-kong.png</code></li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npx playwright test tests/sales-demo-flow.spec.ts tests/reception.spec.ts tests/chart.spec.ts tests/billing.spec.ts --reporter=line</code> passed: 54 tests.</li>
+        <li><code>npx playwright test tests/audit-log.spec.ts tests/audit-review-surface.spec.ts tests/live-audit-log-persistence.spec.ts tests/live-audit-mutation-emission.spec.ts tests/staging-medium-hospital-seed-contract.spec.ts tests/staging-synthetic-readback-contract.spec.ts tests/role-tenant-audit-isolation-contract.spec.ts --reporter=line</code> passed: 26 tests.</li>
+        <li><code>npx playwright test tests/reception-mutation-permissions-server.spec.ts tests/reception-queue-read-server.spec.ts tests/reception-calendar-read-server.spec.ts tests/chart-soap-note-persistence-server.spec.ts tests/chart-diagnosis-persistence-server.spec.ts tests/chart-order-draft-persistence-server.spec.ts tests/chart-order-action-persistence-server.spec.ts tests/chart-order-lifecycle-persistence-server.spec.ts tests/chart-completion-persistence-server.spec.ts tests/billing-invoice-candidate-sync-server.spec.ts tests/billing-invoice-line-persistence-server.spec.ts tests/billing-payment-status-persistence-server.spec.ts tests/billing-security-regression.spec.ts tests/cross-tenant-denial-regression.spec.ts --reporter=line</code> passed: 77 tests.</li>
+        <li><code>npx supabase db query --linked --file supabase/snippets/den-197_role_tenant_audit_isolation_replay.sql --output json</code> passed against <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>.</li>
+      </ul>
+
+      <h2>Staging DB Evidence Already Available</h2>
+      <ul>
+        <li>DEN-194: synthetic medium hospital seed applied to staging.</li>
+        <li>DEN-195: staging fixture readback/reset contract passed and repeated seed replay path documented.</li>
+        <li>DEN-197: role/tenant/audit isolation replay passed in staging.</li>
+      </ul>
+
+      <h2>Blocked / Not Yet Proven</h2>
+      <ul>
+        <li>Actual staging URL smoke is still blocked by DEN-186 env/secret wiring and DEN-188 staging deploy smoke.</li>
+        <li>This report does not claim production readiness, real customer readiness, real email delivery, or payment/provider integration.</li>
+        <li>Lab, imaging, dispensing, and treatment are demo-visible, but current status still forbids claiming full live persistence for every path.</li>
+        <li>A repeated DEN-195 readback rerun during this pass hit Supabase pooler temporary auth circuit breaker after parallel linked queries. The earlier DEN-195 readback remains the fixture baseline; no destructive retry was attempted.</li>
+      </ul>
+
+      <h2>DEN-189 Go / No-Go Recommendation</h2>
+      <p>
+        <strong>No-go for final synthetic hospital go/no-go review until DEN-186 and DEN-188 clear.</strong>
+        App-level local replay and staging DB trust evidence are strong enough to proceed to env/deploy readiness work,
+        but not enough to claim the full north star on a real staging URL.
+      </p>
+
+      <h2>Recommended Next Step</h2>
+      <p>
+        Continue with DEN-186 to prove staging env secrets and demo bypass disablement, then DEN-188 for staging deploy smoke.
+        After those pass, rerun this DEN-196 replay on the actual staging URL and proceed to DEN-189.
+      </p>
+    </main>
+  </body>
+</html>
