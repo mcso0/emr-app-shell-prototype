@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-238 Lab Imaging Fulfillment Queue</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / DEN-238 / 2026-05-23</p>
+      <h1>검사/영상 화면 fulfillment queue 연결</h1>
+      <p>
+        Lab과 Imaging 화면이 fulfillment work item route를 읽고, 같은 order id의 서버 상태를 기존 대기열에 반영하도록 연결했다.
+        영상 완료 액션은 fulfillment PATCH route를 호출하며, 기존 검사결과/영상판독/첨부 흐름은 유지했다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>핵심 변경</h2>
+        <table>
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>Queue read</td><td>Lab/Imaging 화면이 <code>GET /fulfillment/work-items</code>를 호출해 queue별 work item을 읽는다.</td></tr>
+          <tr><td>Status mapping</td><td>Fulfillment 상태를 기존 lab result/imaging study 상태 label로 매핑한다.</td></tr>
+          <tr><td>Status mutation</td><td>기존 상태 액션 뒤에서 <code>PATCH /fulfillment/work-items/[workItemId]</code>를 호출한다.</td></tr>
+          <tr><td>Fallback</td><td>Route 읽기가 실패하면 기존 fixture queue가 유지된다.</td></tr>
+          <tr><td>제외 범위</td><td>PACS/device/provider integration, result import, dispensing/treatment adoption, billing sync는 후속 범위다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3103 npx playwright test tests/lab-imaging.spec.ts tests/fulfillment-work-item-server.spec.ts</code>: 10개 테스트 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 작업</h2>
+        <ul>
+          <li><code>DEN-239</code>: dispensing/treatment 화면에 같은 fulfillment route를 적용한다.</li>
+          <li><code>DEN-240</code>: fulfillment completion과 order lifecycle/billing candidate sync를 연결한다.</li>
+          <li>Remote Supabase migration은 아직 push하지 않았다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

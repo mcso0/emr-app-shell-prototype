@@ -7,6 +7,7 @@ related_work:
   - DEN-235
   - DEN-236
   - DEN-237
+  - DEN-238
 supersedes: []
 superseded_by: []
 last_updated: 2026-05-23
@@ -16,7 +17,7 @@ last_updated: 2026-05-23
 
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
-`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. Remote staging migration remains gated by dry-run and explicit approval.
+`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. Remote staging migration remains gated by dry-run and explicit approval.
 
 ## Current Inventory
 
@@ -32,6 +33,7 @@ This document defines the engineering contract for Project 08, `Clinical Order F
 | Dispensing/treatment screen | `src/features/dispensing/data.ts` | module-local fixture rows, no fulfillment server queue route |
 | Shared fulfillment work items | `src/app/api/workspaces/[workspaceId]/fulfillment/work-items/**` | DEN-236 server route/core/gateway foundation, not yet adopted by downstream screens |
 | Chart-to-fulfillment sync | `PATCH /api/workspaces/[workspaceId]/chart/order-actions` | DEN-237 confirm action calls fulfillment sync after successful order confirmation |
+| Lab/imaging queue adoption | `src/features/lab-imaging/module.tsx` | DEN-238 reads fulfillment work item status context and sends status mutation from existing actions |
 
 ## Target Route Shape
 

@@ -146,7 +146,13 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(page.getByRole("button", { name: "판독중", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "판독 상태 액션" }).click();
+  const fulfillmentStatusPatch = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().includes("/api/workspaces/clair-demo/fulfillment/work-items/")
+  );
   await page.getByRole("menuitem", { name: "판독완료" }).click();
+  expect((await fulfillmentStatusPatch).ok()).toBe(true);
   await expect(page.getByRole("button", { name: "판독완료", exact: true })).toBeVisible();
   const summaryPanel = page.getByTestId("imaging-summary-panel");
   await expect(summaryPanel.getByText("coco-thorax-lateral.png")).toBeVisible();
