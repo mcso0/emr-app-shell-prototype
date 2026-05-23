@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-239 Dispensing Treatment Fulfillment Queue</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / DEN-239 / 2026-05-23</p>
+      <h1>조제/처치 화면 fulfillment queue 연결</h1>
+      <p>
+        조제/처치 화면이 fulfillment work item route에서 <code>dispensing</code>과 <code>treatment</code> queue를 읽고,
+        기존 대기열에 서버 상태와 담당자 context를 반영하도록 연결했다.
+        담당하기, 진행, 완료, 반려 액션은 기존 UI를 유지하면서 fulfillment PATCH route를 호출한다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>핵심 변경</h2>
+        <table>
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>Queue read</td><td>조제/처치 화면이 <code>GET /fulfillment/work-items?queueType=dispensing</code>과 <code>?queueType=treatment</code>를 읽는다.</td></tr>
+          <tr><td>Status mapping</td><td>Fulfillment 상태를 기존 waiting, inProgress, completed, reRequested, canceled queue 상태로 매핑한다.</td></tr>
+          <tr><td>Status mutation</td><td>기존 담당/진행/완료/반려 액션 뒤에서 <code>PATCH /fulfillment/work-items/[workItemId]</code>를 호출한다.</td></tr>
+          <tr><td>Fallback</td><td>Route 읽기가 실패하면 기존 fixture queue가 유지된다.</td></tr>
+          <tr><td>제외 범위</td><td>재고, 라벨 출력, 조제 외부 연동, 처치 장비/provider integration, lifecycle/billing sync는 후속 범위다.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3104 npx playwright test tests/dispensing-fulfillment.spec.ts tests/fulfillment-work-item-server.spec.ts</code>: 6개 테스트 통과.</li>
+          <li>Full local quality gate는 PR 생성 전 다시 실행한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 작업</h2>
+        <ul>
+          <li><code>DEN-240</code>: fulfillment completion을 order lifecycle과 billing candidate sync에 연결한다.</li>
+          <li><code>DEN-241</code>: chart부터 downstream queue와 billing까지 end-to-end replay regression을 추가한다.</li>
+          <li>Remote Supabase migration은 아직 push하지 않았다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

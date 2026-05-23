@@ -8,6 +8,7 @@ related_work:
   - DEN-236
   - DEN-237
   - DEN-238
+  - DEN-239
 supersedes: []
 superseded_by: []
 last_updated: 2026-05-23
@@ -17,7 +18,7 @@ last_updated: 2026-05-23
 
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
-`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. Remote staging migration remains gated by dry-run and explicit approval.
+`DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. Remote staging migration remains gated by dry-run and explicit approval.
 
 ## Current Inventory
 
@@ -29,11 +30,12 @@ This document defines the engineering contract for Project 08, `Clinical Order F
 | Billing candidates | `GET/PATCH /api/workspaces/[workspaceId]/billing/invoice-candidates` | selected order to billing candidate sync |
 | Billing invoice lines | `GET/PATCH /api/workspaces/[workspaceId]/billing/invoice-lines` | line edit and billing confirmation |
 | Billing payment status | `GET/PATCH /api/workspaces/[workspaceId]/billing/payment-status` | synthetic payment/unpaid state |
-| Lab/imaging screens | `src/features/lab-imaging/data.ts` | mock domain fixtures, no fulfillment server queue route |
-| Dispensing/treatment screen | `src/features/dispensing/data.ts` | module-local fixture rows, no fulfillment server queue route |
-| Shared fulfillment work items | `src/app/api/workspaces/[workspaceId]/fulfillment/work-items/**` | DEN-236 server route/core/gateway foundation, not yet adopted by downstream screens |
+| Lab/imaging screens | `src/features/lab-imaging/module.tsx` | DEN-238 reads fulfillment work item status context and sends status mutation from existing actions |
+| Dispensing/treatment screen | `src/features/dispensing/module.tsx` | DEN-239 reads fulfillment work item status context and sends status mutation from existing actions |
+| Shared fulfillment work items | `src/app/api/workspaces/[workspaceId]/fulfillment/work-items/**` | DEN-236 server route/core/gateway foundation, adopted by lab/imaging and dispensing/treatment screens |
 | Chart-to-fulfillment sync | `PATCH /api/workspaces/[workspaceId]/chart/order-actions` | DEN-237 confirm action calls fulfillment sync after successful order confirmation |
 | Lab/imaging queue adoption | `src/features/lab-imaging/module.tsx` | DEN-238 reads fulfillment work item status context and sends status mutation from existing actions |
+| Dispensing/treatment queue adoption | `src/features/dispensing/module.tsx` | DEN-239 reads fulfillment work item status context and sends status mutation from existing actions |
 
 ## Target Route Shape
 
