@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-20"
+updated: "2026-05-23"
 linear_issue: "DEN-143"
 linear_project: "00 UI 시스템 인벤토리 및 리팩토링 기준"
 source_docs:
@@ -24,6 +24,124 @@ Commands used:
 - `rg -o "\b(?:min-w|w|h|max-w|max-h|grid-cols|grid-rows|basis|flex|text|leading|tracking|rounded|px|py|p|gap|mt|mb|ml|mr|top|left|right|bottom)-\[[^\]]+\]" src/features src/components/emr src/components/ui src/shell src/app -g '*.tsx'`
 - `rg -o "#[0-9A-Fa-f]{3,8}|rgba?\([^)]*\)|\b(?:bg|text|border|ring|from|to|via)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}\b|clair-color-[A-Za-z0-9_-]+" src/features src/components/emr src/components/ui src/shell src/app -g '*.tsx' -g '*.ts'`
 - Manual review of `src/styles/tokens/emr-foundation.css`, `src/styles/tokens/shadcn.css`, `src/app/manifest.ts`, `src/app/layout.tsx`, `src/shell/global-command-palette.tsx`, `src/components/emr/side-panel-card.tsx`, and `src/features/billing/module.tsx`.
+
+## DEN-214 Latest Rescan Baseline
+
+Updated on 2026-05-23 for Linear `DEN-214`.
+
+Scope:
+
+- `src/**/*.{ts,tsx}`
+- arbitrary bracket utilities in spacing, typography, width/height, radius, and grid categories
+- scan output is a cleanup baseline, not permission to mechanically rewrite every value
+
+Latest counts:
+
+| Metric | Count | Notes |
+|---|---:|---|
+| Scanned source files | 281 | `src` TypeScript and TSX only |
+| All bracket utilities found | 3,052 | Includes colors, borders, effects, and other categories outside DEN-214 scope |
+| In-scope spacing/font/width/radius/grid utilities | 1,637 | DEN-214 baseline for A+ token cleanup |
+| Unique in-scope utilities | 300 | Candidate vocabulary size before cleanup |
+| Files with in-scope utilities | 83 | Cleanup is cross-module, so implementation must stay PR-sized |
+| Raw measure utilities | 1,091 | Highest-priority cleanup pool |
+| Tokenized CSS-var utilities | 472 | Already token-backed, but still bracket syntax |
+| Structural grid/expression utilities | 49 | Often valid local layout constraints |
+| Layout `calc()` utilities | 23 | Usually drawer, viewport, or switch geometry constraints |
+
+Category counts:
+
+| Category | Count | First handling rule |
+|---|---:|---|
+| Typography | 1,123 | Start with dense text roles and EMR component variants |
+| Size / width / height | 278 | Classify table columns, shell widths, dialog widths, and icon geometry separately |
+| Radius | 158 | Prefer `--emr-radius-control`, `--emr-radius-panel`, or component variants |
+| Grid | 54 | Keep table/calendar/grid recipes local unless repeated across screen families |
+| Spacing / position | 24 | Low count; fix only when tied to repeated component rhythm |
+
+Top raw repeated utilities:
+
+| Utility | Count | Recommended owner |
+|---|---:|---|
+| `text-[12px]` | 316 | Dense typography role / EMR table-list text variants |
+| `text-[13px]` | 215 | Dense body role / EMR component variants |
+| `text-[11px]` | 75 | Micro metadata role, mostly local until roles are named |
+| `text-[14px]` | 69 | Standard body/label role, prefer existing text classes |
+| `text-[15px]` | 22 | Section or compact title role after typography pass |
+| `text-[16px]` | 16 | Compact heading role after typography pass |
+| `leading-[18px]` | 15 | Side-panel/list rhythm candidate |
+| `tracking-[0.3px]` | 14 | Side-panel badge/meta rhythm candidate |
+| `h-[18px]` | 13 | Side-panel badge/meta rhythm candidate |
+| `text-[18px]` | 12 | Dialog/section title role candidate |
+
+Top module concentrations:
+
+| Module | In-scope count | Raw measure count | Recommended follow-up |
+|---|---:|---:|---|
+| `src/features/reception` | 264 | 174 | Split across DEN-218 and table/responsive follow-ups |
+| `src/features/home` | 227 | 151 | Keep lower priority unless Project 11 scope needs dashboard representative evidence |
+| `src/components/emr` | 215 | 99 | Best shared-component cleanup target for DEN-215 to DEN-217 |
+| `src/features/auth` | 192 | 123 | Mostly outside Project 11 module adoption; defer unless shared component touched |
+| `src/features/lab-imaging` | 144 | 125 | Candidate for DEN-220 |
+| `src/features/chart` | 99 | 71 | Candidate for DEN-219 |
+| `src/shell` | 96 | 62 | Treat as shell-local unless responsive blocker evidence appears |
+| `src/features/hospital-admin` | 73 | 67 | Candidate for DEN-220 |
+| `src/features/billing` | 48 | 42 | Candidate for DEN-220 |
+| `src/features/inpatient` | 45 | 36 | Candidate for DEN-220 if table/density rules apply |
+
+Recommended priority:
+
+1. Use `DEN-215` to normalize text roles before module-specific cleanup.
+2. Use `DEN-216` and `DEN-217` to move repeated control, side-panel, queue-card, table, and list rhythm into existing UI/EMR primitives where stable.
+3. Use `DEN-218` to `DEN-220` for module-level adoption, starting only with high-confidence repeated patterns from the current module.
+4. Keep structural table widths, calendar grids, viewport `calc()` values, command palette dimensions, and icon micro-geometry as documented local exceptions until a specific issue proves they should move.
+
+DEN-215 foundation adoption note:
+
+- Added shared EMR typography role variables and utility classes in `src/styles/tokens/emr-foundation.css` and `src/app/globals.css`.
+- Adopted those roles first in high-confidence `src/components/emr/*` surfaces.
+- In-scope arbitrary utility count moved from 1,637 to 1,568.
+- Typography arbitrary utility count moved from 1,123 to 1,054.
+- Raw measure count moved from 1,091 to 1,022.
+- Remaining table, patient-context, and module-specific values should be handled by DEN-216 to DEN-220 or Project 12 table-density work, not by a broad text replacement pass.
+
+DEN-216 control/form adoption note:
+
+- Added shared control typography/radius and field gap utility classes in `src/app/globals.css`.
+- Adopted those utilities in high-confidence `src/components/ui/*` primitives: `Button`, `Input`, `Select`, `Textarea`, `Field`, and `SegmentedControl`.
+- In-scope arbitrary utility count moved from 1,568 to 1,551.
+- Typography arbitrary utility count moved from 1,054 to 1,036.
+- Raw measure count moved from 1,022 to 1,004.
+- Remaining token-backed control height and width values should stay with component variants until a later issue proves a safer cross-screen contract.
+
+DEN-217 panel/list/table density adoption note:
+
+- Added shared panel/list/card/table density utility classes in `src/app/globals.css`.
+- Adopted those utilities in `EmrSubpanel`, `EmrSidePanelCard`, `EmrSidePanelCollapsibleGroup`, `EmrContentHistoryList`, `EmrListItem`, and `EmrDataTable`.
+- In-scope arbitrary utility count moved from 1,551 to 1,527 in the legacy bracket scan.
+- Spacing-position bracket utility count is now 13 in `src`, so remaining spacing exceptions are mostly local layout or viewport constraints.
+- Fixed table column widths and scroll behavior remain intentionally local until Project 12 defines the table density/scroll contract.
+
+DEN-218 reception/customer adoption note:
+
+- Adopted existing EMR typography role classes in high-confidence `src/features/reception/*` and `src/features/customer/module.tsx` surfaces.
+- Direct `text-[11px]`, `text-[12px]`, `text-[13px]`, and `text-[14px]` values were removed from the touched reception/customer files.
+- Remaining reception/customer bracket utilities are mostly token-backed colors, viewport/drawer heights, table min-widths, and calendar grid dimensions.
+- The current targeted reception/customer bracket utility count is 139, with 88 typography-related entries still present because semantic token color classes and larger local display sizes are intentionally out of this pass.
+
+DEN-219 chart/order adoption note:
+
+- Adopted existing EMR typography role classes in high-confidence chart, SOAP editor, chart tab/title, and order table surfaces.
+- Direct `text-[11px]`, `text-[12px]`, `text-[13px]`, `text-[14px]`, and generated body typography bracket utilities were removed from the touched chart/order files.
+- The current targeted chart/order bracket utility count is 74, with table min-widths, column widths, editor min-height, semantic color utilities, and token-backed radii left as local exceptions.
+- Order table width, horizontal scroll, and header affordance cleanup remain intentionally deferred to Project 12.
+
+DEN-220 billing/lab-imaging/dispensing/admin adoption note:
+
+- Adopted existing EMR typography role classes in billing, lab/imaging, dispensing, and hospital-admin candidate surfaces.
+- Direct `text-[11px]`, `text-[12px]`, `text-[13px]`, and `text-[14px]` values were removed from the touched module files.
+- Repeated lab/imaging metadata leading/tracking patterns were collapsed into `emr-text-dense-label`, `emr-text-metadata`, and `emr-text-section` where the role was clear.
+- The current targeted bracket utility count across these modules is 103. Remaining values are mostly table width/min-width recipes, dense placeholder heights, semantic colors, and local title/display sizes.
 
 ## Top Repeated Arbitrary Values
 

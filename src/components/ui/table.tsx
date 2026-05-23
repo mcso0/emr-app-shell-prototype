@@ -2,17 +2,59 @@
 
 import * as React from "react"
 
+import {
+  defaultEmrTableDensity,
+  defaultEmrTableLayout,
+  type EmrTableDensity,
+  type EmrTableLayout,
+} from "@/components/emr/table-density"
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+type TableProps = React.ComponentProps<"table"> & {
+  containerClassName?: string
+  density?: EmrTableDensity
+  layout?: EmrTableLayout
+  minWidth?: number | string
+}
+
+function toTableWidth(value: number | string | undefined) {
+  if (typeof value === "number") {
+    return `${value}px`
+  }
+
+  return value
+}
+
+function Table({
+  className,
+  containerClassName,
+  density = defaultEmrTableDensity,
+  layout = defaultEmrTableLayout,
+  minWidth,
+  style,
+  ...props
+}: TableProps) {
+  const tableMinWidth = toTableWidth(minWidth)
+
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      data-emr-layout={layout}
+      className={cn(
+        "relative w-full",
+        layout === "scroll" ? "emr-table-scroll-container overflow-x-auto" : "overflow-x-auto",
+        containerClassName
+      )}
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        data-emr-density={density}
+        data-emr-layout={layout}
+        className={cn("emr-table-surface w-full caption-bottom text-sm", className)}
+        style={{
+          minWidth: tableMinWidth,
+          ...style,
+        }}
         {...props}
       />
     </div>

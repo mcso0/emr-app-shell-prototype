@@ -20,6 +20,7 @@ import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrTextSideNavButton,
   EmrTextSideNavSection,
@@ -58,6 +59,7 @@ import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawe
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 
 const customerSideItems = [
@@ -77,6 +79,10 @@ const customerSidePanelWidthClassName = "min-w-[280px] max-w-[280px]";
 const customerTableWidthClassNames = {
   guardian: "min-w-[1120px]",
   patient: "min-w-[1320px]",
+} as const;
+const customerTableMinWidths = {
+  guardian: 1120,
+  patient: 1320,
 } as const;
 
 const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
@@ -117,6 +123,7 @@ type CustomerDataTableProps<TRow extends { id: string }> = {
   getRowLabel: (row: TRow) => string;
   isActiveRow: (row: TRow) => boolean;
   minTableWidthClassName: string;
+  minTableWidth: number;
   onOpenRow: (row: TRow) => void;
   rowTestId: (row: TRow) => string;
   rows: TRow[];
@@ -182,6 +189,7 @@ function CustomerDataTable<TRow extends { id: string }>({
   getRowLabel,
   isActiveRow,
   minTableWidthClassName,
+  minTableWidth,
   onOpenRow,
   rowTestId,
   rows,
@@ -190,6 +198,7 @@ function CustomerDataTable<TRow extends { id: string }>({
 }: CustomerDataTableProps<TRow>) {
   const [rowSelection, setRowSelection] = useState<Set<string>>(() => new Set());
   const [rowActionFeedback, setRowActionFeedback] = useState<CustomerRowActionFeedback | null>(null);
+  const [density, setDensity] = useState<EmrTableDensity>("standard");
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(columns.map((column) => [column.key, column.defaultVisible !== false]))
   );
@@ -238,49 +247,52 @@ function CustomerDataTable<TRow extends { id: string }>({
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="text-[18px] font-semibold">{title}</h2>
           <Badge variant="secondary">{countLabel}</Badge>
-          <span className="text-[12px] font-medium text-muted-foreground">
+          <span className="emr-text-metadata font-medium text-muted-foreground">
             {selectedCount} / {rows.length} 선택
           </span>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={buttonVariants({
-              variant: "outline",
-              size: "sm",
-              className: "bg-card",
-            })}
-          >
-            <MenuIcon data-icon="inline-start" />
-            컬럼
-            <ChevronDownIcon data-icon="inline-end" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>표시 컬럼</DropdownMenuLabel>
-              {columns.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.key}
-                  checked={columnVisibility[column.key] !== false}
-                  disabled={column.required}
-                  onCheckedChange={() =>
-                    setColumnVisibility((current) => ({
-                      ...current,
-                      [column.key]: !(current[column.key] !== false),
-                    }))
-                  }
-                >
-                  {column.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={buttonVariants({
+                variant: "outline",
+                size: "sm",
+                className: "bg-card",
+              })}
+            >
+              <MenuIcon data-icon="inline-start" />
+              컬럼
+              <ChevronDownIcon data-icon="inline-end" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>표시 컬럼</DropdownMenuLabel>
+                {columns.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={columnVisibility[column.key] !== false}
+                    disabled={column.required}
+                    onCheckedChange={() =>
+                      setColumnVisibility((current) => ({
+                        ...current,
+                        [column.key]: !(current[column.key] !== false),
+                      }))
+                    }
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       {rowActionFeedback ? (
         <EmrInlineAlert
           severity="info"
           title={rowActionFeedback.title}
-          className="mx-4 my-3 text-[12px]"
+          className="mx-4 my-3 emr-text-metadata"
           action={
             <Button size="sm" variant="outline" onClick={() => setRowActionFeedback(null)}>
               확인
@@ -291,7 +303,7 @@ function CustomerDataTable<TRow extends { id: string }>({
           {rowActionFeedback.body}
         </EmrInlineAlert>
       ) : null}
-      <Table className={cn("text-[14px]", minTableWidthClassName)}>
+      <Table density={density} layout="scroll" minWidth={minTableWidth} className={minTableWidthClassName}>
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="w-12 bg-[var(--emr-surface-muted)]">
@@ -322,7 +334,7 @@ function CustomerDataTable<TRow extends { id: string }>({
               <TableHead
                 key={column.key}
                 className={cn(
-                  "h-11 bg-[var(--emr-surface-muted)] text-[13px] font-medium text-muted-foreground",
+                  "h-11 bg-[var(--emr-surface-muted)] emr-text-dense font-medium text-muted-foreground",
                   column.headerClassName
                 )}
               >
@@ -397,7 +409,7 @@ function CustomerDataTable<TRow extends { id: string }>({
           )}
         </TableBody>
       </Table>
-      <div className="flex h-11 items-center justify-between border-t px-4 text-[12px] font-medium text-muted-foreground">
+      <div className="flex h-11 items-center justify-between border-t px-4 emr-text-metadata font-medium text-muted-foreground">
         <span>
           {selectedCount} of {rows.length} row(s) selected.
         </span>
@@ -568,7 +580,7 @@ function CustomerToolbar({
           />
         }
         badge={
-          <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+          <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
             {activeCount}
           </Badge>
         }
@@ -594,7 +606,7 @@ function EmptyDeletedState() {
   return (
     <div className="flex min-h-[360px] flex-col items-center justify-center rounded-md border border-dashed bg-card text-center">
       <div className="text-[15px] font-semibold">삭제된 보호자/동물이 없습니다.</div>
-      <div className="mt-1 text-[13px] text-muted-foreground">삭제 이력이 없습니다.</div>
+      <div className="mt-1 emr-text-dense text-muted-foreground">삭제 이력이 없습니다.</div>
     </div>
   );
 }
@@ -685,6 +697,7 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         (activeDrawer.type === "patient" || activeDrawer.type === "reception-patient")
       }
       minTableWidthClassName={customerTableWidthClassNames.patient}
+      minTableWidth={customerTableMinWidths.patient}
       onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
       rowTestId={(row) => `customer-patient-row-${row.id}`}
       rows={rows}
@@ -758,6 +771,7 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         (activeDrawer.type === "guardian" || activeDrawer.type === "reception-guardian")
       }
       minTableWidthClassName={customerTableWidthClassNames.guardian}
+      minTableWidth={customerTableMinWidths.guardian}
       onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
       rowTestId={(row) => `customer-guardian-row-${row.id}`}
       rows={rows}

@@ -13,6 +13,7 @@ import {
 import { CheckIcon, ChevronDownIcon, WarningIcon } from "@/components/icons";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -31,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { Order, OrderDiffField, TechnicianUser } from "@/types/emr";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type EmrDataTableProps = {
   rows: Order[];
@@ -161,7 +163,7 @@ function AssigneeCell({
         data-row-interactive="true"
         aria-label={`${order.name} 담당 변경`}
         size="sm"
-        className="h-7 max-w-24 border-transparent bg-transparent px-1 text-center text-[12px] font-medium text-[var(--emr-text-secondary)] shadow-none hover:bg-[var(--emr-surface-muted)] data-[popup-open]:bg-[var(--emr-surface-muted)]"
+        className="emr-text-status h-7 max-w-24 border-transparent bg-transparent px-1 text-center font-medium text-[var(--emr-text-secondary)] shadow-none hover:bg-[var(--emr-surface-muted)] data-[popup-open]:bg-[var(--emr-surface-muted)]"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
@@ -202,7 +204,7 @@ function WorkStatusButton({
       variant="outline"
       size="xs"
       className={cn(
-        "h-6 gap-1 rounded-md bg-[var(--emr-surface-panel)] px-2 text-[12px]",
+        "emr-text-status h-6 gap-1 rounded-md bg-[var(--emr-surface-panel)] px-2",
         completed &&
           "border-[var(--emr-status-success-border)] text-[var(--emr-status-success-text)]"
       )}
@@ -264,6 +266,7 @@ export function EmrDataTable({
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [density, setDensity] = useState<EmrTableDensity>("compact");
   const completeRows = useCallback((rowIds: string[]) => {
     onCompleteRows(rowIds);
     setRowSelection({});
@@ -484,12 +487,19 @@ export function EmrDataTable({
     onColumnSizingChange: setColumnSizing,
   });
   const selectedRows = table.getSelectedRowModel().rows;
+  const tableWidth = table.getTotalSize();
 
   return (
     <div className="relative">
+      <div className="mb-2 flex justify-end">
+        <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+      </div>
       <Table
-        className="table-fixed text-[14px] leading-5 tracking-[0.014em]"
-        style={{ width: table.getTotalSize() }}
+        density={density}
+        layout="scroll"
+        minWidth={tableWidth}
+        className="table-fixed"
+        style={{ width: tableWidth }}
       >
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           {table.getHeaderGroups().map((headerGroup) => (
@@ -501,7 +511,7 @@ export function EmrDataTable({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "relative h-10 select-none bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground",
+                      "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
                       align === "right" && "text-right",
                       align === "center" && "text-center"
                     )}
@@ -509,7 +519,7 @@ export function EmrDataTable({
                   >
                     <div
                       className={cn(
-                        "flex h-6 min-w-0 items-center px-1",
+                        "emr-table-cell-content flex min-w-0 items-center",
                         align === "right" && "justify-end",
                         align === "center" && "justify-center"
                       )}
@@ -544,7 +554,7 @@ export function EmrDataTable({
               <TableRow
                 data-state={row.getIsSelected() ? "selected" : undefined}
                 data-testid={`order-row-${sectionId}-${row.original.id}`}
-                className="group/order-row h-11 cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)] hover:!bg-[var(--emr-state-hover)] data-[state=selected]:!bg-[var(--emr-state-selected)]"
+                className="group/order-row cursor-pointer border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-[var(--emr-text-secondary)] hover:!bg-[var(--emr-state-hover)] data-[state=selected]:!bg-[var(--emr-state-selected)]"
                 onClick={(event) => {
                   const target = event.target as HTMLElement;
 
@@ -562,7 +572,7 @@ export function EmrDataTable({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        "h-11 px-1 py-2 font-medium",
+                        "emr-table-body-cell font-medium",
                         cell.column.id === "assignee" ? "overflow-visible" : "overflow-hidden",
                         align === "right" && "text-right",
                         align === "center" && "text-center"
@@ -571,7 +581,7 @@ export function EmrDataTable({
                     >
                       <div
                         className={cn(
-                          "flex h-6 min-w-0 items-center px-1",
+                          "emr-table-cell-content flex min-w-0 items-center",
                           align === "right" && "justify-end",
                           align === "center" && "justify-center"
                         )}
@@ -587,8 +597,8 @@ export function EmrDataTable({
                   key={`${row.id}-warning`}
                   className="h-8 border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] hover:bg-[var(--emr-status-warning-bg)]"
                 >
-                  <TableCell colSpan={row.getVisibleCells().length} className="px-8 py-1">
-                    <div className="flex h-6 items-center gap-2 text-[14px] font-medium text-[var(--emr-status-warning-text)]">
+                  <TableCell colSpan={row.getVisibleCells().length} className="emr-table-warning-cell">
+                    <div className="emr-text-body flex h-6 items-center gap-2 font-medium text-[var(--emr-status-warning-text)]">
                       <WarningIcon className="size-4" />
                       {row.original.warningMessage}
                     </div>
@@ -601,7 +611,7 @@ export function EmrDataTable({
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
               <TableCell
                 colSpan={table.getVisibleFlatColumns().length}
-                className="h-24 text-center text-[13px] font-medium text-muted-foreground"
+                className="emr-text-dense h-24 text-center font-medium text-muted-foreground"
               >
                 표시할 오더가 없습니다.
               </TableCell>
@@ -612,7 +622,7 @@ export function EmrDataTable({
       {selectedRows.length ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-3 flex justify-center">
           <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 shadow-lg">
-            <span className="text-[12px] font-medium text-muted-foreground">
+            <span className="emr-text-status font-medium text-muted-foreground">
               선택한 오더 {selectedRows.length}개
             </span>
             <Button

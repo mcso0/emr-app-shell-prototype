@@ -32,7 +32,7 @@ export function EmrPageHeader({
           {icon}
           <h1
             className={cn(
-              "truncate text-[16px] font-semibold leading-6 tracking-[-0.002em] text-foreground",
+              "emr-text-panel-title truncate font-semibold text-foreground",
               titleClassName
             )}
           >

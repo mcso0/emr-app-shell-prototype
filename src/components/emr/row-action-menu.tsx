@@ -75,9 +75,9 @@ export function EmrRowActionMenu({
                 item.onSelect?.();
               }}
             >
-              <span className="text-[13px] font-medium leading-4">{item.label}</span>
+              <span className="emr-text-dense font-medium">{item.label}</span>
               {item.description ? (
-                <span className="text-[11px] leading-4 text-muted-foreground">{item.description}</span>
+                <span className="emr-text-micro text-muted-foreground">{item.description}</span>
               ) : null}
             </DropdownMenuItem>
           </div>

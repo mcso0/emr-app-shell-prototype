@@ -100,7 +100,7 @@ export function EmrSubpanelTitle({
     <div className={cn("flex h-12 shrink-0 items-center px-4 py-3", className)}>
       <div className="flex min-w-0 flex-1 items-center">
         <div className="relative flex min-w-0 max-w-full items-center">
-          <div className="min-w-0 truncate text-[16px] font-semibold leading-6 tracking-normal text-foreground">
+          <div className="emr-text-panel-title min-w-0 truncate font-semibold text-foreground">
             {title}
           </div>
           {onCollapse ? (
@@ -147,7 +147,7 @@ export function EmrDateNavigator({
       </Button>
       <button
         type="button"
-        className="flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium leading-[18px] tracking-[0.019em] text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="emr-text-dense-label flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         onClick={onOpenDatePicker}
         aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
       >
@@ -192,12 +192,12 @@ export function EmrListHeader({
         className
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--emr-text-secondary)]">
+      <div className="emr-text-section flex min-w-0 flex-1 items-center gap-1.5 font-medium text-[var(--emr-text-secondary)]">
         {leadingAction}
         {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
         <span className="truncate">{label}</span>
         {count !== undefined ? (
-          <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-primary)]">
+          <Badge variant="secondary" className="emr-text-metadata h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 font-medium text-[var(--emr-text-primary)]">
             {count}
           </Badge>
         ) : null}
@@ -238,7 +238,7 @@ export function EmrListGroup({
     <>
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <span className="h-[18px] w-[3px] shrink-0 rounded-[var(--clair-border-width-atomic-1)] bg-[var(--emr-state-selected-border)]" />
-        <div className="flex min-w-0 items-center gap-1.5 text-[14px] font-medium leading-5 tracking-[0.196px]">
+        <div className="emr-text-section flex min-w-0 items-center gap-1.5 font-medium">
           <span className="truncate text-[var(--emr-text-secondary)]">{label}</span>
           {count !== undefined ? (
             <span className="shrink-0 text-[var(--emr-text-tertiary)]">{count}</span>
@@ -262,20 +262,20 @@ export function EmrListGroup({
   );
 
   return (
-    <section className={cn("flex flex-col gap-1 rounded-[var(--clair-radius-atomic-10)]", className)}>
+    <section className={cn("emr-density-stack-sm flex flex-col rounded-[var(--clair-radius-atomic-10)]", className)}>
       {onToggle ? (
         <button
           type="button"
-          className="flex h-8 w-full items-center gap-3 rounded-md p-1 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="emr-density-list-compact flex h-8 w-full items-center gap-3 rounded-md text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-expanded={!collapsed}
           onClick={onToggle}
         >
           {titleContent}
         </button>
       ) : (
-        <div className="flex h-8 items-center gap-3 rounded-md p-1">{titleContent}</div>
+        <div className="emr-density-list-compact flex h-8 items-center gap-3 rounded-md">{titleContent}</div>
       )}
-      {collapsed ? null : <div className="flex flex-col gap-1">{children}</div>}
+      {collapsed ? null : <div className="emr-density-stack-sm flex flex-col">{children}</div>}
     </section>
   );
 }
@@ -299,21 +299,21 @@ export function EmrListItem({
       <div className="flex min-h-6 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           {title ? (
-            <div className="truncate text-[13px] font-semibold leading-5 text-[var(--emr-text-secondary)]">
+            <div className="emr-text-dense truncate font-semibold text-[var(--emr-text-secondary)]">
               {title}
             </div>
           ) : null}
           {subtitle ? (
-            <div className="truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
+            <div className="emr-text-metadata truncate font-medium text-muted-foreground">
               {subtitle}
             </div>
           ) : null}
         </div>
         {itemBadge ? <div className="shrink-0">{itemBadge}</div> : null}
       </div>
-      {meta ? <div className="mt-1 min-w-0 truncate text-[12px] leading-4 text-muted-foreground">{meta}</div> : null}
+      {meta ? <div className="emr-text-status mt-1 min-w-0 truncate text-muted-foreground">{meta}</div> : null}
       {footer ? (
-        <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 text-[11px] text-muted-foreground">
+        <div className="emr-text-micro mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 text-muted-foreground">
           {footer}
         </div>
       ) : null}
@@ -322,8 +322,8 @@ export function EmrListItem({
   const itemClassName = cn(
     "group/emr-list-item w-full border text-left transition-colors",
     variant === "outline"
-      ? "rounded-[var(--clair-radius-atomic-8)] px-3 pb-2.5 pt-2"
-      : "rounded-[var(--clair-radius-sm)] px-1 py-1",
+      ? "emr-density-card rounded-[var(--clair-radius-atomic-8)]"
+      : "emr-density-list-compact rounded-[var(--clair-radius-sm)]",
     selected
       ? variant === "outline"
         ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
@@ -370,7 +370,7 @@ export function EmrListItem({
 export function EmrSubpanelBody({ children, className }: EmrSubpanelProps) {
   return (
     <ScrollArea className={cn("min-h-0 flex-1", className)}>
-      <div className="flex flex-col gap-2 px-4 py-2">{children}</div>
+      <div className="emr-density-panel-inset emr-density-stack-md flex flex-col">{children}</div>
     </ScrollArea>
   );
 }

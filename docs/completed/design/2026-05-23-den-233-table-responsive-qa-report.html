@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-233 Table Responsive QA</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-233 Table Responsive QA</h1>
+      <p>Project 12 table density/scroll adoption 후 representative table routes를 1440x900, 1280x880, 1024x768에서 캡처하고 document-level overflow와 table scroll containment를 확인했다.</p>
+
+      <h2>Viewport Matrix</h2>
+      <ul>
+        <li>Routes: dispensing, chart, billing, customer, admin/orders, lab, inpatient.</li>
+        <li>Viewports: 1440x900, 1280x880, 1024x768.</li>
+        <li>Total captures: 21.</li>
+      </ul>
+
+      <h2>Blockers</h2>
+      <p>No document-level horizontal overflow blockers were found. All captured pages had <code>documentElement.scrollWidth === documentElement.clientWidth</code>.</p>
+
+      <h2>Debt</h2>
+      <ul>
+        <li>Chart order table remains very narrow when history aside and right panel are both open at 1280/1024; this is contained by internal scroll and is not a document overflow blocker.</li>
+        <li>Sticky/frozen columns remain deferred because keyboard/focus behavior was not scoped for Project 12.</li>
+        <li>Small two-column local detail tables remain fill/local candidates.</li>
+      </ul>
+
+      <h2>Screenshots</h2>
+      <p>Screenshot files are saved under <code>output/ui-audit-2026-05-22/screenshots/den-233-*.png</code>.</p>
+
+      <h2>Verification</h2>
+      <ul>
+        <li>Playwright screenshot/metric capture: 21 captures, 0 document overflow blockers.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

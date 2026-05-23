@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-225 Table Density Research Report</title>
+    <style>
+      body { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #18181b; line-height: 1.65; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f4f4f5; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+      a { color: #0369a1; }
+      .ok { color: #047857; font-weight: 700; }
+      .note { color: #52525b; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-225 Table Density Research Report</h1>
+    <p class="note">작성일: 2026-05-23 · Linear: DEN-225 · Project 12 Table Density & Data Grid Ergonomics</p>
+
+    <h2>요약</h2>
+    <p>
+      CLAiR EMR table UX는 <code>compact / standard / comfortable</code> density, <code>fill / scroll</code> layout contract, column role 기반 header interaction으로 나눠 구현해야 한다.
+      특히 scroll table은 header/body/row background/border가 같은 inner table width를 가져야 하며, 중간에서 끊기고 오른쪽 blank area가 생기면 blocker로 본다.
+    </p>
+
+    <h2>외부 리서치</h2>
+    <table>
+      <thead>
+        <tr><th>자료</th><th>핵심 인사이트</th><th>CLAiR 적용</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><a href="https://mui.com/x/react-data-grid/row-height/">MUI row height</a></td><td>row height와 density는 table-level concern이며 compact/standard/comfortable 모델을 제공한다.</td><td>행 높이, header 높이, padding, text role을 하나의 density contract로 묶는다.</td></tr>
+        <tr><td><a href="https://mui.com/x/react-data-grid/layout/">MUI layout</a></td><td>grid는 parent dimensions가 없으면 올바르게 렌더링되지 않는다.</td><td>scroll table wrapper와 inner table width를 명시한다.</td></tr>
+        <tr><td><a href="https://mui.com/x/react-data-grid/sorting/">MUI sorting</a> / <a href="https://mui.com/x/react-data-grid/filtering/">filtering</a></td><td>sort/filter는 별도 feature로 다루며 column별 제어가 필요하다.</td><td>모든 header를 interactive로 보이게 하지 않는다.</td></tr>
+        <tr><td><a href="https://www.ag-grid.com/javascript-data-grid/theming-compactness/">AG Grid compactness</a> / <a href="https://www.ag-grid.com/javascript-data-grid/column-menu/">column menu</a></td><td>compactness는 theme parameter이고 column menu는 명시적 기능이다.</td><td>density token과 menu affordance를 분리한다.</td></tr>
+        <tr><td><a href="https://ant.design/components/table/?locale=en">Ant Design Table</a></td><td>size, scroll, fixed header/columns, sorter/filter를 table API로 분리한다.</td><td>fill/scroll wrapper와 header role을 table contract로 문서화한다.</td></tr>
+        <tr><td><a href="https://tanstack.com/table/latest/docs/overview">TanStack Table</a></td><td>headless table은 logic/state를 제공하지만 DOM/styles는 제품이 소유한다.</td><td>CLAiR가 markup, density, scroll containment, accessibility를 소유해야 한다.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>결정</h2>
+    <ul>
+      <li>Density: <code>compact</code>(36/36), <code>standard</code>(44/40), <code>comfortable</code>(52/44)로 시작한다.</li>
+      <li>Layout: <code>fill</code> table과 <code>scroll</code> table을 구분한다.</li>
+      <li>Scroll: outer wrapper는 overflow를, inner table은 unbroken min-width를 소유한다.</li>
+      <li>Header: <code>static</code>, <code>sortable</code>, <code>filterable</code>, <code>menu</code>, <code>compound</code> role로 허용 affordance를 제한한다.</li>
+      <li>Source doc: <code>docs/design/system/table-density-and-grid-ergonomics.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><span class="ok">PASS</span> 외부 primary docs review 완료</li>
+      <li><span class="ok">PASS</span> <code>npm run docs:check</code></li>
+    </ul>
+  </body>
+</html>

@@ -281,7 +281,7 @@ function RightPanelToggleButton({
       type="button"
       variant="outline"
       size="xs"
-      className="relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--emr-text-secondary)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
+      className="emr-text-status relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[var(--emr-text-secondary)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
       aria-label={`${label} ${open ? "접기" : "열기"}`}
       aria-expanded={open}
       aria-pressed={open}
@@ -336,7 +336,7 @@ function PatientContextDatumBadge({ label, value }: PatientContextDatum) {
   return (
     <Badge
       variant="secondary"
-      className="h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]"
+      className="emr-text-dense-label h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 font-medium"
     >
       <span className="text-[var(--emr-text-tertiary)]">{label}</span>
       <span className="text-[var(--emr-text-secondary)]">{value}</span>
@@ -350,7 +350,7 @@ function PatientContextMemoButton({ action }: { action: PatientContextMemoAction
       type="button"
       variant="outline"
       size="xs"
-      className="h-[22px] rounded-[var(--clair-radius-atomic-6)] bg-card px-2 text-[12px] leading-4 tracking-[0.025em] text-[var(--emr-text-secondary)] disabled:bg-[var(--emr-surface-disabled)] disabled:text-[var(--emr-text-disabled)]"
+      className="emr-text-status h-[22px] rounded-[var(--clair-radius-atomic-6)] bg-card px-2 text-[var(--emr-text-secondary)] disabled:bg-[var(--emr-surface-disabled)] disabled:text-[var(--emr-text-disabled)]"
       disabled={action.disabled}
       onClick={action.onClick}
     >

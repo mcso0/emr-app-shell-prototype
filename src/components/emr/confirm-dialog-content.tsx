@@ -42,7 +42,7 @@ export function EmrConfirmDialogContent({
     >
       <DialogHeader className="px-6 pb-3 pt-6">
         <div className="flex min-w-0 items-start justify-between gap-3">
-          <DialogTitle className="text-[18px] font-bold leading-6 text-[var(--emr-text-primary)]">
+          <DialogTitle className="emr-text-dialog-title font-bold text-[var(--emr-text-primary)]">
             {title}
           </DialogTitle>
           <Button

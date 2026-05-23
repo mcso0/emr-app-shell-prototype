@@ -287,7 +287,7 @@ function OrderQueueCard({
           />
         }
       />
-      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-tertiary)]">
+      <div className="emr-text-dense mt-0.5 flex h-[18px] min-w-0 items-center gap-1 font-medium text-[var(--emr-text-tertiary)]">
         <span className="shrink-0 truncate">{item.orderType}</span>
         <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
         <span className="min-w-0 flex-1 truncate">{item.orderName}</span>

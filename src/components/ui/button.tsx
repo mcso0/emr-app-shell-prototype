@@ -21,11 +21,11 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-[var(--clair-control-height-md)] gap-1 px-3 text-[14px] leading-5 tracking-[0.014em] has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-4",
-        xs: "h-[var(--clair-control-height-xs)] gap-1 px-2 text-[12px] leading-4 tracking-[0.025em] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-[var(--clair-control-height-sm)] gap-1 px-2 text-[12px] leading-4 tracking-[0.025em] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        lg: "h-[var(--clair-control-height-lg)] gap-1.5 px-4 text-[14px] leading-5 tracking-[0.014em] has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
-        xl: "h-[var(--clair-control-height-xl)] gap-1.5 px-4 text-[14px] leading-5 tracking-[0.014em] has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
+          "emr-control-text h-[var(--clair-control-height-md)] gap-1 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-4",
+        xs: "emr-control-text-compact h-[var(--clair-control-height-xs)] gap-1 px-2 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "emr-control-text-compact h-[var(--clair-control-height-sm)] gap-1 px-2 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        lg: "emr-control-text h-[var(--clair-control-height-lg)] gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
+        xl: "emr-control-text h-[var(--clair-control-height-xl)] gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
         icon: "size-[var(--clair-control-height-md)] [&_svg:not([class*='size-'])]:size-4",
         "icon-xs": "size-[var(--clair-control-height-xs)] [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-[var(--clair-control-height-sm)] [&_svg:not([class*='size-'])]:size-3",
@@ -33,8 +33,8 @@ const buttonVariants = cva(
         "icon-xl": "size-[var(--clair-control-height-xl)] [&_svg:not([class*='size-'])]:size-4",
       },
       roundness: {
-        default: "rounded-[var(--clair-radius-md)]",
-        round: "rounded-[var(--clair-radius-full)]",
+        default: "emr-control-radius",
+        round: "rounded-full",
       },
     },
     defaultVariants: {

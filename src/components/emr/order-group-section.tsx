@@ -59,7 +59,7 @@ export function EmrOrderGroupSection({
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {label ? (
-        <div className="flex h-6 items-center text-[12px] font-medium text-[var(--emr-text-tertiary)]">
+        <div className="emr-text-status flex h-6 items-center font-medium text-[var(--emr-text-tertiary)]">
           {label}
         </div>
       ) : null}
@@ -87,7 +87,7 @@ export function EmrOrderGroupSection({
             <div className="flex min-w-0 items-center gap-2.5">
               <span
                 className={cn(
-                  "truncate text-[14px] font-semibold leading-5 text-[var(--emr-text-secondary)]",
+                  "emr-text-body truncate font-semibold text-[var(--emr-text-secondary)]",
                   titleClassName
                 )}
               >
@@ -96,7 +96,7 @@ export function EmrOrderGroupSection({
               {count !== undefined ? (
                 <Badge
                   variant="secondary"
-                  className="h-5 min-w-5 rounded-md px-1 text-[12px] font-medium text-[var(--emr-text-tertiary)]"
+                  className="emr-text-status h-5 min-w-5 rounded-md px-1 font-medium text-[var(--emr-text-tertiary)]"
                 >
                   {count}
                 </Badge>

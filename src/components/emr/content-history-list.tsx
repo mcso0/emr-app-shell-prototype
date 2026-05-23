@@ -57,7 +57,7 @@ export function EmrContentHistoryGroup({
 
   const titleContent = (
     <>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] font-medium leading-[18px] tracking-[0.019em]">
+      <div className="emr-text-dense-label flex min-w-0 flex-1 items-center gap-1.5 font-medium">
         <span className="truncate text-muted-foreground">
           {label}
         </span>
@@ -76,11 +76,11 @@ export function EmrContentHistoryGroup({
   );
 
   return (
-    <section className="flex flex-col gap-1 rounded-[10px]" data-testid={dataTestId}>
+    <section className="emr-density-stack-sm flex flex-col rounded-[10px]" data-testid={dataTestId}>
       {onToggle ? (
         <button
           type="button"
-          className="flex h-8 w-full items-center justify-between gap-3 rounded-md px-1 py-1 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="emr-density-list-compact flex h-8 w-full items-center justify-between gap-3 rounded-md text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-expanded={!collapsed}
           data-testid={toggleTestId}
           onClick={onToggle}
@@ -88,7 +88,7 @@ export function EmrContentHistoryGroup({
           {titleContent}
         </button>
       ) : (
-        <div className="flex h-8 items-center justify-between gap-3 rounded-md px-1 py-1">{titleContent}</div>
+        <div className="emr-density-list-compact flex h-8 items-center justify-between gap-3 rounded-md">{titleContent}</div>
       )}
       <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <AnimatePresence initial={false}>
@@ -123,11 +123,11 @@ export function EmrContentHistoryItem({
     <>
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[14px] font-semibold leading-5 tracking-normal text-[var(--emr-text-secondary)]">
+          <div className="emr-text-body truncate font-semibold text-[var(--emr-text-secondary)]">
             {title}
           </div>
           {subtitle ? (
-            <div className="mt-0.5 min-w-0 truncate text-[13px] font-medium leading-[18px] tracking-normal text-[var(--emr-text-tertiary)]">
+            <div className="emr-text-dense mt-0.5 min-w-0 truncate font-medium text-[var(--emr-text-tertiary)]">
               {subtitle}
             </div>
           ) : null}
@@ -136,14 +136,14 @@ export function EmrContentHistoryItem({
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {meta ? (
-        <div className="mt-1 flex min-w-0 items-center gap-2 text-[13px] font-medium leading-[18px] tracking-normal text-[var(--emr-text-tertiary)]">
+        <div className="emr-text-dense mt-1 flex min-w-0 items-center gap-2 font-medium text-[var(--emr-text-tertiary)]">
           {meta}
         </div>
       ) : null}
     </>
   );
   const itemClassName = cn(
-    "block w-full border-b border-[var(--emr-line-subtle)] px-1 py-2 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+    "emr-density-list-item block w-full border-b border-[var(--emr-line-subtle)] text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
     selected && "bg-transparent",
     className
   );

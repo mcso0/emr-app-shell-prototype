@@ -261,7 +261,7 @@ function VeterinarianLaneHeader({
       <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[var(--emr-text-inverse)] bg-[var(--emr-state-hover)] text-[10px] font-semibold leading-none text-primary-foreground">
         {veterinarian.initial}
       </span>
-      <span className="min-w-0 truncate text-[13px] font-semibold">{veterinarian.name}</span>
+      <span className="min-w-0 truncate emr-text-dense font-semibold">{veterinarian.name}</span>
     </div>
   );
 }
@@ -766,7 +766,7 @@ function ReceptionStatusBadge({
     <Badge
       variant="outline"
       className={cn(
-        "h-6 rounded-lg px-2 py-0.5 text-[12px] font-medium leading-4",
+        "h-6 rounded-lg px-2 py-0.5 emr-text-metadata font-medium leading-4",
         tone === "green" &&
           "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
         tone === "orange" &&
@@ -832,7 +832,7 @@ function PatientCard({
       {waitingMinutes !== undefined ? (
         <span
           className={cn(
-            "ml-1 shrink-0 text-[11px] font-semibold leading-none",
+            "ml-1 shrink-0 emr-text-micro font-semibold leading-none",
             getWaitingTimeTextClassName(waitingMinutes)
           )}
         >
@@ -897,7 +897,7 @@ function PatientCard({
           />
         }
       />
-      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
+      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
         <span className="min-w-0 flex-1 truncate">{visitText}</span>
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
@@ -1167,7 +1167,7 @@ function ScheduleAppointmentCard({
       <button type="button" className="block w-full text-left outline-none" onClick={onSelect}>
         <div className="flex items-center gap-1.5 overflow-hidden">
           <ReceptionStatusBadge
-            className="h-5 rounded-md px-1.5 text-[11px]"
+            className="h-5 rounded-md px-1.5 emr-text-micro"
             label={getStatusLabel("appointment", appointment.status)}
             tone={getAppointmentTone(appointment.status)}
           />
@@ -1178,29 +1178,29 @@ function ScheduleAppointmentCard({
           />
         </div>
         <div className="mt-1 flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate text-[13px] font-bold leading-4 text-foreground">
+          <span className="truncate emr-text-dense font-bold leading-4 text-foreground">
             {patient?.name ?? "환자 미지정"}
           </span>
-          <span className="truncate text-[12px] font-semibold leading-4 text-[var(--emr-text-secondary)]">
+          <span className="truncate emr-text-metadata font-semibold leading-4 text-[var(--emr-text-secondary)]">
             {visitPurpose}
           </span>
         </div>
-        <div className="mt-1 truncate text-[11px] leading-4 text-[var(--emr-text-secondary)]">
+        <div className="mt-1 truncate emr-text-micro leading-4 text-[var(--emr-text-secondary)]">
           {getShortTime(appointment.scheduledStartAt)} · {getAppointmentDurationLabel(appointment)}
         </div>
         {visitDetail ? (
-          <div className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+          <div className="mt-0.5 truncate emr-text-micro leading-4 text-muted-foreground">
             {getGuardianDisplay(guardian)} · {visitDetail}
           </div>
         ) : null}
       </button>
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="truncate text-[11px] text-muted-foreground">
+        <span className="truncate emr-text-micro text-muted-foreground">
           {getAppointmentVeterinarianName(appointment)}
         </span>
         <Button
           size="sm"
-          className="h-7 px-2 text-[12px]"
+          className="h-7 px-2 emr-text-metadata"
           variant={canCheckIn ? "default" : "outline"}
           disabled={!canCheckIn}
           onClick={onCheckIn}
@@ -1252,7 +1252,7 @@ function ScheduleWalkInQueueCard({
       >
         <div className="flex items-center gap-1.5 overflow-hidden">
           <ReceptionStatusBadge
-            className="h-5 rounded-md px-1.5 text-[11px]"
+            className="h-5 rounded-md px-1.5 emr-text-micro"
             label={getReceptionEncounterStatusLabel(draft.encounter.status)}
             tone={getEncounterTone(draft.encounter.status)}
           />
@@ -1263,21 +1263,21 @@ function ScheduleWalkInQueueCard({
           />
         </div>
         <div className="mt-1 flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate text-[13px] font-bold leading-4 text-foreground">
+          <span className="truncate emr-text-dense font-bold leading-4 text-foreground">
             {patient?.name ?? "환자 미지정"}
           </span>
-          <span className="truncate text-[12px] font-semibold leading-4 text-[var(--emr-text-secondary)]">
+          <span className="truncate emr-text-metadata font-semibold leading-4 text-[var(--emr-text-secondary)]">
             {visitPurpose}
           </span>
         </div>
-        <div className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+        <div className="mt-0.5 truncate emr-text-micro leading-4 text-muted-foreground">
           {getShortTime(draft.encounter.checkedInAt)} · {durationLabel} · {getGuardianDisplay(guardian)} ·{" "}
           {draft.department ?? defaultWalkInDepartment}
           {draft.memo ? ` · ${draft.memo}` : ""}
         </div>
       </button>
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="truncate text-[11px] text-muted-foreground">
+        <span className="truncate emr-text-micro text-muted-foreground">
           {veterinarianName ?? "담당의 미지정"}
         </span>
       </div>
@@ -1405,7 +1405,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 justify-start px-2 text-[13px] font-medium leading-[18px] text-foreground"
+              className="h-7 justify-start px-2 emr-text-dense font-medium text-foreground"
               aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
             />
           }
@@ -1420,7 +1420,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           {view === "day" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold leading-5 text-foreground">
+                <div className="emr-text-dense font-semibold leading-5 text-foreground">
                   2026년 5월
                 </div>
                 <div className="flex items-center gap-1">
@@ -1436,7 +1436,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                 {receptionDatePickerWeekdays.map((weekday) => (
                   <span
                     key={weekday}
-                    className="h-6 text-[11px] font-medium leading-6 text-muted-foreground"
+                    className="h-6 emr-text-micro font-medium leading-6 text-muted-foreground"
                   >
                     {weekday}
                   </span>
@@ -1446,7 +1446,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                     key={cell.key}
                     type="button"
                     className={cn(
-                      "flex size-7 items-center justify-center rounded-md text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex size-7 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                       cell.inMonth
                         ? "text-foreground"
                         : "text-muted-foreground",
@@ -1468,7 +1468,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           {view === "week" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold leading-5 text-foreground">
+                <div className="emr-text-dense font-semibold leading-5 text-foreground">
                   2026년 4월 - 5월
                 </div>
                 <div className="flex items-center gap-1">
@@ -1486,7 +1486,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                     key={week.key}
                     type="button"
                     className={cn(
-                      "flex h-8 items-center rounded-md px-2 text-left text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex h-8 items-center rounded-md px-2 text-left emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                       week.selected
                         ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
                         : "text-foreground"
@@ -1504,7 +1504,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           {view === "month" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="text-[13px] font-semibold leading-5 text-foreground">
+                <div className="emr-text-dense font-semibold leading-5 text-foreground">
                   2026년
                 </div>
                 <div className="flex items-center gap-1">
@@ -1525,7 +1525,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                       key={month}
                       type="button"
                       className={cn(
-                        "flex h-8 items-center justify-center rounded-md text-[12px] font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "flex h-8 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                         selected
                           ? "bg-primary text-primary-foreground hover:bg-primary/90"
                           : "text-foreground"
@@ -1547,7 +1547,7 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
         type="button"
         variant="outline"
         size="sm"
-        className="h-7 bg-[var(--emr-surface-panel)] px-2 text-[12px] font-medium"
+        className="h-7 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata font-medium"
         aria-label="오늘 일자로 이동"
         onClick={() => setDatePickerOpen(false)}
       >
@@ -1584,7 +1584,7 @@ function ScheduleToolbar({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <ReceptionScheduleDateControl view={view} />
-        <span className="ml-2 rounded-md bg-muted px-2 py-1 text-[12px] font-medium leading-4 text-muted-foreground">
+        <span className="ml-2 rounded-md bg-muted px-2 py-1 emr-text-metadata font-medium leading-4 text-muted-foreground">
           영업시간{" "}
           <span className="font-semibold text-primary">
             {getBusinessHoursTimeRangeLabel()}
@@ -1725,7 +1725,7 @@ function EmptyReceptionSlotButton({
           data-testid={`${testId}-icon`}
         />
         <span
-          className="whitespace-nowrap text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]"
+          className="whitespace-nowrap emr-text-metadata font-semibold leading-4 text-[var(--emr-status-info-text)]"
           aria-hidden="true"
           data-testid={`${testId}-label`}
         >
@@ -1773,11 +1773,11 @@ function ReceptionVisitContextBanner({
               오늘 내원: {reason}
             </h2>
           </div>
-          <div className="mt-1 text-[12px] text-[var(--emr-text-secondary)]">
+          <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
             {guardianName ?? "보호자 미지정"} 보호자 · {patientName}({patientNo}) · {summary}
           </div>
         </div>
-        <div className="rounded-md border border-[var(--emr-status-info-border)] bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+        <div className="rounded-md border border-[var(--emr-status-info-border)] bg-card px-2.5 py-1 emr-text-micro font-medium text-muted-foreground">
           session-only demo context
         </div>
       </div>
@@ -1836,7 +1836,7 @@ function DayScheduleBoard({
                   <button
                     key={`all-day-${veterinarian.id}-${appointment.id}`}
                     type="button"
-                    className="truncate rounded border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-0.5 text-left text-[11px] font-medium text-primary"
+                    className="truncate rounded border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-0.5 text-left emr-text-micro font-medium text-primary"
                     onClick={() => onSelectAppointment(appointment)}
                   >
                     예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
@@ -1850,7 +1850,7 @@ function DayScheduleBoard({
       </div>
       {unassignedWalkIns.length ? (
         <div className="flex gap-2 border-b bg-muted/70 p-2">
-          <div className="flex w-14 shrink-0 items-center justify-center text-[11px] font-medium text-muted-foreground">
+          <div className="flex w-14 shrink-0 items-center justify-center emr-text-micro font-medium text-muted-foreground">
             미지정
           </div>
           <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
@@ -1894,7 +1894,7 @@ function DayScheduleBoard({
               <div
                 key={hour}
                 className={cn(
-                  "absolute left-0 right-0 flex justify-end pr-2 text-[11px] leading-4 text-muted-foreground",
+                  "absolute left-0 right-0 flex justify-end pr-2 emr-text-micro leading-4 text-muted-foreground",
                   firstLabel && "translate-y-1",
                   lastLabel && "-translate-y-full",
                   !firstLabel && !lastLabel && "-translate-y-1/2"
@@ -2027,10 +2027,10 @@ function WeekScheduleBoard({
               day.active && "bg-[var(--emr-status-info-bg)]/60"
             )}
           >
-            <span className="text-[11px] text-muted-foreground">{day.label}</span>
+            <span className="emr-text-micro text-muted-foreground">{day.label}</span>
             <span
               className={cn(
-                "mt-1 flex size-7 items-center justify-center rounded-full text-[14px] font-semibold",
+                "mt-1 flex size-7 items-center justify-center rounded-full emr-text-body font-semibold",
                 day.active && "bg-primary text-primary-foreground"
               )}
             >
@@ -2069,7 +2069,7 @@ function WeekScheduleBoard({
             }}
           >
             <div className="relative border-r">
-              <span className="absolute left-0 right-0 top-2 text-center text-[11px] text-muted-foreground">
+              <span className="absolute left-0 right-0 top-2 text-center emr-text-micro text-muted-foreground">
                 {getScheduleHourLabel(hour)}
               </span>
             </div>
@@ -2130,7 +2130,7 @@ function WeekScheduleBoard({
           style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}
         >
           <div className="relative h-6 border-r">
-            <span className="absolute left-0 right-0 -top-3 text-center text-[11px] text-muted-foreground">
+            <span className="absolute left-0 right-0 -top-3 text-center emr-text-micro text-muted-foreground">
               {getScheduleHourLabel(dayScheduleEndHour)}
             </span>
           </div>
@@ -2160,8 +2160,8 @@ function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) 
             day === 1 && "bg-[var(--emr-status-info-bg)]/50"
           )}
         >
-          <div className="text-[13px] font-semibold">{day}</div>
-          <div className="mt-3 space-y-1 text-[12px] leading-5 text-[var(--emr-text-secondary)]">
+          <div className="emr-text-dense font-semibold">{day}</div>
+          <div className="mt-3 space-y-1 emr-text-metadata leading-5 text-[var(--emr-text-secondary)]">
             <div>진료 0건</div>
             <div>예약 {day === 1 ? appointmentCount : 1}건</div>
             <div>행사 0건</div>
@@ -2501,7 +2501,7 @@ export function ReceptionContent() {
       ) : null}
       {lastMessageDelivery ? (
         <div
-          className="border-b bg-[var(--emr-status-success-bg)] px-4 py-2 text-[12px] font-semibold text-[var(--emr-status-success-text)]"
+          className="border-b bg-[var(--emr-status-success-bg)] px-4 py-2 emr-text-metadata font-semibold text-[var(--emr-status-success-text)]"
           data-testid="check-in-message-delivery"
         >
           카카오톡 발송 완료: {lastMessageDelivery.bodySnapshot}
@@ -2562,7 +2562,7 @@ function ReceptionFormField({
   required?: boolean;
 }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1.5 text-[12px] font-medium text-[var(--emr-text-secondary)]">
+    <label className="flex min-w-0 flex-col gap-1.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
       <span>
         {label}
         {required ? <span className="ml-0.5 text-primary">*</span> : null}
@@ -2849,19 +2849,19 @@ function WalkInReceptionDialog({
                         className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
                       >
                         {lookupActive && lookupState === "loading" ? (
-                          <div className="px-2.5 py-2 text-[13px] text-muted-foreground">
+                          <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
                             DB 환자 검색 중입니다.
                           </div>
                         ) : null}
                         {lookupActive && lookupState === "error" ? (
-                          <div className="px-2.5 py-2 text-[13px] text-[var(--emr-status-danger-text)]">
+                          <div className="px-2.5 py-2 emr-text-dense text-[var(--emr-status-danger-text)]">
                             환자 검색을 불러오지 못했습니다.
                           </div>
                         ) : null}
                         {lookupActive &&
                         lookupState === "idle" &&
                         selectablePatientSummaries.length === 0 ? (
-                          <div className="px-2.5 py-2 text-[13px] text-muted-foreground">
+                          <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
                             검색 결과가 없습니다.
                           </div>
                         ) : null}
@@ -2879,10 +2879,10 @@ function WalkInReceptionDialog({
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => selectReceptionPatient(summary)}
                             >
-                              <span className="truncate text-[13px] font-semibold text-foreground">
+                              <span className="truncate emr-text-dense font-semibold text-foreground">
                                 {optionLabel}
                               </span>
-                              <span className="truncate text-[12px] text-muted-foreground">
+                              <span className="truncate emr-text-metadata text-muted-foreground">
                                 {summary.primaryGuardian?.mobilePhone ?? "보호자 연락처 미등록"}
                               </span>
                             </button>
@@ -2901,7 +2901,7 @@ function WalkInReceptionDialog({
                       readOnly
                       value={patientWeightKg}
                     />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium leading-4 text-foreground">
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium leading-4 text-foreground">
                       kg
                     </span>
                   </div>
@@ -2931,7 +2931,7 @@ function WalkInReceptionDialog({
                         variant={selected ? "default" : "outline"}
                         size="sm"
                         className={cn(
-                          "h-7 rounded-full px-2.5 text-[12px] font-semibold",
+                          "h-7 rounded-full px-2.5 emr-text-metadata font-semibold",
                           selected
                             ? "bg-primary text-primary-foreground hover:bg-primary/90"
                             : ""
@@ -2947,7 +2947,7 @@ function WalkInReceptionDialog({
                     <Input
                       aria-label="태그명"
                       autoFocus
-                      className="h-8 w-[108px] rounded-full bg-card px-3 text-[12px] font-semibold"
+                      className="h-8 w-[108px] rounded-full bg-card px-3 emr-text-metadata font-semibold"
                       placeholder="태그명"
                       value={newPurposeTag}
                       onBlur={addPurposeTag}
@@ -3116,7 +3116,7 @@ function WalkInReceptionDialog({
         </ScrollArea>
 
         <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-8 py-4 sm:justify-between">
-          <label className="flex w-fit items-center gap-2 rounded-md border bg-card px-2.5 py-2 text-[12px] font-semibold text-[var(--emr-text-secondary)]">
+          <label className="flex w-fit items-center gap-2 rounded-md border bg-card px-2.5 py-2 emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
             <Checkbox
               aria-label="카카오톡 발송"
               checked={sendKakaoMessage}
@@ -3128,14 +3128,14 @@ function WalkInReceptionDialog({
             <Button
               type="button"
               variant="ghost"
-              className="h-8 rounded-full px-4 text-[12px] font-semibold text-foreground"
+              className="h-8 rounded-full px-4 emr-text-metadata font-semibold text-foreground"
               onClick={close}
             >
               취소
             </Button>
             <Button
               type="button"
-              className="h-8 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90"
+              className="h-8 rounded-full bg-primary px-4 emr-text-metadata font-semibold text-primary-foreground hover:bg-primary/90"
               disabled={!canCreate || submitting}
               onClick={create}
             >
@@ -3278,13 +3278,13 @@ export function ReceptionDrawer() {
           <section className="rounded-lg border bg-muted p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-[14px] font-semibold">
+                <div className="emr-text-body font-semibold">
                   {selectedAppointment ? "예약 상세" : "접수 상세"}
                 </div>
-                <div className="mt-1 text-[12px] text-muted-foreground">
+                <div className="mt-1 emr-text-metadata text-muted-foreground">
                   {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · {visitSummary}
                 </div>
-                <div className="mt-2 text-[13px] font-medium text-foreground">
+                <div className="mt-2 emr-text-dense font-medium text-foreground">
                   오늘 내원: {visitReason}
                 </div>
               </div>
@@ -3318,7 +3318,7 @@ export function ReceptionDrawer() {
               <Input value="0.00 kg" readOnly className="h-9 bg-card text-right" />
             </ReceptionFormField>
             <ReceptionFormField label="접수구분">
-              <div className="flex h-9 items-center rounded-lg border border-input px-2.5 text-[13px]">
+              <div className="flex h-9 items-center rounded-lg border border-input px-2.5 emr-text-dense">
                 재진
               </div>
             </ReceptionFormField>
@@ -3363,7 +3363,7 @@ export function ReceptionDrawer() {
             <textarea
               value={`${guardian?.name ?? "보호자"} 보호자: ${selectedAppointment?.symptomNote ?? patient.specialNote ?? visitReason}`}
               readOnly
-              className="min-h-20 w-full resize-none rounded-lg border border-input bg-card px-2.5 py-2 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="min-h-20 w-full resize-none rounded-lg border border-input bg-card px-2.5 py-2 emr-text-dense outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </ReceptionFormField>
 
@@ -3375,7 +3375,7 @@ export function ReceptionDrawer() {
               </Button>
             </div>
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid grid-cols-[86px_86px_84px_minmax(120px,1fr)_72px_72px_64px] bg-muted/50 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+              <div className="grid grid-cols-[86px_86px_84px_minmax(120px,1fr)_72px_72px_64px] bg-muted/50 px-3 py-2 emr-text-micro font-medium text-muted-foreground">
                 <span>진단일</span>
                 <span>종료일</span>
                 <span>계통 구분</span>
@@ -3387,7 +3387,7 @@ export function ReceptionDrawer() {
               {recentEncounters.slice(0, 4).map((encounter) => (
                 <div
                   key={encounter.id}
-                  className="grid grid-cols-[86px_86px_84px_minmax(120px,1fr)_72px_72px_64px] border-t px-3 py-2 text-[11px]"
+                  className="grid grid-cols-[86px_86px_84px_minmax(120px,1fr)_72px_72px_64px] border-t px-3 py-2 emr-text-micro"
                 >
                   <span>{getShortDate(encounter.checkedInAt ?? encounter.createdAt)}</span>
                   <span>{encounter.completedAt ? getShortDate(encounter.completedAt) : "-"}</span>

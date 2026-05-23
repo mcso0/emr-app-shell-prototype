@@ -82,6 +82,24 @@
   --emr-text-link: oklch(0.52 0.13 240);
   --emr-text-danger: oklch(0.577 0.245 27.325);
 
+  --emr-type-size-micro: 11px;
+  --emr-type-size-metadata: 12px;
+  --emr-type-size-dense: 13px;
+  --emr-type-size-body: 14px;
+  --emr-type-size-compact-title: 15px;
+  --emr-type-size-panel-title: 16px;
+  --emr-type-size-dialog-title: 18px;
+  --emr-type-leading-micro: 16px;
+  --emr-type-leading-metadata: 16px;
+  --emr-type-leading-dense: 18px;
+  --emr-type-leading-body: 20px;
+  --emr-type-leading-title: 24px;
+  --emr-type-tracking-normal: 0;
+  --emr-type-tracking-dense-label: 0.019em;
+  --emr-type-tracking-metadata: 0.3px;
+  --emr-type-tracking-section: 0.196px;
+  --emr-type-tracking-status: 0.025em;
+
   --emr-state-hover: var(--clair-color-atomic-black-alpha-6);
   --emr-state-active: var(--clair-color-atomic-black-alpha-8);
   --emr-state-selected: var(--emr-surface-selected);
@@ -113,4 +131,17 @@
   --emr-accent-subtle: var(--emr-state-selected);
   --emr-radius-control: var(--radius-md);
   --emr-radius-panel: var(--radius-lg);
+
+  --emr-table-header-height-compact: 36px;
+  --emr-table-header-height-standard: 40px;
+  --emr-table-header-height-comfortable: 44px;
+  --emr-table-row-height-compact: 36px;
+  --emr-table-row-height-standard: 44px;
+  --emr-table-row-height-comfortable: 52px;
+  --emr-table-cell-padding-x-compact: var(--clair-spacing-6);
+  --emr-table-cell-padding-x-standard: var(--clair-spacing-8);
+  --emr-table-cell-padding-x-comfortable: var(--clair-spacing-12);
+  --emr-table-cell-padding-y-compact: var(--clair-spacing-4);
+  --emr-table-cell-padding-y-standard: var(--clair-spacing-8);
+  --emr-table-cell-padding-y-comfortable: var(--clair-spacing-10);
 }

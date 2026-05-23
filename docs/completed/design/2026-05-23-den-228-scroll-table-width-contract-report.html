@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-228 Scroll Table Width Contract</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-228 Scroll Table Width Contract</h1>
+      <p>컬럼이 많은 EMR table이 viewport 안에서만 가로 스크롤되고, header/body/empty/warning row가 같은 table width를 공유하도록 wrapper contract를 확정했다.</p>
+
+      <h2>Wrapper Contract</h2>
+      <ul>
+        <li><code>&lt;Table layout="scroll" minWidth={...}&gt;</code>를 scroll table의 표준 진입점으로 사용한다.</li>
+        <li>outer <code>data-slot="table-container"</code>만 <code>overflow-x-auto</code>를 소유한다.</li>
+        <li>inner table surface만 단일 <code>minWidth</code>를 소유한다.</li>
+        <li><code>TableHeader</code>, <code>TableBody</code>, empty state, warning/change row를 별도 overflow wrapper로 분리하지 않는다.</li>
+      </ul>
+
+      <h2>Affected Surfaces</h2>
+      <ul>
+        <li>P0: dispensing/treatment order table.</li>
+        <li>P1: chart order draft and billing invoice line tables.</li>
+        <li>P2: customer, hospital admin catalog, lab result/order, inpatient ward tables.</li>
+      </ul>
+
+      <h2>Deferred</h2>
+      <p>Sticky/frozen columns are deferred. They need explicit keyboard focus, hover, shadow, and row action alignment rules beyond the current Project 12 scope.</p>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run docs:check</code>: passed.</li>
+        <li>Screenshot QA is performed in DEN-230+ adoption issues where visible table surfaces change.</li>
+      </ul>
+    </main>
+  </body>
+</html>

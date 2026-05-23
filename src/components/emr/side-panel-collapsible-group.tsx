@@ -91,10 +91,10 @@ export function EmrSidePanelCollapsibleGroup({
     : undefined;
 
   return (
-    <section className={cn("flex flex-col gap-1", className)} data-testid={dataTestId}>
+    <section className={cn("emr-density-stack-sm flex flex-col", className)} data-testid={dataTestId}>
       <button
         type="button"
-        className="flex h-8 w-full items-center gap-3 rounded-[var(--clair-radius-atomic-6)] p-1 text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="emr-density-list-compact flex h-8 w-full items-center gap-3 rounded-[var(--clair-radius-atomic-6)] text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-expanded={!collapsed}
         aria-label={`${resolvedAccessibleLabel} ${collapsed ? "펼치기" : "접기"}`}
         onClick={onToggle}
@@ -110,7 +110,7 @@ export function EmrSidePanelCollapsibleGroup({
               aria-hidden="true"
             />
           ) : null}
-          <span className="flex min-w-0 items-center text-[14px] font-medium leading-5 tracking-[0.196px]">
+          <span className="emr-text-section flex min-w-0 items-center font-medium">
             <span className="truncate text-[var(--emr-text-secondary)]">{label}</span>
           </span>
         </div>
@@ -118,7 +118,7 @@ export function EmrSidePanelCollapsibleGroup({
           <span
             data-testid={dataTestId ? `${dataTestId}-count` : undefined}
             className={cn(
-              "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] px-1.5 text-[12px] font-semibold leading-4 tracking-normal text-[var(--emr-status-neutral-text)]",
+              "emr-text-status inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] px-1.5 font-semibold text-[var(--emr-status-neutral-text)]",
               countBadgeClassName
             )}
             style={countBadgeStyle}
@@ -137,7 +137,7 @@ export function EmrSidePanelCollapsibleGroup({
       <AnimatePresence initial={false}>
         {collapsed ? null : (
           <motion.div
-            className={cn("flex flex-col gap-2 overflow-hidden p-1 -m-1", contentClassName)}
+            className={cn("emr-density-stack-md emr-density-list-compact flex flex-col overflow-hidden -m-1", contentClassName)}
             initial={{ height: 0, opacity: 0, y: -4 }}
             animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
             exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}

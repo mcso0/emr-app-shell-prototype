@@ -838,7 +838,7 @@ function DispensingContentBody({
               />
             }
             badge={
-              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+              <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
                 {instructionId}
               </Badge>
             }
@@ -882,8 +882,8 @@ function DispensingContentBody({
           <div className="grid grid-cols-5 rounded-lg border border-border bg-card px-4 py-3">
             {instructionInfoItems.map(({ label, value }) => (
               <div key={label} className="border-r border-border px-3 last:border-r-0">
-                <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-                <div className="mt-1 flex min-h-6 items-center text-[13px] font-medium text-foreground">{value}</div>
+                <div className="emr-text-metadata font-medium text-muted-foreground">{label}</div>
+                <div className="mt-1 flex min-h-6 items-center emr-text-dense font-medium text-foreground">{value}</div>
               </div>
             ))}
           </div>
@@ -912,7 +912,7 @@ function DispensingContentBody({
                 label={group.label}
                 title={group.title}
                 meta={
-                  <span className="text-[12px] font-medium text-muted-foreground">
+                  <span className="emr-text-metadata font-medium text-muted-foreground">
                     작업 완료 {completedCount}/{group.rows.length}
                   </span>
                 }
@@ -954,7 +954,7 @@ function DispensingContentBody({
             );
           })}
           {!visibleTableGroups.length ? (
-            <div className="rounded-lg border border-[var(--emr-line-hairline)] bg-card p-8 text-center text-[13px] font-medium text-muted-foreground">
+            <div className="rounded-lg border border-[var(--emr-line-hairline)] bg-card p-8 text-center emr-text-dense font-medium text-muted-foreground">
               표시할 오더 그룹이 없습니다.
             </div>
           ) : null}
@@ -977,7 +977,7 @@ function DispensingDrawerField({
     <div className="flex flex-col gap-1">
       <Label
         htmlFor={inputId}
-        className="text-[12px] leading-4 text-muted-foreground"
+        className="emr-text-metadata leading-4 text-muted-foreground"
       >
         {label}
       </Label>
@@ -1001,7 +1001,7 @@ export function DispensingDrawer() {
   return (
     <div className="flex h-[calc(100%-48px)] flex-col gap-4 overflow-y-auto p-4">
       <div className="rounded-md border bg-background p-3">
-        <div className="text-[12px] text-muted-foreground">오더명</div>
+        <div className="emr-text-metadata text-muted-foreground">오더명</div>
         <div className="mt-1 text-base font-semibold">{order.name}</div>
       </div>
       <div className="grid grid-cols-2 gap-3">

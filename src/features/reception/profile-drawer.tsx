@@ -535,7 +535,7 @@ function Field({
   label: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-[12px] font-medium text-muted-foreground">
+    <label className="flex flex-col gap-1 emr-text-metadata font-medium text-muted-foreground">
       {label}
       {children}
     </label>
@@ -562,7 +562,7 @@ export function RegistrationFormField({
   return (
     <FormField className={className} data-invalid={Boolean(error) || undefined}>
       <div className="flex min-h-5 items-center justify-between gap-3">
-        <FieldLabel className="text-[14px] font-bold leading-5 text-foreground">
+        <FieldLabel className="emr-text-body font-bold leading-5 text-foreground">
           <span className="inline-flex items-baseline gap-0.5">
             <span>{label}</span>
             {required ? (
@@ -573,9 +573,9 @@ export function RegistrationFormField({
         {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
       </div>
       {children}
-      {error ? <FieldError className="text-[12px] leading-4">{error}</FieldError> : null}
+      {error ? <FieldError className="emr-text-metadata leading-4">{error}</FieldError> : null}
       {helper ? (
-        <FieldDescription className="text-[12px] font-medium leading-4">
+        <FieldDescription className="emr-text-metadata font-medium leading-4">
           {helper}
         </FieldDescription>
       ) : null}
@@ -619,7 +619,7 @@ export function RegistrationFormSection({
     <>
       {separated ? <div className="h-px w-full shrink-0 bg-border" /> : null}
       <FieldSet className={cn("gap-0", className)}>
-        <FieldLegend className="mb-3 text-[13px] font-bold leading-5 text-[var(--emr-text-tertiary)]">
+        <FieldLegend className="mb-3 emr-text-dense font-bold leading-5 text-[var(--emr-text-tertiary)]">
           {title}
         </FieldLegend>
         <FieldGroup className="gap-6">{children}</FieldGroup>
@@ -654,7 +654,7 @@ function KoreanAddressFields({
           value={postalCode}
           onValueChange={(value) => onPostalCodeChange(value.replace(/\D/g, "").slice(0, 5))}
         />
-        <Button type="button" variant="secondary" size="sm" className="h-8 px-2.5 text-[12px] font-semibold">
+        <Button type="button" variant="secondary" size="sm" className="h-8 px-2.5 emr-text-metadata font-semibold">
           주소 검색
         </Button>
       </div>
@@ -752,7 +752,7 @@ function BreedAutocomplete({
                 role="option"
                 aria-selected={value === breed}
                 className={cn(
-                  "rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]",
+                  "rounded-md px-2.5 py-2 text-left emr-text-dense font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]",
                   value === breed && "bg-[var(--emr-state-selected)] text-[var(--emr-status-info-text)]"
                 )}
                 onMouseDown={(event) => event.preventDefault()}
@@ -765,7 +765,7 @@ function BreedAutocomplete({
               </button>
             ))
           ) : (
-            <div className="px-2.5 py-2 text-[12px] text-muted-foreground">
+            <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
               직접 입력한 품종으로 저장합니다.
             </div>
           )}
@@ -860,8 +860,8 @@ function GuardianSearchPopover({
                 }}
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[13px] font-semibold">{guardian.name}</span>
-                  <span className="mt-0.5 block truncate text-[12px] text-muted-foreground">
+                  <span className="block truncate emr-text-dense font-semibold">{guardian.name}</span>
+                  <span className="mt-0.5 block truncate emr-text-metadata text-muted-foreground">
                     {guardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
                     {getGuardianPatientCount(guardian.id, patientGuardians)}마리
                   </span>
@@ -872,7 +872,7 @@ function GuardianSearchPopover({
               </button>
             ))
           ) : (
-            <div className="px-2.5 py-2 text-[12px] text-muted-foreground">
+            <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
               일치하는 보호자가 없습니다. 새 보호자로 등록합니다.
             </div>
           )}
@@ -929,12 +929,12 @@ function BreedMultiSelect({
         {selectedBreeds.map((breed) => (
           <span
             key={breed}
-            className="inline-flex h-7 items-center gap-1 rounded-full border bg-[var(--emr-surface-muted)] px-2 text-[12px] font-semibold text-[var(--emr-text-secondary)]"
+            className="inline-flex h-7 items-center gap-1 rounded-full border bg-[var(--emr-surface-muted)] px-2 emr-text-metadata font-semibold text-[var(--emr-text-secondary)]"
           >
             {breed}
             <button
               type="button"
-              className="text-[13px] leading-none text-[var(--emr-text-tertiary)] hover:text-foreground"
+              className="emr-text-dense leading-none text-[var(--emr-text-tertiary)] hover:text-foreground"
               aria-label={`${breed} 제거`}
               onClick={() => removeBreed(breed)}
             >
@@ -983,7 +983,7 @@ function BreedMultiSelect({
                     type="button"
                     role="option"
                     aria-selected={false}
-                    className="rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]"
+                    className="rounded-md px-2.5 py-2 text-left emr-text-dense font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]"
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => addBreed(breed)}
                   >
@@ -993,7 +993,7 @@ function BreedMultiSelect({
               ) : (
                 <button
                   type="button"
-                  className="rounded-md px-2.5 py-2 text-left text-[12px] text-muted-foreground hover:bg-[var(--emr-state-hover)]"
+                  className="rounded-md px-2.5 py-2 text-left emr-text-metadata text-muted-foreground hover:bg-[var(--emr-state-hover)]"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => addBreed(query)}
                 >
@@ -1026,7 +1026,7 @@ function ProfileHeader({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-[18px] font-semibold">{title}</div>
-          <div className="mt-1 text-[12px] text-muted-foreground">{meta}</div>
+          <div className="mt-1 emr-text-metadata text-muted-foreground">{meta}</div>
         </div>
         <Button size="sm" variant="outline" onClick={onEdit}>
           {editing ? "취소" : "수정"}
@@ -1067,7 +1067,7 @@ function CsHistoryTable({
         aria-label="CS 이력 유형"
         value={csTab}
         items={csTabs}
-        itemClassName="text-[13px]"
+        itemClassName="emr-text-dense"
         onValueChange={setCsTab}
       />
       <div className="overflow-hidden rounded-lg border">
@@ -1078,15 +1078,15 @@ function CsHistoryTable({
                 <div className="font-medium">{entry.category}</div>
                 <Badge variant="outline">{getStatusLabel("csHistory", entry.status)}</Badge>
               </div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
+              <div className="mt-1 emr-text-metadata text-muted-foreground">
                 {getChannelLabel(entry.channel)} · {entry.direction === "inbound" ? "수신" : "발신"} ·{" "}
                 {getShortDateTime(entry.occurredAt)}
               </div>
-              <p className="mt-2 text-[13px] leading-5">{entry.summary}</p>
+              <p className="mt-2 emr-text-dense leading-5">{entry.summary}</p>
             </div>
           ))
         ) : (
-          <div className="p-4 text-[13px] text-muted-foreground">표시할 CS 이력이 없습니다.</div>
+          <div className="p-4 emr-text-dense text-muted-foreground">표시할 CS 이력이 없습니다.</div>
         )}
       </div>
     </section>
@@ -1107,10 +1107,10 @@ function LatestWorkGrid({
               <div className="font-medium">{shortcut.title}</div>
               {shortcut.enabled ? <CdsNavigationExternalLinkIcon className="size-3" /> : null}
             </div>
-            <div className="mt-1 line-clamp-2 min-h-8 text-[12px] text-muted-foreground">
+            <div className="mt-1 line-clamp-2 min-h-8 emr-text-metadata text-muted-foreground">
               {shortcut.description}
             </div>
-            <div className="mt-2 text-[11px] text-muted-foreground">
+            <div className="mt-2 emr-text-micro text-muted-foreground">
               {getShortDateTime(shortcut.occurredAt)}
             </div>
           </>
@@ -1152,13 +1152,13 @@ function PatientVisitContextCard({ bundle }: { bundle: PatientProfileBundle }) {
     <section className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[12px] font-semibold text-[var(--emr-status-info-text)]">
+          <div className="emr-text-metadata font-semibold text-[var(--emr-status-info-text)]">
             오늘 내원 맥락
           </div>
-          <div className="mt-1 text-[14px] font-semibold text-foreground">
+          <div className="mt-1 emr-text-body font-semibold text-foreground">
             {guardianName} 보호자가 {bundle.patient.name}를 {reason}로 접수
           </div>
-          <div className="mt-1 text-[12px] text-muted-foreground">{summary}</div>
+          <div className="mt-1 emr-text-metadata text-muted-foreground">{summary}</div>
         </div>
         <Badge variant="outline" className="bg-card">
           session-only
@@ -1265,7 +1265,7 @@ function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="text-[13px] font-semibold">보호자 연결</div>
+      <div className="emr-text-dense font-semibold">보호자 연결</div>
       {bundle.guardians.map((guardian) => {
         const link = bundle.patientGuardians.find((item) => item.guardianId === guardian.id);
 
@@ -1277,7 +1277,7 @@ function GuardianLinkList({ bundle }: { bundle: PatientProfileBundle }) {
                   <span className="font-medium">{guardian.name}</span>
                   {link?.isPrimary ? <Badge>주보호자</Badge> : <Badge variant="outline">연결</Badge>}
                 </div>
-                <div className="mt-1 text-[12px] text-muted-foreground">
+                <div className="mt-1 emr-text-metadata text-muted-foreground">
                   {guardian.mobilePhone ?? "연락처 미입력"} · {link?.relationship ?? "관계 미입력"}
                 </div>
               </div>
@@ -1341,7 +1341,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   });
 
   if (!bundle) {
-    return <div className="p-4 text-[13px] text-muted-foreground">환자 정보를 찾을 수 없습니다.</div>;
+    return <div className="p-4 emr-text-dense text-muted-foreground">환자 정보를 찾을 수 없습니다.</div>;
   }
 
   const beginEdit = () => {
@@ -1421,7 +1421,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
             aria-label="환자 정보 탭"
             value={activeTab}
             items={patientProfileTabs}
-            itemClassName="text-[13px]"
+            itemClassName="emr-text-dense"
             onValueChange={setActiveTab}
           />
           {activeTab === "summary" ? (
@@ -1529,7 +1529,7 @@ function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="text-[13px] font-semibold">동의 이력</div>
+      <div className="emr-text-dense font-semibold">동의 이력</div>
       <div className="grid gap-2">
         {sortedConsents.length ? (
           sortedConsents.map((consent) => (
@@ -1538,10 +1538,10 @@ function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
               className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3"
             >
               <div className="min-w-0">
-                <div className="text-[13px] font-semibold text-foreground">
+                <div className="emr-text-dense font-semibold text-foreground">
                   {getConsentLabel(consent)}
                 </div>
-                <div className="mt-1 text-[12px] text-muted-foreground">
+                <div className="mt-1 emr-text-metadata text-muted-foreground">
                   {consent.signedAt ? `${getShortDateTime(consent.signedAt)} 서명` : "서명일 미기록"}
                 </div>
               </div>
@@ -1551,7 +1551,7 @@ function GuardianConsentSummary({ consents }: { consents: Consent[] }) {
             </div>
           ))
         ) : (
-          <div className="rounded-lg border border-dashed bg-card p-3 text-[12px] text-muted-foreground">
+          <div className="rounded-lg border border-dashed bg-card p-3 emr-text-metadata text-muted-foreground">
             등록된 동의 이력이 없습니다.
           </div>
         )}
@@ -1589,7 +1589,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   });
 
   if (!bundle) {
-    return <div className="p-4 text-[13px] text-muted-foreground">보호자 정보를 찾을 수 없습니다.</div>;
+    return <div className="p-4 emr-text-dense text-muted-foreground">보호자 정보를 찾을 수 없습니다.</div>;
   }
 
   const beginEdit = () => {
@@ -1669,7 +1669,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
             aria-label="보호자 정보 탭"
             value={activeTab}
             items={guardianProfileTabs}
-            itemClassName="text-[13px]"
+            itemClassName="emr-text-dense"
             onValueChange={setActiveTab}
           />
           {activeTab === "summary" ? (
@@ -1688,7 +1688,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
               />
               <GuardianConsentSummary consents={bundle.consents} />
               <section className="flex flex-col gap-2">
-                <div className="text-[13px] font-semibold">연결 환자</div>
+                <div className="emr-text-dense font-semibold">연결 환자</div>
                 {bundle.patients.map((patient) => {
                   const link = bundle.patientGuardians.find((item) => item.patientId === patient.id);
 
@@ -1703,7 +1703,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
                         <span className="font-medium">{patient.name}</span>
                         {link?.isPrimary ? <Badge>주보호자</Badge> : <Badge variant="outline">연결</Badge>}
                       </div>
-                      <div className="mt-1 text-[12px] text-muted-foreground">
+                      <div className="mt-1 emr-text-metadata text-muted-foreground">
                         {patient.patientNo} · {getSpeciesLabel(patient)} · {getPatientDisplayAge(patient)}
                       </div>
                     </button>
@@ -1908,21 +1908,21 @@ export function NewPatientDialog({
 	                </RegistrationFormField>
 	                {duplicateGuardian ? (
 	                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-3">
-	                    <div className="text-[13px] font-semibold text-[var(--emr-status-danger-text)]">
+	                    <div className="emr-text-dense font-semibold text-[var(--emr-status-danger-text)]">
 	                      이미 등록된 보호자입니다
 	                    </div>
-	                    <div className="mt-1 text-[12px] text-[var(--emr-status-danger-text)]">
+	                    <div className="mt-1 emr-text-metadata text-[var(--emr-status-danger-text)]">
 	                      {duplicateGuardian.name} · {duplicateGuardian.mobilePhone} 보호자를 선택해 연결해 주세요.
 	                    </div>
 	                  </div>
 	                ) : null}
                 {error && !error.includes("환자명") && !error.includes("보호자명") ? (
-	                  <div className="col-span-2 text-[12px] font-medium text-[var(--emr-status-danger-text)]">
+	                  <div className="col-span-2 emr-text-metadata font-medium text-[var(--emr-status-danger-text)]">
 	                    {error}
 	                  </div>
 	                ) : null}
                 {duplicatePatientName ? (
-                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 text-[12px] font-medium text-[var(--emr-status-warning-text)]">
+                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 emr-text-metadata font-medium text-[var(--emr-status-warning-text)]">
                     동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
                   </div>
                 ) : null}
@@ -1979,7 +1979,7 @@ export function NewPatientDialog({
                   label="주 품종"
                   required
                   actions={
-                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
+                    <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
                       <Switch
                         checked={draft.isMixed}
                         onCheckedChange={(isMixed) =>
@@ -2048,7 +2048,7 @@ export function NewPatientDialog({
                 <RegistrationFormField
                   label="동물 나이"
                   actions={
-                    <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
+                    <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
                       <Switch
                         size="sm"
                         checked={draft.estimatedAge}
@@ -2091,7 +2091,7 @@ export function NewPatientDialog({
                     />
                   </div>
                   {draft.birthDate ? (
-                    <div className="mt-1 text-[12px] font-medium text-muted-foreground">
+                    <div className="mt-1 emr-text-metadata font-medium text-muted-foreground">
                       생년월일 {draft.birthDate}
                     </div>
                   ) : null}
@@ -2112,7 +2112,7 @@ export function NewPatientDialog({
                     }
                   />
                   {draft.birthDate ? (
-                    <div className="mt-1 text-[12px] font-medium text-muted-foreground">
+                    <div className="mt-1 emr-text-metadata font-medium text-muted-foreground">
                       현재 나이 {getAgeTextFromBirthDate(draft.birthDate) || "계산 불가"}
                     </div>
                   ) : null}
@@ -2136,7 +2136,7 @@ export function NewPatientDialog({
                   className="col-span-2"
                   label="메모"
                   actions={
-                    <span className="text-[12px] font-medium text-[var(--emr-text-tertiary)]">
+                    <span className="emr-text-metadata font-medium text-[var(--emr-text-tertiary)]">
                       {draft.specialNote.length}/500자
                     </span>
                   }
@@ -2156,7 +2156,7 @@ export function NewPatientDialog({
           </div>
         </ScrollArea>
 	        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-card px-8 py-4 sm:justify-between">
-	          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
+	          <div className="min-w-0 text-left emr-text-metadata font-medium text-muted-foreground">
 	            품종/보호자 중복은 현재 세션 데이터 기준으로만 확인합니다.
 	          </div>
 	          <div className="flex shrink-0 items-center gap-2">
@@ -2332,10 +2332,10 @@ function NewGuardianDialog({
 	                  <div className="col-span-2 rounded-lg border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-3">
 	                    <div className="flex items-start justify-between gap-3">
 	                      <div>
-	                        <div className="text-[13px] font-semibold text-[var(--emr-status-danger-text)]">
+	                        <div className="emr-text-dense font-semibold text-[var(--emr-status-danger-text)]">
 	                          이미 등록된 보호자입니다
 	                        </div>
-	                        <div className="mt-1 text-[12px] text-[var(--emr-status-danger-text)]">
+	                        <div className="mt-1 emr-text-metadata text-[var(--emr-status-danger-text)]">
 	                          {duplicateGuardian.name} · {duplicateGuardian.mobilePhone ?? "연락처 미입력"} · 연결 환자{" "}
 	                          {getGuardianPatientCount(duplicateGuardian.id, patientGuardians)}마리
 	                        </div>
@@ -2416,10 +2416,10 @@ function NewGuardianDialog({
 	                <div className="rounded-lg border bg-card p-3">
 	                  <div className="flex items-start justify-between gap-3">
 	                    <div>
-	                      <div className="text-[13px] font-semibold text-foreground">
+	                      <div className="emr-text-dense font-semibold text-foreground">
 	                        전자서명
 	                      </div>
-	                      <div className="mt-1 text-[12px] text-muted-foreground">
+	                      <div className="mt-1 emr-text-metadata text-muted-foreground">
 	                        개인정보 수집 동의는 태블릿 서명 완료 후 등록할 수 있습니다.
 	                      </div>
 	                    </div>
@@ -2457,11 +2457,11 @@ function NewGuardianDialog({
 	                    >
 	                      서명 완료 처리
 	                    </Button>
-	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
+	                    <label className="flex items-center gap-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
 	                      <Checkbox checked={draft.privacyConsent} disabled />
 	                      개인정보 수집 동의
 	                    </label>
-	                    <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
+	                    <label className="flex items-center gap-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
 	                      <Checkbox
 	                        checked={draft.marketingConsent}
 	                        onCheckedChange={(marketingConsent) =>
@@ -2475,7 +2475,7 @@ function NewGuardianDialog({
 	                    </label>
 	                  </div>
 	                  {error && !error.includes("보호자명") ? (
-	                    <div className="mt-3 text-[12px] font-medium text-[var(--emr-status-danger-text)]">
+	                    <div className="mt-3 emr-text-metadata font-medium text-[var(--emr-status-danger-text)]">
 	                      {error}
 	                    </div>
 	                  ) : null}
@@ -2485,7 +2485,7 @@ function NewGuardianDialog({
           </div>
         </ScrollArea>
         <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-card px-8 py-4 sm:justify-between">
-          <div className="min-w-0 text-left text-[12px] font-medium text-muted-foreground">
+          <div className="min-w-0 text-left emr-text-metadata font-medium text-muted-foreground">
             환자 연결은 보호자 상세에서 후속으로 관리합니다.
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -2631,7 +2631,7 @@ function RegistrationModeCard({
         <span className="block text-[15px] font-bold text-foreground">
           {title}
         </span>
-        <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
+        <span className="mt-1 block emr-text-dense leading-5 text-muted-foreground">
           {description}
         </span>
       </span>
@@ -3183,7 +3183,7 @@ function PatientGuardianRegistrationButton({
                         : "등록 정보 확인"}
                 </DialogTitle>
                 {stepBadge ? (
-                  <Badge variant="secondary" className="h-6 rounded-md px-2 text-[12px] font-semibold">
+                  <Badge variant="secondary" className="h-6 rounded-md px-2 emr-text-metadata font-semibold">
                     {stepBadge}
                   </Badge>
                 ) : null}
@@ -3330,10 +3330,10 @@ function PatientGuardianRegistrationButton({
                       <div className="rounded-lg border bg-card p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-[13px] font-semibold text-foreground">
+                            <div className="emr-text-dense font-semibold text-foreground">
                               전자서명
                             </div>
-                            <div className="mt-1 text-[12px] text-muted-foreground">
+                            <div className="mt-1 emr-text-metadata text-muted-foreground">
                               개인정보 수집 동의는 태블릿 서명 완료 후 등록할 수 있습니다.
                             </div>
                           </div>
@@ -3380,11 +3380,11 @@ function PatientGuardianRegistrationButton({
                           >
                             서명 완료 처리
                           </Button>
-                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
+                          <label className="flex items-center gap-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
                             <Checkbox checked={guardianDraft.privacyConsent} disabled />
                             개인정보 수집 동의
                           </label>
-                          <label className="flex items-center gap-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
+                          <label className="flex items-center gap-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
                             <Checkbox
                               checked={guardianDraft.marketingConsent}
                               onCheckedChange={(marketingConsent) =>
@@ -3398,7 +3398,7 @@ function PatientGuardianRegistrationButton({
                           </label>
                         </div>
                         {errors.privacyConsent ? (
-                          <div className="mt-3 text-[12px] font-medium text-[var(--emr-status-danger-text)]">
+                          <div className="mt-3 emr-text-metadata font-medium text-[var(--emr-status-danger-text)]">
                             {errors.privacyConsent}
                           </div>
                         ) : null}
@@ -3491,10 +3491,10 @@ function PatientGuardianRegistrationButton({
                                         }}
                                       >
                                         <span className="min-w-0 truncate">
-                                          <span className="text-[13px] font-semibold">
+                                          <span className="emr-text-dense font-semibold">
                                             {guardian.name}
                                           </span>
-                                          <span className="ml-1 text-[12px] text-muted-foreground">
+                                          <span className="ml-1 emr-text-metadata text-muted-foreground">
                                             {guardian.mobilePhone ?? "연락처 미입력"} ·{" "}
                                             {getGuardianPatientSummary(guardian.id, patients, patientGuardians)}
                                           </span>
@@ -3506,7 +3506,7 @@ function PatientGuardianRegistrationButton({
                                     );
                                   })
                                 ) : (
-                                  <div className="px-2.5 py-2 text-[12px] text-muted-foreground">
+                                  <div className="px-2.5 py-2 emr-text-metadata text-muted-foreground">
                                     일치하는 보호자가 없습니다.
                                   </div>
                                 )}
@@ -3516,7 +3516,7 @@ function PatientGuardianRegistrationButton({
                         </RegistrationFormField>
                         {selectedGuardian ? (
                           <details className="group rounded-lg border bg-[var(--emr-surface-muted)] p-3" open>
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[13px] font-semibold text-foreground">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 emr-text-dense font-semibold text-foreground">
                               <span className="flex min-w-0 items-center gap-2">
                                 <span className="truncate">
                                   {selectedGuardian.name} 보호자의 동물
@@ -3537,10 +3537,10 @@ function PatientGuardianRegistrationButton({
                                     key={patient.id}
                                     className="flex min-w-0 items-center gap-2 rounded-md border bg-card px-3 py-2"
                                   >
-                                    <span className="shrink-0 text-[13px] font-semibold text-foreground">
+                                    <span className="shrink-0 emr-text-dense font-semibold text-foreground">
                                       {patient.name}
                                     </span>
-                                    <span className="truncate text-[12px] text-muted-foreground">
+                                    <span className="truncate emr-text-metadata text-muted-foreground">
                                       {[patient.breed, getPatientSexLabel(patient), getPatientDisplayAge(patient)]
                                         .filter(Boolean)
                                         .join(" · ")}
@@ -3548,7 +3548,7 @@ function PatientGuardianRegistrationButton({
                                   </div>
                                 ))
                               ) : (
-                                <div className="rounded-md border bg-card px-3 py-2 text-[12px] text-muted-foreground">
+                                <div className="rounded-md border bg-card px-3 py-2 emr-text-metadata text-muted-foreground">
                                   연결된 동물이 없습니다.
                                 </div>
                               )}
@@ -3610,7 +3610,7 @@ function PatientGuardianRegistrationButton({
                         label="주 품종"
                         required
                         actions={
-                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
+                          <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
                             <Switch
                               checked={patientDraft.isMixed}
                               onCheckedChange={(isMixed) =>
@@ -3685,7 +3685,7 @@ function PatientGuardianRegistrationButton({
                         label="동물 나이"
                         required
                         actions={
-                          <label className="flex items-center gap-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
+                          <label className="flex items-center gap-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
                             <Switch
                               size="sm"
                               checked={patientDraft.estimatedAge}
@@ -3794,7 +3794,7 @@ function PatientGuardianRegistrationButton({
                       </RegistrationFormField>
                     </div>
                     {duplicatePatientName ? (
-                      <div className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 text-[12px] font-medium text-[var(--emr-status-warning-text)]">
+                      <div className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 emr-text-metadata font-medium text-[var(--emr-status-warning-text)]">
                         동일 보호자 아래 같은 이름의 동물이 이미 등록되어 있습니다. 실제 중복 여부를 확인해 주세요.
                       </div>
                     ) : null}
@@ -3810,14 +3810,14 @@ function PatientGuardianRegistrationButton({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="text-[13px] font-semibold text-muted-foreground">보호자</span>
+                        <span className="emr-text-dense font-semibold text-muted-foreground">보호자</span>
                         <span className="truncate text-[16px] font-bold text-foreground">
                           {mode === "new_guardian_patient"
                             ? guardianDraft.name
                             : selectedGuardian?.name}
                         </span>
                       </div>
-                      <div className="mt-1 truncate text-[12px] text-muted-foreground">
+                      <div className="mt-1 truncate emr-text-metadata text-muted-foreground">
                         {[
                           mode === "new_guardian_patient"
                             ? guardianDraft.mobilePhone
@@ -3837,12 +3837,12 @@ function PatientGuardianRegistrationButton({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="text-[13px] font-semibold text-muted-foreground">환자</span>
+                        <span className="emr-text-dense font-semibold text-muted-foreground">환자</span>
                         <span className="truncate text-[16px] font-bold text-foreground">
                           {patientDraft.name}
                         </span>
                       </div>
-                      <div className="mt-1 truncate text-[12px] text-muted-foreground">
+                      <div className="mt-1 truncate emr-text-metadata text-muted-foreground">
                         {[
                           getNewPatientSpeciesLabel(patientDraft.species),
                           patientDraft.breed || "품종 미입력",
@@ -3860,7 +3860,7 @@ function PatientGuardianRegistrationButton({
                       </div>
                     </div>
                   </section>
-                  <div className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3 text-[12px] font-medium text-[var(--emr-status-info-text)]">
+                  <div className="rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-3 emr-text-metadata font-medium text-[var(--emr-status-info-text)]">
                     등록을 누르면 위 정보가 현재 session 데이터에 저장됩니다.
                   </div>
                 </div>

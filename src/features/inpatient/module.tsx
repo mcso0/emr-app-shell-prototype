@@ -19,6 +19,7 @@ import {
   EmrInstructionHeaderStack,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,6 +62,7 @@ import {
 import { useInpatientStore } from "@/features/inpatient/store";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type InpatientSemanticTone = "danger" | "info" | "neutral" | "success" | "warning";
 
@@ -91,6 +93,7 @@ const inpatientCautionTone: Record<InpatientCautionTag["tone"], InpatientSemanti
 };
 
 const inpatientTableMinWidthClass = "min-w-[1180px]";
+const inpatientTableMinWidth = 1180;
 
 const inpatientTableColumnClasses = {
   room: "w-[76px]",
@@ -339,19 +342,29 @@ function InpatientWardSection({
   admissions: InpatientAdmission[];
   label: string;
 }) {
+  const [density, setDensity] = useState<EmrTableDensity>("compact");
+
   if (!admissions.length) return null;
 
   return (
     <section className="rounded-lg border bg-card" data-testid={`inpatient-section-${label}`}>
-      <div className="flex h-11 items-center justify-between border-b bg-muted/50 px-4">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b bg-muted/50 px-4 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="text-[14px] font-semibold">{label}</h2>
           <Badge variant="secondary">{admissions.length}</Badge>
         </div>
-        <span className="text-[12px] text-muted-foreground">입원실 · 주의사항 · 담당 · 퇴실 상태</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] text-muted-foreground">입원실 · 주의사항 · 담당 · 퇴실 상태</span>
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <Table className={cn(inpatientTableMinWidthClass, "table-fixed text-[13px]")}>
+      <div>
+        <Table
+          density={density}
+          layout="scroll"
+          minWidth={inpatientTableMinWidth}
+          className={cn(inpatientTableMinWidthClass, "table-fixed")}
+        >
           <TableHeader>
             <TableRow>
               <TableHead className={inpatientTableColumnClasses.room}>입원실</TableHead>

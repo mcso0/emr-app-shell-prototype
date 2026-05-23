@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-218 Reception/Customer Token Adoption Closeout</title>
+    <style>
+      body { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #18181b; line-height: 1.65; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f4f4f5; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+      .ok { color: #047857; font-weight: 700; }
+      .note { color: #52525b; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-218 Reception/Customer Token Adoption Closeout</h1>
+    <p class="note">작성일: 2026-05-23 · Linear: DEN-218 · Project 11 A+ Token & Responsive Hardening</p>
+
+    <h2>요약</h2>
+    <p>
+      접수와 고객관리 화면의 반복적인 11px/12px/13px/14px 텍스트 유틸리티를 기존 EMR typography role로 교체했다.
+      workflow, drawer state, table data shape, 서버 persistence는 변경하지 않았고, 캘린더/테이블 width처럼 구조 의미가 큰 값은 다음 QA/table contract 이슈로 남겼다.
+    </p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>src/features/reception/profile-drawer.tsx</code></li>
+      <li><code>src/features/reception/reception-list-search.tsx</code></li>
+      <li><code>src/features/customer/module.tsx</code></li>
+      <li><code>docs/design/system/arbitrary-value-token-audit.md</code></li>
+    </ul>
+
+    <h2>적용 결과</h2>
+    <table>
+      <thead>
+        <tr><th>항목</th><th>결과</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Targeted direct text utilities</td><td><code>text-[11px]</code>, <code>text-[12px]</code>, <code>text-[13px]</code>, <code>text-[14px]</code> 제거</td></tr>
+        <tr><td>Reception DOM evidence</td><td><code>emr-text-micro</code> 36, <code>emr-text-metadata</code> 149, <code>emr-text-dense</code> 15, <code>emr-text-body</code> 4</td></tr>
+        <tr><td>Customer DOM evidence</td><td><code>emr-text-micro</code> 1, <code>emr-text-metadata</code> 2, <code>emr-text-dense</code> 10, <code>emr-text-body</code> 4</td></tr>
+        <tr><td>Remaining exceptions</td><td>drawer viewport height, table/calendar min-width and grid recipes, semantic token color utilities, larger local display sizes</td></tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><span class="ok">PASS</span> <code>npm run lint -- --ignore-pattern '.worktrees/**'</code> - 기존 warning 5개 유지, error 없음</li>
+      <li><span class="ok">PASS</span> <code>npx tsc --noEmit</code></li>
+      <li><span class="ok">PASS</span> <code>npx playwright test tests/reception.spec.ts tests/customer.spec.ts --project=chromium</code> - 38 passed</li>
+      <li><span class="ok">PASS</span> Browser QA screenshots: <code>den-218-reception-token-adoption-after.png</code>, <code>den-218-customer-token-adoption-after.png</code></li>
+    </ul>
+
+    <h2>후속</h2>
+    <p>
+      Customer/reception table width와 scroll containment는 Project 12 table density contract가 먼저 필요하다.
+      Browser console의 401/403 mock/live boundary API 로그는 현재 MVP local fallback 경계에서 발생하며 이번 typography cleanup 범위 밖이다.
+    </p>
+  </body>
+</html>

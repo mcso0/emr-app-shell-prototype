@@ -91,7 +91,7 @@ export function SoapRichTextEditor({
       attributes: {
         "aria-label": editorAriaLabel,
         class:
-          "min-h-[180px] px-4 py-3 text-[13px] leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--emr-text-placeholder)]",
+          "min-h-[180px] px-4 py-3 emr-text-dense leading-5 outline-none [&_ol]:my-1.5 [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--emr-text-placeholder)]",
       },
     },
     onCreate: ({ editor: currentEditor }) => {
@@ -212,7 +212,7 @@ export function SoapRichTextEditor({
             />
             <PopoverContent align="start" className="w-72 gap-2 p-3" initialFocus={false}>
               <div className="grid gap-1.5">
-                <div className="text-[12px] font-semibold text-foreground">링크 추가</div>
+                <div className="emr-text-metadata font-semibold text-foreground">링크 추가</div>
                 <Input
                   aria-label="링크 URL"
                   value={linkValue}

@@ -64,7 +64,7 @@ export function ReceptionPanelStateMessage({
   return (
     <div
       className={cn(
-        "border-b px-4 py-2 text-[12px] font-medium",
+        "border-b px-4 py-2 emr-text-metadata font-medium",
         tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
         tone === "muted" && "border-[var(--emr-line-subtle)] bg-muted/50 text-muted-foreground",
         tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]"
@@ -77,7 +77,7 @@ export function ReceptionPanelStateMessage({
 
 export function ReceptionEmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed bg-card p-4 text-[13px] text-muted-foreground">
+    <div className="rounded-lg border border-dashed bg-card p-4 emr-text-dense text-muted-foreground">
       {children}
     </div>
   );

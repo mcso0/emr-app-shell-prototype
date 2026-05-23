@@ -14,6 +14,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrTextSideNavButton,
   EmrTextSideNavSection,
@@ -73,6 +74,7 @@ import { WorkspaceMembershipManagement } from "@/features/auth/workspace-members
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 
 const orderSetPlaceholderId = "order-set-placeholder";
@@ -105,6 +107,7 @@ const drawerTabs = [
 type DrawerTab = (typeof drawerTabs)[number]["value"];
 
 const hospitalOrderTableMinWidthClass = "min-w-[1060px]";
+const hospitalOrderTableMinWidth = 1060;
 const hospitalOrderTableColumnClasses = {
   select: "w-10",
   type: "w-[72px]",
@@ -381,7 +384,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
             <div className="ml-4 border-l py-1 pl-3">
               {orderMenuGroups.map((group) => (
                 <div key={group.id} className="py-1">
-                  <div className="flex h-8 items-center rounded-md px-2 text-[14px] font-semibold text-[var(--emr-text-primary)]">
+                  <div className="flex h-8 items-center rounded-md px-2 emr-text-body font-semibold text-[var(--emr-text-primary)]">
                     {group.label}
                   </div>
                   <div className="grid gap-1">
@@ -397,7 +400,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
                           className="pl-4"
                           count={
                             item.subcategoryId ? (
-                              <Badge variant="secondary" className="h-5 min-w-5 rounded-md px-1 text-[11px]">
+                              <Badge variant="secondary" className="h-5 min-w-5 rounded-md px-1 emr-text-micro">
                                 {getSubcategoryCount(orders, item.subcategoryId)}
                               </Badge>
                             ) : undefined
@@ -423,7 +426,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
           <EmrTextSideNavButton
             disabled
             count={
-              <Badge variant="outline" className="h-5 rounded-md px-1.5 text-[11px]">
+              <Badge variant="outline" className="h-5 rounded-md px-1.5 emr-text-micro">
                 후속
               </Badge>
             }
@@ -466,6 +469,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     (state) => state.toggleVisibleOrderSelection
   );
   const workTypeFilter = useHospitalAdminStore((state) => state.workTypeFilter);
+  const [tableDensity, setTableDensity] = useState<EmrTableDensity>("standard");
   const selectedSubcategory = getHospitalOrderSubcategory(selectedSubcategoryId);
   const orderTypeTabs = orderTypeTabsBySubcategory[selectedSubcategoryId] ?? defaultOrderTypeTabs;
   const selectedLeafLabel =
@@ -553,7 +557,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
               <h1 className="text-[20px] font-semibold leading-7">{selectedLeafLabel}</h1>
               <Badge variant="secondary">{visibleOrders.length}</Badge>
             </div>
-            <div className="mt-1 max-w-2xl text-[13px] leading-5 text-muted-foreground">
+            <div className="mt-1 max-w-2xl emr-text-dense leading-5 text-muted-foreground">
               병원관리 / Order 관리 / {selectedLeafLabel}
             </div>
             <LineTabs
@@ -561,7 +565,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
               className="mt-3 max-w-full overflow-x-auto"
               value="all"
               items={orderTypeTabs}
-              itemClassName="text-[14px]"
+              itemClassName="emr-text-body"
               onValueChange={() => undefined}
               size="default"
             />
@@ -580,7 +584,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
           <Input
             aria-label="오더 검색"
-            className="h-8 border-0 bg-transparent px-2 text-[13px] shadow-none focus-visible:ring-0"
+            className="h-8 border-0 bg-transparent px-2 emr-text-dense shadow-none focus-visible:ring-0"
             placeholder="오더명, 별칭, 청구서명 검색"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
@@ -622,13 +626,19 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
         <Button size="icon-sm" variant="outline" aria-label="컬럼 표시 설정">
           <SlidersIcon />
         </Button>
       </section>
       <div className="min-h-0 flex-1 overflow-hidden">
         <ScrollArea className="h-full">
-          <Table className={cn(hospitalOrderTableMinWidthClass, "table-fixed text-[13px]")}>
+          <Table
+            density={tableDensity}
+            layout="scroll"
+            minWidth={hospitalOrderTableMinWidth}
+            className={cn(hospitalOrderTableMinWidthClass, "table-fixed")}
+          >
             <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
               <TableRow className="hover:bg-transparent">
                 <TableHead className={hospitalOrderTableColumnClasses.select}>
@@ -728,7 +738,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       {selectedOrderIds.length > 0 ? (
         <div className="pointer-events-none sticky bottom-3 z-20 mt-[-52px] flex justify-center">
           <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border bg-card px-3 shadow-lg">
-            <span className="text-[12px] font-medium text-muted-foreground">
+            <span className="emr-text-metadata font-medium text-muted-foreground">
               선택한 오더 {selectedOrderIds.length}개
             </span>
             <Button size="sm" variant="outline" onClick={handleDuplicateFirstSelected}>
@@ -820,7 +830,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
               <h1 className="text-[20px] font-semibold leading-7">감사 로그</h1>
               <Badge variant="secondary">{events.length}</Badge>
             </div>
-            <div className="mt-1 max-w-2xl text-[13px] leading-5 text-muted-foreground">
+            <div className="mt-1 max-w-2xl emr-text-dense leading-5 text-muted-foreground">
               병원관리 / 감사 로그 / 주요 변경 이력
             </div>
           </div>
@@ -831,7 +841,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
           <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
           <Input
             aria-label="감사 로그 검색"
-            className="h-8 border-0 bg-transparent px-2 text-[13px] shadow-none focus-visible:ring-0"
+            className="h-8 border-0 bg-transparent px-2 emr-text-dense shadow-none focus-visible:ring-0"
             placeholder="actor, target, encounter 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -854,14 +864,14 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
         {status === "denied" ? (
           <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center">
             <h2 className="text-[16px] font-semibold">감사 로그 접근 제한</h2>
-            <p className="max-w-md text-[13px] leading-5 text-muted-foreground">
+            <p className="max-w-md emr-text-dense leading-5 text-muted-foreground">
               병원관리자만 workspace-scoped audit event를 볼 수 있습니다.
             </p>
           </div>
         ) : status === "error" ? (
           <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-2 px-6 text-center">
             <h2 className="text-[16px] font-semibold">감사 로그를 불러오지 못했습니다</h2>
-            <p className="max-w-md text-[13px] leading-5 text-muted-foreground">
+            <p className="max-w-md emr-text-dense leading-5 text-muted-foreground">
               서버 audit review reader를 다시 확인해 주세요.
             </p>
           </div>
@@ -870,16 +880,16 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="h-9 w-[170px] px-4 text-[12px]">시간</TableHead>
-                  <TableHead className="h-9 w-[180px] px-2 text-[12px]">이벤트</TableHead>
-                  <TableHead className="h-9 w-[150px] px-2 text-[12px]">Actor</TableHead>
-                  <TableHead className="h-9 w-[220px] px-2 text-[12px]">Target</TableHead>
-                  <TableHead className="h-9 px-2 text-[12px]">요약</TableHead>
+                  <TableHead className="h-9 w-[170px] px-4 emr-text-metadata">시간</TableHead>
+                  <TableHead className="h-9 w-[180px] px-2 emr-text-metadata">이벤트</TableHead>
+                  <TableHead className="h-9 w-[150px] px-2 emr-text-metadata">Actor</TableHead>
+                  <TableHead className="h-9 w-[220px] px-2 emr-text-metadata">Target</TableHead>
+                  <TableHead className="h-9 px-2 emr-text-metadata">요약</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {events.map((event) => (
-                  <TableRow key={event.id} data-testid={`audit-review-row-${event.id}`} className="h-12 border-border bg-card text-[13px]">
+                  <TableRow key={event.id} data-testid={`audit-review-row-${event.id}`} className="h-12 border-border bg-card emr-text-dense">
                     <TableCell className="px-4 font-medium">{formatAuditTime(event.occurredAt)}</TableCell>
                     <TableCell className="px-2">
                       <Badge variant="outline" className="rounded-md">{auditEventLabels[event.eventType] ?? event.eventType}</Badge>
@@ -894,11 +904,11 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
                 ))}
                 {status === "loading" ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-[13px] text-muted-foreground">불러오는 중</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center emr-text-dense text-muted-foreground">불러오는 중</TableCell>
                   </TableRow>
                 ) : events.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-[13px] text-muted-foreground">표시할 감사 로그가 없습니다.</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center emr-text-dense text-muted-foreground">표시할 감사 로그가 없습니다.</TableCell>
                   </TableRow>
                 ) : null}
               </TableBody>
@@ -962,13 +972,13 @@ function DrawerField({
       orientation="responsive"
       className="gap-2 md:grid md:grid-cols-[150px_minmax(0,1fr)] md:items-start md:gap-5"
     >
-      <FieldLabel className="pt-2 text-[14px] font-bold text-foreground">
+      <FieldLabel className="pt-2 emr-text-body font-bold text-foreground">
         {label}
         {required ? <span className="ml-1 text-[var(--emr-text-danger)]">*</span> : null}
       </FieldLabel>
       <FieldContent className="min-w-0 gap-1.5">
         {children}
-        {hint ? <FieldDescription className="text-[12px] leading-4">{hint}</FieldDescription> : null}
+        {hint ? <FieldDescription className="emr-text-metadata leading-4">{hint}</FieldDescription> : null}
       </FieldContent>
     </Field>
   );
@@ -1038,7 +1048,7 @@ export function HospitalAdminDrawer() {
 
   if (activeDrawer?.type !== "hospital-order" || !order || !draft) {
     return (
-      <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center emr-text-dense text-muted-foreground">
         오더를 선택해 주세요.
       </div>
     );
@@ -1070,11 +1080,11 @@ export function HospitalAdminDrawer() {
         <Badge className="shrink-0">개별</Badge>
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[20px] font-semibold leading-7">{draft.standardName}</h2>
-          <div className="truncate text-[12px] text-muted-foreground">
+          <div className="truncate emr-text-metadata text-muted-foreground">
             {category?.label} / {subcategory?.label}
           </div>
         </div>
-        <label className="flex shrink-0 items-center gap-2 text-[13px] font-semibold">
+        <label className="flex shrink-0 items-center gap-2 emr-text-dense font-semibold">
           사용여부
           <Switch
             aria-label="오더 사용여부"
@@ -1089,7 +1099,7 @@ export function HospitalAdminDrawer() {
       <ScrollArea className="min-h-0 flex-1">
         <FieldGroup className="px-8 py-6">
           <DrawerField label="분류">
-            <div className="flex h-9 items-center rounded-lg border bg-[var(--emr-surface-muted)] px-3 text-[13px] font-semibold">
+            <div className="flex h-9 items-center rounded-lg border bg-[var(--emr-surface-muted)] px-3 emr-text-dense font-semibold">
               {category?.label} / {subcategory?.label}
             </div>
           </DrawerField>
@@ -1132,7 +1142,7 @@ export function HospitalAdminDrawer() {
               value={draft.careGuide}
               onChange={(event) => updateDraft({ careGuide: event.target.value })}
             />
-            <div className="mt-1 text-right text-[12px] text-muted-foreground">
+            <div className="mt-1 text-right emr-text-metadata text-muted-foreground">
               {draft.careGuide.length}/500자
             </div>
           </DrawerField>
@@ -1144,7 +1154,7 @@ export function HospitalAdminDrawer() {
               value={draft.hospitalInstruction}
               onChange={(event) => updateDraft({ hospitalInstruction: event.target.value })}
             />
-            <div className="mt-1 text-right text-[12px] text-muted-foreground">
+            <div className="mt-1 text-right emr-text-metadata text-muted-foreground">
               {draft.hospitalInstruction.length}/500자
             </div>
           </DrawerField>
@@ -1156,20 +1166,20 @@ export function HospitalAdminDrawer() {
               value={draft.memo}
               onChange={(event) => updateDraft({ memo: event.target.value })}
             />
-            <div className="mt-1 text-right text-[12px] text-muted-foreground">
+            <div className="mt-1 text-right emr-text-metadata text-muted-foreground">
               {draft.memo.length}/500자
             </div>
           </DrawerField>
           <DrawerField label="금액" required>
             <div className="grid gap-2 md:grid-cols-[86px_minmax(100px,1fr)_86px_minmax(100px,1fr)]">
-              <div className="flex items-center text-[12px] font-semibold text-muted-foreground">판매 단위</div>
+              <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">판매 단위</div>
               <DrawerSelect
                 ariaLabel="판매 단위"
                 value={draft.saleUnit}
                 items={Object.entries(saleUnitLabels).map(([value, label]) => ({ label, value }))}
                 onValueChange={(saleUnit) => updateDraft({ saleUnit: saleUnit as HospitalOrderDraft["saleUnit"] })}
               />
-              <div className="flex items-center text-[12px] font-semibold text-muted-foreground">판매 금액</div>
+              <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">판매 금액</div>
               <Input
                 aria-label="판매 금액"
                 inputMode="numeric"
@@ -1178,15 +1188,15 @@ export function HospitalAdminDrawer() {
               />
             </div>
             <div className="mt-2 grid gap-2 md:grid-cols-[86px_minmax(100px,1fr)_86px_minmax(100px,1fr)]">
-              <div className="flex items-center text-[12px] font-semibold text-muted-foreground">반올림</div>
+              <div className="flex items-center emr-text-metadata font-semibold text-muted-foreground">반올림</div>
               <DrawerSelect
                 ariaLabel="반올림"
                 value={draft.roundRule}
                 items={Object.entries(roundRuleLabels).map(([value, label]) => ({ label, value }))}
                 onValueChange={(roundRule) => updateDraft({ roundRule: roundRule as HospitalOrderDraft["roundRule"] })}
               />
-              <label className="flex items-center text-[12px] font-semibold text-muted-foreground">과세</label>
-              <label className="flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold">
+              <label className="flex items-center emr-text-metadata font-semibold text-muted-foreground">과세</label>
+              <label className="flex h-9 items-center gap-2 rounded-lg border px-3 emr-text-dense font-semibold">
                 <Checkbox
                   aria-label="과세 여부"
                   checked={draft.isTaxable}
@@ -1197,7 +1207,7 @@ export function HospitalAdminDrawer() {
             </div>
           </DrawerField>
           <DrawerField label="변경 이력">
-            <div className="flex h-9 items-center border-b px-3 text-[13px]">
+            <div className="flex h-9 items-center border-b px-3 emr-text-dense">
               {draft.updatedAtLabel} {draft.updatedBy}
             </div>
           </DrawerField>

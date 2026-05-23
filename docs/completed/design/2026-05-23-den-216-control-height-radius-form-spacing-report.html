@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-216 Control Height Radius Form Spacing Report</title>
+    <style>
+      :root { color-scheme: light; --ink: #171717; --muted: #5f6673; --line: #d8dde6; --panel: #fff; --soft: #f6f8fb; --accent: #224f9f; --good: #0f766e; --warn: #9a5b00; }
+      body { margin: 0; background: #eef2f7; color: var(--ink); font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; }
+      main { max-width: 1040px; margin: 0 auto; padding: 48px 24px 72px; }
+      header, section { margin-bottom: 16px; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+      h1, h2 { margin: 0 0 12px; letter-spacing: 0; }
+      h1 { font-size: 28px; line-height: 1.25; }
+      h2 { font-size: 18px; }
+      p { margin: 0 0 12px; }
+      table { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { background: var(--soft); color: #303846; }
+      code { border-radius: 6px; background: #edf1f7; padding: 2px 5px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
+      ul { margin: 8px 0 0 20px; padding: 0; }
+      li { margin: 6px 0; }
+      .meta, .note { color: var(--muted); font-size: 13px; }
+      .decision { border-left: 4px solid var(--accent); }
+      .good { color: var(--good); font-weight: 700; }
+      .warn { color: var(--warn); font-weight: 700; }
+      @media (max-width: 760px) { main { padding: 24px 14px 48px; } header, section { padding: 18px; } table { display: block; overflow-x: auto; white-space: nowrap; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">Linear DEN-216 · Project 11 · Milestone 01 Token / Variant Foundations</p>
+        <h1>Control Height, Radius, Form Spacing Variant Foundation</h1>
+        <p>
+          Input, Select, Button, Textarea, Field, SegmentedControl의 control text, radius, field gap을
+          EMR shared role로 묶었다. 기능, validation, 저장, 권한 동작은 변경하지 않았다.
+        </p>
+      </header>
+
+      <section class="decision">
+        <h2>대표 판단</h2>
+        <p>
+          기존 control height는 이미 <code>--clair-control-height-*</code>를 쓰고 있어 새 height token을 늘릴 필요는 없었다.
+          대신 <code>emr-control-text</code>, <code>emr-control-text-compact</code>,
+          <code>emr-control-radius</code>, <code>emr-field-gap</code>, <code>emr-field-group-gap</code>을 추가해
+          radius와 text rhythm, form spacing을 shared rule로 묶었다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Before / After Metrics</h2>
+        <table>
+          <thead><tr><th>Metric</th><th>Before DEN-216</th><th>After DEN-216</th></tr></thead>
+          <tbody>
+            <tr><td>In-scope arbitrary utilities</td><td>1,568</td><td>1,551</td></tr>
+            <tr><td>Typography arbitrary utilities</td><td>1,054</td><td>1,036</td></tr>
+            <tr><td>Raw measure utilities</td><td>1,022</td><td>1,004</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Changed Variants</h2>
+        <ul>
+          <li><code>emr-control-text</code>: default/lg/xl button, input, select, textarea control rhythm.</li>
+          <li><code>emr-control-text-compact</code>: xs/sm and icon-adjacent compact controls.</li>
+          <li><code>emr-control-radius</code>: shared control radius using <code>--emr-radius-control</code>.</li>
+          <li><code>emr-field-gap</code> and <code>emr-field-group-gap</code>: shadcn field spacing aliases.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Changed Files</h2>
+        <ul>
+          <li><code>src/app/globals.css</code></li>
+          <li><code>src/components/ui/button.tsx</code></li>
+          <li><code>src/components/ui/input.tsx</code></li>
+          <li><code>src/components/ui/select.tsx</code></li>
+          <li><code>src/components/ui/textarea.tsx</code></li>
+          <li><code>src/components/ui/field.tsx</code></li>
+          <li><code>src/components/ui/segmented-control.tsx</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Screenshot Evidence</h2>
+        <p><code>output/ui-audit-2026-05-22/screenshots/den-216-reception-controls-after.png</code></p>
+        <p class="note">
+          Reception representative surface에서 top controls, segmented controls, queue cards, action buttons가 렌더링되는 것을 확인했다.
+          server calendar warning은 현재 mock/local 권한 boundary에 따른 기존 화면 상태이며 이번 control variant 변경과 무관하다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Verification</h2>
+        <ul>
+          <li class="good"><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with existing warnings.</li>
+          <li class="good"><code>npx tsc --noEmit</code>: passed.</li>
+          <li class="good"><code>npx playwright test tests/reception.spec.ts --project=chromium -g "reception renders the first-path workspace"</code>: passed.</li>
+          <li class="good">Browser screenshot QA captured for reception controls.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Remaining Exceptions</h2>
+        <ul>
+          <li>Feature-local fixed heights and table control widths remain for DEN-217 to DEN-220.</li>
+          <li>Native table density and column containment are deferred to Project 12.</li>
+          <li>Validation behavior and server/auth boundaries intentionally stayed out of scope.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

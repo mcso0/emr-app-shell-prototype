@@ -28,7 +28,7 @@ export function EmrTextSideNavButton({
     <button
       type="button"
       className={cn(
-        "group flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-[14px] font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]",
+        "emr-text-body group flex h-9 w-full items-center gap-2 rounded-md px-2 text-left font-medium text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]",
         active && "bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
         disabled && "cursor-not-allowed text-muted-foreground hover:bg-transparent",
         className
@@ -67,7 +67,7 @@ export function EmrTextSideNavSection({
     <div className="rounded-md">
       <button
         type="button"
-        className="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-[15px] font-semibold text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]"
+        className="emr-text-compact-title flex h-10 w-full items-center gap-2 rounded-md px-2 text-left font-semibold text-[var(--emr-text-secondary)] transition-colors hover:bg-[var(--emr-state-hover)]"
         aria-expanded={open}
         data-testid={testId}
         onClick={onToggle}
