@@ -2,8 +2,11 @@
 
 Use this file for small product-planning changes that do not need a standalone decision record.
 
+## 2026-05-23
+
+- `added`: Added `docs/product/domain/order-fulfillment-handoff.md` for the DEN-235 chart-confirmed order to downstream fulfillment handoff product contract.
+
 ## 2026-05-03
 
 - `added`: Adopted shared docs lifecycle and routing rules from `docs/_meta/`.
 - `added`: Split DB planning guidance between `docs/product/domain/` and `docs/engineering/data-model/`.
-
