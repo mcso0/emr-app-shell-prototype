@@ -34,10 +34,10 @@ The app currently has usable prototype screens for:
 | Home | Operational dashboard and work-status view with session-only mock data |
 | Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, and local-first encounter path foundations |
 | Customer management | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries |
-| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, and local-first persistence checkpoints |
+| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, and local-first persistence checkpoints |
 | Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route, while full live result/provider persistence remains outside current completion claims |
 | Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, while full live dispensing/treatment execution persistence remains outside current completion claims |
-| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, and amount-integrity regression foundations |
+| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, fulfillment completion candidate sync, and amount-integrity regression foundations |
 | Inpatient | Session-only ward board and detail surface |
 | Hospital admin | Order catalog persistence foundation and membership/invitation management surfaces |
 | Audit | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface |

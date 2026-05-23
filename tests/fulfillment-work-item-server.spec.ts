@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
+import { createMockInvoiceCandidateSyncGateway } from "../src/features/billing/server-invoice-candidate-sync-core";
+import { createMockChartOrderLifecycleGateway } from "../src/features/chart/server-order-lifecycle-persistence-core";
 import {
   createMockFulfillmentWorkItemGateway,
   createSupabaseFulfillmentWorkItemGateway,
@@ -120,12 +122,42 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   expect(completed.status()).toBe(200);
   const completedBody = await completed.json() as {
     ok: true;
+    downstreamSync?: {
+      billingCandidateCount: number;
+      lifecycleStatus?: string;
+    };
     workItems: Array<{ completedAt?: string | null; status: string }>;
   };
   expect(completedBody.workItems[0]).toMatchObject({
     status: "completed",
   });
   expect(completedBody.workItems[0]?.completedAt).toEqual(expect.any(String));
+  expect(completedBody.downstreamSync).toMatchObject({
+    billingCandidateCount: 1,
+    lifecycleStatus: "completed",
+  });
+
+  const lifecycleReadBack = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-lifecycle?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } }
+  );
+  expect(lifecycleReadBack.status()).toBe(200);
+  const lifecycleReadBody = await lifecycleReadBack.json() as {
+    ok: true;
+    lifecycles: Array<{ orderId: string; status: string }>;
+  };
+  expect(lifecycleReadBody.lifecycles.find((row) => row.orderId === orderId)?.status).toBe("completed");
+
+  const candidateReadBack = await request.get(
+    `/api/workspaces/${workspaceId}/billing/invoice-candidates?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } }
+  );
+  expect(candidateReadBack.status()).toBe(200);
+  const candidateReadBody = await candidateReadBack.json() as {
+    ok: true;
+    candidates: Array<{ orderId: string }>;
+  };
+  expect(candidateReadBody.candidates.some((candidate) => candidate.orderId === orderId)).toBe(true);
 });
 
 test("fulfillment core enforces chart sync permission and workspace encounter scope", async () => {
@@ -205,6 +237,70 @@ test("fulfillment core blocks terminal-state transitions", async () => {
     ok: false,
     status: 409,
     denialReason: "invalid_transition",
+  });
+});
+
+test("fulfillment completion syncs order lifecycle and billing candidates from server-owned snapshots", async () => {
+  const timestamp = () => "2026-05-23T10:40:00.000Z";
+  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const lifecycleGateway = createMockChartOrderLifecycleGateway(undefined, timestamp);
+  const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(undefined, timestamp);
+
+  await syncFulfillmentWorkItemsFromOrders({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: { encounterId, orderIds: [orderId] },
+    gateway,
+  });
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "accepted", assignedToUserId: "user-tech" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+  await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "in_progress" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+  });
+
+  const completed = await updateFulfillmentWorkItem({
+    actorUserId: "user-tech",
+    workspaceId,
+    workItemId,
+    input: { status: "completed" },
+    gateway,
+    lifecycleGateway,
+    invoiceCandidateGateway,
+    auditNow: timestamp,
+  });
+
+  expect(completed).toMatchObject({
+    ok: true,
+    downstreamSync: {
+      auditEventCount: 2,
+      billingCandidateCount: 1,
+      lifecycleStatus: "completed",
+    },
+  });
+
+  const lifecycles = await lifecycleGateway.readOrderLifecycles({ encounterId, workspaceId });
+  expect(lifecycles).toMatchObject({ ok: true });
+  expect(lifecycles.ok ? lifecycles.lifecycles.find((row) => row.orderId === orderId)?.status : null).toBe("completed");
+
+  const candidates = await invoiceCandidateGateway.listInvoiceCandidates({ encounterId, workspaceId });
+  expect(candidates).toMatchObject({ ok: true });
+  expect(candidates.ok ? candidates.candidates.find((candidate) => candidate.orderId === orderId) : null).toMatchObject({
+    lineTotal: 4500,
+    quantity: 1,
+    unitPrice: 4500,
   });
 });
 

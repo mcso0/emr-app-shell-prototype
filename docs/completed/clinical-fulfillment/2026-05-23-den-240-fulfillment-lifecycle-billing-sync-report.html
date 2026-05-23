@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-240 Fulfillment Lifecycle Billing Sync</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 1040px; margin: 0 auto; padding: 44px 28px 64px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { font-size: 18px; }
+      p, li, td, th { font-size: 14px; line-height: 1.7; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e2e7ef; padding: 8px 6px; text-align: left; vertical-align: top; }
+      code { border-radius: 4px; background: #eef1f5; padding: 2px 5px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Clinical Order Fulfillment Handoff Persistence / DEN-240 / 2026-05-23</p>
+      <h1>Fulfillment 완료 결과의 진료/수납 동기화</h1>
+      <p>
+        후속 부서의 fulfillment 상태 변경이 chart order lifecycle과 billing candidate sync로 돌아오도록 연결했다.
+        완료된 청구 가능 업무는 서버가 가진 invoice line 금액 snapshot으로 후보를 만들고,
+        반려/취소/진행 중 상태는 billing 후보를 만들지 않는다.
+      </p>
+      <span class="badge">Status: Human Review Ready</span>
+
+      <section>
+        <h2>상태 규칙</h2>
+        <table>
+          <tr><th>Fulfillment 상태</th><th>Order lifecycle</th><th>Billing candidate</th></tr>
+          <tr><td><code>accepted</code>, <code>in_progress</code></td><td><code>in_progress</code></td><td>생성하지 않음</td></tr>
+          <tr><td><code>completed</code></td><td><code>completed</code></td><td><code>billingReflectionEnabled</code>가 false가 아니면 서버 금액 snapshot으로 sync</td></tr>
+          <tr><td><code>returned</code></td><td><code>re_requested</code></td><td>생성하지 않음</td></tr>
+          <tr><td><code>cancelled</code></td><td><code>cancelled</code></td><td>생성하지 않음</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>핵심 변경</h2>
+        <ul>
+          <li><code>updateFulfillmentWorkItem</code> 성공 후 downstream sync summary를 반환한다.</li>
+          <li>Order lifecycle gateway와 billing invoice candidate gateway를 fulfillment update route에 연결했다.</li>
+          <li>완료 상태의 billing sync는 기존 billing core를 사용하므로 client-submitted amount를 받지 않는다.</li>
+          <li><code>order.status_changed</code>와 <code>billing.invoice_candidate_generated</code> audit event를 남긴다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3105 npx playwright test tests/fulfillment-work-item-server.spec.ts tests/billing-invoice-candidate-sync-server.spec.ts tests/chart-order-lifecycle-persistence-server.spec.ts</code>: 15개 테스트 통과.</li>
+          <li>Full local quality gate는 PR 생성 전 다시 실행한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 작업</h2>
+        <ul>
+          <li><code>DEN-241</code>: chart confirmation부터 downstream queue, lifecycle, billing readback까지 end-to-end replay regression을 추가한다.</li>
+          <li><code>DEN-242</code>: 프로젝트 closeout과 staging readiness claim을 정리한다.</li>
+          <li>Remote Supabase migration은 아직 push하지 않았다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
