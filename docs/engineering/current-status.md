@@ -36,7 +36,7 @@ The app currently has usable prototype screens for:
 | Customer management | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries |
 | Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, and local-first persistence checkpoints |
 | Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route, while full live result/provider persistence remains outside current completion claims |
-| Dispensing/treatment | Workspace screen exists; DEN-236 adds a shared fulfillment work item server route foundation, but screen adoption/full live persistence remains outside current completion claims |
+| Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, while full live dispensing/treatment execution persistence remains outside current completion claims |
 | Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, and amount-integrity regression foundations |
 | Inpatient | Session-only ward board and detail surface |
 | Hospital admin | Order catalog persistence foundation and membership/invitation management surfaces |

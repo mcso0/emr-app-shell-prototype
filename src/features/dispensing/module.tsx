@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -62,6 +62,24 @@ import {
 import type { Order, OrderQueueItem, ShellComponentProps, TechnicianUser } from "@/types/emr";
 
 type OrderGroupFilter = "all" | "oral" | "other";
+type FulfillmentQueueType = "dispensing" | "treatment";
+type FulfillmentWorkItemStatus =
+  | "requested"
+  | "accepted"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "returned";
+type FulfillmentWorkItem = {
+  assignedToUserId?: string | null;
+  id: string;
+  orderId: string;
+  queueType: FulfillmentQueueType;
+  sourceSnapshot?: {
+    orderDisplayName?: string;
+  };
+  status: FulfillmentWorkItemStatus;
+};
 type DispensingContentBodyProps = Pick<
   ShellComponentProps,
   "hasRightPanel" | "moduleId"
@@ -95,9 +113,128 @@ function getQueuePatientSummary(item: OrderQueueItem | null) {
   return `${item.patientName}(${item.patientAge ?? patient.age}) · ${item.patientBreed ?? patient.breed}`;
 }
 
+function getWorkspaceIdFromPath() {
+  if (typeof window === "undefined") return "clair-demo";
+
+  const match = window.location.pathname.match(/^\/w\/([^/]+)/);
+  return match?.[1] ?? "clair-demo";
+}
+
+function useDispensingFulfillmentQueue() {
+  const workspaceId = getWorkspaceIdFromPath();
+  const [workItems, setWorkItems] = useState<FulfillmentWorkItem[]>([]);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [dispensingResponse, treatmentResponse] = await Promise.all([
+        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing`, {
+          headers: { "x-clair-demo-session-user-id": "user-tech" },
+        }),
+        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment`, {
+          headers: { "x-clair-demo-session-user-id": "user-tech" },
+        }),
+      ]);
+      const dispensingBody = await dispensingResponse.json() as { ok?: boolean; workItems?: FulfillmentWorkItem[] };
+      const treatmentBody = await treatmentResponse.json() as { ok?: boolean; workItems?: FulfillmentWorkItem[] };
+      const nextItems = [
+        ...(dispensingResponse.ok && dispensingBody.ok && Array.isArray(dispensingBody.workItems)
+          ? dispensingBody.workItems
+          : []),
+        ...(treatmentResponse.ok && treatmentBody.ok && Array.isArray(treatmentBody.workItems)
+          ? treatmentBody.workItems
+          : []),
+      ];
+      setWorkItems(nextItems);
+    } catch {
+      setWorkItems([]);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    // Fetching the server queue is an external sync; fixture fallback stays in place on failure.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
+  }, [refresh]);
+
+  const updateStatus = useCallback(async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
+    for (const status of statuses) {
+      const response = await fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          "x-clair-demo-session-user-id": "user-tech",
+        },
+        body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
+      });
+      if (!response.ok) break;
+    }
+    await refresh();
+  }, [refresh, workspaceId]);
+
+  return { updateStatus, workItems };
+}
+
+function findFulfillmentForQueueItem(
+  item: OrderQueueItem | null,
+  workItems: FulfillmentWorkItem[]
+) {
+  if (!workItems.length) return undefined;
+  const queueType = item?.orderTypeCategory === "treatment" ? "treatment" : "dispensing";
+  const queueItems = workItems.filter((workItem) => workItem.queueType === queueType);
+  if (!queueItems.length) return undefined;
+  if (!item) return queueItems[0];
+
+  return queueItems.find((workItem) => {
+    const displayName = workItem.sourceSnapshot?.orderDisplayName;
+    return displayName && item.orderName.includes(displayName);
+  }) ?? queueItems[0];
+}
+
+function applyFulfillmentToQueueItems(
+  items: OrderQueueItem[],
+  workItems: FulfillmentWorkItem[]
+) {
+  const usedWorkItemIds = new Set<string>();
+
+  return items.map((item) => {
+    const workItem = findFulfillmentForQueueItem(
+      item,
+      workItems.filter((candidate) => !usedWorkItemIds.has(candidate.id))
+    );
+    if (!workItem) return item;
+    usedWorkItemIds.add(workItem.id);
+
+    return {
+      ...item,
+      assigneeName: getFulfillmentAssigneeName(workItem) ?? item.assigneeName,
+      startedAt: workItem.status === "in_progress" ? item.startedAt ?? item.time : item.startedAt,
+      statusId: mapFulfillmentToQueueStatusId(workItem.status, item.statusId),
+    };
+  });
+}
+
+function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
+  if (!workItem.assignedToUserId) return undefined;
+  if (workItem.assignedToUserId === "user-tech" || workItem.assignedToUserId === "user-tech-hayun") return "송하윤";
+  return undefined;
+}
+
+function mapFulfillmentToQueueStatusId(status: FulfillmentWorkItemStatus, fallback: string) {
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "canceled";
+  if (status === "returned") return "reRequested";
+  if (status === "in_progress" || status === "accepted") return "inProgress";
+  if (status === "requested") return "waiting";
+  return fallback;
+}
+
 export function DispensingSidePanel() {
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
-  const items = getOrderQueueItems("dispensing");
+  const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const items = useMemo(
+    () => applyFulfillmentToQueueItems(getOrderQueueItems("dispensing"), fulfillmentQueue.workItems),
+    [fulfillmentQueue.workItems]
+  );
   const statuses = getOrderQueueStatuses("dispensing");
 
   return (
@@ -508,10 +645,15 @@ export function DispensingContent({
   moduleId,
 }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
-  const selectedQueueItem = getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
+  const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const selectedQueueItem = useMemo(() => {
+    const items = applyFulfillmentToQueueItems(getOrderQueueItems("dispensing"), fulfillmentQueue.workItems);
+    return items.find((item) => item.id === selectedQueueItemIds[moduleId]) ?? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
+  }, [fulfillmentQueue.workItems, moduleId, selectedQueueItemIds]);
 
   return (
     <DispensingContentBody
+      fulfillmentQueue={fulfillmentQueue}
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
@@ -522,9 +664,12 @@ export function DispensingContent({
 
 function DispensingContentBody({
   hasRightPanel,
+  fulfillmentQueue,
   moduleId,
   selectedQueueItem,
-}: DispensingContentBodyProps) {
+}: DispensingContentBodyProps & {
+  fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
+}) {
   const {
     contentAsideOpen,
     rightPanelOpen,
@@ -532,6 +677,10 @@ function DispensingContentBody({
     setRightPanelOpen,
   } = useLayoutStore();
   const selectedQueueItemId = selectedQueueItem?.id;
+  const selectedFulfillmentWorkItem = useMemo(
+    () => findFulfillmentForQueueItem(selectedQueueItem, fulfillmentQueue.workItems),
+    [fulfillmentQueue.workItems, selectedQueueItem]
+  );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
     cloneOrderTableGroups(selectedQueueItemId)
   );
@@ -636,15 +785,27 @@ function DispensingContentBody({
     updateGroup(groupId, (group) => assignOrderInGroup(group, rowId, technicianId));
   };
   const startGroup = (groupId: string) => {
+    if (selectedFulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["accepted", "in_progress"]);
+    }
     updateGroup(groupId, startOrderGroup);
   };
   const completeGroup = (groupId: string) => {
+    if (selectedFulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["completed"]);
+    }
     updateGroup(groupId, completeOrderGroup);
   };
   const completeInstruction = () => {
+    if (selectedFulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["completed"]);
+    }
     setTableGroups((current) => current.map(completeInstructionGroup));
   };
   const cancelGroupAssignment = (groupId: string) => {
+    if (selectedFulfillmentWorkItem) {
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["returned", "requested"]);
+    }
     updateGroup(groupId, cancelOrderGroupAssignment);
   };
   const toggleOrderGroup = (groupId: string) => {
