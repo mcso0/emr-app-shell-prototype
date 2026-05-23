@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-214 Arbitrary Utility Rescan Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #5f6673;
+        --line: #d8dde6;
+        --panel: #ffffff;
+        --soft: #f6f8fb;
+        --accent: #224f9f;
+        --good: #0f766e;
+        --warn: #9a5b00;
+      }
+
+      body {
+        margin: 0;
+        background: #eef2f7;
+        color: var(--ink);
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      header,
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 16px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      .meta,
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .badge {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--soft);
+        color: #303846;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--soft);
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--soft);
+        color: #303846;
+        font-weight: 700;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #edf1f7;
+        padding: 2px 5px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+      }
+
+      ul,
+      ol {
+        margin: 8px 0 0 20px;
+        padding: 0;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      .decision {
+        border-left: 4px solid var(--accent);
+      }
+
+      .good {
+        color: var(--good);
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 18px;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">Linear DEN-214 · Project 11 · Milestone 00 A+ Scope &amp; Metrics</p>
+        <h1>Arbitrary Spacing / Font Utility Rescan</h1>
+        <p>
+          최신 <code>src/**/*.{ts,tsx}</code> 기준으로 arbitrary spacing, font, width/height,
+          radius, grid utility를 다시 스캔하고 A+ token cleanup 후보를 분류했다. 이번 이슈는
+          구현 변경이 아니라 후속 DEN-215~220이 안전하게 줄일 수 있는 기준선을 확정하는 작업이다.
+        </p>
+        <div class="badges">
+          <span class="badge">Docs / audit only</span>
+          <span class="badge">No UI behavior change</span>
+          <span class="badge">Human Review target</span>
+        </div>
+      </header>
+
+      <section class="decision">
+        <h2>대표 판단</h2>
+        <p>
+          A+를 막는 주된 debt는 여전히 typography 계열이다. 전체 in-scope 1,637건 중
+          <strong>1,123건이 typography</strong>이고, raw measure 기준으로도
+          <code>text-[12px]</code>, <code>text-[13px]</code>,
+          <code>text-[11px]</code>, <code>text-[14px]</code> 네 값이 압도적이다.
+        </p>
+        <p>
+          반대로 grid, table width, viewport <code>calc()</code>, command palette 크기,
+          shell icon micro-geometry는 화면 가독성과 구조를 지탱하는 local exception 가능성이 높다.
+          따라서 A+ cleanup은 전역 일괄 치환보다 <strong>text role → component rhythm →
+          module adoption</strong> 순서로 가는 편이 안전하다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Scan Metrics</h2>
+        <div class="grid">
+          <div class="metric"><strong>281</strong><span>scanned source files</span></div>
+          <div class="metric"><strong>3,052</strong><span>all bracket utilities</span></div>
+          <div class="metric"><strong>1,637</strong><span>in-scope utilities</span></div>
+          <div class="metric"><strong>300</strong><span>unique in-scope utilities</span></div>
+          <div class="metric"><strong>83</strong><span>files with in-scope values</span></div>
+          <div class="metric"><strong>1,091</strong><span>raw measure utilities</span></div>
+          <div class="metric"><strong>472</strong><span>tokenized CSS-var utilities</span></div>
+          <div class="metric"><strong>1,613</strong><span>legacy-compatible rg count</span></div>
+        </div>
+        <p class="note">
+          Legacy-compatible count는 이전 감사의 <code>rg</code> 계열 명령과 비교하기 위한 값이다.
+          DEN-213에서 언급한 약 1,978건 대비 365건 감소한 기준선으로 볼 수 있지만, 이번 보고서는
+          더 세분화된 분류 기준의 1,637건을 A+ baseline으로 사용한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Category Breakdown</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Count</th>
+              <th>First handling rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Typography</td>
+              <td>1,123</td>
+              <td>DEN-215에서 dense text role과 EMR component variant로 먼저 정리한다.</td>
+            </tr>
+            <tr>
+              <td>Size / width / height</td>
+              <td>278</td>
+              <td>table column, dialog width, shell width, icon geometry를 섞지 않고 분류한다.</td>
+            </tr>
+            <tr>
+              <td>Radius</td>
+              <td>158</td>
+              <td><code>--emr-radius-control</code>, <code>--emr-radius-panel</code>, component variant 우선.</td>
+            </tr>
+            <tr>
+              <td>Grid</td>
+              <td>54</td>
+              <td>calendar/table/grid recipe는 반복 증거가 있을 때만 승격한다.</td>
+            </tr>
+            <tr>
+              <td>Spacing / position</td>
+              <td>24</td>
+              <td>수치가 낮아 side-panel/list rhythm과 연결될 때만 정리한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Top Raw Candidates</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Utility</th>
+              <th>Count</th>
+              <th>추천 분류</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>text-[12px]</code></td><td>316</td><td>dense metadata, table/list body role</td></tr>
+            <tr><td><code>text-[13px]</code></td><td>215</td><td>dense body role</td></tr>
+            <tr><td><code>text-[11px]</code></td><td>75</td><td>micro metadata role, local exception 가능</td></tr>
+            <tr><td><code>text-[14px]</code></td><td>69</td><td>standard body/label role</td></tr>
+            <tr><td><code>text-[15px]</code></td><td>22</td><td>compact title / section title 후보</td></tr>
+            <tr><td><code>text-[16px]</code></td><td>16</td><td>compact heading 후보</td></tr>
+            <tr><td><code>leading-[18px]</code></td><td>15</td><td>side-panel/list rhythm 후보</td></tr>
+            <tr><td><code>tracking-[0.3px]</code></td><td>14</td><td>side-panel badge/meta rhythm 후보</td></tr>
+            <tr><td><code>h-[18px]</code></td><td>13</td><td>side-panel badge/meta rhythm 후보</td></tr>
+            <tr><td><code>text-[18px]</code></td><td>12</td><td>dialog/section title 후보</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Module Concentration</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>In-scope</th>
+              <th>Raw measure</th>
+              <th>Follow-up issue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>src/features/reception</code></td><td>264</td><td>174</td><td>DEN-218</td></tr>
+            <tr><td><code>src/features/home</code></td><td>227</td><td>151</td><td>defer unless representative evidence is needed</td></tr>
+            <tr><td><code>src/components/emr</code></td><td>215</td><td>99</td><td>DEN-215~217</td></tr>
+            <tr><td><code>src/features/auth</code></td><td>192</td><td>123</td><td>mostly outside Project 11 adoption scope</td></tr>
+            <tr><td><code>src/features/lab-imaging</code></td><td>144</td><td>125</td><td>DEN-220</td></tr>
+            <tr><td><code>src/features/chart</code></td><td>99</td><td>71</td><td>DEN-219</td></tr>
+            <tr><td><code>src/shell</code></td><td>96</td><td>62</td><td>local shell exception unless responsive blocker appears</td></tr>
+            <tr><td><code>src/features/hospital-admin</code></td><td>73</td><td>67</td><td>DEN-220</td></tr>
+            <tr><td><code>src/features/billing</code></td><td>48</td><td>42</td><td>DEN-220</td></tr>
+            <tr><td><code>src/features/inpatient</code></td><td>45</td><td>36</td><td>DEN-220 / Project 12 table follow-up</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Token / Variant 후보</h2>
+        <ol>
+          <li>
+            <strong>Typography roles:</strong> dense body, dense metadata, micro metadata, compact title,
+            dialog title를 먼저 이름 붙인다. 후속 구현은 DEN-215에서 한다.
+          </li>
+          <li>
+            <strong>Side-panel rhythm:</strong> 반복되는 <code>h-[18px]</code>,
+            <code>leading-[18px]</code>, tracking 값을 <code>src/components/emr</code> primitive
+            또는 feature-local variant로 흡수한다.
+          </li>
+          <li>
+            <strong>Radius cleanup:</strong> 이미 CSS var를 쓰는 radius bracket 값은
+            <code>--emr-radius-control</code>, <code>--emr-radius-panel</code> 또는 component
+            size/variant를 우선한다.
+          </li>
+          <li>
+            <strong>Width/table recipes:</strong> table column width는 DEN-214에서 승격하지 않는다.
+            Project 12 table density contract가 생기기 전까지는 overflow QA와 local exception으로 둔다.
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Local Exception 후보</h2>
+        <ul>
+          <li>dense table column widths and min-widths</li>
+          <li>calendar grid recipes and event positioning values</li>
+          <li>drawer and viewport <code>calc()</code> heights</li>
+          <li>command palette max height/width and shell overlay geometry</li>
+          <li>nav rail icon micro-sizes and generated SVG alignment values</li>
+          <li><code>w-[var(--anchor-width)]</code> 같은 popover/select anchor matching values</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Changed Files</h2>
+        <ul>
+          <li><code>docs/design/system/arbitrary-value-token-audit.md</code></li>
+          <li><code>docs/completed/design/2026-05-23-den-214-arbitrary-utility-rescan-report.html</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Verification</h2>
+        <p class="good">통과: scan commands completed.</p>
+        <p>
+          실행한 주요 확인:
+          <code>src/**/*.{ts,tsx}</code> Node rescan,
+          legacy-compatible <code>rg</code> count, source-doc update review.
+        </p>
+        <p class="warn">
+          남은 검증: docs-only 이슈 기준으로 <code>npm run docs:check</code>를 실행해야 한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Next Step</h2>
+        <p>
+          DEN-215는 이 baseline의 typography raw measure부터 처리하면 된다. 단, raw 값을 모두
+          삭제하는 것이 목표가 아니라, 반복되는 text role을 먼저 공유 규칙으로 정리하고 table/grid
+          구조값은 Project 12 table contract 이후에 다루는 것이 안전하다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

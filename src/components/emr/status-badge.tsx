@@ -80,7 +80,7 @@ export function EmrStatusBadge({
     <Badge
       data-testid={testId}
       className={cn(
-        "h-6 rounded-lg px-2 py-0.5 text-[12px] font-medium leading-4 tracking-[0.025em]",
+        "emr-text-status h-6 rounded-lg px-2 py-0.5 font-medium",
         statusTone[label] ??
           "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
         className

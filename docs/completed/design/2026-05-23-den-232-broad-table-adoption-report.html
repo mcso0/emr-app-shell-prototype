@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-232 Broad Table Adoption</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-232 Broad Table Adoption</h1>
+      <p>Customer, hospital admin, lab/imaging, inpatient의 high-confidence table surfaces에 shared density, scroll layout, explicit min-width contract를 적용했다.</p>
+
+      <h2>Touched Modules</h2>
+      <ul>
+        <li>Customer guardian/patient tables: standard density, scroll layout, 1120/1320 min-width.</li>
+        <li>Hospital admin order catalog: standard density, scroll layout, 1060 min-width.</li>
+        <li>Lab result input: standard density, scroll layout, 860 min-width.</li>
+        <li>Imaging order summary: comfortable density, scroll layout, 760 min-width.</li>
+        <li>Inpatient ward tables: compact density, scroll layout, 1180 min-width baseline.</li>
+      </ul>
+
+      <h2>Deferred Candidates</h2>
+      <p>Small two-column detail tables, auth/security membership table, and home task summary table remain local/fill candidates. They are outside the Project 12 core adoption path or need separate ownership review.</p>
+
+      <h2>Screenshots</h2>
+      <ul>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-232-customer-table-1280x880-after.png</code></li>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-232-admin-table-1280x880-after.png</code></li>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-232-lab-table-1280x880-after.png</code></li>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-232-imaging-table-1280x880-after.png</code></li>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-232-inpatient-table-1280x880-after.png</code></li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code>: passed.</li>
+        <li><code>npx playwright test tests/customer.spec.ts tests/lab-imaging.spec.ts tests/hospital-admin.spec.ts tests/inpatient.spec.ts --project=chromium</code>: 19 passed.</li>
+        <li>Screenshot QA: 1280 viewport remained document-width bounded for customer, admin, lab, imaging, inpatient captures.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

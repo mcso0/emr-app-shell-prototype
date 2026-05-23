@@ -77,7 +77,9 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] shadow-xs transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className="emr-workspace-frame-responsive relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] shadow-xs transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      data-content-aside-open={ContentAside && contentAsideOpen ? "true" : "false"}
+      data-right-panel-open={RightPanel && rightPanelOpen ? "true" : "false"}
       style={{
         "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
@@ -169,7 +171,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
       <aside
         className={cn(
-          "min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] transition-opacity duration-150 max-md:hidden",
+          "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] transition-opacity duration-150 max-md:hidden",
           RightPanel && rightPanelOpen && "border-l border-[var(--emr-line-default)]",
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}

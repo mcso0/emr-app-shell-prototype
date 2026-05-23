@@ -46,7 +46,7 @@ export function EmrSidePanelCard({
       role="button"
       tabIndex={0}
       className={cn(
-        "group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 pb-2.5 pt-2 text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)] active:shadow-none",
+        "emr-density-card group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)] active:shadow-none",
         selected &&
           (selectionVariant === "modulePanel"
             ? "border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] hover:bg-[var(--clair-color-atomic-sky-50)]"
@@ -84,7 +84,7 @@ export function EmrSidePanelIdentityLine({
 }) {
   return (
     <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[14px] font-semibold leading-5 tracking-normal text-[var(--emr-text-primary)]">
+      <div className="emr-text-body flex min-w-0 flex-1 items-center gap-1 overflow-hidden font-semibold text-[var(--emr-text-primary)]">
         <span className="truncate">{patientName}</span>
         <span className="shrink-0 font-medium text-[var(--emr-text-tertiary)]">·</span>
         <span className="truncate">{guardianName}</span>
@@ -125,7 +125,7 @@ export function EmrSidePanelTypeBadge({ label }: { label: string }) {
     <Badge
       variant="secondary"
       className={cn(
-        "h-5 shrink-0 rounded-[var(--clair-radius-atomic-6)] border-transparent px-1.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
+        "emr-text-metadata h-5 shrink-0 rounded-[var(--clair-radius-atomic-6)] border-transparent px-1.5 font-medium",
         reservation
           ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
           : "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]"
@@ -153,7 +153,7 @@ export function EmrSidePanelMetaBadge({
     <span
       aria-label={`${label} ${value}`}
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 text-[12px] font-medium leading-4 tracking-[0.3px]",
+        "emr-text-metadata inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 font-medium",
         maxWidthClassName
       )}
     >
@@ -193,7 +193,7 @@ export function EmrSidePanelStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)]",
+        "emr-text-metadata inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 font-medium text-[var(--emr-text-secondary)]",
         maxWidthClassName
       )}
     >

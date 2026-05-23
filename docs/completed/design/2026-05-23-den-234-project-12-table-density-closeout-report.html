@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-234 Project 12 Table UX Closeout</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-234 Project 12 Table UX Closeout</h1>
+      <p>Project 12 CLAiR EMR Table Density &amp; Data Grid Ergonomics를 A+ 후보 상태로 closeout한다. 테이블 밀도, 내부 가로 스크롤, header interaction 역할 기준이 source doc과 runtime contract로 정리됐고, 대표 EMR table surfaces에 high-confidence adoption이 적용됐다.</p>
+
+      <h2>비개발자용 요약</h2>
+      <p>조제/처치에서 보였던 “테이블이 중간에서 끊기는” 문제를 공통 table 규칙으로 해결했다. 이제 넓은 테이블은 화면 전체를 밀어내지 않고 table 안에서만 가로 스크롤되며, 좁게/기본/넓게 밀도 기준도 일관된 토큰으로 관리된다.</p>
+
+      <h2>A+ Candidate Verdict</h2>
+      <ul>
+        <li>Density model: pass. compact / standard / comfortable가 token과 TypeScript contract로 정의됐다.</li>
+        <li>Scroll containment: pass. adopted scroll tables use explicit layout and minWidth contracts.</li>
+        <li>Header interaction rules: pass. static/sortable/filterable/menu/compound role rules are documented and typed.</li>
+        <li>Responsive QA: pass. 21 screenshot captures across 1440, 1280, 1024 had zero document-level horizontal overflow blockers.</li>
+        <li>Final status: A+ table UX candidate, pending Seungwook approval before any Linear Done transition.</li>
+      </ul>
+
+      <h2>Evidence Summary</h2>
+      <ul>
+        <li>Research/gate: <code>docs/design/system/table-density-and-grid-ergonomics.md</code></li>
+        <li>Inventory: <code>docs/design/system/table-surface-inventory.md</code></li>
+        <li>Runtime contract: <code>src/components/emr/table-density.ts</code>, <code>src/components/ui/table.tsx</code>, <code>src/styles/tokens/emr-foundation.css</code>, <code>src/app/globals.css</code></li>
+        <li>Visible density control: <code>src/components/emr/table-density-selector.tsx</code> exposes icon-only compact/standard/comfortable buttons with Korean accessible names and titles: <code>좁게 / 기본 / 넓게</code>.</li>
+        <li>Adoption: dispensing, chart/order, billing, customer, hospital admin order catalog, lab/imaging, inpatient tables.</li>
+        <li>Screenshot pack: <code>output/ui-audit-2026-05-22/screenshots/den-230-*.png</code>, <code>den-231-*.png</code>, <code>den-232-*.png</code>, <code>den-233-*.png</code></li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code>: passed.</li>
+        <li>Dispensing focused Playwright: 5 passed.</li>
+        <li>Chart + billing Playwright: 23 passed.</li>
+        <li>Customer + lab/imaging + hospital-admin + inpatient Playwright: 19 passed.</li>
+        <li>Responsive screenshot QA: 21 captures, 0 document-level overflow blockers.</li>
+        <li>Density option screenshot QA: <code>output/ui-audit-2026-05-22/screenshots/den-235-*-density-options-1280x880-after.png</code> confirms the visible density segmented control on adopted table routes; <code>den-236-*-density-icons-1280x880-after.png</code> confirms the icon-only update.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+
+      <h2>Remaining Risk</h2>
+      <ul>
+        <li>Sticky/frozen columns are intentionally deferred until keyboard/focus/hover behavior is scoped.</li>
+        <li>Chart order table can become narrow when history aside and right panel are both open at 1280/1024; this is contained by internal scroll and is not a blocker.</li>
+        <li>Auth/security membership and home task tables remain outside the Project 12 core adoption path.</li>
+        <li>No live Supabase, server-side sorting/filtering, provider integration, payment, VAT, receipt, refund, or settlement behavior was changed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

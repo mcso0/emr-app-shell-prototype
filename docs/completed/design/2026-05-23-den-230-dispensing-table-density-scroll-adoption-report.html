@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-230 Dispensing Table Density Scroll Adoption</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-230 Dispensing Table Density Scroll Adoption</h1>
+      <p>조제/처치 order table을 Project 12 shared contract의 첫 adoption surface로 전환했다. table은 compact density와 scroll layout을 명시하고, TanStack total size를 단일 min-width로 사용한다.</p>
+
+      <h2>Changed Files</h2>
+      <ul>
+        <li><code>src/components/emr/emr-data-table.tsx</code></li>
+        <li><code>src/components/ui/table.tsx</code></li>
+        <li><code>docs/design/system/table-surface-inventory.md</code></li>
+      </ul>
+
+      <h2>Density Behavior</h2>
+      <ul>
+        <li><code>density="compact"</code> applies compact table row/header/cell tokens.</li>
+        <li><code>layout="scroll"</code> keeps horizontal overflow inside the table container.</li>
+        <li><code>minWidth</code> and visual table width are both derived from <code>table.getTotalSize()</code>.</li>
+      </ul>
+
+      <h2>Screenshot Evidence</h2>
+      <ul>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-230-dispensing-table-1280x880-after.png</code></li>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-230-dispensing-table-1440x900-after.png</code></li>
+      </ul>
+
+      <h2>QA Metrics</h2>
+      <ul>
+        <li>1280 viewport: document width 1280/1280, table container 828 client / 1436 scroll.</li>
+        <li>1440 viewport: document width 1440/1440, table container 988 client / 1436 scroll.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code>: passed.</li>
+        <li><code>npx playwright test tests/app-shell.spec.ts --project=chromium -g "dispensing table supports|dispensing table column grips|dispensing order group"</code>: 5 passed.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

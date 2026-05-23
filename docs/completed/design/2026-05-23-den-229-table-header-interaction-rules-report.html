@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-229 Table Header Interaction Rules</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-229 Table Header Interaction Rules</h1>
+      <p>CLAiR EMR table header에서 sort/filter/menu affordance를 허용할 column role과 금지할 column role을 정의했다.</p>
+
+      <h2>Column Role Matrix</h2>
+      <ul>
+        <li><code>static</code>: checkbox, action, attachment, memo, warning/change, icon-only, summary.</li>
+        <li><code>sortable</code>: date/time, amount, quantity, name, explicit status order, room number.</li>
+        <li><code>filterable</code>: status, 담당자, category/type, department, source, modality.</li>
+        <li><code>menu</code>: admin-heavy grids where column actions are explicitly scoped.</li>
+        <li><code>compound</code>: multi-value cells; static until the data field is split.</li>
+      </ul>
+
+      <h2>Accessibility Notes</h2>
+      <ul>
+        <li>Sort/filter/menu affordance must be reachable by keyboard only when the role allows it.</li>
+        <li>Active state must be visible without hover.</li>
+        <li>Static headers must not expose hidden tab stops or fake hover states.</li>
+      </ul>
+
+      <h2>Changed Files</h2>
+      <ul>
+        <li><code>src/components/emr/table-density.ts</code></li>
+        <li><code>docs/design/system/table-density-and-grid-ergonomics.md</code></li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code>: passed.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

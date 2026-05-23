@@ -77,6 +77,14 @@ Use typography for scanning, not drama:
 - no negative letter spacing
 - no viewport-based font scaling
 
+Shared EMR typography roles are available for repeated operational UI rhythm:
+
+- `emr-text-micro`: 11px micro metadata
+- `emr-text-metadata` / `emr-text-status`: 12px badges, counters, compact status labels
+- `emr-text-dense` / `emr-text-dense-label`: 13px dense lists, queue cards, and side-panel metadata
+- `emr-text-body` / `emr-text-section`: 14px compact body and section labels
+- `emr-text-compact-title`, `emr-text-panel-title`, `emr-text-dialog-title`: compact title steps for EMR panels and dialogs
+
 ## Shape
 
 Most EMR surfaces should be compact:

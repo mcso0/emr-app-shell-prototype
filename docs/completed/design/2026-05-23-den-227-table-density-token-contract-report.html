@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-227 Table Density Token Contract</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-227 Table Density Token Contract</h1>
+      <p>CLAiR EMR 테이블의 compact / standard / comfortable density를 공통 token, TypeScript contract, shadcn Table wrapper prop으로 정의했다.</p>
+
+      <h2>Changed Files</h2>
+      <ul>
+        <li><code>src/styles/tokens/emr-foundation.css</code></li>
+        <li><code>src/app/globals.css</code></li>
+        <li><code>src/components/emr/table-density.ts</code></li>
+        <li><code>src/components/ui/table.tsx</code></li>
+        <li><code>docs/design/system/table-density-and-grid-ergonomics.md</code></li>
+      </ul>
+
+      <h2>Contract</h2>
+      <ul>
+        <li><code>density="compact"</code>: row 36px, header 36px, Korean copy <code>좁게</code>.</li>
+        <li><code>density="standard"</code>: row 44px, header 40px, Korean copy <code>기본</code>.</li>
+        <li><code>density="comfortable"</code>: row 52px, header 44px, Korean copy <code>넓게</code>.</li>
+        <li><code>layout="fill|scroll"</code> and <code>minWidth</code> prepare the scroll containment contract for DEN-228 and adoption issues.</li>
+      </ul>
+
+      <h2>Default Recommendation</h2>
+      <p>기본값은 <code>standard</code> / <code>fill</code>로 유지해 기존 shadcn Table 사용처의 blast radius를 줄였다. 조제/처치와 차트 오더 같은 dense clinical table은 각 adoption 이슈에서 <code>compact</code> / <code>scroll</code>로 명시 적용한다.</p>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code>: passed.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

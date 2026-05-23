@@ -35,29 +35,29 @@ export function OrderQueueSelectionSummary({
               style={{ backgroundColor: `var(${status?.colorToken ?? "--emr-status-neutral-text"})` }}
               aria-hidden="true"
             />
-            <h2 className="truncate text-[15px] font-semibold leading-5 text-foreground">
+            <h2 className="emr-text-compact-title truncate font-semibold text-foreground">
               {item.patientName} · {item.guardianName}
             </h2>
             <Badge
               variant="secondary"
-              className="h-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-status-neutral-bg)] px-1.5 text-[12px] font-medium text-[var(--emr-status-neutral-text)]"
+              className="emr-text-status h-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-status-neutral-bg)] px-1.5 font-medium text-[var(--emr-status-neutral-text)]"
             >
               {item.receptionType}
             </Badge>
           </div>
-          <div className="mt-1 flex min-w-0 items-center gap-1 text-[13px] font-medium text-[var(--emr-text-tertiary)]">
+          <div className="emr-text-dense mt-1 flex min-w-0 items-center gap-1 font-medium text-[var(--emr-text-tertiary)]">
             <span className="shrink-0">{item.orderType}</span>
             <span className="text-[var(--emr-text-tertiary)]">·</span>
             <span className="truncate">{item.orderName}</span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 text-[12px] font-medium text-[var(--emr-text-tertiary)]">
+        <div className="emr-text-status flex shrink-0 items-center gap-1 font-medium text-[var(--emr-text-tertiary)]">
           <ClockIcon className="size-3.5 text-[var(--emr-text-tertiary)]" aria-hidden="true" />
           <span>{item.time}</span>
           <span>{statusLabel}</span>
         </div>
       </div>
-      <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[12px] font-medium">
+      <div className="emr-text-status mt-2 flex min-w-0 items-center gap-1.5 font-medium">
         <span className="rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-subtle)] px-1.5 py-0.5 text-[var(--emr-text-secondary)]">
           요청 {item.requesterName}
         </span>

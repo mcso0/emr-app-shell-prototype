@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-224 Project 11 A+ Visual QA Closeout</title>
+    <style>
+      body { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #18181b; line-height: 1.65; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f4f4f5; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+      .ok { color: #047857; font-weight: 700; }
+      .warn { color: #b45309; font-weight: 700; }
+      .note { color: #52525b; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-224 Project 11 A+ Visual QA Closeout</h1>
+    <p class="note">작성일: 2026-05-23 · Linear: DEN-224 · Project 11 CLAiR EMR UI/UX A+ Token & Responsive Hardening</p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      Project 11은 A 등급 이후 남아 있던 전역 typography/control/panel density 흔들림과 1024px responsive squeeze를 줄였다.
+      핵심 화면은 유지됐고, 대표 screenshot pack도 남겼다. 다만 table density, horizontal scroll, header sort/filter/menu 규칙은 Project 12의 별도 범위라 Project 11만으로 전체 table UX A+까지 선언하지는 않는다.
+    </p>
+
+    <h2>판정</h2>
+    <table>
+      <thead>
+        <tr><th>영역</th><th>판정</th><th>근거</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Token/variant hardening</td><td><span class="ok">A+ 후보</span></td><td>in-scope bracket utilities 1,637 → 1,146, typography 1,123 → 658, spacing-position 24 → 13</td></tr>
+        <tr><td>Responsive hardening</td><td><span class="ok">A+ 후보</span></td><td>1280/1024 representative capture 완료, chart 1024 triple-panel squeeze fix 적용</td></tr>
+        <tr><td>Regression evidence</td><td><span class="ok">A+ 후보</span></td><td>stable screenshot regression 후보 7개 그룹 정의</td></tr>
+        <tr><td>Table UX</td><td><span class="warn">Project 12 필요</span></td><td>table density, unbroken horizontal scroll, header interaction contract는 다음 프로젝트 범위</td></tr>
+      </tbody>
+    </table>
+
+    <h2>완료 이슈</h2>
+    <ul>
+      <li>DEN-213: A+ scope/gate 정의</li>
+      <li>DEN-214: arbitrary utility rescan baseline 작성</li>
+      <li>DEN-215: EMR typography role foundation</li>
+      <li>DEN-216: control height/radius/form spacing foundation</li>
+      <li>DEN-217: panel/list/table density utility foundation</li>
+      <li>DEN-218: reception/customer high-confidence adoption</li>
+      <li>DEN-219: chart/order high-confidence adoption</li>
+      <li>DEN-220: billing/lab-imaging/dispensing/admin high-confidence adoption</li>
+      <li>DEN-221: 1280/1024 responsive audit</li>
+      <li>DEN-222: 1024px chart triple-panel responsive containment fix</li>
+      <li>DEN-223: screenshot regression candidate pack</li>
+    </ul>
+
+    <h2>검증 요약</h2>
+    <ul>
+      <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: pass, 기존 warning 5개 유지</li>
+      <li><code>npx tsc --noEmit</code>: pass</li>
+      <li>Focused Playwright: reception/customer 38 passed, chart 19 passed, billing/lab-imaging/hospital-admin 15 passed, chart responsive smoke passed</li>
+      <li>Browser QA: Project 11 screenshots saved under <code>output/ui-audit-2026-05-22/screenshots/den-215*</code> through <code>den-222*</code></li>
+      <li><code>npm run docs:check</code>: pass</li>
+    </ul>
+
+    <h2>남은 Risk</h2>
+    <ul>
+      <li>Home/auth/ops/inpatient 등 Project 11 adoption 밖의 화면에는 아직 typography bracket debt가 남아 있다.</li>
+      <li>Table width/min-width, horizontal scroll, header sort/filter/menu affordance는 Project 12에서 research gate 후 처리한다.</li>
+      <li>Browser console의 TipTap duplicate extension warning과 local mock 401/403 boundary log는 기존 범위이며 Project 11에서 수정하지 않았다.</li>
+      <li>모든 Linear 이슈는 승욱 승인 전 규칙에 따라 Human Review에서 멈춘다.</li>
+    </ul>
+  </body>
+</html>

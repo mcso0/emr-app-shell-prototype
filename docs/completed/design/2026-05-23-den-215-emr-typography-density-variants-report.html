@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-215 EMR Typography Density Variants Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #5f6673;
+        --line: #d8dde6;
+        --panel: #ffffff;
+        --soft: #f6f8fb;
+        --accent: #224f9f;
+        --good: #0f766e;
+        --warn: #9a5b00;
+      }
+
+      body {
+        margin: 0;
+        background: #eef2f7;
+        color: var(--ink);
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      header,
+      section {
+        margin-bottom: 16px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--soft);
+        color: #303846;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #edf1f7;
+        padding: 2px 5px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+      }
+
+      ul {
+        margin: 8px 0 0 20px;
+        padding: 0;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      .meta,
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--soft);
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      .good {
+        color: var(--good);
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+
+      .decision {
+        border-left: 4px solid var(--accent);
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        header,
+        section {
+          padding: 18px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">Linear DEN-215 · Project 11 · Milestone 01 Token / Variant Foundations</p>
+        <h1>EMR Text Size, Leading, Density Variant Foundation</h1>
+        <p>
+          반복되는 EMR typography arbitrary utility를 먼저 shared role로 묶었다. 이번 변경은
+          화면 재디자인이 아니라, 후속 DEN-216~220이 같은 텍스트 리듬을 재사용할 수 있게
+          작은 token/utility foundation을 만든 작업이다.
+        </p>
+      </header>
+
+      <section class="decision">
+        <h2>대표 판단</h2>
+        <p>
+          <code>text-[12px]</code>, <code>text-[13px]</code>, <code>leading-[18px]</code>,
+          <code>tracking-[0.3px]</code> 같은 반복값은 개별 화면보다
+          <code>src/components/emr/*</code> 공유 surface에서 먼저 정리하는 것이 안전했다.
+          그래서 EMR typography variables와 utility classes를 추가하고 side panel, queue card,
+          content history, dialog title, dense table surface에 우선 적용했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Before / After Metrics</h2>
+        <div class="grid">
+          <div class="metric"><strong>1,637 → 1,568</strong><span>in-scope arbitrary utilities</span></div>
+          <div class="metric"><strong>1,123 → 1,054</strong><span>typography arbitrary utilities</span></div>
+          <div class="metric"><strong>1,091 → 1,022</strong><span>raw measure utilities</span></div>
+        </div>
+        <p class="note">
+          Before baseline은 DEN-214 rescan 기준이다. 코드 수정 전 별도 screenshot은 이 세션에서
+          캡처하지 못했으므로, visual before/after는 scan metric과 after screenshot 중심으로
+          판정한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Added Shared Roles</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>emr-text-micro</code></td><td>11px micro metadata</td></tr>
+            <tr><td><code>emr-text-metadata</code></td><td>12px counters, badge/meta rhythm with 0.3px tracking</td></tr>
+            <tr><td><code>emr-text-status</code></td><td>12px compact status and button-label rhythm</td></tr>
+            <tr><td><code>emr-text-dense</code></td><td>13px dense list/table body rhythm</td></tr>
+            <tr><td><code>emr-text-dense-label</code></td><td>13px dense side-panel labels with slightly open tracking</td></tr>
+            <tr><td><code>emr-text-body</code></td><td>14px compact body text</td></tr>
+            <tr><td><code>emr-text-section</code></td><td>14px section/list header rhythm</td></tr>
+            <tr><td><code>emr-text-compact-title</code></td><td>15px compact title</td></tr>
+            <tr><td><code>emr-text-panel-title</code></td><td>16px panel/page title</td></tr>
+            <tr><td><code>emr-text-dialog-title</code></td><td>18px dialog title</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Changed Files</h2>
+        <ul>
+          <li><code>src/styles/tokens/emr-foundation.css</code></li>
+          <li><code>src/app/globals.css</code></li>
+          <li><code>src/components/emr/content-history-list.tsx</code></li>
+          <li><code>src/components/emr/side-panel-card.tsx</code></li>
+          <li><code>src/components/emr/subpanel.tsx</code></li>
+          <li><code>src/components/emr/order-queue-summary.tsx</code></li>
+          <li><code>src/components/emr/order-group-section.tsx</code></li>
+          <li><code>src/components/emr/dialog-shell.tsx</code></li>
+          <li><code>src/components/emr/confirm-dialog-content.tsx</code></li>
+          <li><code>src/components/emr/page-header.tsx</code></li>
+          <li><code>src/components/emr/row-action-menu.tsx</code></li>
+          <li><code>src/components/emr/order-queue-side-panel.tsx</code></li>
+          <li><code>src/components/emr/side-panel-collapsible-group.tsx</code></li>
+          <li><code>src/components/emr/status-badge.tsx</code></li>
+          <li><code>src/components/emr/text-side-panel.tsx</code></li>
+          <li><code>src/components/emr/emr-data-table.tsx</code></li>
+          <li><code>src/components/emr/patient-context-bar.tsx</code></li>
+          <li><code>docs/design/system/DESIGN.md</code></li>
+          <li><code>docs/design/system/arbitrary-value-token-audit.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Screenshot Evidence</h2>
+        <ul>
+          <li><code>output/ui-audit-2026-05-22/screenshots/den-215-chart-typography-after.png</code></li>
+          <li><code>output/ui-audit-2026-05-22/screenshots/den-215-chart-typography-tablet-after.png</code></li>
+        </ul>
+        <p class="note">
+          Desktop screenshot은 대표 chart workspace가 정상 렌더링되고 queue card selection interaction이
+          유지되는 것을 확인했다. 1024px screenshot에서는 기존 responsive clipping 위험이 보였으며,
+          이는 DEN-221/DEN-222 범위로 넘긴다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Verification</h2>
+        <ul>
+          <li class="good"><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+          <li class="good"><code>npx tsc --noEmit</code>: passed.</li>
+          <li class="good"><code>npx playwright test tests/chart.spec.ts --project=chromium -g "chart workspace renders"</code>: passed.</li>
+          <li class="good">Browser desktop QA: page identity, non-blank content, queue-card interaction, computed typography role values, screenshot captured.</li>
+          <li class="warn">Browser console: existing TipTap duplicate extension warning observed; no new app error was found.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Remaining Exceptions</h2>
+        <ul>
+          <li><code>src/components/emr/emr-data-table.tsx</code> still contains table width and row-height constraints; Project 12 should own broader table density.</li>
+          <li><code>src/components/emr/patient-context-bar.tsx</code> keeps 10px notification badge and 22px compact control heights as local geometry.</li>
+          <li><code>src/components/ui/*</code> button and segmented-control text sizes were not changed in this issue; DEN-216 can handle control variants.</li>
+          <li>Feature modules still contain many typography raw values; DEN-218~220 should adopt the roles module by module.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Next Step</h2>
+        <p>
+          DEN-216 should use the same conservative pattern for control height, radius, and form spacing:
+          first define or reuse stable shared variants, then apply only high-confidence replacements.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

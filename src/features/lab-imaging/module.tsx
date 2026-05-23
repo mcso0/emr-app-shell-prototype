@@ -39,6 +39,7 @@ import {
 } from "@/components/emr/subpanel";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EMR_SIDE_PANEL_COLLAPSE_EASE,
   EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE,
@@ -81,6 +82,7 @@ import {
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 import {
   getPatientDisplayAge,
   getPatientSexLabel,
@@ -590,7 +592,7 @@ function LabQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? item.result.resultName}</span>
         </div>
         <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
@@ -680,23 +682,23 @@ function LabChartQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
           <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
           <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
         </div>
         <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
         <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-secondary)]">
+          <span className="min-w-0 flex-1 truncate emr-text-dense-label font-medium text-[var(--emr-text-secondary)]">
             {orderNames}
           </span>
           {abnormalCount > 0 ? (
-            <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-destructive">
+            <span className="shrink-0 emr-text-metadata font-medium text-destructive">
               비정상 {abnormalCount}
             </span>
           ) : null}
         </div>
-        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
+        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 emr-text-metadata font-medium text-muted-foreground">
           <span className="shrink-0 truncate">{statusSummary}</span>
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.result.receivedAt ?? latestItem?.result.collectedAt).slice(9)}
@@ -738,7 +740,7 @@ function ImagingQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`}</span>
           <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="shrink-0">{item.study.modality}</span>
@@ -864,21 +866,21 @@ function ImagingChartQueueItem({
             />
           }
         />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 text-[13px] font-medium leading-[18px] tracking-[0.247px] text-muted-foreground">
+        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
           <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
           <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
           <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
         </div>
         <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
         <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-[18px] tracking-[0.247px] text-[var(--emr-text-secondary)]">
+          <span className="min-w-0 flex-1 truncate emr-text-dense-label font-medium text-[var(--emr-text-secondary)]">
             {orderNames}
           </span>
-          <span className="shrink-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
+          <span className="shrink-0 emr-text-metadata font-medium text-muted-foreground">
             {statusSummary}
           </span>
         </div>
-        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
+        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 emr-text-metadata font-medium text-muted-foreground">
           <span className="shrink-0 truncate">{latestItem?.study.modality ?? "영상"}</span>
           <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
             {formatShortDateTime(latestItem?.study.capturedAt ?? latestItem?.study.requestedAt).slice(9)}
@@ -1080,6 +1082,7 @@ export function ImagingSidePanel() {
 
 function LabResultInputSection({ assigneeName, result }: { assigneeName: string; result: LabResult }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [density, setDensity] = useState<EmrTableDensity>("standard");
   const initialRowValues = useMemo(
     () => Object.fromEntries(result.rows.map((row) => [row.id, row.value ?? ""])),
     [result.rows]
@@ -1107,15 +1110,15 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
   return (
     <EmrOrderGroupSection
       title={`${result.resultName} 세트`}
-      titleClassName="text-[14px] leading-5"
+      titleClassName="emr-text-body leading-5"
       count={rows.length}
       meta={
         abnormalRows.length > 0 ? (
-          <span className="text-[12px] font-medium text-destructive">
+          <span className="emr-text-metadata font-medium text-destructive">
             비정상 {abnormalRows.length}
           </span>
         ) : (
-          <span className="text-[12px] font-medium text-muted-foreground">
+          <span className="emr-text-metadata font-medium text-muted-foreground">
             정상 범위
           </span>
         )
@@ -1131,8 +1134,11 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
       collapsed={collapsed}
       onToggle={() => setCollapsed((current) => !current)}
     >
-      <div className="overflow-x-auto">
-        <Table className="min-w-[860px] table-fixed text-[14px] leading-5 tracking-[0.014em]">
+      <div>
+        <div className="mb-2 flex justify-end">
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+        </div>
+        <Table density={density} layout="scroll" minWidth={860} className="min-w-[860px] table-fixed">
           <colgroup>
             <col className="w-[32%]" />
             <col className="w-[14%]" />
@@ -1143,22 +1149,22 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
           </colgroup>
           <TableHeader className="bg-[var(--emr-surface-muted)]">
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 emr-text-body font-medium text-muted-foreground">
                 <div className="flex h-6 min-w-0 items-center px-1">항목</div>
               </TableHead>
-              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 emr-text-body font-medium text-muted-foreground">
                 <div className="flex h-6 min-w-0 items-center px-1">결과값</div>
               </TableHead>
-              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 emr-text-body font-medium text-muted-foreground">
                 <div className="flex h-6 min-w-0 items-center px-1">단위</div>
               </TableHead>
-              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 emr-text-body font-medium text-muted-foreground">
                 <div className="flex h-6 min-w-0 items-center justify-center px-1 text-center">정상범위</div>
               </TableHead>
-              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 emr-text-body font-medium text-muted-foreground">
                 <div className="flex h-6 min-w-0 items-center px-1">판정</div>
               </TableHead>
-              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 text-[14px] font-medium text-muted-foreground">
+              <TableHead className="relative h-10 bg-[var(--emr-surface-muted)] px-1 py-1 emr-text-body font-medium text-muted-foreground">
                 <div className="flex h-6 min-w-0 items-center px-1">담당자</div>
               </TableHead>
             </TableRow>
@@ -1213,7 +1219,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
               </TableCell>
               <TableCell className="h-11 px-1 py-2 font-medium" aria-live="polite">
                 <div className="flex h-6 min-w-0 items-center px-1">
-                  <span className="truncate text-[13px] text-foreground">{assigneeName}</span>
+                  <span className="truncate emr-text-dense text-foreground">{assigneeName}</span>
                 </div>
               </TableCell>
               </TableRow>
@@ -1222,7 +1228,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
               <TableRow className="border-border bg-card hover:bg-card">
                 <TableCell
                   colSpan={6}
-                  className="h-24 text-center text-[13px] font-medium text-muted-foreground"
+                  className="h-24 text-center emr-text-dense font-medium text-muted-foreground"
                 >
                   표시할 검사 결과가 없습니다.
                 </TableCell>
@@ -1249,7 +1255,7 @@ function NormalRangeCell({ row }: { row: LabResultRow }) {
       aria-label={`${row.analyteName} 정상범위 ${row.referenceRange ?? "-"} 결과 ${row.value} ${rangeState.label}`}
     >
       {range ? (
-        <div className="relative mb-1 h-4 text-[12px] font-medium text-foreground">
+        <div className="relative mb-1 h-4 emr-text-metadata font-medium text-foreground">
           <span
             className="absolute top-0 -translate-x-1/2 whitespace-nowrap"
             style={{ left: `${scale.normalStart}%` }}
@@ -1264,7 +1270,7 @@ function NormalRangeCell({ row }: { row: LabResultRow }) {
           </span>
         </div>
       ) : (
-        <div className="mb-1 h-4 text-[12px] font-medium text-foreground">-</div>
+        <div className="mb-1 h-4 emr-text-metadata font-medium text-foreground">-</div>
       )}
       <NormalRangeChart row={row} scale={scale} markerClassName={rangeState.markerClassName} />
     </div>
@@ -1340,14 +1346,14 @@ function LabResultCommentSection({ result }: { result: LabResult }) {
     <section className="rounded-lg border bg-card">
       <div className="flex h-11 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-[14px] font-semibold">검사결과 종합소견</h2>
+          <h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>
           <Badge variant="secondary">담당자 코멘트</Badge>
         </div>
       </div>
       <div className="p-4">
         <Textarea
           aria-label="검사결과 종합소견"
-          className="min-h-24 resize-y bg-background text-[13px] leading-5"
+          className="min-h-24 resize-y bg-background emr-text-dense leading-5"
           defaultValue={defaultComment}
           placeholder="검사자가 결과 해석, 재검 필요 여부, 보호자 안내 메모를 입력합니다."
         />
@@ -1394,7 +1400,7 @@ function AttachmentStrip({
     <section className="rounded-lg border bg-card">
       <div className="flex h-11 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-[14px] font-semibold">첨부자료</h2>
+          <h2 className="emr-text-body font-semibold">첨부자료</h2>
           <Badge variant="secondary">{displayAttachments.length}</Badge>
         </div>
         <Button size="xs" variant="outline" className="bg-card" aria-label="첨부자료 추가">
@@ -1417,15 +1423,15 @@ function AttachmentStrip({
               </div>
             )}
             <div className="p-3 pt-2">
-              <div className="truncate text-[13px] font-medium">{attachment.fileName}</div>
-              <div className="mt-1 text-[12px] text-muted-foreground">
+              <div className="truncate emr-text-dense font-medium">{attachment.fileName}</div>
+              <div className="mt-1 emr-text-metadata text-muted-foreground">
                 {attachment.mimeType} · {formatFileSize(attachment.fileSizeBytes)}
               </div>
             </div>
           </div>
         ))}
         {!displayAttachments.length ? (
-          <div className="rounded-md border border-dashed p-3 text-[13px] text-muted-foreground">
+          <div className="rounded-md border border-dashed p-3 emr-text-dense text-muted-foreground">
             첨부자료 없음
           </div>
         ) : null}
@@ -1636,7 +1642,7 @@ export function LabRightPanel() {
             );
           })}
           {!visibleReceipts.length ? (
-            <section className="rounded-md border border-dashed p-3 text-[13px] text-muted-foreground">
+            <section className="rounded-md border border-dashed p-3 emr-text-dense text-muted-foreground">
               현재 오더와 연결된 장비결과가 없습니다.
             </section>
           ) : null}
@@ -1719,14 +1725,14 @@ function LabReceiptCard({
       >
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[14px] font-semibold leading-5 tracking-[0.196px] text-foreground">
+            <span className="truncate emr-text-section font-semibold text-foreground">
               {receipt.equipmentName}
             </span>
-            <span className="shrink-0 rounded border border-[var(--emr-line-subtle)] px-1.5 py-0.5 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)]">
+            <span className="shrink-0 rounded border border-[var(--emr-line-subtle)] px-1.5 py-0.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
               {receivedTime} 수신
             </span>
           </div>
-          <div className="mt-1 truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-muted-foreground">
+          <div className="mt-1 truncate emr-text-metadata font-medium text-muted-foreground">
             {patientLabel} · {primaryGuardianLabel} {orderLabel}
           </div>
         </div>
@@ -1750,7 +1756,7 @@ function LabReceiptCard({
             <div className="px-4 pb-3 pt-2">
               <div className="mb-2 h-px w-full bg-[var(--emr-line-subtle)]" />
               <div className="flex h-8 items-center justify-between gap-2">
-                <h3 className="text-[13px] font-semibold text-[var(--emr-text-secondary)]">검사 결과</h3>
+                <h3 className="emr-text-dense font-semibold text-[var(--emr-text-secondary)]">검사 결과</h3>
                 <Button
                   size="xs"
                   variant="outline"
@@ -1763,7 +1769,7 @@ function LabReceiptCard({
               </div>
               {previewRows.length ? (
                 <div className="mt-2 overflow-hidden">
-                  <div className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] bg-[var(--emr-surface-muted)] px-2 py-2 text-[12px] font-medium text-[var(--emr-text-secondary)]">
+                  <div className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] bg-[var(--emr-surface-muted)] px-2 py-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
                     <span>검사 항목명</span>
                     <span>수치</span>
                     <span>단위</span>
@@ -1771,7 +1777,7 @@ function LabReceiptCard({
                   {previewRows.map((row) => (
                     <div
                       key={row.id}
-                      className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] border-t px-2 py-2 text-[12px] leading-5"
+                      className="grid grid-cols-[minmax(0,2fr)_minmax(52px,1fr)_minmax(48px,1fr)] border-t px-2 py-2 emr-text-metadata leading-5"
                     >
                       <span className="truncate text-[var(--emr-text-secondary)]">{row.analyteName}</span>
                       <span className="text-foreground">{row.value}</span>
@@ -1780,7 +1786,7 @@ function LabReceiptCard({
                   ))}
                 </div>
               ) : (
-                <div className="mt-2 rounded-md border border-dashed p-3 text-[12px] text-muted-foreground">
+                <div className="mt-2 rounded-md border border-dashed p-3 emr-text-metadata text-muted-foreground">
                   미리 볼 수 있는 검사 결과가 없습니다.
                 </div>
               )}
@@ -1852,7 +1858,7 @@ export function LabContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
         검사 대기열에서 항목을 선택해 주세요.
       </div>
     );
@@ -1875,7 +1881,7 @@ export function LabContent() {
               />
             }
             badge={
-              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+              <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
                 {getLabResultDocumentId(detail.result)}
               </Badge>
             }
@@ -1931,8 +1937,8 @@ export function LabContent() {
               ],
             ].map(([label, value]) => (
               <div key={label as string} className="min-w-0 border-r border-border px-3 last:border-r-0">
-                <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-                <div className="mt-1 flex min-h-6 min-w-0 items-center text-[13px] font-medium text-foreground">{value}</div>
+                <div className="emr-text-metadata font-medium text-muted-foreground">{label}</div>
+                <div className="mt-1 flex min-h-6 min-w-0 items-center emr-text-dense font-medium text-foreground">{value}</div>
               </div>
             ))}
           </div>
@@ -2111,19 +2117,24 @@ function getImagingDocumentId(study: ImagingStudy) {
 }
 
 function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
+  const [density, setDensity] = useState<EmrTableDensity>("comfortable");
+
   return (
     <EmrOrderGroupSection
       title="Order 상세정보"
       count={1}
-      meta={<span className="text-[12px] font-medium text-muted-foreground">같은 차트 기준</span>}
+      meta={<span className="emr-text-metadata font-medium text-muted-foreground">같은 차트 기준</span>}
       actions={
         <Button size="xs" variant="outline" className="bg-card">
           PACS
         </Button>
       }
     >
-      <div className="overflow-x-auto">
-        <Table className="min-w-[760px] table-fixed text-[13px] leading-5">
+      <div>
+        <div className="mb-2 flex justify-end">
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+        </div>
+        <Table density={density} layout="scroll" minWidth={760} className="min-w-[760px] table-fixed leading-5">
           <colgroup>
             <col className="w-[13%]" />
             <col className="w-[25%]" />
@@ -2134,18 +2145,18 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
           </colgroup>
           <TableHeader className="bg-[var(--emr-surface-muted)]">
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사분류</TableHead>
-              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사명</TableHead>
-              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사명(영문)</TableHead>
-              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">요청자</TableHead>
-              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">요청 일시</TableHead>
-              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 text-[13px] font-medium text-muted-foreground">검사 담당자</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-medium text-muted-foreground">검사분류</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-medium text-muted-foreground">검사명</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-medium text-muted-foreground">검사명(영문)</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-medium text-muted-foreground">요청자</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-medium text-muted-foreground">요청 일시</TableHead>
+              <TableHead className="h-10 bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-medium text-muted-foreground">검사 담당자</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow className="border-border bg-card hover:bg-[var(--emr-state-hover)]">
               <TableCell className="h-11 px-2 font-medium">
-                <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[11px]">
+                <Badge variant="secondary" className="h-5 rounded-md px-1.5 emr-text-micro">
                   {detail.study.modality === "X-ray" ? "XR" : "US"}
                 </Badge>
               </TableCell>
@@ -2176,8 +2187,8 @@ function ImagingReadingSections({ study }: { study: ImagingStudy }) {
   return (
     <section className="rounded-lg border bg-card">
       <div className="flex min-h-11 items-center justify-between gap-3 border-b px-4">
-        <h2 className="text-[14px] font-semibold">스터디 판독의견</h2>
-        <div className="flex h-8 items-center gap-1 rounded-lg bg-[var(--emr-surface-muted)] px-2 text-[13px] font-semibold text-muted-foreground">
+        <h2 className="emr-text-body font-semibold">스터디 판독의견</h2>
+        <div className="flex h-8 items-center gap-1 rounded-lg bg-[var(--emr-surface-muted)] px-2 emr-text-dense font-semibold text-muted-foreground">
           <span>B</span>
           <span className="italic">I</span>
           <span>T</span>
@@ -2187,43 +2198,43 @@ function ImagingReadingSections({ study }: { study: ImagingStudy }) {
       </div>
       <div className="grid gap-3 p-4">
         <div>
-          <div className="text-[12px] font-medium text-muted-foreground">Findings</div>
+          <div className="emr-text-metadata font-medium text-muted-foreground">Findings</div>
           <Textarea
             aria-label="영상 판독 내용"
-            className="mt-2 min-h-32 resize-none bg-background text-[13px] leading-5"
+            className="mt-2 min-h-32 resize-none bg-background emr-text-dense leading-5"
             defaultValue={study.reading}
           />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <div className="text-[12px] font-medium text-muted-foreground">Imaging Dx</div>
+            <div className="emr-text-metadata font-medium text-muted-foreground">Imaging Dx</div>
             <Textarea
               aria-label="Imaging Dx"
-              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              className="mt-2 min-h-20 resize-none bg-background emr-text-dense leading-5"
               defaultValue={study.impression ? `${study.bodyPart} 영상상 위장관염 가능성` : ""}
             />
           </div>
           <div>
-            <div className="text-[12px] font-medium text-muted-foreground">DDx</div>
+            <div className="emr-text-metadata font-medium text-muted-foreground">DDx</div>
             <Textarea
               aria-label="DDx"
-              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              className="mt-2 min-h-20 resize-none bg-background emr-text-dense leading-5"
               defaultValue="이물, 급성 위장관염, 식이성 구토"
             />
           </div>
           <div>
-            <div className="text-[12px] font-medium text-muted-foreground">Impression</div>
+            <div className="emr-text-metadata font-medium text-muted-foreground">Impression</div>
             <Textarea
               aria-label="영상 종합소견"
-              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              className="mt-2 min-h-20 resize-none bg-background emr-text-dense leading-5"
               defaultValue={study.impression}
             />
           </div>
           <div>
-            <div className="text-[12px] font-medium text-muted-foreground">Recommendation</div>
+            <div className="emr-text-metadata font-medium text-muted-foreground">Recommendation</div>
             <Textarea
               aria-label="Recommendation"
-              className="mt-2 min-h-20 resize-none bg-background text-[13px] leading-5"
+              className="mt-2 min-h-20 resize-none bg-background emr-text-dense leading-5"
               defaultValue="CBC 결과와 임상 증상을 종합해 추적 관찰합니다."
             />
           </div>
@@ -2292,7 +2303,7 @@ export function ImagingContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
         영상 대기열에서 항목을 선택해 주세요.
       </div>
     );
@@ -2315,7 +2326,7 @@ export function ImagingContent() {
               />
             }
             badge={
-              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+              <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
                 {getImagingDocumentId(detail.study)}
               </Badge>
             }
@@ -2361,8 +2372,8 @@ export function ImagingContent() {
               ["검사 담당", <span key="imaging-assignee" aria-live="polite">{assignment.assigneeName}</span>],
             ].map(([label, value]) => (
               <div key={label as string} className="min-w-0 border-r border-border px-3 last:border-r-0">
-                <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-                <div className="mt-1 flex min-h-6 min-w-0 items-center text-[13px] font-medium text-foreground">{value}</div>
+                <div className="emr-text-metadata font-medium text-muted-foreground">{label}</div>
+                <div className="mt-1 flex min-h-6 min-w-0 items-center emr-text-dense font-medium text-foreground">{value}</div>
               </div>
             ))}
           </div>
@@ -2370,7 +2381,7 @@ export function ImagingContent() {
       />
       <ScrollArea data-slot="imaging-result-scroll-area" className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 pb-10 pt-4">
-          <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 text-[13px] font-medium leading-5 text-[var(--emr-status-warning-text)]">
+          <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 emr-text-dense font-medium leading-5 text-[var(--emr-status-warning-text)]">
             병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
           </section>
           <ImagingOrderDetailTable detail={detail} />
@@ -2389,14 +2400,14 @@ function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
     <div className="flex gap-2 overflow-x-auto pb-1">
       {mediaAttachments.map((attachment) => (
         <div key={attachment.id} className="w-[92px] shrink-0 overflow-hidden rounded-md border bg-card">
-          <div className="flex h-16 items-center justify-center bg-[linear-gradient(135deg,var(--emr-text-primary),var(--emr-text-secondary))] text-[12px] font-semibold text-[var(--emr-text-inverse)]">
+          <div className="flex h-16 items-center justify-center bg-[linear-gradient(135deg,var(--emr-text-primary),var(--emr-text-secondary))] emr-text-metadata font-semibold text-[var(--emr-text-inverse)]">
             {attachment.mimeType.includes("png") ? "IMG" : "FILE"}
           </div>
-          <div className="truncate px-2 py-1.5 text-[11px] text-muted-foreground">{attachment.fileName}</div>
+          <div className="truncate px-2 py-1.5 emr-text-micro text-muted-foreground">{attachment.fileName}</div>
         </div>
       ))}
       {!mediaAttachments.length ? (
-        <div className="rounded-md border border-dashed p-3 text-[12px] text-muted-foreground">
+        <div className="rounded-md border border-dashed p-3 emr-text-metadata text-muted-foreground">
           미디어 첨부 없음
         </div>
       ) : null}
@@ -2411,7 +2422,7 @@ export function ImagingRightPanel() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center p-4 emr-text-dense text-muted-foreground">
         영상 대기열에서 항목을 선택해 주세요.
       </div>
     );
@@ -2426,7 +2437,7 @@ export function ImagingRightPanel() {
     <div className="flex min-h-0 flex-1 flex-col" data-testid="imaging-summary-panel">
       <div className="flex h-14 items-center justify-between px-4">
         <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
-        <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+        <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
           {sameEncounterOrderCount}
         </Badge>
       </div>
@@ -2434,12 +2445,12 @@ export function ImagingRightPanel() {
         <div className="flex flex-col gap-4 p-3">
           <section className="overflow-hidden rounded-lg border bg-card">
             <div className="flex h-10 items-center justify-between border-b px-3">
-              <h3 className="text-[13px] font-semibold">같은 차트 내 Order</h3>
-              <Badge variant="outline" className="h-5 rounded-md px-1.5 text-[11px]">
+              <h3 className="emr-text-dense font-semibold">같은 차트 내 Order</h3>
+              <Badge variant="outline" className="h-5 rounded-md px-1.5 emr-text-micro">
                 {sameEncounterOrderCount}
               </Badge>
             </div>
-            <Table className="table-fixed text-[12px]">
+            <Table className="table-fixed emr-text-metadata">
               <TableBody>
                 {sameEncounterLabItems.map((item) => (
                   <TableRow key={item.result.id}>
@@ -2458,8 +2469,8 @@ export function ImagingRightPanel() {
           </section>
 
           <section>
-            <div className="text-[13px] font-semibold">보호자 공유용 종합 코멘트</div>
-            <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--emr-surface-muted)] px-3 text-[13px] font-semibold text-muted-foreground">
+            <div className="emr-text-dense font-semibold">보호자 공유용 종합 코멘트</div>
+            <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--emr-surface-muted)] px-3 emr-text-dense font-semibold text-muted-foreground">
               <span>B</span>
               <span className="italic">I</span>
               <span>T</span>
@@ -2468,23 +2479,23 @@ export function ImagingRightPanel() {
             </div>
             <Textarea
               aria-label="영상 종합 코멘트"
-              className="mt-2 min-h-28 resize-none bg-background text-[13px] leading-5"
+              className="mt-2 min-h-28 resize-none bg-background emr-text-dense leading-5"
               defaultValue={`- ${detail.study.impression ?? "종합소견 text"}\n- 보호자에게 CBC 결과와 함께 안내`}
             />
           </section>
 
           <section>
-            <div className="mb-2 text-[13px] font-semibold">미디어</div>
+            <div className="mb-2 emr-text-dense font-semibold">미디어</div>
             <ImagingMediaStrip attachments={detail.attachments} />
           </section>
 
           <section>
-            <div className="mb-2 text-[13px] font-semibold">첨부 파일</div>
+            <div className="mb-2 emr-text-dense font-semibold">첨부 파일</div>
             <div className="flex flex-col gap-2">
               {fileAttachments.map((attachment) => (
                 <div
                   key={attachment.id}
-                  className="flex h-9 items-center justify-between gap-2 rounded-md bg-[var(--emr-surface-muted)] px-3 text-[12px]"
+                  className="flex h-9 items-center justify-between gap-2 rounded-md bg-[var(--emr-surface-muted)] px-3 emr-text-metadata"
                 >
                   <span className="truncate text-primary">{attachment.fileName}</span>
                   <Button variant="ghost" size="icon-xs" aria-label={`${attachment.fileName} 삭제`}>
@@ -2493,7 +2504,7 @@ export function ImagingRightPanel() {
                 </div>
               ))}
               {!fileAttachments.length ? (
-                <div className="rounded-md border border-dashed p-3 text-[12px] text-muted-foreground">
+                <div className="rounded-md border border-dashed p-3 emr-text-metadata text-muted-foreground">
                   첨부 파일 없음
                 </div>
               ) : null}

@@ -47,6 +47,7 @@ import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel"
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -92,6 +93,7 @@ import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   Diagnosis,
@@ -653,7 +655,7 @@ function ChartHistoryItem({
       testId={`chart-history-item-${row.encounter.id}`}
       title={primaryDiagnosis ?? row.encounter.encounterNo}
       badge={
-        <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 text-[11px]">
+        <Badge variant="outline" className="h-5 shrink-0 rounded-md px-1.5 emr-text-micro">
           {statusLabel}
         </Badge>
       }
@@ -1430,7 +1432,7 @@ function SoapPanel({
             aria-label="SOAP 더보기"
             aria-pressed={activeInOverflow}
             className={cn(
-              "inline-flex h-full shrink-0 items-center gap-1 px-2 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              "inline-flex h-full shrink-0 items-center gap-1 px-2 emr-text-body font-semibold  outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
               activeInOverflow ? "text-foreground" : "text-muted-foreground"
             )}
           >
@@ -1542,7 +1544,7 @@ function SoapPanel({
               label={activeSection.title}
               onContentChange={updateActiveSoapContent}
             />
-            <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 text-[12px] text-muted-foreground">
+            <div className="flex min-h-9 items-center justify-between border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 emr-text-metadata text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Button
                   type="button"
@@ -1590,7 +1592,7 @@ function SoapPanel({
             <DialogTitle className="text-[18px] font-bold leading-6 text-foreground">
               SOAP 진단계통 선택
             </DialogTitle>
-            <DialogDescription className="text-[13px]">
+            <DialogDescription className="emr-text-dense">
               진단명 섹션의 계통분류와 같은 기준으로 SOAP 탭을 추가합니다.
             </DialogDescription>
           </DialogHeader>
@@ -1603,7 +1605,7 @@ function SoapPanel({
                   key={systemLabel}
                   type="button"
                   disabled={alreadyAdded}
-                  className="flex min-h-11 items-center justify-between rounded-md px-3 text-left text-[13px] transition-colors hover:bg-[var(--emr-state-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-11 items-center justify-between rounded-md px-3 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => {
                     addSystemSoap(systemLabel, true);
                     setAddDialogOpen(false);
@@ -1765,7 +1767,7 @@ function AssessmentPanel({
       <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-2">
         <span className="flex min-w-0 items-center gap-2">
           <ChartSectionTitle title="진단명" />
-          <span data-testid="chart-diagnosis-save-status" className="text-[12px] font-medium text-muted-foreground">
+          <span data-testid="chart-diagnosis-save-status" className="emr-text-metadata font-medium text-muted-foreground">
             {saveStatusText}
           </span>
         </span>
@@ -1796,7 +1798,7 @@ function AssessmentPanel({
                   autoComplete="off"
                   placeholder="한글, 영문, 약자, 연관검색어로 진단명 검색"
                   value={searchQuery}
-                  className="h-9 bg-[var(--emr-surface-panel)] pl-9 text-[13px]"
+                  className="h-9 bg-[var(--emr-surface-panel)] pl-9 emr-text-dense"
                   onFocus={() => setSearchOpen(true)}
                   onValueChange={(value) => {
                     setSearchQuery(value);
@@ -1809,7 +1811,7 @@ function AssessmentPanel({
                 className="max-h-72 w-[var(--anchor-width)] gap-1 overflow-y-auto p-1.5"
                 initialFocus={false}
               >
-                <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+                <div className="px-2 py-1 emr-text-micro font-semibold text-muted-foreground">
                   {resultModeLabel}
                 </div>
                 <div role="listbox" aria-label="진단명 검색 결과" className="grid gap-1">
@@ -1827,14 +1829,14 @@ function AssessmentPanel({
                         <Badge variant="outline" className="shrink-0">
                           {item.systemLabel}
                         </Badge>
-                        <span className="truncate text-[13px] font-semibold text-foreground">
+                        <span className="truncate emr-text-dense font-semibold text-foreground">
                           {item.name}
                         </span>
-                        <span className="shrink-0 text-[11px] text-muted-foreground">
+                        <span className="shrink-0 emr-text-micro text-muted-foreground">
                           {diagnosisTypeLabel[item.defaultType]}
                         </span>
                       </span>
-                      <span className="truncate text-[11px] text-muted-foreground">{item.hint}</span>
+                      <span className="truncate emr-text-micro text-muted-foreground">{item.hint}</span>
                     </button>
                   ))}
                   {canAddFreeText ? (
@@ -1842,18 +1844,18 @@ function AssessmentPanel({
                       type="button"
                       role="option"
                       aria-selected="false"
-                      className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-[var(--emr-state-hover)]"
+                      className="rounded-md border border-dashed border-[var(--emr-line-hairline)] px-2.5 py-2 text-left emr-text-dense transition-colors hover:bg-[var(--emr-state-hover)]"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={addFreeTextDiagnosis}
                     >
                       <span className="font-semibold">‘{searchQuery.trim()}’ 직접 추가</span>
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      <span className="mt-0.5 block emr-text-micro text-muted-foreground">
                         카탈로그 미연결 진단명으로 이 차트에만 표시
                       </span>
                     </button>
                   ) : null}
                   {!searchResults.length && !canAddFreeText ? (
-                    <div className="px-2.5 py-3 text-[12px] text-muted-foreground">
+                    <div className="px-2.5 py-3 emr-text-metadata text-muted-foreground">
                       표시할 추천 진단명이 없습니다.
                     </div>
                   ) : null}
@@ -1873,7 +1875,7 @@ function AssessmentPanel({
             </Button>
           </div>
           <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-            <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--emr-surface-muted)] px-3 py-2 text-[12px] font-semibold text-muted-foreground">
+            <div className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] bg-[var(--emr-surface-muted)] px-3 py-2 emr-text-metadata font-semibold text-muted-foreground">
               <span>계통분류</span>
               <span>진단명</span>
               <span>확진</span>
@@ -1883,7 +1885,7 @@ function AssessmentPanel({
             {diagnosisRows.map((diagnosis) => (
               <div
                 key={diagnosis.id}
-                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2 text-[13px]"
+                className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2 emr-text-dense"
               >
                 <Badge variant="outline">{diagnosis.systemLabel}</Badge>
                 <span className="min-w-0 truncate font-medium">
@@ -1893,7 +1895,7 @@ function AssessmentPanel({
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 확진 토글`}
                   aria-pressed={diagnosis.diagnosisType === "confirmed"}
-                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
+                  className="w-fit rounded-md px-2 py-1 emr-text-metadata font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
                   onClick={() => toggleConfirmedDiagnosis(diagnosis.id)}
                 >
                   {diagnosis.diagnosisType === "confirmed" ? "✓" : "-"}
@@ -1902,7 +1904,7 @@ function AssessmentPanel({
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 중점 진단 표시`}
                   aria-pressed={diagnosis.isPrimary}
-                  className="w-fit rounded-md px-2 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
+                  className="w-fit rounded-md px-2 py-1 emr-text-metadata font-semibold text-muted-foreground transition-colors hover:bg-[var(--emr-state-hover)] aria-pressed:bg-[var(--emr-state-selected)] aria-pressed:text-foreground"
                   onClick={() => togglePrimaryDiagnosis(diagnosis.id)}
                 >
                   {diagnosis.isPrimary ? "✓" : "-"}
@@ -1922,7 +1924,7 @@ function AssessmentPanel({
               </div>
             ))}
             {!diagnosisRows.length ? (
-              <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6 text-center text-[13px] text-muted-foreground">
+              <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6 text-center emr-text-dense text-muted-foreground">
                 진단 입력 전입니다.
               </div>
             ) : null}
@@ -1937,7 +1939,7 @@ function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) 
   return (
     <section className="rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-[14px] font-semibold">진단 이력</h2>
+        <h2 className="emr-text-body font-semibold">진단 이력</h2>
         <Badge variant="outline">{historyRows.length}</Badge>
       </div>
       <div className="flex flex-col gap-2">
@@ -1947,7 +1949,7 @@ function AssessmentHistory({ historyRows }: { historyRows: ChartHistoryRow[] }) 
               <span className="font-medium">{getShortDateTime(row.encounter.checkedInAt ?? row.encounter.createdAt)}</span>
               <Badge variant="outline">{getStatusLabel("encounter", row.encounter.status)}</Badge>
             </div>
-            <p className="mt-2 text-[13px] leading-5">
+            <p className="mt-2 emr-text-dense leading-5">
               {row.soapNote?.assessment ?? getDiagnosisLabel(row.diagnoses)}
             </p>
           </div>
@@ -1989,13 +1991,13 @@ function ChartRightPanel() {
           <AssessmentHistory historyRows={historyRows} />
           <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
             <div className="font-semibold">개인/민감 정보</div>
-            <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+            <p className="mt-2 emr-text-metadata leading-5 text-muted-foreground">
               보호자 메모: {bundle.primaryGuardian?.memo ?? "물 섭취 후 재구토, 검사 비용 설명을 먼저 요청."}
             </p>
           </section>
           <section className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-3">
             <div className="font-semibold">부가 정보</div>
-            <p className="mt-2 text-[12px] leading-5 text-muted-foreground">
+            <p className="mt-2 emr-text-metadata leading-5 text-muted-foreground">
               환자 메모: {bundle.patient.specialNote ?? "진료대에서 긴장도가 높아 보호자 동석 권장."}
             </p>
           </section>
@@ -2149,9 +2151,19 @@ function ChartOrderTable({
   selectedOrderIds: Set<string>;
   someVisibleSelected: boolean;
 }) {
+  const [density, setDensity] = useState<EmrTableDensity>("compact");
+
   return (
     <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <Table className="min-w-[1160px] table-fixed bg-[var(--emr-surface-panel)] text-[13px]">
+      <div className="flex justify-end border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2">
+        <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+      </div>
+      <Table
+        density={density}
+        layout="scroll"
+        minWidth={1160}
+        className="table-fixed bg-[var(--emr-surface-panel)]"
+      >
         <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
             <TableHead className="w-10 px-3 text-muted-foreground">
@@ -2163,16 +2175,16 @@ function ChartOrderTable({
                 onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
               />
             </TableHead>
-            <TableHead className="w-[132px] text-[12px] text-muted-foreground">그룹</TableHead>
-            <TableHead className="w-[72px] text-[12px] text-muted-foreground">분류</TableHead>
-            <TableHead className="w-[76px] text-[12px] text-muted-foreground">상태</TableHead>
-            <TableHead className="w-[260px] text-[12px] text-muted-foreground">Order명</TableHead>
-            <TableHead className="w-[220px] text-[12px] text-muted-foreground">청구서명</TableHead>
-            <TableHead className="w-[68px] text-right text-[12px] text-muted-foreground">수량</TableHead>
-            <TableHead className="w-[84px] text-right text-[12px] text-muted-foreground">단가</TableHead>
-            <TableHead className="w-[96px] text-right text-[12px] text-muted-foreground">청구금액</TableHead>
-            <TableHead className="w-[76px] text-[12px] text-muted-foreground">수의사</TableHead>
-            <TableHead className="w-[116px] text-right text-[12px] text-muted-foreground">작업</TableHead>
+            <TableHead className="w-[132px] emr-text-metadata text-muted-foreground">그룹</TableHead>
+            <TableHead className="w-[72px] emr-text-metadata text-muted-foreground">분류</TableHead>
+            <TableHead className="w-[76px] emr-text-metadata text-muted-foreground">상태</TableHead>
+            <TableHead className="w-[260px] emr-text-metadata text-muted-foreground">Order명</TableHead>
+            <TableHead className="w-[220px] emr-text-metadata text-muted-foreground">청구서명</TableHead>
+            <TableHead className="w-[68px] text-right emr-text-metadata text-muted-foreground">수량</TableHead>
+            <TableHead className="w-[84px] text-right emr-text-metadata text-muted-foreground">단가</TableHead>
+            <TableHead className="w-[96px] text-right emr-text-metadata text-muted-foreground">청구금액</TableHead>
+            <TableHead className="w-[76px] emr-text-metadata text-muted-foreground">수의사</TableHead>
+            <TableHead className="w-[116px] text-right emr-text-metadata text-muted-foreground">작업</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -2188,7 +2200,7 @@ function ChartOrderTable({
                 key={order.id}
                 data-dirty={dirty ? "true" : undefined}
                 data-state={selected ? "selected" : undefined}
-                className="h-11 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40 data-[state=selected]:bg-[var(--emr-state-selected)]"
+                className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40 data-[state=selected]:bg-[var(--emr-state-selected)]"
               >
                 <TableCell className="px-3">
                   <EmrTableCheckbox
@@ -2197,7 +2209,7 @@ function ChartOrderTable({
                     onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
                   />
                 </TableCell>
-                <TableCell className="truncate text-[12px] font-medium text-muted-foreground" title={groupTitle}>
+                <TableCell className="truncate emr-text-metadata font-medium text-muted-foreground" title={groupTitle}>
                   {groupTitle}
                 </TableCell>
                 <TableCell>
@@ -2213,7 +2225,7 @@ function ChartOrderTable({
                     {order.displayName}
                   </div>
                   <div
-                    className="truncate text-[12px] text-muted-foreground"
+                    className="truncate emr-text-metadata text-muted-foreground"
                     title={order.instruction ?? orderTypeMeta[order.orderType].handoff}
                   >
                     {order.instruction ?? orderTypeMeta[order.orderType].handoff}
@@ -2223,7 +2235,7 @@ function ChartOrderTable({
                   <Input
                     aria-label={`${order.displayName} 청구서명 수정`}
                     value={row.billingName}
-                    className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-[12px]"
+                    className="h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
                     onChange={(event) => onUpdateBillingName(order.id, event.target.value)}
                   />
                 </TableCell>
@@ -2235,7 +2247,7 @@ function ChartOrderTable({
                     title={invalidQuantity ? "수량은 숫자로 입력해 주세요." : undefined}
                     value={row.quantityInput}
                     className={cn(
-                      "h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-right text-[12px] tabular-nums",
+                      "h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-right emr-text-metadata tabular-nums",
                       invalidQuantity && "border-[var(--emr-status-danger-border)]"
                     )}
                     onChange={(event) => onUpdateQuantity(order.id, event.target.value)}
@@ -2286,7 +2298,7 @@ function ChartOrderTable({
           })}
           {!rows.length ? (
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
-              <TableCell colSpan={11} className="h-28 text-center text-[13px] text-muted-foreground">
+              <TableCell colSpan={11} className="h-28 text-center emr-text-dense text-muted-foreground">
                 <span className="grid gap-1">
                   <span className="font-semibold text-foreground">표시할 오더가 없습니다.</span>
                   <span>현재 선택한 분류에 해당하는 오더가 없어요.</span>
@@ -2361,7 +2373,7 @@ function ChartUnavailableAlert({
     <EmrInlineAlert
       severity="info"
       title={copy.title}
-      className={cn("text-[12px]", className)}
+      className={cn("emr-text-metadata", className)}
       action={
         <Button size="sm" variant="outline" onClick={onDismiss}>
           확인
@@ -2693,7 +2705,7 @@ function OrderArea({
           someVisibleSelected={someVisibleSelected}
         />
       </div>
-      <div className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2 text-[12px]">
+      <div className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2 emr-text-metadata">
         <div className="min-w-0 text-muted-foreground">
           <div className="truncate">
             선택 오더 {selectedOrderIds.size}건 · 확정 대상 {actionableSelectedOrderCount}건 · 재확인 필요 {recheckOrderCount}건
@@ -2749,7 +2761,7 @@ function OrderArea({
           description={
             <span className="grid gap-3">
               <span>현재 환자와 선택 오더를 확인한 뒤 서버 draft 상태에 저장합니다.</span>
-              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
+              <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
                 <span>환자: {bundle.patient.name} · 보호자 {guardianName}</span>
                 <span>차트번호: {bundle.encounter.encounterNo}</span>
                 <span>선택 오더: {selectedOrderIds.size}건 · 선택 금액 {selectedAmount.toLocaleString()}</span>
@@ -2772,7 +2784,7 @@ function OrderArea({
                 <span>
                   {deleteTargetOrder.displayName} 오더를 현재 차트의 draft에서 제외합니다. 저장 시 서버 draft에도 반영됩니다.
                 </span>
-                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
+                <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
                   삭제 후 `Order 업데이트`를 눌러 현재 세션 변경으로 확정할 수 있습니다.
                 </span>
               </span>
@@ -2814,11 +2826,11 @@ function ChartInstructionInfo({
         <span className="grid gap-0.5">
           <span
             data-testid="chart-completion-status"
-            className="text-[13px] font-semibold text-[var(--emr-status-info-text)]"
+            className="emr-text-dense font-semibold text-[var(--emr-status-info-text)]"
           >
             {getChartCompletionStatusText(bundle.encounter)}
           </span>
-          <span data-testid="chart-soap-status" className="text-[12px] font-medium text-muted-foreground">
+          <span data-testid="chart-soap-status" className="emr-text-metadata font-medium text-muted-foreground">
             {getSoapStatusText(latestSoap)}
           </span>
         </span>
@@ -2830,8 +2842,8 @@ function ChartInstructionInfo({
     <div className="grid grid-cols-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3">
       {infoItems.map(({ label, value }) => (
         <div key={label} className="border-r border-[var(--emr-line-hairline)] px-3 last:border-r-0">
-          <div className="text-[12px] font-medium text-muted-foreground">{label}</div>
-          <div className="mt-1 flex min-h-6 items-center text-[13px] font-medium text-foreground">{value}</div>
+          <div className="emr-text-metadata font-medium text-muted-foreground">{label}</div>
+          <div className="mt-1 flex min-h-6 items-center emr-text-dense font-medium text-foreground">{value}</div>
         </div>
       ))}
     </div>
@@ -2848,7 +2860,7 @@ function ChartPreflightLine({
   value: string;
 }) {
   return (
-    <div className="flex min-h-7 items-center justify-between gap-3 text-[12px]">
+    <div className="flex min-h-7 items-center justify-between gap-3 emr-text-metadata">
       <span className="text-[var(--emr-text-tertiary)]">{label}</span>
       <span className={cn("text-right font-medium", emphasis && "text-primary")}>{value}</span>
     </div>
@@ -2857,7 +2869,7 @@ function ChartPreflightLine({
 
 function EmptyChartState() {
   return (
-    <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">
+    <div className="flex h-full items-center justify-center emr-text-dense text-muted-foreground">
       진료 대기열에서 환자를 선택해 주세요.
     </div>
   );
@@ -3266,7 +3278,7 @@ export function ChartContent() {
               />
             }
             badge={
-              <Badge variant="secondary" className="h-5 rounded-md px-2 text-[11px] text-muted-foreground">
+              <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
                 {currentBundle.encounter.encounterNo}
               </Badge>
             }
@@ -3314,7 +3326,7 @@ export function ChartContent() {
             </Button>
           }
         >
-          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 text-[13px] text-foreground">
+          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
             <ChartPreflightLine
               label="환자 / 보호자"
               value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
@@ -3328,7 +3340,7 @@ export function ChartContent() {
             <EmrInlineAlert
               severity="error"
               title="차트 작성완료가 저장되지 않았어"
-              className="mt-3 text-[12px]"
+              className="mt-3 emr-text-metadata"
               action={
                 <Button size="sm" variant="outline" onClick={() => void handleChartCompletionConfirm()}>
                   작성완료 다시 시도

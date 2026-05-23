@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-231 Chart Billing Table Adoption</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-231 Chart Billing Table Adoption</h1>
+      <p>Chart/order draft table과 billing invoice line table에 shared table density/scroll contract를 적용했다.</p>
+
+      <h2>Affected Tables</h2>
+      <ul>
+        <li>Chart order draft: <code>density="compact" layout="scroll" minWidth={1160}</code>.</li>
+        <li>Billing invoice lines: <code>density="standard" layout="scroll" minWidth={720}</code>.</li>
+      </ul>
+
+      <h2>Header Rule Adoption</h2>
+      <p>이번 변경에서는 sort/filter/menu affordance를 새로 추가하지 않았다. Checkbox/action/compound clinical cells remain static, and financial amount columns keep right-aligned readable cells.</p>
+
+      <h2>Screenshots</h2>
+      <ul>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-231-chart-order-table-1280x880-after.png</code></li>
+        <li><code>output/ui-audit-2026-05-22/screenshots/den-231-billing-table-1280x880-after.png</code></li>
+      </ul>
+
+      <h2>QA Metrics</h2>
+      <ul>
+        <li>Chart: document width 1280/1280, scroll table density <code>compact</code>, layout <code>scroll</code>.</li>
+        <li>Billing: document width 1280/1280, scroll table density <code>standard</code>, layout <code>scroll</code>.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: passed with 5 pre-existing warnings.</li>
+        <li><code>npx tsc --noEmit</code>: passed.</li>
+        <li><code>npx playwright test tests/chart.spec.ts tests/billing.spec.ts --project=chromium</code>: 23 passed.</li>
+        <li><code>npm run docs:check</code>: passed.</li>
+      </ul>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-222 Responsive Blocker Fix</title>
+    <style>
+      body { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #18181b; line-height: 1.65; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f4f4f5; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+      .ok { color: #047857; font-weight: 700; }
+      .note { color: #52525b; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-222 Responsive Blocker Fix</h1>
+    <p class="note">작성일: 2026-05-23 · Linear: DEN-222 · Project 11 A+ Token & Responsive Hardening</p>
+
+    <h2>요약</h2>
+    <p>
+      DEN-221에서 확인한 1024px chart triple-panel squeeze를 shell-level responsive containment로 수정했다.
+      content aside와 right panel이 동시에 열린 1100px 이하 상태에서만 right panel column을 표시하지 않아 중앙 chart workspace가 접근 가능하게 남는다.
+    </p>
+
+    <h2>변경</h2>
+    <table>
+      <thead>
+        <tr><th>파일</th><th>내용</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>src/shell/workspace-frame.tsx</code></td><td>workspace frame에 content aside/right panel open 상태를 data attribute로 노출하고, right panel aside에 responsive class를 추가</td></tr>
+        <tr><td><code>src/app/globals.css</code></td><td>1100px 이하에서 content aside와 right panel이 모두 열린 경우 workspace grid를 1열로 고정하고 right panel을 숨기는 containment rule 추가</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Before / After</h2>
+    <ul>
+      <li>Before: <code>output/ui-audit-2026-05-22/screenshots/den-221-chart-1024x768.png</code></li>
+      <li>After: <code>output/ui-audit-2026-05-22/screenshots/den-222-chart-1024x768-after.png</code></li>
+      <li>After metric: right panel display <code>none</code>, document horizontal overflow 없음, chart content visible</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><span class="ok">PASS</span> <code>npm run lint -- --ignore-pattern '.worktrees/**'</code> - 기존 warning 5개 유지, error 없음</li>
+      <li><span class="ok">PASS</span> <code>npx tsc --noEmit</code></li>
+      <li><span class="ok">PASS</span> <code>npx playwright test tests/chart.spec.ts --project=chromium -g "chart workspace renders"</code></li>
+      <li><span class="ok">PASS</span> Browser QA screenshot at 1024x768</li>
+      <li><span class="ok">PASS</span> <code>npm run docs:check</code></li>
+    </ul>
+
+    <h2>남은 Debt</h2>
+    <p>
+      1024px에서도 module side panel과 content aside가 모두 열리면 chart workspace는 여전히 dense하다.
+      다만 우측 patient panel이 더 이상 workspace를 덮어쓰지 않으며, full mobile redesign과 table scroll contract는 후속 Project 12 범위로 남긴다.
+    </p>
+  </body>
+</html>

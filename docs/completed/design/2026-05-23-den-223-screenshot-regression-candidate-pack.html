@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-223 Screenshot Regression Candidate Pack</title>
+    <style>
+      body { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #18181b; line-height: 1.65; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f4f4f5; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+      .stable { color: #047857; font-weight: 700; }
+      .manual { color: #b45309; font-weight: 700; }
+      .note { color: #52525b; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-223 Screenshot Regression Candidate Pack</h1>
+    <p class="note">작성일: 2026-05-23 · Linear: DEN-223 · Project 11 A+ Token & Responsive Hardening</p>
+
+    <h2>추천 자동화 순서</h2>
+    <table>
+      <thead>
+        <tr><th>순서</th><th>그룹</th><th>URL / Setup</th><th>Viewport</th><th>Expected State</th><th>현재 Evidence</th><th>Risk</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>Chart dense workspace</td><td><code>/w/clair-demo/treatment?modulePanel=open&amp;aside=history&amp;right=open</code></td><td>1440x900</td><td>queue, history, SOAP, diagnosis, order table visible</td><td><code>den-219-chart-order-token-adoption-after.png</code></td><td><span class="stable">Stable</span></td>
+        </tr>
+        <tr>
+          <td>2</td><td>Reception controls</td><td><code>/w/clair-demo/reception?modulePanel=open&amp;right=open</code></td><td>1440x900</td><td>queue/calendar controls keep 40px alignment and dense labels</td><td><code>den-216-reception-controls-after.png</code>, <code>den-218-reception-token-adoption-after.png</code></td><td><span class="stable">Stable</span></td>
+        </tr>
+        <tr>
+          <td>3</td><td>Billing financial preflight</td><td><code>/w/clair-demo/billing?modulePanel=open&amp;right=open</code></td><td>1440x900</td><td>invoice group, line table, payment CTA visible</td><td><code>den-212-billing-financial-preflight-after.png</code>, <code>den-220-billing-token-adoption-after.png</code></td><td><span class="stable">Stable</span></td>
+        </tr>
+        <tr>
+          <td>4</td><td>Customer row action menu</td><td><code>/w/clair-demo/customer?modulePanel=open&amp;right=open</code>, open row action menu</td><td>1440x900</td><td>menu feedback remains visible and row selection unchanged</td><td><code>den-210-customer-row-menu-feedback-after.png</code>, <code>den-218-customer-token-adoption-after.png</code></td><td><span class="manual">Interaction setup</span></td>
+        </tr>
+        <tr>
+          <td>5</td><td>Responsive chart containment</td><td><code>/w/clair-demo/treatment?modulePanel=open&amp;aside=history&amp;right=open</code></td><td>1024x768</td><td>right panel hidden by containment, chart content visible, no document overflow</td><td><code>den-222-chart-1024x768-after.png</code></td><td><span class="stable">Stable</span></td>
+        </tr>
+        <tr>
+          <td>6</td><td>Lab/imaging operational tables</td><td><code>/w/clair-demo/lab?modulePanel=open&amp;right=open</code>, <code>/w/clair-demo/imaging?modulePanel=open&amp;right=open</code></td><td>1440x900</td><td>result input, equipment receipt, imaging reading panel visible</td><td><code>den-220-lab-token-adoption-after.png</code>, <code>den-220-imaging-token-adoption-after.png</code></td><td><span class="stable">Stable</span></td>
+        </tr>
+        <tr>
+          <td>7</td><td>Reception empty calendar slot</td><td><code>/w/clair-demo/reception?modulePanel=open</code>, hover/focus an empty slot</td><td>1440x900</td><td>empty-slot affordance visible without cancel flicker</td><td><code>den-211-reception-empty-slot-hover-rework-after.png</code>, <code>den-212-reception-empty-slot-hover-after.png</code></td><td><span class="manual">Pointer state</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>수동 후보 / Flaky 분리</h2>
+    <ul>
+      <li>Menu, popover, hover, focus state는 Playwright setup이 가능하지만 snapshot timing과 animation stabilization을 먼저 넣어야 한다.</li>
+      <li>TipTap editor selection toolbar, command palette, dirty draft confirmation은 interaction sequencing이 길어 우선 수동 후보로 둔다.</li>
+      <li>Table horizontal scroll candidate는 Project 12의 table wrapper contract 이후 자동화하는 것이 안전하다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li>새 screenshot framework, CI integration, 대량 snapshot 생성은 이번 이슈 범위에서 제외</li>
+    </ul>
+  </body>
+</html>

@@ -94,7 +94,7 @@ export function EmrDialogShell({
       <DialogHeader className={cn(layout.headerClassName, headerClassName)}>
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <DialogTitle className="text-[18px] font-bold leading-6 text-[var(--emr-text-primary)]">
+            <DialogTitle className="emr-text-dialog-title font-bold text-[var(--emr-text-primary)]">
               {title}
             </DialogTitle>
             {description ? (

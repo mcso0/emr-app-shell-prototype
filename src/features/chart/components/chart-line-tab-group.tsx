@@ -22,7 +22,7 @@ export function ChartLineTabGroup<TValue extends string>({
           role="tab"
           aria-selected={value === item.value}
           className={cn(
-            "group relative inline-flex items-center whitespace-nowrap px-1 py-1 text-[length:var(--clair-typography-body-2-normal-font-size)] font-semibold leading-[var(--clair-typography-body-2-normal-line-height)] tracking-normal text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            "group relative inline-flex items-center whitespace-nowrap px-1 py-1 emr-text-body font-semibold  tracking-normal text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
             value === item.value && "text-foreground"
           )}
           onClick={() => onValueChange(item.value)}

@@ -11,6 +11,7 @@ import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrSidePanelCard,
   emrSidePanelCardHoverActionButtonClassName,
@@ -60,6 +61,7 @@ import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 import type { InvoiceLine, InvoiceStatus, Payment, PaymentMethod } from "@/types/emr-domain";
 
@@ -602,10 +604,10 @@ function QueueItem({
     >
       <div className="flex min-h-6 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold leading-5 text-[var(--emr-text-primary)]">
+          <div className="truncate emr-text-dense font-semibold leading-5 text-[var(--emr-text-primary)]">
             {row.patient?.name ?? "환자 미상"} · {row.invoice.invoiceNo}
           </div>
-          <div className="truncate text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--emr-text-secondary)]">
+          <div className="truncate emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
             {row.guardian?.name ?? "보호자 미지정"} · {row.encounter.encounterNo}
           </div>
         </div>
@@ -624,10 +626,10 @@ function QueueItem({
           triggerClassName={emrSidePanelCardHoverActionButtonClassName}
         />
       </div>
-      <div className="mt-1 min-w-0 truncate text-[12px] leading-4 text-muted-foreground">
+      <div className="mt-1 min-w-0 truncate emr-text-metadata leading-4 text-muted-foreground">
         {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
       </div>
-      <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 text-[11px] text-muted-foreground">
+      <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 emr-text-micro text-muted-foreground">
         <span>{formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}</span>
         <span>{formatAmount(row.invoice.totalAmount)}</span>
       </div>
@@ -793,17 +795,17 @@ function BillingTitleCard({ detail }: { detail: BillingDetail }) {
             <h1 className="text-[18px] font-semibold leading-[26px]">수납</h1>
             <EmrStatusBadge label={getInvoiceStatusLabel(detail.invoice.status)} marker="none" />
           </div>
-          <div className="mt-1 text-[13px] text-muted-foreground">
+          <div className="mt-1 emr-text-dense text-muted-foreground">
             {detail.invoice.invoiceNo} · {detail.patient?.name ?? "환자 미상"} ·{" "}
             {detail.guardian?.name ?? "보호자 미지정"} · {detail.encounter.encounterNo}
           </div>
-          <div className="mt-2 text-[13px] font-medium text-[var(--emr-text-secondary)]">
+          <div className="mt-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
             {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게 안내합니다.
           </div>
         </div>
         <div className="text-right">
           <div className="text-[20px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="emr-text-metadata text-muted-foreground">
             {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
           </div>
         </div>
@@ -822,7 +824,7 @@ function GuardianGroups({
   return (
     <section className="rounded-lg border bg-card">
       <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="text-[14px] font-semibold">보호자 청구 묶음</h2>
+        <h2 className="emr-text-body font-semibold">보호자 청구 묶음</h2>
         <Badge variant="secondary">{groups.length}</Badge>
       </div>
       <div className="grid gap-3 p-4 md:grid-cols-3">
@@ -841,7 +843,7 @@ function GuardianGroups({
                 <div className="font-medium">{group.guardian.name}</div>
                 <Badge variant="outline">{group.invoices.length}건</Badge>
               </div>
-              <div className="mt-2 truncate text-[12px] text-muted-foreground">
+              <div className="mt-2 truncate emr-text-metadata text-muted-foreground">
                 {group.patients.map((patient) => patient.name).join(", ")}
               </div>
               <div className="mt-3 text-[15px] font-semibold">{formatAmount(group.totalDueAmount)}</div>
@@ -871,7 +873,7 @@ function CombinePanel({
   return (
     <section className="rounded-lg border bg-card">
       <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="text-[14px] font-semibold">합산/해제</h2>
+        <h2 className="emr-text-body font-semibold">합산/해제</h2>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={onCombine}>합산</Button>
           <Button size="sm" variant="outline" onClick={onClear}>합산 해제</Button>
@@ -881,7 +883,7 @@ function CombinePanel({
         {(group?.invoices ?? []).map((invoice) => (
           <label
             key={invoice.id}
-            className="flex cursor-pointer items-center gap-3 px-4 py-3 text-[13px]"
+            className="flex cursor-pointer items-center gap-3 px-4 py-3 emr-text-dense"
           >
             <Checkbox
               aria-label={`${invoice.invoiceNo} 합산 선택`}
@@ -897,7 +899,7 @@ function CombinePanel({
           </label>
         ))}
       </div>
-      <div className="border-t px-4 py-3 text-[12px] text-muted-foreground">
+      <div className="border-t px-4 py-3 emr-text-metadata text-muted-foreground">
         합산 대상 {selectedInvoiceIds.length}건 · 적용 {combinedInvoiceIds.length}건
       </div>
     </section>
@@ -915,6 +917,7 @@ function InvoiceLinesTable({
   totalAmount: number;
   onUpdateQuantity: (lineId: string, quantity: number) => void;
 }) {
+  const [density, setDensity] = useState<EmrTableDensity>("standard");
   const sortedLines = sortInvoiceLinesForDemoFlow(lines);
   const flowLabel = getBillingFlowLabel(lines);
 
@@ -922,26 +925,29 @@ function InvoiceLinesTable({
     <section className="rounded-lg border bg-card">
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <div>
-          <h2 className="text-[14px] font-semibold">청구 항목 편집</h2>
-          <div className="mt-1 text-[12px] text-muted-foreground">
+          <h2 className="emr-text-body font-semibold">청구 항목 편집</h2>
+          <div className="mt-1 emr-text-metadata text-muted-foreground">
             {flowLabel} 항목이 오늘 수납액 {formatAmount(totalAmount)}으로 묶입니다.
           </div>
         </div>
-        <Badge variant={persistenceState === "error" ? "destructive" : "secondary"}>
-          {persistenceState === "saving"
-            ? "저장 중"
-            : persistenceState === "saved"
-              ? "저장됨"
-              : persistenceState === "error"
-                ? "저장 실패"
-                : sortedLines.length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          <Badge variant={persistenceState === "error" ? "destructive" : "secondary"}>
+            {persistenceState === "saving"
+              ? "저장 중"
+              : persistenceState === "saved"
+                ? "저장됨"
+                : persistenceState === "error"
+                  ? "저장 실패"
+                  : sortedLines.length}
+          </Badge>
+        </div>
       </div>
       <BillingScopeNotice>
         실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과 청구 확정만 저장합니다.
       </BillingScopeNotice>
-      <div className="overflow-x-auto">
-        <Table className="min-w-[720px] table-fixed text-[13px]">
+      <div>
+        <Table density={density} layout="scroll" minWidth={720} className="table-fixed">
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className={billingInvoiceLineColumns.category}>업무</TableHead>
@@ -997,7 +1003,7 @@ function InvoiceLinesTable({
 
 function BillingScopeNotice({ children }: { children: ReactNode }) {
   return (
-    <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 text-[12px] text-[var(--emr-status-warning-text)]">
+    <div className="border-b bg-[var(--emr-status-warning-bg)] px-4 py-2 emr-text-metadata text-[var(--emr-status-warning-text)]">
       {children}
     </div>
   );
@@ -1030,7 +1036,7 @@ export function BillingContent() {
 
   if (!detail) {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
         수납 목록에서 청구서를 선택해 주세요.
       </div>
     );
@@ -1096,7 +1102,7 @@ function SummaryLine({
   muted?: boolean;
 }) {
   return (
-    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--emr-line-subtle)] text-[13px]">
+    <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--emr-line-subtle)] emr-text-dense">
       <span className={muted ? "text-muted-foreground" : "text-[var(--emr-text-secondary)]"}>
         {label}
       </span>
@@ -1150,10 +1156,10 @@ function PaymentStatusNote({
 
   return (
     <div className="rounded-md border bg-[var(--emr-surface-muted)] px-3 py-2">
-      <div className="text-[13px] font-semibold">
+      <div className="emr-text-dense font-semibold">
         {isPaid ? "세션 내 수납 완료" : "보호자 안내 후 수납 완료 처리"}
       </div>
-      <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
+      <div className="mt-1 emr-text-metadata leading-5 text-muted-foreground">
         {isPaid
           ? `${formatAmount(paidAmount)} ${approvedPaymentLabel} 상태로 기록되었습니다.`
           : "실제 PG, 현금영수증, 영수증 출력 연동 없이 데모 세션에서만 상태를 변경합니다."}
@@ -1284,14 +1290,14 @@ export function BillingRightPanel() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="flex h-[50px] shrink-0 items-center justify-between border-b px-4">
-        <h2 className="text-[14px] font-semibold">수납 요약</h2>
+        <h2 className="emr-text-body font-semibold">수납 요약</h2>
         <EmrStatusBadge label={statusLabel} marker="none" />
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-4 py-3">
-          <div className="text-[12px] text-muted-foreground">{detail.invoice.invoiceNo}</div>
+          <div className="emr-text-metadata text-muted-foreground">{detail.invoice.invoiceNo}</div>
           <div className="mt-1 text-[18px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
-          <div className="mt-1 text-[12px] text-muted-foreground">
+          <div className="mt-1 emr-text-metadata text-muted-foreground">
             {getInvoiceStatusDescription(detail.invoice.status, balance)}
           </div>
 
@@ -1303,14 +1309,14 @@ export function BillingRightPanel() {
             <SummaryLine label="발행" value={formatShortDateTime(detail.invoice.issuedAt)} />
           </div>
 
-          <div className="mt-5 text-[13px] font-semibold">읽기 전용 수납 정보</div>
+          <div className="mt-5 emr-text-dense font-semibold">읽기 전용 수납 정보</div>
           <div className="mt-2 rounded-md border bg-[var(--emr-surface-muted)] px-3">
             <SummaryLine label="영수증 금액" value="미연동" muted />
             <SummaryLine label="VAT 세부" value={formatAmount(detail.invoice.taxAmount)} muted />
             <SummaryLine label="부분 결제 입력" value="미지원" muted />
           </div>
 
-          <div className="mt-5 text-[13px] font-semibold">결제 수단</div>
+          <div className="mt-5 emr-text-dense font-semibold">결제 수단</div>
           <div className="mt-2">
             <PaymentMethodControl
               paymentMethod={paymentMethod}
@@ -1404,7 +1410,7 @@ function BillingPaymentErrorMessage({
     <EmrInlineAlert
       severity="error"
       title={title}
-      className="mt-3 text-[12px]"
+      className="mt-3 emr-text-metadata"
       action={
         <Button size="sm" variant="outline" onClick={onRetry}>
           {actionLabel}
@@ -1493,7 +1499,7 @@ function BillingFinancialPreflightDialog({
         <EmrInlineAlert
           severity="warning"
           title="저장 실패 시 상태는 확정되지 않아"
-          className="mt-3 text-[12px]"
+          className="mt-3 emr-text-metadata"
         >
           실패하면 이 패널에 다시 시도 안내를 남기고, 실제 결제나 영수증 발행이 된 것처럼 표시하지 않아.
         </EmrInlineAlert>
@@ -1512,7 +1518,7 @@ function BillingPreflightLine({
   value: string;
 }) {
   return (
-    <div className="flex min-h-7 items-center justify-between gap-3 text-[12px]">
+    <div className="flex min-h-7 items-center justify-between gap-3 emr-text-metadata">
       <span className="text-[var(--emr-text-tertiary)]">{label}</span>
       <span className={cn("text-right font-medium", emphasis && "text-primary")}>{value}</span>
     </div>

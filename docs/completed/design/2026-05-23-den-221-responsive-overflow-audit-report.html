@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-221 Responsive Overflow Audit</title>
+    <style>
+      body { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; color: #18181b; line-height: 1.65; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      h2 { font-size: 18px; margin-top: 28px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; vertical-align: top; }
+      th { background: #f4f4f5; }
+      code { background: #f4f4f5; padding: 1px 4px; border-radius: 4px; }
+      .ok { color: #047857; font-weight: 700; }
+      .warn { color: #b45309; font-weight: 700; }
+      .note { color: #52525b; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-221 Responsive Overflow Audit</h1>
+    <p class="note">작성일: 2026-05-23 · Linear: DEN-221 · Project 11 A+ Token & Responsive Hardening</p>
+
+    <h2>요약</h2>
+    <p>
+      1280x880과 1024x768에서 접수, 차트, 수납, 고객, lab, 병원관리 대표 화면을 캡처했다.
+      문서 전체 horizontal overflow는 재현되지 않았지만, 1024px에서 module panel + content aside + right panel이 동시에 열릴 때 차트 중앙 업무 영역이 과하게 좁아지는 risk가 확인됐다.
+    </p>
+
+    <h2>Viewport와 Screenshot</h2>
+    <table>
+      <thead>
+        <tr><th>Viewport</th><th>화면</th><th>Screenshot</th><th>판정</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1280x880</td><td>Reception, Chart, Billing, Customer, Lab, Orders Admin</td><td><code>den-221-*-1280x880.png</code></td><td><span class="ok">문서 overflow 없음</span></td></tr>
+        <tr><td>1024x768</td><td>Reception, Chart, Billing, Customer, Lab, Orders Admin</td><td><code>den-221-*-1024x768.png</code></td><td><span class="warn">Chart 3-panel density risk</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Risk 분류</h2>
+    <table>
+      <thead>
+        <tr><th>Risk</th><th>증거</th><th>추천 후속</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Chart 1024px triple-panel squeeze</td>
+          <td><code>den-221-chart-1024x768.png</code>에서 module panel, chart history aside, right patient panel이 동시에 열려 중앙 chart workspace가 매우 좁아짐</td>
+          <td>DEN-222에서 1024px 이하일 때 right panel을 overlay/collapsible 또는 숨김 우선 상태로 전환하는 high-confidence fix 검토</td>
+        </tr>
+        <tr>
+          <td>Expected truncation</td>
+          <td>queue card, table labels, status chips의 clipped count는 대부분 <code>truncate</code> UI로 의도된 축약</td>
+          <td>문서 overflow가 아니므로 blocker 아님</td>
+        </tr>
+        <tr>
+          <td>Table width debt</td>
+          <td>billing/customer/lab/admin table은 horizontal overflow 없이 유지되지만 column width recipe가 local</td>
+          <td>Project 12 table density/scroll contract에서 처리</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><span class="ok">PASS</span> Playwright browser screenshot capture for 12 representative states</li>
+      <li><span class="ok">PASS</span> No document-level horizontal overflow in the captured 1280px/1024px states</li>
+      <li><span class="ok">PASS</span> <code>npm run docs:check</code></li>
+    </ul>
+  </body>
+</html>
