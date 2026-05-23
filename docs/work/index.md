@@ -126,6 +126,7 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 | CLINICAL-BILLING-PR-016 | human_review | clinical-billing | P0 | Project 04 / DEN-81 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-016-audit-security-readiness-handoff.md` |
 | CLINICAL-FULFILLMENT-PR-001 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-235 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-001-scope-data-contract.md` |
 | CLINICAL-FULFILLMENT-PR-002 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-236 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-002-schema-route-contract.md` |
+| CLINICAL-FULFILLMENT-PR-003 | human_review | clinical-fulfillment | P0 | Project 08 / DEN-237 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-003-chart-confirmation-sync.md` |
 | DEMO-DATA-PR-001 | human_review | demo-data | P0 | Project 04 / DEN-99 | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md` |
 | CUSTOMER-LIVE-PR-001 | human_review | customer | P0 | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md` |
 | CUSTOMER-LIVE-PR-002 | human_review | customer | P0 | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md` |
@@ -172,7 +173,7 @@ Recommended next shaping target:
 - Project 04 and Project 05 have completed their active issue sequences and were accepted for `Done` in Linear on 2026-05-20.
 - Project 06 `Customer Management Persistence` has completed its active issue sequence through DEN-110 and is ready for representative Human Review.
 - Project 07 `Hospital Admin Order Catalog Persistence` has completed its active issue sequence through DEN-117 and is ready for representative Human Review.
-- Project 08 `Clinical Order Fulfillment Handoff Persistence` has completed DEN-235 and DEN-236 through Human Review. Start next from DEN-237 / chart confirmation to fulfillment sync.
+- Project 08 `Clinical Order Fulfillment Handoff Persistence` has completed DEN-235 through DEN-237 through Human Review. Start next from DEN-238 / lab and imaging fulfillment queue adoption.
 - Keep Project 06 and Project 07 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
 
 ## Inbox

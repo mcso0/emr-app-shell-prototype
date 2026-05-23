@@ -37,6 +37,13 @@ test("order action route confirms selected orders via mock fallback and reads af
   expect(saved.status()).toBe(200);
   const savedBody = await saved.json() as {
     ok: true;
+    fulfillmentWorkItems?: Array<{
+      id: string;
+      orderId: string;
+      queueType: string;
+      sourceSnapshot: { orderDisplayName: string };
+      status: string;
+    }>;
     orderActions: Array<{
       billingCandidateStatus: string;
       confirmedAt?: string;
@@ -59,6 +66,30 @@ test("order action route confirms selected orders via mock fallback and reads af
     }),
   ]));
   expect(savedBody.orderActions[0]?.confirmedAt).toBeTruthy();
+  expect(savedBody.fulfillmentWorkItems).toEqual([
+    expect.objectContaining({
+      id: `fulfill-${orderId}`,
+      orderId,
+      queueType: "dispensing",
+      sourceSnapshot: expect.objectContaining({
+        orderDisplayName: "Maropitant 16mg T",
+      }),
+      status: "requested",
+    }),
+  ]);
+
+  const fulfillmentRead = await request.get(
+    `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing&encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } }
+  );
+  expect(fulfillmentRead.status()).toBe(200);
+  const fulfillmentReadBody = await fulfillmentRead.json() as {
+    ok: true;
+    workItems: Array<{ id: string; orderId: string }>;
+  };
+  expect(fulfillmentReadBody.workItems).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: `fulfill-${orderId}`, orderId }),
+  ]));
 
   const readBack = await request.get(
     `/api/workspaces/${workspaceId}/chart/order-actions?encounterId=${encounterId}`,
@@ -98,6 +129,7 @@ test("order action core submits billing candidates separately from confirmation"
       updatedAt: "2026-05-19T16:00:00.000Z",
     }),
   ]));
+  expect(result.ok ? result.fulfillmentWorkItems : undefined).toBeUndefined();
 });
 
 test("order action core rejects missing order ids, permission gaps, and encounter scope mismatches", async () => {

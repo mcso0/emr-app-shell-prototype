@@ -14,6 +14,10 @@ import {
   createSupabaseLiveAuditAppendGateway,
   type SupabaseLiveAuditAppendRpcClient,
 } from "@/features/audit/server-audit-log-persistence";
+import {
+  createSupabaseFulfillmentWorkItemGateway,
+  type SupabaseFulfillmentWorkItemRpcClient,
+} from "@/features/fulfillment/server-fulfillment-work-item";
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -103,6 +107,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     auditGateway: client
       ? createSupabaseLiveAuditAppendGateway(
           client as unknown as SupabaseLiveAuditAppendRpcClient
+        )
+      : undefined,
+    fulfillmentGateway: client
+      ? createSupabaseFulfillmentWorkItemGateway(
+          client as unknown as SupabaseFulfillmentWorkItemRpcClient
         )
       : undefined,
     auditRequestId: getAuditRequestId(request),
