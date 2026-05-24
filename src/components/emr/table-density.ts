@@ -1,11 +1,25 @@
 export type EmrTableDensity = "compact" | "standard" | "comfortable";
 export type EmrTableLayout = "fill" | "scroll";
-export type EmrTableHeaderRole =
+export type EmrTableKind =
+  | "clinical-review"
+  | "operational-worklist"
+  | "master-data-grid"
+  | "financial-edit-grid";
+export type EmrTableHeaderInteraction =
   | "static"
   | "sortable"
   | "filterable"
+  | "sortable-filterable"
   | "menu"
   | "compound";
+export type EmrTableHeaderRole = EmrTableHeaderInteraction;
+export type EmrColumnResize = "none" | "data-column";
+export type EmrTableCellTextMode =
+  | "one-line"
+  | "two-line-if-long"
+  | "always-multiline"
+  | "badge-wrap"
+  | "full-on-demand";
 
 export type EmrTableViewOption = {
   value: EmrTableDensity;
@@ -33,6 +47,7 @@ export const emrTableHeaderRoleDefinitions: EmrTableHeaderRoleDefinition[] = [
   { value: "static", label: "정적", allowedAffordance: "none" },
   { value: "sortable", label: "정렬", allowedAffordance: "sort indicator and keyboard sort" },
   { value: "filterable", label: "필터", allowedAffordance: "filter trigger or explicit menu item" },
+  { value: "sortable-filterable", label: "정렬/필터", allowedAffordance: "sort indicator plus explicit filter trigger" },
   { value: "menu", label: "메뉴", allowedAffordance: "explicit column menu button" },
   { value: "compound", label: "복합", allowedAffordance: "static by default" },
 ];

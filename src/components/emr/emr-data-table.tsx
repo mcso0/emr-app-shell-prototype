@@ -25,14 +25,22 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  EmrTableCellText,
+  EmrTableHeaderCell,
+} from "@/components/emr/table-primitives";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { Order, OrderDiffField, TechnicianUser } from "@/types/emr";
-import type { EmrTableDensity } from "@/components/emr/table-density";
+import type {
+  EmrColumnResize,
+  EmrTableCellTextMode,
+  EmrTableDensity,
+  EmrTableHeaderInteraction,
+} from "@/components/emr/table-density";
 
 type EmrDataTableProps = {
   density?: EmrTableDensity;
@@ -47,6 +55,9 @@ type EmrDataTableProps = {
 
 type ColumnMeta = {
   align?: "left" | "center" | "right";
+  headerInteraction?: EmrTableHeaderInteraction;
+  resize?: EmrColumnResize;
+  textMode?: EmrTableCellTextMode;
 };
 
 const numericDiffFields = new Set<OrderDiffField>([
@@ -63,6 +74,18 @@ function isSelectableOrder(order: Order) {
 
 function getCellAlign(column: ColumnDef<Order>) {
   return (column.meta as ColumnMeta | undefined)?.align ?? "left";
+}
+
+function getHeaderInteraction(column: ColumnDef<Order>) {
+  return (column.meta as ColumnMeta | undefined)?.headerInteraction ?? "static";
+}
+
+function getColumnResize(column: ColumnDef<Order>) {
+  return (column.meta as ColumnMeta | undefined)?.resize ?? "data-column";
+}
+
+function getCellTextMode(column: ColumnDef<Order>) {
+  return (column.meta as ColumnMeta | undefined)?.textMode ?? "one-line";
 }
 
 function OrderValue({
@@ -88,27 +111,28 @@ function OrderValue({
           numericDiffFields.has(field) && "font-medium"
         )}
       >
-        <span className="truncate text-muted-foreground">
+        <EmrTableCellText as="span" mode="one-line" className="text-muted-foreground">
           {diff.previous}
-        </span>
+        </EmrTableCellText>
         <span className="text-[var(--emr-text-tertiary)]">-&gt;</span>
-        <span className="truncate text-[var(--emr-status-warning-text)]">
+        <EmrTableCellText as="span" mode="one-line" className="text-[var(--emr-status-warning-text)]">
           {diff.current}
-        </span>
+        </EmrTableCellText>
       </span>
     );
   }
 
   return (
-    <span
+    <EmrTableCellText
+      as="span"
+      mode="one-line"
       className={cn(
-        "block min-w-0 truncate",
         align === "right" && "text-right",
         isCanceled && "text-muted-foreground line-through"
       )}
     >
       {value}
-    </span>
+    </EmrTableCellText>
   );
 }
 
@@ -287,6 +311,7 @@ export function EmrDataTable({
         minSize: 32,
         maxSize: 32,
         enableResizing: false,
+        meta: { resize: "none", headerInteraction: "static" },
         header: ({ table }) => (
           <span
             data-row-interactive="true"
@@ -320,16 +345,23 @@ export function EmrDataTable({
         header: "오더명",
         size: 360,
         minSize: 220,
+        meta: {
+          headerInteraction: "sortable-filterable",
+          resize: "data-column",
+          textMode: "two-line-if-long",
+        },
         cell: ({ row }) => (
           <div
             className={cn(
-              "flex min-w-0 items-center gap-1.5",
+              "flex min-w-0 items-start gap-1.5",
               row.original.status === "취소" &&
                 "text-muted-foreground line-through"
             )}
           >
-            <ChevronDownIcon className="size-3 shrink-0 text-[var(--emr-text-tertiary)]" />
-            <span className="truncate font-medium">{row.original.name}</span>
+            <ChevronDownIcon className="mt-0.5 size-3 shrink-0 text-[var(--emr-text-tertiary)]" />
+            <EmrTableCellText mode="two-line-if-long" fullText={row.original.name} className="font-medium">
+              {row.original.name}
+            </EmrTableCellText>
           </div>
         ),
       },
@@ -338,6 +370,7 @@ export function EmrDataTable({
         header: "상태",
         size: 80,
         minSize: 76,
+        meta: { headerInteraction: "filterable", resize: "data-column" },
         cell: ({ row }) => (
           <EmrStatusBadge
             label={row.original.status}
@@ -350,7 +383,7 @@ export function EmrDataTable({
         header: "일수",
         size: 80,
         minSize: 64,
-        meta: { align: "right" },
+        meta: { align: "right", headerInteraction: "sortable", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue field="days" order={row.original} value={row.original.days} align="right" />
         ),
@@ -360,6 +393,7 @@ export function EmrDataTable({
         header: "복용",
         size: 72,
         minSize: 64,
+        meta: { headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue field="doseTiming" order={row.original} value={row.original.doseTiming} />
         ),
@@ -369,7 +403,7 @@ export function EmrDataTable({
         header: "회분",
         size: 96,
         minSize: 72,
-        meta: { align: "right" },
+        meta: { align: "right", headerInteraction: "sortable", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="servings"
@@ -384,7 +418,7 @@ export function EmrDataTable({
         header: "용량",
         size: 128,
         minSize: 88,
-        meta: { align: "right" },
+        meta: { align: "right", headerInteraction: "sortable", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="amount"
@@ -399,6 +433,7 @@ export function EmrDataTable({
         header: "단위",
         size: 56,
         minSize: 52,
+        meta: { headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue field="unit" order={row.original} value={row.original.unit} />
         ),
@@ -408,7 +443,7 @@ export function EmrDataTable({
         header: "수량",
         size: 100,
         minSize: 72,
-        meta: { align: "right" },
+        meta: { align: "right", headerInteraction: "sortable", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="quantity"
@@ -423,6 +458,7 @@ export function EmrDataTable({
         header: "제형",
         size: 56,
         minSize: 52,
+        meta: { headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue field="dosageForm" order={row.original} value={row.original.dosageForm} />
         ),
@@ -432,6 +468,7 @@ export function EmrDataTable({
         header: "보관",
         size: 100,
         minSize: 76,
+        meta: { headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue field="storage" order={row.original} value={row.original.storage} />
         ),
@@ -441,6 +478,11 @@ export function EmrDataTable({
         header: "복약지도",
         size: 100,
         minSize: 84,
+        meta: {
+          headerInteraction: "static",
+          resize: "data-column",
+          textMode: "two-line-if-long",
+        },
         cell: ({ row }) => (
           <OrderValue
             field="medicationGuide"
@@ -454,7 +496,8 @@ export function EmrDataTable({
         header: "담당",
         size: 72,
         minSize: 64,
-        meta: { align: "center" },
+        enableResizing: false,
+        meta: { align: "center", headerInteraction: "static", resize: "none" },
         cell: ({ row }) => (
           <AssigneeCell
             order={row.original}
@@ -468,6 +511,8 @@ export function EmrDataTable({
         header: "작업여부",
         size: 100,
         minSize: 88,
+        enableResizing: false,
+        meta: { headerInteraction: "static", resize: "none" },
         cell: ({ row }) => (
           <WorkStatusButton
             order={row.original}
@@ -515,43 +560,27 @@ export function EmrDataTable({
             <TableRow key={headerGroup.id} className="border-[var(--emr-line-hairline)] hover:bg-transparent">
               {headerGroup.headers.map((header) => {
                 const align = getCellAlign(header.column.columnDef);
+                const headerInteraction = getHeaderInteraction(header.column.columnDef);
+                const columnResize = header.column.getCanResize()
+                  ? getColumnResize(header.column.columnDef)
+                  : "none";
 
                 return (
-                  <TableHead
+                  <EmrTableHeaderCell
                     key={header.id}
-                    className={cn(
-                      "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
-                      align === "right" && "text-right",
-                      align === "center" && "text-center"
-                    )}
+                    align={align}
+                    interaction={header.isPlaceholder ? "static" : headerInteraction}
+                    isResizing={header.column.getIsResizing()}
+                    resize={header.isPlaceholder ? "none" : columnResize}
+                    resizeLabel={`${header.column.id} 컬럼 너비 조절`}
                     style={{ width: header.getSize() }}
+                    onResizeMouseDown={header.getResizeHandler()}
+                    onResizeTouchStart={header.getResizeHandler()}
                   >
-                    <div
-                      className={cn(
-                        "emr-table-cell-content flex min-w-0 items-center",
-                        align === "right" && "justify-end",
-                        align === "center" && "justify-center"
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </div>
-                    {header.column.getCanResize() ? (
-                      <button
-                        data-row-interactive="true"
-                        type="button"
-                        aria-label={`${header.column.id} 컬럼 너비 조절`}
-                        className={cn(
-                          "absolute right-[-4px] top-2 z-10 h-6 w-2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-line-hairline)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50",
-                          header.column.getIsResizing() && "bg-[var(--emr-state-drag)]"
-                        )}
-                        onClick={(event) => event.stopPropagation()}
-                        onMouseDown={header.getResizeHandler()}
-                        onTouchStart={header.getResizeHandler()}
-                      />
-                    ) : null}
-                  </TableHead>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </EmrTableHeaderCell>
                 );
               })}
             </TableRow>
@@ -576,6 +605,7 @@ export function EmrDataTable({
               >
                 {row.getVisibleCells().map((cell) => {
                   const align = getCellAlign(cell.column.columnDef);
+                  const textMode = getCellTextMode(cell.column.columnDef);
 
                   return (
                     <TableCell
@@ -591,9 +621,11 @@ export function EmrDataTable({
                       <div
                         className={cn(
                           "emr-table-cell-content flex min-w-0 items-center",
+                          textMode !== "one-line" && "items-start",
                           align === "right" && "justify-end",
                           align === "center" && "justify-center"
                         )}
+                        data-emr-cell-content={textMode !== "one-line" ? "auto" : undefined}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </div>
@@ -607,9 +639,14 @@ export function EmrDataTable({
                   className="h-8 border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] hover:bg-[var(--emr-status-warning-bg)]"
                 >
                   <TableCell colSpan={row.getVisibleCells().length} className="emr-table-warning-cell">
-                    <div className="emr-text-body flex h-6 items-center gap-2 font-medium text-[var(--emr-status-warning-text)]">
-                      <WarningIcon className="size-4" />
-                      {row.original.warningMessage}
+                    <div
+                      className="emr-text-body flex min-h-6 items-start gap-2 font-medium text-[var(--emr-status-warning-text)]"
+                      data-emr-cell-content="auto"
+                    >
+                      <WarningIcon className="mt-0.5 size-4 shrink-0" />
+                      <EmrTableCellText mode="two-line-if-long" fullText={row.original.warningMessage}>
+                        {row.original.warningMessage}
+                      </EmrTableCellText>
                     </div>
                   </TableCell>
                 </TableRow>

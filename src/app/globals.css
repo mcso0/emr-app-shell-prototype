@@ -230,6 +230,11 @@
     padding-inline: var(--clair-spacing-4);
   }
 
+  .emr-table-cell-content[data-emr-cell-content="auto"] {
+    height: auto;
+    min-height: 24px;
+  }
+
   .emr-table-warning-cell {
     padding: var(--clair-spacing-4) var(--clair-spacing-32, 32px);
   }
