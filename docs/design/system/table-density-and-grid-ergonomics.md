@@ -318,6 +318,14 @@ Implementation guidance:
 - Tooltips should supplement truncated data, not become the only place to read required information.
 - If a table needs long-form reading or editing, move the full content into a side panel, drawer, row detail, or editor area outside the dense grid.
 
+### DEN-264 Pilot Implementation
+
+- `src/components/emr/table-primitives.tsx` adds the first shared `EmrTableHeaderCell` and `EmrTableCellText` primitives.
+- `src/components/emr/table-density.ts` now exports the DEN-250/251 API vocabulary for table kind, header interaction, resize policy, and cell text modes.
+- `src/components/emr/emr-data-table.tsx` pilots the API in the dispensing/treatment worklist table only.
+- The pilot keeps scalar cells one-line by default and allows limited two-line previews for order names and warning/change messages.
+- Checkbox, assignment control, and workflow action columns are excluded from resize affordances. Wider table adoption remains out of scope for DEN-264.
+
 ## Implementation Gate
 
 Before Project 12 implementation issues:
