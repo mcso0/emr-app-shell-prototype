@@ -2126,6 +2126,7 @@ const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
 
 function ChartOrderTable({
   allVisibleSelected,
+  density,
   hasCommittedRows,
   invalidOrderIds,
   onDeleteOrder,
@@ -2139,6 +2140,7 @@ function ChartOrderTable({
   someVisibleSelected,
 }: {
   allVisibleSelected: boolean;
+  density: EmrTableDensity;
   hasCommittedRows: boolean;
   invalidOrderIds: Set<string>;
   onDeleteOrder: (orderId: string) => void;
@@ -2151,13 +2153,8 @@ function ChartOrderTable({
   selectedOrderIds: Set<string>;
   someVisibleSelected: boolean;
 }) {
-  const [density, setDensity] = useState<EmrTableDensity>("compact");
-
   return (
     <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
-      <div className="flex justify-end border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2">
-        <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-      </div>
       <Table
         density={density}
         layout="scroll"
@@ -2464,6 +2461,7 @@ function OrderArea({
   const hasDraftChanges = changedDraftOrderCount > 0;
   const canUpdateOrders = hasDraftChanges && invalidOrderIds.size === 0;
   const deleteTargetOrder = draftRows.find(({ order }) => order.id === deleteOrderId)?.order;
+  const [orderTableDensity, setOrderTableDensity] = useState<EmrTableDensity>("compact");
   const toggleAllVisibleOrders = (checked: boolean) => {
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -2663,6 +2661,10 @@ function OrderArea({
           onValueChange={setOrderFilter}
         />
         <div className="flex items-center gap-2 py-2">
+          <EmrTableDensitySelector
+            value={orderTableDensity}
+            onValueChange={setOrderTableDensity}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -2692,6 +2694,7 @@ function OrderArea({
       <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-panel)] px-3 pt-2 pb-0">
         <ChartOrderTable
           allVisibleSelected={allVisibleSelected}
+          density={orderTableDensity}
           hasCommittedRows={committedRowIds.size > 1}
           invalidOrderIds={invalidOrderIds}
           onDeleteOrder={setDeleteOrderId}

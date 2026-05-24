@@ -1125,6 +1125,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
       }
       actions={
         <>
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
           <Button variant="outline" size="xs" className="bg-card">
             판정적용
           </Button>
@@ -1135,9 +1136,6 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
       onToggle={() => setCollapsed((current) => !current)}
     >
       <div>
-        <div className="mb-2 flex justify-end">
-          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-        </div>
         <Table density={density} layout="scroll" minWidth={860} className="min-w-[860px] table-fixed">
           <colgroup>
             <col className="w-[32%]" />
@@ -2125,15 +2123,15 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
       count={1}
       meta={<span className="emr-text-metadata font-medium text-muted-foreground">같은 차트 기준</span>}
       actions={
-        <Button size="xs" variant="outline" className="bg-card">
-          PACS
-        </Button>
+        <>
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          <Button size="xs" variant="outline" className="bg-card">
+            PACS
+          </Button>
+        </>
       }
     >
       <div>
-        <div className="mb-2 flex justify-end">
-          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-        </div>
         <Table density={density} layout="scroll" minWidth={760} className="min-w-[760px] table-fixed leading-5">
           <colgroup>
             <col className="w-[13%]" />

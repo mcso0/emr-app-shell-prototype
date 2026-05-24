@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-257 GitBook Docs Site Creation Plan Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 880px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #1f2933;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #eef2f7;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d8dee9;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f5f7fa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-257 GitBook Docs Site Creation Plan Report</h1>
+
+    <h2>요약</h2>
+    <p>
+      GitBook 공식 docs site 모델을 기준으로 CLAiR EMR 문서를 GitBook private/internal docs site로 만드는 계획을 정리했다.
+      이번 작업은 실제 사이트 생성이나 공개가 아니라, 승욱이 나중에 수동으로 만들 때 따라갈 source-of-truth, access, sync, domain, stop condition을 확정하는 작업이다.
+    </p>
+
+    <h2>결정</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>권장안</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Site purpose</td>
+          <td>Private/internal reader portal</td>
+        </tr>
+        <tr>
+          <td>Source of truth</td>
+          <td>Repo <code>docs/</code> 유지</td>
+        </tr>
+        <tr>
+          <td>GitBook editing</td>
+          <td>직접 편집은 피하고, repo 변경을 GitBook에 sync하는 흐름 우선</td>
+        </tr>
+        <tr>
+          <td>Space/site structure</td>
+          <td>초기에는 one docs site, one primary docs space</td>
+        </tr>
+        <tr>
+          <td>Audience</td>
+          <td>Unpublished/manual review first, then private/internal access</td>
+        </tr>
+        <tr>
+          <td>Custom domain</td>
+          <td>초기에는 기본 GitBook URL 사용, custom domain은 나중에 결정</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li><code>docs/_meta/gitbook-docs-site-creation-plan.md</code>를 추가했다.</li>
+      <li><code>docs/SUMMARY.md</code>, <code>docs/index.md</code>, <code>docs/_meta/README.md</code>에서 계획 문서를 연결했다.</li>
+      <li><code>docs/_meta/gitbook-structure-rules.md</code>와 <code>.agents/skills/emr-docs-sync/SKILL.md</code>에 docs-site setup 전 계획 문서를 읽도록 반영했다.</li>
+      <li><code>docs/engineering/current-status.md</code>에 DEN-252부터 DEN-257까지 Human Review 상태이며, 실제 GitBook site setup은 승욱의 명시 요청 전까지 하지 않는다고 반영했다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code>는 계획 문서 추가 직후 1회 통과: 804 docs/agent markdown files checked.</li>
+      <li>보고서 추가 후 최종 <code>npm run docs:check</code>는 실패. 실패 원인은 이번 작업 범위 밖의 기존 dirty file <code>docs/design/system/table-density-and-grid-ergonomics.md</code>가 없는 <code>docs/completed/design/2026-05-24-den-251-table-cell-text-wrapping-research-report.html</code>를 링크하고 있기 때문이다.</li>
+      <li>DEN-257 touched markdown focused link check 통과.</li>
+      <li><code>git diff --check</code> 통과: DEN-257 대상 파일 whitespace 문제 없음.</li>
+      <li>Ruby YAML/frontmatter validation 통과: skill, GitBook docs site creation plan, private operations checklist, GitBook structure rules.</li>
+      <li>GitBook 공식 문서 확인: Publish a docs site, Site settings, Site structure, Custom domain, Git Sync, Private publishing with share links.</li>
+    </ul>
+
+    <h2>의도적으로 하지 않은 것</h2>
+    <ul>
+      <li>GitBook site를 생성하지 않았다.</li>
+      <li>GitBook 설정, audience, share link, authenticated access, custom domain, DNS를 변경하지 않았다.</li>
+      <li>GitBook을 external-public으로 전환하지 않았다.</li>
+      <li>GitHub main push, production publication, remote Supabase, migration, RLS replay, production deploy, real email, payment, provider integration, compliance 작업을 하지 않았다.</li>
+      <li>Linear issue를 Done으로 이동하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      DEN-252부터 DEN-257까지 Human Review가 끝나면, 승욱이 원할 때 별도 실행 작업으로 GitBook organization/space/site를 수동 생성하면 된다.
+      그때도 먼저 private/unpublished 상태로 렌더링과 sidebar만 검수하고, 공유 범위는 별도 승인 후 열어야 한다.
+    </p>
+  </body>
+</html>

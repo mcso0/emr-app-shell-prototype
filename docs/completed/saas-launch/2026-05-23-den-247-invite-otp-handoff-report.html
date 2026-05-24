@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-247 초대 이메일 OTP Handoff 구현 리포트</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --paper: #ffffff;
+        --ink: #172033;
+        --muted: #5f6b7a;
+        --line: #d8dee8;
+        --line-soft: #e8ecf2;
+        --brand: #0f766e;
+        --brand-soft: #e6f5f2;
+        --warn: #a16207;
+        --warn-soft: #fff7df;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 44px 24px 64px;
+      }
+
+      section {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 22px 24px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 19px;
+        line-height: 1.35;
+      }
+
+      p,
+      li,
+      td,
+      th,
+      a {
+        font-size: 14px;
+        line-height: 1.72;
+      }
+
+      a {
+        color: #1d4ed8;
+      }
+
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--line-soft);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #445164;
+        background: #f8fafc;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--brand-soft);
+        color: var(--brand);
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .note {
+        border-color: #efdca6;
+        background: var(--warn-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="pill">DEN-247 · Human Review</span>
+        <h1>초대 이메일 OTP Handoff 구현 리포트</h1>
+        <p>
+          DEN-246의 email-first 초대 화면 다음 단계로, 초대받은 이메일을 잠그고
+          OTP 요청/검증 후 초대 화면으로 돌아오는 handoff 경계를 구현했다.
+        </p>
+      </header>
+
+      <section>
+        <h2>구현 내용</h2>
+        <ul>
+          <li>
+            <code>/api/auth/invite-otp/request</code>에서 pending 초대, locked email,
+            safe <code>/invite/...</code> next를 검증한다.
+          </li>
+          <li>
+            <code>/login?reason=invite_email_otp</code> 화면을 초대 이메일 인증 전용
+            UI로 전환하고 이메일을 readonly로 고정했다.
+          </li>
+          <li>
+            Supabase mode는 <code>signInWithOtp</code>와
+            <code>verifyOtp</code> boundary를 사용한다.
+          </li>
+          <li>
+            local/mock mode는 실제 이메일을 보내지 않고 <code>000000</code> 데모
+            코드로 링크 확인이 가능하다.
+          </li>
+          <li>
+            <code>/auth/confirm</code> route를 추가해 Supabase email link의
+            <code>token_hash</code>를 검증하고 safe invite next로만 redirect한다.
+          </li>
+          <li>
+            계정 존재 여부는 API/UX에서 직접 노출하지 않는다.
+          </li>
+        </ul>
+      </section>
+
+      <section class="note">
+        <h2>남은 범위</h2>
+        <p>
+          원격 Supabase/staging OTP delivery, redirect URL allow-list, email template rollout,
+          실제 production email provider 검증은 명시 승인 후 별도 작업에서 진행해야 한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>주요 파일</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>파일</th>
+              <th>내용</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>src/features/auth/login-form.tsx</code></td>
+              <td>초대 OTP UI, locked email, mock verification, Supabase OTP 호출.</td>
+            </tr>
+            <tr>
+              <td><code>src/features/auth/auth-client.ts</code></td>
+              <td><code>signInWithEmailOtp</code>, <code>verifyEmailOtp</code> client boundary.</td>
+            </tr>
+            <tr>
+              <td><code>src/features/auth/invite-otp-handoff.ts</code></td>
+              <td>safe invite next, invite context parsing, redirect URL helper.</td>
+            </tr>
+            <tr>
+              <td><code>src/app/api/auth/invite-otp/request/route.ts</code></td>
+              <td>OTP request guard and public rate-limit boundary.</td>
+            </tr>
+            <tr>
+              <td><code>src/app/auth/confirm/route.ts</code></td>
+              <td>Supabase email link token verification and safe redirect.</td>
+            </tr>
+            <tr>
+              <td><code>tests/invite-otp-handoff.spec.ts</code></td>
+              <td>Route, UI, and source boundary regression coverage.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>참고한 공식 문서</h2>
+        <ul>
+          <li>
+            <a href="https://supabase.com/docs/reference/javascript/auth-signinwithotp">Supabase JavaScript: signInWithOtp</a>
+          </li>
+          <li>
+            <a href="https://supabase.com/docs/guides/auth/redirect-urls">Supabase Redirect URLs</a>
+          </li>
+          <li>
+            <a href="https://supabase.com/docs/guides/with-nextjs">Supabase Next.js SSR Auth guide</a>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx playwright test tests/invite-otp-handoff.spec.ts --reporter=line</code> passed.</li>
+          <li><code>npx playwright test tests/invite-acceptance.spec.ts --reporter=line</code> passed.</li>
+          <li><code>npx playwright test tests/auth.spec.ts --reporter=line</code> passed.</li>
+          <li><code>npx tsc --noEmit</code> passed.</li>
+          <li><code>npm run docs:check</code> passed.</li>
+          <li><code>npm run security:secrets</code> passed.</li>
+          <li><code>git diff --check</code> passed.</li>
+          <li><code>npm run lint</code> passed with 5 existing unrelated warnings.</li>
+          <li>Desktop and mobile OTP handoff screenshots were captured from the local dev server.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

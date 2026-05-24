@@ -14,6 +14,19 @@ This folder defines the synthetic demo dataset for the CLAiR EMR portfolio MVP.
 
 승욱의 현재 목표는 production launch가 아니라, 실제 업무 프로그램처럼 작동하는 고완성도 포트폴리오 MVP다. 이 데이터셋은 접수, 차트, 오더, 검사, 영상, 조제, 처치, 수납이 하나의 outpatient workflow로 이어지는 모습을 보여주기 위한 기준이다.
 
+Use this README as the GitBook entry point for synthetic dataset design. The child docs are product data contracts, not real clinical, pricing, billing, or import guidance.
+
+## Read First
+
+| Need | Start With |
+| --- | --- |
+| Understand the demo hospital and staff context | `virtual-hospital-profile.md`, then `staff-roles-workflow-v1.md` |
+| Review outpatient story coverage | `demo-scenarios-v1.md` |
+| Implement or inspect seed/mock data | `seed-handoff-v1.md` |
+| Work on guardian or patient data | `patient-guardian-data-v1.md` |
+| Work on orders, sets, pricing, chart application, or fulfillment handoff | `order-catalog-v1.md`, `order-sets-and-templates-v1.md`, `order-pricing-rules-v1.md`, `chart-order-application-v1.md` |
+| Work on lab or medication detail examples | `lab-test-items-v1.md`, `medication-order-details-v1.md` |
+
 ## Ground Rules
 
 - Use synthetic guardians, patients, staff, encounters, orders, diagnoses, results, and invoices.
@@ -22,6 +35,14 @@ This folder defines the synthetic demo dataset for the CLAiR EMR portfolio MVP.
 - Do not claim medical accuracy, dosage safety, diagnosis correctness, or clinical decision support.
 - Keep all demo cases resettable and repeatable.
 - Make `encounterId` and `workspaceId` the core linkage for downstream chart/order/billing flows.
+
+## GitBook Reader Boundary
+
+- This folder is safe to read in the private GitBook portal because it is synthetic workflow documentation.
+- Do not add real hospital, patient, guardian, staff, billing, identity, or credential data.
+- Do not present sample prices, diagnoses, medications, dosage-like fields, or result examples as clinical or fee guidance.
+- Keep provider, PACS, device, payment, email, KakaoTalk, and live integration claims out unless a scoped source doc has verified them.
+- If GitBook is ever made external-public, re-review this folder for synthetic-only wording before sharing.
 
 ## Documents
 
@@ -41,6 +62,13 @@ This folder defines the synthetic demo dataset for the CLAiR EMR portfolio MVP.
 | `diagnosis-catalog-v1.md` | Diagnosis systems and sample diagnoses |
 | `staff-roles-workflow-v1.md` | Staff roles and workflow ownership |
 | `seed-handoff-v1.md` | Handoff from product docs to app mock/seed data |
+
+## Where New Demo Docs Go
+
+- Add scenario, role, patient, guardian, order, pricing, lab, medication, diagnosis, or seed contracts here.
+- Put actual schema, migrations, RLS, indexes, or live persistence contracts in `docs/engineering/data-model/`.
+- Put screen layout, interaction, and visual QA guidance in `docs/design/`.
+- Put historical reference extraction in an archive-style document and keep the README focused on current contracts.
 
 ## MVP Data Shape
 
@@ -137,3 +165,4 @@ The following can wait until screen implementation because they do not change th
 - 2026-05-19: Added patient/guardian data contract from 동물 등록 and 동물 정보 drawer references, including registration fields, breed/species rules, staff assignment, status labels, messaging consent, soft delete, and restoration data.
 - 2026-05-19: Added guardian registration/detail reference data for normalized contact fields, cash receipt rules, consent/referral rows, duplicate detection, patient relationship management, guardian deletion locks, and change-history metadata.
 - 2026-05-19: Created DEN-99 synthetic virtual hospital demo dataset foundation.
+- 2026-05-24: Added GitBook-oriented reading order and private-reader boundary for DEN-254.

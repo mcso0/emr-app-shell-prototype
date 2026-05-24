@@ -243,7 +243,7 @@
   }
 
   .emr-table-surface[data-emr-layout="scroll"] {
-    width: max-content;
+    min-width: 100%;
   }
 
   .emr-table-surface[data-emr-layout="fill"] {

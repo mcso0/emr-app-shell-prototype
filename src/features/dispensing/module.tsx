@@ -30,6 +30,7 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
+import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -60,6 +61,7 @@ import {
   type OrderTableGroup,
 } from "@/features/dispensing/data";
 import type { Order, OrderQueueItem, ShellComponentProps, TechnicianUser } from "@/types/emr";
+import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type OrderGroupFilter = "all" | "oral" | "other";
 type FulfillmentQueueType = "dispensing" | "treatment";
@@ -687,6 +689,7 @@ function DispensingContentBody({
   const selectedQueueStatusLabel = getQueueStatusLabel(moduleId, selectedQueueItem);
   const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
   const [collapsedOrderGroupIds, setCollapsedOrderGroupIds] = useState<Set<string>>(() => new Set());
+  const [tableDensity, setTableDensity] = useState<EmrTableDensity>("compact");
   const primaryGroup = tableGroups[0];
   const totalOrderCount = tableGroups.reduce((total, group) => total + group.rows.length, 0);
   const regularOrderCount = tableGroups.find((group) => group.id === "oral")?.rows.length ?? 0;
@@ -926,6 +929,7 @@ function DispensingContentBody({
                     <Button variant="outline" size="xs" className="bg-card">
                       필터 1
                     </Button>
+                    <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
                     <Button variant="outline" size="xs" className="max-w-24 bg-card">
                       <span className="truncate">{getAssigneeSummary(group.assigneeIds)}</span>
                     </Button>
@@ -942,8 +946,11 @@ function DispensingContentBody({
                 onToggle={() => toggleOrderGroup(group.id)}
               >
                 <EmrDataTable
+                  density={tableDensity}
+                  onDensityChange={setTableDensity}
                   rows={group.rows}
                   sectionId={`section-${section}`}
+                  showDensitySelector={false}
                   technicians={technicianUsers}
                   onCompleteRows={(rowIds) => completeGroupRows(group.id, rowIds)}
                   onAssignOrder={(rowId, technicianId) =>

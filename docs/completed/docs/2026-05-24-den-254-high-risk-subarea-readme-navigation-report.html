@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-254 High-Risk Subarea README Navigation Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 880px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #1f2933;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #eef2f7;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d8dee9;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f5f7fa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-254 High-Risk Subarea README Navigation Report</h1>
+
+    <h2>요약</h2>
+    <p>
+      GitBook을 외부 공개용이 아니라 승욱이 내부에서 보기 쉬운 비공개 문서 포털로 사용하는 방향에 맞춰,
+      위험도가 높은 하위 문서 묶음의 README를 정리했다. 이제 GitBook 사이드바가 모든 하위 문서를 나열하지 않아도,
+      각 README에서 무엇을 먼저 읽어야 하는지와 어떤 경계를 지켜야 하는지 확인할 수 있다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>문서</th>
+          <th>변경 요약</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>docs/product/demo-data/README.md</code></td>
+          <td>synthetic demo dataset reading order, GitBook reader boundary, and new-doc placement rules를 추가했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/design/qa/README.md</code></td>
+          <td>UI/UX QA 문서별 역할, 먼저 읽을 문서, QA finding과 implementation scope의 경계를 명확히 했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/engineering/data-model/README.md</code></td>
+          <td>schema, persistence, order-fulfillment handoff 문서의 읽기 순서와 remote/staging operation gate를 정리했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/engineering/operations/README.md</code></td>
+          <td>launch readiness와 staging readback/reset 문서를 연결하고, live operation approval boundary를 명확히 했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/engineering/auth-security/auth-login/README.md</code></td>
+          <td>큰 auth/security 문서 묶음을 GitBook에서 탐색할 수 있도록 현재 시작점, 문서 묶음 역할, reader boundary를 추가했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/_meta/gitbook-structure-rules.md</code>, <code>.agents/skills/emr-docs-sync/SKILL.md</code></td>
+          <td>GitBook 운영 기준을 public-first가 아니라 private/internal reader portal 기준으로 조정했다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과: 802개 docs/agent markdown file 검사 완료.</li>
+      <li><code>git diff --check</code> 통과: DEN-254 대상 파일의 whitespace 문제 없음.</li>
+      <li>Ruby YAML/frontmatter 검증 통과: skill, GitBook structure rules, demo-data README.</li>
+    </ul>
+
+    <h2>의도적으로 하지 않은 것</h2>
+    <ul>
+      <li>GitBook 사이트를 생성하거나 공개 설정을 바꾸지 않았다.</li>
+      <li>remote Supabase, migration, RLS replay, staging seed replay, production deploy, real email, payment, provider integration 작업을 하지 않았다.</li>
+      <li>각 하위 문서의 본문 전체를 재작성하지 않았다. 이번 작업은 README navigation과 boundary 정리에 한정했다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      DEN-255에서 docs work-board와 review visibility drift를 정리하는 흐름이 자연스럽다.
+      현재 작업으로 GitBook 내부 탐색성은 좋아졌지만, work index와 current status의 오래된 docs project 표현은 별도 정리가 필요하다.
+    </p>
+  </body>
+</html>

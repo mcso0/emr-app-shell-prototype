@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-243 Table Density & Full-Width Grid Implementation Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --ink: #17181c;
+        --muted: #626975;
+        --line: #d9dee7;
+        --accent: #1f6feb;
+        --ok: #148044;
+        --warn: #a15c00;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          "Pretendard",
+          "Apple SD Gothic Neo",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        box-sizing: border-box;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      header,
+      section {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+      }
+
+      header {
+        padding: 28px;
+      }
+
+      section {
+        margin-top: 16px;
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        font-size: 28px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 20px;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 16px;
+      }
+
+      p {
+        margin-bottom: 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        border-radius: 5px;
+        background: #eef1f6;
+        padding: 1px 5px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f2f4f8;
+        color: #343944;
+        font-weight: 700;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        background: #e9f2ff;
+        color: var(--accent);
+        padding: 0 9px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="badge">DEN-243</div>
+        <h1>Table Density & Full-Width Grid Implementation Report</h1>
+        <p class="meta">
+          2026-05-23 · Project 12 CLAiR EMR Table Density & Data Grid Ergonomics
+        </p>
+        <p>
+          테이블이 넓은 화면에서도 좌측에 고정된 폭으로 남는 문제를 수정하고, 테이블 밀도 컨트롤의 위치와 라벨
+          정책을 모듈별 사용 맥락에 맞게 정리했다.
+        </p>
+      </header>
+
+      <section>
+        <h2>Implemented Changes</h2>
+        <ul>
+          <li>
+            <code>scroll</code> 레이아웃 테이블은 고정 폭 대신 부모의 가로 영역을 채우도록
+            <code>min-width: 100%</code> 기반으로 정리했다.
+          </li>
+          <li>
+            TanStack 기반 <code>EmrDataTable</code>의 인라인 <code>width</code> 고정을 제거해 넓은 화면에서
+            테이블이 컨테이너 폭까지 확장되도록 했다.
+          </li>
+          <li>
+            밀도 컨트롤은 visible text <code>밀도</code>를 제거하고, 아이콘 전용 3단 컨트롤과
+            <code>좁게 보기</code>, <code>기본 보기</code>, <code>넓게 보기</code> tooltip/aria-label을 적용했다.
+          </li>
+          <li>
+            진료/차트, 임상병리검사, 영상검사, 조제/처치, 수납, 입원, 고객관리, 병원관리 테이블의 밀도 컨트롤
+            위치를 DEN-245 벤치마크 기준에 맞게 재배치했다.
+          </li>
+          <li>
+            입원 화면의 중복 <code>all</code> 드롭다운을 제거하고, 상단 필터 행에 단일 공용 밀도 컨트롤을 배치했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Module Acceptance Matrix</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>Density Placement</th>
+              <th>Width Behavior</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>진료/차트</td>
+              <td><code>Order 출력</code> 왼쪽</td>
+              <td>주문 테이블이 컨테이너 가로폭을 채움</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>임상병리검사</td>
+              <td><code>판정적용</code> 왼쪽</td>
+              <td>결과 테이블이 넓은 화면에서 확장됨</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>영상검사</td>
+              <td><code>PACS</code> 왼쪽</td>
+              <td>상세정보 테이블이 넓은 화면에서 확장됨</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>조제/처치</td>
+              <td><code>필터 1</code> 오른쪽</td>
+              <td>오더 그룹 테이블들이 동일 밀도로 확장됨</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>수납</td>
+              <td>기존 테이블 헤더 우측 유지</td>
+              <td>청구 항목 테이블이 컨테이너 가로폭을 채움</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>입원</td>
+              <td>탭 그룹 오른쪽, 검색 입력 왼쪽</td>
+              <td>3개 입원실 테이블이 화면 가로폭을 채움</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>고객관리</td>
+              <td>기존 테이블 툴바 우측 유지</td>
+              <td>동물 목록 테이블이 화면 가로폭을 채움</td>
+              <td class="ok">Pass</td>
+            </tr>
+            <tr>
+              <td>병원관리</td>
+              <td>기존 테이블 툴바 우측 유지</td>
+              <td>Order 관리 테이블이 화면 가로폭을 채움</td>
+              <td class="ok">Pass</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Verification</h2>
+        <ul>
+          <li><code>npm run lint</code>: pass, pre-existing warnings only.</li>
+          <li><code>npx tsc --noEmit</code>: pass.</li>
+          <li>
+            Playwright viewport checks at 1440px and 2048px: all target modules have zero visible
+            <code>밀도</code> labels, expected density group count, and scroll tables filling the visible container width.
+          </li>
+          <li>
+            Inpatient-specific check: <code>입원 검색조건</code> copy/dropdown is absent, and one shared density selector is present.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Notes</h2>
+        <p>
+          Narrower clinical grids still retain horizontal scroll when their meaningful minimum column width is wider than the visible
+          content area. This is expected: the fix is that the table grows with available space and no longer leaves unused blank width
+          when the viewport is wider than the table's minimum.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

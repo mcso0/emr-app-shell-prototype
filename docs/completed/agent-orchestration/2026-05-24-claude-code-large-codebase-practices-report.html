@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex 대형 코드베이스 운영 가이드 적용 보고서</title>
+    <style type="text/css">
+      :root {
+        color-scheme: light;
+        --bg: #f5f7f8;
+        --surface: #ffffff;
+        --surface-soft: #eef3f4;
+        --text: #17202a;
+        --muted: #5b6874;
+        --line: #d6dee3;
+        --accent: #0f766e;
+        --accent-strong: #0b5f59;
+        --warn: #9a5b00;
+        --code: #edf2f5;
+        --nav: #102027;
+        --nav-muted: #b7c5ca;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .layout {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: 292px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: auto;
+        background: var(--nav);
+        color: #f8fbfb;
+        border-right: 1px solid #071316;
+      }
+
+      .brand {
+        padding: 28px 24px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0;
+        color: #7dd3c7;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.28;
+      }
+
+      .brand p {
+        margin: 12px 0 0;
+        color: var(--nav-muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .toc {
+        padding: 18px 14px 28px;
+      }
+
+      .toc a {
+        display: block;
+        padding: 10px 10px;
+        border-radius: 6px;
+        color: #e8f0f1;
+        text-decoration: none;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      .toc a:hover,
+      .toc a:focus {
+        background: rgba(255, 255, 255, 0.1);
+        outline: none;
+      }
+
+      .toc .sub {
+        margin: 2px 0 10px 12px;
+        border-left: 1px solid rgba(255, 255, 255, 0.16);
+      }
+
+      .toc .sub a {
+        color: var(--nav-muted);
+        font-size: 13px;
+        padding: 8px 10px 8px 14px;
+      }
+
+      .main {
+        min-width: 0;
+        padding: 42px 36px 72px;
+      }
+
+      .content {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+
+      .hero {
+        padding-bottom: 26px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero h2 {
+        margin: 0 0 14px;
+        font-size: 34px;
+        line-height: 1.18;
+      }
+
+      .lead {
+        max-width: 850px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.75;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .section {
+        margin-top: 34px;
+        scroll-margin-top: 24px;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 24px;
+        line-height: 1.28;
+      }
+
+      h3 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.75;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul,
+      ol {
+        margin: 10px 0 0;
+        padding-left: 21px;
+      }
+
+      li + li {
+        margin-top: 7px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 20px;
+      }
+
+      .callout {
+        border-left: 4px solid var(--accent);
+      }
+
+      .warning {
+        border-left-color: var(--warn);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      th {
+        background: var(--surface-soft);
+        font-size: 13px;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: var(--code);
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .status {
+        display: inline-block;
+        min-width: 76px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #e5f5f2;
+        color: var(--accent-strong);
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .source {
+        border-top: 1px solid var(--line);
+        margin-top: 36px;
+        padding-top: 22px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 880px) {
+        .layout {
+          display: block;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+        }
+
+        .toc {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 2px 8px;
+        }
+
+        .toc .sub {
+          display: contents;
+          margin: 0;
+          border-left: 0;
+        }
+
+        .main {
+          padding: 30px 18px 56px;
+        }
+
+        .hero h2 {
+          font-size: 28px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <div class="sidebar">
+        <div class="brand">
+          <p class="eyebrow">Agent Operations</p>
+          <h1>Codex 대형 코드베이스 적용 보고서</h1>
+          <p>Claude Code 원문을 참고하되, CLAiR EMR 저장소의 Codex 운영 방식에 맞춰 재구성했다.</p>
+        </div>
+        <div class="toc">
+          <a href="#summary">요약</a>
+          <a href="#translation">한국어 번역형 요약</a>
+          <div class="sub">
+            <a href="#translation-navigation">코드베이스 탐색</a>
+            <a href="#translation-harness">Harness 구성</a>
+            <a href="#translation-patterns">성공 패턴</a>
+          </div>
+          <a href="#project-fit">우리 프로젝트 적용 판단</a>
+          <a href="#operating-model">권장 운영 모델</a>
+          <a href="#roadmap">실행 로드맵</a>
+          <a href="#checklist">체크리스트</a>
+          <a href="#risks">주의점</a>
+          <a href="#source">출처</a>
+        </div>
+      </div>
+
+      <div class="main">
+        <div class="content">
+          <div class="hero" id="summary">
+            <h2>대형 코드베이스에서 AI 코딩 에이전트를 잘 쓰려면 “모델”보다 “운영 환경”을 먼저 설계해야 한다.</h2>
+            <p class="lead">
+              Anthropic 글의 핵심은 Claude Code가 거대한 저장소를 별도 중앙 인덱스에 의존하지 않고
+              개발자처럼 파일 시스템, 검색, 참조 추적, 로컬 도구를 이용해 탐색한다는 점이다. 그래서
+              성공 여부는 모델 성능만이 아니라, 시작 컨텍스트, 계층형 지침, 자동화 hooks, task-specific
+              skills, MCP, LSP, subagents, 그리고 이를 관리하는 책임자 체계에 크게 좌우된다.
+            </p>
+            <div class="meta">
+              <span class="pill">작성일: 2026-05-24</span>
+              <span class="pill">대상: CLAiR EMR app shell prototype</span>
+              <span class="pill">범위: 문서/에이전트 운영 가이드</span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="callout">
+              <h3>이 보고서의 결론</h3>
+              <p>
+                원문 요약은 Claude Code 사례를 그대로 다루되, 적용안은 Codex 기준으로 해석한다. 우리 프로젝트는
+                이미 <code>AGENTS.md</code>, <code>docs/agent-start-here.md</code>,
+                <code>docs/engineering/current-status.md</code>, <code>docs/_meta</code>,
+                <code>docs/work</code>, repo-local skills를 갖고 있다. 다음 개선은 이 구조를 Codex가 더 적은
+                문맥으로 정확히 쓰게 만들고, 필요한 tool/plugin만 불러오며, 검증과 승인 경계를 놓치지 않게
+                만드는 것이다.
+              </p>
+            </div>
+          </div>
+
+          <div class="section" id="translation">
+            <h2>한국어 번역형 요약</h2>
+            <p class="muted">
+              원문 전체를 그대로 옮기지 않고, 핵심 주장과 구조를 한국어로 의역해 정리했다.
+            </p>
+
+            <div class="grid">
+              <div class="card" id="translation-navigation">
+                <h3>1. Claude Code는 큰 코드베이스를 개발자처럼 탐색한다</h3>
+                <p>
+                  Claude Code는 전체 저장소를 미리 임베딩해서 서버 인덱스로 올리는 방식에 기대지 않는다.
+                  로컬 개발 환경에서 파일을 읽고, 검색하고, 참조를 따라가며 필요한 문맥을 찾아간다.
+                </p>
+                <p>
+                  이 접근은 최신 워크트리를 직접 본다는 장점이 있다. 반면 시작점이 흐리거나, 저장소 구조가
+                  불분명하거나, 모든 정보를 한 번에 읽게 만들면 컨텍스트 한계에 빠진다. 따라서 큰 저장소일수록
+                  “어디서 시작해야 하는지”를 명확히 알려주는 계층형 안내가 중요하다.
+                </p>
+              </div>
+
+              <div class="card" id="translation-harness">
+                <h3>2. 성능은 모델만이 아니라 harness가 결정한다</h3>
+                <p>
+                  원문은 Claude Code의 실제 성과가 모델 자체보다 모델을 둘러싼 실행 환경, 즉 harness에
+                  크게 좌우된다고 설명한다. harness는 <code>CLAUDE.md</code>, hooks, skills, plugins,
+                  MCP servers 같은 확장 지점으로 구성된다.
+                </p>
+                <p>
+                  핵심은 모든 지식을 한 파일에 넣지 않는 것이다. 매 세션 필요한 공통 규칙은 가볍게 유지하고,
+                  특정 업무에만 필요한 전문 지식은 skill처럼 필요할 때만 불러오게 해야 한다.
+                </p>
+              </div>
+
+              <div class="card">
+                <h3>3. LSP와 subagents는 큰 저장소에서 특히 유용하다</h3>
+                <p>
+                  LSP는 문자열 검색이 아니라 심볼 기준으로 정의와 참조를 찾게 해준다. 이름이 같은 함수나
+                  비슷한 파일이 많은 저장소에서는 잘못된 위치를 여는 비용을 줄인다.
+                </p>
+                <p>
+                  Subagent는 탐색과 편집을 분리하는 데 유용하다. 읽기 전용으로 하위 시스템을 조사한 뒤
+                  핵심 결과만 부모 세션에 넘기면, 메인 세션의 컨텍스트를 실제 수정 작업에 더 많이 쓸 수 있다.
+                </p>
+              </div>
+
+              <div class="card" id="translation-patterns">
+                <h3>4. 성공한 조직은 설정을 계속 관리한다</h3>
+                <p>
+                  성공 사례들은 공통적으로 코드베이스를 탐색 가능하게 만들고, 지침 파일을 주기적으로 정비하며,
+                  Claude Code 운영 책임자를 둔다. 모델이 발전하면 예전 지침이 오히려 방해가 될 수 있으므로
+                  3-6개월 단위로 설정을 재검토하는 흐름이 필요하다.
+                </p>
+                <p>
+                  특히 규제 산업이나 민감한 제품에서는 승인된 skills, 리뷰 절차, 제한된 초기 접근,
+                  보안/거버넌스 협업 체계를 먼저 정하는 것이 중요하다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section" id="project-fit">
+            <h2>우리 프로젝트 적용 판단</h2>
+            <div class="table-wrap">
+              <table summary="원문 개념을 Codex와 CLAiR EMR 저장소에 적용한 판단">
+                <thead>
+                  <tr>
+                    <th>원문 개념</th>
+                    <th>Codex 기준 대응</th>
+                    <th>판단</th>
+                    <th>우리 프로젝트 적용</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>CLAUDE.md</code> / root context</td>
+                    <td><code>AGENTS.md</code>, system/developer instructions, <code>docs/agent-start-here.md</code>, <code>docs/engineering/current-status.md</code></td>
+                    <td><span class="status">강함</span></td>
+                    <td>Codex가 매 세션 반드시 읽을 내용은 compact하게 유지하고, 세부 지식은 source docs와 work item으로 내려보낸다.</td>
+                  </tr>
+                  <tr>
+                    <td>Layered context</td>
+                    <td><code>docs/_meta/agent-rag-map.md</code>, 영역별 README, work item source docs</td>
+                    <td><span class="status">진행 중</span></td>
+                    <td>Codex가 root에서 방황하지 않도록 작업 유형별 “최소 읽기 경로”와 “다음 검증 명령”을 명확히 둔다.</td>
+                  </tr>
+                  <tr>
+                    <td>Skills</td>
+                    <td>Codex skills, repo-local <code>.agents/skills</code>, <code>emr-docs-sync</code>, <code>manual-linear-ops</code></td>
+                    <td><span class="status">기반 있음</span></td>
+                    <td>반복되는 docs sync, Linear handoff, HTML report, QA 절차는 장문 지시가 아니라 skill로 승격한다.</td>
+                  </tr>
+                  <tr>
+                    <td>Hooks</td>
+                    <td>Codex에서는 shell 검증, result-review 규칙, CI/check scripts, automation 후보로 해석</td>
+                    <td><span class="status">후보</span></td>
+                    <td><code>docs:check</code>, lint, typecheck, secret scan, result-review 누락 감지는 deterministic gate로 관리한다.</td>
+                  </tr>
+                  <tr>
+                    <td>MCP / external tools</td>
+                    <td>Codex plugins/connectors, <code>tool_search</code>, GitHub, Linear, Supabase, Vercel, Browser, automation tools</td>
+                    <td><span class="status">선별 필요</span></td>
+                    <td>읽기 전용 조사와 실제 변경 도구를 분리하고, Supabase/RLS/deploy/email/payment는 explicit approval gate를 유지한다.</td>
+                  </tr>
+                  <tr>
+                    <td>LSP / symbol navigation</td>
+                    <td><code>rg</code>, TypeScript 타입 검사, Next.js 문서 확인, 필요 시 IDE/LSP 기반 심볼 탐색</td>
+                    <td><span class="status">우선 검토</span></td>
+                    <td>대규모 리팩터나 cross-feature 변경 전에는 문자열 검색만 믿지 않고 타입/심볼/테스트 근거를 같이 확인한다.</td>
+                  </tr>
+                  <tr>
+                    <td>Subagents</td>
+                    <td>Codex multi-agent tools, read-only 조사 세션, 병렬 파일 읽기, 독립 QA/review 세션</td>
+                    <td><span class="status">조건부</span></td>
+                    <td>편집 권한이 필요한 본작업과 분리해 조사, QA, 보안 리뷰, 디자인 리뷰처럼 독립 가능한 작업에만 우선 적용한다.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section" id="operating-model">
+            <h2>권장 운영 모델</h2>
+            <div class="grid">
+              <div class="card">
+                <h3>1. Codex 시작 컨텍스트는 얇고 강하게 유지</h3>
+                <ul>
+                  <li><code>AGENTS.md</code>는 절대 규칙과 언어/안전 계약 중심으로 유지한다.</li>
+                  <li><code>docs/agent-start-here.md</code>는 새 세션의 최소 라우팅 문서로 유지한다.</li>
+                  <li>상세 구현 지식은 영역별 README, source docs, work item으로 내려보낸다.</li>
+                </ul>
+              </div>
+
+              <div class="card">
+                <h3>2. Codex는 관련 문서와 도구만 불러오게 한다</h3>
+                <ul>
+                  <li>문서 작업은 <code>docs/_meta</code>, <code>docs/work</code>, 관련 source doc부터 본다.</li>
+                  <li>Next.js 코드는 관련 <code>node_modules/next/dist/docs/</code> 문서를 먼저 확인한다.</li>
+                  <li>브라우저, GitHub, Linear, Supabase, Vercel 등은 작업 목적이 맞을 때만 <code>tool_search</code>로 불러온다.</li>
+                </ul>
+              </div>
+
+              <div class="card">
+                <h3>3. 반복 업무는 Codex skill 후보로 승격</h3>
+                <ul>
+                  <li>GitBook 문서 동기화 점검</li>
+                  <li>Linear Human Review handoff</li>
+                  <li>HTML closeout/report 생성</li>
+                  <li>Sales Demo 회귀 확인</li>
+                </ul>
+              </div>
+
+              <div class="card">
+                <h3>4. 승인 gate와 운영 책임자를 명확히 둔다</h3>
+                <ul>
+                  <li>에이전트 운영 DRI는 지침 중복과 오래된 규칙을 정리한다.</li>
+                  <li>auth, DB, Supabase, RLS, deploy, real email, payment는 Codex가 임의로 진행하지 않게 승인 조건을 유지한다.</li>
+                  <li>3-6개월 단위로 agent contract, skills, plugins, connector 사용 규칙을 리뷰한다.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="section" id="roadmap">
+            <h2>실행 로드맵</h2>
+            <div class="table-wrap">
+              <table summary="CLAiR EMR 에이전트 운영 개선 실행 로드맵">
+                <thead>
+                  <tr>
+                    <th>단계</th>
+                    <th>목표</th>
+                    <th>구체 작업</th>
+                    <th>검증</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1주차</td>
+                    <td>Codex 시작 경로 정리</td>
+                    <td><code>agent-rag-map</code>과 영역별 README에서 Codex task별 최소 읽기 경로를 재점검한다.</td>
+                    <td><code>npm run docs:check</code></td>
+                  </tr>
+                  <tr>
+                    <td>2주차</td>
+                    <td>반복 보고서 Codex skill화</td>
+                    <td>HTML closeout/report 구조를 repo-local skill workflow로 정리한다.</td>
+                    <td>샘플 보고서 1개 생성 후 링크/렌더링 확인</td>
+                  </tr>
+                  <tr>
+                    <td>3주차</td>
+                    <td>Codex 검증 gate 정리</td>
+                    <td>docs check, lint, typecheck, secret scan, approval-gated command 감지 항목을 검증 gate 후보로 분류한다.</td>
+                    <td>실행 시간과 false positive 점검</td>
+                  </tr>
+                  <tr>
+                    <td>4주차</td>
+                    <td>대형 변경 작업 분리</td>
+                    <td>Codex multi-agent 또는 별도 조사 세션을 읽기 전용 조사와 QA에만 시범 적용하고, 편집 세션과 분리한다.</td>
+                    <td>조사 파일과 최종 diff 비교 리뷰</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section" id="checklist">
+            <h2>에이전트 작업 체크리스트</h2>
+            <div class="callout">
+              <h3>작업 시작 전</h3>
+              <ul>
+                <li><code>docs/agent-start-here.md</code>와 <code>docs/engineering/current-status.md</code>를 먼저 읽는다.</li>
+                <li>PR-sized 작업이면 <code>docs/work/index.md</code>에서 기존 item을 찾는다.</li>
+                <li>작업 유형에 맞는 source doc만 추가로 읽는다.</li>
+                <li>필요한 plugin/connector는 목적이 명확할 때만 <code>tool_search</code>로 불러온다.</li>
+                <li>Next.js 앱 코드는 관련 Next.js 문서를 먼저 확인한다.</li>
+              </ul>
+            </div>
+
+            <div class="callout">
+              <h3>작업 중</h3>
+              <ul>
+                <li>기존 dirty worktree 변경을 되돌리지 않는다.</li>
+                <li>mock/live, Supabase, RLS, production deploy 경계는 현재 상태 문서를 따른다.</li>
+                <li>파일 수정은 수동 편집이면 <code>apply_patch</code>를 우선 사용하고, 기존 패턴을 먼저 읽는다.</li>
+                <li>반복되는 지식은 긴 root instruction이 아니라 source doc 또는 Codex skill 후보로 기록한다.</li>
+                <li>검증 명령은 작업 범위에 맞게 좁히되, 보안/권한 경계는 넓게 본다.</li>
+              </ul>
+            </div>
+
+            <div class="callout">
+              <h3>작업 종료 전</h3>
+              <ul>
+                <li>문서 변경은 <code>npm run docs:check</code>를 우선 실행한다.</li>
+                <li>구현 변경은 lint, typecheck, build, focused Playwright를 범위에 맞게 실행한다.</li>
+                <li>프론트엔드/HTML 변경은 가능하면 Browser 또는 정적 HTML 검증으로 렌더링을 확인한다.</li>
+                <li>의미 있는 작업은 한국어 HTML report를 남긴다.</li>
+                <li>최종 리뷰는 비개발자도 이해할 수 있게 “무엇이 바뀌었고 왜 중요한지”부터 말한다.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="section" id="risks">
+            <h2>주의점</h2>
+            <div class="callout warning">
+              <h3>우리 프로젝트에서 피해야 할 적용 방식</h3>
+              <ul>
+                <li>모든 운영 지식을 <code>AGENTS.md</code>나 시작 문서에 계속 추가해 Codex 기본 컨텍스트를 비대하게 만드는 방식</li>
+                <li>승인 없이 live Supabase, migration push, RLS, production deploy, real email, payment 범위를 에이전트 자동화에 연결하는 방식</li>
+                <li>읽기 전용 조사와 실제 편집을 같은 세션에서 오래 끌어 컨텍스트를 소모하는 방식</li>
+                <li>한 번 성공한 수동 노하우를 문서화하지 않아 매번 새 에이전트가 다시 추론하게 만드는 방식</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="section source" id="source">
+            <h2>출처와 범위</h2>
+            <p>
+              원문:
+              <a href="https://claude.com/blog/how-claude-code-works-in-large-codebases-best-practices-and-where-to-start">
+                Anthropic, “How Claude Code works in large codebases: Best practices and where to start”
+              </a>
+              (게시일: 2026-05-14).
+            </p>
+            <p>
+              이 문서는 원문을 그대로 복제한 번역본이 아니라, 공개 글의 핵심 개념을 한국어로 의역한 뒤
+              적용 섹션을 Codex와 CLAiR EMR 저장소 운영 방식에 맞게 재구성한 내부 보고서다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

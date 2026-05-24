@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-256 GitBook Private Operations Checklist Closeout</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 880px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #1f2933;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #eef2f7;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d8dee9;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f5f7fa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-256 GitBook Private Operations Checklist Closeout</h1>
+
+    <h2>요약</h2>
+    <p>
+      GitBook을 외부 공개용이 아니라 승욱이 보기 쉬운 private/internal 문서 포털로 사용한다는 결정에 맞춰,
+      공개 발행 체크리스트 대신 private GitBook 운영, 접근 확대, 공유, 외부 공개 전환 gate를 정리했다.
+      이로써 docs/GitBook governance hardening 범위는 닫고, 실제 GitBook site creation path는 DEN-257에 남겼다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>문서</th>
+          <th>변경 요약</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>docs/_meta/gitbook-private-operations-checklist.md</code></td>
+          <td>private/internal review, sensitive-area checks, access changes, external-public conversion gate, verification을 정의했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/_meta/gitbook-structure-rules.md</code></td>
+          <td>private operations checklist를 GitBook reader-boundary 규칙에서 직접 연결했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/index.md</code>, <code>docs/SUMMARY.md</code>, <code>docs/_meta/README.md</code></td>
+          <td>GitBook private operations checklist를 GitBook/portal 읽기 경로에 추가했다.</td>
+        </tr>
+        <tr>
+          <td><code>.agents/skills/emr-docs-sync/SKILL.md</code></td>
+          <td>GitBook access, sharing, publication posture 변경 시 checklist를 읽도록 업데이트했다.</td>
+        </tr>
+        <tr>
+          <td><code>docs/engineering/current-status.md</code></td>
+          <td>DEN-252부터 DEN-256까지 Human Review 상태이고, DEN-257이 site creation/publishing-path planning으로 남아 있음을 반영했다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과: 803 docs/agent markdown files checked.</li>
+      <li><code>git diff --check</code> 통과: DEN-256 대상 파일 whitespace 문제 없음.</li>
+      <li>Ruby YAML/frontmatter validation 통과: skill, private operations checklist, GitBook structure rules.</li>
+    </ul>
+
+    <h2>의도적으로 하지 않은 것</h2>
+    <ul>
+      <li>GitBook site를 생성하거나 설정을 변경하지 않았다.</li>
+      <li>GitBook을 external-public으로 전환하지 않았다.</li>
+      <li>민감한 문서를 repo에서 제거하거나 재작성하지 않았다.</li>
+      <li>remote Supabase, migration, RLS replay, staging seed replay, production deploy, real email, payment, provider integration, compliance 작업을 하지 않았다.</li>
+      <li>Linear issue를 Done으로 이동하지 않았다. 승욱의 Human Review 이후 명시 승인 시에만 Done으로 이동한다.</li>
+    </ul>
+
+    <h2>남은 작업</h2>
+    <p>
+      DEN-257에서 GitBook docs site 생성 방식, Git Sync 연결, private access 설정, 사이트 구조, custom domain 필요 여부를 계획하면 된다.
+      DEN-257도 실제 공개/배포 실행이 아니라 site creation path 설계 작업으로 유지하는 것이 적절하다.
+    </p>
+  </body>
+</html>

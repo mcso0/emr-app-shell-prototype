@@ -85,7 +85,9 @@ Do not assume the full suite has been run for a new task unless the current work
 
 ## Current Documentation Work
 
-The active docs operating-system project is `CLAiR EMR 문서 운영 체계 구축`.
+The baseline docs operating-system project is `CLAiR EMR 문서 운영 체계 구축`. It produced the current docs portal, startup rules, baseline source docs, and GitBook handoff set.
+
+The active docs navigation improvement project is `CLAiR EMR GitBook/docs 운영 고도화`. It is private/internal GitBook-oriented work for making repo docs easier for 승욱 to read and review; it is not a public publishing or production launch project.
 
 Completed or in Human Review:
 
@@ -105,7 +107,8 @@ Completed or in Human Review:
 
 Current work:
 
-- Representative Human Review of the docs operating system.
+- Representative Human Review of the baseline docs operating system.
+- GitBook/docs navigation improvement through DEN-252 through DEN-257. DEN-252 through DEN-257 are in Human Review; the remaining action is representative review before any Done transitions or manual GitBook site setup.
 
 Upcoming baseline docs in this project:
 
@@ -113,7 +116,9 @@ Upcoming baseline docs in this project:
 
 ## Recommended Next Work
 
-Review the `CLAiR EMR 문서 운영 체계 구축` project documents in Human Review. After approval, commit and push the docs so GitBook can sync the updated portal from GitHub `main`.
+Review the `CLAiR EMR 문서 운영 체계 구축` baseline documents in Human Review when ready. For the current GitBook/docs navigation effort, review the DEN-252 through DEN-257 outputs in `CLAiR EMR GitBook/docs 운영 고도화`; do not create or publish a GitBook site until 승욱 explicitly asks for manual setup.
+
+Do not infer next implementation work from the large `human_review` count in `docs/work/index.md`. Use Linear issue status first, then use `docs/work/index.md` to find the matching repo work item or review queue.
 
 For product/live-MVP work outside this docs project, review the current Linear project/issue first. Do not infer readiness from old status bullets; use the active issue, source docs, and latest closeout reports.
 

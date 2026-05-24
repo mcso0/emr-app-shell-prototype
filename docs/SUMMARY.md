@@ -17,6 +17,9 @@
 - [Intake Rules](_meta/intake-rules.md)
 - [Documentation Depth Rules](_meta/documentation-depth-rules.md)
 - [Agent RAG Map](_meta/agent-rag-map.md)
+- [GitBook Structure Rules](_meta/gitbook-structure-rules.md)
+- [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md)
+- [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md)
 - [Result Review Rules](_meta/result-review-rules.md)
 
 ## Product

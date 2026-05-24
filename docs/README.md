@@ -15,7 +15,7 @@ For GitBook, use `docs/SUMMARY.md` as the sidebar map. The repository `docs/` fo
 
 This repository uses docs as the lightweight replacement for ClickUp or Notion. Work is planned, scoped, and handed off in repo so a new chat or sub-agent can continue without hidden context.
 
-Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, and how to review completed work with the user.
+Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, how GitBook-facing navigation should stay curated, and how to review completed work with the user.
 
 Canonical docs are organized by purpose:
 

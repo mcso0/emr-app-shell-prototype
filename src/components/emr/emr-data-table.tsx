@@ -35,8 +35,11 @@ import type { Order, OrderDiffField, TechnicianUser } from "@/types/emr";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type EmrDataTableProps = {
+  density?: EmrTableDensity;
+  onDensityChange?: (density: EmrTableDensity) => void;
   rows: Order[];
   sectionId: string;
+  showDensitySelector?: boolean;
   technicians: TechnicianUser[];
   onCompleteRows: (rowIds: string[]) => void;
   onAssignOrder: (rowId: string, technicianId: string) => void;
@@ -257,8 +260,11 @@ function RowCheckbox({ row }: { row: Row<Order> }) {
 }
 
 export function EmrDataTable({
+  density: densityProp,
+  onDensityChange,
   rows,
   sectionId,
+  showDensitySelector = true,
   technicians,
   onCompleteRows,
   onAssignOrder,
@@ -266,7 +272,9 @@ export function EmrDataTable({
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
-  const [density, setDensity] = useState<EmrTableDensity>("compact");
+  const [internalDensity, setInternalDensity] = useState<EmrTableDensity>("compact");
+  const density = densityProp ?? internalDensity;
+  const setDensity = onDensityChange ?? setInternalDensity;
   const completeRows = useCallback((rowIds: string[]) => {
     onCompleteRows(rowIds);
     setRowSelection({});
@@ -491,15 +499,16 @@ export function EmrDataTable({
 
   return (
     <div className="relative">
-      <div className="mb-2 flex justify-end">
-        <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-      </div>
+      {showDensitySelector ? (
+        <div className="mb-2 flex justify-end">
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+        </div>
+      ) : null}
       <Table
         density={density}
         layout="scroll"
         minWidth={tableWidth}
         className="table-fixed"
-        style={{ width: tableWidth }}
       >
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           {table.getHeaderGroups().map((headerGroup) => (

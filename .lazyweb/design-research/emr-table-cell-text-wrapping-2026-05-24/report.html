@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-251 Table Cell Text Wrapping Lazyweb Research</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8fafc;
+        color: #111827;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 36px 24px 56px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 21px;
+      }
+      .panel {
+        border: 1px solid #d9e1ea;
+        border-radius: 10px;
+        background: #fff;
+        padding: 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      figure {
+        margin: 0 0 18px;
+      }
+      img {
+        display: block;
+        width: 100%;
+        border: 1px solid #d9e1ea;
+        border-radius: 10px;
+        background: white;
+      }
+      figcaption,
+      .meta {
+        color: #64748b;
+        font-size: 13px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      code {
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        background: #f1f5f9;
+        padding: 1px 5px;
+      }
+      a {
+        color: #2563eb;
+      }
+      @media (max-width: 820px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Lazyweb research artifact · DEN-251 · 2026-05-24</p>
+      <h1>CLAiR Table Cell Text Wrapping Research</h1>
+      <section class="panel">
+        <p>
+          CLAiR 테이블 셀 텍스트는 기본 1행으로 간다. 긴 텍스트는 의미 손실이 큰 컬럼에 한해 2행 preview를 허용하고,
+          전체 내용은 tooltip, popover, side detail, drawer, editor에서 읽게 한다. 자동 행 높이는 dense EMR grid의
+          기본값으로 쓰지 않는다.
+        </p>
+      </section>
+
+      <h2>CLAiR Evidence</h2>
+      <div class="grid">
+        <figure>
+          <img src="references/current-inpatient.png" alt="CLAiR inpatient table" />
+          <figcaption>입원: 진단명, 입실 메모, 유의사항 badge가 2행 preview 후보.</figcaption>
+        </figure>
+        <figure>
+          <img src="references/current-dispensing.png" alt="CLAiR dispensing table" />
+          <figcaption>조제/처치: scalar 값은 1행, 오더명/변경 알림은 제한적 2행 후보.</figcaption>
+        </figure>
+        <figure>
+          <img src="references/current-customer.png" alt="CLAiR customer table" />
+          <figcaption>고객관리: master data table은 대부분 1행이 적합하고 badge 묶음만 예외 후보.</figcaption>
+        </figure>
+        <figure>
+          <img src="references/current-treatment.png" alt="CLAiR treatment table" />
+          <figcaption>진료/차트: 오더 작업 table은 금액/수량/담당자 비교가 중요해 1행 기준을 강하게 유지한다.</figcaption>
+        </figure>
+      </div>
+
+      <h2>Lazyweb References</h2>
+      <div class="grid">
+        <figure>
+          <img src="references/lazyweb-asana-table-list.png" alt="Table-style list reference" />
+          <figcaption>Many-entry table-style list optimized for scanning concise rows.</figcaption>
+        </figure>
+        <figure>
+          <img src="references/lazyweb-mlb-data-grid.png" alt="Data management grid reference" />
+          <figcaption>Data management dashboard with many columns and concise record fields.</figcaption>
+        </figure>
+        <figure>
+          <img src="references/lazyweb-wikipedia-comparison-table.png" alt="Comparison table reference" />
+          <figcaption>Large comparison table where consistent row height improves scanning across metrics.</figcaption>
+        </figure>
+        <figure>
+          <img src="references/lazyweb-fotmob-spreadsheet-table.png" alt="Spreadsheet table reference" />
+          <figcaption>Spreadsheet-style table with toolbar controls and scrollable rows/columns.</figcaption>
+        </figure>
+      </div>
+
+      <h2>Official References</h2>
+      <ul>
+        <li><a href="https://mui.com/x/react-data-grid/row-height/">MUI X row height</a> and <a href="https://mui.com/x/react-data-grid/cells/">MUI X cells</a></li>
+        <li><a href="https://www.ag-grid.com/react-data-grid/row-height/">AG Grid row height and text wrapping</a></li>
+        <li><a href="https://ant.design/components/table/">Ant Design Table ellipsis column option</a></li>
+        <li><a href="https://tanstack.com/table/latest/docs/guide/column-sizing/">TanStack Table column sizing</a></li>
+      </ul>
+
+      <h2>Recommendation</h2>
+      <ul>
+        <li><code>one-line</code>을 기본 text mode로 둔다.</li>
+        <li><code>two-line-if-long</code>은 Order명, 진단명, 입실 메모, 복약지도처럼 의미 손실이 큰 컬럼에만 둔다.</li>
+        <li><code>always-multiline</code>은 dense table body 밖의 detail/editor surface에만 쓴다.</li>
+        <li>긴 텍스트는 tooltip만 의존하지 말고 side detail, drawer, popover, editor 중 하나로 full text 경로를 둔다.</li>
+        <li>공유 <code>EmrTableCellText</code>, <code>EmrTableBadgeStack</code>, <code>EmrLongTextPreview</code> primitive를 만든다.</li>
+      </ul>
+
+      <p class="meta">
+        Full durable report:
+        <code>docs/completed/design/2026-05-24-den-251-table-cell-text-wrapping-research-report.html</code>
+      </p>
+    </main>
+  </body>
+</html>

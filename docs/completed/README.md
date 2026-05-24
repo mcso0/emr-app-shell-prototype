@@ -1,19 +1,43 @@
 # Completed Work Documents
 
-이 폴더는 완료된 작업의 closeout 문서를 모으는 곳이다. 진행 중 계획이나 기준 문서는 `docs/work/`, `docs/product/`, `docs/design/`, `docs/engineering/`의 알맞은 위치에 두고, 작업이 끝난 뒤 결과/검증/남은 후속 작업이 정리된 문서만 이곳으로 보관한다.
+This folder stores durable closeouts and reports for finished work. Completed records are evidence and handoff material; they are not the active source of truth.
 
-Use `docs/_meta/templates/closeout.md` for new closeouts.
+## Read First
 
-## 규칙
+- Closeout template: `docs/_meta/templates/closeout.md`
+- Result review rules: `docs/_meta/result-review-rules.md`
+- Current status: `docs/engineering/current-status.md`
+- Work index: `docs/work/index.md`
 
-- 작업별 하위 폴더를 만든다. 예: `docs/completed/auth/`, `docs/completed/billing/`, `docs/completed/reception/`
-- 파일명은 `YYYY-MM-DD-<work-slug>.md` 형식을 사용한다.
-- 완료 문서에는 최소한 아래 내용을 남긴다.
-  - 완료 날짜
-  - 최종 목표와 실제 결과물
-  - 변경한 주요 파일
-  - 사용한 스킬
-  - 통과한 검증 명령
-  - 남은 후속 작업
-- 작업 완료 시에는 완료 문서만 만들지 말고, 관련 `docs/work/` item, `docs/engineering/current-status.md`, 또는 해당 작업의 기준 문서도 함께 갱신한다.
-- Closeouts are not the active source of truth. If a completed task changes current guidance, update the relevant `business/`, `product/`, `design/`, or `engineering/` document and link it from the closeout.
+## What Belongs Here
+
+- Finished-work closeouts.
+- Korean HTML reports for meaningful Linear issue work.
+- Verification summaries, remaining risks, and next-step recommendations.
+- Project or initiative closeouts that should be preserved after execution ends.
+
+## Common Subareas
+
+- `auth/`: completed auth and workspace boundary work.
+- `billing/`: completed billing workspace work.
+- `chart/`: completed chart workspace work.
+- `clinical-billing/`: completed clinical billing and persistence work.
+- `clinical-fulfillment/`: completed order fulfillment handoff work.
+- `design/`: completed design system, visual QA, and UI reports.
+- `docs/`: completed docs-operations work.
+- `reception/`: completed reception workflow work.
+- Other area folders mirror the product or engineering area that produced the closeout.
+
+## Rules
+
+- Use `YYYY-MM-DD-<work-slug>.md` or `YYYY-MM-DD-<work-slug>-report.html` naming.
+- Include the requested goal, actual result, changed files, verification, risks, and next step.
+- Link the completed record from the Linear issue or final user review when a Linear issue exists.
+- If completed work changes current guidance, update the relevant `business/`, `product/`, `design/`, `engineering/`, `work/`, or `_meta/` source document. Do not rely on the closeout alone.
+- Keep completed reports out of the default reading path unless a current source doc, work item, or Linear issue points there.
+
+## Boundaries
+
+- Do not start new work from completed reports by default.
+- Do not use completed reports to override `docs/engineering/current-status.md` or the most specific approved source doc.
+- Do not place in-progress plans here. Use `docs/work/` for PR-sized execution and the relevant source-doc area for durable guidance.
