@@ -2,6 +2,35 @@
 
 This is the current work board. Work items are PR-sized unless explicitly marked otherwise.
 
+## How To Read This Board
+
+Use this file as the repo-side work inventory, not as the only next-work queue. Linear remains the control plane for active issue status, Human Review handoff, and representative acceptance.
+
+`human_review` means the scoped work has been handed to 승욱 or the representative for review. It does not mean the issue is still implementation-ready next work, and it should not be moved to `done` unless 승욱 explicitly accepts it or asks for the status transition.
+
+## Review Visibility Snapshot
+
+DEN-255 review on 2026-05-24 confirmed the large status counts are intentional, but they make the board hard to scan:
+
+| Status | Count | How to read it |
+|---|---:|---|
+| `done` | 48 | Completed historical work items already closed in this repo board. |
+| `human_review` | 109 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
+
+Large `human_review` groups:
+
+| Group | Count | Current meaning |
+|---|---:|---|
+| Standalone or legacy PR rows | 40 | Historical PR-sized work items. Do not pick these as next work unless a current Linear issue points back to them. |
+| Project 03 | 11 | Historical reception/live-persistence review queue; keep status unchanged until a representative review or migration task explicitly handles it. |
+| Project 04 | 19 | Active sequence was accepted for `Done` in Linear on 2026-05-20, but this repo board still records the older Human Review rows. Proposed status migration needs explicit 승욱 approval. |
+| Project 05 | 12 | Active sequence was accepted for `Done` in Linear on 2026-05-20, but this repo board still records the older Human Review rows. Proposed status migration needs explicit 승욱 approval. |
+| Project 06 | 10 | Customer Management Persistence is ready for representative Human Review. |
+| Project 07 | 9 | Hospital Admin Order Catalog Persistence is ready for representative Human Review. |
+| Project 08 | 8 | Clinical Order Fulfillment Handoff Persistence is ready for representative Human Review; remote staging remains approval-gated. |
+
+For actual next work, start from the active Linear project and issue, then use the table below only to locate the matching repo work item.
+
 ## Status Board
 
 | ID | Status | Area | Priority | Target PR | Work Item |
@@ -166,7 +195,9 @@ This is the current work board. Work items are PR-sized unless explicitly marked
 
 ## Current Next Work
 
-The docs restructure and docs operations sequence is complete. Product MVP implementation work should start from:
+The original docs restructure and docs operating-system sequence is complete and in representative review. The newer GitBook/docs 운영 고도화 sequence is tracked in Linear project `CLAiR EMR GitBook/docs 운영 고도화`; use that Linear project for the current docs navigation work instead of inferring from older board rows.
+
+Product MVP implementation work should start from:
 
 - `docs/agent-start-here.md`
 - `docs/_meta/README.md`
@@ -180,6 +211,12 @@ Recommended next shaping target:
 - Project 07 `Hospital Admin Order Catalog Persistence` has completed its active issue sequence through DEN-117 and is ready for representative Human Review.
 - Project 08 `Clinical Order Fulfillment Handoff Persistence` has completed DEN-235 through DEN-242 through Human Review. Representative approval is needed before moving issues to `Done` or running remote staging validation.
 - Keep Project 06 and Project 07 local-first unless 승욱 separately approves remote Supabase, staging/live migration, real data, or production deploy.
+
+Proposed board cleanup candidates for 승욱 review:
+
+- Move Project 04 rows from `human_review` to `done` only if 승욱 confirms the Linear acceptance should be mirrored in `docs/work/index.md`.
+- Move Project 05 rows from `human_review` to `done` only if 승욱 confirms the Linear acceptance should be mirrored in `docs/work/index.md`.
+- Leave Project 06, Project 07, Project 08, and standalone legacy rows unchanged unless a focused review/migration issue is opened.
 
 ## Inbox
 

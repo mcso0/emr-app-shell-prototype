@@ -32,9 +32,15 @@ test("valid invite acceptance creates a mock account membership and redirects to
   );
 
   await expect(page.getByRole("heading", { name: "초대 수락" })).toBeVisible();
-  await expect(page.getByText("vet@hanbit.test")).toBeVisible();
-  await expect(page.getByText("신규 계정으로 시작")).toBeVisible();
-  await expect(page.getByText("기존 계정에 연결")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "계정 이메일 확인 후 워크스페이스에 입장" })
+  ).toBeVisible();
+  await expect(page.getByText("vet@hanbit.test", { exact: true })).toBeVisible();
+  await expect(page.getByText("초대받은 이메일로 인증 코드를 확인하면")).toBeVisible();
+  await expect(page.getByText("신규 계정으로 시작")).toHaveCount(0);
+  await expect(page.getByText("기존 계정에 연결")).toHaveCount(0);
+  await expect(page.getByText("staging Supabase")).toHaveCount(0);
+  await expect(page.getByText("not_sent_approval_gated")).toHaveCount(0);
 
   const acceptResponse = page.waitForResponse(
     (response) =>
@@ -79,14 +85,23 @@ test("invalid invite acceptance states do not expose account creation actions", 
   await page.goto("/invite/invitation-expired?workspaceId=workspace-a");
   await expect(page.getByRole("heading", { name: "초대가 만료되었습니다" })).toBeVisible();
   await expect(page.getByRole("button", { name: "초대 수락하고 워크스페이스 열기" })).toHaveCount(0);
+  await expect(page.getByText("신규 계정으로 시작")).toHaveCount(0);
+  await expect(page.getByText("기존 계정에 연결")).toHaveCount(0);
+  await expect(page.getByText("인증 코드 받기")).toHaveCount(0);
 
   await page.goto("/invite/invitation-canceled?workspaceId=workspace-a");
   await expect(page.getByRole("heading", { name: "취소된 초대입니다" })).toBeVisible();
   await expect(page.getByRole("button", { name: "초대 수락하고 워크스페이스 열기" })).toHaveCount(0);
+  await expect(page.getByText("신규 계정으로 시작")).toHaveCount(0);
+  await expect(page.getByText("기존 계정에 연결")).toHaveCount(0);
+  await expect(page.getByText("인증 코드 받기")).toHaveCount(0);
 
   await page.goto("/invite/invitation-accepted?workspaceId=workspace-a");
   await expect(page.getByRole("heading", { name: "이미 수락된 초대입니다" })).toBeVisible();
   await expect(page.getByRole("button", { name: "초대 수락하고 워크스페이스 열기" })).toHaveCount(0);
+  await expect(page.getByText("신규 계정으로 시작")).toHaveCount(0);
+  await expect(page.getByText("기존 계정에 연결")).toHaveCount(0);
+  await expect(page.getByText("인증 코드 받기")).toHaveCount(0);
 });
 
 test("unknown invite link is denied without creating local session state", async ({ page }) => {
@@ -112,6 +127,15 @@ test("unknown invite link is denied without creating local session state", async
 test("invite account setup pages preserve invite context", async ({ page }) => {
   const invitePath =
     "/invite/invitation-pending?workspaceId=workspace-a&email=vet%40hanbit.test";
+
+  await page.goto(
+    `/login?reason=invite_email_otp&inviteEmail=vet%40hanbit.test&next=${encodeURIComponent(invitePath)}`
+  );
+  await expect(page.getByRole("heading", { name: "초대 이메일 인증" })).toBeVisible();
+  await expect(page.getByTestId("auth-session-notice")).toContainText(
+    "초대받은 이메일로 계속하세요."
+  );
+  await expect(page.getByLabel("이메일")).toHaveValue("vet@hanbit.test");
 
   await page.goto(
     `/login?reason=invite_existing_account&inviteEmail=vet%40hanbit.test&next=${encodeURIComponent(invitePath)}`
@@ -141,7 +165,7 @@ test("invite account setup pages preserve invite context", async ({ page }) => {
   );
 });
 
-test("Supabase invite acceptance calls the server accept route after matching login", async () => {
+test("Supabase invite acceptance uses OTP-first handoff before server acceptance", async () => {
   const source = readFileSync("src/features/auth/invite-acceptance-screen.tsx", "utf8");
 
   expect(source).toContain("useAuthClient");
@@ -152,13 +176,21 @@ test("Supabase invite acceptance calls the server accept route after matching lo
   );
   expect(source).toContain('denialReason === "active_membership_exists"');
   expect(source).toContain("현재 로그인한 계정은 이 초대 이메일과 일치하지 않습니다.");
+  expect(source).toContain('reason: "invite_email_otp"');
+  expect(source).toContain("인증 코드 받기");
+  expect(source).toContain("이메일 인증 코드");
+  expect(source).not.toContain("신규 계정으로 시작");
+  expect(source).not.toContain("기존 계정에 연결");
+  expect(source).not.toContain("staging Supabase");
+  expect(source).not.toContain("not_sent_approval_gated");
+  expect(source).not.toContain("router.push(buildAccountPath(accountMode))");
 
   const supabaseBranch = source.slice(
     source.indexOf("if (usesSupabaseProvider)"),
     source.indexOf("const actorUserId = `invitee:${record.invitation.email}`")
   );
 
-  expect(supabaseBranch).toContain("router.push(buildAccountPath(accountMode))");
+  expect(supabaseBranch).toContain("router.push(buildAccountPath())");
   expect(supabaseBranch).toContain("fetch(");
   expect(supabaseBranch).not.toContain("x-clair-demo-session-user-id");
 });

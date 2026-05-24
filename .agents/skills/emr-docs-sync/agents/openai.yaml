@@ -1,0 +1,4 @@
+interface:
+  display_name: "EMR Docs Sync"
+  short_description: "Sync EMR repo docs and GitBook navigation"
+  default_prompt: "Use $emr-docs-sync to reconcile docs after this EMR repo change."

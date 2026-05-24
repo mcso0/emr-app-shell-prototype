@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-244 초대 수락 계정 선택 UX 리서치 및 제안</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --paper: #ffffff;
+        --paper-soft: #f9fbfe;
+        --ink: #172033;
+        --muted: #5f6b7a;
+        --line: #d8dee8;
+        --line-soft: #e8ecf2;
+        --brand: #0f766e;
+        --brand-soft: #e6f5f2;
+        --blue: #1d4ed8;
+        --blue-soft: #e8f0ff;
+        --warn: #a16207;
+        --warn-soft: #fff7df;
+        --danger: #b42318;
+        --danger-soft: #fff0ed;
+        --ok: #18794e;
+        --ok-soft: #eaf7ef;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      header {
+        margin-bottom: 20px;
+      }
+
+      section {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 22px 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 19px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 15px;
+        line-height: 1.4;
+        letter-spacing: 0;
+      }
+
+      p,
+      li,
+      td,
+      th,
+      dd,
+      dt,
+      a {
+        font-size: 14px;
+        line-height: 1.72;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+
+      ul,
+      ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 4px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--line-soft);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #445164;
+        font-size: 13px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .lead {
+        max-width: 900px;
+        color: #334155;
+        font-size: 15px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border-radius: 999px;
+        background: var(--blue-soft);
+        color: #0f3b89;
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .badge.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        background: var(--paper-soft);
+        padding: 16px;
+      }
+
+      .card.recommend {
+        border-color: #99d1c8;
+        background: var(--brand-soft);
+      }
+
+      .callout {
+        border: 1px solid #b7d7ff;
+        border-radius: 8px;
+        background: #edf6ff;
+        padding: 14px 16px;
+      }
+
+      .callout.warning {
+        border-color: #f3d58a;
+        background: var(--warn-soft);
+      }
+
+      .callout.danger {
+        border-color: #ffb4a8;
+        background: var(--danger-soft);
+      }
+
+      .decision {
+        border-left: 4px solid var(--brand);
+        padding-left: 14px;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .step {
+        min-height: 84px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+      }
+
+      .step strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+
+      .step span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .mockups {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .screen {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f3f5f8;
+      }
+
+      .screen-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        background: #ffffff;
+        padding: 10px 12px;
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #cbd5e1;
+      }
+
+      .screen-body {
+        padding: 18px;
+      }
+
+      .email-card,
+      .app-panel,
+      .side-panel {
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 16px;
+      }
+
+      .email-title {
+        margin-bottom: 6px;
+        font-size: 18px;
+        font-weight: 760;
+      }
+
+      .email-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        border-top: 1px solid var(--line-soft);
+        padding: 9px 0;
+      }
+
+      .email-row:first-of-type {
+        border-top: 0;
+      }
+
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .value {
+        color: #243044;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        border-radius: 6px;
+        background: #111827;
+        color: #ffffff;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      .button.secondary {
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: #1f2937;
+      }
+
+      .app-layout {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .check-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .check {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 10px;
+      }
+
+      .check b {
+        display: inline-grid;
+        place-items: center;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        border-radius: 999px;
+        background: #111827;
+        color: #fff;
+        font-size: 11px;
+      }
+
+      .option-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .option {
+        min-height: 116px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .option.selected {
+        border-color: #111827;
+        box-shadow: inset 0 0 0 1px #111827;
+      }
+
+      .alert {
+        margin-top: 12px;
+        border: 1px solid #b7d7ff;
+        border-radius: 8px;
+        background: #edf6ff;
+        padding: 10px 12px;
+        color: #16406b;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .alert.danger {
+        border-color: #ffb4a8;
+        background: #fff0ed;
+        color: #8a1f17;
+      }
+
+      .form {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .input {
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #f8fafc;
+        padding: 9px 10px;
+        color: #334155;
+        font-size: 13px;
+      }
+
+      .sources li {
+        word-break: keep-all;
+      }
+
+      @media (max-width: 900px) {
+        main {
+          padding: 32px 16px 48px;
+        }
+
+        .grid.two,
+        .grid.three,
+        .mockups,
+        .app-layout,
+        .option-row,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">DEN-244 / CLAiR EMR SaaS Launch Foundation / 2026-05-23</p>
+        <h1>초대 수락 계정 선택 UX 리서치 및 제안</h1>
+        <p class="lead">
+          현재 초대 이메일에서 링크를 열면 신규 계정을 만들어야 하는지, 기존 계정으로 로그인해야 하는지,
+          그리고 어떤 이메일로 인증해야 하는지 판단하기 어렵다. 이 보고서는 B2B SaaS 초대 UX 사례를 비교하고
+          CLAiR EMR에 맞는 초대 수락 플로우와 화면 시안을 제안한다.
+        </p>
+        <div class="badge-row">
+          <span class="badge ok">Recommendation: Invite-first guided flow</span>
+          <span class="badge ok">Signup: Email OTP first</span>
+          <span class="badge">Output: Research + UX proposal</span>
+          <span class="badge warn">Implementation not included</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>결론</h2>
+        <div class="decision">
+          <p>
+            CLAiR EMR에는 <strong>초대 정보를 먼저 확인시키고, 그 다음 “초대받은 이메일로 계속하기” 하나의 주 CTA로
+            가입/로그인을 자동 분기하는 흐름</strong>이 가장 적합하다. 사용자는 “신규 계정”과 “기존 계정”을 먼저 판단하지
+            않아도 되고, 시스템이 초대 이메일 기준으로 계정 존재 여부와 인증 상태를 판정한다.
+          </p>
+          <p>
+            화면에는 신규/기존 카드 두 개를 동등하게 보여주기보다, “초대받은 이메일로 계속”을 기본 행동으로 두고
+            보조 링크로 “이미 다른 계정으로 로그인 중인가요?”와 “초대 이메일을 바꾸고 싶어요” 같은 예외 처리를 제공하는
+            구조가 덜 헷갈린다.
+          </p>
+          <p>
+            가입 방식은 <strong>이메일 OTP 기반 passwordless 방식</strong>을 1순위로 추천한다. 초대받은 이메일로
+            6자리 인증 코드를 보내고, 코드 확인 후 계정이 없으면 생성하고 기존 계정이면 로그인한다. 매직링크는 보조 옵션으로
+            둘 수 있지만, 첫 MVP에서는 브라우저/메일앱 이동이 적은 OTP가 더 예측 가능하다.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>현재 문제</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>사용자가 직접 판단해야 하는 선택지가 많다</h3>
+            <p>
+              “신규 계정으로 시작”과 “기존 계정에 연결”이 동등한 카드로 보이면 사용자는 자기 상태를 먼저 알아야 한다.
+              병원 직원 입장에서는 이미 계정이 있는지, 같은 이메일인지, 현재 로그인 세션이 맞는지 알기 어렵다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>표기 정보가 서로 다른 수준으로 섞인다</h3>
+            <p>
+              이메일에는 <code>clair-demo</code>, 수락 화면에는 병원 표시명, 역할은 <code>vet</code> 또는
+              <code>수의사</code>로 보일 수 있다. 초대 대상, 병원, 역할이 한 기준으로 정리되어야 한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>로그인 후 복귀가 화면 구조 안에서 보장되어 보이지 않는다</h3>
+            <p>
+              초대 화면에서 로그인 화면으로 이동했다가 다시 초대 수락으로 돌아오는 이유와 다음 상태가 사용자의 머릿속에
+              남아야 한다. 단순 “로그인 필요”는 초대 맥락을 잃게 만든다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>예외 상태가 가입/로그인보다 먼저 안전하게 설명되어야 한다</h3>
+            <p>
+              만료, 취소, 이미 수락됨, 다른 이메일로 로그인 중 같은 상태는 계정 생성 전에 차단해야 한다. 그래야 잘못된
+              계정을 만들거나 다른 이메일의 초대를 claim하려는 혼란을 줄일 수 있다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>외부 사례 리서치 요약</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>서비스</th>
+              <th>관찰한 패턴</th>
+              <th>CLAiR에 가져올 점</th>
+              <th>주의할 점</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Slack</td>
+              <td>이메일 기반 sign-in과 workspace 선택을 분리한다. 같은 이메일로 여러 workspace에 접근할 수 있다는 모델을 설명한다.</td>
+              <td>초대 이메일을 계정 식별의 첫 기준으로 두고, workspace entry는 별도 단계로 보여준다.</td>
+              <td>workspace 개념이 강한 서비스라 잘못 설계하면 사용자가 새 workspace를 만드는 길로 빠질 수 있다.</td>
+            </tr>
+            <tr>
+              <td>Notion</td>
+              <td>초대받은 사람은 이메일 링크로 sign in 후 workspace에 join한다. 도메인 기반 자동 join도 제공한다.</td>
+              <td>초대 이메일, workspace, role을 먼저 확인시키고 sign in/join을 연결한다.</td>
+              <td>CLAiR는 invite-only라 도메인 자동 가입은 현재 범위 밖이다.</td>
+            </tr>
+            <tr>
+              <td>Linear</td>
+              <td>초대 이메일에는 join steps가 포함되고, SAML/JIT/allowed domain 같은 계정 생성 방식을 workspace 정책에 맞춘다.</td>
+              <td>초대 수락 화면은 account method보다 workspace access policy를 먼저 설명해야 한다.</td>
+              <td>CLAiR에는 아직 SSO/SCIM이 없으므로 복잡한 enterprise option은 숨긴다.</td>
+            </tr>
+            <tr>
+              <td>Figma</td>
+              <td>계정이 있어야 초대를 수락할 수 있고, 이메일 초대와 in-app notification을 함께 쓴다. 특히 올바른 계정으로 로그인해야 함을 경고한다.</td>
+              <td>“현재 로그인 계정이 초대 이메일과 맞는지”를 수락 전 화면에서 명확히 검증한다.</td>
+              <td>Figma식 account 선택은 다계정 사용자가 많을 때 유용하지만 EMR 초기 MVP에는 너무 복잡할 수 있다.</td>
+            </tr>
+            <tr>
+              <td>GitHub</td>
+              <td>이메일로 조직 초대를 보낼 경우, 초대 이메일이 개인 계정의 verified email과 일치해야 수락할 수 있다.</td>
+              <td>CLAiR도 초대 이메일과 인증 이메일이 일치해야 멤버십을 활성화한다는 규칙을 전면에 둔다.</td>
+              <td>개발자 도구식 설명은 병원 직원에게 어렵다. UX 문구는 더 직접적이어야 한다.</td>
+            </tr>
+            <tr>
+              <td>Google Workspace</td>
+              <td>초대 수락 시 해당 이메일의 Google Account가 없으면 생성하도록 안내한다. 기존 계정 충돌도 별도 문제로 관리한다.</td>
+              <td>신규/기존 계정 선택을 사용자가 판단하게 하지 말고, 이메일 기준으로 시스템이 다음 행동을 안내한다.</td>
+              <td>Google처럼 계정 체계가 큰 서비스가 아니므로 충돌 관리는 단순한 safe denial로 시작한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>CLAiR EMR UX 원칙</h2>
+        <div class="grid three">
+          <div class="card">
+            <h3>1. 초대 이메일이 identity 기준이다</h3>
+            <p>
+              사용자는 초대받은 이메일로만 멤버십을 활성화할 수 있다. 다른 이메일 세션으로는 수락 버튼을 보여주지 말고
+              계정 전환 안내를 제공한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>2. 병원 표시명과 역할명은 human label로 통일한다</h3>
+            <p>
+              사용자가 보는 화면에서는 <code>CLAiR Medium Animal Hospital</code>, <code>수의사</code>처럼
+              사람이 이해하는 이름을 사용한다. 내부 id는 보조 정보로만 둔다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>3. 가입과 로그인은 수단이고, 목적은 워크스페이스 입장이다</h3>
+            <p>
+              CTA는 “계정 만들기”보다 “초대받은 이메일로 계속”이 우선이다. 계정 존재 여부는 다음 단계에서 자동 분기한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>4. 로그인 후 돌아올 위치를 계속 보여준다</h3>
+            <p>
+              로그인/가입 화면 상단에는 “로그인 후 이 초대로 돌아와 병원 워크스페이스에 입장합니다”라는 context strip을 유지한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>5. 예외 상태는 계정 행동 전에 차단한다</h3>
+            <p>
+              만료/취소/이미 수락된 초대는 로그인이나 계정 생성으로 보내기 전에 알려준다. 관리자가 재초대해야 하는 경우도 명시한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>6. staging과 production 문구를 분리한다</h3>
+            <p>
+              이메일 본문과 모든 시안은 production tone을 기준으로 작성한다. staging 표기는 footer나 내부 QA evidence에만
+              제한하고, 사용자가 보는 핵심 문구에는 테스트 냄새를 남기지 않는다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>가입 방식 결정</h2>
+        <div class="grid three">
+          <div class="card recommend">
+            <h3>추천: 이메일 OTP passwordless</h3>
+            <p>
+              초대받은 이메일로 6자리 인증 코드를 보내고, 사용자가 코드를 입력하면 같은 화면 맥락에서 가입 또는 로그인을
+              완료한다. 신규/기존 계정 판단은 시스템이 처리하고, 사용자는 “초대받은 이메일을 확인한다”는 한 가지 행동만 한다.
+            </p>
+            <ul>
+              <li>신규 사용자와 기존 사용자를 같은 CTA로 처리한다.</li>
+              <li>비밀번호 생성/재설정 부담을 MVP에서 줄인다.</li>
+              <li>초대 이메일 소유 증명과 멤버십 활성화가 자연스럽게 연결된다.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>보조: 매직링크</h3>
+            <p>
+              매직링크도 passwordless라 방향은 맞지만, 사용자가 초대 이메일 링크를 누른 뒤 다시 인증 이메일 링크를 눌러야
+              해서 브라우저 탭과 이메일 앱 전환이 늘어난다. 모바일이나 사내 SSO가 붙는 단계에서 보조 옵션으로 검토한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>비추천: 첫 가입부터 비밀번호 생성</h3>
+            <p>
+              초대 수락 목적보다 “회원가입 폼 작성”이 앞서 보이고, 비밀번호 정책/재설정/실패 상태를 먼저 해결해야 한다.
+              병원 직원 초대 MVP에서는 passwordless 이후 선택적 비밀번호 설정으로 미루는 편이 낫다.
+            </p>
+          </div>
+        </div>
+        <div class="callout warning" style="margin-top: 14px">
+          Supabase Auth의 이메일 OTP는 없는 사용자를 생성할 수 있으므로, CLAiR 구현에서는 반드시 유효한 pending invitation을
+          먼저 확인한 뒤 인증 코드를 보내야 한다. 또한 invite/auth route rate limit, generic response, safe redirect allow-list를
+          같이 적용해야 한다.
+        </div>
+      </section>
+
+      <section>
+        <h2>제안 플로우 3안</h2>
+        <div class="grid three">
+          <div class="card">
+            <h3>안 A. Account-first 선택형</h3>
+            <p>
+              현재 구조를 다듬어 신규 계정/기존 계정 카드를 명확히 나누는 방식이다. 빠르게 구현할 수 있지만 사용자가
+              자기 계정 상태를 판단해야 한다.
+            </p>
+            <ul>
+              <li>장점: 기존 화면과 가장 유사, 구현 리스크 낮음</li>
+              <li>단점: 핵심 혼란을 완전히 해결하지 못함</li>
+              <li>추천도: 낮음</li>
+            </ul>
+          </div>
+          <div class="card recommend">
+            <h3>안 B. Invite-first guided flow</h3>
+            <p>
+              초대 정보를 먼저 확인하고 “초대받은 이메일로 계속” CTA 하나로 시작한다. 시스템이 가입/로그인 여부를
+              판정하고, 사용자는 병원 초대를 수락한다는 목적만 이해하면 된다.
+            </p>
+            <ul>
+              <li>장점: 신규/기존 사용자 모두 덜 헷갈림</li>
+              <li>단점: 계정 존재 조회/분기 copy 설계가 필요</li>
+              <li>추천도: 높음</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>안 C. Email-verification-first</h3>
+            <p>
+              이메일 OTP 또는 magic link로 먼저 소유 확인을 하고, 확인 후 계정 생성/로그인을 이어가는 방식이다.
+              보안감은 좋지만 현재 MVP에는 auth 구현 범위가 커진다.
+            </p>
+            <ul>
+              <li>장점: 초대 이메일 소유 증명이 가장 명확함</li>
+              <li>단점: Supabase email/redirect gate와 실제 발송 의존</li>
+              <li>추천도: 중기 후보</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>추천 플로우</h2>
+        <div class="callout">
+          추천안은 <strong>안 B. Invite-first guided flow</strong>다. 가입과 로그인을 첫 화면에서 나누지 않고,
+          초대받은 이메일을 중심으로 같은 CTA를 제공한다.
+        </div>
+        <div class="flow">
+          <div class="step">
+            <strong>1. 이메일</strong>
+            <span>병원명, 역할, 만료일, “초대 확인하기” CTA</span>
+          </div>
+          <div class="step">
+            <strong>2. 초대 확인</strong>
+            <span>초대 유효성, 이메일, 병원, 역할을 human label로 표시</span>
+          </div>
+          <div class="step">
+            <strong>3. 인증 코드 입력</strong>
+            <span>초대받은 이메일로 OTP 발송, 코드 확인</span>
+          </div>
+          <div class="step">
+            <strong>4. 인증 후 복귀</strong>
+            <span>계정 생성 또는 기존 계정 로그인 후 초대 수락</span>
+          </div>
+          <div class="step">
+            <strong>5. 워크스페이스 입장</strong>
+            <span>초대 수락 완료, 병원 workspace로 이동</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>CSO 관점 보안/남용 방지 기준</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>위험</th>
+              <th>사용자에게 보여줄 UX</th>
+              <th>구현 시 지켜야 할 경계</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>초대 토큰 노출</td>
+              <td>초대 상태와 병원명만 보여주고 token 값은 표시하지 않는다.</td>
+              <td>token, OTP, magic link, provider error는 화면/로그/보고서에 남기지 않는다.</td>
+            </tr>
+            <tr>
+              <td>계정 존재 여부 유추</td>
+              <td>“이 이메일로 계속” 이후 가입/로그인을 안내하되, 외부인에게 계정 존재 여부를 직접 말하지 않는다.</td>
+              <td>public route 응답은 generic category를 쓰고, Supabase Auth user existence를 노출하지 않는다.</td>
+            </tr>
+            <tr>
+              <td>다른 이메일로 초대 claim</td>
+              <td>현재 로그인 계정과 초대 이메일이 다르면 수락 버튼 대신 계정 전환 안내를 보여준다.</td>
+              <td>server accept route에서 verified session email과 invitation email을 다시 비교한다.</td>
+            </tr>
+            <tr>
+              <td>open redirect</td>
+              <td>로그인 후 돌아갈 위치를 “이 초대 화면” 또는 “병원 워크스페이스”로만 설명한다.</td>
+              <td><code>next</code>는 내부 invite/workspace 경로 allow-list만 허용하고 외부 URL은 무시한다.</td>
+            </tr>
+            <tr>
+              <td>만료/취소 초대 재사용</td>
+              <td>계정 생성으로 보내기 전에 “새 초대가 필요함”을 먼저 알려준다.</td>
+              <td>expired/canceled/accepted 상태는 membership mutation 전에 차단한다.</td>
+            </tr>
+            <tr>
+              <td>staging/production 혼동</td>
+              <td>핵심 본문은 production tone으로 유지하고, staging 표식은 QA 전용 footer/evidence에만 둔다.</td>
+              <td>staging domain, test recipient, real send approval gate를 production claim과 분리한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>화면 시안</h2>
+        <div class="mockups">
+          <div class="screen">
+            <div class="screen-head">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <strong>이메일 초대</strong>
+            </div>
+            <div class="screen-body">
+              <div class="email-card">
+                <p class="label">CLAiR EMR 워크스페이스 초대</p>
+                <p class="email-title">CLAiR Medium Animal Hospital에 초대되었습니다</p>
+                <p>
+                  병원 워크스페이스에 참여하려면 아래 버튼을 눌러 초대받은 이메일을 확인해 주세요.
+                </p>
+                <div class="email-row">
+                  <span class="label">초대 이메일</span>
+                  <span class="value">gofldi65@gmail.com</span>
+                </div>
+                <div class="email-row">
+                  <span class="label">역할</span>
+                  <span class="value">수의사</span>
+                </div>
+                <div class="email-row">
+                  <span class="label">만료 예정</span>
+                  <span class="value">2026. 5. 30. 오후 1:55</span>
+                </div>
+                <p><span class="button">초대 확인하기</span></p>
+                <p class="meta">본 초대는 위 이메일 계정으로만 수락할 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen">
+            <div class="screen-head">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <strong>초대 확인 landing</strong>
+            </div>
+            <div class="screen-body">
+              <div class="app-layout">
+                <div class="side-panel">
+                  <p class="label">이메일 초대</p>
+                  <h3>초대 수락</h3>
+                  <div class="check-list">
+                    <div class="check"><b>1</b><span>초대 확인</span></div>
+                    <div class="check"><b>2</b><span>이메일 계정 확인</span></div>
+                    <div class="check"><b>3</b><span>워크스페이스 입장</span></div>
+                  </div>
+                </div>
+                <div class="app-panel">
+                  <p class="badge">초대 대기</p>
+                  <h3>CLAiR Medium Animal Hospital 초대 확인</h3>
+                  <p>
+                    <strong>gofldi65@gmail.com</strong> 이메일을 확인하면 수의사 역할로 병원 워크스페이스에
+                    참여할 수 있습니다.
+                  </p>
+                  <p><span class="button">인증 코드 받기</span></p>
+                  <p class="meta">계정이 없으면 코드 확인 후 새 계정이 생성되고, 이미 가입된 이메일이면 바로 로그인됩니다.</p>
+                  <p><span class="button secondary">다른 계정으로 로그인 중이에요</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen">
+            <div class="screen-head">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <strong>이메일 인증 코드</strong>
+            </div>
+            <div class="screen-body">
+              <div class="app-panel">
+                <p class="label">이메일 인증</p>
+                <h3>인증 코드를 입력해 주세요</h3>
+                <p><strong>gofldi65@gmail.com</strong>으로 보낸 6자리 코드를 입력하면 초대 수락을 계속합니다.</p>
+                <div class="form">
+                  <div class="input">gofldi65@gmail.com</div>
+                  <div class="input">6자리 인증 코드</div>
+                  <span class="button">이메일 확인하고 계속</span>
+                </div>
+                <div class="alert">
+                  계정이 없으면 이메일 확인 후 새 계정이 생성됩니다. 이미 가입된 이메일이면 같은 코드로 로그인됩니다.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen">
+            <div class="screen-head">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <strong>이메일 mismatch</strong>
+            </div>
+            <div class="screen-body">
+              <div class="app-panel">
+                <p class="badge warn">계정 확인 필요</p>
+                <h3>초대받은 이메일과 현재 계정이 다릅니다</h3>
+                <p>
+                  이 초대는 <strong>gofldi65@gmail.com</strong>으로 발송되었습니다. 현재 로그인 계정은
+                  <strong>other@example.com</strong>입니다.
+                </p>
+                <div class="alert danger">
+                  다른 이메일 계정으로는 이 병원 워크스페이스 초대를 수락할 수 없습니다.
+                </div>
+                <p>
+                  <span class="button">현재 계정에서 로그아웃</span>
+                  <span class="button secondary">관리자에게 재초대 요청</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen">
+            <div class="screen-head">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <strong>수락 완료</strong>
+            </div>
+            <div class="screen-body">
+              <div class="app-panel">
+                <p class="badge ok">수락 완료</p>
+                <h3>워크스페이스 입장이 준비되었습니다</h3>
+                <p>
+                  <strong>CLAiR Medium Animal Hospital</strong>에 <strong>수의사</strong> 역할로 참여했습니다.
+                  이제 접수, 진료, 오더, 수납 흐름을 사용할 수 있습니다.
+                </p>
+                <p><span class="button">병원 워크스페이스로 이동</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen">
+            <div class="screen-head">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <strong>만료/취소 상태</strong>
+            </div>
+            <div class="screen-body">
+              <div class="app-panel">
+                <p class="badge warn">초대 사용 불가</p>
+                <h3>이 초대 링크는 더 이상 사용할 수 없습니다</h3>
+                <p>
+                  초대가 만료되었거나 병원관리자가 취소했습니다. 계정을 새로 만들 필요는 없습니다.
+                </p>
+                <div class="alert">
+                  병원관리자에게 새 초대를 요청하면 같은 이메일로 다시 시작할 수 있습니다.
+                </div>
+                <p><span class="button secondary">로그인 화면으로 이동</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>후속 구현 이슈 후보</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>후보</th>
+              <th>목표</th>
+              <th>포함</th>
+              <th>제외</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>03-06</code> Invite landing copy and state redesign</td>
+              <td>초대 수락 landing을 invite-first 구조로 변경</td>
+              <td>이메일/병원/역할 표기 통일, 단일 CTA, expired/canceled/accepted 상태 copy</td>
+              <td>실제 Supabase signup 구현, email provider 변경</td>
+            </tr>
+            <tr>
+              <td><code>03-07</code> Login/signup handoff with invite context</td>
+              <td>이메일 OTP 기반 가입/로그인 handoff 구현</td>
+              <td><code>reason=invite</code>, locked email, OTP request/verify, safe next, mismatch denial</td>
+              <td>MFA, SSO, password signup-first policy</td>
+            </tr>
+            <tr>
+              <td><code>03-08</code> Invite acceptance regression scenarios</td>
+              <td>이메일 링크부터 workspace entry까지 회귀 테스트 추가</td>
+              <td>pending, existing user, new user, mismatch, expired/canceled/already accepted</td>
+              <td>real email delivery smoke, remote staging send</td>
+            </tr>
+            <tr>
+              <td><code>01 Staging follow-up</code></td>
+              <td>실제 발송 이메일 template과 staging send gate 검증</td>
+              <td>발신 도메인, test recipient, 링크 host, delivery evidence</td>
+              <td>초대 화면 IA 설계</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>결정 반영</h2>
+        <div class="grid two">
+          <div class="callout">
+            <h3>가입 방식</h3>
+            <p>
+              MVP 추천안은 이메일 OTP 기반 passwordless다. 신규/기존 계정을 별도로 고르게 하지 않고, 초대받은 이메일로
+              인증 코드를 확인한 뒤 시스템이 계정 생성 또는 로그인을 처리한다.
+            </p>
+          </div>
+          <div class="callout">
+            <h3>문구 톤</h3>
+            <p>
+              이메일 본문과 모든 화면 시안은 production tone으로 정리한다. staging 표식은 실제 발송 gate와 QA evidence에서만
+              다루고, 사용자가 보는 핵심 플로우에는 노출하지 않는다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>검증 및 범위</h2>
+        <ul>
+          <li>이번 작업은 리서치와 제안서 작성이며, 제품 UI 구현은 하지 않았다.</li>
+          <li>실제 이메일 발송, Supabase Auth 정책, RLS/server permission policy, production/staging deploy는 범위 밖이다.</li>
+          <li>로컬 source-of-truth로 기존 invite/account policy와 invite onboarding flow를 확인했다.</li>
+          <li>외부 사례는 공식 문서 위주로 확인하고, CLAiR에 필요한 원칙으로 재해석했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>참고 자료</h2>
+        <ul class="sources">
+          <li>
+            Slack Help,
+            <a href="https://slack.com/help/articles/212681477-Sign-in-to-Slack">Sign in to Slack</a>
+          </li>
+          <li>
+            Notion Help Center,
+            <a href="https://www.notion.com/help/add-members-admins-guests-and-groups">Manage members & guests</a>
+          </li>
+          <li>
+            Linear Docs,
+            <a href="https://linear.app/docs/invite-members">Invite members</a>
+          </li>
+          <li>
+            Figma Help Center,
+            <a href="https://help.figma.com/hc/en-us/articles/1500008023902-Accept-invitations">Accept invitations</a>
+          </li>
+          <li>
+            GitHub Docs,
+            <a href="https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization">Inviting users to join your organization</a>
+          </li>
+          <li>
+            Google Workspace Learning Center,
+            <a href="https://support.google.com/a/users/answer/9172600?hl=en">Join Google Workspace</a>
+          </li>
+          <li>
+            Google Workspace Admin Help,
+            <a href="https://support.google.com/a/answer/33310?co=DASHER._Family%3DEmail-verified&hl=en">Add an account for a new user - Email verified</a>
+          </li>
+          <li>
+            Vercel API Docs,
+            <a href="https://docs.vercel.com/docs/rest-api/reference/endpoints/teams/invite-a-user">Invite a user</a>
+          </li>
+          <li>
+            Supabase Docs,
+            <a href="https://supabase.com/docs/guides/auth/auth-magic-link">Passwordless email logins</a>
+          </li>
+          <li>
+            Supabase Docs,
+            <a href="https://supabase.com/docs/reference/javascript/auth-signinwithotp">JavaScript: Sign in a user through OTP</a>
+          </li>
+          <li>
+            CLAiR local source,
+            <code>docs/design/flows/invite-acceptance-account-onboarding-flow.md</code>
+          </li>
+          <li>
+            CLAiR local source,
+            <code>docs/engineering/auth-security/auth-login/account-recovery-and-invite-account-policy.md</code>
+          </li>
+          <li>
+            CLAiR local source,
+            <code>docs/engineering/auth-security/auth-login/invite-acceptance-account-linking-screen.md</code>
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

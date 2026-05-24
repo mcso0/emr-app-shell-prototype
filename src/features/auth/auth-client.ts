@@ -36,6 +36,16 @@ export type SignInWithPasswordCredentials = {
   password: string;
 };
 
+export type SignInWithEmailOtpCredentials = {
+  email: string;
+  redirectTo: string;
+};
+
+export type VerifyEmailOtpCredentials = {
+  email: string;
+  token: string;
+};
+
 export type AuthClient = {
   authMode: AuthMode;
   authProvider: "mock" | "supabase";
@@ -49,6 +59,8 @@ export type AuthClient = {
     options?: SignInWithMockRoleOptions
   ) => Promise<AuthSession>;
   signInWithPassword: (credentials: SignInWithPasswordCredentials) => Promise<AuthSession>;
+  signInWithEmailOtp: (credentials: SignInWithEmailOtpCredentials) => Promise<void>;
+  verifyEmailOtp: (credentials: VerifyEmailOtpCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
 };
 
@@ -133,6 +145,48 @@ export function useAuthClient(): AuthClient {
 
       if (error || !data.user) {
         throw error ?? new Error("supabase-login-failed");
+      }
+
+      const session = createSupabaseAuthSession(data.user);
+      setSupabaseHydrated(true);
+      setSupabaseSession(session);
+
+      return session;
+    },
+    signInWithEmailOtp: async ({ email, redirectTo }) => {
+      const supabase = getBrowserSupabaseClient();
+
+      if (!supabase) {
+        throw new Error("supabase-not-configured");
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectTo,
+          shouldCreateUser: true,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    },
+    verifyEmailOtp: async ({ email, token }) => {
+      const supabase = getBrowserSupabaseClient();
+
+      if (!supabase) {
+        throw new Error("supabase-not-configured");
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "email",
+      });
+
+      if (error || !data.user) {
+        throw error ?? new Error("supabase-otp-verify-failed");
       }
 
       const session = createSupabaseAuthSession(data.user);

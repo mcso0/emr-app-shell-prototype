@@ -34,6 +34,21 @@ Treat requests such as "앞으로 이렇게 하자", "규칙으로 만들자", o
 | "완료됐어", "결과 정리해줘" | `docs/completed/` closeout |
 | "이전 문서는 더 이상 기준 아냐" | Mark `superseded` or `deprecated`; move to `docs/archive/` only when no longer active |
 
+## UX/UI Research-First Routing
+
+Reusable UX/UI pattern changes must start with a research/proposal issue unless an approved design contract already exists.
+
+Route these requests to `docs/design/system/ux-ui-research-before-implementation.md` and a research/proposal Linear issue before implementation:
+
+- new or changed table/data-grid behavior
+- sort, filter, column menu, resize, density, row height, wrapping, truncation, or line-clamp rules
+- toolbar/action placement patterns repeated across screens
+- reusable dialog, drawer, popover, command, tab, segmented control, or filter behavior
+- shell, navigation, workspace tab, side panel, or right panel interaction patterns
+- new shared EMR component APIs
+
+Do not require research-first for one-off copy, spacing, icon, visual regression hotfixes, or direct adoption of an already approved design-system contract.
+
 ## Add, Update, Delete, Defer
 
 - Add: create or update the smallest canonical document that can hold the truth, then link any work item.

@@ -45,6 +45,7 @@ export type InviteAcceptanceScreenProps = {
 };
 
 type AccountMode = "new" | "existing";
+const inviteOtpAccountMode: AccountMode = "new";
 
 export function InviteAcceptanceScreen({
   invitationId,
@@ -53,7 +54,6 @@ export function InviteAcceptanceScreen({
   initialRecord = null,
 }: InviteAcceptanceScreenProps) {
   const router = useRouter();
-  const [accountMode, setAccountMode] = useState<AccountMode>("new");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { authProvider, hydrated, session, hydrate } = useAuthClient();
@@ -75,10 +75,10 @@ export function InviteAcceptanceScreen({
     hydrate();
   }, [hydrate]);
 
-  function buildAccountPath(mode: AccountMode) {
+  function buildAccountPath() {
     const next = `${window.location.pathname}${window.location.search}`;
     const params = new URLSearchParams({
-      reason: mode === "new" ? "invite_new_account" : "invite_existing_account",
+      reason: "invite_email_otp",
       next,
     });
 
@@ -86,15 +86,7 @@ export function InviteAcceptanceScreen({
       params.set("inviteEmail", record.invitation.email);
     }
 
-    return mode === "new" ? `/signup?${params.toString()}` : `/login?${params.toString()}`;
-  }
-
-  function chooseAccountMode(mode: AccountMode) {
-    setAccountMode(mode);
-
-    if (usesSupabaseProvider) {
-      router.push(buildAccountPath(mode));
-    }
+    return `/login?${params.toString()}`;
   }
 
   async function acceptInvite() {
@@ -102,7 +94,7 @@ export function InviteAcceptanceScreen({
 
     if (usesSupabaseProvider) {
       if (!hydrated || !session) {
-        router.push(buildAccountPath(accountMode));
+        router.push(buildAccountPath());
         return;
       }
 
@@ -122,7 +114,7 @@ export function InviteAcceptanceScreen({
             headers: {
               "content-type": "application/json",
             },
-            body: JSON.stringify({ accountMode }),
+            body: JSON.stringify({ accountMode: inviteOtpAccountMode }),
           }
         );
         const result = (await response.json()) as {
@@ -177,7 +169,7 @@ export function InviteAcceptanceScreen({
             "content-type": "application/json",
             "x-clair-demo-session-user-id": actorUserId,
           },
-          body: JSON.stringify({ accountMode }),
+          body: JSON.stringify({ accountMode: inviteOtpAccountMode }),
         }
       );
       const result = (await response.json()) as {
@@ -198,7 +190,7 @@ export function InviteAcceptanceScreen({
       persistAcceptedInvite({
         record,
         actorUserId,
-        accountMode,
+        accountMode: inviteOtpAccountMode,
         membership: {
           ...result.membership,
           email: record.invitation.email,
@@ -223,7 +215,7 @@ export function InviteAcceptanceScreen({
   function goToLogin() {
     const next = `${window.location.pathname}${window.location.search}`;
     const params = new URLSearchParams({
-      reason: "invite_existing_account",
+      reason: "invite_email_otp",
       next,
     });
 
@@ -252,33 +244,28 @@ export function InviteAcceptanceScreen({
                       초대 대기
                     </Badge>
                     <h2 className="text-[22px] font-semibold leading-8 tracking-normal">
-                      계정 확인 후 워크스페이스에 입장
+                      계정 이메일 확인 후 워크스페이스에 입장
                     </h2>
                     <p className="max-w-[560px] text-[14px] leading-6 text-muted-foreground">
-                      초대받은 이메일 계정으로 로그인하거나 계정 생성을 시작하면, 이
-                      초대 화면으로 돌아와 멤버십을 활성화합니다.
+                      초대받은 이메일로 인증 코드를 확인하면 새 계정 생성과 기존 계정
+                      로그인을 한 흐름에서 처리합니다.
                     </p>
                   </div>
 
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <ModeButton
-                      active={accountMode === "new"}
-                      title="신규 계정으로 시작"
-                      description={
-                        usesSupabaseProvider
-                          ? "초대 이메일로 계정을 만든 뒤 이 워크스페이스 초대로 돌아옵니다."
-                          : "초대 이메일로 local-first mock 계정을 만들고 멤버십을 활성화합니다."
-                      }
-                      icon={<UserIcon className="size-4" />}
-                      onClick={() => chooseAccountMode("new")}
-                    />
-                    <ModeButton
-                      active={accountMode === "existing"}
-                      title="기존 계정에 연결"
-                      description="이미 같은 이메일로 로그인 가능한 사용자를 초대된 워크스페이스에 연결합니다."
-                      icon={<CheckIcon className="size-4" />}
-                      onClick={() => chooseAccountMode("existing")}
-                    />
+                  <div className="mt-6 border border-border bg-[var(--emr-surface-subpanel)] p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border border-border bg-card text-[var(--emr-text-secondary)]">
+                        <UserIcon className="size-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="text-[14px] font-semibold leading-5">초대 이메일 인증</h3>
+                        <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
+                          인증 코드는 {record.invitation.email} 주소로만 보낼 수 있습니다.
+                          같은 이메일의 기존 계정이 있으면 로그인으로 이어지고, 없으면
+                          계정 생성을 시작합니다.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {error ? (
@@ -294,19 +281,19 @@ export function InviteAcceptanceScreen({
                           className="w-full bg-card text-foreground sm:w-fit"
                           onClick={goToLogin}
                         >
-                          로그인하고 돌아오기
+                          초대받은 이메일로 인증하기
                         </Button>
                       }
                     >
-                      초대받은 이메일 계정으로 먼저 로그인해야 수락할 수 있습니다.
+                      초대받은 이메일로 인증한 뒤 이 초대를 수락할 수 있습니다.
                     </EmrInlineAlert>
                   ) : (
                     <EmrInlineAlert
                       className="mt-5"
                       severity="info"
-                      title="초대 이메일 확인 필요"
+                      title="초대받은 이메일 확인 필요"
                     >
-                      staging Supabase 초대는 초대받은 이메일로 로그인한 뒤 수락됩니다.
+                      인증 코드는 초대받은 이메일 주소로만 보낼 수 있습니다.
                     </EmrInlineAlert>
                   )}
 
@@ -323,11 +310,11 @@ export function InviteAcceptanceScreen({
                         : usesSupabaseProvider && supabaseEmailMatchesInvite
                           ? "초대 수락하고 워크스페이스 열기"
                           : usesSupabaseProvider
-                            ? "선택한 방식으로 계속하기"
+                            ? "인증 코드 받기"
                           : "초대 수락하고 워크스페이스 열기"}
                     </Button>
                     <p className="text-[12px] leading-5 text-muted-foreground">
-                      선택한 경로와 초대 이메일은 다음 화면에 유지됩니다.
+                      인증 후 이 초대 화면으로 돌아와 멤버십을 활성화합니다.
                     </p>
                   </div>
                 </div>
@@ -422,52 +409,6 @@ function InviteContextPanel({
   );
 }
 
-function ModeButton({
-  active,
-  title,
-  description,
-  onClick,
-  icon,
-}: {
-  active: boolean;
-  title: string;
-  description: string;
-  onClick: () => void;
-  icon: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={[
-        "group flex min-h-[132px] flex-col justify-between border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        active
-          ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-          : "border-border bg-background hover:bg-accent",
-      ].join(" ")}
-    >
-      <span className="flex items-start justify-between gap-3">
-        <span className="block text-[14px] font-semibold leading-5">{title}</span>
-        <span
-          className={[
-            "flex size-7 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border",
-            active
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-muted-foreground group-hover:text-foreground",
-          ].join(" ")}
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-      </span>
-      <span className="mt-4 block text-[12px] leading-5 text-muted-foreground">
-        {description}
-      </span>
-    </button>
-  );
-}
-
 function DetailRow({
   icon,
   label,
@@ -525,7 +466,7 @@ function StatusPanel({ stateCopy }: { stateCopy: ReturnType<typeof getStateCopy>
       <dl className="mt-4 grid gap-3 text-[13px] sm:grid-cols-3 lg:grid-cols-1">
         <Detail label="상태" value={stateCopy.statusLabel} />
         <Detail label="계정 처리" value={stateCopy.accountPolicy} />
-        <Detail label="이메일 발송" value="not_sent_approval_gated" />
+        <Detail label="인증 방식" value={stateCopy.emailPolicy} />
       </dl>
     </aside>
   );
@@ -545,9 +486,10 @@ function getStateCopy(record: InviteAcceptanceRecord) {
     return {
       title: "초대 수락",
       description:
-        "초대된 이메일을 확인하고 계정 처리 방식을 선택하면 병원 워크스페이스 멤버십이 활성화됩니다.",
+        "초대받은 이메일을 확인하면 병원 워크스페이스 멤버십이 활성화됩니다.",
       statusLabel: "pending",
-      accountPolicy: "new_or_existing_account_link",
+      accountPolicy: "이메일 인증 후 자동 분기",
+      emailPolicy: "이메일 인증 코드",
     };
   }
 
@@ -557,6 +499,7 @@ function getStateCopy(record: InviteAcceptanceRecord) {
       description: "만료된 초대는 계정이나 멤버십을 만들 수 없습니다.",
       statusLabel: "expired",
       accountPolicy: "blocked",
+      emailPolicy: "사용 불가",
     };
   }
 
@@ -566,6 +509,7 @@ function getStateCopy(record: InviteAcceptanceRecord) {
       description: "병원 관리자가 취소한 초대는 수락할 수 없습니다.",
       statusLabel: "canceled",
       accountPolicy: "blocked",
+      emailPolicy: "사용 불가",
     };
   }
 
@@ -575,6 +519,7 @@ function getStateCopy(record: InviteAcceptanceRecord) {
       description: "이미 처리된 초대는 다시 멤버십을 만들지 않습니다.",
       statusLabel: "accepted",
       accountPolicy: "blocked",
+      emailPolicy: "사용 불가",
     };
   }
 
@@ -583,6 +528,7 @@ function getStateCopy(record: InviteAcceptanceRecord) {
     description: "워크스페이스 또는 초대 식별자가 올바르지 않습니다.",
     statusLabel: "missing",
     accountPolicy: "blocked",
+    emailPolicy: "사용 불가",
   };
 }
 

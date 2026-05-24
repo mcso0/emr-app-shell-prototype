@@ -21,6 +21,7 @@ The goal is practical quality control, not a heavy visual-regression program for
 
 Every UI refactor issue must satisfy these before Human Review:
 
+- Reusable UX/UI pattern changes followed `docs/design/system/ux-ui-research-before-implementation.md` unless the issue only adopted an already approved design contract or fixed a one-off regression.
 - Scope stayed frontend-only: no DB, Supabase, RLS, live persistence, server enforcement, payment, email, deploy, external integration, or role/permission policy changes.
 - Current product workflow and session-only mock behavior are preserved.
 - Component placement follows `docs/design/system/component-ownership-rules.md`.
@@ -43,6 +44,25 @@ Choose the narrowest level that matches the risk. Expand when the change touches
 | V4 Broad visual/system risk | multiple screen families, design tokens, global layout, shell frame, or cross-screen QA gate | V3 plus broader Playwright subset and explicit follow-up risk list |
 
 Do not run backend/live-data verification for this initiative unless a separate approved non-UI issue scopes it.
+
+## Research-First Gate
+
+Before starting broad UX/UI implementation, confirm whether the issue introduces or changes a reusable pattern.
+
+Research-first is required for:
+
+- table/data-grid sort, filter, resize, density, row height, wrapping, truncation, or header behavior
+- reusable toolbar, side panel, right panel, tab, drawer, dialog, popover, command, or filter composition
+- new shared EMR component APIs or ownership changes
+- cross-screen behavior that could otherwise diverge by feature module
+
+Research-first is not required for:
+
+- one-off copy, spacing, icon, or visual regression fixes
+- direct adoption of an already approved design-system contract
+- feature-local UI behavior that will not become a reusable pattern
+
+The research/proposal output should identify recommended patterns, rejected patterns, affected screens, accessibility requirements, reusable component/API shape, out-of-scope work, and implementation verification scope.
 
 ## Suggested Test Mapping
 

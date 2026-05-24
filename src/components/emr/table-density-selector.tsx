@@ -1,10 +1,15 @@
 "use client";
 
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   emrTableDensityOptions,
   type EmrTableDensity,
 } from "@/components/emr/table-density";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type EmrTableDensitySelectorProps = {
@@ -42,24 +47,44 @@ export function EmrTableDensitySelector({
   value,
   onValueChange,
   className,
-  label = "밀도",
+  label = "테이블 보기 밀도",
 }: EmrTableDensitySelectorProps) {
   return (
-    <div className={cn("flex shrink-0 items-center gap-2", className)}>
-      <span className="emr-text-metadata font-medium text-muted-foreground">{label}</span>
-      <SegmentedControl
-        aria-label="테이블 밀도"
-        value={value}
-        items={emrTableDensityOptions.map((option) => ({
-          value: option.value,
-          label: <TableDensityIcon density={option.value} />,
-          ariaLabel: option.label,
-          title: option.label,
-        }))}
-        variant="tabs"
-        itemClassName="min-h-6 min-w-6 px-1"
-        onValueChange={onValueChange}
-      />
-    </div>
+    <TooltipProvider>
+      <div
+        role="group"
+        aria-label={label}
+        className={cn(
+          "inline-flex shrink-0 items-center gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] p-[var(--clair-border-width-atomic-4)]",
+          className
+        )}
+      >
+        {emrTableDensityOptions.map((option) => {
+          const active = option.value === value;
+          const accessibleLabel = `${option.label} 보기`;
+
+          return (
+            <Tooltip key={option.value}>
+              <TooltipTrigger
+                type="button"
+                aria-label={accessibleLabel}
+                aria-pressed={active}
+                title={accessibleLabel}
+                className={cn(
+                  "inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] border border-transparent px-1 text-[var(--emr-text-secondary)] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                  active
+                    ? "bg-card text-[var(--emr-text-primary)] shadow-[var(--clair-shadow-xs)] hover:bg-card"
+                    : "bg-transparent hover:bg-[var(--emr-state-hover)]"
+                )}
+                onClick={() => onValueChange(option.value)}
+              >
+                <TableDensityIcon density={option.value} />
+              </TooltipTrigger>
+              <TooltipContent>{accessibleLabel}</TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 }

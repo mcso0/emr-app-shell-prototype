@@ -1,7 +1,7 @@
 # Invite Acceptance Account Linking Screen
 
-Updated: 2026-05-20
-Linear: DEN-160
+Updated: 2026-05-23
+Linear: DEN-160, DEN-246
 Initiative: `CLAiR EMR SaaS Launch Foundation`
 Project: `03 Invite-Based Member Onboarding`
 
@@ -9,7 +9,7 @@ Project: `03 Invite-Based Member Onboarding`
 
 This document records the local-first invite acceptance screen for staff onboarding.
 
-The screen lets an invited staff user open a valid invite link, choose new-account or existing-account linking, activate the invited workspace membership through the server accept route, and enter the workspace. Invalid invitations do not create local session or membership state.
+The screen lets an invited staff user open a valid invite link, confirm the invited email, activate the invited workspace membership through the server accept route, and enter the workspace. Invalid invitations do not create local session or membership state.
 
 ## Implemented Route
 
@@ -35,18 +35,23 @@ The page is implemented by:
 
 | Invitation state | Screen heading | Account action | Membership effect |
 | --- | --- | --- | --- |
-| `pending` | `초대 수락` | User selects `신규 계정으로 시작` or `기존 계정에 연결` | Calls server accept route, creates local mock session, stores active membership, redirects to workspace. |
+| `pending` | `초대 수락` | User continues through invited-email verification. Local/mock mode keeps a deterministic direct accept button for prototype coverage. | Calls server accept route after matching identity, creates local mock session in mock mode, stores active membership, redirects to workspace. |
 | `expired` | `초대가 만료되었습니다` | Blocked | No account or membership state is created. |
 | `canceled` | `취소된 초대입니다` | Blocked | No account or membership state is created. |
 | `accepted` | `이미 수락된 초대입니다` | Blocked | No duplicate membership is created. |
 | `missing` | `초대 링크를 확인할 수 없습니다` | Blocked | No account or membership state is created. |
 
-## New And Existing Account Handling
+## Email-First Account Handling
 
-For DEN-160, both account options are local-first contracts:
+DEN-246 replaces the two equal account-choice cards with an email-first acceptance contract. DEN-247 adds the login/signup handoff boundary:
 
-- `신규 계정으로 시작`: creates a mock session for `invitee:[email]`, maps the invitation role to the closest mock role, persists active workspace membership, and redirects to `/w/[workspaceId]/reception`.
-- `기존 계정에 연결`: uses the same verified-email account-linking contract, but records the selected mode so the future Supabase implementation can preserve the UX path.
+- Supabase-backed invite flow routes unauthenticated users with `reason=invite_email_otp`, `inviteEmail`, and safe `next` context.
+- `/api/auth/invite-otp/request` validates that the request is tied to a pending invitation, the locked email matches the invite email, and `next` is an internal `/invite/...` path before the client requests OTP.
+- Supabase mode uses `signInWithOtp` and `verifyOtp`; local/mock mode exposes a deterministic `000000` demo code for browser verification without sending real email.
+- `/auth/confirm` handles configured Supabase email links with `token_hash`, verifies the token, and redirects only to the safe invite path.
+- The auth step decides whether the invited email belongs to an existing account or needs new account creation.
+- The invite page does not ask the user to choose `new` vs `existing` before email verification.
+- Local/mock mode still creates a mock session for `invitee:[email]`, maps the invitation role to the closest mock role, persists active workspace membership, and redirects to `/w/[workspaceId]/reception`.
 
 Supabase Auth still owns real identity creation, password setup, email verification, recovery, and future MFA. CLAiR app state owns invitation validity, membership activation, workspace access, duplicate/conflict handling, and audit handoff.
 
@@ -64,8 +69,9 @@ The screen does not accept arbitrary `next` URLs from invite links.
 
 This work does not implement:
 
-- Real Supabase signup or password creation.
-- Real existing Supabase account linking.
+- Remote Supabase/staging OTP delivery validation.
+- Production Supabase redirect URL or email template rollout.
+- Real account existence preflight; the UX must remain generic until Supabase completes auth.
 - Email provider templates or delivery.
 - MFA.
 - Production invite token verification.
@@ -79,7 +85,7 @@ For DEN-187 staging email validation, use the current design flow as the UX and 
 
 - `docs/design/flows/invite-acceptance-account-onboarding-flow.md`
 
-The local-first screen contract above remains useful for mock/demo coverage, but staging Supabase UX should separate `신규 계정으로 시작` and `기존 계정에 연결` into explicit account creation/login paths before membership activation.
+The local-first screen contract above remains useful for mock/demo coverage, but staging Supabase UX now uses a single invited-email verification path before membership activation.
 
 ## Source References
 
@@ -87,6 +93,8 @@ The local-first screen contract above remains useful for mock/demo coverage, but
 - `docs/engineering/auth-security/auth-login/hospital-admin-staff-invitation-creation-contract.md`
 - `docs/engineering/auth-security/auth-login/workspace-member-server-route-contract.md`
 - Supabase Auth users docs: https://supabase.com/docs/guides/auth/users
+- Supabase JavaScript OTP docs: https://supabase.com/docs/reference/javascript/auth-signinwithotp
+- Supabase redirect URL docs: https://supabase.com/docs/guides/auth/redirect-urls
 - Supabase product security docs: https://supabase.com/docs/guides/security/product-security
 
 ## Verification

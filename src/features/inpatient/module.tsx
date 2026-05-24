@@ -32,14 +32,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -53,11 +45,9 @@ import {
   getInpatientCounts,
   getInpatientStatusLabel,
   inpatientFilterItems,
-  inpatientSearchFieldItems,
   inpatientWardGroups,
   type InpatientAdmission,
   type InpatientCautionTag,
-  type InpatientSearchField,
 } from "@/features/inpatient/data";
 import { useInpatientStore } from "@/features/inpatient/store";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -337,13 +327,13 @@ function InpatientTableRow({ admission }: { admission: InpatientAdmission }) {
 
 function InpatientWardSection({
   admissions,
+  density,
   label,
 }: {
   admissions: InpatientAdmission[];
+  density: EmrTableDensity;
   label: string;
 }) {
-  const [density, setDensity] = useState<EmrTableDensity>("compact");
-
   if (!admissions.length) return null;
 
   return (
@@ -355,7 +345,6 @@ function InpatientWardSection({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[12px] text-muted-foreground">입원실 · 주의사항 · 담당 · 퇴실 상태</span>
-          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
         </div>
       </div>
       <div>
@@ -399,8 +388,8 @@ export function InpatientContent() {
   const searchField = useInpatientStore((state) => state.searchField);
   const searchQuery = useInpatientStore((state) => state.searchQuery);
   const setFilter = useInpatientStore((state) => state.setFilter);
-  const setSearchField = useInpatientStore((state) => state.setSearchField);
   const setSearchQuery = useInpatientStore((state) => state.setSearchQuery);
+  const [tableDensity, setTableDensity] = useState<EmrTableDensity>("compact");
   const counts = useMemo(() => getInpatientCounts(), []);
   const visibleAdmissions = useMemo(
     () => getFilteredInpatientAdmissions({ filter, searchField, searchQuery }),
@@ -482,20 +471,7 @@ export function InpatientContent() {
                 onValueChange={setFilter}
               />
               <div className="flex min-w-[360px] max-w-xl flex-1 justify-end gap-2">
-                <Select value={searchField} onValueChange={(value) => setSearchField(value as InpatientSearchField)}>
-                  <SelectTrigger aria-label="입원 검색조건" className="h-8 w-[128px] bg-card">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {inpatientSearchFieldItems.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
                 <div className="relative min-w-0 flex-1">
                   <CdsActionsSearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -517,6 +493,7 @@ export function InpatientContent() {
           {groupedAdmissions.map((group) => (
             <InpatientWardSection
               key={group.id}
+              density={tableDensity}
               label={group.label}
               admissions={group.admissions}
             />

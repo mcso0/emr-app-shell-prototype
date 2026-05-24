@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-250 Table Header Ergonomics Research Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --line: #d9e1ea;
+        --text: #111827;
+        --muted: #64748b;
+        --accent: #2563eb;
+        --ok: #047857;
+        --warn: #b45309;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 40px 28px 64px;
+      }
+      h1,
+      h2,
+      h3 {
+        letter-spacing: 0;
+        line-height: 1.25;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 30px;
+      }
+      h2 {
+        margin: 34px 0 12px;
+        font-size: 21px;
+      }
+      h3 {
+        margin: 22px 0 8px;
+        font-size: 16px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      a {
+        color: var(--accent);
+      }
+      code {
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        background: #f1f5f9;
+        padding: 1px 5px;
+        font-size: 0.92em;
+      }
+      .meta,
+      .note {
+        color: var(--muted);
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .callout {
+        border-left: 4px solid var(--accent);
+      }
+      .ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+      ul,
+      ol {
+        padding-left: 22px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0 22px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+      th {
+        background: #f1f5f9;
+        color: #334155;
+        font-weight: 700;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      figure {
+        margin: 16px 0 24px;
+      }
+      img {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: white;
+      }
+      figcaption {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      pre {
+        overflow: auto;
+        border: 1px solid #dbe3ee;
+        border-radius: 8px;
+        background: #0f172a;
+        color: #e5e7eb;
+        padding: 16px;
+      }
+      @media (max-width: 820px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        main {
+          padding: 28px 16px 48px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-250 · 2026-05-24 · Project 12 CLAiR EMR Table Density & Data Grid Ergonomics</p>
+      <h1>Table Header Interaction / Sort / Filter Ergonomics Research</h1>
+      <section class="panel callout">
+        <p>
+          결론은 명확하다. CLAiR 테이블 헤더는 <strong>모든 컬럼에 모든 affordance를 노출하는 방식</strong>이 아니라,
+          컬럼의 역할에 따라 정렬, 필터, 메뉴, 리사이즈를 명시적으로 켜는 방식이어야 한다. 다만 한 테이블에서
+          컬럼 리사이즈를 제공한다면 사용자 혼란을 줄이기 위해 <strong>자격이 있는 데이터 컬럼 전체</strong>에 같은
+          리사이즈 hit zone을 제공해야 한다.
+        </p>
+      </section>
+
+      <h2>현재 문제</h2>
+      <ul>
+        <li>조제/처치에는 일부 헤더에서만 grab/resize affordance가 보여 사용자가 어떤 컬럼을 조작할 수 있는지 예측하기 어렵다.</li>
+        <li>진료/차트, 조제/처치, 수납, 입원, 고객관리, 병원관리의 테이블 성격이 다른데 header interaction 기준은 아직 화면별로 흩어져 있다.</li>
+        <li>정렬/필터/컬럼 메뉴/리사이즈가 같은 UI처럼 섞이면 clinical review 화면에서 과한 조작 가능성으로 보일 수 있다.</li>
+      </ul>
+
+      <div class="grid">
+        <figure>
+          <img src="../../../.lazyweb/design-research/emr-table-header-ergonomics-2026-05-24/references/current-dispensing.png" alt="CLAiR 조제/처치 현재 테이블" />
+          <figcaption>CLAiR 조제/처치: 긴 처방 테이블, 상태/수량/담당/작업여부가 섞인 operational worklist.</figcaption>
+        </figure>
+        <figure>
+          <img src="../../../.lazyweb/design-research/emr-table-header-ergonomics-2026-05-24/references/current-treatment.png" alt="CLAiR 진료 차트 현재 테이블" />
+          <figcaption>CLAiR 진료/차트: 오더 작업 테이블은 커밋/청구 workflow와 붙어 있어 header affordance가 과하면 흐름을 방해한다.</figcaption>
+        </figure>
+      </div>
+
+      <h2>외부 레퍼런스 요약</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>레퍼런스</th>
+            <th>관찰</th>
+            <th>CLAiR 적용</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://mui.com/x/react-data-grid/sorting/">MUI X sorting</a>, <a href="https://mui.com/x/react-data-grid/filtering/">filtering</a>, <a href="https://mui.com/x/react-data-grid/column-dimensions/">column dimensions</a>, <a href="https://mui.com/x/react-data-grid/column-menu/">column menu</a></td>
+            <td>컬럼별로 sortable/filterable/resizable/menu를 끄거나 켤 수 있다. 컬럼 폭은 min/max와 resize callback을 가진 별도 concern이다.</td>
+            <td>헤더는 role 기반 opt-in. 정렬, 필터, 메뉴, 리사이즈를 한 뭉치로 만들지 않는다.</td>
+          </tr>
+          <tr>
+            <td><a href="https://www.ag-grid.com/javascript-data-grid/column-sizing/">AG Grid column sizing</a>, <a href="https://www.ag-grid.com/javascript-data-grid/column-menu/">column menu</a>, <a href="https://www.ag-grid.com/javascript-data-grid/row-sorting/">sorting</a></td>
+            <td>컬럼 리사이즈는 기본적으로 헤더 오른쪽 edge interaction이며, 메뉴/필터 버튼은 컬럼 정의로 억제할 수 있다.</td>
+            <td>리사이즈는 영구 아이콘보다 edge hit zone이 맞다. 메뉴는 admin-heavy grid에 제한한다.</td>
+          </tr>
+          <tr>
+            <td><a href="https://tanstack.com/table/latest/docs/guide/column-defs">TanStack column definitions</a>, <a href="https://tanstack.com/table/latest/docs/guide/sorting">sorting</a>, <a href="https://tanstack.com/table/latest/docs/guide/column-filtering">filtering</a>, <a href="https://tanstack.com/table/latest/docs/guide/column-sizing">column sizing</a></td>
+            <td>Accessor column은 sort/filter 대상이 될 수 있지만 display column은 데이터 모델이 없어 정렬/필터가 불가능하다.</td>
+            <td>checkbox, action, expander, warning row 같은 display column은 static으로 고정한다.</td>
+          </tr>
+          <tr>
+            <td><a href="https://v3.shadcn.com/docs/components/data-table">shadcn/ui Data Table</a></td>
+            <td>단일 완성형 DataTable보다 TanStack + shadcn primitives로 각 테이블 요구를 조합하는 방식을 권장한다.</td>
+            <td>CLAiR도 공유 header cell과 toolbar primitive를 만들되 table kind별 설정은 열어둔다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid">
+        <figure>
+          <img src="../../../.lazyweb/design-research/emr-table-header-ergonomics-2026-05-24/references/lazyweb-mlb-dashboard.png" alt="Lazyweb data management dashboard reference" />
+          <figcaption>Lazyweb reference: 여러 컬럼, 행 선택, 대량 작업이 있는 data management dashboard.</figcaption>
+        </figure>
+        <figure>
+          <img src="../../../.lazyweb/design-research/emr-table-header-ergonomics-2026-05-24/references/lazyweb-outerbase-dashboard.png" alt="Lazyweb database dashboard reference" />
+          <figcaption>Lazyweb reference: 데이터 탐색형 테이블은 검색, 페이지네이션, 컬럼성 데이터가 분명하다.</figcaption>
+        </figure>
+      </div>
+
+      <h2>CLAiR 적용 원칙</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>테이블 클래스</th>
+            <th>대상 화면</th>
+            <th>정렬/필터/메뉴/리사이즈 기준</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>clinical-review</code></td>
+            <td>임상병리 검사 결과, 영상검사 Order 상세</td>
+            <td>기본은 static. 명확한 scalar column만 정렬. 컬럼 메뉴는 숨김. 리사이즈는 overflow가 반복되는 경우에만.</td>
+          </tr>
+          <tr>
+            <td><code>operational-worklist</code></td>
+            <td>조제/처치, 입원, 진료/차트 오더 작업</td>
+            <td>상태/담당/시간/금액처럼 업무 우선순위 판단에 쓰는 컬럼만 sort/filter. 리사이즈는 data column 전체에 일관 적용.</td>
+          </tr>
+          <tr>
+            <td><code>master-data-grid</code></td>
+            <td>고객관리, 병원관리 Order 관리</td>
+            <td>정렬, 필터, 컬럼 표시/숨김 메뉴를 가장 폭넓게 허용. 검색/상태/카테고리 filter는 toolbar에 둔다.</td>
+          </tr>
+          <tr>
+            <td><code>financial-edit-grid</code></td>
+            <td>수납 청구 항목</td>
+            <td>금액/수량 입력과 합계 인지가 우선. 리사이즈는 허용하되 정렬/필터는 제한적으로 시작한다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>헤더 셀 정책</h2>
+      <ul>
+        <li><strong>정렬:</strong> header label 또는 label button에서만. 활성 정렬은 <code>aria-sort</code>와 아이콘으로 항상 표시한다.</li>
+        <li><strong>필터:</strong> status/category/담당자 같은 high-level filter는 toolbar가 우선이다. 컬럼별 advanced filter는 master-data-grid부터 도입한다.</li>
+        <li><strong>메뉴:</strong> hide/pin/copy/column settings가 필요한 admin grid에만 노출한다. clinical table 모든 컬럼에 더보기 메뉴를 붙이지 않는다.</li>
+        <li><strong>리사이즈:</strong> resize mode가 켜진 테이블에서는 checkbox/action을 제외한 모든 data column header edge에 같은 hit zone을 둔다.</li>
+        <li><strong>비활성 헤더:</strong> static header에는 hover background, pointer cursor, chevron, hidden focus stop을 주지 않는다.</li>
+      </ul>
+
+      <h2>아이콘 제안</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>기능</th>
+            <th>아이콘</th>
+            <th>사용 방식</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>정렬 가능/미정렬</td>
+            <td><code>ArrowUpDown</code></td>
+            <td>sortable header hover 또는 menu trigger 안에서만. 항상 보이게 둘지는 table kind별로 결정.</td>
+          </tr>
+          <tr>
+            <td>정렬 활성</td>
+            <td><code>ArrowUp</code>, <code>ArrowDown</code></td>
+            <td>활성 상태는 hover와 무관하게 표시.</td>
+          </tr>
+          <tr>
+            <td>필터</td>
+            <td><code>ListFilter</code> 또는 <code>Funnel</code></td>
+            <td>toolbar filter는 <code>ListFilter</code>, 컬럼 filter active state는 <code>Funnel</code> 계열이 더 명확하다.</td>
+          </tr>
+          <tr>
+            <td>컬럼/보기 설정</td>
+            <td><code>Settings2</code>, <code>SlidersHorizontal</code></td>
+            <td>컬럼 표시/숨김, view options에만 사용. density icon과 혼동하지 않는다.</td>
+          </tr>
+          <tr>
+            <td>행/컬럼 액션</td>
+            <td><code>MoreHorizontal</code></td>
+            <td>row action 또는 explicit column menu trigger.</td>
+          </tr>
+          <tr>
+            <td>리사이즈</td>
+            <td>아이콘 없음, 필요 시 <code>GripVertical</code></td>
+            <td>기본은 header separator edge + <code>col-resize</code> cursor. 아이콘을 항상 넣으면 시각 잡음이 커진다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>공유 컴포넌트 제안</h2>
+      <pre><code>type EmrTableKind =
+  | "clinical-review"
+  | "operational-worklist"
+  | "master-data-grid"
+  | "financial-edit-grid";
+
+type EmrHeaderInteraction =
+  | "static"
+  | "sortable"
+  | "filterable"
+  | "sortable-filterable"
+  | "menu"
+  | "compound";
+
+type EmrColumnResize = "none" | "data-column";</code></pre>
+      <ul>
+        <li><code>EmrTableHeaderCell</code>: label, sort state, filter state, optional menu trigger, resize handle를 한 곳에서 소유한다.</li>
+        <li><code>EmrTableToolbar</code>: global search, status/category filters, density selector, view options 위치를 관리한다.</li>
+        <li><code>useEmrColumnSizing</code>: TanStack column sizing과 table min-width/fill width 규칙을 연결한다.</li>
+        <li><code>EmrColumnMenu</code>: master-data-grid에서만 hide/pin/sort/filter menu를 단계적으로 제공한다.</li>
+      </ul>
+
+      <h2>후속 구현 이슈 범위</h2>
+      <ol>
+        <li>전체 테이블 inventory를 기준으로 <code>tableKind</code>와 column interaction role을 선언한다.</li>
+        <li>공유 header cell을 만들고 조제/처치 테이블에서 먼저 적용한다.</li>
+        <li>리사이즈는 resize-enabled table의 모든 data column에 동일하게 적용하고, checkbox/action column은 제외한다.</li>
+        <li>입원, 고객관리, 병원관리, 수납, 임상병리, 영상검사, 진료/차트로 확장한다.</li>
+        <li>정렬/필터는 fake UI 없이 실제 state가 연결된 컬럼부터만 노출한다.</li>
+      </ol>
+
+      <h2>검증 권장</h2>
+      <ul>
+        <li>1440, 1280, 1024 viewport에서 header affordance가 겹치지 않는지 캡처한다.</li>
+        <li>키보드 탭 순서가 static header에 걸리지 않는지 확인한다.</li>
+        <li>활성 sort/filter state가 hover 없이도 보이는지 확인한다.</li>
+        <li>리사이즈 가능한 테이블에서 모든 data column edge가 같은 pointer affordance를 갖는지 확인한다.</li>
+      </ul>
+
+      <h2>상태</h2>
+      <p><span class="ok">PASS</span> Research report created.</p>
+      <p><span class="ok">PASS</span> Source design-system guide updated: <code>docs/design/system/table-density-and-grid-ergonomics.md</code>.</p>
+      <p class="note">구현은 포함하지 않았다. 이 보고서는 다음 구현 이슈의 기준으로 사용한다.</p>
+    </main>
+  </body>
+</html>

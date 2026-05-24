@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-249 UX/UI Research-First Workflow Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --ink: #17181c;
+        --muted: #626975;
+        --line: #d9dee7;
+        --accent: #1f6feb;
+        --ok: #148044;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          "Pretendard",
+          "Apple SD Gothic Neo",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        box-sizing: border-box;
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      header,
+      section {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+      }
+
+      header {
+        padding: 28px;
+      }
+
+      section {
+        margin-top: 16px;
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        font-size: 28px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 20px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        border-radius: 5px;
+        background: #eef1f6;
+        padding: 1px 5px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f2f4f8;
+        color: #343944;
+        font-weight: 700;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        background: #e9f2ff;
+        color: var(--accent);
+        padding: 0 9px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="badge">DEN-249</div>
+        <h1>UX/UI Research-First Workflow</h1>
+        <p class="meta">
+          2026-05-24 · Project 12 CLAiR EMR Table Density & Data Grid Ergonomics
+        </p>
+        <p>
+          반복 사용되는 UX/UI 패턴을 바로 구현하지 않고, 레퍼런스와 CLAiR 내부 유스케이스를 먼저 조사한 뒤
+          제안과 합의를 거쳐 구현하도록 운영 기준을 문서화했다.
+        </p>
+      </header>
+
+      <section>
+        <h2>What Changed</h2>
+        <ul>
+          <li>
+            신규 기준 문서 <code>docs/design/system/ux-ui-research-before-implementation.md</code>를 추가했다.
+          </li>
+          <li>
+            <code>docs/_meta/intake-rules.md</code>에 reusable UX/UI pattern 변경 시 research/proposal 이슈를 먼저 만들도록
+            라우팅 규칙을 추가했다.
+          </li>
+          <li>
+            <code>docs/design/system/ui-refactor-dod.md</code>에 Research-First Gate를 추가해 Human Review 전 확인 기준으로
+            연결했다.
+          </li>
+          <li>
+            <code>DEN-250</code>과 <code>DEN-251</code> 같은 테이블 header/text policy 조사 이슈가 구현 전에 보고서와 제안을
+            먼저 만들도록 기준을 고정했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Decision</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Case</th>
+              <th>Workflow</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Reusable table/grid behavior</td>
+              <td>Research report and CLAiR proposal before implementation</td>
+            </tr>
+            <tr>
+              <td>Toolbar, drawer, popover, command, tab, filter patterns reused across screens</td>
+              <td>Research-first unless an approved design contract exists</td>
+            </tr>
+            <tr>
+              <td>One-off copy, spacing, icon, or regression fix</td>
+              <td>No research issue required</td>
+            </tr>
+            <tr>
+              <td>Adoption of an approved design-system contract</td>
+              <td>Implement directly within scoped issue</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Why It Matters</h2>
+        <p>
+          CLAiR EMR은 동일한 UI 패턴이 여러 업무 화면에 반복된다. 조사 없이 한 화면에서 바로 구현하면 나중에 전체
+          화면으로 확산할 때 수정과 되돌림이 커진다. 이 기준은 테이블 정렬/필터/리사이즈, 텍스트 줄바꿈, 툴바 배치처럼
+          재사용성이 큰 UX/UI 작업을 더 안정적으로 진행하기 위한 운영 장치다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Verification</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 대상 문서로 검증한다.</li>
+          <li>코드 구현은 없으므로 lint/type/build/browser QA는 필요하지 않다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Next Step</h2>
+        <p>
+          다음 작업은 <code>DEN-250</code> 또는 <code>DEN-251</code> 중 하나를 시작해 실제 reference/use case 조사 보고서를
+          작성하는 것이다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

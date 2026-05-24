@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>DEN-255 Work Board Review Visibility Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 880px;
+        margin: 40px auto;
+        padding: 0 24px;
+        color: #1f2933;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #eef2f7;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d8dee9;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f5f7fa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-255 Work Board Review Visibility Report</h1>
+
+    <h2>요약</h2>
+    <p>
+      <code>docs/work/index.md</code>의 큰 Human Review 묶음이 다음 작업처럼 보이는 문제를 줄이기 위해,
+      상태값은 바꾸지 않고 보드 상단에 읽는 법과 review queue 요약을 추가했다.
+      이제 독자는 Linear를 active control plane으로 보고, repo work board는 matching work item과 review queue를 찾는 용도로 읽을 수 있다.
+    </p>
+
+    <h2>확인한 상태</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>결과</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>done</code></td>
+          <td>48 rows</td>
+        </tr>
+        <tr>
+          <td><code>human_review</code></td>
+          <td>109 rows</td>
+        </tr>
+        <tr>
+          <td>큰 Human Review 묶음</td>
+          <td>Standalone/legacy 40, Project 03 11, Project 04 19, Project 05 12, Project 06 10, Project 07 9, Project 08 8</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li><code>docs/work/index.md</code>: Human Review 의미, count snapshot, project-level review queue, proposed cleanup candidates를 추가했다.</li>
+      <li><code>docs/engineering/current-status.md</code>: baseline docs operating-system project와 current GitBook/docs navigation project를 분리해서 설명했다.</li>
+      <li>Project 04/05를 <code>done</code>으로 바꿀 수 있는 후보로만 적고, 실제 status row는 변경하지 않았다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>git diff --check -- docs/work/index.md docs/engineering/current-status.md</code> 통과.</li>
+      <li>DEN-255 touched markdown focused link check 통과.</li>
+      <li><code>npm run docs:check</code>는 실패. 실패 원인은 이번 작업 범위 밖의 기존 dirty file <code>docs/design/system/table-density-and-grid-ergonomics.md</code>가 없는 <code>docs/completed/design/2026-05-24-den-250-table-header-ergonomics-research-report.html</code>를 링크하고 있기 때문이다.</li>
+    </ul>
+
+    <h2>의도적으로 하지 않은 것</h2>
+    <ul>
+      <li>Linear issue나 repo work item status를 <code>Done</code>으로 이동하지 않았다.</li>
+      <li>Project 04/05 Human Review rows를 자동으로 status migration 하지 않았다.</li>
+      <li>Product, engineering, design source-of-truth claims를 새로 만들지 않았다.</li>
+      <li>범위 밖 dirty file의 깨진 링크는 수정하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 작업은 DEN-256이다. GitBook이 private/internal 용도라는 전제를 반영해,
+      공개 민감도 체크리스트보다 내부 공유/검토/사이트 운영 체크리스트로 좁혀 정리하는 것이 적절하다.
+    </p>
+  </body>
+</html>

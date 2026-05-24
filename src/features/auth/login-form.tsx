@@ -20,6 +20,10 @@ import {
   type MockSessionStorageMode,
 } from "@/features/auth/mock-session";
 import { useAuthClient } from "@/features/auth/auth-client";
+import {
+  createInviteOtpRedirectTo,
+  getSafeInviteNextHref,
+} from "@/features/auth/invite-otp-handoff";
 import { cn } from "@/lib/utils";
 
 const storageOptions: Array<{
@@ -71,6 +75,14 @@ function getAuthSessionNotice(reason: string | null) {
     } as const;
   }
 
+  if (reason === "invite_email_otp") {
+    return {
+      title: "초대받은 이메일로 계속하세요.",
+      description: "계정 확인 후 초대 화면으로 돌아가 워크스페이스 멤버십을 활성화합니다.",
+      tone: "warning",
+    } as const;
+  }
+
   if (reason === "signed_out") {
     return {
       title: "안전하게 로그아웃되었습니다.",
@@ -90,6 +102,14 @@ function getAuthSessionNotice(reason: string | null) {
   return null;
 }
 
+function isInviteLoginReason(reason: string | null) {
+  return reason === "invite_existing_account" || reason === "invite_email_otp";
+}
+
+function isInviteOtpReason(reason: string | null) {
+  return reason === "invite_email_otp";
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -97,6 +117,8 @@ export function LoginForm() {
   const [storageMode, setStorageMode] = useState<MockSessionStorageMode>("session");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [inviteOtpSent, setInviteOtpSent] = useState(false);
+  const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
   const {
     authProvider,
     hydrated,
@@ -104,13 +126,18 @@ export function LoginForm() {
     hydrate,
     signInWithMockRole,
     signInWithPassword,
+    signInWithEmailOtp,
+    verifyEmailOtp,
     signOut,
     supabaseConfigured,
   } = useAuthClient();
   const usesSupabaseProvider = authProvider === "supabase";
-  const authSessionNotice = getAuthSessionNotice(searchParams.get("reason"));
+  const reason = searchParams.get("reason");
+  const authSessionNotice = getAuthSessionNotice(reason);
   const inviteEmail = searchParams.get("inviteEmail");
-  const isInviteLogin = searchParams.get("reason") === "invite_existing_account";
+  const isInviteLogin = isInviteLoginReason(reason);
+  const isInviteOtpLogin = isInviteOtpReason(reason);
+  const safeInviteNext = getSafeInviteNextHref(searchParams.get("next"));
 
   useEffect(() => {
     hydrate();
@@ -121,11 +148,72 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const token = String(formData.get("otp-token") ?? "").trim();
 
     setIsSubmitting(true);
     setLoginError(null);
+    setInviteOtpStatus(null);
 
     try {
+      if (isInviteOtpLogin) {
+        if (!email || !safeInviteNext) {
+          throw new Error("invite-otp-invalid-context");
+        }
+
+        if (!inviteOtpSent) {
+          const response = await fetch("/api/auth/invite-otp/request", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              email,
+              next: safeInviteNext,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("invite-otp-request-failed");
+          }
+
+          if (usesSupabaseProvider) {
+            if (!supabaseConfigured) {
+              throw new Error("supabase-not-configured");
+            }
+
+            await signInWithEmailOtp({
+              email,
+              redirectTo: createInviteOtpRedirectTo({
+                origin: window.location.origin,
+                next: safeInviteNext,
+              }),
+            });
+          }
+
+          setInviteOtpSent(true);
+          setInviteOtpStatus("인증 코드를 보냈습니다.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!token) {
+          throw new Error("invite-otp-token-required");
+        }
+
+        if (usesSupabaseProvider) {
+          if (!supabaseConfigured) {
+            throw new Error("supabase-not-configured");
+          }
+
+          await verifyEmailOtp({ email, token });
+        } else if (token !== "000000") {
+          throw new Error("invite-otp-token-invalid");
+        }
+
+        router.replace(safeInviteNext);
+        return;
+      }
+
       if (usesSupabaseProvider) {
         if (!supabaseConfigured) {
           throw new Error("supabase-not-configured");
@@ -145,7 +233,9 @@ export function LoginForm() {
       router.replace(getSafeNextHref(searchParams.get("next")));
     } catch {
       setLoginError(
-        usesSupabaseProvider
+        isInviteOtpLogin
+          ? "초대 이메일 인증을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
+          : usesSupabaseProvider
           ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
       );
@@ -172,10 +262,12 @@ export function LoginForm() {
               <FieldGroup>
                 <div className="flex flex-col gap-2">
                   <h1 className="text-[28px] font-semibold leading-9 tracking-normal">
-                    CLAiR EMR에 로그인
+                    {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR에 로그인"}
                   </h1>
                   <p className="text-[14px] leading-6 text-muted-foreground">
-                    {isInviteLogin
+                    {isInviteOtpLogin
+                      ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다."
+                      : isInviteLogin
                       ? "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요."
                       : "병원 워크스페이스에 접속하려면 계정 정보를 입력하세요."}
                   </p>
@@ -211,26 +303,57 @@ export function LoginForm() {
                     defaultValue={inviteEmail ?? undefined}
                     autoComplete="email"
                     disabled={isSubmitting}
+                    readOnly={isInviteOtpLogin}
                     aria-describedby="mock-email-description"
                   />
                   <FieldDescription id="mock-email-description" className="text-[12px]">
-                    {isInviteLogin && inviteEmail
+                    {isInviteOtpLogin && inviteEmail
+                      ? `${inviteEmail} 주소로 인증 코드를 보냅니다.`
+                      : isInviteLogin && inviteEmail
                       ? `${inviteEmail} 계정으로 로그인해야 이 초대를 수락할 수 있습니다.`
                       : "Mock 모드에서는 역할 선택으로 로그인하고, Supabase 모드에서는 계정 정보를 확인합니다."}
                   </FieldDescription>
                 </Field>
 
-                <Field>
-                  <FieldLabel htmlFor="mock-password">비밀번호</FieldLabel>
-                  <Input
-                    id="mock-password"
-                    type="password"
-                    name="password"
-                    placeholder="비밀번호"
-                    autoComplete="current-password"
-                    disabled={isSubmitting}
-                  />
-                </Field>
+                {isInviteOtpLogin ? (
+                  inviteOtpSent ? (
+                    <>
+                      <Field>
+                        <FieldLabel htmlFor="otp-token">인증 코드</FieldLabel>
+                        <Input
+                          id="otp-token"
+                          name="otp-token"
+                          inputMode="numeric"
+                          placeholder="6자리 코드"
+                          autoComplete="one-time-code"
+                          disabled={isSubmitting}
+                        />
+                        {!usesSupabaseProvider ? (
+                          <FieldDescription className="text-[12px]">
+                            데모 인증 코드: 000000
+                          </FieldDescription>
+                        ) : null}
+                      </Field>
+                      {inviteOtpStatus ? (
+                        <div className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]">
+                          {inviteOtpStatus}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null
+                ) : (
+                  <Field>
+                    <FieldLabel htmlFor="mock-password">비밀번호</FieldLabel>
+                    <Input
+                      id="mock-password"
+                      type="password"
+                      name="password"
+                      placeholder="비밀번호"
+                      autoComplete="current-password"
+                      disabled={isSubmitting}
+                    />
+                  </Field>
+                )}
 
                 {loginError ? (
                   <FieldError className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]">
@@ -239,7 +362,15 @@ export function LoginForm() {
                 ) : null}
 
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "로그인 중" : "로그인"}
+                  {isInviteOtpLogin
+                    ? isSubmitting
+                      ? "처리 중"
+                      : inviteOtpSent
+                        ? "인증하고 초대 화면으로 돌아가기"
+                        : "인증 코드 받기"
+                    : isSubmitting
+                      ? "로그인 중"
+                      : "로그인"}
                 </Button>
               </FieldGroup>
             </form>
@@ -248,7 +379,7 @@ export function LoginForm() {
 
         <aside className="flex min-h-[520px] items-center justify-center border-t border-border bg-[var(--emr-surface-muted)] px-5 py-8 md:px-10 lg:border-l lg:border-t-0">
           <div className={loginControlsClassName}>
-            {usesSupabaseProvider ? (
+            {usesSupabaseProvider || isInviteLogin ? (
               <InviteLoginContext inviteEmail={inviteEmail} />
             ) : (
               <>

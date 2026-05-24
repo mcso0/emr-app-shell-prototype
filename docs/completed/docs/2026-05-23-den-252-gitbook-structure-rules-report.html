@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-252 GitBook/docs 구조 운영 규칙 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #17202a;
+        background: #f7f9fb;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.65;
+      }
+      .card {
+        border: 1px solid #dbe3ea;
+        border-radius: 8px;
+        background: #fff;
+        padding: 20px;
+        margin-top: 18px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef3f7;
+      }
+      .ok {
+        color: #116b3a;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-252 GitBook/docs 구조 운영 규칙 리포트</h1>
+      <p>
+        GitBook을 직접 편집하는 대신 repo <code>docs/</code>를 원본으로 유지하는 운영 규칙을
+        source-of-truth 문서로 승격했다. 앞으로 GitBook sidebar, area README, 공개 문서 민감도
+        판단을 같은 기준으로 처리할 수 있다.
+      </p>
+
+      <section class="card">
+        <h2>요청</h2>
+        <p>
+          <code>emr-docs-sync</code>와 GitBook/docs 운영 고도화 작업이 따를 수 있도록
+          GitBook/docs 구조 규칙을 만들고, 스킬과 sidebar에서 찾을 수 있게 연결한다.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>변경 사항</h2>
+        <ul>
+          <li><code>docs/_meta/gitbook-structure-rules.md</code>를 추가했다.</li>
+          <li><code>docs/SUMMARY.md</code>의 Operating Rules에 새 규칙 문서를 추가했다.</li>
+          <li><code>docs/_meta/README.md</code>에서 새 규칙 문서를 운영 규칙 목록에 연결했다.</li>
+          <li><code>docs/README.md</code>의 운영 모델 설명에 GitBook-facing navigation 기준을 포함했다.</li>
+          <li><code>.agents/skills/emr-docs-sync/SKILL.md</code>가 GitBook/docs 작업 시 새 규칙 문서를 읽도록 업데이트했다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>중요한 기준</h2>
+        <ul>
+          <li>repo <code>docs/</code>가 원본이고 GitBook은 readable portal이다.</li>
+          <li><code>docs/SUMMARY.md</code>는 모든 파일 목록이 아니라 curated sidebar다.</li>
+          <li>세부 탐색은 area <code>README.md</code>가 담당한다.</li>
+          <li><code>completed/</code>, <code>archive/</code>, compatibility stubs는 기본 읽기 경로를 오염시키지 않는다.</li>
+          <li>auth, security, live DB, launch, real data 관련 정보는 공개 GitBook 전 민감도 검토가 필요하다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>검증</h2>
+        <ul>
+          <li><span class="ok">통과</span> <code>npm run docs:check</code></li>
+          <li><span class="ok">통과</span> Ruby YAML parser로 changed skill/source-doc frontmatter 검증</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>범위 밖</h2>
+        <ul>
+          <li>GitBook 직접 편집 또는 게시를 하지 않았다.</li>
+          <li>live Supabase, DB migration, RLS, production deploy, 제품 권한 정책은 변경하지 않았다.</li>
+          <li>기존 invite/OTP, table density, UI 관련 미완료 워크트리 변경은 건드리지 않았다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>다음 단계</h2>
+        <p>
+          다음 이슈는 DEN-253이다. primary area README 6개를 정리해서 GitBook sidebar를 길게 늘리지
+          않고도 세부 문서를 찾을 수 있게 만들면 된다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
