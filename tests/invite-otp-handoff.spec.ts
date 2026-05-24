@@ -65,6 +65,7 @@ test("invite OTP login locks email and returns to invite after mock verification
   await expect(page.getByLabel("이메일")).toHaveValue("vet@hanbit.test");
   await expect(page.getByLabel("이메일")).toHaveAttribute("readonly", "");
   await expect(page.getByLabel("비밀번호")).toHaveCount(0);
+  await expect(page.getByLabel("인증 코드")).toBeVisible();
 
   await page.getByRole("button", { name: "인증 코드 받기" }).click();
 
@@ -75,6 +76,19 @@ test("invite OTP login locks email and returns to invite after mock verification
 
   await expect(page).toHaveURL(/\/invite\/invitation-pending/);
   expect(new URL(page.url()).searchParams.get("email")).toBe("vet@hanbit.test");
+});
+
+test("invite OTP login accepts an already received code before resend succeeds", async ({ page }) => {
+  await page.goto(
+    `/login?reason=invite_email_otp&inviteEmail=vet%40hanbit.test&next=${encodeURIComponent(
+      inviteNext
+    )}`
+  );
+
+  await page.getByLabel("인증 코드").fill("000000");
+  await page.getByRole("button", { name: "인증하고 초대 화면으로 돌아가기" }).click();
+
+  await expect(page).toHaveURL(/\/invite\/invitation-pending/);
 });
 
 test("invite OTP implementation keeps Supabase and redirect boundaries explicit", () => {

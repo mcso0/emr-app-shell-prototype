@@ -119,6 +119,7 @@ export function LoginForm() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [inviteOtpSent, setInviteOtpSent] = useState(false);
   const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
+  const [inviteOtpToken, setInviteOtpToken] = useState("");
   const {
     authProvider,
     hydrated,
@@ -160,6 +161,21 @@ export function LoginForm() {
           throw new Error("invite-otp-invalid-context");
         }
 
+        if (token) {
+          if (usesSupabaseProvider) {
+            if (!supabaseConfigured) {
+              throw new Error("supabase-not-configured");
+            }
+
+            await verifyEmailOtp({ email, token });
+          } else if (token !== "000000") {
+            throw new Error("invite-otp-token-invalid");
+          }
+
+          router.replace(safeInviteNext);
+          return;
+        }
+
         if (!inviteOtpSent) {
           const response = await fetch("/api/auth/invite-otp/request", {
             method: "POST",
@@ -196,22 +212,7 @@ export function LoginForm() {
           return;
         }
 
-        if (!token) {
-          throw new Error("invite-otp-token-required");
-        }
-
-        if (usesSupabaseProvider) {
-          if (!supabaseConfigured) {
-            throw new Error("supabase-not-configured");
-          }
-
-          await verifyEmailOtp({ email, token });
-        } else if (token !== "000000") {
-          throw new Error("invite-otp-token-invalid");
-        }
-
-        router.replace(safeInviteNext);
-        return;
+        throw new Error("invite-otp-token-required");
       }
 
       if (usesSupabaseProvider) {
@@ -316,31 +317,34 @@ export function LoginForm() {
                 </Field>
 
                 {isInviteOtpLogin ? (
-                  inviteOtpSent ? (
-                    <>
-                      <Field>
-                        <FieldLabel htmlFor="otp-token">인증 코드</FieldLabel>
-                        <Input
-                          id="otp-token"
-                          name="otp-token"
-                          inputMode="numeric"
-                          placeholder="6자리 코드"
-                          autoComplete="one-time-code"
-                          disabled={isSubmitting}
-                        />
-                        {!usesSupabaseProvider ? (
-                          <FieldDescription className="text-[12px]">
-                            데모 인증 코드: 000000
-                          </FieldDescription>
-                        ) : null}
-                      </Field>
-                      {inviteOtpStatus ? (
-                        <div className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]">
-                          {inviteOtpStatus}
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null
+                  <>
+                    <Field>
+                      <FieldLabel htmlFor="otp-token">인증 코드</FieldLabel>
+                      <Input
+                        id="otp-token"
+                        name="otp-token"
+                        inputMode="numeric"
+                        placeholder="인증 코드"
+                        autoComplete="one-time-code"
+                        disabled={isSubmitting}
+                        value={inviteOtpToken}
+                        onChange={(event) => {
+                          setInviteOtpToken(event.target.value);
+                          if (loginError) setLoginError(null);
+                        }}
+                      />
+                      <FieldDescription className="text-[12px]">
+                        {usesSupabaseProvider
+                          ? "이미 받은 코드가 있다면 바로 입력해 초대 화면으로 돌아갈 수 있습니다."
+                          : "데모 인증 코드: 000000"}
+                      </FieldDescription>
+                    </Field>
+                    {inviteOtpStatus ? (
+                      <div className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]">
+                        {inviteOtpStatus}
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
                   <Field>
                     <FieldLabel htmlFor="mock-password">비밀번호</FieldLabel>
@@ -365,7 +369,7 @@ export function LoginForm() {
                   {isInviteOtpLogin
                     ? isSubmitting
                       ? "처리 중"
-                      : inviteOtpSent
+                      : inviteOtpToken.trim()
                         ? "인증하고 초대 화면으로 돌아가기"
                         : "인증 코드 받기"
                     : isSubmitting
