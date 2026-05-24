@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 export type SupabaseInviteAcceptanceLookupClient = {
   rpc(
     functionName: "clair_get_workspace_invitation_for_acceptance",
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
@@ -28,29 +28,36 @@ export async function readServerInviteAcceptanceRecord({
   const client = await createClient();
   if (!client) return null;
 
-  const { data, error } = await (client as unknown as SupabaseInviteAcceptanceLookupClient).rpc(
-    "clair_get_workspace_invitation_for_acceptance",
-    {
-      p_workspace_id: workspaceId,
-      p_invitation_id: invitationId,
-      p_email: email,
-    }
-  );
+  const { data, error } = await (
+    client as unknown as SupabaseInviteAcceptanceLookupClient
+  ).rpc("clair_get_workspace_invitation_for_acceptance", {
+    p_workspace_id: workspaceId,
+    p_invitation_id: invitationId,
+    p_email: email,
+  });
 
   if (error) return null;
 
   return mapInviteAcceptanceRpcData(data);
 }
 
-function mapInviteAcceptanceRpcData(data: unknown): InviteAcceptanceRecord | null {
+function mapInviteAcceptanceRpcData(
+  data: unknown,
+): InviteAcceptanceRecord | null {
   const value = data as {
     status?: InviteAcceptanceRecord["status"];
+    accountState?: InviteAcceptanceRecord["accountState"];
     workspace?: Partial<SessionWorkspace> | null;
     invitation?: Partial<SessionWorkspaceInvitation> | null;
   } | null;
 
   if (!value || value.status === "missing") {
-    return { status: "missing", workspace: null, invitation: null };
+    return {
+      status: "missing",
+      accountState: "unknown",
+      workspace: null,
+      invitation: null,
+    };
   }
 
   if (
@@ -96,12 +103,17 @@ function mapInviteAcceptanceRpcData(data: unknown): InviteAcceptanceRecord | nul
 
   return {
     status: value.status,
+    accountState: isInviteAcceptanceAccountState(value.accountState)
+      ? value.accountState
+      : "unknown",
     workspace,
     invitation,
   };
 }
 
-function isInviteAcceptanceStatus(status: unknown): status is InviteAcceptanceRecord["status"] {
+function isInviteAcceptanceStatus(
+  status: unknown,
+): status is InviteAcceptanceRecord["status"] {
   return (
     status === "pending" ||
     status === "expired" ||
@@ -111,7 +123,9 @@ function isInviteAcceptanceStatus(status: unknown): status is InviteAcceptanceRe
   );
 }
 
-function isSessionWorkspaceRole(role: string): role is SessionWorkspaceInvitation["invitedRoles"][number] {
+function isSessionWorkspaceRole(
+  role: string,
+): role is SessionWorkspaceInvitation["invitedRoles"][number] {
   return (
     role === "hospital_admin" ||
     role === "vet" ||
@@ -120,8 +134,14 @@ function isSessionWorkspaceRole(role: string): role is SessionWorkspaceInvitatio
   );
 }
 
+function isInviteAcceptanceAccountState(
+  value: unknown,
+): value is InviteAcceptanceRecord["accountState"] {
+  return value === "new" || value === "existing" || value === "unknown";
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value
+    value,
   );
 }

@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
     {
       authKey: MOCK_AUTH_STORAGE_KEY,
       workspaceKey: SESSION_WORKSPACES_STORAGE_KEY,
-    }
+    },
   );
 });
 
@@ -23,21 +23,25 @@ test("accepted invite user can enter invited workspace but not another workspace
   page,
 }) => {
   await page.goto(
-    "/invite/invitation-pending?workspaceId=workspace-a&email=vet@hanbit.test"
+    "/invite/invitation-pending?workspaceId=workspace-a&email=vet@hanbit.test",
   );
-  await page.getByRole("button", { name: "초대 수락하고 워크스페이스 열기" }).click();
+  await page.getByLabel("새 비밀번호").fill("local-pass-1");
+  await page.getByLabel("비밀번호 확인").fill("local-pass-1");
+  await page.getByRole("button", { name: "워크스페이스로 이동" }).click();
   await expect(page).toHaveURL(/\/w\/workspace-a\/reception/);
 
   await page.goto("/w/workspace-b/reception?modulePanel=open&aside=closed");
 
   await expect(page).toHaveURL(/\/login\?/);
-  await expect(page.getByText("이 워크스페이스에 접근할 권한이 없습니다.")).toBeVisible();
+  await expect(
+    page.getByText("이 워크스페이스에 접근할 권한이 없습니다."),
+  ).toBeVisible();
 });
 
 test("invite-based onboarding Project 04 handoff records scenarios blockers and tenant boundary inputs", () => {
   const handoff = readFileSync(
     "docs/engineering/auth-security/auth-login/invite-based-onboarding-regression-handoff.md",
-    "utf8"
+    "utf8",
   );
 
   expect(handoff).toContain("Happy Path Regression");

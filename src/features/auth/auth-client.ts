@@ -9,10 +9,7 @@ import {
 } from "@/features/auth/mock-session";
 import { useMockAuthStore } from "@/features/auth/session-store";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
-import {
-  getAuthRuntimeMode,
-  type AuthMode,
-} from "@/lib/supabase/config";
+import { getAuthRuntimeMode, type AuthMode } from "@/lib/supabase/config";
 
 export type SupabaseAuthSession = {
   provider: "supabase";
@@ -41,6 +38,11 @@ export type SignInWithEmailOtpCredentials = {
   redirectTo: string;
 };
 
+export type SignUpWithPasswordCredentials = {
+  email: string;
+  password: string;
+};
+
 export type VerifyEmailOtpCredentials = {
   email: string;
   token: string;
@@ -60,12 +62,23 @@ export type AuthClient = {
   signInWithMockRole: (
     role: MockAuthRole,
     storageMode: MockSessionStorageMode,
-    options?: SignInWithMockRoleOptions
+    options?: SignInWithMockRoleOptions,
   ) => Promise<AuthSession>;
-  signInWithPassword: (credentials: SignInWithPasswordCredentials) => Promise<AuthSession>;
-  signInWithEmailOtp: (credentials: SignInWithEmailOtpCredentials) => Promise<void>;
-  verifyEmailOtp: (credentials: VerifyEmailOtpCredentials) => Promise<AuthSession>;
-  updatePassword: (credentials: UpdatePasswordCredentials) => Promise<AuthSession>;
+  signInWithPassword: (
+    credentials: SignInWithPasswordCredentials,
+  ) => Promise<AuthSession>;
+  signUpWithPassword: (
+    credentials: SignUpWithPasswordCredentials,
+  ) => Promise<AuthSession>;
+  signInWithEmailOtp: (
+    credentials: SignInWithEmailOtpCredentials,
+  ) => Promise<void>;
+  verifyEmailOtp: (
+    credentials: VerifyEmailOtpCredentials,
+  ) => Promise<AuthSession>;
+  updatePassword: (
+    credentials: UpdatePasswordCredentials,
+  ) => Promise<AuthSession>;
   signOut: () => Promise<void>;
 };
 
@@ -97,7 +110,8 @@ export function useAuthClient(): AuthClient {
   const login = useMockAuthStore((state) => state.login);
   const mockLogout = useMockAuthStore((state) => state.logout);
   const [supabaseHydrated, setSupabaseHydrated] = useState(false);
-  const [supabaseSession, setSupabaseSession] = useState<SupabaseAuthSession | null>(null);
+  const [supabaseSession, setSupabaseSession] =
+    useState<SupabaseAuthSession | null>(null);
   const runtimeMode = getAuthRuntimeMode();
   const useSupabase = runtimeMode.authProvider === "supabase";
 
@@ -117,7 +131,9 @@ export function useAuthClient(): AuthClient {
 
     void supabase.auth.getUser().then(({ data, error }) => {
       setSupabaseHydrated(true);
-      setSupabaseSession(error || !data.user ? null : createSupabaseAuthSession(data.user));
+      setSupabaseSession(
+        error || !data.user ? null : createSupabaseAuthSession(data.user),
+      );
     });
   }, [mockHydrate, useSupabase]);
 
@@ -129,7 +145,10 @@ export function useAuthClient(): AuthClient {
     session: useSupabase ? supabaseSession : mockSession,
     hydrate,
     signInWithMockRole: async (role, storageMode, options) => {
-      if (options?.forceProviderError && process.env.NODE_ENV !== "production") {
+      if (
+        options?.forceProviderError &&
+        process.env.NODE_ENV !== "production"
+      ) {
         await waitForProviderErrorPreview();
         throw new Error("mock-provider-error");
       }
@@ -176,6 +195,32 @@ export function useAuthClient(): AuthClient {
       if (error) {
         throw error;
       }
+    },
+    signUpWithPassword: async ({ email, password }) => {
+      const supabase = getBrowserSupabaseClient();
+
+      if (!supabase) {
+        throw new Error("supabase-not-configured");
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error || !data.user) {
+        throw error ?? new Error("supabase-signup-failed");
+      }
+
+      if (!data.session) {
+        throw new Error("supabase-signup-confirmation-required");
+      }
+
+      const session = createSupabaseAuthSession(data.user);
+      setSupabaseHydrated(true);
+      setSupabaseSession(session);
+
+      return session;
     },
     verifyEmailOtp: async ({ email, token }) => {
       const supabase = getBrowserSupabaseClient();
