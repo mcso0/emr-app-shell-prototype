@@ -46,6 +46,10 @@ export type VerifyEmailOtpCredentials = {
   token: string;
 };
 
+export type UpdatePasswordCredentials = {
+  password: string;
+};
+
 export type AuthClient = {
   authMode: AuthMode;
   authProvider: "mock" | "supabase";
@@ -61,6 +65,7 @@ export type AuthClient = {
   signInWithPassword: (credentials: SignInWithPasswordCredentials) => Promise<AuthSession>;
   signInWithEmailOtp: (credentials: SignInWithEmailOtpCredentials) => Promise<void>;
   verifyEmailOtp: (credentials: VerifyEmailOtpCredentials) => Promise<AuthSession>;
+  updatePassword: (credentials: UpdatePasswordCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
 };
 
@@ -187,6 +192,27 @@ export function useAuthClient(): AuthClient {
 
       if (error || !data.user) {
         throw error ?? new Error("supabase-otp-verify-failed");
+      }
+
+      const session = createSupabaseAuthSession(data.user);
+      setSupabaseHydrated(true);
+      setSupabaseSession(session);
+
+      return session;
+    },
+    updatePassword: async ({ password }) => {
+      const supabase = getBrowserSupabaseClient();
+
+      if (!supabase) {
+        throw new Error("supabase-not-configured");
+      }
+
+      const { data, error } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (error || !data.user) {
+        throw error ?? new Error("supabase-password-update-failed");
       }
 
       const session = createSupabaseAuthSession(data.user);

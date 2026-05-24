@@ -99,6 +99,7 @@ test("invalid invite acceptance states do not expose account creation actions", 
   await page.goto("/invite/invitation-accepted?workspaceId=workspace-a");
   await expect(page.getByRole("heading", { name: "이미 수락된 초대입니다" })).toBeVisible();
   await expect(page.getByRole("button", { name: "초대 수락하고 워크스페이스 열기" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "워크스페이스로 이동" })).toBeVisible();
   await expect(page.getByText("신규 계정으로 시작")).toHaveCount(0);
   await expect(page.getByText("기존 계정에 연결")).toHaveCount(0);
   await expect(page.getByText("인증 코드 받기")).toHaveCount(0);
@@ -177,8 +178,11 @@ test("Supabase invite acceptance uses OTP-first handoff before server acceptance
   expect(source).toContain('denialReason === "active_membership_exists"');
   expect(source).toContain("현재 로그인한 계정은 이 초대 이메일과 일치하지 않습니다.");
   expect(source).toContain('reason: "invite_email_otp"');
+  expect(source).toContain('reason: "invite_existing_account"');
   expect(source).toContain("인증 코드 받기");
   expect(source).toContain("이메일 인증 코드");
+  expect(source).toContain("이메일 인증 후 비밀번호 설정");
+  expect(source).toContain("워크스페이스로 이동");
   expect(source).not.toContain("신규 계정으로 시작");
   expect(source).not.toContain("기존 계정에 연결");
   expect(source).not.toContain("staging Supabase");

@@ -108,6 +108,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | AUTH-PR-038 | human_review | auth | P0 | PR 38 | `docs/work/auth/AUTH-PR-038-workspace-live-api-rate-limiting.md` |
 | AUTH-PR-039 | human_review | auth | P0 | PR 39 | `docs/work/auth/AUTH-PR-039-workspace-persistence-security-review.md` |
 | AUTH-PR-040 | human_review | auth | P0 | PR 40 | `docs/work/auth/AUTH-PR-040-project-02-workspace-persistence-closeout.md` |
+| AUTH-PR-041 | done | auth | P0 | Project 03 / DEN-268 | `docs/work/auth/AUTH-PR-041-invite-password-setup-returning-login.md` |
 | AUDIT-SECURITY-PR-001 | human_review | audit-security | P0 | Project 05 / DEN-82 | `docs/work/audit-security/AUDIT-SECURITY-PR-001-mvp-pilot-readiness-criteria.md` |
 | AUDIT-SECURITY-PR-002 | human_review | audit-security | P0 | Project 05 / DEN-83 | `docs/work/audit-security/AUDIT-SECURITY-PR-002-live-mvp-audit-event-matrix.md` |
 | AUDIT-SECURITY-PR-003 | human_review | audit-security | P0 | Project 05 / DEN-84 | `docs/work/audit-security/AUDIT-SECURITY-PR-003-live-mvp-audit-log-persistence.md` |

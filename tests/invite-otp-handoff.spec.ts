@@ -100,9 +100,15 @@ test("invite OTP implementation keeps Supabase and redirect boundaries explicit"
 
   expect(authClient).toContain("signInWithOtp");
   expect(authClient).toContain("verifyOtp");
+  expect(authClient).toContain("updateUser");
+  expect(authClient).toContain("updatePassword");
   expect(loginForm).toContain("reason === \"invite_email_otp\"");
   expect(loginForm).toContain("signInWithEmailOtp");
   expect(loginForm).toContain("verifyEmailOtp");
+  expect(loginForm).toContain("새 비밀번호");
+  expect(loginForm).toContain("비밀번호는 8자 이상");
+  expect(loginForm).toContain("인증하고 비밀번호 설정");
+  expect(loginForm).toContain("autoComplete=\"new-password\"");
   expect(requestCore).toContain("getSafeInviteNextHref");
   expect(requestRoute).toContain("resolveInviteOtpRequest");
   expect(confirmRoute).toContain("token_hash");

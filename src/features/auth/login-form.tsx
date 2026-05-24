@@ -120,6 +120,8 @@ export function LoginForm() {
   const [inviteOtpSent, setInviteOtpSent] = useState(false);
   const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
   const [inviteOtpToken, setInviteOtpToken] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [invitePasswordConfirm, setInvitePasswordConfirm] = useState("");
   const {
     authProvider,
     hydrated,
@@ -129,6 +131,7 @@ export function LoginForm() {
     signInWithPassword,
     signInWithEmailOtp,
     verifyEmailOtp,
+    updatePassword,
     signOut,
     supabaseConfigured,
   } = useAuthClient();
@@ -149,6 +152,8 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const nextInvitePassword = String(formData.get("invite-password") ?? "");
+    const nextInvitePasswordConfirm = String(formData.get("invite-password-confirm") ?? "");
     const token = String(formData.get("otp-token") ?? "").trim();
 
     setIsSubmitting(true);
@@ -167,7 +172,16 @@ export function LoginForm() {
               throw new Error("supabase-not-configured");
             }
 
+            if (nextInvitePassword.length < 8) {
+              throw new Error("invite-password-too-short");
+            }
+
+            if (nextInvitePassword !== nextInvitePasswordConfirm) {
+              throw new Error("invite-password-mismatch");
+            }
+
             await verifyEmailOtp({ email, token });
+            await updatePassword({ password: nextInvitePassword });
           } else if (token !== "000000") {
             throw new Error("invite-otp-token-invalid");
           }
@@ -232,10 +246,15 @@ export function LoginForm() {
       }
 
       router.replace(getSafeNextHref(searchParams.get("next")));
-    } catch {
+    } catch (caught) {
+      const errorCode = caught instanceof Error ? caught.message : null;
       setLoginError(
         isInviteOtpLogin
-          ? "초대 이메일 인증을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
+          ? errorCode === "invite-password-too-short"
+            ? "비밀번호는 8자 이상으로 설정해 주세요."
+            : errorCode === "invite-password-mismatch"
+              ? "비밀번호 확인이 일치하지 않습니다."
+              : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
           : usesSupabaseProvider
           ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
@@ -339,6 +358,47 @@ export function LoginForm() {
                           : "데모 인증 코드: 000000"}
                       </FieldDescription>
                     </Field>
+                    {usesSupabaseProvider ? (
+                      <>
+                        <Field>
+                          <FieldLabel htmlFor="invite-password">새 비밀번호</FieldLabel>
+                          <Input
+                            id="invite-password"
+                            type="password"
+                            name="invite-password"
+                            placeholder="8자 이상"
+                            autoComplete="new-password"
+                            disabled={isSubmitting}
+                            value={invitePassword}
+                            onChange={(event) => {
+                              setInvitePassword(event.target.value);
+                              if (loginError) setLoginError(null);
+                            }}
+                          />
+                          <FieldDescription className="text-[12px]">
+                            인증 코드 확인 후 이 비밀번호로 다시 로그인할 수 있습니다.
+                          </FieldDescription>
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="invite-password-confirm">
+                            비밀번호 확인
+                          </FieldLabel>
+                          <Input
+                            id="invite-password-confirm"
+                            type="password"
+                            name="invite-password-confirm"
+                            placeholder="다시 입력"
+                            autoComplete="new-password"
+                            disabled={isSubmitting}
+                            value={invitePasswordConfirm}
+                            onChange={(event) => {
+                              setInvitePasswordConfirm(event.target.value);
+                              if (loginError) setLoginError(null);
+                            }}
+                          />
+                        </Field>
+                      </>
+                    ) : null}
                     {inviteOtpStatus ? (
                       <div className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]">
                         {inviteOtpStatus}
@@ -370,7 +430,9 @@ export function LoginForm() {
                     ? isSubmitting
                       ? "처리 중"
                       : inviteOtpToken.trim()
-                        ? "인증하고 초대 화면으로 돌아가기"
+                        ? usesSupabaseProvider
+                          ? "인증하고 비밀번호 설정"
+                          : "인증하고 초대 화면으로 돌아가기"
                         : "인증 코드 받기"
                     : isSubmitting
                       ? "로그인 중"

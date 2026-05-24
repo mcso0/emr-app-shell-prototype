@@ -89,6 +89,11 @@ export function InviteAcceptanceScreen({
     return `/login?${params.toString()}`;
   }
 
+  function buildWorkspacePath() {
+    if (!record.workspace) return null;
+    return `/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`;
+  }
+
   async function acceptInvite() {
     if (!record.workspace || !record.invitation || record.status !== "pending") return;
 
@@ -226,6 +231,27 @@ export function InviteAcceptanceScreen({
     router.push(`/login?${params.toString()}`);
   }
 
+  function goToAcceptedWorkspace() {
+    const workspacePath = buildWorkspacePath();
+    if (!workspacePath) return;
+
+    if (usesSupabaseProvider && !session) {
+      const params = new URLSearchParams({
+        reason: "invite_existing_account",
+        next: workspacePath,
+      });
+
+      if (record.invitation?.email) {
+        params.set("inviteEmail", record.invitation.email);
+      }
+
+      router.push(`/login?${params.toString()}`);
+      return;
+    }
+
+    router.push(workspacePath);
+  }
+
   return (
     <main className="min-h-svh bg-[var(--emr-surface-app)] text-foreground">
       <section className="grid min-h-svh lg:grid-cols-[minmax(0,0.9fr)_minmax(560px,1.1fr)]">
@@ -261,8 +287,7 @@ export function InviteAcceptanceScreen({
                         <h3 className="text-[14px] font-semibold leading-5">초대 이메일 인증</h3>
                         <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
                           인증 코드는 {record.invitation.email} 주소로만 보낼 수 있습니다.
-                          같은 이메일의 기존 계정이 있으면 로그인으로 이어지고, 없으면
-                          계정 생성을 시작합니다.
+                          확인된 계정은 비밀번호를 설정한 뒤 초대 수락으로 이어집니다.
                         </p>
                       </div>
                     </div>
@@ -327,9 +352,17 @@ export function InviteAcceptanceScreen({
                   severity={record.status === "accepted" ? "success" : "warning"}
                   title={stateCopy.title}
                 >
-                  병원 관리자에게 새 초대를 요청하거나, 이미 계정이 있다면 로그인
-                  화면에서 워크스페이스 접근 상태를 확인하세요.
+                  {record.status === "accepted"
+                    ? "이미 활성화된 멤버십은 다시 만들지 않습니다. 같은 이메일 계정으로 로그인하면 워크스페이스로 이동할 수 있습니다."
+                    : "병원 관리자에게 새 초대를 요청하거나, 이미 계정이 있다면 로그인 화면에서 워크스페이스 접근 상태를 확인하세요."}
                 </EmrInlineAlert>
+                {record.status === "accepted" && record.workspace ? (
+                  <div className="mt-5">
+                    <Button type="button" onClick={goToAcceptedWorkspace}>
+                      워크스페이스로 이동
+                    </Button>
+                  </div>
+                ) : null}
                 <div className="mt-5">
                   <StatusPanel stateCopy={stateCopy} />
                 </div>
@@ -486,9 +519,9 @@ function getStateCopy(record: InviteAcceptanceRecord) {
     return {
       title: "초대 수락",
       description:
-        "초대받은 이메일을 확인하면 병원 워크스페이스 멤버십이 활성화됩니다.",
+        "초대받은 이메일을 확인하고 비밀번호를 설정하면 병원 워크스페이스 멤버십이 활성화됩니다.",
       statusLabel: "pending",
-      accountPolicy: "이메일 인증 후 자동 분기",
+      accountPolicy: "이메일 인증 후 비밀번호 설정",
       emailPolicy: "이메일 인증 코드",
     };
   }

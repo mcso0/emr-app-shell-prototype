@@ -1,7 +1,7 @@
 # Invite Acceptance Account Linking Screen
 
 Updated: 2026-05-23
-Linear: DEN-160, DEN-246
+Linear: DEN-160, DEN-246, DEN-268
 Initiative: `CLAiR EMR SaaS Launch Foundation`
 Project: `03 Invite-Based Member Onboarding`
 
@@ -43,17 +43,18 @@ The page is implemented by:
 
 ## Email-First Account Handling
 
-DEN-246 replaces the two equal account-choice cards with an email-first acceptance contract. DEN-247 adds the login/signup handoff boundary:
+DEN-246 replaces the two equal account-choice cards with an email-first acceptance contract. DEN-247 adds the login/signup handoff boundary. DEN-268 adds password setup for invited accounts so accepted members can later return through email/password login:
 
 - Supabase-backed invite flow routes unauthenticated users with `reason=invite_email_otp`, `inviteEmail`, and safe `next` context.
 - `/api/auth/invite-otp/request` validates that the request is tied to a pending invitation, the locked email matches the invite email, and `next` is an internal `/invite/...` path before the client requests OTP.
 - Supabase mode uses `signInWithOtp` and `verifyOtp`; local/mock mode exposes a deterministic `000000` demo code for browser verification without sending real email.
+- Supabase mode updates the verified session password after OTP verification. The password is sent only to Supabase Auth through the browser client and is not stored in CLAiR app state, docs, or logs.
 - `/auth/confirm` handles configured Supabase email links with `token_hash`, verifies the token, and redirects only to the safe invite path.
-- The auth step decides whether the invited email belongs to an existing account or needs new account creation.
+- Returning members use the existing email/password login form. Google, social login, SSO, and MFA remain separate future decisions.
 - The invite page does not ask the user to choose `new` vs `existing` before email verification.
 - Local/mock mode still creates a mock session for `invitee:[email]`, maps the invitation role to the closest mock role, persists active workspace membership, and redirects to `/w/[workspaceId]/reception`.
 
-Supabase Auth still owns real identity creation, password setup, email verification, recovery, and future MFA. CLAiR app state owns invitation validity, membership activation, workspace access, duplicate/conflict handling, and audit handoff.
+Supabase Auth still owns real identity creation, password hashing/storage, email verification, recovery, and future MFA. CLAiR app state owns invitation validity, membership activation, workspace access, duplicate/conflict handling, and audit handoff.
 
 ## Safe Redirect
 
@@ -73,6 +74,7 @@ This work does not implement:
 - Production Supabase redirect URL or email template rollout.
 - Real account existence preflight; the UX must remain generic until Supabase completes auth.
 - Email provider templates or delivery.
+- Google, social login, or SSO.
 - MFA.
 - Production invite token verification.
 - New DB/RLS migration.
