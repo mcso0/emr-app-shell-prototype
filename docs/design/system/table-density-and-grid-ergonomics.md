@@ -326,6 +326,15 @@ Implementation guidance:
 - The pilot keeps scalar cells one-line by default and allows limited two-line previews for order names and warning/change messages.
 - Checkbox, assignment control, and workflow action columns are excluded from resize affordances. Wider table adoption remains out of scope for DEN-264.
 
+### DEN-266 Billing Invoice Table Adoption
+
+- `src/features/billing/module.tsx` applies `EmrTableHeaderCell` and `EmrTableCellText` to the billing invoice line table only.
+- The billing invoice line table records local column policy metadata for header interaction, resize policy, and text mode.
+- The table follows the `financial-edit-grid` policy: invoice item descriptions may use `two-line-if-long`, while category, unit price, discount, and line total stay `one-line`.
+- Quantity remains an editable input column and is excluded from resize affordance policy.
+- Display-only discount and line-total columns are excluded from resize affordance policy.
+- The adoption does not add real sort, filter, column menu, resize behavior, payment-provider behavior, persistence, DB, RLS, or server enforcement changes.
+
 ## Implementation Gate
 
 Before Project 12 implementation issues:

@@ -33,6 +33,19 @@ test("billing workspace renders waiting invoice, guardian group, editable lines,
   await expect(guardianGroupSection).toBeVisible();
   await expect(guardianGroupSection.getByText("이지은", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "청구 항목 편집" })).toBeVisible();
+  const billingTable = page.getByRole("table", { name: "청구 항목 테이블" });
+  await expect(
+    billingTable.locator('th[data-emr-header-interaction="compound"][data-emr-column-resize="data-column"]', {
+      hasText: "항목",
+    })
+  ).toBeVisible();
+  await expect(billingTable.locator("th", { hasText: "수량" })).toHaveAttribute(
+    "data-emr-column-resize",
+    "none"
+  );
+  const cbcRow = billingTable.locator("tbody tr", { hasText: "CBC 검사" }).first();
+  await expect(cbcRow.locator('[data-emr-cell-text-mode="two-line-if-long"]')).toContainText("CBC 검사");
+  await expect(cbcRow.locator('[data-emr-cell-text-mode="one-line"]', { hasText: "35,000원" }).first()).toBeVisible();
   await expect(page.getByRole("spinbutton", { name: "CBC 검사 수량" })).toHaveValue("1");
   await expect(page.getByText("121,500원").first()).toBeVisible();
 
