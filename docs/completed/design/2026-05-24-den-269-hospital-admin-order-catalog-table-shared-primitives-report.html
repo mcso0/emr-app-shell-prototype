@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-269 Hospital Admin Order Catalog Table Shared Primitives</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #18181b;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.2;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+
+      h2 {
+        margin: 34px 0 10px;
+        font-size: 19px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+      }
+
+      .meta {
+        color: #71717a;
+        font-size: 14px;
+      }
+
+      .panel {
+        margin-top: 18px;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+      }
+
+      th,
+      td {
+        border: 1px solid #e4e4e7;
+        padding: 9px 10px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        background: #f4f4f5;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        border: 1px solid #d4d4d8;
+        border-radius: 8px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #f4f4f5;
+        padding: 1px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-269 병원관리 Order 카탈로그 테이블 Primitive 적용</h1>
+      <div class="meta">2026-05-24 · Project 12 CLAiR EMR Table Density &amp; Data Grid Ergonomics · Human Review</div>
+
+      <section class="panel">
+        <h2>무엇을 바꿨나</h2>
+        <p>
+          병원관리의 Order 관리 목록에 DEN-264에서 만든 <code>EmrTableHeaderCell</code>과
+          <code>EmrTableCellText</code>를 제한 적용했다. 이번 변경은 병원관리 Order 카탈로그 테이블에만
+          국한되며, 전체 테이블 일괄 전환이나 새 정렬/필터/resize 동작 구현은 포함하지 않았다.
+        </p>
+      </section>
+
+      <h2>왜 중요한가</h2>
+      <p>
+        병원관리 Order 카탈로그는 임상 오더명, 원내명, 청구서명, 판매금액, 사용여부가 한 화면에서 함께
+        읽혀야 하는 dense master-data 표다. 공통 primitive를 적용해 헤더 역할과 셀 텍스트 줄 수 정책을
+        명시해 두면, 이후 다른 테이블로 확장할 때 각 표가 임의의 truncate/class 조합으로 흩어지는 일을 줄일 수 있다.
+      </p>
+
+      <h2>컬럼 역할</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>컬럼</th>
+            <th>헤더 역할</th>
+            <th>Resize 정책</th>
+            <th>셀 텍스트 정책</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>선택</td><td><code>static</code></td><td><code>none</code></td><td>checkbox control</td></tr>
+          <tr><td>유형</td><td><code>filterable</code></td><td><code>data-column</code></td><td>badge</td></tr>
+          <tr><td>표준 Order명</td><td><code>sortable</code></td><td><code>data-column</code></td><td><code>two-line-if-long</code></td></tr>
+          <tr><td>원내 Order명</td><td><code>sortable</code></td><td><code>data-column</code></td><td><code>two-line-if-long</code></td></tr>
+          <tr><td>청구서명</td><td><code>sortable</code></td><td><code>data-column</code></td><td><code>two-line-if-long</code></td></tr>
+          <tr><td>사용여부</td><td><code>filterable</code></td><td><code>data-column</code></td><td><code>one-line</code></td></tr>
+          <tr><td>판매금액</td><td><code>sortable</code></td><td><code>data-column</code></td><td><code>one-line</code></td></tr>
+          <tr><td>대상</td><td><code>filterable</code></td><td><code>data-column</code></td><td><code>one-line</code></td></tr>
+          <tr><td>작업</td><td><code>static</code></td><td><code>none</code></td><td>row action menu</td></tr>
+        </tbody>
+      </table>
+
+      <h2>보존한 동작</h2>
+      <ul>
+        <li>병원관리 카테고리/하위 카테고리 이동</li>
+        <li>검색, 사용여부/청구/업무유형 필터 컨트롤</li>
+        <li>행 선택과 bulk action 표시</li>
+        <li>Order drawer 열기, 수정, 삭제, 행 action menu</li>
+        <li>mock auth/session 기반 workspace 진입</li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx eslint src/features/hospital-admin/module.tsx tests/hospital-admin.spec.ts</code> 통과</li>
+        <li><code>npx tsc --noEmit</code> 통과</li>
+        <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3079 npx playwright test tests/hospital-admin.spec.ts -g "shared header and cell text primitives"</code> 통과</li>
+        <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3079 npx playwright test tests/hospital-admin.spec.ts</code> 7 passed</li>
+        <li><code>npm run lint</code> 통과, 기존 warning 5개 유지</li>
+        <li><code>npm run docs:check</code> 통과</li>
+        <li><code>git diff --check</code> 통과</li>
+      </ul>
+
+      <h2>Evidence</h2>
+      <p>Mock auth storage state를 넣고 실제 병원관리 Order 카탈로그 화면을 캡처했다. 로그인 화면 캡처가 아니다.</p>
+      <img
+        src="./evidence/2026-05-24-den-269-hospital-admin-order-catalog-table-primitives.png"
+        alt="병원관리 Order 카탈로그 테이블에 shared table primitive가 적용된 화면"
+      />
+
+      <h2>범위 밖</h2>
+      <p>
+        새 sort/filter/resize 동작, 전체 테이블 일괄 적용, Supabase/DB/RLS/server enforcement,
+        pricing/role/permission 정책 변경, DEN-250/251/264/265/266/267 상태 변경은 이번 작업 범위에 넣지 않았다.
+      </p>
+    </main>
+  </body>
+</html>
