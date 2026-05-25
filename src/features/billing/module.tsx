@@ -11,7 +11,10 @@ import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrTableCellText, EmrTableHeaderCell } from "@/components/emr/table-primitives";
+import {
+  EmrTableCellText,
+  EmrTableHeaderCell,
+} from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrSidePanelCard,
@@ -32,6 +35,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -68,9 +76,18 @@ import type {
   EmrTableHeaderInteraction,
 } from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
-import type { InvoiceLine, InvoiceStatus, Payment, PaymentMethod } from "@/types/emr-domain";
+import type {
+  InvoiceLine,
+  InvoiceStatus,
+  Payment,
+  PaymentMethod,
+} from "@/types/emr-domain";
 
-const billingQueueGroups: Array<{ colorToken: string; label: string; value: BillingFilter }> = [
+const billingQueueGroups: Array<{
+  colorToken: string;
+  label: string;
+  value: BillingFilter;
+}> = [
   { label: "대기", value: "waiting", colorToken: "--emr-status-info-text" },
   { label: "미납", value: "unpaid", colorToken: "--emr-status-warning-text" },
   { label: "종료", value: "closed", colorToken: "--emr-status-success-text" },
@@ -90,7 +107,10 @@ const getBillingPaymentMethodLabel = (method: PaymentMethod) =>
   paymentMethodItems.find((item) => item.value === method)?.label ?? method;
 
 type BillingFinancialAction = "issue_invoice" | "mark_unpaid" | "mark_paid";
-type BillingPaymentFailureContext = "payment_method" | "mark_unpaid" | "mark_paid";
+type BillingPaymentFailureContext =
+  | "payment_method"
+  | "mark_unpaid"
+  | "mark_paid";
 
 type BillingInvoiceCandidateSnapshot = {
   billingCandidateId: string;
@@ -177,7 +197,10 @@ const invoiceStatusLabels: Record<InvoiceStatus, string> = {
 const getInvoiceStatusLabel = (status: InvoiceStatus) =>
   invoiceStatusLabels[status] ?? getStatusLabel("invoice", status);
 
-const getInvoiceStatusDescription = (status: InvoiceStatus, balance: number) => {
+const getInvoiceStatusDescription = (
+  status: InvoiceStatus,
+  balance: number,
+) => {
   if (status === "paid" || balance === 0) {
     return "수납이 완료되어 오늘 encounter를 마무리할 수 있습니다.";
   }
@@ -189,7 +212,14 @@ const getInvoiceStatusDescription = (status: InvoiceStatus, balance: number) => 
   return "진료, 검사, 영상, 조제, 처치 항목을 확인한 뒤 수납할 단계입니다.";
 };
 
-const billingLineCategoryOrder = ["진료", "검사", "영상", "조제", "처치", "기타"] as const;
+const billingLineCategoryOrder = [
+  "진료",
+  "검사",
+  "영상",
+  "조제",
+  "처치",
+  "기타",
+] as const;
 type BillingLineCategory = (typeof billingLineCategoryOrder)[number];
 const billingInvoiceLineColumns = {
   category: "w-[88px]",
@@ -208,7 +238,10 @@ type BillingInvoiceLineColumnPolicy = {
   resize: EmrColumnResize;
   textMode: EmrTableCellTextMode;
 };
-const billingInvoiceLineColumnPolicies: Record<BillingInvoiceLineColumnKey, BillingInvoiceLineColumnPolicy> = {
+const billingInvoiceLineColumnPolicies: Record<
+  BillingInvoiceLineColumnKey,
+  BillingInvoiceLineColumnPolicy
+> = {
   category: {
     headerInteraction: "filterable",
     label: "업무",
@@ -251,6 +284,48 @@ const billingInvoiceLineColumnPolicies: Record<BillingInvoiceLineColumnKey, Bill
   },
 };
 
+type BillingInvoiceLineSortKey =
+  | "category"
+  | "description"
+  | "unitPrice"
+  | "quantity"
+  | "discount"
+  | "lineTotal";
+type BillingInvoiceLineSortDirection = "asc" | "desc";
+type BillingInvoiceLineSortState = {
+  direction: BillingInvoiceLineSortDirection;
+  key: BillingInvoiceLineSortKey;
+} | null;
+type BillingInvoiceLineFilter =
+  | {
+      field: "category";
+      id: string;
+      operator: "is";
+      values: BillingLineCategory[];
+    }
+  | {
+      field: "lineTotal";
+      id: string;
+      operator: "gte" | "lte";
+      value: number | null;
+    };
+
+const billingInvoiceLineSortLabels: Record<BillingInvoiceLineSortKey, string> =
+  {
+    category: "업무",
+    description: "항목",
+    unitPrice: "단가",
+    quantity: "수량",
+    discount: "할인",
+    lineTotal: "청구금액",
+  };
+let billingInvoiceLineFilterId = 0;
+
+function createBillingInvoiceLineFilterId() {
+  billingInvoiceLineFilterId += 1;
+  return `billing-line-filter-${billingInvoiceLineFilterId}`;
+}
+
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
   if (line.serviceItemId?.startsWith("svc-lab")) return "검사";
@@ -272,16 +347,129 @@ const sortInvoiceLinesForDemoFlow = (lines: InvoiceLine[]) =>
     return a.description.localeCompare(b.description);
   });
 
+function compareBillingInvoiceLineValues(
+  a: InvoiceLine,
+  b: InvoiceLine,
+  key: BillingInvoiceLineSortKey,
+) {
+  if (key === "category") {
+    return (
+      billingLineCategoryOrder.indexOf(getBillingLineCategory(a)) -
+      billingLineCategoryOrder.indexOf(getBillingLineCategory(b))
+    );
+  }
+
+  if (key === "description") {
+    return a.description.localeCompare(b.description, "ko-KR", {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+
+  if (key === "discount") return 0;
+
+  return a[key] - b[key];
+}
+
+function sortBillingInvoiceLines(
+  lines: InvoiceLine[],
+  sortState: BillingInvoiceLineSortState,
+) {
+  const baseLines = sortInvoiceLinesForDemoFlow(lines);
+  if (!sortState) return baseLines;
+
+  return baseLines
+    .map((line, index) => ({ index, line }))
+    .sort((a, b) => {
+      const compared = compareBillingInvoiceLineValues(
+        a.line,
+        b.line,
+        sortState.key,
+      );
+      if (compared === 0) return a.index - b.index;
+
+      return sortState.direction === "asc" ? compared : -compared;
+    })
+    .map((entry) => entry.line);
+}
+
+function isBillingInvoiceLineFilterActive(filter: BillingInvoiceLineFilter) {
+  if (filter.field === "category") return filter.values.length > 0;
+
+  return typeof filter.value === "number" && Number.isFinite(filter.value);
+}
+
+function doesBillingInvoiceLineMatchFilter(
+  line: InvoiceLine,
+  filter: BillingInvoiceLineFilter,
+) {
+  if (!isBillingInvoiceLineFilterActive(filter)) return true;
+
+  if (filter.field === "category") {
+    return filter.values.includes(getBillingLineCategory(line));
+  }
+
+  return filter.operator === "gte"
+    ? line.lineTotal >= (filter.value ?? 0)
+    : line.lineTotal <= (filter.value ?? 0);
+}
+
+function filterBillingInvoiceLines(
+  lines: InvoiceLine[],
+  filters: BillingInvoiceLineFilter[],
+) {
+  const activeFilters = filters.filter(isBillingInvoiceLineFilterActive);
+  if (activeFilters.length === 0) return lines;
+
+  return lines.filter((line) =>
+    activeFilters.every((filter) =>
+      doesBillingInvoiceLineMatchFilter(line, filter),
+    ),
+  );
+}
+
+function createBillingInvoiceLineFilter(
+  field: BillingInvoiceLineFilter["field"] = "category",
+): BillingInvoiceLineFilter {
+  if (field === "lineTotal") {
+    return {
+      field,
+      id: createBillingInvoiceLineFilterId(),
+      operator: "gte",
+      value: null,
+    };
+  }
+
+  return {
+    field,
+    id: createBillingInvoiceLineFilterId(),
+    operator: "is",
+    values: [],
+  };
+}
+
+function cloneBillingInvoiceLineFilter(
+  filter: BillingInvoiceLineFilter,
+): BillingInvoiceLineFilter {
+  if (filter.field === "category")
+    return { ...filter, values: [...filter.values] };
+
+  return { ...filter };
+}
+
 const getBillingFlowLabel = (lines: InvoiceLine[]) => {
   const categories = billingLineCategoryOrder.filter(
-    (category) => category !== "기타" && lines.some((line) => getBillingLineCategory(line) === category)
+    (category) =>
+      category !== "기타" &&
+      lines.some((line) => getBillingLineCategory(line) === category),
   );
 
   return categories.length ? categories.join(" / ") : "청구 항목";
 };
 
 function getDemoActorHeader(session: AuthSession | null) {
-  return session && (!("provider" in session) || session.provider !== "supabase")
+  return session &&
+    (!("provider" in session) || session.provider !== "supabase")
     ? {
         "x-clair-demo-client-session-id": getDemoClientSessionId(),
         "x-clair-demo-session-user-id": session.id,
@@ -319,9 +507,10 @@ async function loadBillingInvoiceCandidates({
       {
         cache: "no-store",
         headers: actorHeaders,
-      }
+      },
     );
-    const body = (await response.json()) as BillingInvoiceCandidateRouteResponse;
+    const body =
+      (await response.json()) as BillingInvoiceCandidateRouteResponse;
 
     if (!response.ok || !body.ok) {
       if (!body.ok) return { ...body, status: response.status };
@@ -349,7 +538,7 @@ async function loadBillingInvoiceLines({
       {
         cache: "no-store",
         headers: actorHeaders,
-      }
+      },
     );
     const body = (await response.json()) as BillingInvoiceLineRouteResponse;
 
@@ -388,7 +577,7 @@ async function saveBillingInvoiceLines({
           ...actorHeaders,
         },
         method: "PATCH",
-      }
+      },
     );
     const body = (await response.json()) as BillingInvoiceLineRouteResponse;
 
@@ -418,7 +607,7 @@ async function loadBillingPaymentStatus({
       {
         cache: "no-store",
         headers: actorHeaders,
-      }
+      },
     );
     const body = (await response.json()) as BillingPaymentStatusRouteResponse;
 
@@ -452,14 +641,19 @@ async function saveBillingPaymentStatus({
     const response = await fetch(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/payment-status`,
       {
-        body: JSON.stringify({ action, invoiceId, paymentMethod, unpaidReason }),
+        body: JSON.stringify({
+          action,
+          invoiceId,
+          paymentMethod,
+          unpaidReason,
+        }),
         cache: "no-store",
         headers: {
           "content-type": "application/json",
           ...actorHeaders,
         },
         method: "PATCH",
-      }
+      },
     );
     const body = (await response.json()) as BillingPaymentStatusRouteResponse;
 
@@ -476,13 +670,15 @@ async function saveBillingPaymentStatus({
 
 const mergeInvoiceCandidateLines = (
   invoiceLines: InvoiceLine[],
-  candidates: BillingInvoiceCandidateSnapshot[]
+  candidates: BillingInvoiceCandidateSnapshot[],
 ) => {
   let nextLines = invoiceLines;
 
   for (const candidate of candidates) {
     const existingLine = nextLines.find(
-      (line) => line.invoiceId === candidate.invoiceId && line.orderId === candidate.orderId
+      (line) =>
+        line.invoiceId === candidate.invoiceId &&
+        line.orderId === candidate.orderId,
     );
     const candidateLine = {
       id: existingLine?.id ?? `invoice-line-${candidate.billingCandidateId}`,
@@ -496,7 +692,9 @@ const mergeInvoiceCandidateLines = (
     } satisfies InvoiceLine;
 
     nextLines = existingLine
-      ? nextLines.map((line) => line.id === existingLine.id ? candidateLine : line)
+      ? nextLines.map((line) =>
+          line.id === existingLine.id ? candidateLine : line,
+        )
       : [...nextLines, candidateLine];
   }
 
@@ -506,8 +704,12 @@ const mergeInvoiceCandidateLines = (
 function useBillingWorkspaceData() {
   const searchParams = useSearchParams();
   const { session: authSession } = useAuthClient();
-  const applyInvoiceSnapshot = useBillingStore((state) => state.applyInvoiceSnapshot);
-  const applyPaymentStatusSnapshot = useBillingStore((state) => state.applyPaymentStatusSnapshot);
+  const applyInvoiceSnapshot = useBillingStore(
+    (state) => state.applyInvoiceSnapshot,
+  );
+  const applyPaymentStatusSnapshot = useBillingStore(
+    (state) => state.applyPaymentStatusSnapshot,
+  );
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const invoices = useBillingStore((state) => state.invoices);
   const payments = useBillingStore((state) => state.payments);
@@ -519,7 +721,10 @@ function useBillingWorkspaceData() {
     candidates: BillingInvoiceCandidateSnapshot[];
     encounterId?: string;
   }>({ candidates: [] });
-  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
+  const actorHeaders = useMemo(
+    () => getDemoActorHeader(authSession),
+    [authSession],
+  );
   const baseDetail =
     getBillingDetail(effectiveInvoiceId, invoices, invoiceLines, payments) ??
     getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
@@ -537,14 +742,27 @@ function useBillingWorkspaceData() {
         return {
           ...invoice,
           subtotalAmount,
-          totalAmount: Math.max(0, subtotalAmount - invoice.discountAmount + invoice.taxAmount),
+          totalAmount: Math.max(
+            0,
+            subtotalAmount - invoice.discountAmount + invoice.taxAmount,
+          ),
         };
       }),
-    [effectiveInvoiceLines, invoices]
+    [effectiveInvoiceLines, invoices],
   );
   const detail =
-    getBillingDetail(effectiveInvoiceId, effectiveInvoices, effectiveInvoiceLines, payments) ??
-    getBillingDetail("invoice-coco-260501", effectiveInvoices, effectiveInvoiceLines, payments);
+    getBillingDetail(
+      effectiveInvoiceId,
+      effectiveInvoices,
+      effectiveInvoiceLines,
+      payments,
+    ) ??
+    getBillingDetail(
+      "invoice-coco-260501",
+      effectiveInvoices,
+      effectiveInvoiceLines,
+      payments,
+    );
   const baseEncounterId = baseDetail?.encounter.id;
   const baseEncounterWorkspaceId = baseDetail?.encounter.workspaceId;
   const baseInvoiceId = baseDetail?.invoice.id;
@@ -597,7 +815,12 @@ function useBillingWorkspaceData() {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, applyInvoiceSnapshot, baseInvoiceId, baseInvoiceWorkspaceId]);
+  }, [
+    actorHeaders,
+    applyInvoiceSnapshot,
+    baseInvoiceId,
+    baseInvoiceWorkspaceId,
+  ]);
   useEffect(() => {
     if (!baseInvoiceId || !baseInvoiceWorkspaceId) return;
     const invoiceId = baseInvoiceId;
@@ -620,10 +843,20 @@ function useBillingWorkspaceData() {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, applyPaymentStatusSnapshot, baseInvoiceId, baseInvoiceWorkspaceId]);
+  }, [
+    actorHeaders,
+    applyPaymentStatusSnapshot,
+    baseInvoiceId,
+    baseInvoiceWorkspaceId,
+  ]);
   const groups = useMemo(
-    () => getBillingGuardianGroups(effectiveInvoices, effectiveInvoiceLines, payments),
-    [effectiveInvoiceLines, effectiveInvoices, payments]
+    () =>
+      getBillingGuardianGroups(
+        effectiveInvoices,
+        effectiveInvoiceLines,
+        payments,
+      ),
+    [effectiveInvoiceLines, effectiveInvoices, payments],
   );
 
   return {
@@ -663,7 +896,8 @@ function QueueItem({
             {row.patient?.name ?? "환자 미상"} · {row.invoice.invoiceNo}
           </div>
           <div className="truncate emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
-            {row.guardian?.name ?? "보호자 미지정"} · {row.encounter.encounterNo}
+            {row.guardian?.name ?? "보호자 미지정"} ·{" "}
+            {row.encounter.encounterNo}
           </div>
         </div>
         <EmrRowActionMenu
@@ -685,7 +919,9 @@ function QueueItem({
         {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
       </div>
       <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 emr-text-micro text-muted-foreground">
-        <span>{formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}</span>
+        <span>
+          {formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}
+        </span>
         <span>{formatAmount(row.invoice.totalAmount)}</span>
       </div>
     </EmrSidePanelCard>
@@ -697,17 +933,24 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
   const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const selectInvoice = useBillingStore((state) => state.selectInvoice);
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<BillingFilter>>(() => new Set());
+  const setModulePanelOpen = useLayoutStore(
+    (state) => state.setModulePanelOpen,
+  );
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<
+    Set<BillingFilter>
+  >(() => new Set());
   const groupedRows = useMemo(
     () =>
       billingQueueGroups.map((group) => ({
         ...group,
         rows: getBillingQueueRows(invoices, payments, group.value),
       })),
-    [invoices, payments]
+    [invoices, payments],
   );
-  const totalRowCount = groupedRows.reduce((total, group) => total + group.rows.length, 0);
+  const totalRowCount = groupedRows.reduce(
+    (total, group) => total + group.rows.length,
+    0,
+  );
   const toggleGroup = (groupId: BillingFilter) => {
     setCollapsedGroupIds((current) => {
       const next = new Set(current);
@@ -817,9 +1060,20 @@ export function BillingHeader({ hasRightPanel }: ShellComponentProps) {
       patientItems={[
         { label: "환자", value: detail.patient?.name ?? "환자 미상" },
         { label: "보호자", value: detail.guardian?.name ?? "보호자 미지정" },
-        { label: "품종", value: detail.patient ? detail.patient.breed ?? getSpeciesLabel(detail.patient) : "-" },
-        { label: "나이", value: detail.patient ? getPatientDisplayAge(detail.patient) : "-" },
-        { label: "성별", value: detail.patient ? getPatientSexLabel(detail.patient) : "-" },
+        {
+          label: "품종",
+          value: detail.patient
+            ? (detail.patient.breed ?? getSpeciesLabel(detail.patient))
+            : "-",
+        },
+        {
+          label: "나이",
+          value: detail.patient ? getPatientDisplayAge(detail.patient) : "-",
+        },
+        {
+          label: "성별",
+          value: detail.patient ? getPatientSexLabel(detail.patient) : "-",
+        },
       ]}
       memoActions={[
         { label: "방문목적" },
@@ -848,18 +1102,25 @@ function BillingTitleCard({ detail }: { detail: BillingDetail }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-[18px] font-semibold leading-[26px]">수납</h1>
-            <EmrStatusBadge label={getInvoiceStatusLabel(detail.invoice.status)} marker="none" />
+            <EmrStatusBadge
+              label={getInvoiceStatusLabel(detail.invoice.status)}
+              marker="none"
+            />
           </div>
           <div className="mt-1 emr-text-dense text-muted-foreground">
             {detail.invoice.invoiceNo} · {detail.patient?.name ?? "환자 미상"} ·{" "}
-            {detail.guardian?.name ?? "보호자 미지정"} · {detail.encounter.encounterNo}
+            {detail.guardian?.name ?? "보호자 미지정"} ·{" "}
+            {detail.encounter.encounterNo}
           </div>
           <div className="mt-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
-            {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게 안내합니다.
+            {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게
+            안내합니다.
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[20px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
+          <div className="text-[20px] font-semibold">
+            {formatAmount(detail.invoice.totalAmount)}
+          </div>
           <div className="emr-text-metadata text-muted-foreground">
             {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
           </div>
@@ -891,7 +1152,8 @@ function GuardianGroups({
               key={group.guardian.id}
               className={cn(
                 "rounded-md border bg-card p-3",
-                active && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                active &&
+                  "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]",
               )}
             >
               <div className="flex items-center justify-between gap-3">
@@ -901,7 +1163,9 @@ function GuardianGroups({
               <div className="mt-2 truncate emr-text-metadata text-muted-foreground">
                 {group.patients.map((patient) => patient.name).join(", ")}
               </div>
-              <div className="mt-3 text-[15px] font-semibold">{formatAmount(group.totalDueAmount)}</div>
+              <div className="mt-3 text-[15px] font-semibold">
+                {formatAmount(group.totalDueAmount)}
+              </div>
             </div>
           );
         })}
@@ -930,8 +1194,12 @@ function CombinePanel({
       <div className="flex h-11 items-center justify-between border-b px-4">
         <h2 className="emr-text-body font-semibold">합산/해제</h2>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onCombine}>합산</Button>
-          <Button size="sm" variant="outline" onClick={onClear}>합산 해제</Button>
+          <Button size="sm" variant="outline" onClick={onCombine}>
+            합산
+          </Button>
+          <Button size="sm" variant="outline" onClick={onClear}>
+            합산 해제
+          </Button>
         </div>
       </div>
       <div className="divide-y">
@@ -949,15 +1217,237 @@ function CombinePanel({
               }}
             />
             <span className="font-medium">{invoice.invoiceNo}</span>
-            <span className="text-muted-foreground">{getInvoiceStatusLabel(invoice.status)}</span>
-            <span className="ml-auto font-semibold">{formatAmount(invoice.totalAmount)}</span>
+            <span className="text-muted-foreground">
+              {getInvoiceStatusLabel(invoice.status)}
+            </span>
+            <span className="ml-auto font-semibold">
+              {formatAmount(invoice.totalAmount)}
+            </span>
           </label>
         ))}
       </div>
       <div className="border-t px-4 py-3 emr-text-metadata text-muted-foreground">
-        합산 대상 {selectedInvoiceIds.length}건 · 적용 {combinedInvoiceIds.length}건
+        합산 대상 {selectedInvoiceIds.length}건 · 적용{" "}
+        {combinedInvoiceIds.length}건
       </div>
     </section>
+  );
+}
+
+function BillingInvoiceLineSortableHead({
+  align = "left",
+  className,
+  columnKey,
+  label,
+  onSort,
+  sortState,
+}: {
+  align?: "left" | "center" | "right";
+  className?: string;
+  columnKey: BillingInvoiceLineSortKey;
+  label: string;
+  onSort: (key: BillingInvoiceLineSortKey) => void;
+  sortState: BillingInvoiceLineSortState;
+}) {
+  const active = sortState?.key === columnKey;
+  const nextAction =
+    !active || !sortState
+      ? `${label} 오름차순 정렬`
+      : sortState.direction === "asc"
+        ? `${label} 내림차순 정렬`
+        : `${label} 정렬 해제`;
+  const activeDirectionLabel =
+    sortState?.direction === "asc"
+      ? "오름차순"
+      : sortState?.direction === "desc"
+        ? "내림차순"
+        : "";
+  const ariaLabel = active
+    ? `현재 정렬: ${label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
+    : `정렬 없음. 클릭하면 ${nextAction}.`;
+  const policy = billingInvoiceLineColumnPolicies[columnKey];
+
+  return (
+    <EmrTableHeaderCell
+      align={align}
+      className={className}
+      interaction={policy.headerInteraction}
+      resize={policy.resize}
+      sortDirection={active ? sortState.direction : undefined}
+      sortLabel={ariaLabel}
+      title={ariaLabel}
+      onSort={() => onSort(columnKey)}
+    >
+      {label}
+    </EmrTableHeaderCell>
+  );
+}
+
+function BillingInvoiceLineFilterBuilder({
+  draftFilters,
+  onAdd,
+  onApply,
+  onChangeField,
+  onChangeLineTotalOperator,
+  onChangeLineTotalValue,
+  onClose,
+  onRemove,
+  onReset,
+  onToggleCategory,
+}: {
+  draftFilters: BillingInvoiceLineFilter[];
+  onAdd: () => void;
+  onApply: () => void;
+  onChangeField: (
+    filterId: string,
+    field: BillingInvoiceLineFilter["field"],
+  ) => void;
+  onChangeLineTotalOperator: (
+    filterId: string,
+    operator: "gte" | "lte",
+  ) => void;
+  onChangeLineTotalValue: (filterId: string, value: number | null) => void;
+  onClose: () => void;
+  onRemove: (filterId: string) => void;
+  onReset: () => void;
+  onToggleCategory: (filterId: string, category: BillingLineCategory) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <div>
+        <div className="emr-text-body font-semibold">Filters</div>
+        <div className="emr-text-metadata text-muted-foreground">
+          다중 조건은 AND로 적용됩니다.
+        </div>
+      </div>
+      <div className="grid gap-2">
+        {draftFilters.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-4 text-center emr-text-metadata text-muted-foreground">
+            적용할 필터 조건이 없습니다.
+          </div>
+        ) : (
+          draftFilters.map((filter) => (
+            <div
+              key={filter.id}
+              className="grid gap-2 rounded-lg bg-[var(--emr-surface-muted)] p-2 md:grid-cols-[132px_108px_minmax(0,1fr)_32px]"
+            >
+              <select
+                aria-label="필터 필드"
+                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)]"
+                value={filter.field}
+                onChange={(event) =>
+                  onChangeField(
+                    filter.id,
+                    event.target.value as BillingInvoiceLineFilter["field"],
+                  )
+                }
+              >
+                <option value="category">업무</option>
+                <option value="lineTotal">청구금액</option>
+              </select>
+              <select
+                aria-label="필터 조건"
+                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)] disabled:text-muted-foreground"
+                disabled={filter.field === "category"}
+                value={filter.operator}
+                onChange={(event) =>
+                  filter.field === "lineTotal"
+                    ? onChangeLineTotalOperator(
+                        filter.id,
+                        event.target.value as "gte" | "lte",
+                      )
+                    : undefined
+                }
+              >
+                {filter.field === "category" ? (
+                  <option value="is">Is</option>
+                ) : (
+                  <>
+                    <option value="gte">이상</option>
+                    <option value="lte">이하</option>
+                  </>
+                )}
+              </select>
+              {filter.field === "category" ? (
+                <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-[var(--emr-radius-control)] border border-input bg-card px-1.5 py-1">
+                  {billingLineCategoryOrder.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      aria-pressed={filter.values.includes(category)}
+                      className={cn(
+                        "min-h-6 rounded-full border border-transparent px-2 emr-text-metadata font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]",
+                        filter.values.includes(category) &&
+                          "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
+                      )}
+                      onClick={() => onToggleCategory(filter.id, category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <Input
+                  aria-label="청구금액 필터 값"
+                  className="h-8 bg-card text-right tabular-nums"
+                  inputMode="numeric"
+                  min={0}
+                  step={1000}
+                  type="number"
+                  value={filter.value ?? ""}
+                  onChange={(event) =>
+                    onChangeLineTotalValue(
+                      filter.id,
+                      event.target.value === ""
+                        ? null
+                        : Number(event.target.value),
+                    )
+                  }
+                />
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="필터 조건 삭제"
+                className="justify-self-end text-[var(--emr-text-danger)]"
+                onClick={() => onRemove(filter.id)}
+              >
+                ×
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="bg-card"
+          onClick={onAdd}
+        >
+          + Add filter
+        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button type="button" size="sm" onClick={onApply}>
+            Apply filters
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-[var(--emr-text-danger)]"
+            onClick={onReset}
+          >
+            초기화
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -973,8 +1463,50 @@ function InvoiceLinesTable({
   onUpdateQuantity: (lineId: string, quantity: number) => void;
 }) {
   const [density, setDensity] = useState<EmrTableDensity>("standard");
-  const sortedLines = sortInvoiceLinesForDemoFlow(lines);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<BillingInvoiceLineFilter[]>([]);
+  const [draftFilters, setDraftFilters] = useState<BillingInvoiceLineFilter[]>(
+    [],
+  );
+  const [sortState, setSortState] = useState<BillingInvoiceLineSortState>(null);
+  const activeFilterCount = filters.filter(
+    isBillingInvoiceLineFilterActive,
+  ).length;
+  const filteredLines = useMemo(
+    () => filterBillingInvoiceLines(lines, filters),
+    [filters, lines],
+  );
+  const sortedLines = useMemo(
+    () => sortBillingInvoiceLines(filteredLines, sortState),
+    [filteredLines, sortState],
+  );
   const flowLabel = getBillingFlowLabel(lines);
+  const handleSort = (key: BillingInvoiceLineSortKey) => {
+    setSortState((current) => {
+      if (current?.key !== key) return { direction: "asc", key };
+      if (current.direction === "asc") return { direction: "desc", key };
+
+      return null;
+    });
+  };
+  const handleFilterOpenChange = (open: boolean) => {
+    setFilterOpen(open);
+    if (open) {
+      setDraftFilters(
+        filters.length > 0 ? filters.map(cloneBillingInvoiceLineFilter) : [],
+      );
+    }
+  };
+  const updateDraftFilter = (
+    filterId: string,
+    updater: (filter: BillingInvoiceLineFilter) => BillingInvoiceLineFilter,
+  ) => {
+    setDraftFilters((current) =>
+      current.map((filter) =>
+        filter.id === filterId ? updater(filter) : filter,
+      ),
+    );
+  };
 
   return (
     <section className="rounded-lg border bg-card">
@@ -982,24 +1514,117 @@ function InvoiceLinesTable({
         <div>
           <h2 className="emr-text-body font-semibold">청구 항목 편집</h2>
           <div className="mt-1 emr-text-metadata text-muted-foreground">
-            {flowLabel} 항목이 오늘 수납액 {formatAmount(totalAmount)}으로 묶입니다.
+            {flowLabel} 항목이 오늘 수납액 {formatAmount(totalAmount)}으로
+            묶입니다.
           </div>
         </div>
         <div className="flex items-center gap-2">
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-          <Badge variant={persistenceState === "error" ? "destructive" : "secondary"}>
+          <Popover open={filterOpen} onOpenChange={handleFilterOpenChange}>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={activeFilterCount > 0 ? "secondary" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "bg-card",
+                    activeFilterCount > 0 &&
+                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
+                  )}
+                  aria-label={
+                    activeFilterCount > 0
+                      ? `청구 항목 필터 ${activeFilterCount}개 설정`
+                      : "청구 항목 필터 설정"
+                  }
+                />
+              }
+            >
+              <CdsActionsListFilterIcon
+                aria-hidden="true"
+                className="size-3.5"
+              />
+              Filter{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+              initialFocus={false}
+            >
+              <BillingInvoiceLineFilterBuilder
+                draftFilters={draftFilters}
+                onAdd={() =>
+                  setDraftFilters((current) => [
+                    ...current,
+                    createBillingInvoiceLineFilter(),
+                  ])
+                }
+                onApply={() => {
+                  setFilters(draftFilters);
+                  setFilterOpen(false);
+                }}
+                onChangeField={(filterId, field) =>
+                  updateDraftFilter(filterId, () =>
+                    createBillingInvoiceLineFilter(field),
+                  )
+                }
+                onChangeLineTotalOperator={(filterId, operator) =>
+                  updateDraftFilter(filterId, (filter) =>
+                    filter.field === "lineTotal"
+                      ? { ...filter, operator }
+                      : filter,
+                  )
+                }
+                onChangeLineTotalValue={(filterId, value) =>
+                  updateDraftFilter(filterId, (filter) =>
+                    filter.field === "lineTotal"
+                      ? { ...filter, value }
+                      : filter,
+                  )
+                }
+                onClose={() => setFilterOpen(false)}
+                onRemove={(filterId) =>
+                  setDraftFilters((current) =>
+                    current.filter((filter) => filter.id !== filterId),
+                  )
+                }
+                onReset={() => {
+                  setDraftFilters([]);
+                  setFilters([]);
+                }}
+                onToggleCategory={(filterId, category) =>
+                  updateDraftFilter(filterId, (filter) => {
+                    if (filter.field !== "category") return filter;
+
+                    return filter.values.includes(category)
+                      ? {
+                          ...filter,
+                          values: filter.values.filter(
+                            (value) => value !== category,
+                          ),
+                        }
+                      : { ...filter, values: [...filter.values, category] };
+                  })
+                }
+              />
+            </PopoverContent>
+          </Popover>
+          <Badge
+            variant={persistenceState === "error" ? "destructive" : "secondary"}
+          >
             {persistenceState === "saving"
               ? "저장 중"
               : persistenceState === "saved"
                 ? "저장됨"
                 : persistenceState === "error"
                   ? "저장 실패"
-                  : sortedLines.length}
+                  : `${sortedLines.length}/${lines.length}`}
           </Badge>
         </div>
       </div>
       <BillingScopeNotice>
-        실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과 청구 확정만 저장합니다.
+        실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과
+        청구 확정만 저장합니다.
       </BillingScopeNotice>
       <div>
         <Table
@@ -1011,20 +1636,61 @@ function InvoiceLinesTable({
         >
           <TableHeader className="bg-muted/50">
             <TableRow>
-              {Object.entries(billingInvoiceLineColumnPolicies).map(([columnKey, policy]) => (
-                <EmrTableHeaderCell
-                  key={columnKey}
-                  align={policy.align}
-                  className={cn(
-                    billingInvoiceLineColumns[columnKey as BillingInvoiceLineColumnKey],
-                    policy.align === "right" && billingAmountCellClassName
-                  )}
-                  interaction={policy.headerInteraction}
-                  resize={policy.resize}
-                >
-                  {policy.label}
-                </EmrTableHeaderCell>
-              ))}
+              <BillingInvoiceLineSortableHead
+                className={billingInvoiceLineColumns.category}
+                columnKey="category"
+                label={billingInvoiceLineSortLabels.category}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                className={billingInvoiceLineColumns.description}
+                columnKey="description"
+                label={billingInvoiceLineSortLabels.description}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="right"
+                className={cn(
+                  billingInvoiceLineColumns.unitPrice,
+                  billingAmountCellClassName,
+                )}
+                columnKey="unitPrice"
+                label={billingInvoiceLineSortLabels.unitPrice}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="center"
+                className={billingInvoiceLineColumns.quantity}
+                columnKey="quantity"
+                label={billingInvoiceLineSortLabels.quantity}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="right"
+                className={cn(
+                  billingInvoiceLineColumns.discount,
+                  billingAmountCellClassName,
+                )}
+                columnKey="discount"
+                label={billingInvoiceLineSortLabels.discount}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="right"
+                className={cn(
+                  billingInvoiceLineColumns.lineTotal,
+                  billingAmountCellClassName,
+                )}
+                columnKey="lineTotal"
+                label={billingInvoiceLineSortLabels.lineTotal}
+                sortState={sortState}
+                onSort={handleSort}
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1032,7 +1698,10 @@ function InvoiceLinesTable({
               <TableRow key={line.id}>
                 <TableCell className={billingInvoiceLineColumns.category}>
                   <Badge variant="outline">
-                    <EmrTableCellText as="span" mode={billingInvoiceLineColumnPolicies.category.textMode}>
+                    <EmrTableCellText
+                      as="span"
+                      mode={billingInvoiceLineColumnPolicies.category.textMode}
+                    >
                       {getBillingLineCategory(line)}
                     </EmrTableCellText>
                   </Badge>
@@ -1047,7 +1716,9 @@ function InvoiceLinesTable({
                   </EmrTableCellText>
                 </TableCell>
                 <TableCell className={billingAmountCellClassName}>
-                  <EmrTableCellText mode={billingInvoiceLineColumnPolicies.unitPrice.textMode}>
+                  <EmrTableCellText
+                    mode={billingInvoiceLineColumnPolicies.unitPrice.textMode}
+                  >
                     {formatAmount(line.unitPrice)}
                   </EmrTableCellText>
                 </TableCell>
@@ -1058,21 +1729,45 @@ function InvoiceLinesTable({
                     inputMode="numeric"
                     type="number"
                     value={line.quantity}
-                    onChange={(event) => onUpdateQuantity(line.id, Number(event.target.value))}
+                    onChange={(event) =>
+                      onUpdateQuantity(line.id, Number(event.target.value))
+                    }
                   />
                 </TableCell>
-                <TableCell className={cn(billingAmountCellClassName, "text-muted-foreground")}>
-                  <EmrTableCellText mode={billingInvoiceLineColumnPolicies.discount.textMode}>
+                <TableCell
+                  className={cn(
+                    billingAmountCellClassName,
+                    "text-muted-foreground",
+                  )}
+                >
+                  <EmrTableCellText
+                    mode={billingInvoiceLineColumnPolicies.discount.textMode}
+                  >
                     0원
                   </EmrTableCellText>
                 </TableCell>
-                <TableCell className={cn(billingAmountCellClassName, "font-semibold")}>
-                  <EmrTableCellText mode={billingInvoiceLineColumnPolicies.lineTotal.textMode}>
+                <TableCell
+                  className={cn(billingAmountCellClassName, "font-semibold")}
+                >
+                  <EmrTableCellText
+                    mode={billingInvoiceLineColumnPolicies.lineTotal.textMode}
+                  >
                     {formatAmount(line.lineTotal)}
                   </EmrTableCellText>
                 </TableCell>
               </TableRow>
             ))}
+            {sortedLines.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="h-24 text-center emr-text-dense text-muted-foreground"
+                >
+                  조건에 맞는 청구 항목이 없습니다. Filter에서 조건을 조정하거나
+                  초기화하세요.
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
       </div>
@@ -1089,19 +1784,39 @@ function BillingScopeNotice({ children }: { children: ReactNode }) {
 }
 
 export function BillingContent() {
-  const { detail, groups, invoices, queryInvoiceId, selectedInvoiceId } = useBillingWorkspaceData();
+  const { detail, groups, invoices, queryInvoiceId, selectedInvoiceId } =
+    useBillingWorkspaceData();
   const { session: authSession } = useAuthClient();
-  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
-  const applyInvoiceSnapshot = useBillingStore((state) => state.applyInvoiceSnapshot);
-  const combinedInvoiceIds = useBillingStore((state) => state.combinedInvoiceIds);
-  const selectedInvoiceIds = useBillingStore((state) => state.selectedInvoiceIds);
-  const clearCombinedInvoices = useBillingStore((state) => state.clearCombinedInvoices);
+  const actorHeaders = useMemo(
+    () => getDemoActorHeader(authSession),
+    [authSession],
+  );
+  const applyInvoiceSnapshot = useBillingStore(
+    (state) => state.applyInvoiceSnapshot,
+  );
+  const combinedInvoiceIds = useBillingStore(
+    (state) => state.combinedInvoiceIds,
+  );
+  const selectedInvoiceIds = useBillingStore(
+    (state) => state.selectedInvoiceIds,
+  );
+  const clearCombinedInvoices = useBillingStore(
+    (state) => state.clearCombinedInvoices,
+  );
   const selectInvoice = useBillingStore((state) => state.selectInvoice);
-  const setCombinedInvoices = useBillingStore((state) => state.setCombinedInvoices);
+  const setCombinedInvoices = useBillingStore(
+    (state) => state.setCombinedInvoices,
+  );
   const setFilter = useBillingStore((state) => state.setFilter);
-  const toggleInvoiceSelection = useBillingStore((state) => state.toggleInvoiceSelection);
-  const updateInvoiceLineQuantity = useBillingStore((state) => state.updateInvoiceLineQuantity);
-  const [linePersistenceState, setLinePersistenceState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const toggleInvoiceSelection = useBillingStore(
+    (state) => state.toggleInvoiceSelection,
+  );
+  const updateInvoiceLineQuantity = useBillingStore(
+    (state) => state.updateInvoiceLineQuantity,
+  );
+  const [linePersistenceState, setLinePersistenceState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
 
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
@@ -1121,7 +1836,10 @@ export function BillingContent() {
     );
   }
 
-  async function handleUpdateInvoiceLineQuantity(lineId: string, quantity: number) {
+  async function handleUpdateInvoiceLineQuantity(
+    lineId: string,
+    quantity: number,
+  ) {
     if (!detail) return;
     const safeQuantity = Math.max(1, Math.round(quantity * 1000) / 1000 || 1);
     updateInvoiceLineQuantity(lineId, safeQuantity);
@@ -1148,7 +1866,10 @@ export function BillingContent() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-4 p-4">
           <BillingTitleCard detail={detail} />
-          <GuardianGroups groups={groups} selectedGuardianId={detail.guardian?.id} />
+          <GuardianGroups
+            groups={groups}
+            selectedGuardianId={detail.guardian?.id}
+          />
           <CombinePanel
             group={detail.guardianGroup}
             selectedInvoiceIds={selectedInvoiceIds}
@@ -1182,14 +1903,18 @@ function SummaryLine({
 }) {
   return (
     <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[var(--emr-line-subtle)] emr-text-dense">
-      <span className={muted ? "text-muted-foreground" : "text-[var(--emr-text-secondary)]"}>
+      <span
+        className={
+          muted ? "text-muted-foreground" : "text-[var(--emr-text-secondary)]"
+        }
+      >
         {label}
       </span>
       <span
         className={cn(
           "text-right font-medium",
           emphasis && "text-primary",
-          muted && "text-muted-foreground"
+          muted && "text-muted-foreground",
         )}
       >
         {value}
@@ -1229,8 +1954,12 @@ function PaymentStatusNote({
   paidAmount: number;
   payments: Payment[];
 }) {
-  const approvedPayment = payments.find((payment) => payment.status === "approved");
-  const approvedPaymentLabel = approvedPayment ? getStatusLabel("payment", approvedPayment.status) : "승인";
+  const approvedPayment = payments.find(
+    (payment) => payment.status === "approved",
+  );
+  const approvedPaymentLabel = approvedPayment
+    ? getStatusLabel("payment", approvedPayment.status)
+    : "승인";
   const isPaid = invoiceStatus === "paid" || balance === 0;
 
   return (
@@ -1250,13 +1979,24 @@ function PaymentStatusNote({
 export function BillingRightPanel() {
   const { detail } = useBillingWorkspaceData();
   const { session: authSession } = useAuthClient();
-  const actorHeaders = useMemo(() => getDemoActorHeader(authSession), [authSession]);
-  const applyInvoiceSnapshot = useBillingStore((state) => state.applyInvoiceSnapshot);
-  const applyPaymentStatusSnapshot = useBillingStore((state) => state.applyPaymentStatusSnapshot);
+  const actorHeaders = useMemo(
+    () => getDemoActorHeader(authSession),
+    [authSession],
+  );
+  const applyInvoiceSnapshot = useBillingStore(
+    (state) => state.applyInvoiceSnapshot,
+  );
+  const applyPaymentStatusSnapshot = useBillingStore(
+    (state) => state.applyPaymentStatusSnapshot,
+  );
   const paymentMethod = useBillingStore((state) => state.paymentMethod);
   const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
-  const [confirmationState, setConfirmationState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [paymentState, setPaymentState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [confirmationState, setConfirmationState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [paymentState, setPaymentState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [paymentFailureContext, setPaymentFailureContext] =
     useState<BillingPaymentFailureContext | null>(null);
   const [pendingFinancialAction, setPendingFinancialAction] =
@@ -1288,7 +2028,9 @@ export function BillingRightPanel() {
     setConfirmationState("saved");
     return true;
   };
-  const handlePaymentMethodChange = async (nextPaymentMethod: PaymentMethod) => {
+  const handlePaymentMethodChange = async (
+    nextPaymentMethod: PaymentMethod,
+  ) => {
     setPaymentMethod(nextPaymentMethod);
     setPaymentState("saving");
     const result = await saveBillingPaymentStatus({
@@ -1374,24 +2116,52 @@ export function BillingRightPanel() {
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-4 py-3">
-          <div className="emr-text-metadata text-muted-foreground">{detail.invoice.invoiceNo}</div>
-          <div className="mt-1 text-[18px] font-semibold">{formatAmount(detail.invoice.totalAmount)}</div>
+          <div className="emr-text-metadata text-muted-foreground">
+            {detail.invoice.invoiceNo}
+          </div>
+          <div className="mt-1 text-[18px] font-semibold">
+            {formatAmount(detail.invoice.totalAmount)}
+          </div>
           <div className="mt-1 emr-text-metadata text-muted-foreground">
             {getInvoiceStatusDescription(detail.invoice.status, balance)}
           </div>
 
           <div className="mt-4">
-            <SummaryLine label="청구액" value={formatAmount(detail.invoice.totalAmount)} emphasis />
-            <SummaryLine label="수납액" value={formatAmount(detail.paidAmount)} emphasis={detail.paidAmount > 0} />
-            <SummaryLine label="미납액" value={formatAmount(balance)} emphasis={balance > 0} />
-            <SummaryLine label="할인" value={formatAmount(detail.invoice.discountAmount)} />
-            <SummaryLine label="발행" value={formatShortDateTime(detail.invoice.issuedAt)} />
+            <SummaryLine
+              label="청구액"
+              value={formatAmount(detail.invoice.totalAmount)}
+              emphasis
+            />
+            <SummaryLine
+              label="수납액"
+              value={formatAmount(detail.paidAmount)}
+              emphasis={detail.paidAmount > 0}
+            />
+            <SummaryLine
+              label="미납액"
+              value={formatAmount(balance)}
+              emphasis={balance > 0}
+            />
+            <SummaryLine
+              label="할인"
+              value={formatAmount(detail.invoice.discountAmount)}
+            />
+            <SummaryLine
+              label="발행"
+              value={formatShortDateTime(detail.invoice.issuedAt)}
+            />
           </div>
 
-          <div className="mt-5 emr-text-dense font-semibold">읽기 전용 수납 정보</div>
+          <div className="mt-5 emr-text-dense font-semibold">
+            읽기 전용 수납 정보
+          </div>
           <div className="mt-2 rounded-md border bg-[var(--emr-surface-muted)] px-3">
             <SummaryLine label="영수증 금액" value="미연동" muted />
-            <SummaryLine label="VAT 세부" value={formatAmount(detail.invoice.taxAmount)} muted />
+            <SummaryLine
+              label="VAT 세부"
+              value={formatAmount(detail.invoice.taxAmount)}
+              muted
+            />
             <SummaryLine label="부분 결제 입력" value="미지원" muted />
           </div>
 
@@ -1417,8 +2187,8 @@ export function BillingRightPanel() {
               actionLabel="청구 확정 다시 시도"
               onRetry={() => setPendingFinancialAction("issue_invoice")}
             >
-              금액과 항목은 화면에 남아 있지만 서버 저장은 완료되지 않았어. 실제 PG, VAT, 영수증
-              연동은 아직 없는 MVP 범위야.
+              금액과 항목은 화면에 남아 있지만 서버 저장은 완료되지 않았어. 실제
+              PG, VAT, 영수증 연동은 아직 없는 MVP 범위야.
             </BillingPaymentErrorMessage>
           ) : null}
           {paymentState === "error" ? (
@@ -1442,11 +2212,14 @@ export function BillingRightPanel() {
                 }
 
                 setPendingFinancialAction(
-                  paymentFailureContext === "mark_unpaid" ? "mark_unpaid" : "mark_paid"
+                  paymentFailureContext === "mark_unpaid"
+                    ? "mark_unpaid"
+                    : "mark_paid",
                 );
               }}
             >
-              수납 상태는 아직 확정되지 않았어. 결제 수단과 금액을 확인한 뒤 다시 시도해.
+              수납 상태는 아직 확정되지 않았어. 결제 수단과 금액을 확인한 뒤
+              다시 시도해.
             </BillingPaymentErrorMessage>
           ) : null}
         </div>
@@ -1522,7 +2295,9 @@ function BillingFinancialPreflightDialog({
   paymentState: "idle" | "saving" | "saved" | "error";
 }) {
   const isIssueAction = action === "issue_invoice";
-  const isSaving = isIssueAction ? confirmationState === "saving" : paymentState === "saving";
+  const isSaving = isIssueAction
+    ? confirmationState === "saving"
+    : paymentState === "saving";
   const amount = isIssueAction ? detail.invoice.totalAmount : balance;
   const lineCount = detail.invoiceLines.length;
   const dialogTitle =
@@ -1544,7 +2319,11 @@ function BillingFinancialPreflightDialog({
         ? "미납 저장 중"
         : "수납 저장 중";
   const nextStateLabel =
-    action === "issue_invoice" ? "청구확정" : action === "mark_unpaid" ? "미납" : "수납완료";
+    action === "issue_invoice"
+      ? "청구확정"
+      : action === "mark_unpaid"
+        ? "미납"
+        : "수납완료";
 
   return (
     <Dialog open={action !== null} onOpenChange={onOpenChange}>
@@ -1554,33 +2333,59 @@ function BillingFinancialPreflightDialog({
         description="금액 상태가 바뀌는 financial CTA라서 저장 전에 보호자, 청구서, 금액, MVP 경계를 확인해."
         footerMeta="실제 PG, VAT, 영수증, 환불, 정산 연동은 이번 MVP 범위 밖이야."
         primaryAction={
-          <Button type="button" size="sm" disabled={isSaving} onClick={onConfirm}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSaving}
+            onClick={onConfirm}
+          >
             {isSaving ? savingLabel : primaryLabel}
           </Button>
         }
         secondaryAction={
-          <Button type="button" size="sm" variant="outline" disabled={isSaving} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isSaving}
+            onClick={() => onOpenChange(false)}
+          >
             취소
           </Button>
         }
       >
         <div className="grid gap-2 rounded-md border bg-[var(--emr-surface-muted)] px-3 py-2">
-          <BillingPreflightLine label="청구서" value={detail.invoice.invoiceNo} />
+          <BillingPreflightLine
+            label="청구서"
+            value={detail.invoice.invoiceNo}
+          />
           <BillingPreflightLine
             label="보호자 / 환자"
             value={`${detail.guardian?.name ?? "보호자 미지정"} / ${detail.patient?.name ?? "환자 미상"}`}
           />
           <BillingPreflightLine label="청구 항목" value={`${lineCount}건`} />
-          <BillingPreflightLine label="확인 금액" value={formatAmount(amount)} emphasis />
-          <BillingPreflightLine label="결제 수단" value={getBillingPaymentMethodLabel(paymentMethod)} />
-          <BillingPreflightLine label="변경 후 상태" value={nextStateLabel} emphasis />
+          <BillingPreflightLine
+            label="확인 금액"
+            value={formatAmount(amount)}
+            emphasis
+          />
+          <BillingPreflightLine
+            label="결제 수단"
+            value={getBillingPaymentMethodLabel(paymentMethod)}
+          />
+          <BillingPreflightLine
+            label="변경 후 상태"
+            value={nextStateLabel}
+            emphasis
+          />
         </div>
         <EmrInlineAlert
           severity="warning"
           title="저장 실패 시 상태는 확정되지 않아"
           className="mt-3 emr-text-metadata"
         >
-          실패하면 이 패널에 다시 시도 안내를 남기고, 실제 결제나 영수증 발행이 된 것처럼 표시하지 않아.
+          실패하면 이 패널에 다시 시도 안내를 남기고, 실제 결제나 영수증 발행이
+          된 것처럼 표시하지 않아.
         </EmrInlineAlert>
       </EmrDialogShell>
     </Dialog>
@@ -1599,7 +2404,11 @@ function BillingPreflightLine({
   return (
     <div className="flex min-h-7 items-center justify-between gap-3 emr-text-metadata">
       <span className="text-[var(--emr-text-tertiary)]">{label}</span>
-      <span className={cn("text-right font-medium", emphasis && "text-primary")}>{value}</span>
+      <span
+        className={cn("text-right font-medium", emphasis && "text-primary")}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -1633,7 +2442,11 @@ function BillingPaymentActionFooter({
         disabled={confirmationState === "saving"}
         onClick={onIssueInvoice}
       >
-        {confirmationState === "saving" ? "확정 중" : confirmationState === "saved" ? "확정됨" : "청구 확정"}
+        {confirmationState === "saving"
+          ? "확정 중"
+          : confirmationState === "saved"
+            ? "확정됨"
+            : "청구 확정"}
       </Button>
       <Button
         className="col-span-2"

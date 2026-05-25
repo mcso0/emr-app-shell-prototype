@@ -2,7 +2,12 @@
 
 import * as React from "react";
 
-import { ChevronDownIcon, ChevronUpIcon, FilterIcon, MenuIcon } from "@/components/icons";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  FilterIcon,
+  MenuIcon,
+} from "@/components/icons";
 import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type {
@@ -11,7 +16,10 @@ import type {
   EmrTableHeaderInteraction,
 } from "@/components/emr/table-density";
 
-type EmrTableHeaderCellProps = Omit<React.ComponentProps<typeof TableHead>, "children"> & {
+type EmrTableHeaderCellProps = Omit<
+  React.ComponentProps<typeof TableHead>,
+  "children"
+> & {
   align?: "left" | "center" | "right";
   children: React.ReactNode;
   filterActive?: boolean;
@@ -26,6 +34,7 @@ type EmrTableHeaderCellProps = Omit<React.ComponentProps<typeof TableHead>, "chi
   resize?: EmrColumnResize;
   resizeLabel?: string;
   sortDirection?: "asc" | "desc";
+  sortLabel?: string;
 };
 
 type EmrTableCellTextProps = {
@@ -70,11 +79,14 @@ export function EmrTableHeaderCell({
   resize = "none",
   resizeLabel,
   sortDirection,
+  sortLabel,
   style,
   ...props
 }: EmrTableHeaderCellProps) {
   const label = getStringLabel(children);
-  const resizable = resize === "data-column" && Boolean(onResizeMouseDown || onResizeTouchStart);
+  const resizable =
+    resize === "data-column" &&
+    Boolean(onResizeMouseDown || onResizeTouchStart);
   const sortable = Boolean(onSort);
   const filterable = Boolean(onFilter);
   const menuable = Boolean(onMenu);
@@ -88,7 +100,7 @@ export function EmrTableHeaderCell({
         "emr-table-header-cell emr-text-body relative select-none bg-[var(--emr-surface-muted)] font-medium text-muted-foreground",
         align === "right" && "text-right",
         align === "center" && "text-center",
-        className
+        className,
       )}
       style={style}
       {...props}
@@ -97,7 +109,7 @@ export function EmrTableHeaderCell({
         className={cn(
           "emr-table-cell-content flex min-w-0 items-center gap-1",
           align === "right" && "justify-end",
-          align === "center" && "justify-center"
+          align === "center" && "justify-center",
         )}
       >
         <span className="min-w-0 truncate">{children}</span>
@@ -105,7 +117,8 @@ export function EmrTableHeaderCell({
           <button
             data-row-interactive="true"
             type="button"
-            aria-label={`${label} 정렬`}
+            aria-label={sortLabel ?? `${label} 정렬`}
+            title={sortLabel ?? `${label} 정렬`}
             className="inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
             onClick={(event) => {
               event.stopPropagation();
@@ -123,7 +136,7 @@ export function EmrTableHeaderCell({
             aria-pressed={filterActive}
             className={cn(
               "inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-              filterActive && "bg-[var(--emr-state-selected)] text-foreground"
+              filterActive && "bg-[var(--emr-state-selected)] text-foreground",
             )}
             onClick={(event) => {
               event.stopPropagation();
@@ -141,7 +154,7 @@ export function EmrTableHeaderCell({
             aria-pressed={menuActive}
             className={cn(
               "inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-              menuActive && "bg-[var(--emr-state-selected)] text-foreground"
+              menuActive && "bg-[var(--emr-state-selected)] text-foreground",
             )}
             onClick={(event) => {
               event.stopPropagation();
@@ -177,7 +190,8 @@ export function EmrTableCellText({
   title,
 }: EmrTableCellTextProps) {
   const Component = as;
-  const textTitle = title ?? fullText ?? (typeof children === "string" ? children : undefined);
+  const textTitle =
+    title ?? fullText ?? (typeof children === "string" ? children : undefined);
 
   return (
     <Component
@@ -186,11 +200,13 @@ export function EmrTableCellText({
       className={cn(
         "min-w-0 max-w-full",
         mode === "one-line" && "block truncate",
-        mode === "two-line-if-long" && "line-clamp-2 whitespace-normal break-words",
+        mode === "two-line-if-long" &&
+          "line-clamp-2 whitespace-normal break-words",
         mode === "always-multiline" && "block whitespace-normal break-words",
         mode === "badge-wrap" && "flex flex-wrap gap-1 overflow-hidden",
-        mode === "full-on-demand" && "line-clamp-2 whitespace-normal break-words",
-        className
+        mode === "full-on-demand" &&
+          "line-clamp-2 whitespace-normal break-words",
+        className,
       )}
     >
       {children}
