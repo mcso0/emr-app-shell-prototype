@@ -326,6 +326,12 @@ Implementation guidance:
 - The pilot keeps scalar cells one-line by default and allows limited two-line previews for order names and warning/change messages.
 - Checkbox, assignment control, and workflow action columns are excluded from resize affordances. Wider table adoption remains out of scope for DEN-264.
 
+### DEN-265 Chart/order Adoption
+
+- `src/features/chart/module.tsx` applies `EmrTableHeaderCell` and `EmrTableCellText` to the chart/order dense clinical table.
+- Chart/order column roles are kept local to the table: checkbox/action columns stay static with resize excluded; scalar data columns stay one-line; order names and diagnosis names allow limited `two-line-if-long` previews.
+- DEN-265 does not add live sort/filter behavior and does not broaden the primitive adoption to unrelated EMR tables.
+
 ## Implementation Gate
 
 Before Project 12 implementation issues:

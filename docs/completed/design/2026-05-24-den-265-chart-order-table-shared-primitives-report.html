@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-265 Chart/order Table Shared Primitive Adoption</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #18181b;
+        font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+      section {
+        margin-top: 20px;
+        border: 1px solid #d8dde5;
+        border-radius: 12px;
+        background: #fff;
+        padding: 22px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 6px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.92em;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+        border: 1px solid #d8dde5;
+        border-radius: 10px;
+      }
+      .meta {
+        margin-top: 8px;
+        color: #5f6673;
+        font-size: 13px;
+      }
+      .summary {
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-265 Chart/order Table Shared Primitive Adoption</h1>
+      <p class="meta">2026-05-24 · Project 12 CLAiR EMR Table Density &amp; Data Grid Ergonomics</p>
+
+      <section>
+        <h2>요약</h2>
+        <p class="summary">
+          DEN-264에서 검증한 shared table header/cell text primitive를 진료/차트의 처방/오더 테이블에 제한 적용했다.
+        </p>
+        <p>
+          이 변경으로 차트 오더 테이블도 column role, resize 제외 기준, 1행/2행 텍스트 표시 기준을 shared API로 표현하게 됐다. 실제 정렬/필터 동작이나 전체 테이블 확장은 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>ChartOrderTable</code> header를 local column role metadata와 <code>EmrTableHeaderCell</code>로 구성했다.</li>
+          <li>checkbox와 작업 column은 <code>resize="none"</code>으로 두고, scalar/data column만 <code>data-column</code> 정책을 기록했다.</li>
+          <li>group, 금액, 담당 수의사 같은 scalar text는 <code>EmrTableCellText mode="one-line"</code>을 사용한다.</li>
+          <li>오더명과 진단명은 의미 손실이 큰 clinical text라 <code>two-line-if-long</code>으로 제한적 2행 preview를 허용했다.</li>
+          <li>청구서명/수량 input, order draft update, Order 확정/청구, 삭제 dialog 흐름은 그대로 유지했다.</li>
+          <li>DEN-265 work item을 <code>docs/work/design-system/DESIGN-SYSTEM-PR-022-chart-order-table-shared-primitives.md</code>로 기록했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Evidence</h2>
+        <p>
+          Browser QA는 mock auth 로그인 후 <code>/w/clair-demo/treatment?scenario=kong-vomit&amp;patientId=patient-kong&amp;encounterId=encounter-kong-260501&amp;modulePanel=open&amp;aside=closed&amp;right=closed</code>에서 수행했다. evidence는 로그인 화면이 아니라 실제 진료/차트 처방/오더 테이블을 캡처한다.
+        </p>
+        <img src="evidence/2026-05-24-den-265-chart-order-table-primitives.png" alt="DEN-265 chart/order table primitive adoption evidence" />
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npm run lint</code>: 통과. 기존 warning 5개는 이번 변경 범위 밖이다.</li>
+          <li><code>npx tsc --noEmit</code>: 통과.</li>
+          <li><code>npx playwright test tests/chart.spec.ts -g "chart workspace renders queue, history, SOAP, assessment, and orders"</code>: 1개 통과.</li>
+          <li><code>npx playwright test tests/chart.spec.ts -g "chart (safety context and confirmation dialogs identify the active patient|order table edits quantity, commits draft changes, and deletes rows|workspace renders queue, history, SOAP, assessment, and orders)"</code>: 3개 통과.</li>
+          <li>Browser QA: chart/order route, table presence, header role, resize exclusion, one-line/two-line text mode, mock auth evidence 확인. Console warning은 기존 Tiptap duplicate extension warning 2건만 관찰됐다.</li>
+          <li><code>npm run docs:check</code>: 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 제외와 리스크</h2>
+        <ul>
+          <li>실제 sort/filter 동작은 추가하지 않았다.</li>
+          <li>billing, customer, hospital admin, lab/imaging, inpatient 등 다른 테이블에는 확장하지 않았다.</li>
+          <li>Supabase, DB migration, RLS, server enforcement, role policy, live persistence는 건드리지 않았다.</li>
+          <li>현재 브랜치에는 DEN-265 범위 밖의 workspace invitation/migration 변경이 별도로 감지됐고, 이번 작업에서는 수정하거나 되돌리지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>추천 다음 단계</h2>
+        <p>
+          Human Review에서 chart/order density와 2행 preview가 실제 진료 화면 스캔성에 맞는지 확인한 뒤, billing 또는 다른 dense table로 확장할지 별도 이슈로 판단한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

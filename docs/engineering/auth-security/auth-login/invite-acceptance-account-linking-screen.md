@@ -49,6 +49,7 @@ DEN-246 replaces the two equal account-choice cards with an email-first acceptan
 - `/api/auth/invite-otp/request` validates that the request is tied to a pending invitation, the locked email matches the invite email, and `next` is an internal `/invite/...` path before the client requests OTP.
 - Supabase mode uses `signInWithOtp` and `verifyOtp`; local/mock mode exposes a deterministic `000000` demo code for browser verification without sending real email.
 - `/auth/confirm` handles configured Supabase email links with `token_hash`, verifies the token, and redirects only to the safe invite path.
+- The invite accept DB transaction upserts the verified OTP identity into `public.users` before activating the workspace membership, so a newly created Supabase Auth user can complete the same invite flow as an existing app user.
 - The auth step decides whether the invited email belongs to an existing account or needs new account creation.
 - The invite page does not ask the user to choose `new` vs `existing` before email verification.
 - Local/mock mode still creates a mock session for `invitee:[email]`, maps the invitation role to the closest mock role, persists active workspace membership, and redirects to `/w/[workspaceId]/reception`.
@@ -75,7 +76,7 @@ This work does not implement:
 - Email provider templates or delivery.
 - MFA.
 - Production invite token verification.
-- New DB/RLS migration.
+- New RLS policy migration.
 - Remote Supabase or production execution.
 - Real hospital staff data.
 
@@ -108,3 +109,4 @@ The local-first screen contract above remains useful for mock/demo coverage, but
 - `npm run build` passed.
 - `npm run security:secrets` passed.
 - `git diff --check` passed.
+- 2026-05-24 follow-up: `npx playwright test tests/workspace-invitation-lifecycle-server.spec.ts -g "links OTP-authenticated" --reporter=line` passed after adding the local-first app-user upsert migration contract.

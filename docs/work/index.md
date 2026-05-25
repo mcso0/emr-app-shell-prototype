@@ -64,6 +64,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-019 | human_review | design-system | P0 | Project 06 / DEN-129 | `docs/work/design-system/DESIGN-SYSTEM-PR-019-hospital-admin-table-form-standardization.md` |
 | DESIGN-SYSTEM-PR-020 | human_review | design-system | P0 | Project 06 / DEN-131 | `docs/work/design-system/DESIGN-SYSTEM-PR-020-inpatient-table-status-standardization.md` |
 | DESIGN-SYSTEM-PR-021 | human_review | design-system | P0 | Project 12 / DEN-264 | `docs/work/design-system/DESIGN-SYSTEM-PR-021-shared-table-header-cell-text-primitives.md` |
+| DESIGN-SYSTEM-PR-022 | human_review | design-system | P0 | Project 12 / DEN-265 | `docs/work/design-system/DESIGN-SYSTEM-PR-022-chart-order-table-shared-primitives.md` |
 | HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |
