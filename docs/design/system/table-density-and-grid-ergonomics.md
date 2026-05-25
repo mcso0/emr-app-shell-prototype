@@ -39,11 +39,11 @@ Research conclusions:
 
 Use three density modes:
 
-| Mode | Korean UI copy | Intended use | Row target | Header target |
-|---|---|---|---:|---:|
-| `compact` | 좁게 | clinical/order/admin tables where visible row count matters | 36px | 36px |
-| `standard` | 기본 | default operational tables | 44px | 40px |
-| `comfortable` | 넓게 | review-heavy rows, multi-line summaries, low row count | 52px | 44px |
+| Mode          | Korean UI copy | Intended use                                                | Row target | Header target |
+| ------------- | -------------- | ----------------------------------------------------------- | ---------: | ------------: |
+| `compact`     | 좁게           | clinical/order/admin tables where visible row count matters |       36px |          36px |
+| `standard`    | 기본           | default operational tables                                  |       44px |          40px |
+| `comfortable` | 넓게           | review-heavy rows, multi-line summaries, low row count      |       52px |          44px |
 
 Density controls:
 
@@ -76,11 +76,11 @@ Runtime source:
 
 Density API:
 
-| Prop | Values | Default | Notes |
-|---|---|---|---|
-| `density` | `compact`, `standard`, `comfortable` | `standard` | Maps to shared row/header height and cell padding tokens. |
-| `layout` | `fill`, `scroll` | `fill` | `scroll` gives the outer wrapper horizontal overflow and the table an unbroken width. |
-| `minWidth` | number or CSS length | none | Required for `scroll` tables with meaningful column minimums. |
+| Prop       | Values                               | Default    | Notes                                                                                 |
+| ---------- | ------------------------------------ | ---------- | ------------------------------------------------------------------------------------- |
+| `density`  | `compact`, `standard`, `comfortable` | `standard` | Maps to shared row/header height and cell padding tokens.                             |
+| `layout`   | `fill`, `scroll`                     | `fill`     | `scroll` gives the outer wrapper horizontal overflow and the table an unbroken width. |
+| `minWidth` | number or CSS length                 | none       | Required for `scroll` tables with meaningful column minimums.                         |
 
 View option copy:
 
@@ -181,13 +181,13 @@ Acceptance rules:
 
 Define each column with a header role:
 
-| Role | Use for | Allowed affordance |
-|---|---|---|
-| `static` | checkbox, action, icon-only, memo, summary, alert/change rows | no sort/filter/menu |
-| `sortable` | stable scalar values: name, date/time, amount, quantity, status order | sort indicator and keyboard sort |
-| `filterable` | status, 담당자, category/type, department, source | filter trigger or menu item |
-| `menu` | optional column actions such as hide/pin/copy in admin-heavy grids | explicit menu button only |
-| `compound` | cells combining multiple values | static by default; split if sort/filter is needed |
+| Role         | Use for                                                               | Allowed affordance                                |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------- |
+| `static`     | checkbox, action, icon-only, memo, summary, alert/change rows         | no sort/filter/menu                               |
+| `sortable`   | stable scalar values: name, date/time, amount, quantity, status order | sort indicator and keyboard sort                  |
+| `filterable` | status, 담당자, category/type, department, source                     | filter trigger or menu item                       |
+| `menu`       | optional column actions such as hide/pin/copy in admin-heavy grids    | explicit menu button only                         |
+| `compound`   | cells combining multiple values                                       | static by default; split if sort/filter is needed |
 
 Header interaction gates:
 
@@ -236,12 +236,12 @@ Reference conclusions:
 
 CLAiR table classes:
 
-| Class | Surfaces | Header behavior |
-|---|---|---|
-| `clinical-review` | 임상병리 검사 결과, 영상검사 Order 상세 | minimal sorting; no column menu by default; resize only if content routinely overflows |
-| `operational-worklist` | 조제/처치, 입원, 진료/차트 오더 작업 | sortable scalar columns; toolbar filters; resize for eligible data columns |
-| `master-data-grid` | 고객관리, 병원관리 Order 관리 | sort/filter/menu/column visibility can be enabled through shared config |
-| `financial-edit-grid` | 수납 청구 항목 | limited sort/filter; protect amount/quantity editing and totals alignment |
+| Class                  | Surfaces                                | Header behavior                                                                        |
+| ---------------------- | --------------------------------------- | -------------------------------------------------------------------------------------- |
+| `clinical-review`      | 임상병리 검사 결과, 영상검사 Order 상세 | minimal sorting; no column menu by default; resize only if content routinely overflows |
+| `operational-worklist` | 조제/처치, 입원, 진료/차트 오더 작업    | sortable scalar columns; toolbar filters; resize for eligible data columns             |
+| `master-data-grid`     | 고객관리, 병원관리 Order 관리           | sort/filter/menu/column visibility can be enabled through shared config                |
+| `financial-edit-grid`  | 수납 청구 항목                          | limited sort/filter; protect amount/quantity editing and totals alignment              |
 
 Recommended shared API additions for the next implementation issue:
 
@@ -296,13 +296,13 @@ Reference conclusions:
 
 Text display modes:
 
-| Mode | Use for | Behavior |
-|---|---|---|
-| `one-line` | IDs, names, status labels, 담당자, dates, amounts, short order names, phone numbers | single line, ellipsis on overflow |
-| `two-line-if-long` | order names, 진단명, 입실 메모, 복약지도, clinical caution summaries | clamp to 2 lines only when content exceeds one line |
-| `always-multiline` | row detail panels, comments, 판독의견 editors, 종합소견 text areas | not used inside dense table body cells by default |
-| `badge-wrap` | multiple status/caution badges | badges may wrap to 2 lines in standard/comfortable density; compact prefers horizontal scroll or overflow containment |
-| `full-on-demand` | clinically important long text that may be truncated | one- or two-line preview plus tooltip, popover, side detail, or drawer full text |
+| Mode               | Use for                                                                             | Behavior                                                                                                              |
+| ------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `one-line`         | IDs, names, status labels, 담당자, dates, amounts, short order names, phone numbers | single line, ellipsis on overflow                                                                                     |
+| `two-line-if-long` | order names, 진단명, 입실 메모, 복약지도, clinical caution summaries                | clamp to 2 lines only when content exceeds one line                                                                   |
+| `always-multiline` | row detail panels, comments, 판독의견 editors, 종합소견 text areas                  | not used inside dense table body cells by default                                                                     |
+| `badge-wrap`       | multiple status/caution badges                                                      | badges may wrap to 2 lines in standard/comfortable density; compact prefers horizontal scroll or overflow containment |
+| `full-on-demand`   | clinically important long text that may be truncated                                | one- or two-line preview plus tooltip, popover, side detail, or drawer full text                                      |
 
 Density interaction:
 
@@ -331,6 +331,15 @@ Implementation guidance:
 - `src/features/chart/module.tsx` applies `EmrTableHeaderCell` and `EmrTableCellText` to the chart/order dense clinical table.
 - Chart/order column roles are kept local to the table: checkbox/action columns stay static with resize excluded; scalar data columns stay one-line; order names and diagnosis names allow limited `two-line-if-long` previews.
 - DEN-265 does not add live sort/filter behavior and does not broaden the primitive adoption to unrelated EMR tables.
+
+### DEN-266 Billing Invoice Table Adoption
+
+- `src/features/billing/module.tsx` applies `EmrTableHeaderCell` and `EmrTableCellText` to the billing invoice line table only.
+- The billing invoice line table records local column policy metadata for header interaction, resize policy, and text mode.
+- The table follows the `financial-edit-grid` policy: invoice item descriptions may use `two-line-if-long`, while category, unit price, discount, and line total stay `one-line`.
+- Quantity remains an editable input column and is excluded from resize affordance policy.
+- Display-only discount and line-total columns are excluded from resize affordance policy.
+- The adoption does not add real sort, filter, column menu, resize behavior, payment-provider behavior, persistence, DB, RLS, or server enforcement changes.
 
 ## Implementation Gate
 

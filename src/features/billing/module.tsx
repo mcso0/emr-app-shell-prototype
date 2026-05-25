@@ -11,6 +11,7 @@ import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
+import { EmrTableCellText, EmrTableHeaderCell } from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrSidePanelCard,
@@ -37,7 +38,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -61,7 +61,12 @@ import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { EmrTableDensity } from "@/components/emr/table-density";
+import type {
+  EmrColumnResize,
+  EmrTableCellTextMode,
+  EmrTableDensity,
+  EmrTableHeaderInteraction,
+} from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 import type { InvoiceLine, InvoiceStatus, Payment, PaymentMethod } from "@/types/emr-domain";
 
@@ -195,6 +200,56 @@ const billingInvoiceLineColumns = {
   lineTotal: "w-[116px]",
 } as const;
 const billingAmountCellClassName = "whitespace-nowrap text-right tabular-nums";
+type BillingInvoiceLineColumnKey = keyof typeof billingInvoiceLineColumns;
+type BillingInvoiceLineColumnPolicy = {
+  align?: "left" | "center" | "right";
+  headerInteraction: EmrTableHeaderInteraction;
+  label: string;
+  resize: EmrColumnResize;
+  textMode: EmrTableCellTextMode;
+};
+const billingInvoiceLineColumnPolicies: Record<BillingInvoiceLineColumnKey, BillingInvoiceLineColumnPolicy> = {
+  category: {
+    headerInteraction: "filterable",
+    label: "업무",
+    resize: "data-column",
+    textMode: "one-line",
+  },
+  description: {
+    headerInteraction: "compound",
+    label: "항목",
+    resize: "data-column",
+    textMode: "two-line-if-long",
+  },
+  unitPrice: {
+    align: "right",
+    headerInteraction: "sortable",
+    label: "단가",
+    resize: "data-column",
+    textMode: "one-line",
+  },
+  quantity: {
+    align: "center",
+    headerInteraction: "static",
+    label: "수량",
+    resize: "none",
+    textMode: "one-line",
+  },
+  discount: {
+    align: "right",
+    headerInteraction: "static",
+    label: "할인",
+    resize: "none",
+    textMode: "one-line",
+  },
+  lineTotal: {
+    align: "right",
+    headerInteraction: "static",
+    label: "청구금액",
+    resize: "none",
+    textMode: "one-line",
+  },
+};
 
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
@@ -947,35 +1002,55 @@ function InvoiceLinesTable({
         실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과 청구 확정만 저장합니다.
       </BillingScopeNotice>
       <div>
-        <Table density={density} layout="scroll" minWidth={720} className="table-fixed">
+        <Table
+          aria-label="청구 항목 테이블"
+          density={density}
+          layout="scroll"
+          minWidth={720}
+          className="table-fixed"
+        >
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className={billingInvoiceLineColumns.category}>업무</TableHead>
-              <TableHead className={billingInvoiceLineColumns.description}>항목</TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.unitPrice, billingAmountCellClassName)}>
-                단가
-              </TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.quantity, "text-center")}>
-                수량
-              </TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.discount, billingAmountCellClassName)}>
-                할인
-              </TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.lineTotal, billingAmountCellClassName)}>
-                청구금액
-              </TableHead>
+              {Object.entries(billingInvoiceLineColumnPolicies).map(([columnKey, policy]) => (
+                <EmrTableHeaderCell
+                  key={columnKey}
+                  align={policy.align}
+                  className={cn(
+                    billingInvoiceLineColumns[columnKey as BillingInvoiceLineColumnKey],
+                    policy.align === "right" && billingAmountCellClassName
+                  )}
+                  interaction={policy.headerInteraction}
+                  resize={policy.resize}
+                >
+                  {policy.label}
+                </EmrTableHeaderCell>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedLines.map((line) => (
               <TableRow key={line.id}>
                 <TableCell className={billingInvoiceLineColumns.category}>
-                  <Badge variant="outline">{getBillingLineCategory(line)}</Badge>
+                  <Badge variant="outline">
+                    <EmrTableCellText as="span" mode={billingInvoiceLineColumnPolicies.category.textMode}>
+                      {getBillingLineCategory(line)}
+                    </EmrTableCellText>
+                  </Badge>
                 </TableCell>
-                <TableCell className={cn(billingInvoiceLineColumns.description, "truncate font-medium")}>
-                  {line.description}
+                <TableCell className={billingInvoiceLineColumns.description}>
+                  <EmrTableCellText
+                    mode={billingInvoiceLineColumnPolicies.description.textMode}
+                    fullText={line.description}
+                    className="font-medium"
+                  >
+                    {line.description}
+                  </EmrTableCellText>
                 </TableCell>
-                <TableCell className={billingAmountCellClassName}>{formatAmount(line.unitPrice)}</TableCell>
+                <TableCell className={billingAmountCellClassName}>
+                  <EmrTableCellText mode={billingInvoiceLineColumnPolicies.unitPrice.textMode}>
+                    {formatAmount(line.unitPrice)}
+                  </EmrTableCellText>
+                </TableCell>
                 <TableCell className={billingInvoiceLineColumns.quantity}>
                   <Input
                     aria-label={`${line.description} 수량`}
@@ -987,10 +1062,14 @@ function InvoiceLinesTable({
                   />
                 </TableCell>
                 <TableCell className={cn(billingAmountCellClassName, "text-muted-foreground")}>
-                  0원
+                  <EmrTableCellText mode={billingInvoiceLineColumnPolicies.discount.textMode}>
+                    0원
+                  </EmrTableCellText>
                 </TableCell>
                 <TableCell className={cn(billingAmountCellClassName, "font-semibold")}>
-                  {formatAmount(line.lineTotal)}
+                  <EmrTableCellText mode={billingInvoiceLineColumnPolicies.lineTotal.textMode}>
+                    {formatAmount(line.lineTotal)}
+                  </EmrTableCellText>
                 </TableCell>
               </TableRow>
             ))}
