@@ -1,7 +1,7 @@
 # Invite Acceptance Account Linking Screen
 
-Updated: 2026-05-23
-Linear: DEN-160, DEN-246
+Updated: 2026-05-24
+Linear: DEN-160, DEN-246, DEN-268, DEN-278
 Initiative: `CLAiR EMR SaaS Launch Foundation`
 Project: `03 Invite-Based Member Onboarding`
 
@@ -9,7 +9,7 @@ Project: `03 Invite-Based Member Onboarding`
 
 This document records the local-first invite acceptance screen for staff onboarding.
 
-The screen lets an invited staff user open a valid invite link, confirm the invited email, activate the invited workspace membership through the server accept route, and enter the workspace. Invalid invitations do not create local session or membership state.
+The screen lets an invited staff user open a valid invite link, continue account setup from that confirmed invite context, activate the invited workspace membership through the server accept route, and enter the workspace. Invalid invitations do not create local session or membership state.
 
 ## Implemented Route
 
@@ -25,6 +25,12 @@ Acceptance API reused by the page:
 POST /api/workspaces/[workspaceId]/invitations/[invitationId]/accept
 ```
 
+Blocked-invite recovery API used by expired/canceled invite states:
+
+```text
+POST /api/workspaces/[workspaceId]/invitations/[invitationId]/reinvite-request
+```
+
 The page is implemented by:
 
 - `src/app/invite/[invitationId]/page.tsx`
@@ -33,27 +39,38 @@ The page is implemented by:
 
 ## UX State Table
 
-| Invitation state | Screen heading | Account action | Membership effect |
-| --- | --- | --- | --- |
-| `pending` | `초대 수락` | User continues through invited-email verification. Local/mock mode keeps a deterministic direct accept button for prototype coverage. | Calls server accept route after matching identity, creates local mock session in mock mode, stores active membership, redirects to workspace. |
-| `expired` | `초대가 만료되었습니다` | Blocked | No account or membership state is created. |
-| `canceled` | `취소된 초대입니다` | Blocked | No account or membership state is created. |
-| `accepted` | `이미 수락된 초대입니다` | Blocked | No duplicate membership is created. |
-| `missing` | `초대 링크를 확인할 수 없습니다` | Blocked | No account or membership state is created. |
+| Invitation state                    | Screen heading                   | Account action                                                                                                                           | Membership effect                                                                                                                             |
+| ----------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pending` + `accountState=new`      | `비밀번호 설정`                  | User sets a password for the invited email. The submit CTA is `워크스페이스로 이동` and stays disabled until password validation passes. | Calls server accept route after matching identity, creates local mock session in mock mode, stores active membership, redirects to workspace. |
+| `pending` + `accountState=existing` | `초대받은 계정으로 로그인`       | User logs in with the invited email. The submit CTA is `로그인` and stays disabled until a password is entered.                          | Calls server accept route after matching identity, stores active membership in mock mode, redirects to workspace.                             |
+| `expired`                           | `초대가 만료되었습니다`          | Blocked, with `관리자에게 재요청` recovery action.                                                                                       | No account or membership state is created. The re-request route validates invite state and email before returning dialog feedback.            |
+| `canceled`                          | `취소된 초대입니다`              | Blocked, with `관리자에게 재요청` recovery action.                                                                                       | No account or membership state is created. The re-request route validates invite state and email before returning dialog feedback.            |
+| `accepted`                          | `이미 수락된 초대입니다`         | Offers `워크스페이스로 이동` for the accepted workspace.                                                                                 | No duplicate membership is created.                                                                                                           |
+| `missing`                           | `초대 링크를 확인할 수 없습니다` | Blocked                                                                                                                                  | No account or membership state is created.                                                                                                    |
 
-## Email-First Account Handling
+## Invite-Link Password Handling
 
-DEN-246 replaces the two equal account-choice cards with an email-first acceptance contract. DEN-247 adds the login/signup handoff boundary:
+DEN-246 replaced the two equal account-choice cards with an email-first acceptance contract. DEN-247 added the login/signup handoff boundary. DEN-268 added password setup for invited accounts after OTP verification. DEN-278 updates the invite page so the invite email link itself establishes the invite context before the app asks for account credentials:
 
-- Supabase-backed invite flow routes unauthenticated users with `reason=invite_email_otp`, `inviteEmail`, and safe `next` context.
-- `/api/auth/invite-otp/request` validates that the request is tied to a pending invitation, the locked email matches the invite email, and `next` is an internal `/invite/...` path before the client requests OTP.
-- Supabase mode uses `signInWithOtp` and `verifyOtp`; local/mock mode exposes a deterministic `000000` demo code for browser verification without sending real email.
-- `/auth/confirm` handles configured Supabase email links with `token_hash`, verifies the token, and redirects only to the safe invite path.
-- The auth step decides whether the invited email belongs to an existing account or needs new account creation.
-- The invite page does not ask the user to choose `new` vs `existing` before email verification.
+- Pending new-account invites render password setup directly on the invite page.
+- Pending existing-account invites render invited-email password login directly on the invite page.
+- Password setup validates required input, minimum length, and confirmation match before enabling the workspace CTA.
+- Existing-account login validates that a password is present before enabling the login CTA.
+- Supabase mode uses `signUpWithPassword` or `signInWithPassword` and then calls the server accept route only for the invited email context.
 - Local/mock mode still creates a mock session for `invitee:[email]`, maps the invitation role to the closest mock role, persists active workspace membership, and redirects to `/w/[workspaceId]/reception`.
+- `/auth/confirm` remains the safe handler for configured Supabase email links with `token_hash` and redirects only to safe internal paths.
+- The legacy invite OTP login handoff remains covered for compatibility, but the invite acceptance screen no longer asks a user who opened the invite email link to request another OTP.
+- Returning members use the existing email/password login form. Google, social login, SSO, and MFA remain separate future decisions.
+- The invite page does not ask the user to choose `new` vs `existing` before email verification.
 
-Supabase Auth still owns real identity creation, password setup, email verification, recovery, and future MFA. CLAiR app state owns invitation validity, membership activation, workspace access, duplicate/conflict handling, and audit handoff.
+Supabase Auth still owns real identity creation, password hashing/storage, email verification, recovery, and future MFA. CLAiR app state owns invitation validity, membership activation, workspace access, duplicate/conflict handling, and audit handoff.
+
+## Validation
+
+- Client password setup: required password, minimum 8 characters, matching confirmation, disabled submit until valid.
+- Client existing login: required password and disabled submit until present.
+- Server re-request: validates that the target invitation exists, the submitted email matches the invited email, and the invitation is expired or canceled before queuing recovery feedback.
+- Pending, accepted, missing, and email-mismatched re-request attempts return denial responses instead of pretending recovery was queued.
 
 ## Safe Redirect
 
@@ -69,10 +86,11 @@ The screen does not accept arbitrary `next` URLs from invite links.
 
 This work does not implement:
 
-- Remote Supabase/staging OTP delivery validation.
 - Production Supabase redirect URL or email template rollout.
-- Real account existence preflight; the UX must remain generic until Supabase completes auth.
+- Real account existence preflight outside the invitation lookup contract.
 - Email provider templates or delivery.
+- Real administrator notification persistence or inbox delivery for re-request.
+- Google, social login, or SSO.
 - MFA.
 - Production invite token verification.
 - New DB/RLS migration.
@@ -81,11 +99,11 @@ This work does not implement:
 
 ## Staging Flow Update
 
-For DEN-187 staging email validation, use the current design flow as the UX and scenario-test basis:
+For DEN-278 invite-link password onboarding, use the current design flow as the UX and scenario-test basis:
 
-- `docs/design/flows/invite-acceptance-account-onboarding-flow.md`
+- `docs/design/flows/invite-link-password-onboarding-ui-prototype.html`
 
-The local-first screen contract above remains useful for mock/demo coverage, but staging Supabase UX now uses a single invited-email verification path before membership activation.
+The local-first screen contract above remains useful for mock/demo coverage. Staging Supabase should keep using the invite link as the email-confirmed context before password setup or existing-account login.
 
 ## Source References
 
@@ -93,18 +111,13 @@ The local-first screen contract above remains useful for mock/demo coverage, but
 - `docs/engineering/auth-security/auth-login/hospital-admin-staff-invitation-creation-contract.md`
 - `docs/engineering/auth-security/auth-login/workspace-member-server-route-contract.md`
 - Supabase Auth users docs: https://supabase.com/docs/guides/auth/users
-- Supabase JavaScript OTP docs: https://supabase.com/docs/reference/javascript/auth-signinwithotp
+- Supabase JavaScript sign up docs: https://supabase.com/docs/reference/javascript/auth-signup
+- Supabase JavaScript sign in with password docs: https://supabase.com/docs/reference/javascript/auth-signinwithpassword
 - Supabase redirect URL docs: https://supabase.com/docs/guides/auth/redirect-urls
 - Supabase product security docs: https://supabase.com/docs/guides/security/product-security
 
 ## Verification
 
-- Red: `npx playwright test tests/invite-acceptance.spec.ts --reporter=line` failed before the invite acceptance page existed.
-- Green: `npx playwright test tests/invite-acceptance.spec.ts --reporter=line` (`3 passed`).
-- Regression: `npx playwright test tests/invite-acceptance.spec.ts tests/workspace-invitation-lifecycle-server.spec.ts tests/workspace-invitation-server.spec.ts tests/auth.spec.ts --reporter=line` (`41 passed`).
-- `npx tsc --noEmit` passed.
-- `npm run lint` passed with existing warnings only.
-- `npm run docs:check` passed.
-- `npm run build` passed.
-- `npm run security:secrets` passed.
-- `git diff --check` passed.
+DEN-278 implementation verification is recorded in:
+
+- `docs/work/auth/AUTH-PR-043-invite-link-password-onboarding-implementation.md`

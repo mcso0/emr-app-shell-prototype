@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +15,15 @@ import {
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   MOCK_AUTH_STORAGE_KEY,
   getMockRoleLabel,
@@ -45,7 +54,6 @@ export type InviteAcceptanceScreenProps = {
 };
 
 type AccountMode = "new" | "existing";
-const inviteOtpAccountMode: AccountMode = "new";
 
 export function InviteAcceptanceScreen({
   invitationId,
@@ -56,20 +64,54 @@ export function InviteAcceptanceScreen({
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { authProvider, hydrated, session, hydrate } = useAuthClient();
+  const [invitePassword, setInvitePassword] = useState("");
+  const [invitePasswordConfirm, setInvitePasswordConfirm] = useState("");
+  const [existingPassword, setExistingPassword] = useState("");
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [passwordConfirmTouched, setPasswordConfirmTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [reinviteDialog, setReinviteDialog] = useState<
+    "success" | "failure" | null
+  >(null);
+  const [reinviteError, setReinviteError] = useState<string | null>(null);
+  const {
+    authProvider,
+    hydrated,
+    session,
+    hydrate,
+    signInWithPassword,
+    signUpWithPassword,
+  } = useAuthClient();
   const record = useMemo(
-    () => initialRecord ?? resolveInviteAcceptanceRecord({ invitationId, workspaceId, email }),
-    [email, initialRecord, invitationId, workspaceId]
+    () =>
+      initialRecord ??
+      resolveInviteAcceptanceRecord({ invitationId, workspaceId, email }),
+    [email, initialRecord, invitationId, workspaceId],
   );
   const stateCopy = getStateCopy(record);
   const usesSupabaseProvider = authProvider === "supabase";
   const supabaseSessionEmail =
-    session && "provider" in session && session.provider === "supabase" ? session.email : null;
-  const supabaseEmailMatchesInvite =
-    usesSupabaseProvider &&
-    !!record.invitation?.email &&
-    !!supabaseSessionEmail &&
-    supabaseSessionEmail.toLowerCase() === record.invitation.email.toLowerCase();
+    session && "provider" in session && session.provider === "supabase"
+      ? session.email
+      : null;
+  const isExistingAccountInvite =
+    record.status === "pending" && record.accountState === "existing";
+  const passwordValidation = validateInvitePassword(
+    invitePassword,
+    invitePasswordConfirm,
+  );
+  const showPasswordError = submitAttempted || passwordTouched;
+  const showPasswordConfirmError = submitAttempted || passwordConfirmTouched;
+  const canSubmitPasswordSetup =
+    record.status === "pending" &&
+    !!record.invitation &&
+    passwordValidation.ok &&
+    !submitting;
+  const canSubmitExistingLogin =
+    record.status === "pending" &&
+    !!record.invitation &&
+    existingPassword.length > 0 &&
+    !submitting;
 
   useEffect(() => {
     hydrate();
@@ -78,7 +120,7 @@ export function InviteAcceptanceScreen({
   function buildAccountPath() {
     const next = `${window.location.pathname}${window.location.search}`;
     const params = new URLSearchParams({
-      reason: "invite_email_otp",
+      reason: "invite_existing_account",
       next,
     });
 
@@ -89,17 +131,36 @@ export function InviteAcceptanceScreen({
     return `/login?${params.toString()}`;
   }
 
-  async function acceptInvite() {
-    if (!record.workspace || !record.invitation || record.status !== "pending") return;
+  function buildWorkspacePath() {
+    if (!record.workspace) return null;
+    return `/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`;
+  }
+
+  async function acceptInvite(
+    accountMode: AccountMode,
+    actorUserId?: string,
+    options: { supabaseEmail?: string } = {},
+  ) {
+    if (!record.workspace || !record.invitation || record.status !== "pending")
+      return;
 
     if (usesSupabaseProvider) {
-      if (!hydrated || !session) {
+      const effectiveSupabaseEmail =
+        options.supabaseEmail ?? supabaseSessionEmail;
+
+      if (!hydrated && !effectiveSupabaseEmail) {
         router.push(buildAccountPath());
         return;
       }
 
-      if (!supabaseEmailMatchesInvite) {
-        setError("초대받은 이메일 계정으로 로그인해야 이 초대를 수락할 수 있습니다.");
+      if (
+        !effectiveSupabaseEmail ||
+        effectiveSupabaseEmail.toLowerCase() !==
+          record.invitation.email.toLowerCase()
+      ) {
+        setError(
+          "초대받은 이메일 계정으로 로그인해야 이 초대를 수락할 수 있습니다.",
+        );
         return;
       }
 
@@ -114,8 +175,8 @@ export function InviteAcceptanceScreen({
             headers: {
               "content-type": "application/json",
             },
-            body: JSON.stringify({ accountMode: inviteOtpAccountMode }),
-          }
+            body: JSON.stringify({ accountMode }),
+          },
         );
         const result = (await response.json()) as {
           ok?: boolean;
@@ -123,16 +184,26 @@ export function InviteAcceptanceScreen({
         };
 
         if (response.ok && result.ok) {
-          router.replace(`/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`);
+          router.replace(
+            `/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`,
+          );
           return;
         }
 
-        if (response.status === 409 && result.denialReason === "active_membership_exists") {
-          router.replace(`/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`);
+        if (
+          response.status === 409 &&
+          result.denialReason === "active_membership_exists"
+        ) {
+          router.replace(
+            `/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`,
+          );
           return;
         }
 
-        if (response.status === 401 || result.denialReason === "unauthenticated") {
+        if (
+          response.status === 401 ||
+          result.denialReason === "unauthenticated"
+        ) {
           throw new Error("invite-login-required");
         }
 
@@ -145,7 +216,8 @@ export function InviteAcceptanceScreen({
         const message =
           caught instanceof Error && caught.message === "invite-email-mismatch"
             ? "현재 로그인한 계정은 이 초대 이메일과 일치하지 않습니다."
-            : caught instanceof Error && caught.message === "invite-login-required"
+            : caught instanceof Error &&
+                caught.message === "invite-login-required"
               ? "초대받은 이메일 계정으로 로그인한 뒤 다시 수락해 주세요."
               : "초대 수락 상태를 확인해 주세요.";
 
@@ -158,7 +230,7 @@ export function InviteAcceptanceScreen({
     setSubmitting(true);
     setError(null);
 
-    const actorUserId = `invitee:${record.invitation.email}`;
+    const nextActorUserId = actorUserId ?? `invitee:${record.invitation.email}`;
 
     try {
       const response = await fetch(
@@ -167,10 +239,10 @@ export function InviteAcceptanceScreen({
           method: "POST",
           headers: {
             "content-type": "application/json",
-            "x-clair-demo-session-user-id": actorUserId,
+            "x-clair-demo-session-user-id": nextActorUserId,
           },
-          body: JSON.stringify({ accountMode: inviteOtpAccountMode }),
-        }
+          body: JSON.stringify({ accountMode }),
+        },
       );
       const result = (await response.json()) as {
         ok?: boolean;
@@ -180,7 +252,10 @@ export function InviteAcceptanceScreen({
       };
 
       if (!response.ok || !result.ok || !result.membership) {
-        if (response.status === 401 || result.denialReason === "unauthenticated") {
+        if (
+          response.status === 401 ||
+          result.denialReason === "unauthenticated"
+        ) {
           throw new Error("invite-login-required");
         }
 
@@ -189,8 +264,8 @@ export function InviteAcceptanceScreen({
 
       persistAcceptedInvite({
         record,
-        actorUserId,
-        accountMode: inviteOtpAccountMode,
+        actorUserId: nextActorUserId,
+        accountMode,
         membership: {
           ...result.membership,
           email: record.invitation.email,
@@ -201,13 +276,122 @@ export function InviteAcceptanceScreen({
         },
       });
 
-      router.replace(`/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`);
+      router.replace(
+        `/w/${record.workspace.id}/reception?modulePanel=open&aside=closed`,
+      );
     } catch (caught) {
       setError(
         caught instanceof Error && caught.message === "invite-login-required"
           ? "초대받은 이메일 계정으로 로그인한 뒤 다시 수락해 주세요."
-          : "초대 수락 상태를 확인해 주세요."
+          : "초대 수락 상태를 확인해 주세요.",
       );
+      setSubmitting(false);
+    }
+  }
+
+  async function handlePasswordSetupSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitAttempted(true);
+    setError(null);
+
+    if (!record.invitation || !record.workspace) return;
+
+    if (!passwordValidation.ok) {
+      setError(passwordValidation.message);
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      if (usesSupabaseProvider) {
+        await signUpWithPassword({
+          email: record.invitation.email,
+          password: invitePassword,
+        });
+        hydrate();
+      }
+
+      await acceptInvite("new", undefined, {
+        supabaseEmail: record.invitation.email,
+      });
+    } catch (caught) {
+      const message =
+        caught instanceof Error &&
+        caught.message === "supabase-signup-confirmation-required"
+          ? "초대 링크는 확인됐지만 현재 Auth 설정에서 즉시 계정 세션을 만들 수 없습니다."
+          : "비밀번호 설정과 워크스페이스 입장을 완료하지 못했습니다.";
+
+      setError(message);
+      setSubmitting(false);
+    }
+  }
+
+  async function handleExistingLoginSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitAttempted(true);
+    setError(null);
+
+    if (!record.invitation || !record.workspace) return;
+
+    if (!existingPassword) {
+      setError("비밀번호를 입력해 주세요.");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      if (usesSupabaseProvider) {
+        await signInWithPassword({
+          email: record.invitation.email,
+          password: existingPassword,
+        });
+        hydrate();
+      }
+
+      await acceptInvite("existing", undefined, {
+        supabaseEmail: record.invitation.email,
+      });
+    } catch {
+      setError("로그인 또는 초대 수락을 완료하지 못했습니다.");
+      setSubmitting(false);
+    }
+  }
+
+  async function requestReinvite() {
+    if (!record.workspace || !record.invitation) return;
+
+    setSubmitting(true);
+    setReinviteError(null);
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${record.workspace.id}/invitations/${record.invitation.id}/reinvite-request`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            email: record.invitation.email,
+          }),
+        },
+      );
+      const result = (await response.json()) as {
+        ok?: boolean;
+        denialReason?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.denialReason ?? "reinvite-request-failed");
+      }
+
+      setReinviteDialog("success");
+    } catch {
+      setReinviteError("관리자에게 재요청을 접수하지 못했습니다.");
+      setReinviteDialog("failure");
+    } finally {
       setSubmitting(false);
     }
   }
@@ -215,7 +399,7 @@ export function InviteAcceptanceScreen({
   function goToLogin() {
     const next = `${window.location.pathname}${window.location.search}`;
     const params = new URLSearchParams({
-      reason: "invite_email_otp",
+      reason: "invite_existing_account",
       next,
     });
 
@@ -224,6 +408,27 @@ export function InviteAcceptanceScreen({
     }
 
     router.push(`/login?${params.toString()}`);
+  }
+
+  function goToAcceptedWorkspace() {
+    const workspacePath = buildWorkspacePath();
+    if (!workspacePath) return;
+
+    if (usesSupabaseProvider && !session) {
+      const params = new URLSearchParams({
+        reason: "invite_existing_account",
+        next: workspacePath,
+      });
+
+      if (record.invitation?.email) {
+        params.set("inviteEmail", record.invitation.email);
+      }
+
+      router.push(`/login?${params.toString()}`);
+      return;
+    }
+
+    router.push(workspacePath);
   }
 
   return (
@@ -235,110 +440,464 @@ export function InviteAcceptanceScreen({
           <div className="flex w-full max-w-[680px] flex-col gap-5">
             {record.status === "pending" && record.invitation ? (
               <>
-                <div className="border border-border bg-card p-5 shadow-sm md:p-6">
-                  <div className="flex flex-col gap-2">
-                    <Badge
-                      variant="outline"
-                      className="h-6 w-fit rounded-[var(--clair-radius-full)] border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2.5 text-[var(--emr-status-info-text)]"
-                    >
-                      초대 대기
-                    </Badge>
-                    <h2 className="text-[22px] font-semibold leading-8 tracking-normal">
-                      계정 이메일 확인 후 워크스페이스에 입장
-                    </h2>
-                    <p className="max-w-[560px] text-[14px] leading-6 text-muted-foreground">
-                      초대받은 이메일로 인증 코드를 확인하면 새 계정 생성과 기존 계정
-                      로그인을 한 흐름에서 처리합니다.
-                    </p>
-                  </div>
-
-                  <div className="mt-6 border border-border bg-[var(--emr-surface-subpanel)] p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border border-border bg-card text-[var(--emr-text-secondary)]">
-                        <UserIcon className="size-4" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <h3 className="text-[14px] font-semibold leading-5">초대 이메일 인증</h3>
-                        <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
-                          인증 코드는 {record.invitation.email} 주소로만 보낼 수 있습니다.
-                          같은 이메일의 기존 계정이 있으면 로그인으로 이어지고, 없으면
-                          계정 생성을 시작합니다.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {error ? (
-                    <EmrInlineAlert
-                      className="mt-5"
-                      severity="error"
-                      title={error}
-                      action={
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="w-full bg-card text-foreground sm:w-fit"
-                          onClick={goToLogin}
-                        >
-                          초대받은 이메일로 인증하기
-                        </Button>
-                      }
-                    >
-                      초대받은 이메일로 인증한 뒤 이 초대를 수락할 수 있습니다.
-                    </EmrInlineAlert>
-                  ) : (
-                    <EmrInlineAlert
-                      className="mt-5"
-                      severity="info"
-                      title="초대받은 이메일 확인 필요"
-                    >
-                      인증 코드는 초대받은 이메일 주소로만 보낼 수 있습니다.
-                    </EmrInlineAlert>
-                  )}
-
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="w-full sm:w-fit"
-                      disabled={submitting}
-                      onClick={acceptInvite}
-                    >
-                      {submitting
-                        ? "초대 수락 중"
-                        : usesSupabaseProvider && supabaseEmailMatchesInvite
-                          ? "초대 수락하고 워크스페이스 열기"
-                          : usesSupabaseProvider
-                            ? "인증 코드 받기"
-                          : "초대 수락하고 워크스페이스 열기"}
-                    </Button>
-                    <p className="text-[12px] leading-5 text-muted-foreground">
-                      인증 후 이 초대 화면으로 돌아와 멤버십을 활성화합니다.
-                    </p>
-                  </div>
-                </div>
+                {isExistingAccountInvite ? (
+                  <InviteExistingAccountCard
+                    email={record.invitation.email}
+                    password={existingPassword}
+                    error={error}
+                    submitting={submitting}
+                    canSubmit={canSubmitExistingLogin}
+                    onPasswordChange={(value) => {
+                      setExistingPassword(value);
+                      if (error) setError(null);
+                    }}
+                    onSubmit={handleExistingLoginSubmit}
+                    onAlternateLogin={goToLogin}
+                  />
+                ) : (
+                  <InvitePasswordSetupCard
+                    email={record.invitation.email}
+                    password={invitePassword}
+                    passwordConfirm={invitePasswordConfirm}
+                    error={error}
+                    passwordError={
+                      showPasswordError
+                        ? passwordValidation.passwordError
+                        : null
+                    }
+                    passwordConfirmError={
+                      showPasswordConfirmError
+                        ? passwordValidation.confirmError
+                        : null
+                    }
+                    submitting={submitting}
+                    canSubmit={canSubmitPasswordSetup}
+                    onPasswordChange={(value) => {
+                      setInvitePassword(value);
+                      if (value.length > 0) setPasswordTouched(true);
+                      if (error) setError(null);
+                    }}
+                    onPasswordBlur={() => setPasswordTouched(true)}
+                    onPasswordConfirmChange={(value) => {
+                      setInvitePasswordConfirm(value);
+                      if (value.length > 0) setPasswordConfirmTouched(true);
+                      if (error) setError(null);
+                    }}
+                    onPasswordConfirmBlur={() =>
+                      setPasswordConfirmTouched(true)
+                    }
+                    onSubmit={handlePasswordSetupSubmit}
+                    onAlternateLogin={goToLogin}
+                  />
+                )}
 
                 <StatusPanel stateCopy={stateCopy} />
               </>
             ) : (
-              <div className="border border-border bg-card p-6 shadow-sm">
-                <EmrInlineAlert
-                  severity={record.status === "accepted" ? "success" : "warning"}
-                  title={stateCopy.title}
-                >
-                  병원 관리자에게 새 초대를 요청하거나, 이미 계정이 있다면 로그인
-                  화면에서 워크스페이스 접근 상태를 확인하세요.
-                </EmrInlineAlert>
-                <div className="mt-5">
-                  <StatusPanel stateCopy={stateCopy} />
-                </div>
-              </div>
+              <InviteBlockedCard
+                record={record}
+                stateCopy={stateCopy}
+                submitting={submitting}
+                reinviteError={reinviteError}
+                onRequestReinvite={requestReinvite}
+                onAcceptedWorkspace={goToAcceptedWorkspace}
+                onAlternateLogin={goToLogin}
+              />
             )}
           </div>
         </div>
       </section>
+      <ReinviteRequestDialog
+        state={reinviteDialog}
+        onOpenChange={(open) => {
+          if (!open) setReinviteDialog(null);
+        }}
+      />
     </main>
+  );
+}
+
+function InviteCardShell({
+  badge,
+  title,
+  description,
+  children,
+}: {
+  badge?: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border border-border bg-card p-5 shadow-sm md:p-6">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <span className="flex size-8 items-center justify-center rounded-[var(--clair-radius-md)] bg-[var(--emr-accent-subtle)] text-[var(--emr-accent)]">
+          <WorkspaceLogoMarkIcon aria-hidden="true" />
+        </span>
+        {badge ? (
+          <Badge
+            variant="outline"
+            className="h-6 w-fit rounded-[var(--clair-radius-full)] border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2.5 text-[var(--emr-status-info-text)]"
+          >
+            {badge}
+          </Badge>
+        ) : null}
+        <div className="flex flex-col gap-1.5">
+          <h2 className="text-[22px] font-semibold leading-7 tracking-normal">
+            {title}
+          </h2>
+          <p className="text-[13px] leading-5 text-muted-foreground">
+            {description}
+          </p>
+        </div>
+      </div>
+      <div className="mt-6">{children}</div>
+    </div>
+  );
+}
+
+function InvitePasswordSetupCard({
+  email,
+  password,
+  passwordConfirm,
+  error,
+  passwordError,
+  passwordConfirmError,
+  submitting,
+  canSubmit,
+  onPasswordChange,
+  onPasswordBlur,
+  onPasswordConfirmChange,
+  onPasswordConfirmBlur,
+  onSubmit,
+  onAlternateLogin,
+}: {
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  error: string | null;
+  passwordError: string | null;
+  passwordConfirmError: string | null;
+  submitting: boolean;
+  canSubmit: boolean;
+  onPasswordChange: (value: string) => void;
+  onPasswordBlur: () => void;
+  onPasswordConfirmChange: (value: string) => void;
+  onPasswordConfirmBlur: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onAlternateLogin: () => void;
+}) {
+  return (
+    <InviteCardShell
+      title="비밀번호 설정"
+      description="초대받은 이메일 계정으로 워크스페이스에 참여합니다."
+    >
+      <form className="grid gap-4" onSubmit={onSubmit}>
+        <InviteReadonlyEmailField email={email} />
+        <InvitePasswordField
+          id="invite-password"
+          label="새 비밀번호"
+          value={password}
+          placeholder="8자 이상"
+          autoComplete="new-password"
+          disabled={submitting}
+          error={passwordError}
+          onChange={onPasswordChange}
+          onBlur={onPasswordBlur}
+        />
+        <InvitePasswordField
+          id="invite-password-confirm"
+          label="비밀번호 확인"
+          value={passwordConfirm}
+          placeholder="다시 입력"
+          autoComplete="new-password"
+          disabled={submitting}
+          error={passwordConfirmError}
+          onChange={onPasswordConfirmChange}
+          onBlur={onPasswordConfirmBlur}
+        />
+        {error ? (
+          <EmrInlineAlert severity="error" title={error}>
+            비밀번호 입력값을 확인한 뒤 다시 시도해 주세요.
+          </EmrInlineAlert>
+        ) : null}
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={!canSubmit}
+        >
+          {submitting ? "처리 중" : "워크스페이스로 이동"}
+        </Button>
+        <InviteSecondaryActions
+          leftLabel="다른 계정으로 로그인"
+          onLeftClick={onAlternateLogin}
+        />
+      </form>
+    </InviteCardShell>
+  );
+}
+
+function InviteExistingAccountCard({
+  email,
+  password,
+  error,
+  submitting,
+  canSubmit,
+  onPasswordChange,
+  onSubmit,
+  onAlternateLogin,
+}: {
+  email: string;
+  password: string;
+  error: string | null;
+  submitting: boolean;
+  canSubmit: boolean;
+  onPasswordChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onAlternateLogin: () => void;
+}) {
+  return (
+    <InviteCardShell
+      title="초대받은 계정으로 로그인"
+      description="로그인 후 초대를 수락하고 워크스페이스로 이동합니다."
+    >
+      <form className="grid gap-4" onSubmit={onSubmit}>
+        <EmrInlineAlert severity="warning" title="이미 가입된 이메일입니다.">
+          초대받은 계정으로 로그인해야 이 초대를 수락할 수 있습니다.
+        </EmrInlineAlert>
+        <InviteReadonlyEmailField email={email} />
+        <InvitePasswordField
+          id="existing-password"
+          label="비밀번호"
+          value={password}
+          placeholder="비밀번호"
+          autoComplete="current-password"
+          disabled={submitting}
+          error={error === "비밀번호를 입력해 주세요." ? error : null}
+          onChange={onPasswordChange}
+        />
+        {error && error !== "비밀번호를 입력해 주세요." ? (
+          <EmrInlineAlert severity="error" title={error}>
+            계정 정보와 초대 상태를 확인해 주세요.
+          </EmrInlineAlert>
+        ) : null}
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={!canSubmit}
+        >
+          {submitting ? "로그인 중" : "로그인"}
+        </Button>
+        <InviteSecondaryActions
+          leftLabel="비밀번호 찾기"
+          onLeftClick={onAlternateLogin}
+        />
+      </form>
+    </InviteCardShell>
+  );
+}
+
+function InviteReadonlyEmailField({ email }: { email: string }) {
+  return (
+    <div className="grid gap-1.5">
+      <label
+        htmlFor="invite-email"
+        className="text-[12px] font-semibold leading-4"
+      >
+        이메일
+      </label>
+      <Input
+        id="invite-email"
+        type="email"
+        value={email}
+        readOnly
+        className="h-[38px] bg-[var(--emr-surface-subpanel)]"
+      />
+      <p className="text-[12px] leading-5 text-muted-foreground">
+        이 초대는 해당 이메일 계정으로만 수락할 수 있습니다.
+      </p>
+    </div>
+  );
+}
+
+function InvitePasswordField({
+  id,
+  label,
+  value,
+  placeholder,
+  autoComplete,
+  disabled,
+  error,
+  onChange,
+  onBlur,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  autoComplete: string;
+  disabled: boolean;
+  error?: string | null;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <label htmlFor={id} className="text-[12px] font-semibold leading-4">
+        {label}
+      </label>
+      <Input
+        id={id}
+        type="password"
+        value={value}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        disabled={disabled}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className="h-[38px] bg-background"
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+      />
+      {error ? (
+        <p
+          id={`${id}-error`}
+          className="text-[12px] leading-5 text-[var(--emr-status-danger-text)]"
+        >
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function InviteSecondaryActions({
+  leftLabel,
+  onLeftClick,
+}: {
+  leftLabel: string;
+  onLeftClick: () => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2 border-t border-border pt-4 text-center">
+      <Button type="button" variant="ghost" size="sm" onClick={onLeftClick}>
+        {leftLabel}
+      </Button>
+      <Button type="button" variant="ghost" size="sm">
+        관리자에게 문의
+      </Button>
+    </div>
+  );
+}
+
+function InviteBlockedCard({
+  record,
+  stateCopy,
+  submitting,
+  reinviteError,
+  onRequestReinvite,
+  onAcceptedWorkspace,
+  onAlternateLogin,
+}: {
+  record: InviteAcceptanceRecord;
+  stateCopy: ReturnType<typeof getStateCopy>;
+  submitting: boolean;
+  reinviteError: string | null;
+  onRequestReinvite: () => void;
+  onAcceptedWorkspace: () => void;
+  onAlternateLogin: () => void;
+}) {
+  const canRequestReinvite =
+    record.status === "expired" || record.status === "canceled";
+
+  return (
+    <InviteCardShell
+      title="초대 상태 확인"
+      description="이 링크로는 워크스페이스 참여를 계속할 수 없습니다."
+    >
+      <div className="grid gap-4">
+        <EmrInlineAlert
+          severity={record.status === "accepted" ? "success" : "warning"}
+          title={stateCopy.title}
+        >
+          {record.status === "accepted"
+            ? "이미 활성화된 멤버십은 다시 만들지 않습니다. 같은 이메일 계정으로 로그인하면 워크스페이스로 이동할 수 있습니다."
+            : "병원 관리자에게 재요청하거나 다른 계정으로 로그인해 초대 상태를 확인하세요."}
+        </EmrInlineAlert>
+        {reinviteError ? (
+          <EmrInlineAlert severity="error" title={reinviteError}>
+            잠시 후 다시 시도하거나 관리자에게 문의하세요.
+          </EmrInlineAlert>
+        ) : null}
+        {record.status === "accepted" && record.workspace ? (
+          <Button type="button" size="lg" onClick={onAcceptedWorkspace}>
+            워크스페이스로 이동
+          </Button>
+        ) : canRequestReinvite ? (
+          <Button
+            type="button"
+            size="lg"
+            disabled={submitting}
+            onClick={onRequestReinvite}
+          >
+            {submitting ? "요청 중" : "관리자에게 재요청"}
+          </Button>
+        ) : null}
+        <InviteSecondaryActions
+          leftLabel="다른 계정으로 로그인"
+          onLeftClick={onAlternateLogin}
+        />
+        <StatusPanel stateCopy={stateCopy} />
+      </div>
+    </InviteCardShell>
+  );
+}
+
+function ReinviteRequestDialog({
+  state,
+  onOpenChange,
+}: {
+  state: "success" | "failure" | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const isSuccess = state === "success";
+
+  return (
+    <Dialog open={state !== null} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="gap-4 rounded-[var(--clair-radius-lg)]"
+        showCloseButton={false}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            {isSuccess
+              ? "관리자에게 재요청이 접수되었습니다"
+              : "관리자에게 재요청을 접수하지 못했습니다"}
+          </DialogTitle>
+          <DialogDescription>
+            {isSuccess
+              ? "병원 관리자에게 재요청 알림이 전송됩니다."
+              : "네트워크 상태를 확인한 뒤 다시 요청하거나 관리자에게 문의하세요."}
+          </DialogDescription>
+        </DialogHeader>
+        {isSuccess ? (
+          <EmrInlineAlert severity="info" title="관리자 알림">
+            관리자 워크스페이스의 초대 요청함에 이 요청이 표시됩니다.
+          </EmrInlineAlert>
+        ) : null}
+        <DialogFooter className="border-t-0 bg-transparent p-0">
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => onOpenChange(false)}
+          >
+            확인
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -384,7 +943,11 @@ function InviteContextPanel({
                 label="초대 이메일"
                 value={record.invitation?.email ?? "확인 불가"}
               />
-              <DetailRow icon={<CheckIcon className="size-4" />} label="초대 역할" value={roleLabel} />
+              <DetailRow
+                icon={<CheckIcon className="size-4" />}
+                label="초대 역할"
+                value={roleLabel}
+              />
               <DetailRow
                 icon={<BuildingIcon className="size-4" />}
                 label="워크스페이스"
@@ -393,14 +956,22 @@ function InviteContextPanel({
               <DetailRow
                 icon={<ClockIcon className="size-4" />}
                 label="만료 예정"
-                value={record.invitation ? formatDate(record.invitation.expiresAt) : "-"}
+                value={
+                  record.invitation
+                    ? formatDate(record.invitation.expiresAt)
+                    : "-"
+                }
               />
             </dl>
           </div>
 
           <ol className="mt-6 grid gap-2 text-[12px] leading-5 text-muted-foreground sm:grid-cols-3">
             <StepItem index="1" label="초대 확인" active />
-            <StepItem index="2" label="계정 확인" active={record.status === "pending"} />
+            <StepItem
+              index="2"
+              label="계정 확인"
+              active={record.status === "pending"}
+            />
             <StepItem index="3" label="워크스페이스 입장" />
           </ol>
         </div>
@@ -431,7 +1002,15 @@ function DetailRow({
   );
 }
 
-function StepItem({ index, label, active = false }: { index: string; label: string; active?: boolean }) {
+function StepItem({
+  index,
+  label,
+  active = false,
+}: {
+  index: string;
+  label: string;
+  active?: boolean;
+}) {
   return (
     <li
       className={[
@@ -454,7 +1033,11 @@ function StepItem({ index, label, active = false }: { index: string; label: stri
   );
 }
 
-function StatusPanel({ stateCopy }: { stateCopy: ReturnType<typeof getStateCopy> }) {
+function StatusPanel({
+  stateCopy,
+}: {
+  stateCopy: ReturnType<typeof getStateCopy>;
+}) {
   return (
     <aside className="border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center gap-2">
@@ -481,15 +1064,46 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
+function validateInvitePassword(password: string, confirmation: string) {
+  const passwordError =
+    password.length === 0
+      ? "새 비밀번호를 입력해 주세요."
+      : password.length < 8
+        ? "비밀번호는 8자 이상으로 설정해 주세요."
+        : null;
+  const confirmError =
+    confirmation.length === 0
+      ? "비밀번호 확인을 입력해 주세요."
+      : password !== confirmation
+        ? "비밀번호 확인이 일치하지 않습니다."
+        : null;
+
+  return {
+    ok: !passwordError && !confirmError,
+    passwordError,
+    confirmError,
+    message:
+      passwordError ?? confirmError ?? "비밀번호 입력값을 확인해 주세요.",
+  };
+}
+
 function getStateCopy(record: InviteAcceptanceRecord) {
   if (record.status === "pending") {
     return {
-      title: "초대 수락",
+      title:
+        record.accountState === "existing"
+          ? "초대받은 계정으로 로그인"
+          : "비밀번호 설정",
       description:
-        "초대받은 이메일을 확인하면 병원 워크스페이스 멤버십이 활성화됩니다.",
+        record.accountState === "existing"
+          ? "초대받은 이메일 계정으로 로그인하면 워크스페이스 멤버십이 활성화됩니다."
+          : "초대받은 이메일 계정으로 비밀번호를 설정하면 병원 워크스페이스 멤버십이 활성화됩니다.",
       statusLabel: "pending",
-      accountPolicy: "이메일 인증 후 자동 분기",
-      emailPolicy: "이메일 인증 코드",
+      accountPolicy:
+        record.accountState === "existing"
+          ? "로그인 후 자동 분기"
+          : "비밀번호 설정",
+      emailPolicy: "초대 링크 확인",
     };
   }
 
@@ -567,25 +1181,41 @@ function persistAcceptedInvite({
   const nextState = {
     currentWorkspaceId: record.workspace.id,
     workspaces: [
-      ...current.workspaces.filter((workspace) => workspace.id !== record.workspace?.id),
+      ...current.workspaces.filter(
+        (workspace) => workspace.id !== record.workspace?.id,
+      ),
       record.workspace,
     ],
     memberships: [
       ...current.memberships.filter(
         (item) =>
-          !(item.workspaceId === membership.workspaceId && item.userSessionId === actorUserId)
+          !(
+            item.workspaceId === membership.workspaceId &&
+            item.userSessionId === actorUserId
+          ),
       ),
       membership,
     ],
     invitations: [
-      ...current.invitations.filter((item) => item.id !== record.invitation?.id),
+      ...current.invitations.filter(
+        (item) => item.id !== record.invitation?.id,
+      ),
       acceptedInvitation,
     ],
     updatedAt: now,
   };
 
-  persistMockAuthSession(authSession, window.sessionStorage, window.localStorage);
-  persistSessionWorkspacesState(nextState, "local", window.sessionStorage, window.localStorage);
+  persistMockAuthSession(
+    authSession,
+    window.sessionStorage,
+    window.localStorage,
+  );
+  persistSessionWorkspacesState(
+    nextState,
+    "local",
+    window.sessionStorage,
+    window.localStorage,
+  );
   window.localStorage.setItem(
     "clair.inviteAcceptance.v1",
     JSON.stringify({
@@ -593,7 +1223,7 @@ function persistAcceptedInvite({
       workspaceId: record.workspace.id,
       accountMode,
       acceptedAt: now,
-    })
+    }),
   );
   window.dispatchEvent(new Event(MOCK_AUTH_STORAGE_KEY));
   window.dispatchEvent(new Event(SESSION_WORKSPACES_STORAGE_KEY));

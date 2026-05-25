@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const inviteNext =
   "/invite/invitation-pending?workspaceId=workspace-a&email=vet%40hanbit.test";
+const demoInviteOtpToken = "0".repeat(8);
 
 test("invite OTP request validates pending invite email and safe next", async ({ request }) => {
   const accepted = await request.post("/api/auth/invite-otp/request", {
@@ -66,12 +67,13 @@ test("invite OTP login locks email and returns to invite after mock verification
   await expect(page.getByLabel("이메일")).toHaveAttribute("readonly", "");
   await expect(page.getByLabel("비밀번호")).toHaveCount(0);
   await expect(page.getByLabel("인증 코드")).toBeVisible();
+  await expect(page.locator('[data-slot="input-otp-slot"]')).toHaveCount(8);
 
   await page.getByRole("button", { name: "인증 코드 받기" }).click();
 
   await expect(page.getByText("인증 코드를 보냈습니다.")).toBeVisible();
-  await expect(page.getByText("데모 인증 코드: 000000")).toBeVisible();
-  await page.getByLabel("인증 코드").fill("000000");
+  await expect(page.getByText("8자리 데모 인증 코드")).toBeVisible();
+  await page.getByLabel("인증 코드").fill(demoInviteOtpToken);
   await page.getByRole("button", { name: "인증하고 초대 화면으로 돌아가기" }).click();
 
   await expect(page).toHaveURL(/\/invite\/invitation-pending/);
@@ -85,7 +87,7 @@ test("invite OTP login accepts an already received code before resend succeeds",
     )}`
   );
 
-  await page.getByLabel("인증 코드").fill("000000");
+  await page.getByLabel("인증 코드").fill(demoInviteOtpToken);
   await page.getByRole("button", { name: "인증하고 초대 화면으로 돌아가기" }).click();
 
   await expect(page).toHaveURL(/\/invite\/invitation-pending/);
@@ -100,9 +102,15 @@ test("invite OTP implementation keeps Supabase and redirect boundaries explicit"
 
   expect(authClient).toContain("signInWithOtp");
   expect(authClient).toContain("verifyOtp");
+  expect(authClient).toContain("updateUser");
+  expect(authClient).toContain("updatePassword");
   expect(loginForm).toContain("reason === \"invite_email_otp\"");
   expect(loginForm).toContain("signInWithEmailOtp");
   expect(loginForm).toContain("verifyEmailOtp");
+  expect(loginForm).toContain("새 비밀번호");
+  expect(loginForm).toContain("비밀번호는 8자 이상");
+  expect(loginForm).toContain("인증하고 비밀번호 설정");
+  expect(loginForm).toContain("autoComplete=\"new-password\"");
   expect(requestCore).toContain("getSafeInviteNextHref");
   expect(requestRoute).toContain("resolveInviteOtpRequest");
   expect(confirmRoute).toContain("token_hash");

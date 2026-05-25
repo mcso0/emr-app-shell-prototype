@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-277 Login Production Entry Polish</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-277 Login Production Entry Polish</h1>
+      <p>
+        로그인 화면을 넓은 중립 배경 위의 중심 진입 카드로 정리해,
+        실제 제품 첫 화면처럼 보이도록 다듬었다. 기존 mock 세션, Supabase
+        password login, invite OTP, invite password setup 흐름은 유지했다.
+      </p>
+
+      <h2>What Changed</h2>
+      <ul>
+        <li>
+          기본 로그인 화면을 CLAiR EMR 브랜드 마크, 이메일, 비밀번호,
+          주요 로그인 버튼 중심의 단일 카드로 재구성했다.
+        </li>
+        <li>
+          MVP 테스트 옵션은 제품 로그인 흐름과 경쟁하지 않도록 카드 아래
+          보조 패널로 내렸다.
+        </li>
+        <li>
+          invite OTP와 invite password setup 화면도 같은 시각 체계 안에서
+          동작하도록 레이아웃을 맞췄다.
+        </li>
+        <li>
+          초대 이메일 인증 코드는 shadcn Input OTP 패턴을 CLAiR EMR 토큰으로 감싸 8개의
+          슬롯으로 입력하도록 바꿨다.
+        </li>
+        <li>
+          Google, social login, OAuth, password reset full flow는 이번 범위에서
+          추가하지 않았다.
+        </li>
+      </ul>
+
+      <h2>Safety Notes</h2>
+      <ul>
+        <li>Production Supabase, production deploy, DB, RLS, migration은 변경하지 않았다.</li>
+        <li>실고객 데이터와 실고객 메일은 사용하지 않았다.</li>
+        <li>Secret, OTP 원문, magic link, raw invite token, password 값은 문서에 남기지 않았다.</li>
+      </ul>
+
+      <h2>Visual QA</h2>
+      <ul>
+        <li>Desktop 기본 로그인 화면: 중심 카드와 하단 보조 패널 렌더링 확인.</li>
+        <li>Mobile 390x844 기본 로그인 화면: 텍스트 겹침, 버튼 overflow, clipped field 없음 확인.</li>
+        <li>Invite OTP mock 화면: 초대 이메일 인증 heading, 8개 OTP slot, one-time-code autocomplete, 초대 context panel 확인.</li>
+        <li>Browser console: 확인한 화면에서 error/warning 없음.</li>
+      </ul>
+
+      <h2>Verification</h2>
+      <ul>
+        <li><code>npx tsc --noEmit</code></li>
+        <li><code>npm run lint</code></li>
+        <li><code>npm run docs:check</code></li>
+        <li><code>npm run security:secrets</code></li>
+        <li><code>git diff --check</code></li>
+        <li>
+          <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3218 npx playwright test tests/auth.spec.ts tests/invite-otp-handoff.spec.ts tests/invite-acceptance.spec.ts --reporter=line</code>
+        </li>
+        <li><code>npm run build</code></li>
+      </ul>
+
+      <h2>Linear</h2>
+      <p>
+        Project 14: CLAiR EMR Login Experience Production Polish<br />
+        Issue: DEN-277 00-01 Polish login screen into production-grade entry surface
+      </p>
+    </main>
+  </body>
+</html>

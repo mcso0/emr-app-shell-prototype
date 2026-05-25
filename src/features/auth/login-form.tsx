@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { useEffect, useState, type FormEvent } from "react";
 import { CheckIcon, WorkspaceLogoMarkIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,17 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
   MOCK_AUTH_ROLES,
   type MockAuthRole,
   type MockSessionStorageMode,
 } from "@/features/auth/mock-session";
-import { useAuthClient } from "@/features/auth/auth-client";
+import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import {
   createInviteOtpRedirectTo,
   getSafeInviteNextHref,
@@ -44,10 +51,11 @@ const storageOptions: Array<{
 ];
 
 const defaultWorkspaceHref = "/w/clair-demo/reception?modulePanel=open&aside=closed";
-const loginPanelClassName =
-  "flex min-h-[520px] flex-col bg-card px-6 py-6 md:px-10 md:py-8";
-const loginFormClassName = "flex w-full max-w-[380px] flex-col gap-6";
-const loginControlsClassName = "flex w-full max-w-[456px] flex-col gap-6";
+const inviteOtpLength = 8;
+const mockInviteOtpToken = "0".repeat(inviteOtpLength);
+const loginFormClassName = "flex w-full flex-col gap-5";
+const loginSupportPanelClassName =
+  "rounded-[var(--clair-radius-lg)] border border-border bg-[var(--emr-surface-panel)] p-4 shadow-[var(--clair-shadow-sm)]";
 
 function getSafeNextHref(value: string | null) {
   if (!value) return defaultWorkspaceHref;
@@ -120,6 +128,8 @@ export function LoginForm() {
   const [inviteOtpSent, setInviteOtpSent] = useState(false);
   const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
   const [inviteOtpToken, setInviteOtpToken] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [invitePasswordConfirm, setInvitePasswordConfirm] = useState("");
   const {
     authProvider,
     hydrated,
@@ -129,6 +139,7 @@ export function LoginForm() {
     signInWithPassword,
     signInWithEmailOtp,
     verifyEmailOtp,
+    updatePassword,
     signOut,
     supabaseConfigured,
   } = useAuthClient();
@@ -149,6 +160,8 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const nextInvitePassword = String(formData.get("invite-password") ?? "");
+    const nextInvitePasswordConfirm = String(formData.get("invite-password-confirm") ?? "");
     const token = String(formData.get("otp-token") ?? "").trim();
 
     setIsSubmitting(true);
@@ -167,8 +180,17 @@ export function LoginForm() {
               throw new Error("supabase-not-configured");
             }
 
+            if (nextInvitePassword.length < 8) {
+              throw new Error("invite-password-too-short");
+            }
+
+            if (nextInvitePassword !== nextInvitePasswordConfirm) {
+              throw new Error("invite-password-mismatch");
+            }
+
             await verifyEmailOtp({ email, token });
-          } else if (token !== "000000") {
+            await updatePassword({ password: nextInvitePassword });
+          } else if (token !== mockInviteOtpToken) {
             throw new Error("invite-otp-token-invalid");
           }
 
@@ -232,10 +254,15 @@ export function LoginForm() {
       }
 
       router.replace(getSafeNextHref(searchParams.get("next")));
-    } catch {
+    } catch (caught) {
+      const errorCode = caught instanceof Error ? caught.message : null;
       setLoginError(
         isInviteOtpLogin
-          ? "초대 이메일 인증을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
+          ? errorCode === "invite-password-too-short"
+            ? "비밀번호는 8자 이상으로 설정해 주세요."
+            : errorCode === "invite-password-mismatch"
+              ? "비밀번호 확인이 일치하지 않습니다."
+              : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
           : usesSupabaseProvider
           ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
@@ -245,312 +272,358 @@ export function LoginForm() {
   }
 
   return (
-    <main className="min-h-svh bg-[var(--emr-surface-app)] text-foreground">
-      <section className="grid min-h-svh lg:grid-cols-2">
-        <div className={loginPanelClassName}>
+    <main className="min-h-svh bg-[var(--emr-surface-muted)] text-foreground">
+      <div className="flex min-h-svh flex-col">
+        <header className="flex items-center justify-between px-5 py-4 md:px-8">
           <div className="flex items-center gap-2 text-[13px] font-semibold leading-5">
-            <span className="flex size-7 items-center justify-center rounded-[var(--clair-radius-md)] bg-primary text-primary-foreground">
+            <span className="flex size-7 items-center justify-center rounded-[var(--clair-radius-md)] bg-primary text-primary-foreground shadow-[var(--clair-shadow-xs)]">
               <WorkspaceLogoMarkIcon aria-hidden="true" />
             </span>
             CLAiR EMR
           </div>
+          <span className="text-[12px] font-medium leading-4 text-muted-foreground">
+            KO
+          </span>
+        </header>
 
-          <div className="flex flex-1 items-center justify-center py-12">
-            <form
-              onSubmit={handleSubmit}
-              className={loginFormClassName}
-            >
-              <FieldGroup>
-                <div className="flex flex-col gap-2">
-                  <h1 className="text-[28px] font-semibold leading-9 tracking-normal">
-                    {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR에 로그인"}
-                  </h1>
-                  <p className="text-[14px] leading-6 text-muted-foreground">
-                    {isInviteOtpLogin
-                      ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다."
-                      : isInviteLogin
-                      ? "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요."
-                      : "병원 워크스페이스에 접속하려면 계정 정보를 입력하세요."}
-                  </p>
-                </div>
-
-                {authSessionNotice ? (
-                  <div
-                    role="status"
-                    data-testid="auth-session-notice"
-                    className={cn(
-                      "rounded-[var(--clair-radius-md)] border px-3 py-2 text-[13px] leading-5",
-                      authSessionNotice.tone === "success"
-                        ? "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]"
-                        : authSessionNotice.tone === "danger"
-                          ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
-                          : "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]"
-                    )}
-                  >
-                    <p className="font-semibold">{authSessionNotice.title}</p>
-                    <p className="mt-0.5 text-[12px] opacity-90">
-                      {authSessionNotice.description}
-                    </p>
+        <section className="flex flex-1 items-start justify-center px-4 pb-10 pt-[12vh] md:px-8 md:pt-[18vh]">
+          <div className="grid w-full max-w-[760px] gap-4">
+            <div className="mx-auto w-full max-w-[390px] rounded-[var(--clair-radius-lg)] border border-border bg-card p-5 shadow-[var(--clair-shadow-md)] md:p-6">
+              <form onSubmit={handleSubmit} className={loginFormClassName}>
+                <FieldGroup className="gap-5">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <span className="flex size-8 items-center justify-center rounded-[var(--clair-radius-md)] bg-[var(--emr-accent-subtle)] text-[var(--emr-accent)]">
+                      <WorkspaceLogoMarkIcon aria-hidden="true" />
+                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      <h1 className="text-[22px] font-semibold leading-7 tracking-normal">
+                        {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR에 로그인"}
+                      </h1>
+                      <p className="text-[13px] leading-5 text-muted-foreground">
+                        {isInviteOtpLogin
+                          ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다."
+                          : isInviteLogin
+                            ? "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요."
+                            : "병원 워크스페이스에 접속하려면 계정 정보를 입력하세요."}
+                      </p>
+                    </div>
                   </div>
-                ) : null}
 
-                <Field>
-                  <FieldLabel htmlFor="mock-email">이메일</FieldLabel>
-                  <Input
-                    id="mock-email"
-                    type="email"
-                    name="email"
-                    placeholder="name@hospital.com"
-                    defaultValue={inviteEmail ?? undefined}
-                    autoComplete="email"
-                    disabled={isSubmitting}
-                    readOnly={isInviteOtpLogin}
-                    aria-describedby="mock-email-description"
-                  />
-                  <FieldDescription id="mock-email-description" className="text-[12px]">
-                    {isInviteOtpLogin && inviteEmail
-                      ? `${inviteEmail} 주소로 인증 코드를 보냅니다.`
-                      : isInviteLogin && inviteEmail
-                      ? `${inviteEmail} 계정으로 로그인해야 이 초대를 수락할 수 있습니다.`
-                      : "Mock 모드에서는 역할 선택으로 로그인하고, Supabase 모드에서는 계정 정보를 확인합니다."}
-                  </FieldDescription>
-                </Field>
+                  {authSessionNotice ? (
+                    <div
+                      role="status"
+                      data-testid="auth-session-notice"
+                      className={cn(
+                        "rounded-[var(--clair-radius-md)] border px-3 py-2 text-[13px] leading-5",
+                        authSessionNotice.tone === "success"
+                          ? "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]"
+                          : authSessionNotice.tone === "danger"
+                            ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
+                            : "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]"
+                      )}
+                    >
+                      <p className="font-semibold">{authSessionNotice.title}</p>
+                      <p className="mt-0.5 text-[12px] opacity-90">
+                        {authSessionNotice.description}
+                      </p>
+                    </div>
+                  ) : null}
 
-                {isInviteOtpLogin ? (
-                  <>
-                    <Field>
-                      <FieldLabel htmlFor="otp-token">인증 코드</FieldLabel>
+                  <div className="grid gap-4">
+                    <Field className="gap-1.5">
+                      <FieldLabel htmlFor="mock-email" className="text-[12px]">
+                        이메일
+                      </FieldLabel>
                       <Input
-                        id="otp-token"
-                        name="otp-token"
-                        inputMode="numeric"
-                        placeholder="인증 코드"
-                        autoComplete="one-time-code"
+                        id="mock-email"
+                        type="email"
+                        name="email"
+                        placeholder="name@hospital.com"
+                        defaultValue={inviteEmail ?? undefined}
+                        autoComplete="email"
                         disabled={isSubmitting}
-                        value={inviteOtpToken}
-                        onChange={(event) => {
-                          setInviteOtpToken(event.target.value);
-                          if (loginError) setLoginError(null);
-                        }}
+                        readOnly={isInviteOtpLogin}
+                        aria-describedby="mock-email-description"
+                        className="h-[38px] bg-background"
                       />
-                      <FieldDescription className="text-[12px]">
-                        {usesSupabaseProvider
-                          ? "이미 받은 코드가 있다면 바로 입력해 초대 화면으로 돌아갈 수 있습니다."
-                          : "데모 인증 코드: 000000"}
+                      <FieldDescription id="mock-email-description" className="text-[12px]">
+                        {isInviteOtpLogin && inviteEmail
+                          ? `${inviteEmail} 주소로 인증 코드를 보냅니다.`
+                          : isInviteLogin && inviteEmail
+                            ? `${inviteEmail} 계정으로 로그인해야 이 초대를 수락할 수 있습니다.`
+                            : "등록된 이메일 또는 초대받은 이메일을 입력하세요."}
                       </FieldDescription>
                     </Field>
-                    {inviteOtpStatus ? (
-                      <div className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]">
-                        {inviteOtpStatus}
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <Field>
-                    <FieldLabel htmlFor="mock-password">비밀번호</FieldLabel>
-                    <Input
-                      id="mock-password"
-                      type="password"
-                      name="password"
-                      placeholder="비밀번호"
-                      autoComplete="current-password"
-                      disabled={isSubmitting}
-                    />
-                  </Field>
-                )}
 
-                {loginError ? (
-                  <FieldError className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]">
-                    {loginError}
-                  </FieldError>
-                ) : null}
-
-                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-                  {isInviteOtpLogin
-                    ? isSubmitting
-                      ? "처리 중"
-                      : inviteOtpToken.trim()
-                        ? "인증하고 초대 화면으로 돌아가기"
-                        : "인증 코드 받기"
-                    : isSubmitting
-                      ? "로그인 중"
-                      : "로그인"}
-                </Button>
-              </FieldGroup>
-            </form>
-          </div>
-        </div>
-
-        <aside className="flex min-h-[520px] items-center justify-center border-t border-border bg-[var(--emr-surface-muted)] px-5 py-8 md:px-10 lg:border-l lg:border-t-0">
-          <div className={loginControlsClassName}>
-            {usesSupabaseProvider || isInviteLogin ? (
-              <InviteLoginContext inviteEmail={inviteEmail} />
-            ) : (
-              <>
-                <div className="flex flex-col gap-2">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
-                    Development controls
-                  </p>
-                  <h2 className="text-[24px] font-semibold leading-8 tracking-normal">
-                    MVP 테스트 옵션
-                  </h2>
-                  <p className="text-[14px] leading-6 text-muted-foreground">
-                    현재는 Supabase Auth 연결 전 mock session으로 진입합니다.
-                  </p>
-                </div>
-
-                <FieldSet className="gap-3">
-                  <FieldLegend className="mb-0 text-[13px]">역할 선택</FieldLegend>
-                  <div className="grid gap-2">
-                    {MOCK_AUTH_ROLES.map((role) => {
-                      const selected = selectedRole === role.id;
-
-                      return (
-                        <button
-                          key={role.id}
-                          type="button"
-                          aria-pressed={selected}
-                          aria-label={`${role.label} 역할 선택`}
-                          disabled={isSubmitting}
-                          onClick={() => setSelectedRole(role.id)}
-                          className={cn(
-                            "flex min-h-[68px] items-start gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3 text-left transition-colors",
-                            "disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                            selected
-                              ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-                              : "border-border hover:bg-[var(--emr-state-hover)]"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border",
-                              selected
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border text-transparent"
-                            )}
-                            aria-hidden="true"
+                    {isInviteOtpLogin ? (
+                      <>
+                        <Field className="gap-1.5">
+                          <FieldLabel htmlFor="otp-token" className="text-[12px]">
+                            인증 코드
+                          </FieldLabel>
+                          <InputOTP
+                            id="otp-token"
+                            name="otp-token"
+                            maxLength={inviteOtpLength}
+                            pattern={REGEXP_ONLY_DIGITS}
+                            autoComplete="one-time-code"
+                            disabled={isSubmitting}
+                            value={inviteOtpToken}
+                            onChange={(value) => {
+                              setInviteOtpToken(value);
+                              if (loginError) setLoginError(null);
+                            }}
+                            containerClassName="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+                            aria-label="인증 코드"
                           >
-                            <CheckIcon />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-[14px] font-semibold leading-5">
-                              {role.label}
-                            </span>
-                            <span className="mt-1 block text-[12px] leading-4 text-muted-foreground">
-                              {role.description}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </FieldSet>
-
-                <FieldSet className="gap-3">
-                  <FieldLegend className="mb-0 text-[13px]">로그인 유지</FieldLegend>
-                  <div className="grid gap-2">
-                    {storageOptions.map((option) => (
-                      <label
-                        key={option.id}
-                        className={cn(
-                          "flex min-h-[64px] cursor-pointer gap-3 rounded-[var(--clair-radius-md)] border bg-card p-3",
-                          storageMode === option.id
-                            ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-                            : "border-border"
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          name="mock-session-storage"
-                          value={option.id}
-                          checked={storageMode === option.id}
+                            <InputOTPGroup className="grid grid-cols-4">
+                              <InputOTPSlot index={0} />
+                              <InputOTPSlot index={1} />
+                              <InputOTPSlot index={2} />
+                              <InputOTPSlot index={3} />
+                            </InputOTPGroup>
+                            <InputOTPSeparator />
+                            <InputOTPGroup className="grid grid-cols-4">
+                              <InputOTPSlot index={4} />
+                              <InputOTPSlot index={5} />
+                              <InputOTPSlot index={6} />
+                              <InputOTPSlot index={7} />
+                            </InputOTPGroup>
+                          </InputOTP>
+                          <FieldDescription className="text-[12px]">
+                            {usesSupabaseProvider
+                              ? "받은 8자리 코드를 입력하면 초대 화면으로 돌아갑니다."
+                              : `8자리 데모 인증 코드: ${mockInviteOtpToken}`}
+                          </FieldDescription>
+                        </Field>
+                        {usesSupabaseProvider ? (
+                          <>
+                            <Field className="gap-1.5">
+                              <FieldLabel htmlFor="invite-password" className="text-[12px]">
+                                새 비밀번호
+                              </FieldLabel>
+                              <Input
+                                id="invite-password"
+                                type="password"
+                                name="invite-password"
+                                placeholder="8자 이상"
+                                autoComplete="new-password"
+                                disabled={isSubmitting}
+                                value={invitePassword}
+                                onChange={(event) => {
+                                  setInvitePassword(event.target.value);
+                                  if (loginError) setLoginError(null);
+                                }}
+                                className="h-[38px] bg-background"
+                              />
+                              <FieldDescription className="text-[12px]">
+                                인증 코드 확인 후 이 비밀번호로 다시 로그인할 수 있습니다.
+                              </FieldDescription>
+                            </Field>
+                            <Field className="gap-1.5">
+                              <FieldLabel
+                                htmlFor="invite-password-confirm"
+                                className="text-[12px]"
+                              >
+                                비밀번호 확인
+                              </FieldLabel>
+                              <Input
+                                id="invite-password-confirm"
+                                type="password"
+                                name="invite-password-confirm"
+                                placeholder="다시 입력"
+                                autoComplete="new-password"
+                                disabled={isSubmitting}
+                                value={invitePasswordConfirm}
+                                onChange={(event) => {
+                                  setInvitePasswordConfirm(event.target.value);
+                                  if (loginError) setLoginError(null);
+                                }}
+                                className="h-[38px] bg-background"
+                              />
+                            </Field>
+                          </>
+                        ) : null}
+                        {inviteOtpStatus ? (
+                          <div className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-success-text)]">
+                            {inviteOtpStatus}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Field className="gap-1.5">
+                        <FieldLabel htmlFor="mock-password" className="text-[12px]">
+                          비밀번호
+                        </FieldLabel>
+                        <Input
+                          id="mock-password"
+                          type="password"
+                          name="password"
+                          placeholder="비밀번호"
+                          autoComplete="current-password"
                           disabled={isSubmitting}
-                          onChange={() => setStorageMode(option.id)}
-                          className="mt-1 size-4 accent-[var(--emr-state-selected-border)]"
+                          className="h-[38px] bg-background"
                         />
-                        <span>
-                          <span className="block text-[13px] font-semibold leading-5">
-                            {option.label}
-                          </span>
-                          <span className="mt-0.5 block text-[12px] leading-4 text-muted-foreground">
-                            {option.description}
-                          </span>
-                        </span>
-                      </label>
-                    ))}
+                      </Field>
+                    )}
                   </div>
-                </FieldSet>
-              </>
-            )}
 
-            <div
-              className="rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-subpanel)] p-3"
-              data-testid="mock-session-status"
-            >
-              <p className="text-[12px] font-semibold leading-4 text-muted-foreground">
-                현재 로그인
-              </p>
-              {!hydrated ? (
-                <p className="mt-2 text-[13px] text-muted-foreground">확인 중</p>
-              ) : session ? (
-                <div className="mt-3 flex flex-col gap-3">
-                  <div className="grid gap-2 text-[13px]">
-                    <div>
-                      <p className="text-[12px] text-muted-foreground">
-                        상태
-                      </p>
-                      <p className="font-semibold">로그인됨</p>
-                    </div>
-                    <div>
-                      <p className="text-[12px] text-muted-foreground">
-                        역할
-                      </p>
-                      <p className="font-medium">
-                        {session.roleLabel}{" "}
-                        <span className="text-[12px]">({session.role})</span>
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[12px] text-muted-foreground">
-                        저장소
-                      </p>
-                      <p className="font-medium">
-                        {session.storageMode === "cookie"
-                          ? "Supabase cookie session"
-                          : session.storageMode === "session"
-                            ? "이번 탭만"
-                            : "브라우저에 유지"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button type="button" variant="outline" size="sm" onClick={signOut}>
-                    로그아웃
+                  {loginError ? (
+                    <FieldError className="rounded-[var(--clair-radius-md)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 text-[13px] leading-5 text-[var(--emr-status-danger-text)]">
+                      {loginError}
+                    </FieldError>
+                  ) : null}
+
+                  <Button type="submit" size="lg" className="h-[42px] w-full" disabled={isSubmitting}>
+                    {isInviteOtpLogin
+                      ? isSubmitting
+                        ? "처리 중"
+                        : inviteOtpToken.trim()
+                          ? usesSupabaseProvider
+                            ? "인증하고 비밀번호 설정"
+                            : "인증하고 초대 화면으로 돌아가기"
+                          : "인증 코드 받기"
+                      : isSubmitting
+                        ? "로그인 중"
+                        : "로그인"}
                   </Button>
+
+                  <div className="grid grid-cols-2 gap-2 border-t border-border pt-4 text-center text-[12px] leading-4 text-muted-foreground">
+                    <span>초대 기반 가입</span>
+                    <span>관리자에게 문의</span>
+                  </div>
+                </FieldGroup>
+              </form>
+            </div>
+
+            <aside className="mx-auto w-full max-w-[760px]">
+              {usesSupabaseProvider || isInviteLogin ? (
+                <div className={loginSupportPanelClassName}>
+                  <InviteLoginContext inviteEmail={inviteEmail} />
+                  <SessionStatus
+                    hydrated={hydrated}
+                    session={session}
+                    signOut={signOut}
+                  />
                 </div>
               ) : (
-                <p className="mt-2 text-[13px] text-muted-foreground">
-                  로그인 전
-                </p>
+                <div className={cn(loginSupportPanelClassName, "flex flex-col gap-4")}>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]">
+                      Development controls
+                    </p>
+                    <h2 className="text-[18px] font-semibold leading-6 tracking-normal">
+                      MVP 테스트 옵션
+                    </h2>
+                    <p className="text-[13px] leading-5 text-muted-foreground">
+                      현재는 Supabase Auth 연결 전 mock session으로 진입합니다.
+                    </p>
+                  </div>
+
+                  <FieldSet className="gap-3">
+                    <FieldLegend className="mb-0 text-[13px]">역할 선택</FieldLegend>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {MOCK_AUTH_ROLES.map((role) => {
+                        const selected = selectedRole === role.id;
+
+                        return (
+                          <button
+                            key={role.id}
+                            type="button"
+                            aria-pressed={selected}
+                            aria-label={`${role.label} 역할 선택`}
+                            disabled={isSubmitting}
+                            onClick={() => setSelectedRole(role.id)}
+                            className={cn(
+                              "flex min-h-[58px] items-start gap-2.5 rounded-[var(--clair-radius-md)] border bg-card p-3 text-left transition-colors",
+                              "disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                              selected
+                                ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                                : "border-border hover:bg-[var(--emr-state-hover)]"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[var(--clair-radius-full)] border",
+                                selected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-border text-transparent"
+                              )}
+                              aria-hidden="true"
+                            >
+                              <CheckIcon />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block text-[13px] font-semibold leading-5">
+                                {role.label}
+                              </span>
+                              <span className="mt-0.5 block text-[12px] leading-4 text-muted-foreground">
+                                {role.description}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FieldSet>
+
+                  <FieldSet className="gap-3">
+                    <FieldLegend className="mb-0 text-[13px]">로그인 유지</FieldLegend>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {storageOptions.map((option) => (
+                        <label
+                          key={option.id}
+                          className={cn(
+                            "flex min-h-[58px] cursor-pointer gap-2.5 rounded-[var(--clair-radius-md)] border bg-card p-3",
+                            storageMode === option.id
+                              ? "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
+                              : "border-border"
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="mock-session-storage"
+                            value={option.id}
+                            checked={storageMode === option.id}
+                            disabled={isSubmitting}
+                            onChange={() => setStorageMode(option.id)}
+                            className="mt-1 size-4 accent-[var(--emr-state-selected-border)]"
+                          />
+                          <span>
+                            <span className="block text-[13px] font-semibold leading-5">
+                              {option.label}
+                            </span>
+                            <span className="mt-0.5 block text-[12px] leading-4 text-muted-foreground">
+                              {option.description}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </FieldSet>
+
+                  <SessionStatus hydrated={hydrated} session={session} signOut={signOut} />
+                </div>
               )}
-            </div>
+            </aside>
           </div>
-        </aside>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
 
 function InviteLoginContext({ inviteEmail }: { inviteEmail: string | null }) {
   return (
-    <div className="flex flex-col gap-4 rounded-[var(--clair-radius-lg)] border border-border bg-card p-5 shadow-sm">
-      <div className="flex flex-col gap-2">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--emr-status-info-text)]">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <p className="text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]">
           Invitation login
         </p>
-        <h2 className="text-[24px] font-semibold leading-8 tracking-normal">
+        <h2 className="text-[18px] font-semibold leading-6 tracking-normal">
           초대 계정 확인
         </h2>
-        <p className="text-[14px] leading-6 text-muted-foreground">
+        <p className="text-[13px] leading-5 text-muted-foreground">
           이 로그인은 초대받은 워크스페이스 멤버십을 활성화하기 위한 단계입니다.
         </p>
       </div>
@@ -567,6 +640,61 @@ function InviteLoginContext({ inviteEmail }: { inviteEmail: string | null }) {
           </dd>
         </div>
       </dl>
+    </div>
+  );
+}
+
+function SessionStatus({
+  hydrated,
+  session,
+  signOut,
+}: {
+  hydrated: boolean;
+  session: AuthSession | null;
+  signOut: () => Promise<void>;
+}) {
+  return (
+    <div
+      className="rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-subpanel)] p-3"
+      data-testid="mock-session-status"
+    >
+      <p className="text-[12px] font-semibold leading-4 text-muted-foreground">
+        현재 로그인
+      </p>
+      {!hydrated ? (
+        <p className="mt-2 text-[13px] text-muted-foreground">확인 중</p>
+      ) : session ? (
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="grid gap-2 text-[13px]">
+            <div>
+              <p className="text-[12px] text-muted-foreground">상태</p>
+              <p className="font-semibold">로그인됨</p>
+            </div>
+            <div>
+              <p className="text-[12px] text-muted-foreground">역할</p>
+              <p className="font-medium">
+                {session.roleLabel}{" "}
+                <span className="text-[12px]">({session.role})</span>
+              </p>
+            </div>
+            <div>
+              <p className="text-[12px] text-muted-foreground">저장소</p>
+              <p className="font-medium">
+                {session.storageMode === "cookie"
+                  ? "Supabase cookie session"
+                  : session.storageMode === "session"
+                    ? "이번 탭만"
+                    : "브라우저에 유지"}
+              </p>
+            </div>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={signOut}>
+            로그아웃
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-2 text-[13px] text-muted-foreground">로그인 전</p>
+      )}
     </div>
   );
 }

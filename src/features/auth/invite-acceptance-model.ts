@@ -11,8 +11,11 @@ export type InviteAcceptanceStatus =
   | "accepted"
   | "missing";
 
+export type InviteAcceptanceAccountState = "new" | "existing" | "unknown";
+
 export type InviteAcceptanceRecord = {
   status: InviteAcceptanceStatus;
+  accountState: InviteAcceptanceAccountState;
   workspace: SessionWorkspace | null;
   invitation: SessionWorkspaceInvitation | null;
 };
@@ -42,12 +45,18 @@ export function resolveInviteAcceptanceRecord({
   email?: string | null;
 }): InviteAcceptanceRecord {
   if (workspaceId !== workspaceA.id) {
-    return { status: "missing", workspace: null, invitation: null };
+    return {
+      status: "missing",
+      accountState: "unknown",
+      workspace: null,
+      invitation: null,
+    };
   }
 
   if (invitationId === "invitation-pending") {
     return {
       status: "pending",
+      accountState: "new",
       workspace: workspaceA,
       invitation: createInvitation({
         id: invitationId,
@@ -62,6 +71,7 @@ export function resolveInviteAcceptanceRecord({
   if (invitationId === "invitation-admin-pending") {
     return {
       status: "pending",
+      accountState: "new",
       workspace: workspaceA,
       invitation: createInvitation({
         id: invitationId,
@@ -73,9 +83,25 @@ export function resolveInviteAcceptanceRecord({
     };
   }
 
+  if (invitationId === "invitation-existing-account") {
+    return {
+      status: "pending",
+      accountState: "existing",
+      workspace: workspaceA,
+      invitation: createInvitation({
+        id: invitationId,
+        email: email ?? "vet@hanbit.test",
+        status: "pending",
+        roles: ["vet"],
+        expiresAt: futureExpiry,
+      }),
+    };
+  }
+
   if (invitationId === "invitation-expired") {
     return {
       status: "expired",
+      accountState: "unknown",
       workspace: workspaceA,
       invitation: createInvitation({
         id: invitationId,
@@ -90,6 +116,7 @@ export function resolveInviteAcceptanceRecord({
   if (invitationId === "invitation-canceled") {
     return {
       status: "canceled",
+      accountState: "unknown",
       workspace: workspaceA,
       invitation: createInvitation({
         id: invitationId,
@@ -104,6 +131,7 @@ export function resolveInviteAcceptanceRecord({
   if (invitationId === "invitation-accepted") {
     return {
       status: "accepted",
+      accountState: "existing",
       workspace: workspaceA,
       invitation: createInvitation({
         id: invitationId,
@@ -115,7 +143,12 @@ export function resolveInviteAcceptanceRecord({
     };
   }
 
-  return { status: "missing", workspace: null, invitation: null };
+  return {
+    status: "missing",
+    accountState: "unknown",
+    workspace: null,
+    invitation: null,
+  };
 }
 
 function createInvitation({

@@ -61,7 +61,7 @@ export type WorkspaceInvitationLifecycleGatewayResult =
 
 export type WorkspaceInvitationLifecycleGateway = {
   mutateInvitationLifecycle(
-    write: WorkspaceInvitationLifecycleWrite
+    write: WorkspaceInvitationLifecycleWrite,
   ): Promise<WorkspaceInvitationLifecycleGatewayResult>;
 };
 
@@ -99,14 +99,20 @@ export type WorkspaceInvitationLifecycleResult =
         | "invitation_expired"
         | "active_membership_exists";
     }
-  | { ok: false; statusCode: 500; error: "db_write_failed" | "supabase_client_missing" };
+  | {
+      ok: false;
+      statusCode: 500;
+      error: "db_write_failed" | "supabase_client_missing";
+    };
 
 export async function mutateWorkspaceInvitationLifecycle({
   actorUserId,
   workspaceId,
   invitationId,
   action,
-  permissionAdapter = createDemoInvitationLifecyclePermissionAdapter(workspaceId),
+  permissionAdapter = createDemoInvitationLifecyclePermissionAdapter(
+    workspaceId,
+  ),
   gateway,
   now = new Date().toISOString(),
 }: {
@@ -157,7 +163,8 @@ export async function mutateWorkspaceInvitationLifecycle({
   });
 
   if (!persisted.ok) {
-    if (persisted.status === 500) return { ok: false, statusCode: 500, error: persisted.error };
+    if (persisted.status === 500)
+      return { ok: false, statusCode: 500, error: persisted.error };
     if (persisted.status === 404) {
       return {
         ok: false,
@@ -201,12 +208,12 @@ export type SupabaseWorkspaceInvitationLifecycleRpcClient = {
       | "clair_resend_workspace_invitation"
       | "clair_cancel_workspace_invitation"
       | "clair_accept_workspace_invitation",
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export function createSupabaseWorkspaceInvitationLifecycleGateway(
-  client: SupabaseWorkspaceInvitationLifecycleRpcClient
+  client: SupabaseWorkspaceInvitationLifecycleRpcClient,
 ): WorkspaceInvitationLifecycleGateway {
   return {
     async mutateInvitationLifecycle(write) {
@@ -223,11 +230,19 @@ export function createSupabaseWorkspaceInvitationLifecycleGateway(
 
       if (error) {
         if (error.message?.includes("target_invitation_missing")) {
-          return { ok: false, status: 404, denialReason: "target_invitation_missing" };
+          return {
+            ok: false,
+            status: 404,
+            denialReason: "target_invitation_missing",
+          };
         }
 
         if (error.message?.includes("invitation_not_pending")) {
-          return { ok: false, status: 409, denialReason: "invitation_not_pending" };
+          return {
+            ok: false,
+            status: 409,
+            denialReason: "invitation_not_pending",
+          };
         }
 
         if (error.message?.includes("invitation_expired")) {
@@ -235,7 +250,11 @@ export function createSupabaseWorkspaceInvitationLifecycleGateway(
         }
 
         if (error.message?.includes("active_membership_exists")) {
-          return { ok: false, status: 409, denialReason: "active_membership_exists" };
+          return {
+            ok: false,
+            status: 409,
+            denialReason: "active_membership_exists",
+          };
         }
 
         return { ok: false, status: 500, error: "db_write_failed" };
@@ -250,7 +269,8 @@ export function createSupabaseWorkspaceInvitationLifecycleGateway(
 }
 
 function createDemoInvitationLifecyclePermissionAdapter(workspaceId: string) {
-  const demoMembershipWorkspaceId = workspaceId === "workspace-b" ? "workspace-a" : workspaceId;
+  const demoMembershipWorkspaceId =
+    workspaceId === "workspace-b" ? "workspace-a" : workspaceId;
 
   return createMockWorkspacePermissionAdapter({
     now: new Date().toISOString(),
@@ -391,16 +411,20 @@ function createMockLifecycleResult({
 function resolveMockInvitationLifecycleState(invitationId: string) {
   if (invitationId === "invitation-pending") return "pending";
   if (invitationId === "invitation-admin-pending") return "pending";
+  if (invitationId === "invitation-existing-account") return "pending";
   if (invitationId === "invitation-expired") return "expired";
   if (invitationId === "invitation-canceled") return "canceled";
   if (invitationId === "invitation-accepted") return "accepted";
   if (invitationId.includes(":invite:")) return "pending";
-  if (invitationId.startsWith("workspace-") && invitationId.includes("invite")) return "pending";
+  if (invitationId.startsWith("workspace-") && invitationId.includes("invite"))
+    return "pending";
 
   return "missing";
 }
 
-function resolveMockInvitationRoles(invitationId: string): SessionWorkspaceRole[] {
+function resolveMockInvitationRoles(
+  invitationId: string,
+): SessionWorkspaceRole[] {
   if (invitationId === "invitation-admin-pending") return ["hospital_admin"];
   return ["vet"];
 }
