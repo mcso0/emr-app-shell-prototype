@@ -27,8 +27,21 @@ test("customer workspace renders animal master list and opens the common patient
   expect(customerNavBox!.y - inpatientNavBox!.y).toBeGreaterThan(60);
   expect(hospitalAdminNavBox!.y - customerNavBox!.y).toBeLessThan(52);
   await expect(page.getByTestId("customer-patient-table")).toBeVisible();
+  const patientTable = page.getByRole("table", { name: "동물 고객관리 테이블" });
+  await expect(
+    patientTable.locator('th[data-emr-header-interaction="sortable"][data-emr-column-resize="data-column"]', {
+      hasText: "동물명",
+    })
+  ).toBeVisible();
+  await expect(patientTable.locator("th", { hasText: "행 작업" })).toHaveAttribute(
+    "data-emr-column-resize",
+    "none"
+  );
   await expect(page.getByTestId("customer-patient-row-patient-dubu")).toContainText("두부");
   await expect(page.getByTestId("customer-patient-row-patient-dubu")).toContainText("정하린");
+  const dubuRow = page.getByTestId("customer-patient-row-patient-dubu");
+  await expect(dubuRow.locator('[data-emr-cell-text-mode="two-line-if-long"]', { hasText: "두부" })).toBeVisible();
+  await expect(dubuRow.locator('[data-emr-cell-text-mode="one-line"]', { hasText: /010-/ })).toBeVisible();
   await page.getByTestId("customer-patient-table").getByRole("button", { name: "컬럼" }).click();
   await expect(page.getByText("표시 컬럼")).toBeVisible();
   await page.keyboard.press("Escape");

@@ -66,6 +66,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-021        | human_review | design-system        | P0       | Project 12 / DEN-264 | `docs/work/design-system/DESIGN-SYSTEM-PR-021-shared-table-header-cell-text-primitives.md`             |
 | DESIGN-SYSTEM-PR-022        | human_review | design-system        | P0       | Project 12 / DEN-265 | `docs/work/design-system/DESIGN-SYSTEM-PR-022-chart-order-table-shared-primitives.md`                  |
 | DESIGN-SYSTEM-PR-023        | human_review | design-system        | P0       | Project 12 / DEN-266 | `docs/work/design-system/DESIGN-SYSTEM-PR-023-billing-table-shared-primitives.md`                      |
+| DESIGN-SYSTEM-PR-024        | human_review | design-system        | P0       | Project 12 / DEN-267 | `docs/work/design-system/DESIGN-SYSTEM-PR-024-customer-table-shared-primitives.md`                     |
 | HOME-PR-001                 | done         | home                 | P1       | PR 1                 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md`                                           |
 | HOME-PR-002                 | done         | home                 | P1       | PR 2                 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md`                                                     |
 | HOME-PR-003                 | done         | home                 | P1       | PR 3                 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md`                                                  |

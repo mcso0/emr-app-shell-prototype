@@ -21,6 +21,7 @@ import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
+import { EmrTableCellText, EmrTableHeaderCell } from "@/components/emr/table-primitives";
 import {
   EmrTextSideNavButton,
   EmrTextSideNavSection,
@@ -42,7 +43,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -59,7 +59,12 @@ import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawe
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { EmrTableDensity } from "@/components/emr/table-density";
+import type {
+  EmrColumnResize,
+  EmrTableCellTextMode,
+  EmrTableDensity,
+  EmrTableHeaderInteraction,
+} from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 
 const customerSideItems = [
@@ -107,13 +112,17 @@ function CustomerWorkBadge({ badge }: { badge: CustomerWorkBadge }) {
 }
 
 type CustomerTableColumn<TRow> = {
+  align?: "left" | "center" | "right";
   cell: (row: TRow) => ReactNode;
   className?: string;
   defaultVisible?: boolean;
   headerClassName?: string;
+  headerInteraction?: EmrTableHeaderInteraction;
   key: string;
   label: string;
   required?: boolean;
+  resize?: EmrColumnResize;
+  textMode?: EmrTableCellTextMode;
 };
 
 type CustomerDataTableProps<TRow extends { id: string }> = {
@@ -241,6 +250,22 @@ function CustomerDataTable<TRow extends { id: string }>({
     });
   };
 
+  const renderCell = (column: CustomerTableColumn<TRow>, row: TRow) => {
+    const content = column.cell(row);
+
+    if (typeof content !== "string" && typeof content !== "number") {
+      return content;
+    }
+
+    const text = String(content);
+
+    return (
+      <EmrTableCellText mode={column.textMode ?? "one-line"} fullText={text}>
+        {text}
+      </EmrTableCellText>
+    );
+  };
+
   return (
     <div className="overflow-hidden rounded-lg border bg-card shadow-sm" data-testid={testId}>
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3">
@@ -303,10 +328,22 @@ function CustomerDataTable<TRow extends { id: string }>({
           {rowActionFeedback.body}
         </EmrInlineAlert>
       ) : null}
-      <Table density={density} layout="scroll" minWidth={minTableWidth} className={minTableWidthClassName}>
+      <Table
+        aria-label={`${title} 고객관리 테이블`}
+        density={density}
+        layout="scroll"
+        minWidth={minTableWidth}
+        className={minTableWidthClassName}
+      >
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="w-12 bg-[var(--emr-surface-muted)]">
+            <EmrTableHeaderCell
+              aria-label={`${title} 선택`}
+              className="w-12"
+              interaction="static"
+              resize="none"
+            >
+              <span className="sr-only">선택</span>
               <span
                 data-row-interactive="true"
                 className="inline-flex size-6 items-center justify-center"
@@ -329,19 +366,29 @@ function CustomerDataTable<TRow extends { id: string }>({
                   indeterminate={someRowsSelected}
                 />
               </span>
-            </TableHead>
+            </EmrTableHeaderCell>
             {visibleColumns.map((column) => (
-              <TableHead
+              <EmrTableHeaderCell
                 key={column.key}
+                align={column.align}
                 className={cn(
-                  "h-11 bg-[var(--emr-surface-muted)] emr-text-dense font-medium text-muted-foreground",
+                  "h-11 emr-text-dense",
                   column.headerClassName
                 )}
+                interaction={column.headerInteraction ?? "static"}
+                resize={column.resize ?? "data-column"}
               >
                 {column.label}
-              </TableHead>
+              </EmrTableHeaderCell>
             ))}
-            <TableHead className="w-12 bg-[var(--emr-surface-muted)]" />
+            <EmrTableHeaderCell
+              aria-label={`${title} 행 작업`}
+              className="w-12"
+              interaction="static"
+              resize="none"
+            >
+              <span className="sr-only">행 작업</span>
+            </EmrTableHeaderCell>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -387,7 +434,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                   </TableCell>
                   {visibleColumns.map((column) => (
                     <TableCell key={column.key} className={cn("h-12", column.className)}>
-                      {column.cell(row)}
+                      {renderCell(column, row)}
                     </TableCell>
                   ))}
                   <TableCell className="w-12">
@@ -620,36 +667,50 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         key: "patientNo",
         label: "환자코드",
         required: true,
+        headerInteraction: "sortable",
         className: "whitespace-nowrap font-semibold",
+        textMode: "one-line",
         cell: (row) => row.patientNo,
       },
       {
         key: "name",
         label: "동물명",
         required: true,
-        className: "max-w-40 truncate font-semibold",
+        headerInteraction: "sortable",
+        className: "max-w-40 font-semibold",
+        textMode: "two-line-if-long",
         cell: (row) => row.name,
       },
       {
         key: "breed",
         label: "품종",
-        className: "max-w-56 truncate",
+        headerInteraction: "filterable",
+        className: "max-w-56",
+        textMode: "one-line",
         cell: (row) => row.breed,
       },
       {
         key: "sex",
         label: "성별",
+        headerInteraction: "filterable",
+        className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.sex,
       },
       {
         key: "age",
         label: "나이(생년월일)",
+        headerInteraction: "sortable",
+        className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.age,
       },
       {
         key: "workBadges",
         label: "상태",
+        headerInteraction: "filterable",
         className: "min-w-48",
+        textMode: "badge-wrap",
         cell: (row) => (
           <div className="flex flex-wrap gap-1">
             {row.workBadges.map((badge) => (
@@ -661,25 +722,33 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
       {
         key: "guardianNames",
         label: "보호자명",
-        className: "max-w-52 truncate",
+        headerInteraction: "compound",
+        className: "max-w-52",
+        textMode: "two-line-if-long",
         cell: (row) => row.guardianNames,
       },
       {
         key: "phone",
         label: "전화번호",
+        headerInteraction: "static",
         className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.phone,
       },
       {
         key: "messageConsent",
         label: "수신 여부",
+        headerInteraction: "filterable",
         className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.messageConsent,
       },
       {
         key: "registeredAt",
         label: "등록일시",
+        headerInteraction: "sortable",
         className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.registeredAt,
       },
     ],
@@ -716,44 +785,58 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         key: "name",
         label: "보호자명",
         required: true,
-        className: "max-w-44 truncate font-semibold",
+        headerInteraction: "sortable",
+        className: "max-w-44 font-semibold",
+        textMode: "two-line-if-long",
         cell: (row) => row.name,
       },
       {
         key: "mobilePhone",
         label: "휴대전화",
         required: true,
+        headerInteraction: "static",
         className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.mobilePhone,
       },
       {
         key: "patientSummary",
         label: "연결 동물",
-        className: "max-w-64 truncate",
+        headerInteraction: "compound",
+        className: "max-w-64",
+        textMode: "two-line-if-long",
         cell: (row) => row.patientSummary,
       },
       {
         key: "consentSummary",
         label: "동의 상태",
+        headerInteraction: "filterable",
         className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.consentSummary,
       },
       {
         key: "recentCs",
         label: "최근 CS",
-        className: "max-w-72 truncate",
+        headerInteraction: "compound",
+        className: "max-w-72",
+        textMode: "two-line-if-long",
         cell: (row) => row.recentCs,
       },
       {
         key: "recentWork",
         label: "최근 발송/업무",
-        className: "max-w-64 truncate",
+        headerInteraction: "compound",
+        className: "max-w-64",
+        textMode: "two-line-if-long",
         cell: (row) => row.recentWork,
       },
       {
         key: "registeredAt",
         label: "등록일시",
+        headerInteraction: "sortable",
         className: "whitespace-nowrap",
+        textMode: "one-line",
         cell: (row) => row.registeredAt,
       },
     ],
