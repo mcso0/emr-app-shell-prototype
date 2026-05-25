@@ -20,6 +20,25 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.getByTestId("hospital-order-row-hospital-order-maropitant")).toBeVisible();
 });
 
+test("hospital admin order table uses shared header and cell text primitives", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+
+  const table = page.getByTestId("hospital-order-table");
+  const headers = table.locator("thead th");
+
+  await expect(headers.nth(0)).toHaveAttribute("data-emr-header-interaction", "static");
+  await expect(headers.nth(0)).toHaveAttribute("data-emr-column-resize", "none");
+  await expect(headers.filter({ hasText: "표준 Order명" })).toHaveAttribute("data-emr-header-interaction", "sortable");
+  await expect(headers.filter({ hasText: "표준 Order명" })).toHaveAttribute("data-emr-column-resize", "data-column");
+  await expect(headers.filter({ hasText: "사용여부" })).toHaveAttribute("data-emr-header-interaction", "filterable");
+  await expect(headers.filter({ hasText: "작업" })).toHaveAttribute("data-emr-column-resize", "none");
+
+  const row = page.getByTestId("hospital-order-row-hospital-order-cbc");
+  await expect(row.locator('[data-emr-cell-text-mode="two-line-if-long"]').filter({ hasText: "CBC 검사" }).first()).toBeVisible();
+  await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "사용" })).toBeVisible();
+  await expect(row.locator('[data-emr-cell-text-mode="one-line"]').filter({ hasText: "35,000원" })).toBeVisible();
+});
+
 test("hospital admin order drawer edits and saves a selected order", async ({ page }) => {
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 

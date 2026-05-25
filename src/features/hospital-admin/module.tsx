@@ -14,6 +14,10 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
+import {
+  EmrTableCellText,
+  EmrTableHeaderCell,
+} from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrTextSideNavButton,
@@ -74,7 +78,12 @@ import { WorkspaceMembershipManagement } from "@/features/auth/workspace-members
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { EmrTableDensity } from "@/components/emr/table-density";
+import type {
+  EmrColumnResize,
+  EmrTableCellTextMode,
+  EmrTableDensity,
+  EmrTableHeaderInteraction,
+} from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 
 const orderSetPlaceholderId = "order-set-placeholder";
@@ -119,6 +128,65 @@ const hospitalOrderTableColumnClasses = {
   target: "w-[96px]",
   actions: "w-[80px]",
 } as const;
+
+type HospitalOrderTableColumnKey = keyof typeof hospitalOrderTableColumnClasses;
+
+type HospitalOrderTableHeaderColumn = {
+  align?: "left" | "right";
+  className?: string;
+  interaction: EmrTableHeaderInteraction;
+  key: HospitalOrderTableColumnKey;
+  label: string;
+  resize: EmrColumnResize;
+};
+
+const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
+  {
+    key: "type",
+    label: "유형",
+    interaction: "filterable",
+    resize: "data-column",
+  },
+  {
+    key: "standardName",
+    label: "표준 Order명",
+    interaction: "sortable",
+    resize: "data-column",
+  },
+  {
+    key: "inHospitalName",
+    label: "원내 Order명",
+    interaction: "sortable",
+    resize: "data-column",
+  },
+  {
+    key: "billingName",
+    label: "청구서명",
+    interaction: "sortable",
+    resize: "data-column",
+  },
+  {
+    key: "status",
+    label: "사용여부",
+    interaction: "filterable",
+    resize: "data-column",
+  },
+  {
+    key: "price",
+    label: "판매금액",
+    align: "right",
+    interaction: "sortable",
+    resize: "data-column",
+  },
+  {
+    key: "target",
+    label: "대상",
+    interaction: "filterable",
+    resize: "data-column",
+  },
+];
+
+const hospitalOrderNameTextMode: EmrTableCellTextMode = "two-line-if-long";
 
 type OrderMenuChild = {
   label: string;
@@ -634,6 +702,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       <div className="min-h-0 flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <Table
+            aria-label="병원관리 Order 관리 테이블"
+            data-testid="hospital-order-table"
             density={tableDensity}
             layout="scroll"
             minWidth={hospitalOrderTableMinWidth}
@@ -641,7 +711,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           >
             <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
               <TableRow className="hover:bg-transparent">
-                <TableHead className={hospitalOrderTableColumnClasses.select}>
+                <EmrTableHeaderCell
+                  className={hospitalOrderTableColumnClasses.select}
+                  interaction="static"
+                  resize="none"
+                >
                   <Checkbox
                     aria-label="보이는 오더 전체 선택"
                     checked={allVisibleSelected}
@@ -650,15 +724,26 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       toggleVisibleOrderSelection(visibleOrderIds, Boolean(checked))
                     }
                   />
-                </TableHead>
-                <TableHead className={hospitalOrderTableColumnClasses.type}>유형</TableHead>
-                <TableHead className={hospitalOrderTableColumnClasses.standardName}>표준 Order명</TableHead>
-                <TableHead className={hospitalOrderTableColumnClasses.inHospitalName}>원내 Order명</TableHead>
-                <TableHead className={hospitalOrderTableColumnClasses.billingName}>청구서명</TableHead>
-                <TableHead className={hospitalOrderTableColumnClasses.status}>사용여부</TableHead>
-                <TableHead className={cn(hospitalOrderTableColumnClasses.price, "text-right")}>판매금액</TableHead>
-                <TableHead className={hospitalOrderTableColumnClasses.target}>대상</TableHead>
-                <TableHead className={cn(hospitalOrderTableColumnClasses.actions, "text-right")}>작업</TableHead>
+                </EmrTableHeaderCell>
+                {hospitalOrderTableHeaderColumns.map((column) => (
+                  <EmrTableHeaderCell
+                    key={column.key}
+                    align={column.align}
+                    className={cn(hospitalOrderTableColumnClasses[column.key], column.className)}
+                    interaction={column.interaction}
+                    resize={column.resize}
+                  >
+                    {column.label}
+                  </EmrTableHeaderCell>
+                ))}
+                <EmrTableHeaderCell
+                  align="right"
+                  className={hospitalOrderTableColumnClasses.actions}
+                  interaction="static"
+                  resize="none"
+                >
+                  작업
+                </EmrTableHeaderCell>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -681,25 +766,44 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       />
                     </TableCell>
                     <TableCell><Badge variant="outline">개별</Badge></TableCell>
-                    <TableCell className="truncate font-semibold">{order.standardName}</TableCell>
-                    <TableCell className="truncate">{order.inHospitalName}</TableCell>
-                    <TableCell className="truncate">{order.billingName}</TableCell>
+                    <TableCell className="overflow-hidden font-semibold">
+                      <EmrTableCellText mode={hospitalOrderNameTextMode} fullText={order.standardName}>
+                        {order.standardName}
+                      </EmrTableCellText>
+                    </TableCell>
+                    <TableCell className="overflow-hidden">
+                      <EmrTableCellText mode={hospitalOrderNameTextMode} fullText={order.inHospitalName}>
+                        {order.inHospitalName}
+                      </EmrTableCellText>
+                    </TableCell>
+                    <TableCell className="overflow-hidden">
+                      <EmrTableCellText mode={hospitalOrderNameTextMode} fullText={order.billingName}>
+                        {order.billingName}
+                      </EmrTableCellText>
+                    </TableCell>
                     <TableCell>
-                      <span
+                      <EmrTableCellText
                         className={cn(
                           "font-semibold",
                           order.isActive
                             ? "text-[var(--emr-status-success-text)]"
                             : "text-muted-foreground"
                         )}
+                        mode="one-line"
                       >
                         {order.isActive ? "사용" : "중지"}
-                      </span>
+                      </EmrTableCellText>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatHospitalOrderAmount(order.price)}
+                    <TableCell className="overflow-hidden text-right font-semibold">
+                      <EmrTableCellText mode="one-line">
+                        {formatHospitalOrderAmount(order.price)}
+                      </EmrTableCellText>
                     </TableCell>
-                    <TableCell>{targetLabels[order.target]}</TableCell>
+                    <TableCell className="overflow-hidden">
+                      <EmrTableCellText mode="one-line">
+                        {targetLabels[order.target]}
+                      </EmrTableCellText>
+                    </TableCell>
                     <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
                       <EmrRowActionMenu
                         ariaLabel={`${order.standardName} Order 행 작업`}

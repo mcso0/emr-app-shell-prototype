@@ -326,6 +326,15 @@ Implementation guidance:
 - The pilot keeps scalar cells one-line by default and allows limited two-line previews for order names and warning/change messages.
 - Checkbox, assignment control, and workflow action columns are excluded from resize affordances. Wider table adoption remains out of scope for DEN-264.
 
+### DEN-269 Hospital Admin Order Catalog Adoption
+
+- `src/features/hospital-admin/module.tsx` applies the shared header and cell text primitives to the hospital admin Order catalog table only.
+- The table is treated as an admin/master-data catalog: type, status, and target are filterable headers; Order names and price are sortable-role headers; checkbox and action columns remain static.
+- Resize policy is declared as `data-column` for data columns and `none` for checkbox/action columns. DEN-269 does not implement new resize behavior.
+- Scalar values stay `one-line`; high-meaning Order names, in-hospital names, and billing names use limited `two-line-if-long`.
+- Hospital admin category navigation, search/filter controls, row selection, drawer edit/delete, row action menu, and mock/session behavior remain unchanged.
+- The focused regression contract lives in `tests/hospital-admin.spec.ts` and checks primitive data attributes plus cell text modes.
+
 ## Implementation Gate
 
 Before Project 12 implementation issues:
