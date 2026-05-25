@@ -80,6 +80,20 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("급성 위장관염 의심", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("항구토제 세트")).toBeVisible();
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
+  const diagnosisPanel = page.getByLabel("진단명 관리");
+  await expect(
+    diagnosisPanel.locator('[data-emr-cell-text-mode="two-line-if-long"]', { hasText: "급성 위장관염 의심" }).first()
+  ).toContainText("급성 위장관염 의심");
+  const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
+  await expect(orderTable.locator('th:has-text("Order명")')).toHaveAttribute("data-emr-header-interaction", "compound");
+  await expect(orderTable.locator('th:has-text("수량")')).toHaveAttribute("data-emr-column-resize", "data-column");
+  await expect(orderTable.locator('th:has-text("작업")')).toHaveAttribute("data-emr-column-resize", "none");
+  await expect(
+    orderTable.locator('[data-emr-cell-text-mode="two-line-if-long"]', { hasText: "Maropitant 16mg T" }).first()
+  ).toContainText("Maropitant 16mg T");
+  await expect(
+    orderTable.locator('[data-emr-cell-text-mode="one-line"]', { hasText: "항구토제 세트" }).first()
+  ).toContainText("항구토제 세트");
   await expect(page.getByRole("checkbox", { name: "오더 전체 선택" })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" })).not.toBeChecked();
   await page.getByRole("button", { name: "기본 SOAP 작업" }).click();

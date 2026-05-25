@@ -48,6 +48,10 @@ import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
+import {
+  EmrTableCellText,
+  EmrTableHeaderCell,
+} from "@/components/emr/table-primitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -64,7 +68,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -93,7 +96,11 @@ import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { EmrTableDensity } from "@/components/emr/table-density";
+import type {
+  EmrColumnResize,
+  EmrTableDensity,
+  EmrTableHeaderInteraction,
+} from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   Diagnosis,
@@ -1888,9 +1895,9 @@ function AssessmentPanel({
                 className="grid grid-cols-[86px_minmax(0,1fr)_56px_56px_72px] items-center border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-2 emr-text-dense"
               >
                 <Badge variant="outline">{diagnosis.systemLabel}</Badge>
-                <span className="min-w-0 truncate font-medium">
+                <EmrTableCellText mode="two-line-if-long" fullText={diagnosis.diagnosisText} className="font-medium">
                   {diagnosis.diagnosisText}
-                </span>
+                </EmrTableCellText>
                 <button
                   type="button"
                   aria-label={`${diagnosis.diagnosisText} 확진 토글`}
@@ -1910,7 +1917,9 @@ function AssessmentPanel({
                   {diagnosis.isPrimary ? "✓" : "-"}
                 </button>
                 <span className="flex min-w-0 items-center justify-between gap-1">
-                  <span className="truncate">{getChartStaffName(diagnosis.createdByUserId) ?? "미정"}</span>
+                  <EmrTableCellText mode="one-line" fullText={getChartStaffName(diagnosis.createdByUserId) ?? "미정"}>
+                    {getChartStaffName(diagnosis.createdByUserId) ?? "미정"}
+                  </EmrTableCellText>
                   <Button
                     type="button"
                     variant="ghost"
@@ -2124,6 +2133,28 @@ const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
   row.billingName !== row.committedBillingName ||
   row.quantityInput !== row.committedQuantityInput;
 
+type ChartOrderTableColumn = {
+  align?: "left" | "center" | "right";
+  className: string;
+  interaction: EmrTableHeaderInteraction;
+  label: string;
+  resize: EmrColumnResize;
+};
+
+const chartOrderTableColumns: ChartOrderTableColumn[] = [
+  { className: "w-10 px-3", interaction: "static", label: "선택", resize: "none" },
+  { className: "w-[132px]", interaction: "compound", label: "그룹", resize: "data-column" },
+  { className: "w-[72px]", interaction: "filterable", label: "분류", resize: "data-column" },
+  { className: "w-[76px]", interaction: "filterable", label: "상태", resize: "data-column" },
+  { className: "w-[260px]", interaction: "compound", label: "Order명", resize: "data-column" },
+  { className: "w-[220px]", interaction: "compound", label: "청구서명", resize: "data-column" },
+  { align: "right", className: "w-[68px]", interaction: "sortable", label: "수량", resize: "data-column" },
+  { align: "right", className: "w-[84px]", interaction: "sortable", label: "단가", resize: "data-column" },
+  { align: "right", className: "w-[96px]", interaction: "sortable", label: "청구금액", resize: "data-column" },
+  { className: "w-[76px]", interaction: "filterable", label: "수의사", resize: "data-column" },
+  { align: "right", className: "w-[116px]", interaction: "static", label: "작업", resize: "none" },
+];
+
 function ChartOrderTable({
   allVisibleSelected,
   density,
@@ -2156,6 +2187,7 @@ function ChartOrderTable({
   return (
     <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
       <Table
+        aria-label="처방/오더 테이블"
         density={density}
         layout="scroll"
         minWidth={1160}
@@ -2163,25 +2195,27 @@ function ChartOrderTable({
       >
         <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
-            <TableHead className="w-10 px-3 text-muted-foreground">
-              <EmrTableCheckbox
-                aria-label="오더 전체 선택"
-                checked={allVisibleSelected}
-                indeterminate={someVisibleSelected}
-                disabled={!rows.length}
-                onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
-              />
-            </TableHead>
-            <TableHead className="w-[132px] emr-text-metadata text-muted-foreground">그룹</TableHead>
-            <TableHead className="w-[72px] emr-text-metadata text-muted-foreground">분류</TableHead>
-            <TableHead className="w-[76px] emr-text-metadata text-muted-foreground">상태</TableHead>
-            <TableHead className="w-[260px] emr-text-metadata text-muted-foreground">Order명</TableHead>
-            <TableHead className="w-[220px] emr-text-metadata text-muted-foreground">청구서명</TableHead>
-            <TableHead className="w-[68px] text-right emr-text-metadata text-muted-foreground">수량</TableHead>
-            <TableHead className="w-[84px] text-right emr-text-metadata text-muted-foreground">단가</TableHead>
-            <TableHead className="w-[96px] text-right emr-text-metadata text-muted-foreground">청구금액</TableHead>
-            <TableHead className="w-[76px] emr-text-metadata text-muted-foreground">수의사</TableHead>
-            <TableHead className="w-[116px] text-right emr-text-metadata text-muted-foreground">작업</TableHead>
+            {chartOrderTableColumns.map((column) => (
+              <EmrTableHeaderCell
+                key={column.label}
+                align={column.align}
+                className={column.className}
+                interaction={column.interaction}
+                resize={column.resize}
+              >
+                {column.label === "선택" ? (
+                  <EmrTableCheckbox
+                    aria-label="오더 전체 선택"
+                    checked={allVisibleSelected}
+                    indeterminate={someVisibleSelected}
+                    disabled={!rows.length}
+                    onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
+                  />
+                ) : (
+                  column.label
+                )}
+              </EmrTableHeaderCell>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -2191,6 +2225,7 @@ function ChartOrderTable({
             const invalidQuantity = invalidOrderIds.has(order.id);
             const lineTotal = getDraftLineTotal(row);
             const selected = selectedOrderIds.has(order.id);
+            const requestedByName = getChartStaffName(order.requestedByUserId) ?? "미정";
 
             return (
               <TableRow
@@ -2206,8 +2241,10 @@ function ChartOrderTable({
                     onCheckedChange={(checked) => onToggleOrder(order.id, Boolean(checked))}
                   />
                 </TableCell>
-                <TableCell className="truncate emr-text-metadata font-medium text-muted-foreground" title={groupTitle}>
-                  {groupTitle}
+                <TableCell className="overflow-hidden emr-text-metadata font-medium text-muted-foreground">
+                  <EmrTableCellText mode="one-line" fullText={groupTitle}>
+                    {groupTitle}
+                  </EmrTableCellText>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="max-w-full truncate">
@@ -2218,15 +2255,16 @@ function ChartOrderTable({
                   <EmrStatusBadge label={orderStatusLabel[order.status]} marker="none" />
                 </TableCell>
                 <TableCell className="min-w-0 whitespace-normal py-2">
-                  <div className="truncate font-medium" title={order.displayName}>
+                  <EmrTableCellText mode="two-line-if-long" fullText={order.displayName} className="font-medium">
                     {order.displayName}
-                  </div>
-                  <div
-                    className="truncate emr-text-metadata text-muted-foreground"
-                    title={order.instruction ?? orderTypeMeta[order.orderType].handoff}
+                  </EmrTableCellText>
+                  <EmrTableCellText
+                    mode="one-line"
+                    fullText={order.instruction ?? orderTypeMeta[order.orderType].handoff}
+                    className="emr-text-metadata text-muted-foreground"
                   >
                     {order.instruction ?? orderTypeMeta[order.orderType].handoff}
-                  </div>
+                  </EmrTableCellText>
                 </TableCell>
                 <TableCell>
                   <Input
@@ -2251,13 +2289,19 @@ function ChartOrderTable({
                   />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {row.unitPrice !== undefined ? row.unitPrice.toLocaleString() : "-"}
+                  <EmrTableCellText mode="one-line">
+                    {row.unitPrice !== undefined ? row.unitPrice.toLocaleString() : "-"}
+                  </EmrTableCellText>
                 </TableCell>
                 <TableCell className="text-right font-semibold tabular-nums">
-                  {lineTotal !== undefined ? lineTotal.toLocaleString() : "-"}
+                  <EmrTableCellText mode="one-line">
+                    {lineTotal !== undefined ? lineTotal.toLocaleString() : "-"}
+                  </EmrTableCellText>
                 </TableCell>
-                <TableCell className="truncate" title={getChartStaffName(order.requestedByUserId) ?? "미정"}>
-                  {getChartStaffName(order.requestedByUserId) ?? "미정"}
+                <TableCell className="overflow-hidden">
+                  <EmrTableCellText mode="one-line" fullText={requestedByName}>
+                    {requestedByName}
+                  </EmrTableCellText>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">

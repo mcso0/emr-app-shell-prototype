@@ -57,8 +57,11 @@ DEN-246 replaced the two equal account-choice cards with an email-first acceptan
 - Password setup validates required input, minimum length, and confirmation match before enabling the workspace CTA.
 - Existing-account login validates that a password is present before enabling the login CTA.
 - Supabase mode uses `signUpWithPassword` or `signInWithPassword` and then calls the server accept route only for the invited email context.
+- The legacy Supabase OTP handoff can still route unauthenticated users with `reason=invite_email_otp`, `inviteEmail`, and safe `next` context for compatibility coverage.
+- `/api/auth/invite-otp/request` validates that the request is tied to a pending invitation, the locked email matches the invite email, and `next` is an internal `/invite/...` path before the client requests OTP.
+- `/auth/confirm` handles configured Supabase email links with `token_hash`, verifies the token, and redirects only to the safe invite path.
+- The invite accept DB transaction upserts the verified invited identity into `public.users` before activating the workspace membership, so a newly created Supabase Auth user can complete the same invite flow as an existing app user.
 - Local/mock mode still creates a mock session for `invitee:[email]`, maps the invitation role to the closest mock role, persists active workspace membership, and redirects to `/w/[workspaceId]/reception`.
-- `/auth/confirm` remains the safe handler for configured Supabase email links with `token_hash` and redirects only to safe internal paths.
 - The legacy invite OTP login handoff remains covered for compatibility, but the invite acceptance screen no longer asks a user who opened the invite email link to request another OTP.
 - Returning members use the existing email/password login form. Google, social login, SSO, and MFA remain separate future decisions.
 - The invite page does not ask the user to choose `new` vs `existing` before email verification.
@@ -93,7 +96,7 @@ This work does not implement:
 - Google, social login, or SSO.
 - MFA.
 - Production invite token verification.
-- New DB/RLS migration.
+- New RLS policy migration.
 - Remote Supabase or production execution.
 - Real hospital staff data.
 
@@ -121,3 +124,10 @@ The local-first screen contract above remains useful for mock/demo coverage. Sta
 DEN-278 implementation verification is recorded in:
 
 - `docs/work/auth/AUTH-PR-043-invite-link-password-onboarding-implementation.md`
+
+DEN-265/DEN-258 follow-up verification is recorded in:
+
+- `docs/work/design-system/DESIGN-SYSTEM-PR-022-chart-order-table-shared-primitives.md`
+- `docs/completed/auth/2026-05-24-invite-acceptance-app-user-upsert-report.html`
+- `docs/completed/saas-launch/2026-05-24-den-258-invite-otp-staging-e2e-closeout-report.html`
+- 2026-05-24 follow-up: `npx playwright test tests/workspace-invitation-lifecycle-server.spec.ts -g "links OTP-authenticated" --reporter=line` passed after adding the local-first app-user upsert migration contract.

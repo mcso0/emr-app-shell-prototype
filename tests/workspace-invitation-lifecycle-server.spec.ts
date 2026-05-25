@@ -170,6 +170,22 @@ test("invitation lifecycle route validates session and keeps server-owned DB fun
   expect(migrationSource).not.toMatch(/service_role|supabase_secret|db_password/i);
 });
 
+test("invite acceptance DB function links OTP-authenticated users into app users", () => {
+  const migrationSource = readFileSync(
+    "supabase/migrations/20260524121000_invite_acceptance_app_user_upsert.sql",
+    "utf8"
+  );
+
+  expect(migrationSource).toContain("create or replace function public.clair_accept_workspace_invitation");
+  expect(migrationSource).toContain("auth.uid()");
+  expect(migrationSource).toContain("auth.jwt() ->> 'email'");
+  expect(migrationSource).toContain("insert into public.users");
+  expect(migrationSource).toContain("on conflict (id) do update");
+  expect(migrationSource).toContain("v_app_user_email <> v_invitation.email");
+  expect(migrationSource).toContain("public.user_memberships");
+  expect(migrationSource).not.toMatch(/service_role|supabase_secret|db_password/i);
+});
+
 async function expectJson(response: APIResponse, shape: Record<string, unknown>) {
   await expect(response.json()).resolves.toEqual(expect.objectContaining(shape));
 }

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-258 초대 OTP staging E2E closeout</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 40px;
+        color: #111827;
+        line-height: 1.6;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .warn {
+        color: #b45309;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-258 초대 OTP staging E2E closeout</h1>
+    <p><strong>일자:</strong> 2026-05-24</p>
+    <p><strong>Linear:</strong> DEN-258 / 03-09 Configure Supabase Auth Custom SMTP for invite OTP QA</p>
+    <p>
+      staging Preview에서 초대 이메일 재발송, Supabase Auth OTP 인증, 초대 수락, 워크스페이스
+      입장 흐름을 검증했다. Secret, OTP 원문, magic link, raw invite token은 기록하지 않았다.
+    </p>
+
+    <h2>대상 환경</h2>
+    <ul>
+      <li>Vercel Preview: <code>emr-app-shell-prototype-hhlm3oxg7-mcso0s-projects.vercel.app</code></li>
+      <li>Supabase staging: <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code></li>
+      <li>테스트 초대: <code>1e6a9b0b-91bb-4d3f-bd66-773a9653e53c</code></li>
+      <li>테스트 수신자: <code>gofldi65@gmail.com</code></li>
+    </ul>
+
+    <h2>변경 및 운영 조치</h2>
+    <ul>
+      <li>
+        OTP 인증으로 새로 생성된 Supabase Auth 사용자가 앱 <code>public.users</code> row 없이
+        초대 수락을 시도하면 membership activation이 실패하는 blocker를 확인했다.
+      </li>
+      <li>
+        <code>20260524121000_invite_acceptance_app_user_upsert.sql</code>을 작성해
+        <code>clair_accept_workspace_invitation</code>이 verified email identity를 확인한 뒤
+        앱 사용자 row를 upsert하고 membership을 active로 전환하도록 보강했다.
+      </li>
+      <li>
+        승욱 승인 후 staging Supabase에 migration을 적용했다. 적용된 remote migration은
+        <code>20260524121849 invite_acceptance_app_user_upsert</code>로 확인했다.
+      </li>
+      <li>
+        Production Supabase, production deploy, 실고객 메일, DB reset, RLS policy 변경은 하지 않았다.
+      </li>
+    </ul>
+
+    <h2>Staging E2E 결과</h2>
+    <ul>
+      <li class="ok">Preview invite OTP guard: <code>ok=true</code>, <code>delivery=supabase</code>.</li>
+      <li class="ok">Supabase Auth OTP request: <code>ok=true</code>, <code>delivery=requested</code>.</li>
+      <li class="ok">
+        Gmail OTP는 사람이 직접 입력했고, OTP 원문 및 인증 링크는 문서/채팅/로그에 남기지 않았다.
+      </li>
+      <li class="ok">
+        초대 수락 후 staging DB에서 invitation status가 <code>accepted</code>이고
+        <code>accepted_at</code>, <code>accepted_by_user_id</code>가 존재함을 확인했다.
+      </li>
+      <li class="ok">
+        Preview가 <code>/w/clair-demo/reception?modulePanel=open</code>으로 이동했고,
+        reception workspace 화면과 <code>gofldi65@gmail.com</code> 프로필 메뉴가 렌더링됐다.
+      </li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li class="ok">
+        <code>npx playwright test tests/workspace-invitation-lifecycle-server.spec.ts --reporter=line</code>
+        passed, 5 tests.
+      </li>
+      <li class="ok">
+        <code>npx playwright test tests/invite-otp-handoff.spec.ts tests/invite-acceptance.spec.ts --reporter=line</code>
+        passed, 9 tests.
+      </li>
+      <li class="ok"><code>npx tsc --noEmit</code> passed.</li>
+      <li class="ok"><code>npm run lint</code> passed with 5 existing warnings.</li>
+      <li class="ok"><code>npm run docs:check</code> passed.</li>
+      <li class="ok"><code>npm run security:secrets</code> passed.</li>
+      <li class="ok"><code>git diff --check</code> passed for DEN-258 touched files.</li>
+    </ul>
+
+    <h2>주의 사항</h2>
+    <p class="warn">
+      이 closeout은 staging Preview QA 완료 기록이다. Production SMTP/Auth/DB 적용이나
+      실고객 온보딩 readiness를 의미하지 않는다.
+    </p>
+  </body>
+</html>
