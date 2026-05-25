@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-270 Sort/Filter Revised Prototype Options</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f9fc;
+        --surface: #ffffff;
+        --surface-soft: #f4f7fb;
+        --line: #d8e1ec;
+        --line-strong: #b8c7d9;
+        --text: #111827;
+        --muted: #64748b;
+        --accent: #4f46e5;
+        --accent-soft: #eef2ff;
+        --accent-line: #a5b4fc;
+        --ok: #047857;
+        --warn: #b45309;
+        --danger: #be123c;
+        --shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+        line-height: 1.22;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      h2 {
+        margin-top: 34px;
+        font-size: 22px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      code {
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        background: #f1f5f9;
+        padding: 1px 5px;
+        font-size: 0.92em;
+      }
+
+      .meta,
+      .note {
+        color: var(--muted);
+      }
+
+      .hero,
+      .panel,
+      .prototype-shell {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .hero {
+        padding: 22px;
+      }
+
+      .hero p {
+        max-width: 900px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+
+      .option-card {
+        display: flex;
+        min-height: 178px;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .badge {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface-soft);
+        padding: 3px 8px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.recommended {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+        color: #3730a3;
+      }
+
+      .reference-list {
+        margin: 12px 0 0;
+        padding-left: 22px;
+      }
+
+      .reference-list li {
+        margin: 7px 0;
+      }
+
+      .prototype-shell {
+        margin-top: 18px;
+        overflow: visible;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--line);
+        background: #f8fafc;
+        padding: 10px;
+      }
+
+      .tab {
+        min-height: 36px;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        padding: 7px 12px;
+        color: #334155;
+        cursor: pointer;
+      }
+
+      .tab[aria-selected="true"] {
+        border-color: var(--line-strong);
+        background: #ffffff;
+        color: var(--text);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .prototype-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 318px;
+        gap: 0;
+      }
+
+      .demo {
+        position: relative;
+        min-width: 0;
+        padding: 16px;
+      }
+
+      .explain {
+        border-left: 1px solid var(--line);
+        background: #fbfdff;
+        padding: 16px;
+      }
+
+      .section-bar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+
+      .section-title {
+        min-width: 0;
+      }
+
+      .section-title h3 {
+        font-size: 18px;
+      }
+
+      .section-title p {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .actions,
+      .filter-row,
+      .panel-head,
+      .builder-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .actions {
+        justify-content: flex-end;
+      }
+
+      .button,
+      .select-like {
+        min-height: 34px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 6px 10px;
+        color: #334155;
+        cursor: pointer;
+      }
+
+      .button:hover,
+      .sort-button:hover {
+        border-color: var(--accent-line);
+        color: #3730a3;
+      }
+
+      .button.primary {
+        border-color: var(--accent-line);
+        background: var(--accent-soft);
+        color: #3730a3;
+        font-weight: 800;
+      }
+
+      .button.ghost {
+        border-color: transparent;
+        background: transparent;
+      }
+
+      .button.danger {
+        color: var(--danger);
+      }
+
+      .filter-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .filter-trigger.active {
+        border-color: #7c3aed;
+        background: #f5f3ff;
+        color: #4c1d95;
+        font-weight: 800;
+      }
+
+      .filter-icon {
+        display: inline-grid;
+        width: 18px;
+        height: 18px;
+        place-items: center;
+      }
+
+      .builder-panel {
+        position: absolute;
+        z-index: 5;
+        top: 86px;
+        right: 16px;
+        display: none;
+        width: min(900px, calc(100% - 32px));
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .builder-panel.open {
+        display: block;
+      }
+
+      .panel-head {
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 850;
+      }
+
+      .filter-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .filter-row {
+        display: grid;
+        grid-template-columns: minmax(130px, 1.2fr) minmax(120px, 0.8fr) minmax(180px, 1.9fr) 38px;
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 8px;
+      }
+
+      .filter-row select,
+      .filter-row input {
+        width: 100%;
+        min-height: 34px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 6px 9px;
+        color: var(--text);
+      }
+
+      .filter-value {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-height: 34px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 5px;
+      }
+
+      .value-pill {
+        border: 1px solid #c7d2fe;
+        border-radius: 999px;
+        background: #eef2ff;
+        padding: 3px 8px;
+        color: #3730a3;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .value-pill[aria-pressed="false"] {
+        border-color: transparent;
+        background: #f1f5f9;
+        color: #64748b;
+      }
+
+      .builder-footer {
+        margin-top: 12px;
+        justify-content: space-between;
+      }
+
+      .builder-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 9px 10px;
+        text-align: left;
+        vertical-align: middle;
+        font-size: 13px;
+      }
+
+      th {
+        background: #f1f5f9;
+        color: #4b5563;
+        font-weight: 850;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      tbody tr:hover td {
+        background: #f8fbff;
+      }
+
+      .sort-button {
+        position: relative;
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        padding: 3px 5px;
+        color: inherit;
+        cursor: pointer;
+        font-weight: 850;
+      }
+
+      .sort-icon {
+        color: #6b7280;
+      }
+
+      .sort-button.active {
+        border-color: #c7d2fe;
+        background: #eef2ff;
+        color: #3730a3;
+      }
+
+      .sort-button.active .sort-icon {
+        color: #4f46e5;
+      }
+
+      .sort-button.active::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #4f46e5;
+      }
+
+      .sort-button[data-tooltip]:hover::after,
+      .sort-button[data-tooltip]:focus-visible::after {
+        position: absolute;
+        z-index: 8;
+        top: calc(100% + 8px);
+        left: 0;
+        min-width: 184px;
+        max-width: 240px;
+        border: 1px solid #c7d2fe;
+        border-radius: 8px;
+        background: #111827;
+        color: #ffffff;
+        content: attr(data-tooltip);
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.35;
+        white-space: normal;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.18);
+      }
+
+      .status {
+        display: inline-flex;
+        min-width: 62px;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 3px 7px;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .status.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .status.ready {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .status.hold {
+        background: #ffe4e6;
+        color: #9f1239;
+      }
+
+      .status.draft {
+        background: #e0f2fe;
+        color: #075985;
+      }
+
+      .amount {
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .empty {
+        padding: 24px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .summary-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .summary-row strong {
+        color: var(--text);
+      }
+
+      .rules {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+
+      .rules li {
+        margin: 6px 0;
+      }
+
+      .decision-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+
+      .decision-table th,
+      .decision-table td {
+        border: 1px solid var(--line);
+        padding: 10px;
+        vertical-align: top;
+      }
+
+      .decision-table th {
+        background: #f1f5f9;
+      }
+
+      @media (max-width: 940px) {
+        .grid,
+        .prototype-body {
+          grid-template-columns: 1fr;
+        }
+
+        .explain {
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+        .builder-panel {
+          top: 124px;
+          right: 16px;
+          left: 16px;
+          width: auto;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 28px 14px 48px;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+
+        .section-bar,
+        .actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+        .filter-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <p class="meta">DEN-270 · 2026-05-24 · Revised after shadcn/TanStack/MUI/AG Grid review</p>
+        <h1>Sort / Filter UX 수정 시안</h1>
+        <p>
+          수정 방향은 명확하다. 테이블 헤더에는 <strong>정렬만</strong> 둔다. 필터는 테이블이 속한 섹션 헤더의
+          오른쪽 액션 영역에 <strong>Filter 버튼</strong>으로 제공하고, 버튼을 열면 여러 조건을 추가/삭제할 수 있는
+          builder형 드롭다운을 사용한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>레퍼런스 조사 요약</h2>
+        <div class="panel">
+          <ul class="reference-list">
+            <li>
+              <a href="https://ui.shadcn.com/docs/components/data-table">shadcn/ui Data Table</a>은 TanStack 기반으로
+              테이블마다 sorting/filtering 요구가 다르므로 재사용 가능한 거대 컴포넌트보다 조합 가능한 구조를 권장한다.
+            </li>
+            <li>
+              <a href="https://tanstack.com/table/latest/docs/guide/sorting">TanStack Table sorting</a>과
+              <a href="https://tanstack.dev/table/latest/docs/guide/column-filtering">column filtering</a>은 state를
+              분리해 제어할 수 있어, header sort와 section-level filter builder를 함께 쓰기 좋다.
+            </li>
+            <li>
+              <a href="https://mui.com/x/react-data-grid/filtering/">MUI X Filtering</a>은 toolbar의 Filters 버튼으로
+              filter panel을 여는 방식을 지원한다. 이 패턴은 CLAiR의 섹션 헤더 액션 영역과 잘 맞는다.
+            </li>
+            <li>
+              <a href="https://www.ag-grid.com/javascript-grid-filter-external/">AG Grid External Filter</a>는 grid 컬럼
+              필터와 별개로 앱 레벨 필터를 둘 수 있음을 보여준다. EMR에서는 이 방식이 workflow 보존에 유리하다.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>제안 시안</h2>
+        <div class="grid">
+          <article class="panel option-card">
+            <div>
+              <span class="badge recommended">A · 권장 기본안</span>
+              <h3>Section filter button</h3>
+              <p>
+                섹션 타이틀 오른쪽에 Filter 버튼을 두고, 현재 활성 조건 수를 버튼에 표시한다. 헤더는 정렬만 담당한다.
+              </p>
+            </div>
+            <p class="note">Billing pilot과 chart/order에 가장 안전한 기본안.</p>
+          </article>
+
+          <article class="panel option-card">
+            <div>
+              <span class="badge">B · 관리형</span>
+              <h3>Admin filter builder</h3>
+              <p>
+                다중 조건 builder는 현재 조건 편집에 집중하고, 섹션 액션에는 Filter 버튼만 유지한다. 관리자/운영 테이블에
+                적합하다.
+              </p>
+            </div>
+            <p class="note">Customer/admin master-data grid 후보.</p>
+          </article>
+
+          <article class="panel option-card">
+            <div>
+              <span class="badge">C · 임상 간소형</span>
+              <h3>Compact clinical filters</h3>
+              <p>
+                같은 builder를 쓰되 field 후보를 상태, 유형, 담당자 정도로 제한한다. 임상 테이블에서 과한 조작감을 줄인다.
+              </p>
+            </div>
+            <p class="note">Chart/order처럼 흐름 방해가 적어야 하는 화면 후보.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="prototype-shell" aria-label="Interactive revised filter prototype">
+        <div class="tabs" role="tablist" aria-label="Prototype options">
+          <button class="tab" type="button" data-mode="default" role="tab" aria-selected="true">A Section filter</button>
+          <button class="tab" type="button" data-mode="admin" role="tab" aria-selected="false">B Admin builder</button>
+          <button class="tab" type="button" data-mode="clinical" role="tab" aria-selected="false">C Compact clinical</button>
+        </div>
+
+        <div class="prototype-body">
+          <div class="demo">
+            <div class="section-bar">
+              <div class="section-title">
+                <h3 id="sectionTitle">수납 청구 항목</h3>
+                <p id="sectionSubtitle">헤더는 정렬만 제공하고, 필터는 이 섹션 액션 영역에서 관리한다.</p>
+              </div>
+              <div class="actions">
+                <button id="filterButton" class="button filter-trigger" type="button" aria-expanded="false">
+                  <span class="filter-icon">≡</span>
+                  <span id="filterButtonText">Filter</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="builderPanel" class="builder-panel" aria-label="Filter builder">
+              <div class="panel-head">
+                <div class="panel-title">
+                  <span>Filters</span>
+                  <span class="note" id="builderHint">다중 조건은 AND로 적용된다.</span>
+                </div>
+              </div>
+
+              <div id="filterList" class="filter-list"></div>
+
+              <div class="builder-footer">
+                <button id="addFilterButton" class="button" type="button">+ Add filter</button>
+                <div class="builder-actions">
+                  <button id="applyFilterButton" class="button primary" type="button">Apply filters</button>
+                  <button id="closeFilterButton" class="button ghost" type="button">Close</button>
+                  <button id="resetFilterButton" class="button ghost danger" type="button">초기화</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="name">항목 <span class="sort-icon" data-sort-icon="name">↕</span></button>
+                    </th>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="type">유형 <span class="sort-icon" data-sort-icon="type">↕</span></button>
+                    </th>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="statusOrder">상태 <span class="sort-icon" data-sort-icon="statusOrder">↕</span></button>
+                    </th>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="owner">담당 <span class="sort-icon" data-sort-icon="owner">↕</span></button>
+                    </th>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="qty">수량 <span class="sort-icon" data-sort-icon="qty">↕</span></button>
+                    </th>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="amount">금액 <span class="sort-icon" data-sort-icon="amount">↕</span></button>
+                    </th>
+                    <th scope="col">
+                      <button class="sort-button" type="button" data-sort="updatedAt">변경 <span class="sort-icon" data-sort-icon="updatedAt">↕</span></button>
+                    </th>
+                    <th scope="col">작업</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+              <div id="emptyState" class="empty" hidden>조건에 맞는 항목이 없다. 필터를 지우거나 조건을 바꿔봐.</div>
+            </div>
+
+            <div class="summary-row">
+              <span>표시 <strong id="visibleCount">0</strong> / 전체 <strong id="totalCount">0</strong></span>
+              <span>합계 <strong id="totalAmount">0원</strong></span>
+            </div>
+          </div>
+
+          <aside class="explain">
+            <h3 id="explainTitle">A. Section filter button</h3>
+            <p id="explainBody">
+              Filter 버튼은 섹션 헤더 오른쪽 액션 영역에 둔다. 사용자는 현재 필터 개수를 버튼에서 확인하고,
+              드롭다운 안에서 여러 조건을 추가/삭제한다.
+            </p>
+            <ul id="explainRules" class="rules">
+              <li>테이블 헤더에는 filter trigger를 두지 않는다.</li>
+              <li>정렬은 scalar 컬럼의 헤더 버튼으로만 제공하고, 현재 상태는 해당 헤더에서 표시한다.</li>
+              <li>필터 조건은 AND로 조합하고 조건 수는 Filter 버튼에 표시한다.</li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section>
+        <h2>추천 결론</h2>
+        <table class="decision-table">
+          <thead>
+            <tr>
+              <th>대상</th>
+              <th>추천</th>
+              <th>이유</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Project 13 기본 정책</td>
+              <td>헤더 정렬 + 섹션 Filter builder</td>
+              <td>정렬/필터 affordance가 분리되어 EMR workflow가 덜 흔들린다.</td>
+            </tr>
+            <tr>
+              <td>DEN-271 Billing pilot</td>
+              <td>A로 시작, footer 초기화가 있는 다중 조건 builder 적용</td>
+              <td>금액/수량/상태 정렬은 필요하지만 row identity와 총액 보존이 우선이다.</td>
+            </tr>
+            <tr>
+              <td>Chart/order</td>
+              <td>C</td>
+              <td>오더 draft/confirmation을 방해하지 않도록 필터 필드 수를 제한한다.</td>
+            </tr>
+            <tr>
+              <td>Customer/admin</td>
+              <td>B</td>
+              <td>관리형 grid는 다중 조건 활용도가 높고, 필터 관리는 Filter 버튼과 builder 내부 action으로 충분하다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script>
+      const rows = [
+        {
+          id: "r1",
+          name: "초진 상담료",
+          type: "진료",
+          status: "ready",
+          statusLabel: "확정",
+          owner: "김서연",
+          qty: 1,
+          amount: 18000,
+          updatedAt: "2026-05-24T09:18:00",
+        },
+        {
+          id: "r2",
+          name: "혈액검사 패널",
+          type: "검사",
+          status: "pending",
+          statusLabel: "대기",
+          owner: "박민준",
+          qty: 1,
+          amount: 42000,
+          updatedAt: "2026-05-24T10:05:00",
+        },
+        {
+          id: "r3",
+          name: "상처 드레싱",
+          type: "처치",
+          status: "hold",
+          statusLabel: "보류",
+          owner: "이하린",
+          qty: 2,
+          amount: 24000,
+          updatedAt: "2026-05-23T16:40:00",
+        },
+        {
+          id: "r4",
+          name: "항생제 3일 처방",
+          type: "약제",
+          status: "draft",
+          statusLabel: "작성중",
+          owner: "김서연",
+          qty: 3,
+          amount: 15500,
+          updatedAt: "2026-05-24T11:12:00",
+        },
+        {
+          id: "r5",
+          name: "영상 판독료",
+          type: "검사",
+          status: "ready",
+          statusLabel: "확정",
+          owner: "정우진",
+          qty: 1,
+          amount: 68000,
+          updatedAt: "2026-05-22T14:02:00",
+        },
+        {
+          id: "r6",
+          name: "물리치료",
+          type: "처치",
+          status: "pending",
+          statusLabel: "대기",
+          owner: "이하린",
+          qty: 1,
+          amount: 32000,
+          updatedAt: "2026-05-24T08:35:00",
+        },
+      ];
+
+      const fieldMeta = {
+        status: {
+          label: "상태",
+          kind: "multi",
+          options: [
+            ["pending", "대기"],
+            ["ready", "확정"],
+            ["hold", "보류"],
+            ["draft", "작성중"],
+          ],
+        },
+        type: {
+          label: "유형",
+          kind: "multi",
+          options: [
+            ["진료", "진료"],
+            ["검사", "검사"],
+            ["처치", "처치"],
+            ["약제", "약제"],
+          ],
+        },
+        owner: {
+          label: "담당",
+          kind: "multi",
+          options: [
+            ["김서연", "김서연"],
+            ["박민준", "박민준"],
+            ["이하린", "이하린"],
+            ["정우진", "정우진"],
+          ],
+        },
+        amount: {
+          label: "금액",
+          kind: "number",
+          options: [],
+        },
+      };
+
+      const statusOrder = { hold: 0, pending: 1, draft: 2, ready: 3 };
+      const formatMoney = new Intl.NumberFormat("ko-KR", {
+        style: "currency",
+        currency: "KRW",
+        maximumFractionDigits: 0,
+      });
+      const formatDate = new Intl.DateTimeFormat("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const state = {
+        mode: "default",
+        filters: [{ field: "status", operator: "is", values: ["pending"] }],
+        sortKey: null,
+        sortDir: null,
+        panelOpen: false,
+      };
+
+      const els = {
+        tabs: document.querySelectorAll(".tab"),
+        sectionTitle: document.getElementById("sectionTitle"),
+        sectionSubtitle: document.getElementById("sectionSubtitle"),
+        filterButton: document.getElementById("filterButton"),
+        filterButtonText: document.getElementById("filterButtonText"),
+        builderPanel: document.getElementById("builderPanel"),
+        builderHint: document.getElementById("builderHint"),
+        filterList: document.getElementById("filterList"),
+        addFilterButton: document.getElementById("addFilterButton"),
+        applyFilterButton: document.getElementById("applyFilterButton"),
+        closeFilterButton: document.getElementById("closeFilterButton"),
+        resetFilterButton: document.getElementById("resetFilterButton"),
+        tableBody: document.getElementById("tableBody"),
+        emptyState: document.getElementById("emptyState"),
+        visibleCount: document.getElementById("visibleCount"),
+        totalCount: document.getElementById("totalCount"),
+        totalAmount: document.getElementById("totalAmount"),
+        explainTitle: document.getElementById("explainTitle"),
+        explainBody: document.getElementById("explainBody"),
+        explainRules: document.getElementById("explainRules"),
+      };
+
+      const explain = {
+        default: {
+          title: "A. Section filter button",
+          body:
+            "Filter 버튼은 섹션 헤더 오른쪽 액션 영역에 둔다. 사용자는 현재 필터 개수를 버튼에서 확인하고, 드롭다운 안에서 여러 조건을 추가/삭제한다.",
+          titleText: "수납 청구 항목",
+          subtitle: "헤더는 정렬만 제공하고, 필터는 이 섹션 액션 영역에서 관리한다.",
+          rules: [
+            "테이블 헤더에는 filter trigger를 두지 않는다.",
+            "정렬은 scalar 컬럼의 헤더 버튼으로만 제공하고, 현재 상태는 해당 헤더에서 표시한다.",
+            "필터 조건은 AND로 조합하고 조건 수는 Filter 버튼에 표시한다.",
+          ],
+        },
+        admin: {
+          title: "B. Admin filter builder",
+          body:
+            "다중 조건 builder를 관리형 테이블에 맞게 확장한 방식이다. 섹션 액션에는 Filter 버튼만 두고, builder 내부에서 현재 조건 편집과 초기화를 처리한다.",
+          titleText: "고객 관리 목록",
+          subtitle: "섹션 액션은 Filter 버튼 하나로 유지하고, builder에서 현재 필터 조건만 편집한다.",
+          rules: [
+            "고객관리/병원관리처럼 반복 탐색이 많은 화면에 적합하다.",
+            "섹션 액션 영역에는 Filter 버튼만 유지한다.",
+            "테이블 헤더는 여전히 정렬만 담당한다.",
+          ],
+        },
+        clinical: {
+          title: "C. Compact clinical filters",
+          body:
+            "같은 builder를 쓰되 필드 후보를 제한하는 방식이다. 차트/오더 화면에서 과한 데이터 관리 UI처럼 보이지 않게 한다.",
+          titleText: "진료 오더",
+          subtitle: "임상 workflow를 방해하지 않도록 상태, 유형, 담당 중심으로 제한한다.",
+          rules: [
+            "필터 필드는 상태, 유형, 담당자처럼 workflow상 의미가 큰 값으로 제한한다.",
+            "금액/복잡한 조건은 clinical table 기본 필드에서 제외한다.",
+            "오더명 같은 긴 텍스트는 검색 또는 별도 scope에서만 다룬다.",
+          ],
+        },
+      };
+
+      function allowedFields() {
+        if (state.mode === "clinical") return ["status", "type", "owner"];
+        return ["status", "type", "owner", "amount"];
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        els.tabs.forEach((tab) => {
+          tab.setAttribute("aria-selected", String(tab.dataset.mode === mode));
+        });
+        els.sectionTitle.textContent = explain[mode].titleText;
+        els.sectionSubtitle.textContent = explain[mode].subtitle;
+        els.builderHint.textContent = mode === "clinical" ? "임상 필드는 제한된다." : "다중 조건은 AND로 적용된다.";
+        els.explainTitle.textContent = explain[mode].title;
+        els.explainBody.textContent = explain[mode].body;
+        els.explainRules.innerHTML = explain[mode].rules.map((rule) => `<li>${rule}</li>`).join("");
+        state.filters = state.filters.filter((filter) => allowedFields().includes(filter.field));
+        if (state.filters.length === 0) state.filters = [{ field: "status", operator: "is", values: ["pending"] }];
+        render();
+      }
+
+      function togglePanel(open = !state.panelOpen) {
+        state.panelOpen = open;
+        els.builderPanel.classList.toggle("open", open);
+        els.filterButton.setAttribute("aria-expanded", String(open));
+      }
+
+      function activeFilterCount() {
+        return state.filters.filter((filter) => {
+          if (filter.field === "amount") return filter.value !== "" && filter.value != null;
+          return filter.values && filter.values.length > 0;
+        }).length;
+      }
+
+      function compareValues(a, b, key) {
+        let av = a[key];
+        let bv = b[key];
+        if (key === "statusOrder") {
+          av = statusOrder[a.status];
+          bv = statusOrder[b.status];
+        }
+        if (key === "updatedAt") {
+          av = new Date(a.updatedAt).getTime();
+          bv = new Date(b.updatedAt).getTime();
+        }
+        if (av == null || av === "") return 1;
+        if (bv == null || bv === "") return -1;
+        if (typeof av === "number" && typeof bv === "number") return av - bv;
+        return String(av).localeCompare(String(bv), "ko-KR", { numeric: true, sensitivity: "base" });
+      }
+
+      function passesFilter(row, filter) {
+        if (filter.field === "amount") {
+          const value = Number(filter.value || 0);
+          if (!value) return true;
+          if (filter.operator === "gte") return row.amount >= value;
+          if (filter.operator === "lte") return row.amount <= value;
+          return row.amount === value;
+        }
+        if (!filter.values || filter.values.length === 0) return true;
+        return filter.values.includes(row[filter.field]);
+      }
+
+      function getVisibleRows() {
+        const filtered = rows.filter((row) => state.filters.every((filter) => passesFilter(row, filter)));
+        if (!state.sortKey || !state.sortDir) return filtered;
+
+        return filtered
+          .map((row, index) => ({ row, index }))
+          .sort((left, right) => {
+            const base = compareValues(left.row, right.row, state.sortKey);
+            if (base === 0) return left.index - right.index;
+            return state.sortDir === "asc" ? base : -base;
+          })
+          .map((entry) => entry.row);
+      }
+
+      function cycleSort(key) {
+        if (state.sortKey !== key) {
+          state.sortKey = key;
+          state.sortDir = "asc";
+        } else if (state.sortDir === "asc") {
+          state.sortDir = "desc";
+        } else if (state.sortDir === "desc") {
+          state.sortKey = null;
+          state.sortDir = null;
+        } else {
+          state.sortDir = "asc";
+        }
+        render();
+      }
+
+      function sortLabel() {
+        const labels = {
+          name: "항목",
+          type: "유형",
+          statusOrder: "상태",
+          owner: "담당",
+          qty: "수량",
+          amount: "금액",
+          updatedAt: "변경",
+        };
+        return labels[state.sortKey] || "없음";
+      }
+
+      function sortDirectionLabel() {
+        if (state.sortDir === "asc") return "오름차순";
+        if (state.sortDir === "desc") return "내림차순";
+        return "정렬 없음";
+      }
+
+      function nextSortActionLabel(key) {
+        if (state.sortKey !== key || !state.sortDir) return "오름차순으로 정렬";
+        if (state.sortDir === "asc") return "내림차순으로 정렬";
+        return "정렬 해제";
+      }
+
+      function renderBuilder() {
+        els.filterList.innerHTML = state.filters
+          .map((filter, index) => {
+            const fields = allowedFields()
+              .map(
+                (field) =>
+                  `<option value="${field}" ${filter.field === field ? "selected" : ""}>${fieldMeta[field].label}</option>`,
+              )
+              .join("");
+            const operator =
+              filter.field === "amount"
+                ? `
+                  <select data-filter-operator="${index}" aria-label="Operator">
+                    <option value="gte" ${filter.operator === "gte" ? "selected" : ""}>이상</option>
+                    <option value="lte" ${filter.operator === "lte" ? "selected" : ""}>이하</option>
+                    <option value="eq" ${filter.operator === "eq" ? "selected" : ""}>같음</option>
+                  </select>
+                `
+                : `
+                  <select data-filter-operator="${index}" aria-label="Operator">
+                    <option value="is" selected>Is</option>
+                  </select>
+                `;
+            const value =
+              filter.field === "amount"
+                ? `<input data-filter-number="${index}" type="number" min="0" step="1000" value="${filter.value || ""}" placeholder="30000" aria-label="Amount value" />`
+                : `<div class="filter-value">${fieldMeta[filter.field].options
+                    .map(
+                      ([valueKey, label]) =>
+                        `<button class="value-pill" type="button" data-filter-value="${index}" data-value="${valueKey}" aria-pressed="${filter.values.includes(valueKey)}">${label}</button>`,
+                    )
+                    .join("")}</div>`;
+
+            return `
+              <div class="filter-row">
+                <select data-filter-field="${index}" aria-label="Filter field">${fields}</select>
+                ${operator}
+                ${value}
+                <button class="button danger" type="button" data-remove-filter="${index}" aria-label="필터 삭제">⌫</button>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderSortButtons() {
+        document.querySelectorAll(".sort-button").forEach((button) => {
+          const active = button.dataset.sort === state.sortKey && Boolean(state.sortDir);
+          const columnLabel = button.textContent.replace(/[↕↑↓]/g, "").trim();
+          const tooltip = active
+            ? `현재 정렬: ${columnLabel} ${sortDirectionLabel()}. 클릭하면 ${nextSortActionLabel(button.dataset.sort)}.`
+            : `정렬 없음. 클릭하면 ${columnLabel} ${nextSortActionLabel(button.dataset.sort)}.`;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-label", tooltip);
+          button.title = tooltip;
+          button.dataset.tooltip = tooltip;
+        });
+        document.querySelectorAll("[data-sort-icon]").forEach((icon) => {
+          const key = icon.dataset.sortIcon;
+          icon.textContent = key === state.sortKey ? (state.sortDir === "asc" ? "↑" : "↓") : "↕";
+        });
+      }
+
+      function render() {
+        const visibleRows = getVisibleRows();
+        els.tableBody.innerHTML = visibleRows
+          .map(
+            (row) => `
+              <tr>
+                <td>${row.name}</td>
+                <td>${row.type}</td>
+                <td><span class="status ${row.status}">${row.statusLabel}</span></td>
+                <td>${row.owner}</td>
+                <td class="amount">${row.qty}</td>
+                <td class="amount">${formatMoney.format(row.amount)}</td>
+                <td>${formatDate.format(new Date(row.updatedAt))}</td>
+                <td class="note">static</td>
+              </tr>
+            `,
+          )
+          .join("");
+
+        const count = activeFilterCount();
+        els.filterButton.classList.toggle("active", count > 0);
+        els.filterButtonText.textContent = count > 0 ? `Filter ${count}` : "Filter";
+        els.emptyState.hidden = visibleRows.length !== 0;
+        els.visibleCount.textContent = String(visibleRows.length);
+        els.totalCount.textContent = String(rows.length);
+        els.totalAmount.textContent = formatMoney.format(visibleRows.reduce((sum, row) => sum + row.amount, 0));
+
+        renderBuilder();
+        renderSortButtons();
+      }
+
+      els.tabs.forEach((tab) => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
+      els.filterButton.addEventListener("click", () => togglePanel());
+      els.closeFilterButton.addEventListener("click", () => togglePanel(false));
+      els.applyFilterButton.addEventListener("click", () => togglePanel(false));
+      els.addFilterButton.addEventListener("click", () => {
+        const firstAllowed = allowedFields()[0];
+        state.filters.push(
+          firstAllowed === "amount"
+            ? { field: "amount", operator: "gte", value: 30000 }
+            : { field: firstAllowed, operator: "is", values: [] },
+        );
+        render();
+      });
+      els.resetFilterButton.addEventListener("click", () => {
+        state.filters = [];
+        render();
+      });
+      document.querySelectorAll(".sort-button").forEach((button) => {
+        button.addEventListener("click", () => cycleSort(button.dataset.sort));
+      });
+
+      els.filterList.addEventListener("change", (event) => {
+        const fieldIndex = event.target.dataset.filterField;
+        const operatorIndex = event.target.dataset.filterOperator;
+        const numberIndex = event.target.dataset.filterNumber;
+
+        if (fieldIndex != null) {
+          const nextField = event.target.value;
+          state.filters[fieldIndex] =
+            nextField === "amount"
+              ? { field: "amount", operator: "gte", value: 30000 }
+              : { field: nextField, operator: "is", values: [] };
+        }
+        if (operatorIndex != null) state.filters[operatorIndex].operator = event.target.value;
+        if (numberIndex != null) state.filters[numberIndex].value = Number(event.target.value);
+        render();
+      });
+
+      els.filterList.addEventListener("input", (event) => {
+        const numberIndex = event.target.dataset.filterNumber;
+        if (numberIndex != null) {
+          state.filters[numberIndex].value = Number(event.target.value);
+          render();
+        }
+      });
+
+      els.filterList.addEventListener("click", (event) => {
+        const removeIndex = event.target.dataset.removeFilter;
+        const valueIndex = event.target.dataset.filterValue;
+        if (removeIndex != null) {
+          state.filters.splice(Number(removeIndex), 1);
+          render();
+          return;
+        }
+        if (valueIndex != null) {
+          const filter = state.filters[Number(valueIndex)];
+          const value = event.target.dataset.value;
+          filter.values = filter.values.includes(value)
+            ? filter.values.filter((item) => item !== value)
+            : [...filter.values, value];
+          render();
+        }
+      });
+
+      setMode("default");
+      togglePanel(false);
+      render();
+    </script>
+  </body>
+</html>

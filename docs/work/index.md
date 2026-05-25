@@ -64,6 +64,9 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-019 | human_review | design-system | P0 | Project 06 / DEN-129 | `docs/work/design-system/DESIGN-SYSTEM-PR-019-hospital-admin-table-form-standardization.md` |
 | DESIGN-SYSTEM-PR-020 | human_review | design-system | P0 | Project 06 / DEN-131 | `docs/work/design-system/DESIGN-SYSTEM-PR-020-inpatient-table-status-standardization.md` |
 | DESIGN-SYSTEM-PR-021 | human_review | design-system | P0 | Project 12 / DEN-264 | `docs/work/design-system/DESIGN-SYSTEM-PR-021-shared-table-header-cell-text-primitives.md` |
+| DESIGN-SYSTEM-PR-026 | human_review | design-system | P0 | Project 13 / DEN-270 | `docs/work/design-system/DESIGN-SYSTEM-PR-026-table-sort-filter-behavior-contract.md` |
+| DESIGN-SYSTEM-PR-027 | human_review | design-system | P0 | Project 13 / DEN-271 | `docs/work/design-system/DESIGN-SYSTEM-PR-027-billing-table-sort-filter-behavior.md` |
+| DESIGN-SYSTEM-PR-028 | human_review | design-system | P0 | Project 13 / DEN-272 | `docs/work/design-system/DESIGN-SYSTEM-PR-028-chart-order-table-sort-filter-behavior.md` |
 | HOME-PR-001 | done | home | P1 | PR 1 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md` |
 | HOME-PR-002 | done | home | P1 | PR 2 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md` |
 | HOME-PR-003 | done | home | P1 | PR 3 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md` |

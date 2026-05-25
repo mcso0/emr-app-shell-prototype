@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -196,6 +197,47 @@ const billingInvoiceLineColumns = {
 } as const;
 const billingAmountCellClassName = "whitespace-nowrap text-right tabular-nums";
 
+type BillingInvoiceLineSortKey =
+  | "category"
+  | "description"
+  | "unitPrice"
+  | "quantity"
+  | "discount"
+  | "lineTotal";
+type BillingInvoiceLineSortDirection = "asc" | "desc";
+type BillingInvoiceLineSortState = {
+  direction: BillingInvoiceLineSortDirection;
+  key: BillingInvoiceLineSortKey;
+} | null;
+type BillingInvoiceLineFilter =
+  | {
+      field: "category";
+      id: string;
+      operator: "is";
+      values: BillingLineCategory[];
+    }
+  | {
+      field: "lineTotal";
+      id: string;
+      operator: "gte" | "lte";
+      value: number | null;
+    };
+
+const billingInvoiceLineSortLabels: Record<BillingInvoiceLineSortKey, string> = {
+  category: "업무",
+  description: "항목",
+  unitPrice: "단가",
+  quantity: "수량",
+  discount: "할인",
+  lineTotal: "청구금액",
+};
+let billingInvoiceLineFilterId = 0;
+
+function createBillingInvoiceLineFilterId() {
+  billingInvoiceLineFilterId += 1;
+  return `billing-line-filter-${billingInvoiceLineFilterId}`;
+}
+
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
   if (line.serviceItemId?.startsWith("svc-lab")) return "검사";
@@ -216,6 +258,107 @@ const sortInvoiceLinesForDemoFlow = (lines: InvoiceLine[]) =>
 
     return a.description.localeCompare(b.description);
   });
+
+function compareBillingInvoiceLineValues(
+  a: InvoiceLine,
+  b: InvoiceLine,
+  key: BillingInvoiceLineSortKey
+) {
+  if (key === "category") {
+    return (
+      billingLineCategoryOrder.indexOf(getBillingLineCategory(a)) -
+      billingLineCategoryOrder.indexOf(getBillingLineCategory(b))
+    );
+  }
+
+  if (key === "description") {
+    return a.description.localeCompare(b.description, "ko-KR", {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+
+  if (key === "discount") return 0;
+
+  return a[key] - b[key];
+}
+
+function sortBillingInvoiceLines(
+  lines: InvoiceLine[],
+  sortState: BillingInvoiceLineSortState
+) {
+  const baseLines = sortInvoiceLinesForDemoFlow(lines);
+  if (!sortState) return baseLines;
+
+  return baseLines
+    .map((line, index) => ({ index, line }))
+    .sort((a, b) => {
+      const compared = compareBillingInvoiceLineValues(a.line, b.line, sortState.key);
+      if (compared === 0) return a.index - b.index;
+
+      return sortState.direction === "asc" ? compared : -compared;
+    })
+    .map((entry) => entry.line);
+}
+
+function isBillingInvoiceLineFilterActive(filter: BillingInvoiceLineFilter) {
+  if (filter.field === "category") return filter.values.length > 0;
+
+  return typeof filter.value === "number" && Number.isFinite(filter.value);
+}
+
+function doesBillingInvoiceLineMatchFilter(
+  line: InvoiceLine,
+  filter: BillingInvoiceLineFilter
+) {
+  if (!isBillingInvoiceLineFilterActive(filter)) return true;
+
+  if (filter.field === "category") {
+    return filter.values.includes(getBillingLineCategory(line));
+  }
+
+  return filter.operator === "gte"
+    ? line.lineTotal >= (filter.value ?? 0)
+    : line.lineTotal <= (filter.value ?? 0);
+}
+
+function filterBillingInvoiceLines(
+  lines: InvoiceLine[],
+  filters: BillingInvoiceLineFilter[]
+) {
+  const activeFilters = filters.filter(isBillingInvoiceLineFilterActive);
+  if (activeFilters.length === 0) return lines;
+
+  return lines.filter((line) =>
+    activeFilters.every((filter) => doesBillingInvoiceLineMatchFilter(line, filter))
+  );
+}
+
+function createBillingInvoiceLineFilter(
+  field: BillingInvoiceLineFilter["field"] = "category"
+): BillingInvoiceLineFilter {
+  if (field === "lineTotal") {
+    return {
+      field,
+      id: createBillingInvoiceLineFilterId(),
+      operator: "gte",
+      value: null,
+    };
+  }
+
+  return {
+    field,
+    id: createBillingInvoiceLineFilterId(),
+    operator: "is",
+    values: [],
+  };
+}
+
+function cloneBillingInvoiceLineFilter(filter: BillingInvoiceLineFilter): BillingInvoiceLineFilter {
+  if (filter.field === "category") return { ...filter, values: [...filter.values] };
+
+  return { ...filter };
+}
 
 const getBillingFlowLabel = (lines: InvoiceLine[]) => {
   const categories = billingLineCategoryOrder.filter(
@@ -906,6 +1049,212 @@ function CombinePanel({
   );
 }
 
+function BillingInvoiceLineSortableHead({
+  align = "left",
+  className,
+  columnKey,
+  label,
+  onSort,
+  sortState,
+}: {
+  align?: "left" | "center" | "right";
+  className?: string;
+  columnKey: BillingInvoiceLineSortKey;
+  label: string;
+  onSort: (key: BillingInvoiceLineSortKey) => void;
+  sortState: BillingInvoiceLineSortState;
+}) {
+  const active = sortState?.key === columnKey;
+  const nextAction =
+    !active || !sortState
+      ? `${label} 오름차순 정렬`
+      : sortState.direction === "asc"
+        ? `${label} 내림차순 정렬`
+        : `${label} 정렬 해제`;
+  const activeDirectionLabel =
+    sortState?.direction === "asc" ? "오름차순" : sortState?.direction === "desc" ? "내림차순" : "";
+  const ariaLabel = active
+    ? `현재 정렬: ${label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
+    : `정렬 없음. 클릭하면 ${nextAction}.`;
+
+  return (
+    <TableHead
+      aria-sort={active ? (sortState.direction === "asc" ? "ascending" : "descending") : undefined}
+      className={cn(className, align === "right" && "text-right", align === "center" && "text-center")}
+    >
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        title={ariaLabel}
+        className={cn(
+          "group inline-flex min-w-0 items-center gap-1 rounded-[var(--emr-radius-control)] px-1 py-0.5 font-semibold text-[var(--emr-text-secondary)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+          active && "bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
+          align === "right" && "ml-auto justify-end",
+          align === "center" && "mx-auto justify-center"
+        )}
+        onClick={() => onSort(columnKey)}
+      >
+        <span className="truncate">{label}</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "inline-flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)]",
+            active && "text-[var(--emr-text-primary)]"
+          )}
+        >
+          {active ? (sortState.direction === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </TableHead>
+  );
+}
+
+function BillingInvoiceLineFilterBuilder({
+  draftFilters,
+  onAdd,
+  onApply,
+  onChangeField,
+  onChangeLineTotalOperator,
+  onChangeLineTotalValue,
+  onClose,
+  onRemove,
+  onReset,
+  onToggleCategory,
+}: {
+  draftFilters: BillingInvoiceLineFilter[];
+  onAdd: () => void;
+  onApply: () => void;
+  onChangeField: (filterId: string, field: BillingInvoiceLineFilter["field"]) => void;
+  onChangeLineTotalOperator: (filterId: string, operator: "gte" | "lte") => void;
+  onChangeLineTotalValue: (filterId: string, value: number | null) => void;
+  onClose: () => void;
+  onRemove: (filterId: string) => void;
+  onReset: () => void;
+  onToggleCategory: (filterId: string, category: BillingLineCategory) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <div>
+        <div className="emr-text-body font-semibold">Filters</div>
+        <div className="emr-text-metadata text-muted-foreground">다중 조건은 AND로 적용됩니다.</div>
+      </div>
+      <div className="grid gap-2">
+        {draftFilters.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-4 text-center emr-text-metadata text-muted-foreground">
+            적용할 필터 조건이 없습니다.
+          </div>
+        ) : (
+          draftFilters.map((filter) => (
+            <div
+              key={filter.id}
+              className="grid gap-2 rounded-lg bg-[var(--emr-surface-muted)] p-2 md:grid-cols-[132px_108px_minmax(0,1fr)_32px]"
+            >
+              <select
+                aria-label="필터 필드"
+                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)]"
+                value={filter.field}
+                onChange={(event) =>
+                  onChangeField(filter.id, event.target.value as BillingInvoiceLineFilter["field"])
+                }
+              >
+                <option value="category">업무</option>
+                <option value="lineTotal">청구금액</option>
+              </select>
+              <select
+                aria-label="필터 조건"
+                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)] disabled:text-muted-foreground"
+                disabled={filter.field === "category"}
+                value={filter.operator}
+                onChange={(event) =>
+                  filter.field === "lineTotal"
+                    ? onChangeLineTotalOperator(filter.id, event.target.value as "gte" | "lte")
+                    : undefined
+                }
+              >
+                {filter.field === "category" ? (
+                  <option value="is">Is</option>
+                ) : (
+                  <>
+                    <option value="gte">이상</option>
+                    <option value="lte">이하</option>
+                  </>
+                )}
+              </select>
+              {filter.field === "category" ? (
+                <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-[var(--emr-radius-control)] border border-input bg-card px-1.5 py-1">
+                  {billingLineCategoryOrder.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      aria-pressed={filter.values.includes(category)}
+                      className={cn(
+                        "min-h-6 rounded-full border border-transparent px-2 emr-text-metadata font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]",
+                        filter.values.includes(category) &&
+                          "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                      )}
+                      onClick={() => onToggleCategory(filter.id, category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <Input
+                  aria-label="청구금액 필터 값"
+                  className="h-8 bg-card text-right tabular-nums"
+                  inputMode="numeric"
+                  min={0}
+                  step={1000}
+                  type="number"
+                  value={filter.value ?? ""}
+                  onChange={(event) =>
+                    onChangeLineTotalValue(
+                      filter.id,
+                      event.target.value === "" ? null : Number(event.target.value)
+                    )
+                  }
+                />
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="필터 조건 삭제"
+                className="justify-self-end text-[var(--emr-text-danger)]"
+                onClick={() => onRemove(filter.id)}
+              >
+                ×
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-2">
+        <Button type="button" variant="outline" size="sm" className="bg-card" onClick={onAdd}>
+          + Add filter
+        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button type="button" size="sm" onClick={onApply}>
+            Apply filters
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-[var(--emr-text-danger)]"
+            onClick={onReset}
+          >
+            초기화
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InvoiceLinesTable({
   lines,
   persistenceState,
@@ -918,8 +1267,37 @@ function InvoiceLinesTable({
   onUpdateQuantity: (lineId: string, quantity: number) => void;
 }) {
   const [density, setDensity] = useState<EmrTableDensity>("standard");
-  const sortedLines = sortInvoiceLinesForDemoFlow(lines);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<BillingInvoiceLineFilter[]>([]);
+  const [draftFilters, setDraftFilters] = useState<BillingInvoiceLineFilter[]>([]);
+  const [sortState, setSortState] = useState<BillingInvoiceLineSortState>(null);
+  const activeFilterCount = filters.filter(isBillingInvoiceLineFilterActive).length;
+  const filteredLines = useMemo(() => filterBillingInvoiceLines(lines, filters), [filters, lines]);
+  const sortedLines = useMemo(
+    () => sortBillingInvoiceLines(filteredLines, sortState),
+    [filteredLines, sortState]
+  );
   const flowLabel = getBillingFlowLabel(lines);
+  const handleSort = (key: BillingInvoiceLineSortKey) => {
+    setSortState((current) => {
+      if (current?.key !== key) return { direction: "asc", key };
+      if (current.direction === "asc") return { direction: "desc", key };
+
+      return null;
+    });
+  };
+  const handleFilterOpenChange = (open: boolean) => {
+    setFilterOpen(open);
+    if (open) {
+      setDraftFilters(filters.length > 0 ? filters.map(cloneBillingInvoiceLineFilter) : []);
+    }
+  };
+  const updateDraftFilter = (
+    filterId: string,
+    updater: (filter: BillingInvoiceLineFilter) => BillingInvoiceLineFilter
+  ) => {
+    setDraftFilters((current) => current.map((filter) => (filter.id === filterId ? updater(filter) : filter)));
+  };
 
   return (
     <section className="rounded-lg border bg-card">
@@ -932,6 +1310,70 @@ function InvoiceLinesTable({
         </div>
         <div className="flex items-center gap-2">
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          <Popover open={filterOpen} onOpenChange={handleFilterOpenChange}>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={activeFilterCount > 0 ? "secondary" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "bg-card",
+                    activeFilterCount > 0 &&
+                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                  )}
+                  aria-label={
+                    activeFilterCount > 0
+                      ? `청구 항목 필터 ${activeFilterCount}개 설정`
+                      : "청구 항목 필터 설정"
+                  }
+                />
+              }
+            >
+              <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
+              Filter{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(720px,calc(100vw-32px))] gap-3 p-3" initialFocus={false}>
+              <BillingInvoiceLineFilterBuilder
+                draftFilters={draftFilters}
+                onAdd={() => setDraftFilters((current) => [...current, createBillingInvoiceLineFilter()])}
+                onApply={() => {
+                  setFilters(draftFilters);
+                  setFilterOpen(false);
+                }}
+                onChangeField={(filterId, field) =>
+                  updateDraftFilter(filterId, () => createBillingInvoiceLineFilter(field))
+                }
+                onChangeLineTotalOperator={(filterId, operator) =>
+                  updateDraftFilter(filterId, (filter) =>
+                    filter.field === "lineTotal" ? { ...filter, operator } : filter
+                  )
+                }
+                onChangeLineTotalValue={(filterId, value) =>
+                  updateDraftFilter(filterId, (filter) =>
+                    filter.field === "lineTotal" ? { ...filter, value } : filter
+                  )
+                }
+                onClose={() => setFilterOpen(false)}
+                onRemove={(filterId) =>
+                  setDraftFilters((current) => current.filter((filter) => filter.id !== filterId))
+                }
+                onReset={() => {
+                  setDraftFilters([]);
+                  setFilters([]);
+                }}
+                onToggleCategory={(filterId, category) =>
+                  updateDraftFilter(filterId, (filter) => {
+                    if (filter.field !== "category") return filter;
+
+                    return filter.values.includes(category)
+                      ? { ...filter, values: filter.values.filter((value) => value !== category) }
+                      : { ...filter, values: [...filter.values, category] };
+                  })
+                }
+              />
+            </PopoverContent>
+          </Popover>
           <Badge variant={persistenceState === "error" ? "destructive" : "secondary"}>
             {persistenceState === "saving"
               ? "저장 중"
@@ -939,7 +1381,7 @@ function InvoiceLinesTable({
                 ? "저장됨"
                 : persistenceState === "error"
                   ? "저장 실패"
-                  : sortedLines.length}
+                  : `${sortedLines.length}/${lines.length}`}
           </Badge>
         </div>
       </div>
@@ -950,20 +1392,52 @@ function InvoiceLinesTable({
         <Table density={density} layout="scroll" minWidth={720} className="table-fixed">
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className={billingInvoiceLineColumns.category}>업무</TableHead>
-              <TableHead className={billingInvoiceLineColumns.description}>항목</TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.unitPrice, billingAmountCellClassName)}>
-                단가
-              </TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.quantity, "text-center")}>
-                수량
-              </TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.discount, billingAmountCellClassName)}>
-                할인
-              </TableHead>
-              <TableHead className={cn(billingInvoiceLineColumns.lineTotal, billingAmountCellClassName)}>
-                청구금액
-              </TableHead>
+              <BillingInvoiceLineSortableHead
+                className={billingInvoiceLineColumns.category}
+                columnKey="category"
+                label={billingInvoiceLineSortLabels.category}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                className={billingInvoiceLineColumns.description}
+                columnKey="description"
+                label={billingInvoiceLineSortLabels.description}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="right"
+                className={cn(billingInvoiceLineColumns.unitPrice, billingAmountCellClassName)}
+                columnKey="unitPrice"
+                label={billingInvoiceLineSortLabels.unitPrice}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="center"
+                className={billingInvoiceLineColumns.quantity}
+                columnKey="quantity"
+                label={billingInvoiceLineSortLabels.quantity}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="right"
+                className={cn(billingInvoiceLineColumns.discount, billingAmountCellClassName)}
+                columnKey="discount"
+                label={billingInvoiceLineSortLabels.discount}
+                sortState={sortState}
+                onSort={handleSort}
+              />
+              <BillingInvoiceLineSortableHead
+                align="right"
+                className={cn(billingInvoiceLineColumns.lineTotal, billingAmountCellClassName)}
+                columnKey="lineTotal"
+                label={billingInvoiceLineSortLabels.lineTotal}
+                sortState={sortState}
+                onSort={handleSort}
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -994,6 +1468,13 @@ function InvoiceLinesTable({
                 </TableCell>
               </TableRow>
             ))}
+            {sortedLines.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center emr-text-dense text-muted-foreground">
+                  조건에 맞는 청구 항목이 없습니다. Filter에서 조건을 조정하거나 초기화하세요.
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
       </div>

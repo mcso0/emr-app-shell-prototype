@@ -74,6 +74,37 @@ test("billing side panel switches between unpaid and closed queues", async ({ pa
   await expect(page.getByText("수납완료").first()).toBeVisible();
 });
 
+test("billing invoice line table supports single sort and section filter builder", async ({ page }) => {
+  await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
+
+  const tableSection = page.locator("section.rounded-lg").filter({
+    has: page.getByRole("heading", { name: "청구 항목 편집" }),
+  });
+  const tableRows = tableSection.locator("tbody tr");
+
+  await tableSection.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
+  await expect(tableRows.first()).toContainText("Maropitant 16mg T");
+
+  await tableSection.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }).click();
+  await expect(tableRows.first()).toContainText("흉부 방사선");
+
+  await tableSection.getByRole("button", { name: "청구 항목 필터 설정" }).click();
+  await page.getByRole("button", { name: "+ Add filter" }).click();
+  await page.getByRole("button", { name: "검사" }).click();
+  await page.getByRole("button", { name: "Apply filters" }).click();
+
+  await expect(tableSection.getByRole("button", { name: "청구 항목 필터 1개 설정" })).toBeVisible();
+  await expect(tableRows).toHaveCount(1);
+  await expect(tableRows.first()).toContainText("CBC 검사");
+
+  await tableSection.getByRole("button", { name: "청구 항목 필터 1개 설정" }).click();
+  await page.getByRole("button", { name: "초기화" }).click();
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await expect(tableSection.getByRole("button", { name: "청구 항목 필터 설정" })).toBeVisible();
+  await expect(tableRows).toHaveCount(5);
+});
+
 test("billing opens the kong-vomit invoice from query and explains completion state", async ({ page }) => {
   await page.goto(
     "/w/clair-demo/billing?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&invoiceId=invoice-kong-260501&right=open"

@@ -2020,6 +2020,64 @@ type ChartOrderDraftRow = ChartOrderTableRow & {
   unitPrice?: number;
 };
 
+type ChartOrderSortKey =
+  | "groupTitle"
+  | "orderType"
+  | "status"
+  | "displayName"
+  | "billingName"
+  | "quantity"
+  | "unitPrice"
+  | "lineTotal"
+  | "requestedBy";
+
+type ChartOrderSortState = {
+  direction: "asc" | "desc";
+  key: ChartOrderSortKey;
+} | null;
+
+type ChartOrderFilter =
+  | {
+      field: "status";
+      id: string;
+      operator: "is";
+      values: EmrOrderStatus[];
+    }
+  | {
+      field: "requestedBy";
+      id: string;
+      operator: "is";
+      values: string[];
+    };
+
+const chartOrderSortLabels: Record<ChartOrderSortKey, string> = {
+  billingName: "청구서명",
+  displayName: "Order명",
+  groupTitle: "그룹",
+  lineTotal: "청구금액",
+  orderType: "분류",
+  quantity: "수량",
+  requestedBy: "수의사",
+  status: "상태",
+  unitPrice: "단가",
+};
+
+const chartOrderStatusOrder: EmrOrderStatus[] = [
+  "requested",
+  "re_requested",
+  "in_progress",
+  "confirmed",
+  "completed",
+  "cancelled",
+];
+
+let chartOrderFilterId = 0;
+
+function createChartOrderFilterId() {
+  chartOrderFilterId += 1;
+  return `chart-order-filter-${chartOrderFilterId}`;
+}
+
 const getChartOrderDraftRows = (orderGroups: ChartOrderGroup[]): ChartOrderDraftRow[] =>
   orderGroups.flatMap(({ group, orders }) =>
     orders.map((order) => {
@@ -2124,12 +2182,316 @@ const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
   row.billingName !== row.committedBillingName ||
   row.quantityInput !== row.committedQuantityInput;
 
+function getChartOrderNumericValue(row: ChartOrderDraftRow, key: "quantity" | "unitPrice" | "lineTotal") {
+  if (key === "quantity") return getDraftQuantity(row.quantityInput);
+  if (key === "unitPrice") return row.unitPrice ?? null;
+
+  return getDraftLineTotal(row) ?? null;
+}
+
+function compareNullableNumbers(a: number | null, b: number | null) {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+
+  return a - b;
+}
+
+function compareChartOrderValues(a: ChartOrderDraftRow, b: ChartOrderDraftRow, key: ChartOrderSortKey) {
+  if (key === "groupTitle") {
+    return a.groupTitle.localeCompare(b.groupTitle, "ko-KR", { numeric: true, sensitivity: "base" });
+  }
+
+  if (key === "orderType") {
+    return (
+      chartOrderTabs.findIndex((tab) => tab.value === a.order.orderType) -
+      chartOrderTabs.findIndex((tab) => tab.value === b.order.orderType)
+    );
+  }
+
+  if (key === "status") {
+    return chartOrderStatusOrder.indexOf(a.order.status) - chartOrderStatusOrder.indexOf(b.order.status);
+  }
+
+  if (key === "displayName") {
+    return a.order.displayName.localeCompare(b.order.displayName, "ko-KR", {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+
+  if (key === "billingName") {
+    return a.billingName.localeCompare(b.billingName, "ko-KR", {
+      numeric: true,
+      sensitivity: "base",
+    });
+  }
+
+  if (key === "requestedBy") {
+    return (getChartStaffName(a.order.requestedByUserId) ?? "미정").localeCompare(
+      getChartStaffName(b.order.requestedByUserId) ?? "미정",
+      "ko-KR",
+      { numeric: true, sensitivity: "base" }
+    );
+  }
+
+  return compareNullableNumbers(getChartOrderNumericValue(a, key), getChartOrderNumericValue(b, key));
+}
+
+function sortChartOrderRows(rows: ChartOrderDraftRow[], sortState: ChartOrderSortState) {
+  if (!sortState) return rows;
+
+  return rows
+    .map((row, index) => ({ index, row }))
+    .sort((a, b) => {
+      const compared = compareChartOrderValues(a.row, b.row, sortState.key);
+      if (compared === 0) return a.index - b.index;
+
+      return sortState.direction === "asc" ? compared : -compared;
+    })
+    .map((entry) => entry.row);
+}
+
+function isChartOrderFilterActive(filter: ChartOrderFilter) {
+  return filter.values.length > 0;
+}
+
+function doesChartOrderMatchFilter(row: ChartOrderDraftRow, filter: ChartOrderFilter) {
+  if (!isChartOrderFilterActive(filter)) return true;
+  if (filter.field === "status") return filter.values.includes(row.order.status);
+
+  return filter.values.includes(row.order.requestedByUserId);
+}
+
+function filterChartOrderRows(rows: ChartOrderDraftRow[], filters: ChartOrderFilter[]) {
+  const activeFilters = filters.filter(isChartOrderFilterActive);
+  if (activeFilters.length === 0) return rows;
+
+  return rows.filter((row) => activeFilters.every((filter) => doesChartOrderMatchFilter(row, filter)));
+}
+
+function createChartOrderFilter(
+  field: ChartOrderFilter["field"] = "status",
+  id = createChartOrderFilterId()
+): ChartOrderFilter {
+  if (field === "requestedBy") {
+    return {
+      field,
+      id,
+      operator: "is",
+      values: [],
+    };
+  }
+
+  return {
+    field,
+    id,
+    operator: "is",
+    values: [],
+  };
+}
+
+function cloneChartOrderFilter(filter: ChartOrderFilter): ChartOrderFilter {
+  return { ...filter, values: [...filter.values] } as ChartOrderFilter;
+}
+
+function ChartOrderSortableHead({
+  align = "left",
+  className,
+  columnKey,
+  label,
+  onSort,
+  sortState,
+}: {
+  align?: "left" | "center" | "right";
+  className?: string;
+  columnKey: ChartOrderSortKey;
+  label: string;
+  onSort: (key: ChartOrderSortKey) => void;
+  sortState: ChartOrderSortState;
+}) {
+  const active = sortState?.key === columnKey;
+  const nextAction =
+    !active || !sortState
+      ? `${label} 오름차순 정렬`
+      : sortState.direction === "asc"
+        ? `${label} 내림차순 정렬`
+        : `${label} 정렬 해제`;
+  const activeDirectionLabel =
+    sortState?.direction === "asc" ? "오름차순" : sortState?.direction === "desc" ? "내림차순" : "";
+  const ariaLabel = active
+    ? `현재 정렬: ${label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
+    : `정렬 없음. 클릭하면 ${nextAction}.`;
+
+  return (
+    <TableHead
+      aria-sort={active ? (sortState.direction === "asc" ? "ascending" : "descending") : undefined}
+      className={cn(className, align === "right" && "text-right", align === "center" && "text-center")}
+    >
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        title={ariaLabel}
+        className={cn(
+          "group inline-flex min-w-0 items-center gap-1 rounded-[var(--emr-radius-control)] px-1 py-0.5 font-semibold text-[var(--emr-text-secondary)] outline-none hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+          active && "bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
+          align === "right" && "ml-auto justify-end",
+          align === "center" && "mx-auto justify-center"
+        )}
+        onClick={() => onSort(columnKey)}
+      >
+        <span className="truncate">{label}</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "inline-flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)]",
+            active && "text-[var(--emr-text-primary)]"
+          )}
+        >
+          {active ? (sortState.direction === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </TableHead>
+  );
+}
+
+function ChartOrderFilterBuilder({
+  draftFilters,
+  onAdd,
+  onApply,
+  onChangeField,
+  onClose,
+  onRemove,
+  onReset,
+  onToggleRequestedBy,
+  onToggleStatus,
+  requestedByOptions,
+}: {
+  draftFilters: ChartOrderFilter[];
+  onAdd: () => void;
+  onApply: () => void;
+  onChangeField: (filterId: string, field: ChartOrderFilter["field"]) => void;
+  onClose: () => void;
+  onRemove: (filterId: string) => void;
+  onReset: () => void;
+  onToggleRequestedBy: (filterId: string, userId: string) => void;
+  onToggleStatus: (filterId: string, status: EmrOrderStatus) => void;
+  requestedByOptions: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="grid gap-3">
+      <div>
+        <div className="emr-text-body font-semibold">Filters</div>
+        <div className="emr-text-metadata text-muted-foreground">오더 필터는 현재 분류 탭 결과 안에서 AND로 적용됩니다.</div>
+      </div>
+      <div className="grid gap-2">
+        {draftFilters.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-4 text-center emr-text-metadata text-muted-foreground">
+            적용할 필터 조건이 없습니다.
+          </div>
+        ) : (
+          draftFilters.map((filter) => (
+            <div
+              key={filter.id}
+              className="grid gap-2 rounded-lg bg-[var(--emr-surface-muted)] p-2 md:grid-cols-[132px_108px_minmax(0,1fr)_32px]"
+            >
+              <select
+                aria-label="오더 필터 필드"
+                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)]"
+                value={filter.field}
+                onChange={(event) => onChangeField(filter.id, event.target.value as ChartOrderFilter["field"])}
+              >
+                <option value="status">상태</option>
+                <option value="requestedBy">수의사</option>
+              </select>
+              <select
+                aria-label="오더 필터 조건"
+                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)]"
+                disabled
+                value={filter.operator}
+              >
+                <option value="is">Is</option>
+              </select>
+              <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-[var(--emr-radius-control)] border border-input bg-card px-1.5 py-1">
+                {filter.field === "status"
+                  ? chartOrderStatusOrder.map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        aria-pressed={filter.values.includes(status)}
+                        className={cn(
+                          "min-h-6 rounded-full border border-transparent px-2 emr-text-metadata font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]",
+                          filter.values.includes(status) &&
+                            "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                        )}
+                        onClick={() => onToggleStatus(filter.id, status)}
+                      >
+                        {orderStatusLabel[status]}
+                      </button>
+                    ))
+                  : requestedByOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={filter.values.includes(option.value)}
+                        className={cn(
+                          "min-h-6 rounded-full border border-transparent px-2 emr-text-metadata font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]",
+                          filter.values.includes(option.value) &&
+                            "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                        )}
+                        onClick={() => onToggleRequestedBy(filter.id, option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="오더 필터 조건 삭제"
+                className="justify-self-end text-[var(--emr-text-danger)]"
+                onClick={() => onRemove(filter.id)}
+              >
+                ×
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-2">
+        <Button type="button" variant="outline" size="sm" className="bg-card" onClick={onAdd}>
+          + Add filter
+        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button type="button" size="sm" onClick={onApply}>
+            Apply filters
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-[var(--emr-text-danger)]"
+            onClick={onReset}
+          >
+            초기화
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChartOrderTable({
   allVisibleSelected,
   density,
   hasCommittedRows,
   invalidOrderIds,
   onDeleteOrder,
+  onSort,
   onToggleAll,
   onToggleOrder,
   onUpdateBillingName,
@@ -2138,12 +2500,14 @@ function ChartOrderTable({
   rows,
   selectedOrderIds,
   someVisibleSelected,
+  sortState,
 }: {
   allVisibleSelected: boolean;
   density: EmrTableDensity;
   hasCommittedRows: boolean;
   invalidOrderIds: Set<string>;
   onDeleteOrder: (orderId: string) => void;
+  onSort: (key: ChartOrderSortKey) => void;
   onToggleAll: (checked: boolean) => void;
   onToggleOrder: (orderId: string, checked: boolean) => void;
   onUpdateBillingName: (orderId: string, billingName: string) => void;
@@ -2152,6 +2516,7 @@ function ChartOrderTable({
   rows: ChartOrderDraftRow[];
   selectedOrderIds: Set<string>;
   someVisibleSelected: boolean;
+  sortState: ChartOrderSortState;
 }) {
   return (
     <div className="overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
@@ -2172,15 +2537,72 @@ function ChartOrderTable({
                 onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
               />
             </TableHead>
-            <TableHead className="w-[132px] emr-text-metadata text-muted-foreground">그룹</TableHead>
-            <TableHead className="w-[72px] emr-text-metadata text-muted-foreground">분류</TableHead>
-            <TableHead className="w-[76px] emr-text-metadata text-muted-foreground">상태</TableHead>
-            <TableHead className="w-[260px] emr-text-metadata text-muted-foreground">Order명</TableHead>
-            <TableHead className="w-[220px] emr-text-metadata text-muted-foreground">청구서명</TableHead>
-            <TableHead className="w-[68px] text-right emr-text-metadata text-muted-foreground">수량</TableHead>
-            <TableHead className="w-[84px] text-right emr-text-metadata text-muted-foreground">단가</TableHead>
-            <TableHead className="w-[96px] text-right emr-text-metadata text-muted-foreground">청구금액</TableHead>
-            <TableHead className="w-[76px] emr-text-metadata text-muted-foreground">수의사</TableHead>
+            <ChartOrderSortableHead
+              className="w-[132px] emr-text-metadata text-muted-foreground"
+              columnKey="groupTitle"
+              label={chartOrderSortLabels.groupTitle}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              className="w-[72px] emr-text-metadata text-muted-foreground"
+              columnKey="orderType"
+              label={chartOrderSortLabels.orderType}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              className="w-[76px] emr-text-metadata text-muted-foreground"
+              columnKey="status"
+              label={chartOrderSortLabels.status}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              className="w-[260px] emr-text-metadata text-muted-foreground"
+              columnKey="displayName"
+              label={chartOrderSortLabels.displayName}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              className="w-[220px] emr-text-metadata text-muted-foreground"
+              columnKey="billingName"
+              label={chartOrderSortLabels.billingName}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              align="right"
+              className="w-[68px] emr-text-metadata text-muted-foreground"
+              columnKey="quantity"
+              label={chartOrderSortLabels.quantity}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              align="right"
+              className="w-[84px] emr-text-metadata text-muted-foreground"
+              columnKey="unitPrice"
+              label={chartOrderSortLabels.unitPrice}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              align="right"
+              className="w-[96px] emr-text-metadata text-muted-foreground"
+              columnKey="lineTotal"
+              label={chartOrderSortLabels.lineTotal}
+              sortState={sortState}
+              onSort={onSort}
+            />
+            <ChartOrderSortableHead
+              className="w-[76px] emr-text-metadata text-muted-foreground"
+              columnKey="requestedBy"
+              label={chartOrderSortLabels.requestedBy}
+              sortState={sortState}
+              onSort={onSort}
+            />
             <TableHead className="w-[116px] text-right emr-text-metadata text-muted-foreground">작업</TableHead>
           </TableRow>
         </TableHeader>
@@ -2195,6 +2617,7 @@ function ChartOrderTable({
             return (
               <TableRow
                 key={order.id}
+                data-testid={`chart-order-row-${order.id}`}
                 data-dirty={dirty ? "true" : undefined}
                 data-state={selected ? "selected" : undefined}
                 className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40 data-[state=selected]:bg-[var(--emr-state-selected)]"
@@ -2296,12 +2719,12 @@ function ChartOrderTable({
           {!rows.length ? (
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
               <TableCell colSpan={11} className="h-28 text-center emr-text-dense text-muted-foreground">
-                <span className="grid gap-1">
-                  <span className="font-semibold text-foreground">표시할 오더가 없습니다.</span>
-                  <span>현재 선택한 분류에 해당하는 오더가 없어요.</span>
-                </span>
-              </TableCell>
-            </TableRow>
+                  <span className="grid gap-1">
+                    <span className="font-semibold text-foreground">표시할 오더가 없습니다.</span>
+                  <span>현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.</span>
+                  </span>
+                </TableCell>
+              </TableRow>
           ) : null}
           <TableRow className="h-10 border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
             <TableCell />
@@ -2404,6 +2827,10 @@ function OrderArea({
     action: ChartUnavailableAction;
     targetName?: string;
   } | null>(null);
+  const [orderFilterOpen, setOrderFilterOpen] = useState(false);
+  const [orderTableFilters, setOrderTableFilters] = useState<ChartOrderFilter[]>([]);
+  const [draftOrderTableFilters, setDraftOrderTableFilters] = useState<ChartOrderFilter[]>([]);
+  const [orderSortState, setOrderSortState] = useState<ChartOrderSortState>(null);
   const [orderDraftSaveState, setOrderDraftSaveState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("idle");
   const draftTouchedRef = useRef(false);
   const allOrders = useMemo(() => draftRows.map(({ order }) => order), [draftRows]);
@@ -2426,6 +2853,25 @@ function OrderArea({
   const filteredOrderRows = draftRows.filter(
     ({ order }) => orderFilter !== "billing" && (orderFilter === "all" || order.orderType === orderFilter)
   );
+  const activeOrderFilterCount = orderTableFilters.filter(isChartOrderFilterActive).length;
+  const visibleOrderRows = useMemo(
+    () => sortChartOrderRows(filterChartOrderRows(filteredOrderRows, orderTableFilters), orderSortState),
+    [filteredOrderRows, orderSortState, orderTableFilters]
+  );
+  const requestedByOptions = useMemo(() => {
+    const optionByUserId = new Map<string, { label: string; value: string }>();
+
+    draftRows.forEach(({ order }) => {
+      optionByUserId.set(order.requestedByUserId, {
+        label: getChartStaffName(order.requestedByUserId) ?? "미정",
+        value: order.requestedByUserId,
+      });
+    });
+
+    return Array.from(optionByUserId.values()).sort((a, b) =>
+      a.label.localeCompare(b.label, "ko-KR", { numeric: true, sensitivity: "base" })
+    );
+  }, [draftRows]);
   const totalAmount = draftRows.reduce((sum, row) => sum + (getDraftLineTotal(row) ?? 0), 0);
   const selectedAmount = draftRows.reduce((sum, row) => {
     if (!selectedOrderIds.has(row.order.id)) return sum;
@@ -2436,7 +2882,7 @@ function OrderArea({
   const recheckOrderCount = allOrders.filter((order) => order.status === "re_requested").length;
   const selectedRecheckOrderCount = selectedOrders.filter((order) => order.status === "re_requested").length;
   const actionableSelectedOrderCount = selectedOrders.filter((order) => order.status !== "cancelled").length;
-  const visibleOrderIds = filteredOrderRows.map(({ order }) => order.id);
+  const visibleOrderIds = visibleOrderRows.map(({ order }) => order.id);
   const selectedVisibleOrderCount = visibleOrderIds.filter((orderId) => selectedOrderIds.has(orderId)).length;
   const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleOrderCount === visibleOrderIds.length;
   const someVisibleSelected = selectedVisibleOrderCount > 0 && !allVisibleSelected;
@@ -2462,6 +2908,28 @@ function OrderArea({
   const canUpdateOrders = hasDraftChanges && invalidOrderIds.size === 0;
   const deleteTargetOrder = draftRows.find(({ order }) => order.id === deleteOrderId)?.order;
   const [orderTableDensity, setOrderTableDensity] = useState<EmrTableDensity>("compact");
+  const handleOrderSort = (key: ChartOrderSortKey) => {
+    setOrderSortState((current) => {
+      if (current?.key !== key) return { direction: "asc", key };
+      if (current.direction === "asc") return { direction: "desc", key };
+
+      return null;
+    });
+  };
+  const handleOrderFilterOpenChange = (open: boolean) => {
+    setOrderFilterOpen(open);
+    if (open) {
+      setDraftOrderTableFilters(orderTableFilters.map(cloneChartOrderFilter));
+    }
+  };
+  const updateDraftOrderFilter = (
+    filterId: string,
+    updater: (filter: ChartOrderFilter) => ChartOrderFilter
+  ) => {
+    setDraftOrderTableFilters((current) =>
+      current.map((filter) => (filter.id === filterId ? updater(filter) : filter))
+    );
+  };
   const toggleAllVisibleOrders = (checked: boolean) => {
     setSelectedOrderIds((current) => {
       const next = new Set(current);
@@ -2665,6 +3133,70 @@ function OrderArea({
             value={orderTableDensity}
             onValueChange={setOrderTableDensity}
           />
+          <Popover open={orderFilterOpen} onOpenChange={handleOrderFilterOpenChange}>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={activeOrderFilterCount > 0 ? "secondary" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "bg-card",
+                    activeOrderFilterCount > 0 &&
+                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                  )}
+                  aria-label={
+                    activeOrderFilterCount > 0
+                      ? `오더 필터 ${activeOrderFilterCount}개 설정`
+                      : "오더 필터 설정"
+                  }
+                />
+              }
+            >
+              <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
+              Filter{activeOrderFilterCount > 0 ? ` ${activeOrderFilterCount}` : ""}
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(720px,calc(100vw-32px))] gap-3 p-3" initialFocus={false}>
+              <ChartOrderFilterBuilder
+                draftFilters={draftOrderTableFilters}
+                requestedByOptions={requestedByOptions}
+                onAdd={() => setDraftOrderTableFilters((current) => [...current, createChartOrderFilter()])}
+                onApply={() => {
+                  setOrderTableFilters(draftOrderTableFilters);
+                  setOrderFilterOpen(false);
+                }}
+                onChangeField={(filterId, field) =>
+                  updateDraftOrderFilter(filterId, (filter) => createChartOrderFilter(field, filter.id))
+                }
+                onClose={() => setOrderFilterOpen(false)}
+                onRemove={(filterId) =>
+                  setDraftOrderTableFilters((current) => current.filter((filter) => filter.id !== filterId))
+                }
+                onReset={() => {
+                  setDraftOrderTableFilters([]);
+                  setOrderTableFilters([]);
+                }}
+                onToggleRequestedBy={(filterId, userId) =>
+                  updateDraftOrderFilter(filterId, (filter) => {
+                    if (filter.field !== "requestedBy") return filter;
+
+                    return filter.values.includes(userId)
+                      ? { ...filter, values: filter.values.filter((value) => value !== userId) }
+                      : { ...filter, values: [...filter.values, userId] };
+                  })
+                }
+                onToggleStatus={(filterId, status) =>
+                  updateDraftOrderFilter(filterId, (filter) => {
+                    if (filter.field !== "status") return filter;
+
+                    return filter.values.includes(status)
+                      ? { ...filter, values: filter.values.filter((value) => value !== status) }
+                      : { ...filter, values: [...filter.values, status] };
+                  })
+                }
+              />
+            </PopoverContent>
+          </Popover>
           <Button
             variant="outline"
             size="sm"
@@ -2698,14 +3230,16 @@ function OrderArea({
           hasCommittedRows={committedRowIds.size > 1}
           invalidOrderIds={invalidOrderIds}
           onDeleteOrder={setDeleteOrderId}
+          onSort={handleOrderSort}
           onToggleAll={toggleAllVisibleOrders}
           onToggleOrder={toggleOrder}
           onUnavailableAction={(action, targetName) => setUnavailableAction({ action, targetName })}
           onUpdateBillingName={(orderId, billingName) => updateDraftRow(orderId, { billingName })}
           onUpdateQuantity={(orderId, quantityInput) => updateDraftRow(orderId, { quantityInput })}
-          rows={filteredOrderRows}
+          rows={visibleOrderRows}
           selectedOrderIds={selectedOrderIds}
           someVisibleSelected={someVisibleSelected}
+          sortState={orderSortState}
         />
       </div>
       <div className="grid min-h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2 emr-text-metadata">

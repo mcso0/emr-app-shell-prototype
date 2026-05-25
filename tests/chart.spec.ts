@@ -343,6 +343,40 @@ test("chart order checkboxes update the selected order total", async ({ page }) 
   await expect(page.getByText("선택 오더 합계: 0")).toBeVisible();
 });
 
+test("chart order table supports single sort and section filter builder", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+
+  const orderArea = page.locator("section").filter({
+    has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+  });
+  const orderRows = orderArea.locator('[data-testid^="chart-order-row-"]');
+
+  await orderArea.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
+  await expect(orderRows.first()).toContainText("Maropitant 16mg T");
+
+  await orderArea.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }).click();
+  await expect(orderRows.first()).toContainText("복부 초음파");
+
+  await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
+  await page.getByRole("button", { name: "+ Add filter" }).click();
+  await page.getByRole("button", { name: "진행중", exact: true }).click();
+  await page.getByRole("button", { name: "Apply filters" }).click();
+
+  await expect(orderArea.getByRole("button", { name: "오더 필터 1개 설정" })).toBeVisible();
+  await expect(orderRows).toHaveCount(2);
+  await expect(orderRows.first()).toContainText("복부 초음파");
+  await expect(orderRows.nth(1)).toContainText("CBC 검사");
+
+  await orderArea.getByRole("button", { name: "오더 필터 1개 설정" }).click();
+  const filterPopover = page.locator('[data-slot="popover-content"]');
+  await filterPopover.getByRole("button", { name: "초기화" }).click();
+  await filterPopover.getByRole("button", { name: "Close" }).click();
+
+  await expect(orderArea.getByRole("button", { name: "오더 필터 설정" })).toBeVisible();
+  await expect(orderRows).toHaveCount(4);
+});
+
 test("chart order table edits quantity, commits draft changes, and deletes rows", async ({ page }) => {
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
