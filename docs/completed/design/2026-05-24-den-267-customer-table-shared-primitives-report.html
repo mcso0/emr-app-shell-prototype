@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-267 고객관리 테이블 shared primitives 적용 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #111827;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 20px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      code {
+        border-radius: 4px;
+        background: #e5e7eb;
+        padding: 2px 5px;
+        font-size: 0.92em;
+      }
+      .summary {
+        margin-top: 20px;
+        border-left: 4px solid #2563eb;
+        background: #ffffff;
+        padding: 16px 18px;
+      }
+      .meta {
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .evidence {
+        margin-top: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 12px;
+      }
+      .evidence img {
+        display: block;
+        width: 100%;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">Linear DEN-267 · Project 12 CLAiR EMR Table Density & Data Grid Ergonomics · 2026-05-24</p>
+      <h1>고객관리 테이블 shared primitives 적용</h1>
+      <div class="summary">
+        <p>
+          고객관리의 공통 데이터 테이블 렌더러에 DEN-264 shared header/cell text primitive 정책을 적용했다.
+          환자/보호자 표가 헤더 역할, resize 제외 정책, 셀 텍스트 줄 수 정책을 같은 방식으로 기록한다.
+        </p>
+      </div>
+
+      <h2>요청</h2>
+      <ul>
+        <li>고객관리 테이블에 <code>EmrTableHeaderCell</code>, <code>EmrTableCellText</code>를 제한 적용한다.</li>
+        <li>전화번호, 날짜, 상태 같은 scalar 값은 1줄로 유지한다.</li>
+        <li>동물명, 보호자명, 연결 동물, 최근 CS/업무처럼 의미 손실이 큰 텍스트만 제한적으로 2줄을 허용한다.</li>
+        <li>checkbox/action 컬럼은 resize affordance policy에서 제외한다.</li>
+      </ul>
+
+      <h2>변경</h2>
+      <ul>
+        <li><code>src/features/customer/module.tsx</code>의 <code>CustomerDataTable</code>에 shared header/cell primitive를 적용했다.</li>
+        <li>고객관리 column metadata에 header interaction, resize policy, text mode를 추가했다.</li>
+        <li>selection/action header는 <code>static</code>과 <code>resize=none</code>으로 고정했다.</li>
+        <li>문자/숫자 셀 값은 <code>EmrTableCellText</code>로 감싸고, badge 셀은 기존 구조를 유지했다.</li>
+        <li><code>tests/customer.spec.ts</code>에 환자 테이블의 primitive DOM 계약 검증을 추가했다.</li>
+      </ul>
+
+      <h2>왜 중요한가</h2>
+      <p>
+        고객관리 표는 보호자/동물 정보를 빠르게 검색하고 drawer로 이어지는 업무 표면이다. 이번 변경으로 긴 이름과 관계 요약은
+        필요한 만큼만 읽히고, 전화번호·날짜·상태 같은 값은 한 줄 스캔성을 유지한다.
+      </p>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx eslint src/features/customer/module.tsx tests/customer.spec.ts</code> 통과</li>
+        <li><code>npx tsc --noEmit</code> 통과</li>
+        <li><code>npx playwright test tests/customer.spec.ts -g "customer workspace renders animal master list" --reporter=line</code> 통과</li>
+        <li><code>npx playwright test tests/customer.spec.ts --reporter=line</code> 5 passed</li>
+        <li><code>npm run lint</code> 통과, 기존 warning 5개 유지</li>
+        <li><code>npm run docs:check</code> 통과</li>
+        <li>mock auth Browser QA 통과: 로그인 화면이 아니라 실제 고객관리 테이블을 캡처했다.</li>
+      </ul>
+
+      <h2>Evidence</h2>
+      <p>
+        캡처 파일:
+        <code>docs/completed/design/evidence/2026-05-24-den-267-customer-table-primitives.png</code>
+      </p>
+      <div class="evidence">
+        <img src="./evidence/2026-05-24-den-267-customer-table-primitives.png" alt="DEN-267 고객관리 테이블 shared primitives evidence" />
+      </div>
+
+      <h2>범위 밖</h2>
+      <ul>
+        <li>DEN-250, DEN-251, DEN-264, DEN-265, DEN-266 상태는 변경하지 않았다.</li>
+        <li>실제 sort/filter/column resize 동작은 추가하지 않았다.</li>
+        <li>Supabase, DB migration, RLS, 서버 권한, role policy, 외부 메시징 연동은 건드리지 않았다.</li>
+      </ul>
+
+      <h2>주의</h2>
+      <p>
+        Browser QA 중 mock/session 권한 요청에서 기존 401 리소스 로그 2개가 관찰됐다. 화면은 정상 렌더링됐고
+        DOM/workflow 검증은 통과했으므로, 이 로그는 별도 auth/session 정리 범위로 남긴다.
+      </p>
+
+      <h2>다음 단계</h2>
+      <p>
+        Human Review에서 고객관리 테이블의 이름/연결요약 줄 수와 drawer 진입 흐름을 확인한 뒤, 병원관리 order catalog나 lab/imaging table을 다음 adoption 후보로 고른다.
+      </p>
+    </main>
+  </body>
+</html>

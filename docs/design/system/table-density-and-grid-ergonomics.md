@@ -326,6 +326,16 @@ Implementation guidance:
 - The pilot keeps scalar cells one-line by default and allows limited two-line previews for order names and warning/change messages.
 - Checkbox, assignment control, and workflow action columns are excluded from resize affordances. Wider table adoption remains out of scope for DEN-264.
 
+### DEN-267 Customer Table Adoption
+
+- `src/features/customer/module.tsx` applies `EmrTableHeaderCell` and `EmrTableCellText` through the shared customer management data table renderer.
+- Customer table columns now record local metadata for header interaction, resize policy, and text mode.
+- Selection and row action columns stay static and are excluded from resize affordance policy.
+- Scalar/contact/date values stay `one-line`.
+- Person names, connected guardian/patient summaries, and CS/work summary-style text may use `two-line-if-long` when clipping would lose meaning.
+- Badge cells remain feature-local structured content rather than being forced through the text primitive.
+- The adoption does not add real sort, filter, column menu, resize behavior, live Supabase, DB, RLS, server enforcement, role policy, or external messaging changes.
+
 ## Implementation Gate
 
 Before Project 12 implementation issues:
