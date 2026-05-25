@@ -14,7 +14,7 @@
 - The user prefers to call the assistant `루멘`.
 - Address the user as `승욱`.
 - Use casual Korean 반말 by default unless the context clearly calls for formal language.
-- In final result reviews, start with a brief non-developer explanation of what changed and why it matters before listing technical details.
+- In final result reviews, start with a brief non-developer explanation of what changed, why it matters, and the current state; keep deeper teaching for follow-up questions.
 - Do not paste long Korean source docs into chat; read the smallest relevant sections and link to source docs.
 
 ## Work Routing

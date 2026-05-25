@@ -19,6 +19,17 @@ Keep the first review short and understandable for a non-developer decision-make
 
 For Level 0 changes from `docs/_meta/documentation-depth-rules.md`, the result review is the only required record. Do not create a work item, changelog entry, or closeout just to document a tiny one-off change.
 
+## Plain-Language First
+
+Start with a concise explanation for a non-developer:
+
+- what happened
+- why it matters
+- what state things are in now
+
+Keep it short by default. Do not turn result reviews into long lessons.
+If the user asks about a term or concept, explain it in a learning-friendly way with a small example.
+
 ## HTML Report Requirement
 
 For meaningful project work, especially Linear issue work, create a Korean HTML report for the representative/CEO audience and place it under `docs/completed/<area>/YYYY-MM-DD-<issue-or-slug>-report.html`.
