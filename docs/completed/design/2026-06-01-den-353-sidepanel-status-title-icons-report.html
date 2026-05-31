@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-353 Side Panel Status Title Icons 작업 결과</title>
+    <style>
+      body {
+        margin: 0;
+        background: #fafafa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin-top: 32px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        border-radius: 4px;
+        background: #f5f5f5;
+        padding: 2px 5px;
+      }
+      .summary {
+        color: #525252;
+      }
+      .pass {
+        color: #276749;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-353 Side Panel Status Title Icons 작업 결과</h1>
+      <p class="summary">
+        CDS V2 sidebar/list title 컴포넌트 기준으로 왼쪽 사이드 패널의 상태 그룹 타이틀에 의미별 아이콘을 추가했다.
+        재요청, 진행중, 대기중, 완료, 취소 같은 상태를 더 빠르게 구분할 수 있고, 기존 접기/펼치기 동작은 유지했다.
+      </p>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li>side-panel list title 전용 EMR 토큰 alias를 추가해 32px title row, 16px state icon, 24px collapse action, hover surface를 관리하도록 했다.</li>
+        <li><code>EmrSidePanelStateIcon</code>을 추가해 Figma stateIcon의 done, in-progress, to-do, cancel, rework, stop SVG variant를 재사용할 수 있게 했다.</li>
+        <li><code>EmrSidePanelCollapsibleGroup</code>를 Figma의 listGroupTitle 구조에 맞춰 state icon, label, neutral count, collapse affordance로 정리했다.</li>
+        <li><code>getEmrSidePanelStatusIconState</code>을 추가해 상태명/상태 ID/color token을 공통 stateIcon variant로 해석하도록 했다.</li>
+        <li>조제/처치 order queue 상태 그룹에 새 status icon title 처리를 적용했다.</li>
+      </ul>
+
+      <h2>수정 파일</h2>
+      <ul>
+        <li><code>src/styles/tokens/emr-foundation.css</code></li>
+        <li><code>src/components/emr/side-panel-state-icon.tsx</code></li>
+        <li><code>src/components/emr/side-panel-collapsible-group.tsx</code></li>
+        <li><code>src/components/emr/side-panel-status-title.ts</code></li>
+        <li><code>src/components/emr/order-queue-side-panel.tsx</code></li>
+        <li><code>tests/app-shell.spec.ts</code></li>
+        <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-041-cds-v2-sidepanel-status-title-icons.md</code></li>
+        <li><code>docs/work/index.md</code></li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li class="pass">통과: <code>npx tsc --noEmit</code></li>
+        <li class="pass">통과: <code>npx playwright test tests/app-shell.spec.ts --project=chromium -g "order queue side panel renders status group titles|order queue status groups can collapse and expand"</code></li>
+        <li class="pass">통과: <code>npx playwright test tests/app-shell.spec.ts --project=chromium</code></li>
+        <li class="pass">통과: <code>npm run lint -- --ignore-pattern '.worktrees/**'</code> (기존 경고 5건 유지)</li>
+        <li class="pass">통과: <code>npm run docs:check</code></li>
+        <li class="pass">화면 확인: 1440px viewport에서 재요청, 진행중, 대기중, 완료, 취소 아이콘이 각각 Figma stateIcon variant와 같은 16x16 SVG 구조로 렌더링됨을 확인했다.</li>
+      </ul>
+
+      <h2>증거 자료</h2>
+      <p>
+        화면 확인 이미지:
+        <code>docs/completed/design/evidence/2026-06-01-den-353-sidepanel-status-title.png</code>
+      </p>
+
+      <h2>제외 범위</h2>
+      <p>
+        task card 본문 구조, 환자/문서 정보바, content aside, 조제/처치 오더 테이블 본문은 이번 DEN-353 범위에서 제외했다.
+        다음 작업은 DEN-354 task card visual states가 자연스럽다.
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-350 CDS V2 앱 쉘 범위 매핑 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #171717;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+
+      h2 {
+        margin-top: 36px;
+        font-size: 20px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+      }
+
+      .summary {
+        margin: 24px 0;
+        padding: 20px;
+        border: 1px solid #d7dde5;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #edf1f5;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        border: 1px solid #d7dde5;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #eef2f6;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-350 CDS V2 앱 쉘 범위 매핑 리포트</h1>
+      <p>작성일: 2026-05-31 / 프로젝트: 17 CLAiR EMR CDS V2 App Shell Refinement</p>
+
+      <section class="summary">
+        <p>
+          이번 작업은 Figma <code>key_screen</code> 프레임을 기준으로 어떤 UI 영역을 고칠지,
+          어떤 파일과 컴포넌트가 책임을 가져야 하는지, 후속 이슈별 완료 기준을 정리한
+          실행 전 범위 매핑 작업이다. 코드 구현은 아직 하지 않았고, 조제/처치 오더 테이블
+          본문은 명시적으로 제외했다.
+        </p>
+      </section>
+
+      <h2>확인한 Figma 범위</h2>
+      <ul>
+        <li>Figma 파일: <code>[CDS.V2] CLAiR EMR Design System Ver.2</code></li>
+        <li>프레임: <code>key_screen</code>, 노드: <code>27290:67969</code></li>
+        <li>관찰한 프레임 크기: <code>1920x1084</code></li>
+        <li>수정 포함: 워크스페이스 버튼, 좌측 네비게이션/커맨드 진입점, 상단 topbar/tabs, 좌측 리스트 타이틀과 카드, 환자 정보바, 문서 정보바, 컨텐츠 사이드바, 전체 배경/패널 색상</li>
+        <li>수정 제외: 중앙 조제/처치 오더 테이블 본문, row/cell 구조, table sort/filter/density 변경</li>
+      </ul>
+
+      <h2>산출물</h2>
+      <ul>
+        <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-038-cds-v2-app-shell-scope.md</code>를 새 work item으로 추가했다.</li>
+        <li><code>docs/work/index.md</code>에 Project 17 / DEN-350 행을 등록했다.</li>
+        <li>후속 이슈 DEN-351부터 DEN-357까지의 수용 기준과 검증 방향을 work item에 정리했다.</li>
+      </ul>
+
+      <h2>컴포넌트 책임 매핑</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>주요 파일</th>
+            <th>핵심 기준</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Shell / 배경 / 워크스페이스</td>
+            <td><code>src/shell/*</code>, <code>src/styles/tokens/emr-foundation.css</code></td>
+            <td>라우팅, 탭, 드로어 상태는 유지하고 CDS V2 surface와 density만 맞춘다.</td>
+          </tr>
+          <tr>
+            <td>네비바 커맨드 진입점</td>
+            <td><code>nav-rail.tsx</code>, <code>global-command-palette.tsx</code></td>
+            <td>빠른 검색은 네비바에서 열리되 기존 커맨드 팔레트 동작과 키보드 접근성을 보존한다.</td>
+          </tr>
+          <tr>
+            <td>좌측 리스트 타이틀/카드</td>
+            <td><code>side-panel-collapsible-group.tsx</code>, <code>side-panel-card.tsx</code></td>
+            <td>상태 아이콘과 카드 메타데이터는 shared EMR 컴포넌트 계층에서 처리한다.</td>
+          </tr>
+          <tr>
+            <td>환자/문서/컨텐츠 정보 영역</td>
+            <td><code>patient-context-bar.tsx</code>, <code>instruction-header-stack.tsx</code>, <code>content-aside-panel.tsx</code></td>
+            <td>정보 구조와 상호작용은 보존하고 시각 계층, surface, chip/card 패턴을 맞춘다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>후속 진행 순서</h2>
+      <ol>
+        <li>DEN-351: shell surface, workspace switcher, nav command entry를 먼저 정리한다.</li>
+        <li>DEN-352: command 이동 후 topbar/tabs chrome을 정돈한다.</li>
+        <li>DEN-353, DEN-354: side panel title icon과 task card를 같은 맥락에서 처리한다.</li>
+        <li>DEN-355, DEN-356: patient/document info bar와 content aside를 surface 기준에 맞춘다.</li>
+        <li>DEN-357: 전체 frame visual QA와 closeout을 진행한다.</li>
+      </ol>
+
+      <h2>검증</h2>
+      <p>
+        DEN-350은 문서/범위 이슈이므로 앱 코드는 수정하지 않았다. 검증은
+        <code>npm run docs:check</code>로 수행한다.
+      </p>
+
+      <h2>남은 리스크</h2>
+      <ul>
+        <li>후속 구현에서 <code>src/shell/*</code>와 <code>src/features/dispensing/module.tsx</code>를 동시에 건드릴 가능성이 있어 병렬 작업 전 merge 확인이 필요하다.</li>
+        <li>중앙 오더 테이블 본문은 이번 프로젝트 범위가 아니므로, 시각적으로 아쉬워도 DEN-357에서 별도 후속 이슈로 분리해야 한다.</li>
+        <li>현재 로컬 worktree에는 다른 제품/API 작업의 미커밋 변경이 있으므로 Project 17 변경과 섞지 않는 것이 중요하다.</li>
+      </ul>
+    </main>
+  </body>
+</html>

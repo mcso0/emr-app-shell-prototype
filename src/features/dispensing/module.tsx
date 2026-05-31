@@ -463,19 +463,12 @@ function HistoryItem({ item }: { item: string }) {
   return (
     <EmrContentHistoryItem
       title={title}
-      subtitle={
-        category || description ? (
-          <span className="flex min-w-0 items-center gap-1.5">
-            {category ? <span className="shrink-0">{category}</span> : null}
-            {description ? <span className="truncate">{description}</span> : null}
-          </span>
-        ) : null
-      }
+      subtitle="10:30 요청"
       meta={
         <>
-          <span className="truncate">담당자명</span>
-          <span className="truncate">담당자명</span>
-          <span className="shrink-0">10:30 요청</span>
+          {category ? <span className="truncate">{category}</span> : null}
+          {description ? <span className="truncate">{description}</span> : null}
+          <span className="truncate">담당 김지선</span>
         </>
       }
     />
@@ -927,7 +920,7 @@ function DispensingContentBody({
               />
             }
             badge={
-              <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
+              <Badge variant="secondary" className="emr-text-metadata h-[22px] rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-label)]">
                 {instructionId}
               </Badge>
             }
@@ -936,7 +929,7 @@ function DispensingContentBody({
               {hasRightPanel && instructionType === "처치" ? (
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="default"
                   className="bg-card"
                   aria-label={rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
                   onClick={() => setRightPanelOpen(!rightPanelOpen)}
@@ -944,11 +937,11 @@ function DispensingContentBody({
                   {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
                 </Button>
               ) : null}
-              <Button variant="outline" size="sm" className="bg-card">
+              <Button variant="outline" size="default" className="bg-card">
                 <DownloadIcon data-icon="inline-start" />
                 PDF 다운로드
               </Button>
-              <Button variant="outline" size="sm" className="bg-card">
+              <Button variant="outline" size="default" className="bg-card">
                 <PrinterIcon data-icon="inline-start" />
                 출력하기
               </Button>
@@ -968,11 +961,14 @@ function DispensingContentBody({
           />
         }
         orderInfo={
-          <div className="grid grid-cols-5 rounded-lg border border-border bg-card px-4 py-3">
+          <div
+            data-slot="instruction-info-card"
+            className="grid min-h-[72px] grid-cols-5 rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
+          >
             {instructionInfoItems.map(({ label, value }) => (
-              <div key={label} className="border-r border-border px-3 last:border-r-0">
-                <div className="emr-text-metadata font-medium text-muted-foreground">{label}</div>
-                <div className="mt-1 flex min-h-6 items-center emr-text-dense font-medium text-foreground">{value}</div>
+              <div key={label} className="border-r border-[var(--emr-document-info-divider)] px-[var(--clair-spacing-12)] first:pl-0 last:border-r-0 last:pr-0">
+                <div className="emr-text-metadata font-medium text-[var(--emr-context-bar-chip-label)]">{label}</div>
+                <div className="mt-[var(--clair-spacing-4)] flex min-h-6 items-center emr-text-dense font-medium text-[var(--emr-context-bar-chip-value)]">{value}</div>
               </div>
             ))}
           </div>

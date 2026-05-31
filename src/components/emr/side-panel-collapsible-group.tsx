@@ -2,6 +2,11 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
+import {
+  EmrSidePanelStateIcon,
+  type EmrSidePanelStateIconState,
+} from "@/components/emr/side-panel-state-icon";
+import { getEmrSidePanelStatusIconState } from "@/components/emr/side-panel-status-title";
 import { ChevronDownIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -17,9 +22,11 @@ type EmrSidePanelCollapsibleGroupProps = {
   dataTestId?: string;
   countBadgeColorToken?: string;
   countBadgeClassName?: string;
+  countVariant?: "badge" | "plain";
   indicatorClassName?: string;
   indicatorColorToken?: string;
   indicatorVisible?: boolean;
+  stateIconState?: EmrSidePanelStateIconState | false;
 };
 
 export const EMR_SIDE_PANEL_COLLAPSE_EASE = [0.16, 1, 0.3, 1] as const;
@@ -58,12 +65,14 @@ export function EmrSidePanelCollapsibleGroup({
   count,
   countBadgeClassName,
   countBadgeColorToken,
+  countVariant = "plain",
   dataTestId,
   indicatorClassName,
   indicatorColorToken,
   indicatorVisible = true,
   label,
   onToggle,
+  stateIconState,
 }: EmrSidePanelCollapsibleGroupProps) {
   const reduceMotion = useReducedMotion();
   const resolvedAccessibleLabel = getAccessibleLabel(label, accessibleLabel);
@@ -89,17 +98,21 @@ export function EmrSidePanelCollapsibleGroup({
         color: `var(${countBadgeTokens.foreground})`,
       }
     : undefined;
+  const resolvedStateIconState =
+    stateIconState === false
+      ? null
+      : stateIconState ?? (typeof label === "string" ? getEmrSidePanelStatusIconState({ colorToken: indicatorColorToken, label }) : null);
 
   return (
     <section className={cn("emr-density-stack-sm flex flex-col", className)} data-testid={dataTestId}>
       <button
         type="button"
-        className="emr-density-list-compact flex h-8 w-full items-center gap-3 rounded-[var(--clair-radius-atomic-6)] text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex h-[var(--emr-sidepanel-list-title-height)] w-full items-center gap-[var(--emr-sidepanel-list-title-gap)] rounded-[var(--emr-sidepanel-list-title-radius)] p-[var(--emr-sidepanel-list-title-padding)] text-left outline-none transition-colors hover:bg-[var(--emr-sidepanel-list-title-hover-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-expanded={!collapsed}
         aria-label={`${resolvedAccessibleLabel} ${collapsed ? "펼치기" : "접기"}`}
         onClick={onToggle}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-[var(--emr-sidepanel-list-title-left-gap)]">
           {indicatorVisible ? (
             <span
               className={cn(
@@ -110,27 +123,44 @@ export function EmrSidePanelCollapsibleGroup({
               aria-hidden="true"
             />
           ) : null}
-          <span className="emr-text-section flex min-w-0 items-center font-medium">
-            <span className="truncate text-[var(--emr-text-secondary)]">{label}</span>
+          {resolvedStateIconState ? (
+            <EmrSidePanelStateIcon
+              state={resolvedStateIconState}
+              data-testid={dataTestId ? `${dataTestId}-status-icon` : undefined}
+              aria-hidden={true}
+            />
+          ) : null}
+          <span className="emr-text-section flex min-w-0 items-center gap-1.5 font-medium">
+            <span className="truncate text-[var(--emr-sidepanel-list-title-text)]">{label}</span>
+            {countVariant === "plain" ? (
+              <span
+                data-testid={dataTestId ? `${dataTestId}-count` : undefined}
+                className={cn("shrink-0 text-[var(--emr-sidepanel-list-title-count)]", countBadgeClassName)}
+              >
+                {count}
+              </span>
+            ) : null}
           </span>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
-          <span
-            data-testid={dataTestId ? `${dataTestId}-count` : undefined}
-            className={cn(
-              "emr-text-status inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] px-1.5 font-semibold text-[var(--emr-status-neutral-text)]",
-              countBadgeClassName
-            )}
-            style={countBadgeStyle}
-          >
-            {count}
-          </span>
+          {countVariant === "badge" ? (
+            <span
+              data-testid={dataTestId ? `${dataTestId}-count` : undefined}
+              className={cn(
+                "emr-text-status inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] px-1.5 font-semibold text-[var(--emr-status-neutral-text)]",
+                countBadgeClassName
+              )}
+              style={countBadgeStyle}
+            >
+              {count}
+            </span>
+          ) : null}
           <motion.span
-            className="flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-sm p-1"
+            className="flex size-[var(--emr-sidepanel-list-title-action-size)] shrink-0 items-center justify-center rounded-[var(--emr-sidepanel-list-title-action-radius)] p-1"
             animate={{ rotate: collapsed ? 180 : 0 }}
             transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
           >
-            <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <ChevronDownIcon className="size-[var(--emr-sidepanel-list-title-action-icon-size)] shrink-0 text-[var(--emr-sidepanel-list-title-action-icon)]" aria-hidden="true" />
           </motion.span>
         </span>
       </button>

@@ -2,6 +2,18 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-05-31
+
+- `changed`: DEN-366 hardens the local-first billing state semantics behind the payment summary UX: `미납 처리` now needs a reason at the API/server boundary, while `issued` without a reason remains `수납진행`/waiting rather than overdue.
+- `changed`: DEN-364 reworks the billing payment summary CTA hierarchy by replacing user-facing `청구 확정` with `수납 진행`, moving `미납 처리` to a secondary reason-required dialog, and adding payment method, installment, adjustment reason, and memo placeholders.
+- `changed`: DEN-363 reframes the billing center workspace around selected checkout groups by patient, encounter, and invoice, including chart-order source badges, order work-state labels, candidate badges, group totals, and non-clinical add-on placeholders.
+- `changed`: DEN-362 adds a billing content-aside guardian ledger with date quick ranges, status filters, optional co-guardian invoice inclusion, selectable ledger rows, and a central selected checkout summary.
+- `changed`: DEN-361 rebuilds the billing side-panel queue labels and row hierarchy around `수납대기`, reason-backed `미납`, and `완료`, with guardian-first row identity, patient chips, explicit state badges, order counts, amounts, and request time.
+- `changed`: DEN-360 replaces the billing workspace patient/vitals header with a billing-only guardian context bar that shows guardian contact, owned patients, waiting/unpaid summary, payment caution, invoice status, and the payment summary toggle.
+- `added`: DEN-359 adds the billing screen component ownership plan for DEN-360 through DEN-364, mapping current `src/features/billing/module.tsx` responsibilities to guardian context, queue, ledger, checkout table, and payment summary slices.
+- `added`: DEN-358 adds the Guardian-Centered Billing Checkout Flow contract, replacing user-facing billing `청구 확정` with `수납 진행` / `결제 진행`, `수납 완료`, and reason-backed `미납 처리` UX.
+- `changed`: Billing financial CTA taxonomy now treats `수납 진행` / `결제 진행` as the primary checkout action and `미납 처리` as a secondary reason-required action.
+
 ## 2026-05-22
 
 - `changed`: Added `EmrRowActionMenu` and normalized representative customer, reception, and hospital-admin row/card menu affordances for DEN-210.

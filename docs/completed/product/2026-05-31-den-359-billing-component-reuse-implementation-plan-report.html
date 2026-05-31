@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-359 Billing Component Reuse Implementation Plan Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f3f4f6;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef6ff;
+        color: #155eef;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-359 - Human Review ready</p>
+      <h1>Billing Component Reuse Implementation Plan Report</h1>
+      <p>
+        DEN-359 audited the current billing screen code and created the implementation plan for DEN-360
+        through DEN-364. The goal is to avoid a broad one-shot rewrite and let each follow-up issue own
+        a clear slice of the guardian-centered billing checkout screen.
+      </p>
+
+      <section>
+        <h2>현재 코드 상태</h2>
+        <ul>
+          <li><code>src/features/billing/module.tsx</code> is 2,296 lines and contains fetch helpers, data hook, queue, header, guardian groups, combine panel, invoice table, payment summary, and financial dialogs.</li>
+          <li><code>src/features/billing/data.ts</code> owns mock/domain selectors for queue rows, guardian groups, and detail hydration.</li>
+          <li><code>src/features/billing/store.ts</code> owns selected invoice, combined invoice IDs, payment method, and line edit state.</li>
+          <li>Candidate readback behavior from DEN-348 is concentrated around candidate merge helpers and must be preserved during UI reshaping.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>후속 이슈별 소유 경계</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>Primary ownership</th>
+              <th>Do not disturb</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DEN-360</td>
+              <td>Billing header / guardian context bar</td>
+              <td>Queue grouping, payment status core, candidate sync core</td>
+            </tr>
+            <tr>
+              <td>DEN-361</td>
+              <td>Billing side panel queue and queue selectors</td>
+              <td>Right payment action handlers</td>
+            </tr>
+            <tr>
+              <td>DEN-362</td>
+              <td>Guardian ledger, selected checkout invoice state</td>
+              <td>Server payment status core</td>
+            </tr>
+            <tr>
+              <td>DEN-363</td>
+              <td>Checkout item workspace and invoice-line table</td>
+              <td>Payment status core and remote RPC contracts</td>
+            </tr>
+            <tr>
+              <td>DEN-364</td>
+              <td>Payment summary, CTA, unpaid reason dialog</td>
+              <td>Candidate sync core</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>재사용할 컴포넌트</h2>
+        <ul>
+          <li><code>EmrSubpanel</code>, <code>EmrListHeader</code>, <code>EmrSidePanelCard</code>, <code>EmrSidePanelCollapsibleGroup</code></li>
+          <li><code>EmrStatusBadge</code>, <code>Badge</code>, <code>EmrInlineAlert</code>, <code>EmrDialogShell</code></li>
+          <li><code>EmrTableCellText</code>, <code>EmrTableHeaderCell</code>, <code>EmrTableDensitySelector</code>, <code>Table</code></li>
+          <li><code>Button</code>, <code>Checkbox</code>, <code>Input</code>, <code>SegmentedControl</code>, <code>Popover</code></li>
+        </ul>
+        <p>
+          New components should stay feature-local first: <code>BillingGuardianContextBar</code>,
+          <code>GuardianBillingLedger</code>, <code>CheckoutItemsTable</code>,
+          <code>BillingPaymentSummaryPanel</code>, and <code>UnpaidReasonDialog</code>.
+        </p>
+      </section>
+
+      <section>
+        <h2>Next.js 문서 기준</h2>
+        <ul>
+          <li>DEN-359 did not change app code, so no Next.js implementation docs were required.</li>
+          <li>Before DEN-360 through DEN-364 app code changes, read relevant local docs under <code>node_modules/next/dist/docs/</code> for Client Components, App Router/search params, and route/data fetching if touched.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>업데이트한 문서</h2>
+        <ul>
+          <li><a href="../../design/screens/billing/planning/guardian-centered-billing-component-plan.md">docs/design/screens/billing/planning/guardian-centered-billing-component-plan.md</a></li>
+          <li><a href="../../design/changelog.md">docs/design/changelog.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>승인 게이트</h2>
+        <ul>
+          <li>No app code was changed.</li>
+          <li>No DB/RPC migration was written or applied.</li>
+          <li>No remote Supabase, RLS replay, production deploy, real data, or payment provider work was performed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

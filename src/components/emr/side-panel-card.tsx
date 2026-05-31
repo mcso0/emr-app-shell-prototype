@@ -18,9 +18,9 @@ type EmrSidePanelCardProps = {
 };
 
 const sidePanelBadgeIconClassName =
-  "flex size-3.5 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:text-[var(--emr-text-tertiary)]";
+  "flex size-3 shrink-0 items-center justify-center text-[var(--emr-sidepanel-task-card-chip-icon)] [&_svg]:size-3 [&_svg]:text-[var(--emr-sidepanel-task-card-chip-icon)]";
 export const emrSidePanelCardHoverActionButtonClassName =
-  "size-6 shrink-0 rounded-[var(--clair-radius-sm)] bg-[var(--emr-surface-panel)] p-0 text-[var(--emr-text-secondary)] opacity-0 transition-opacity hover:bg-[var(--emr-surface-muted)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-state-selected)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-4";
+  "size-[var(--emr-sidepanel-task-card-action-size)] shrink-0 rounded-[var(--emr-sidepanel-task-card-action-radius)] border border-[var(--emr-sidepanel-task-card-action-border)] bg-[var(--emr-sidepanel-task-card-action-bg)] p-0 text-[var(--emr-text-secondary)] opacity-0 shadow-[var(--clair-shadow-xs)] transition-opacity hover:bg-[var(--emr-sidepanel-task-card-action-bg)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-sidepanel-task-card-action-bg)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-[var(--emr-sidepanel-task-card-action-icon-size)]";
 export const emrSidePanelCardActionButtonClassName = cn(
   emrSidePanelCardHoverActionButtonClassName,
   "group-data-[selected=true]/emr-side-panel-card:!opacity-100"
@@ -46,12 +46,15 @@ export function EmrSidePanelCard({
       role="button"
       tabIndex={0}
       className={cn(
-        "emr-density-card group/emr-side-panel-card relative w-full overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)] active:shadow-none",
+        "group/emr-side-panel-card relative w-full overflow-hidden text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 active:shadow-none",
+        selectionVariant === "modulePanel"
+          ? "flex flex-col gap-[var(--emr-sidepanel-task-card-gap)] rounded-[var(--emr-sidepanel-task-card-radius)] border border-[var(--emr-sidepanel-task-card-border)] bg-[var(--emr-sidepanel-task-card-bg)] p-[var(--emr-sidepanel-task-card-padding)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--emr-sidepanel-task-card-hover-bg)] hover:shadow-[var(--clair-shadow-xs)]"
+          : "emr-density-card rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)] hover:shadow-[var(--clair-shadow-sm)]",
         selected &&
           (selectionVariant === "modulePanel"
-            ? "border-[var(--clair-color-atomic-sky-200)] bg-[var(--clair-color-atomic-sky-50)] hover:bg-[var(--clair-color-atomic-sky-50)]"
+            ? "border-[var(--emr-sidepanel-task-card-selected-border)] bg-[var(--emr-sidepanel-task-card-bg)] hover:bg-[var(--emr-sidepanel-task-card-bg)] hover:shadow-none"
             : "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] pl-3.5"),
-        !selected && "hover:bg-[var(--emr-state-hover)]",
+        !selected && selectionVariant !== "modulePanel" && "hover:bg-[var(--emr-state-hover)]",
         className
       )}
       data-testid={testId}
@@ -83,12 +86,14 @@ export function EmrSidePanelIdentityLine({
   typeBadge?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-6 items-center gap-1.5 overflow-hidden">
-      <div className="emr-text-body flex min-w-0 flex-1 items-center gap-1 overflow-hidden font-semibold text-[var(--emr-text-primary)]">
-        <span className="truncate">{patientName}</span>
-        <span className="shrink-0 font-medium text-[var(--emr-text-tertiary)]">·</span>
-        <span className="truncate">{guardianName}</span>
+    <div className="flex h-6 items-center gap-[var(--clair-spacing-12)] overflow-hidden">
+      <div className="flex min-w-0 flex-1 items-center gap-[var(--clair-spacing-4)] overflow-hidden">
         {typeBadge}
+        <div className="emr-text-body flex min-w-0 flex-1 items-center gap-[var(--clair-spacing-4)] overflow-hidden font-medium text-[var(--emr-sidepanel-task-card-title-text)]">
+          <span className="truncate">{patientName}</span>
+          <span className="shrink-0 text-[var(--emr-sidepanel-task-card-label-text)]">·</span>
+          <span className="truncate">{guardianName}</span>
+        </div>
       </div>
       {action}
     </div>
@@ -125,10 +130,10 @@ export function EmrSidePanelTypeBadge({ label }: { label: string }) {
     <Badge
       variant="secondary"
       className={cn(
-        "emr-text-metadata h-5 shrink-0 rounded-[var(--clair-radius-atomic-6)] border-transparent px-1.5 font-medium",
+        "emr-text-metadata h-5 shrink-0 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-sidepanel-task-card-type-bg)] px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)] font-medium text-[var(--emr-sidepanel-task-card-type-text)]",
         reservation
           ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
-          : "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]"
+          : "bg-[var(--emr-sidepanel-task-card-type-bg)] text-[var(--emr-sidepanel-task-card-type-text)]"
       )}
     >
       {label}
@@ -153,7 +158,7 @@ export function EmrSidePanelMetaBadge({
     <span
       aria-label={`${label} ${value}`}
       className={cn(
-        "emr-text-metadata inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 font-medium",
+        "emr-text-metadata inline-flex h-6 shrink-0 items-center gap-[var(--clair-spacing-2)] rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-sidepanel-task-card-chip-border)] bg-[var(--emr-sidepanel-task-card-chip-bg)] px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)] font-medium",
         maxWidthClassName
       )}
     >
@@ -162,9 +167,9 @@ export function EmrSidePanelMetaBadge({
           {resolvedIcon}
         </span>
       ) : (
-        <span className="shrink-0 text-[var(--emr-text-tertiary)]">{label}</span>
+        <span className="shrink-0 text-[var(--emr-sidepanel-task-card-label-text)]">{label}</span>
       )}
-      <span className="truncate text-[var(--emr-text-secondary)]">{value}</span>
+      <span className="truncate text-[var(--emr-sidepanel-task-card-chip-text)]">{value}</span>
     </span>
   );
 }
@@ -193,7 +198,7 @@ export function EmrSidePanelStatusBadge({
   return (
     <span
       className={cn(
-        "emr-text-metadata inline-flex h-5 shrink-0 items-center gap-0.5 rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] py-0.5 pl-1 pr-1.5 font-medium text-[var(--emr-text-secondary)]",
+        "emr-text-metadata inline-flex h-6 shrink-0 items-center gap-[var(--clair-spacing-2)] rounded-[var(--clair-radius-atomic-6)] border border-[var(--emr-sidepanel-task-card-chip-border)] bg-[var(--emr-sidepanel-task-card-chip-bg)] px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)] font-medium text-[var(--emr-sidepanel-task-card-chip-text)]",
         maxWidthClassName
       )}
     >

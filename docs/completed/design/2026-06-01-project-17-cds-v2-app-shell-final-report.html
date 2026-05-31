@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Project 17 CDS.V2 App Shell Refinement Final Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fafafa;
+        --panel: #fcfcfd;
+        --ink: #171717;
+        --muted: #667085;
+        --line: #e4e7ec;
+        --soft: #f8f8fa;
+        --accent: #2e90fa;
+        --success: #067647;
+        --warning: #b54708;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      header {
+        margin-bottom: 32px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 880px;
+        font-size: 34px;
+        line-height: 1.22;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .metric {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 24px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+      }
+
+      .card p:last-child {
+        margin-bottom: 0;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: var(--success);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .status.warning {
+        background: #fffaeb;
+        color: var(--warning);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        background: var(--soft);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      figure {
+        margin: 0;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+      }
+
+      figcaption {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: var(--soft);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          padding: 32px 16px 48px;
+        }
+
+        .summary,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Project 17 · Final Closeout</p>
+        <h1>CLAiR EMR CDS.V2 App Shell Refinement 최종 보고</h1>
+        <p>
+          완료일: 2026-06-01 · 범위: 앱 셸, 네비게이션, 워크스페이스 버튼,
+          상단 탭/탑바, 왼쪽 사이드바 리스트 타이틀과 task 카드, 환자/문서
+          정보바, 컨텐츠 사이드바
+        </p>
+        <div class="summary">
+          <div class="metric">
+            <strong>8</strong>
+            <span>Project 17 이슈 처리</span>
+          </div>
+          <div class="metric">
+            <strong>32/32</strong>
+            <span>app-shell Playwright 통과</span>
+          </div>
+          <div class="metric">
+            <strong>0</strong>
+            <span>lint error</span>
+          </div>
+          <div class="metric">
+            <strong>1</strong>
+            <span>최종 HTML 보고서</span>
+          </div>
+        </div>
+      </header>
+
+      <section>
+        <h2>비개발 요약</h2>
+        <p>
+          이번 작업은 새 화면을 만드는 것이 아니라, 기존 CLAiR EMR app shell을
+          CDS.V2 Figma 기준에 맞게 더 정돈한 작업이다. 화면의 큰 정보 구조는
+          유지하면서, 배경색 계층, 네비게이션 폭과 아이콘 크기, 워크스페이스
+          버튼, 탑바 탭, 사이드바 리스트 타이틀 아이콘, task 카드, 환자/문서
+          정보바, 컨텐츠 이력 사이드바를 토큰 기반으로 맞췄다.
+        </p>
+        <p>
+          결과적으로 조제/처치 핵심 화면은 Figma의 shell rhythm에 더 가까워졌고,
+          하드코딩 대신 기존 token alias를 확장해서 이후 컴포넌트 재사용과
+          조정이 쉬운 상태가 됐다.
+        </p>
+      </section>
+
+      <section>
+        <h2>이슈 처리 현황</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Linear</th>
+              <th>범위</th>
+              <th>결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-350">DEN-350</a></td>
+              <td>CDS.V2 app shell scope 파악</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-351">DEN-351</a></td>
+              <td>앱/사이드/컨텐츠 배경색과 nav command entry</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-352">DEN-352</a></td>
+              <td>상단 topbar, workspace tabs, chrome controls</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-353">DEN-353</a></td>
+              <td>사이드바 리스트 타이틀 앞 상태 아이콘</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-354">DEN-354</a></td>
+              <td>사이드바 task 카드 구조와 상태</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-355">DEN-355</a></td>
+              <td>환자 정보바와 문서/페이지 타이틀 바</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-356">DEN-356</a></td>
+              <td>컨텐츠 사이드바와 history card metadata</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-357">DEN-357</a></td>
+              <td>전체 visual QA와 closeout</td>
+              <td><span class="status">완료</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>핵심 변경</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Token Surface</h3>
+            <p>
+              앱 배경은 <code>#FAFAFA</code>, 사이드/워크스페이스 표면은
+              <code>#FCFCFD</code>, 컨텐츠 패널은 <code>#F8F8FA</code>로 정리했다.
+              nav, topbar, sidepanel, context bar, content aside 전용 alias token을
+              추가해 직접 색상값을 반복하지 않게 했다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Navigation & Workspace</h3>
+            <p>
+              네비바 폭, 패딩, 아이콘 프레임, 검색 버튼 크기, 고객센터 버튼 표시,
+              collapsed/expanded 워크스페이스 버튼 여백을 Figma 컴포넌트 기준으로
+              맞췄다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Sidebar Titles & Cards</h3>
+            <p>
+              재요청/진행중/대기중/완료/취소 타이틀 앞에 재사용 가능한
+              <code>EmrSidePanelStateIcon</code>을 추가했고, task card는 type badge,
+              patient line, order line, 24px metadata chip 구조로 정리했다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Context & Content Aside</h3>
+            <p>
+              환자 정보바는 50px 리듬, 문서 정보카드는 72px 리듬으로 맞췄고,
+              컨텐츠 사이드바는 280px panel, 날짜 아이콘 group title, 세로 timeline,
+              card형 history item으로 맞췄다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>주요 파일</h2>
+        <ul>
+          <li><code>src/styles/tokens/emr-foundation.css</code>: CDS.V2 shell/component alias token 확장</li>
+          <li><code>src/shell/nav-rail.tsx</code>, <code>src/shell/workspace-switcher.tsx</code>, <code>src/shell/workspace-tabs-bar.tsx</code>: shell chrome 정렬</li>
+          <li><code>src/components/emr/side-panel-state-icon.tsx</code>: 리스트 타이틀용 상태 아이콘 컴포넌트 추가</li>
+          <li><code>src/components/emr/side-panel-card.tsx</code>, <code>src/components/emr/order-queue-side-panel.tsx</code>: task card 구조 정리</li>
+          <li><code>src/components/emr/patient-context-bar.tsx</code>, <code>src/components/emr/page-header.tsx</code>, <code>src/components/emr/instruction-header-stack.tsx</code>: 환자/문서 바 정리</li>
+          <li><code>src/components/emr/content-aside-panel.tsx</code>, <code>src/components/emr/content-history-list.tsx</code>: 컨텐츠 이력 사이드바 정리</li>
+          <li><code>tests/app-shell.spec.ts</code>: 토큰/치수/상태 회귀 검증 강화</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>검증</th>
+              <th>결과</th>
+              <th>메모</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>npm run lint -- --ignore-pattern '.worktrees/**'</code></td>
+              <td><span class="status">통과</span></td>
+              <td>error 0개, 기존 warning 5개</td>
+            </tr>
+            <tr>
+              <td><code>npx tsc --noEmit</code></td>
+              <td><span class="status">통과</span></td>
+              <td>타입 체크 통과</td>
+            </tr>
+            <tr>
+              <td><code>npx playwright test tests/app-shell.spec.ts --project=chromium</code></td>
+              <td><span class="status">통과</span></td>
+              <td>32개 전체 통과</td>
+            </tr>
+            <tr>
+              <td>데스크톱 visual QA</td>
+              <td><span class="status">통과</span></td>
+              <td>조제/처치 key flow 기준 캡처 확인</td>
+            </tr>
+            <tr>
+              <td>좁은 viewport 확인</td>
+              <td><span class="status warning">주의</span></td>
+              <td>shell/sidebar는 유지되나, 조제/처치 오더 테이블은 고밀도라 별도 responsive 개선 여지가 있음</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Evidence</h2>
+        <div class="grid">
+          <figure>
+            <img src="evidence/2026-06-01-project-17-final-desktop.png" alt="Project 17 final desktop screenshot" />
+            <figcaption>최종 데스크톱 캡처: 조제/처치, module panel open, content aside open</figcaption>
+          </figure>
+          <figure>
+            <img src="evidence/2026-06-01-project-17-final-narrow.png" alt="Project 17 final narrow viewport screenshot" />
+            <figcaption>최종 좁은 화면 캡처: shell/sidebar 유지 및 테이블 밀도 리스크 확인</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>리뷰 포인트</h2>
+        <ul>
+          <li>Figma와 비교할 때 네비바 검색 버튼, 고객센터 버튼, workspace 버튼의 크기와 좌우 여백이 의도한 수준인지 확인하면 된다.</li>
+          <li>사이드바 리스트 타이틀의 상태 아이콘과 task card의 type badge-first 구조가 실제 업무 인지에 맞는지 보면 된다.</li>
+          <li>환자 정보바와 문서 정보카드는 기존 정보 구조를 유지하면서 치수/색상 위계를 맞춘 상태다.</li>
+          <li>컨텐츠 사이드바는 Figma 기준의 280px panel, timeline, time icon/card metadata 구조로 맞췄다.</li>
+          <li>조제/처치 오더 테이블 본문은 처음 요청에서 제외한 범위라 디자인 구조를 직접 손대지 않았다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

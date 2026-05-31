@@ -25,14 +25,14 @@ export function EmrPageHeader({
   return (
     <div
       data-slot="emr-page-header"
-      className={cn("flex h-9 items-center justify-between gap-4", className)}
+      className={cn("flex min-h-[var(--emr-page-title-height)] items-center justify-between gap-[var(--emr-page-title-section-gap)]", className)}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-[var(--emr-page-title-left-gap)]">
+        <div className="flex min-w-0 items-center gap-[var(--emr-page-title-wrap-gap)]">
           {icon}
           <h1
             className={cn(
-              "emr-text-panel-title truncate font-semibold text-foreground",
+              "truncate text-[18px] font-semibold leading-[26px] tracking-[-0.036px] text-[var(--emr-context-bar-chip-value)]",
               titleClassName
             )}
           >
@@ -42,7 +42,7 @@ export function EmrPageHeader({
         {badge}
       </div>
       {actions ? (
-        <div className={cn("flex shrink-0 items-center gap-2", actionsClassName)}>
+        <div className={cn("flex shrink-0 items-center gap-[var(--emr-page-title-action-gap)]", actionsClassName)}>
           {actions}
         </div>
       ) : null}

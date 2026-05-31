@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-369 수납 이력 조회 선택 및 합산 제외 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #20242a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 40px auto;
+        padding: 32px;
+        border: 1px solid #dde2ea;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      .summary {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #eef6ff;
+        color: #17456b;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-369 수납 이력 조회 선택 및 합산 제외</h1>
+      <p class="summary">
+        완료/취소된 수납 이력도 선택해서 세부 내역을 볼 수 있게 했고, 이
+        이력들은 현재 결제할 금액에는 더하지 않도록 분리했다.
+      </p>
+
+      <h2>사용자 관점 변화</h2>
+      <ul>
+        <li>수납이력에서 완료/취소 건도 체크해서 중앙 작업대에서 항목을 볼 수 있다.</li>
+        <li>완료/취소 그룹에는 "현재 수납 요약 금액에는 합산되지 않는다"는 안내가 보인다.</li>
+        <li>오른쪽 수납 요약은 대기/미납처럼 실제 결제 가능한 건만 계산한다.</li>
+        <li>완료 건은 대기/미납/취소로, 취소 건은 대기/미납/완료로 상태 변경 버튼을 제공한다.</li>
+      </ul>
+
+      <h2>DB/RPC 판단</h2>
+      <p>
+        이번 구현은 런칭 전 local-first/mock 범위에서 상태 변경을 동작하게 했다.
+        실사용 DB에서는 완료/취소를 되돌리는 행위가 결제, 영수증, 감사 로그와
+        연결되므로 별도 audited RPC가 필요하다. 이번 이슈에서는 remote Supabase
+        migration, RLS, production deploy는 하지 않았다.
+      </p>
+
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>src/features/billing/module.tsx</code></li>
+        <li><code>src/features/billing/store.ts</code></li>
+        <li><code>tests/billing.spec.ts</code></li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx eslint src/features/billing/module.tsx src/features/billing/store.ts tests/billing.spec.ts</code></li>
+        <li><code>npx tsc --noEmit --pretty false</code></li>
+        <li><code>npx playwright test tests/billing.spec.ts -g "billing guardian ledger aside|billing completed and cancelled ledger selections|billing selected checkout renders one grouped invoice table" --reporter=line</code></li>
+      </ul>
+    </main>
+  </body>
+</html>

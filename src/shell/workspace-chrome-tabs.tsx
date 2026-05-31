@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FocusEvent, type MouseEvent } from "react";
+import { type MouseEvent } from "react";
 import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
 import { CircleCloseFillIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,13 @@ type WorkspaceChromeTabsProps = {
   onNewTab: () => void;
 };
 
-const WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME = "max-w-[230px]";
+const WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME = "max-w-[var(--emr-topbar-tab-max-width)]";
 const workspaceTabButtonClassName =
-  "h-8 min-w-0 flex-1 justify-start gap-0 truncate rounded-[var(--emr-radius-control)] border-transparent bg-transparent py-0 pl-2 pr-2.5 text-left text-[13px] font-semibold tracking-normal shadow-none hover:bg-transparent";
+  "h-[var(--emr-topbar-control-size)] min-w-0 justify-start gap-0 truncate rounded-[var(--emr-topbar-tab-radius)] border-transparent bg-transparent py-[var(--emr-topbar-tab-padding-y)] pl-[var(--emr-topbar-tab-padding-x)] pr-[var(--emr-topbar-tab-padding-right)] text-left [font-size:var(--emr-type-size-body)] font-medium ![letter-spacing:var(--emr-type-tracking-section)] [line-height:var(--emr-type-leading-body)] shadow-none hover:bg-transparent";
 const workspaceTabCloseClassName =
-  "absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-transparent text-[var(--emr-text-placeholder)] transition-none hover:bg-transparent hover:text-[var(--emr-text-tertiary)]";
-const workspaceTabIconFrameClassName = "flex size-4 shrink-0 items-center justify-center";
+  "mr-[var(--emr-topbar-tab-padding-x)] flex size-[var(--clair-spacing-16)] shrink-0 items-center justify-center rounded-full bg-transparent p-0 text-[var(--emr-topbar-tab-close)] opacity-100 transition-none hover:bg-transparent hover:text-[var(--emr-topbar-tab-active-close)]";
+const workspaceTabIconFrameClassName =
+  "flex size-[var(--clair-spacing-16)] shrink-0 items-center justify-center text-[var(--emr-topbar-tab-icon)]";
 const workspaceTabTooltipClassName =
   "max-w-[260px] flex-col items-start gap-0.5 px-2.5 py-2 text-left";
 
@@ -42,40 +43,32 @@ export function WorkspaceChromeTabs({
   onNewTab,
 }: WorkspaceChromeTabsProps) {
   const hasMultipleTabs = tabs.length > 1;
-  const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5" role="tablist" aria-label="열린 업무 탭">
+    <div
+      className="flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-tab-gap)]"
+      role="tablist"
+      aria-label="열린 업무 탭"
+    >
       {tabs.map((tab) => {
         const active = tab.id === activeTabId;
         const TabIcon = tab.icon;
-        const showCloseButton = hasMultipleTabs && hoveredTabId === tab.id;
 
         function handleCloseTab(event: MouseEvent<HTMLButtonElement>) {
           event.stopPropagation();
           onCloseTab(tab.id);
         }
 
-        function handleBlur(event: FocusEvent<HTMLDivElement>) {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
-            setHoveredTabId(null);
-          }
-        }
-
         return (
           <div
             key={tab.id}
             role="presentation"
-            onBlur={handleBlur}
-            onFocus={() => setHoveredTabId(tab.id)}
-            onMouseEnter={() => setHoveredTabId(tab.id)}
-            onMouseLeave={() => setHoveredTabId(null)}
             className={cn(
-              "group/workspace-tab relative flex h-8 min-w-0 items-center rounded-[var(--emr-radius-control)] border transition-colors",
+              "group/workspace-tab relative flex h-[var(--emr-topbar-control-size)] min-w-0 items-center gap-[var(--emr-topbar-tab-inner-gap)] rounded-[var(--emr-topbar-tab-radius)] border transition-colors",
               WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME,
               active
-                ? "border-[var(--emr-line-default)] bg-card shadow-[var(--clair-shadow-xs)]"
-                : "border-[var(--emr-line-subtle)] bg-transparent hover:border-[var(--emr-line-default)] hover:bg-[var(--emr-state-hover)] hover:shadow-[var(--clair-shadow-xs)]",
+                ? "border-[var(--emr-topbar-tab-active-border)] bg-[var(--emr-topbar-tab-active-bg)] shadow-[var(--clair-shadow-xs)]"
+                : "border-transparent bg-[var(--emr-topbar-tab-bg)] hover:border-transparent hover:bg-[var(--emr-topbar-tab-hover-bg)]",
             )}
           >
             <Tooltip>
@@ -89,31 +82,31 @@ export function WorkspaceChromeTabs({
                     aria-selected={active}
                     className={cn(
                       workspaceTabButtonClassName,
+                      hasMultipleTabs && "pr-0",
                       active
-                        ? "text-[var(--emr-text-primary)] hover:text-[var(--emr-text-primary)]"
-                        : "text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-secondary)] group-hover/workspace-tab:text-[var(--emr-text-secondary)]",
+                        ? "text-[var(--emr-topbar-tab-active-text)] hover:text-[var(--emr-topbar-tab-active-text)]"
+                        : "text-[var(--emr-topbar-tab-text)] hover:text-[var(--emr-topbar-tab-active-text)] group-hover/workspace-tab:text-[var(--emr-topbar-tab-active-text)]",
                     )}
                     onClick={() => onActivateTab(tab.id)}
                   >
-                    <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="flex min-w-0 items-center gap-[var(--emr-topbar-tab-inner-gap)]">
                       {TabIcon ? (
                         <span
                           className={cn(
                             workspaceTabIconFrameClassName,
-                            showCloseButton && "opacity-0",
+                            active && "text-[var(--emr-topbar-tab-active-icon)]",
                           )}
                           aria-hidden="true"
                         >
                           <TabIcon
                             className={cn(
-                              "origin-center scale-[0.65] text-current",
-                              active ? "opacity-65" : "opacity-80",
+                              "origin-center scale-[var(--emr-topbar-tab-icon-scale)] text-current",
                               tab.iconClassName
                             )}
                           />
                         </span>
                       ) : null}
-                      <span className="truncate">{tab.title}</span>
+                      <span className="truncate px-[var(--emr-topbar-tab-label-padding-x)]">{tab.title}</span>
                     </span>
                   </Button>
                 }
@@ -142,11 +135,11 @@ export function WorkspaceChromeTabs({
                 aria-label={`${tab.title} 탭 닫기`}
                 className={cn(
                   workspaceTabCloseClassName,
-                  showCloseButton ? "opacity-100" : "opacity-0",
+                  active && "text-[var(--emr-topbar-tab-active-close)]",
                 )}
                 onClick={handleCloseTab}
               >
-                <CircleCloseFillIcon className="size-3.5" aria-hidden="true" />
+                <CircleCloseFillIcon className="size-[var(--clair-spacing-16)]" aria-hidden="true" />
               </Button>
             ) : null}
           </div>
@@ -157,7 +150,7 @@ export function WorkspaceChromeTabs({
         size="icon"
         aria-label="새 업무 탭"
         onClick={onNewTab}
-        className="shrink-0 rounded-[var(--emr-radius-control)] border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-[var(--emr-state-hover)] hover:text-foreground"
+        className="size-[var(--emr-topbar-control-size)] shrink-0 rounded-[var(--emr-topbar-control-radius)] border-transparent bg-transparent text-[var(--emr-topbar-icon)] shadow-none hover:bg-[var(--emr-topbar-tab-hover-bg)] hover:text-[var(--emr-topbar-icon-strong)]"
       >
         <CdsActionsPlusIcon className="size-4" aria-hidden="true" />
       </Button>

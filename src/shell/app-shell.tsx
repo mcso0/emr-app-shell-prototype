@@ -303,7 +303,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             canGoBack={Boolean(activeTab && activeTab.historyIndex > 0)}
             canGoForward={Boolean(activeTab && activeTab.historyIndex < activeTab.history.length - 1)}
             tabs={tabs}
-            workspaceId={workspaceId}
             onActivateTab={handleActivateTab}
             onBack={handleTabBack}
             onCloseTab={handleCloseTab}

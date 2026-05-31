@@ -80,6 +80,10 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-035        | human_review | design-system        | P0       | Project 13 / DEN-295 | `docs/work/design-system/DESIGN-SYSTEM-PR-035-advanced-filter-builder-rollout-qa.md`                   |
 | DESIGN-SYSTEM-PR-036        | done         | design-system        | P0       | Project 13 / DEN-296 | `docs/work/design-system/DESIGN-SYSTEM-PR-036-customer-advanced-filter-builder-migration.md`           |
 | DESIGN-SYSTEM-PR-037        | human_review | design-system        | P0       | Project 13 / DEN-297 | `docs/work/design-system/DESIGN-SYSTEM-PR-037-hospital-admin-advanced-filter-builder-migration.md`     |
+| DESIGN-SYSTEM-PR-038        | human_review | design-system        | P0       | Project 17 / DEN-350 | `docs/work/design-system/DESIGN-SYSTEM-PR-038-cds-v2-app-shell-scope.md`                               |
+| DESIGN-SYSTEM-PR-039        | human_review | design-system        | P0       | Project 17 / DEN-351 | `docs/work/design-system/DESIGN-SYSTEM-PR-039-cds-v2-shell-surfaces-command-entry.md`                  |
+| DESIGN-SYSTEM-PR-040        | human_review | design-system        | P0       | Project 17 / DEN-352 | `docs/work/design-system/DESIGN-SYSTEM-PR-040-cds-v2-workspace-topbar-tabs-chrome.md`                  |
+| DESIGN-SYSTEM-PR-041        | human_review | design-system        | P0       | Project 17 / DEN-353 | `docs/work/design-system/DESIGN-SYSTEM-PR-041-cds-v2-sidepanel-status-title-icons.md`                  |
 | HOME-PR-001                 | done         | home                 | P1       | PR 1                 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md`                                           |
 | HOME-PR-002                 | done         | home                 | P1       | PR 2                 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md`                                                     |
 | HOME-PR-003                 | done         | home                 | P1       | PR 3                 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md`                                                  |

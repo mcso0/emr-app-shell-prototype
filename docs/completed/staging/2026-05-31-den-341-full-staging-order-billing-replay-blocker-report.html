@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-341 Full Staging Order Billing Replay Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      h3 {
+        font-size: 15px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+        margin-top: 12px;
+        border: 1px solid #d8dbe2;
+        border-radius: 8px;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #f6ffed;
+        color: #237804;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .note {
+        background: #fff7e6;
+        color: #8a5a00;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Fixed staging replay passed - follow-up noted</p>
+      <h1>DEN-341 Full Staging Order Billing Replay Report</h1>
+      <p>
+        DEN-341의 full staging replay는 승인 후 고정 staging alias에서 lab, imaging, dispensing, treatment 4종 오더가
+        <code>Order 청구</code>를 통해 <code>수납 후보</code> 상태와 billing candidate API readback으로 전진한 것을 확인했다.
+        원격 Supabase migration push, production deploy, 실데이터 import, 원격 RLS replay는 수행하지 않았다.
+      </p>
+
+      <section>
+        <h2>검수 대상</h2>
+        <ul>
+          <li>
+            Fixed staging:
+            <a href="https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app">
+              https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app
+            </a>
+          </li>
+          <li>
+            Latest preview assigned to fixed staging:
+            <a href="https://emr-app-shell-prototype-kun7k5nmx-mcso0s-projects.vercel.app">
+              https://emr-app-shell-prototype-kun7k5nmx-mcso0s-projects.vercel.app
+            </a>
+          </li>
+          <li>Workspace: <code>clair-demo</code></li>
+          <li>Primary replay chart: <code>scenario=kong-vomit</code>, <code>encounter-kong-260501</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>진행 결과</h2>
+        <ul>
+          <li>Vercel 보호/로그인 이후 staging app 접근을 확인했다.</li>
+          <li>
+            Fixed staging active catalog에는 lab/treatment만 있어, 병원관리 UI의 정상 catalog creation flow로
+            DEN-341 synthetic imaging/dispensing rows를 보강했다. remote migration, 실데이터 import, RLS replay는 하지 않았다.
+          </li>
+          <li>
+            Latest preview에서 chart catalog 후보 15건 중 lab, imaging, dispensing, treatment row를 추가하고
+            <code>Order 확정</code> confirmation까지 통과했다.
+          </li>
+          <li>
+            승인 후 preview route fix를 배포했고, billing invoice candidate route가 staging demo encounter alias를 resolved UUID로
+            변환하는 것을 API readback으로 확인했다.
+          </li>
+          <li>
+            추가로 chart live queue가 explicit <code>encounter-kong-260501</code> deep link를 첫 live queue item으로 덮어쓰던 문제를
+            preview에서 고쳤다.
+          </li>
+          <li>
+            최신 preview에서 Kong chart deep link가 유지되고, 선택 4건 <code>Order 청구</code> 후 chart table 상태가 모두
+            <code>수납 후보</code>로 전진했다.
+          </li>
+          <li>
+            <code>/api/workspaces/clair-demo/billing/invoice-candidates?encounterId=encounter-kong-260501</code> readback에서
+            lab, imaging, dispensing, treatment 4건 billing candidate가 확인됐다.
+          </li>
+          <li>
+            승욱 승인 후 고정 staging alias를 latest preview로 연결했고,
+            <code>chart/order-lifecycle</code>도 demo encounter alias를 resolved UUID로 변환하도록 보강했다.
+          </li>
+          <li>
+            고정 staging URL에서 <code>chart/order-lifecycle</code> 200/4건, billing candidate API 200/4건, chart table 4건
+            <code>수납 후보</code> readback을 다시 확인했다.
+          </li>
+          <li>
+            Billing module의 기존 청구 항목 편집 table은 아직 fixture invoice lines 5건을 표시한다. Candidate API와 invoice-line 편집 UI를
+            합쳐 보여주는 범위는 별도 follow-up으로 남긴다.
+          </li>
+          <li>
+            Chart 화면의 <code>저장 실패</code> 문구는 order/billing 경로가 아니라 기존 diagnosis/soap persistence 403 신호로 분리 확인했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>증거</h2>
+        <h3>Chart billing blocker</h3>
+        <p>
+          Preview chart에서 replay order rows는 보이지만, 청구 후 수납 후보로 전진하지 않는다.
+        </p>
+        <img
+          src="./evidence/2026-05-31-den-341-preview-chart-billing-blocker.png"
+          alt="DEN-341 preview chart billing blocker evidence"
+        />
+        <h3>Billing readback</h3>
+        <p>
+          Billing workspace는 Kong invoice shell은 보여주지만 replay candidate line readback은 확인되지 않았다.
+        </p>
+        <img
+          src="./evidence/2026-05-31-den-341-preview-billing-readback-after-failed-sync.png"
+          alt="DEN-341 billing readback after failed sync evidence"
+        />
+        <h3>Chart billing candidate pass</h3>
+        <p>
+          Latest preview에서 4종 replay order가 모두 <code>수납 후보</code>로 전진했다.
+        </p>
+        <img
+          src="./evidence/2026-05-31-den-341-preview-chart-billing-candidates-pass.png"
+          alt="DEN-341 preview chart billing candidates pass evidence"
+        />
+        <h3>Candidate API readback pass</h3>
+        <p>
+          Billing candidate API는 resolved encounter 기준으로 4건 candidate를 반환했다.
+        </p>
+        <img
+          src="./evidence/2026-05-31-den-341-preview-candidate-api-readback-pass.png"
+          alt="DEN-341 preview candidate API readback pass evidence"
+        />
+        <h3>Fixed staging chart billing candidate pass</h3>
+        <p>
+          고정 staging alias에서 4종 replay order가 모두 <code>수납 후보</code>로 readback됐다.
+        </p>
+        <img
+          src="./evidence/2026-05-31-den-341-fixed-staging-chart-billing-candidates-pass.png"
+          alt="DEN-341 fixed staging chart billing candidates pass evidence"
+        />
+        <h3>Fixed staging candidate API readback pass</h3>
+        <p>
+          고정 staging alias의 billing candidate API는 resolved encounter 기준으로 4건 candidate를 반환했다.
+        </p>
+        <img
+          src="./evidence/2026-05-31-den-341-fixed-staging-candidate-api-readback-pass.png"
+          alt="DEN-341 fixed staging candidate API readback pass evidence"
+        />
+      </section>
+
+      <section>
+        <h2>판단</h2>
+        <ul>
+          <li>
+            DEN-340의 local/static 판단은 여전히 유효하다. 코드와 migration contract상 분리된 업무 상태와 수납 후보 상태는
+            현재 table/RPC 구조로 표현 가능하다.
+          </li>
+          <li>
+            DEN-341 preview와 fixed staging replay 기준으로는 remote Supabase migration이 필요하지 않았다. 실패 원인은 DB/RPC 부재가 아니라
+            app route alias resolution과 live chart deep-link selection이었다.
+          </li>
+          <li>
+            남은 제품/UX 범위는 billing candidate API readback을 billing invoice-line edit table에 어떻게 노출할지 결정하는 것이다.
+          </li>
+          <li>
+            Fixed staging alias update는 승욱 승인 후 preview deployment에 한해 수행했다. production deploy는 수행하지 않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>승인 후 read-only inspection</h2>
+        <ul>
+          <li>
+            Supabase project <code>clair-emr-staging</code>에는
+            <code>20260530141423_den_329_billing_candidate_invoice_anchor</code>까지 migration이 적용되어 있었다.
+          </li>
+          <li>
+            <code>clair_save_chart_order_action</code>, <code>clair_list_billing_invoice_candidates</code>,
+            <code>clair_sync_billing_invoice_candidates</code> 함수 정의도 존재했다.
+          </li>
+          <li>
+            Postgres 로그에서 billing readback 실패 원인은
+            <code>invalid input syntax for type uuid: "encounter-kong-260501"</code>로 확인했다.
+            billing invoice candidate route가 chart/order route와 달리 staging demo encounter alias를 UUID로 resolve하지 않고 있었다.
+          </li>
+          <li>
+            Local fix: <code>src/app/api/workspaces/[workspaceId]/billing/invoice-candidates/route.ts</code>에
+            <code>resolveServerChartEncounterId</code>를 연결해 GET/PATCH 모두 resolved encounter UUID를 사용하게 했다.
+          </li>
+          <li>
+            Regression: <code>tests/billing-invoice-candidate-sync-server.spec.ts</code>에 route wiring test를 추가했다.
+          </li>
+          <li>
+            Local fix: <code>src/features/chart/module.tsx</code>에서 explicit encounter deep link가 live queue auto-selection에
+            덮이지 않게 하고, 해당 deep link에서는 mock/scenario bundle fallback을 허용했다.
+          </li>
+          <li>
+            Regression: <code>tests/chart.spec.ts</code>에 chart deep-link preservation wiring test를 추가했다.
+          </li>
+          <li>
+            Fixed staging verification에서 <code>chart/order-lifecycle</code> GET이
+            <code>encounter-kong-260501</code> alias를 UUID로 resolve하지 않아 500을 반환하는 것을 확인했고,
+            <code>src/app/api/workspaces/[workspaceId]/chart/order-lifecycle/route.ts</code>에도
+            <code>resolveServerChartEncounterId</code>를 연결했다.
+          </li>
+          <li>
+            Regression: <code>tests/chart-order-lifecycle-persistence-server.spec.ts</code>에 lifecycle route alias wiring test를 추가했다.
+          </li>
+          <li>
+            Fixed staging alias는
+            <code>https://emr-app-shell-prototype-kun7k5nmx-mcso0s-projects.vercel.app</code> preview deployment를 가리키도록
+            승인 후 갱신했다.
+          </li>
+          <li>
+            고정 staging readback 결과:
+            <code>chart/order-lifecycle</code> 200/4건,
+            <code>billing/invoice-candidates</code> 200/4건,
+            candidate line totals <code>18200, 23100, 34100, 34200</code>.
+          </li>
+          <li>
+            Secondary signal: confirm 단계에서 <code>order_fulfillment_work_items</code> direct snapshot-enrichment PATCH가
+            RLS 403을 남긴다. 현재 RPC sync와 audit은 성공하고 이 PATCH 실패는 core에서 무시되지만,
+            source snapshot enrichment를 live persistence requirement로 볼 경우 별도 RLS/RPC hardening이 필요하다.
+          </li>
+          <li>
+            별도 secondary signal: chart diagnosis/soap persistence route는 fixed staging URL에서
+            <code>workspace_membership_missing</code> 403을 반환해 화면에 <code>저장 실패</code> 신호를 남길 수 있다.
+            DEN-341 order/billing replay 통과 조건에는 포함하지 않고 후속 persistence hardening 후보로 분리한다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>금지/미수행</h2>
+        <ul>
+          <li>Production deploy는 하지 않았다.</li>
+          <li>실데이터 import는 하지 않았다.</li>
+          <li>원격 RLS replay는 하지 않았다.</li>
+          <li>remote Supabase migration push는 하지 않았다.</li>
+          <li>Supabase remote SQL introspection도 승인 전에는 진행하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>권장 후속</h2>
+        <p class="note">
+          원격 Supabase migration push는 필요하지 않다. DEN-341은 Human Review로 유지하되, billing candidate rows를 기존 billing invoice-line
+          edit table에 합쳐 표시할지 여부와 diagnosis/soap persistence 403은 별도 follow-up으로 다룬다.
+          production deploy와 remote migration push는 계속 금지한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

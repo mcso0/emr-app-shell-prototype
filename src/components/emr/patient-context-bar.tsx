@@ -213,14 +213,17 @@ export function EmrPatientContextBar({
   }, [updateScrollState]);
 
   return (
-    <div className={cn("border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)]", className)}>
-      <div className="flex h-12 items-center gap-3 px-4">
+    <div
+      data-slot="patient-context-bar"
+      className={cn("border-b border-[var(--emr-context-bar-divider)] bg-[var(--emr-surface-workspace)]", className)}
+    >
+      <div className="flex min-h-[var(--emr-context-bar-min-height)] items-center gap-[var(--emr-context-bar-section-gap)] px-[var(--emr-context-bar-padding-x)] py-[var(--emr-context-bar-padding-y)]">
         {historyButton ? (
           <>
             <Button
               variant="outline"
               size="xs"
-              className="h-[26px] bg-card data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
+              className="h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
               aria-expanded={historyButton.expanded}
               aria-pressed={historyButton.expanded}
               aria-controls={historyButton.controls}
@@ -230,23 +233,23 @@ export function EmrPatientContextBar({
               <CdsUtilitiesHistoryIcon data-icon="inline-start" />
               {historyButton.label ?? "이력"}
             </Button>
-            <div className="h-[18px] w-px shrink-0 bg-border" />
+            <div className="h-[var(--emr-context-bar-divider-height)] w-px shrink-0 bg-[var(--emr-context-bar-divider)]" />
           </>
         ) : null}
 
         <div className="relative min-w-0 flex-1">
           <div
             ref={scrollRef}
-            className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex min-w-0 items-center gap-[var(--emr-context-bar-section-gap)] overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             aria-label="환자 컨텍스트 정보"
           >
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-[var(--emr-context-bar-item-gap)]">
               <IllustrationIcon src={getAssetSrc(animalDogIcon)} alt="" />
               <PatientContextDatumGroup items={patientItems} />
             </div>
 
             {displayedVitalItems.length ? (
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-[var(--emr-context-bar-item-gap)]">
                 <IllustrationIcon src={getAssetSrc(vitalHeartPulseIcon)} alt="" />
                 <PatientContextDatumGroup items={displayedVitalItems} />
                 <Popover
@@ -268,7 +271,7 @@ export function EmrPatientContextBar({
                         type="button"
                         aria-label="바이탈 입력"
                         aria-expanded={vitalPopoverOpen}
-                        className="size-[26px] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"
+                        className="size-[26px] rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-control-muted-bg)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"
                       >
                         <CdsActionsPlusIcon />
                       </EmrIconButton>
@@ -310,9 +313,9 @@ export function EmrPatientContextBar({
             ) : null}
 
             {memoActions.length ? (
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-[var(--emr-context-bar-item-gap)]">
                 <IllustrationIcon src={getAssetSrc(memoNoteLinesIcon)} alt="" />
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-[var(--emr-context-bar-item-gap)]">
                   {memoActions.map((action, index) => (
                     <PatientContextMemoButton
                       key={`${String(action.label)}-${index}`}
@@ -324,7 +327,7 @@ export function EmrPatientContextBar({
             ) : null}
 
             {trailingItems.length ? (
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-[var(--emr-context-bar-item-gap)]">
                 <PatientContextDatumGroup items={trailingItems} />
               </div>
             ) : null}
@@ -338,8 +341,8 @@ export function EmrPatientContextBar({
           />
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-[var(--emr-context-bar-section-gap)]">
+          <div className="flex items-center gap-[var(--clair-spacing-8)]">
             <PatientContextControlButton
               aria-label="환자 정보 처음으로 이동"
               disabled={!scrollState.canScrollLeft}
@@ -357,7 +360,7 @@ export function EmrPatientContextBar({
           </div>
           {shouldShowRightPanelToggle ? (
             <>
-              <div className="h-[18px] w-px shrink-0 bg-border" />
+              <div className="h-[var(--emr-context-bar-divider-height)] w-px shrink-0 bg-[var(--emr-context-bar-divider)]" />
               {rightPanelToggleLabel ? (
                 <RightPanelToggleButton
                   badgeCount={rightPanelBadgeCount}
@@ -407,7 +410,7 @@ function RightPanelToggleButton({
       type="button"
       variant="outline"
       size="xs"
-      className="emr-text-status relative h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2 text-[var(--emr-text-secondary)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
+      className="emr-text-status relative h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
       aria-label={`${label} ${open ? "접기" : "열기"}`}
       aria-expanded={open}
       aria-pressed={open}
@@ -501,7 +504,7 @@ function PatientVitalPopover({
 
 function PatientContextDatumGroup({ items }: { items: PatientContextDatum[] }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-[var(--emr-context-bar-item-gap)]">
       {items.map((item, index) => (
         <PatientContextDatumBadge
           key={`${String(item.label)}-${String(item.value)}-${index}`}
@@ -517,10 +520,10 @@ function PatientContextDatumBadge({ label, value }: PatientContextDatum) {
   return (
     <Badge
       variant="secondary"
-      className="emr-text-dense-label h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 font-medium"
+      className="emr-text-metadata h-[var(--emr-context-bar-chip-height)] shrink-0 gap-[var(--clair-spacing-2)] rounded-[var(--emr-context-bar-chip-radius)] border-transparent bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] py-[3px] font-medium"
     >
-      <span className="text-[var(--emr-text-tertiary)]">{label}</span>
-      <span className="text-[var(--emr-text-secondary)]">{value}</span>
+      <span className="text-[var(--emr-context-bar-chip-label)]">{label}</span>
+      <span className="text-[var(--emr-context-bar-chip-value)]">{value}</span>
     </Badge>
   );
 }
@@ -531,14 +534,14 @@ function PatientContextMemoButton({ action }: { action: PatientContextMemoAction
       type="button"
       variant="outline"
       size="xs"
-      className="emr-text-status h-[22px] rounded-[var(--clair-radius-atomic-6)] bg-card px-2 text-[var(--emr-text-secondary)] disabled:bg-[var(--emr-surface-disabled)] disabled:text-[var(--emr-text-disabled)]"
+      className="emr-text-metadata h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-value)] shadow-[var(--clair-shadow-xs)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-50"
       disabled={action.disabled}
       onClick={action.onClick}
     >
       {action.label}
       {action.locked ? (
         <CdsAlertsLockIcon
-          className="ml-0.5 size-3 text-[var(--emr-text-tertiary)]"
+          className="ml-0.5 size-[var(--emr-context-bar-inline-icon-size)] text-[var(--emr-text-tertiary)]"
           aria-hidden="true"
         />
       ) : null}
@@ -556,7 +559,7 @@ function PatientContextControlButton({
       type="button"
       iconSize="md"
       className={cn(
-        "size-6 rounded-[var(--clair-radius-atomic-4)] border border-[var(--emr-line-hairline)] bg-card text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)] disabled:border-[var(--emr-line-hairline)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100",
+        "size-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-control-radius)] border border-[var(--emr-context-bar-divider)] bg-card text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--emr-state-hover)] disabled:border-[var(--emr-context-bar-divider)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-50",
         className
       )}
       {...props}
@@ -583,7 +586,7 @@ function IllustrationIcon({
       height={20}
       unoptimized
       aria-hidden={alt ? undefined : true}
-      className={cn("size-5 shrink-0 object-contain", className)}
+      className={cn("size-[var(--emr-context-bar-icon-size)] shrink-0 object-contain", className)}
       draggable={false}
     />
   );

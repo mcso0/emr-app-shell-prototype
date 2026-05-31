@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-367 Guardian Billing Regression Coverage Report</title>
+    <style>
+      body { margin: 0; background: #f7f7f8; color: #17181c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+      section { margin-top: 24px; padding: 24px; border: 1px solid #e2e4e8; border-radius: 10px; background: #fff; }
+      h1, h2 { margin: 0 0 12px; line-height: 1.25; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 18px; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f0f2f5; }
+      .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: #eef6ff; color: #155eef; font-size: 13px; font-weight: 700; }
+      .decision { background: #f6ffed; color: #237804; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-367 - Human Review ready</p>
+      <h1>Guardian-Centered Billing Regression Coverage</h1>
+      <p>
+        DEN-367은 보호자 중심 수납 화면의 핵심 흐름을 focused regression으로
+        고정했다. 테스트 중 live encounter 후보가 중앙 checkout 작업대에 반영되지
+        않는 회귀도 발견해 함께 수정했다.
+      </p>
+
+      <section>
+        <h2>보호하는 흐름</h2>
+        <ul>
+          <li>보호자 정보바: 보호자 연락처/소유 환자/주의 메모가 보이고 환자 바이탈성 정보는 빠진다.</li>
+          <li>왼쪽 큐: <code>수납대기</code>, reason-backed <code>미납</code>, <code>완료</code> 분류와 row badge를 고정한다.</li>
+          <li>보호자 ledger: 날짜 quick range, 상태 필터, ledger row 선택, co-guardian toggle 조건을 고정한다.</li>
+          <li>중앙 checkout: 선택된 invoice/candidate가 checkout 작업대와 항목 테이블에 반영된다.</li>
+          <li>오른쪽 요약: <code>수납 진행</code>, <code>수납 완료</code>, <code>미납 처리</code>가 분리되고 <code>청구 확정</code> copy가 노출되지 않는다.</li>
+          <li>server route/core: 사유 없는 <code>mark_unpaid</code>는 400으로 막힌다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>수정된 회귀</h2>
+        <p class="status decision">live candidate detail이 기본 invoice selection에 묻히지 않게 수정했다.</p>
+        <ul>
+          <li>live encounter handoff detail의 invoice가 store invoice 목록 밖에 있으면, 중앙 checkout group을 해당 live detail에서 직접 구성한다.</li>
+          <li>이로써 live candidate row가 <code>청구 항목 테이블</code>에 바로 보인다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/billing/module.tsx</code></li>
+          <li><code>tests/billing.spec.ts</code></li>
+          <li><code>tests/billing-payment-status-persistence-server.spec.ts</code></li>
+          <li><code>docs/engineering/changelog.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+          <li><code>npx eslint src/features/billing/module.tsx tests/billing.spec.ts tests/billing-payment-status-persistence-server.spec.ts src/features/billing/server-payment-status-persistence-core.ts src/features/billing/store.ts</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing renders live candidate rows|billing maps encounter candidates|billing workspace renders waiting invoice|billing side panel switches|billing guardian ledger aside|billing unpaid processing requires|billing financial confirmation failure" --reporter=line</code> passed.</li>
+          <li><code>npx playwright test tests/billing-payment-status-persistence-server.spec.ts --reporter=line</code> passed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

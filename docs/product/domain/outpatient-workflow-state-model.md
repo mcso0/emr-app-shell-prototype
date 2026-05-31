@@ -166,8 +166,8 @@ Rules:
 
 | Invoice state | Meaning | Normal next states |
 | --- | --- | --- |
-| `draft` | Candidate invoice exists but is not issued | `issued`, `voided` |
-| `issued` | Billing has confirmed the invoice | `paid`, `refund_requested`, `voided` |
+| `draft` | Candidate-backed payable invoice exists in the billing queue; it is still selectable/editable before checkout | `issued`, `voided` |
+| `issued` | Billing has started checkout / presented the payable amount; this can be an internal transition behind `수납 진행` | `paid`, `refund_requested`, `voided` |
 | `paid` | Payment state is completed synthetically or by approved provider in future | `refund_requested` |
 | `refund_requested` | Refund review was requested | `refunded`, `paid` |
 | `refunded` | Refund is completed | terminal |
@@ -176,7 +176,7 @@ Rules:
 | Payment state | Meaning |
 | --- | --- |
 | `none` | No payment intent or result exists |
-| `unpaid` | Visit is closed or pending with unpaid reason |
+| `unpaid` | Payment was explicitly deferred, declined, left unpaid after amount presentation, or became overdue; reason is required |
 | `paid` | Payment completed in current approved scope |
 | `failed` | Payment attempt failed |
 | `refunded` | Payment refunded |
@@ -185,6 +185,7 @@ Rules:
 
 - MVP/local-first billing may record synthetic payment completion; it is not provider confirmation.
 - Server-side recalculation is required for amount integrity before payment/closure claims.
+- Chart `Order 청구` should make selected billable orders visible as `수납대기` / payable billing candidates. They are not `미납` simply because same-day payment has not happened yet.
 - `ready_for_billing` -> `completed` may happen through paid completion or approved unpaid closure with reason.
 - Refund approval is not a generic front desk action; exact live refund policy remains a later product decision.
 

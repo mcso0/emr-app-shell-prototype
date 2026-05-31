@@ -5,6 +5,7 @@ import { mockInvoiceLines, mockInvoices, mockPayments } from "@/mocks/emr-domain
 import type { EmrId, Invoice, InvoiceLine, Payment, PaymentMethod } from "@/types/emr-domain";
 
 export type BillingFilter = "waiting" | "unpaid" | "closed";
+export type BillingInvoiceStatusTransitionTarget = "waiting" | "unpaid" | "paid" | "voided";
 
 type BillingStore = {
   combinedInvoiceIds: EmrId[];
@@ -19,12 +20,13 @@ type BillingStore = {
   applyPaymentStatusSnapshot: (invoice: Invoice, payments: Payment[]) => void;
   issueSelectedInvoice: () => void;
   markSelectedInvoicePaid: () => void;
-  markSelectedInvoiceUnpaid: () => void;
+  markSelectedInvoiceUnpaid: (unpaidReason: string) => void;
   selectInvoice: (selectedInvoiceId: EmrId) => void;
   setFilter: (filter: BillingFilter) => void;
   setPaymentMethod: (paymentMethod: PaymentMethod) => void;
   setCombinedInvoices: () => void;
   clearCombinedInvoices: () => void;
+  transitionInvoiceStatus: (invoiceId: EmrId, target: BillingInvoiceStatusTransitionTarget) => void;
   toggleInvoiceSelection: (invoiceId: EmrId) => void;
   updateInvoiceLineQuantity: (invoiceLineId: EmrId, quantity: number) => void;
 };
@@ -108,19 +110,28 @@ export const useBillingStore = create<BillingStore>()((set, get) => ({
       return {
         invoices: state.invoices.map((item) =>
           item.id === selectedInvoiceId
-            ? { ...item, status: "paid", issuedAt: item.issuedAt ?? now }
+            ? { ...item, status: "paid", issuedAt: item.issuedAt ?? now, paidAt: now, paymentState: "paid" }
             : item
         ),
         payments: nextPayments,
       };
     });
   },
-  markSelectedInvoiceUnpaid: () => {
+  markSelectedInvoiceUnpaid: (unpaidReason) => {
     const { selectedInvoiceId } = get();
+    const normalizedUnpaidReason = unpaidReason.trim();
+    if (!normalizedUnpaidReason) return;
     set((state) => ({
       invoices: state.invoices.map((invoice) =>
         invoice.id === selectedInvoiceId
-          ? { ...invoice, status: "issued", issuedAt: invoice.issuedAt ?? now }
+          ? {
+              ...invoice,
+              status: "issued",
+              issuedAt: invoice.issuedAt ?? now,
+              paidAt: undefined,
+              paymentState: "unpaid",
+              unpaidReason: normalizedUnpaidReason,
+            }
           : invoice
       ),
     }));
@@ -137,6 +148,70 @@ export const useBillingStore = create<BillingStore>()((set, get) => ({
     set({ combinedInvoiceIds: selectedInvoiceIds });
   },
   clearCombinedInvoices: () => set({ combinedInvoiceIds: [] }),
+  transitionInvoiceStatus: (invoiceId, target) =>
+    set((state) => {
+      const invoice = state.invoices.find((item) => item.id === invoiceId);
+      if (!invoice) return state;
+
+      const paymentMethod = invoice.selectedPaymentMethod ?? state.paymentMethod;
+      const clearApprovedPayments = state.payments.filter(
+        (payment) => payment.invoiceId !== invoiceId || payment.status !== "approved",
+      );
+      const approvedPayment = {
+        id: `payment-${invoiceId}-${paymentMethod}`,
+        invoiceId,
+        paymentMethod,
+        amount: invoice.totalAmount,
+        status: "approved" as const,
+        paidAt: now,
+        metadata: { prototype: true, source: "billing-status-transition" },
+      };
+      const nextInvoice =
+        target === "paid"
+          ? {
+              ...invoice,
+              issuedAt: invoice.issuedAt ?? now,
+              paidAt: now,
+              paymentState: "paid" as const,
+              selectedPaymentMethod: paymentMethod,
+              status: "paid" as const,
+              unpaidReason: undefined,
+            }
+          : target === "unpaid"
+            ? {
+                ...invoice,
+                issuedAt: invoice.issuedAt ?? now,
+                paidAt: undefined,
+                paymentState: "unpaid" as const,
+                status: "issued" as const,
+                unpaidReason: invoice.unpaidReason ?? "상태 변경: 미납으로 전환",
+              }
+            : target === "voided"
+              ? {
+                  ...invoice,
+                  paidAt: undefined,
+                  paymentState: "none" as const,
+                  status: "voided" as const,
+                  unpaidReason: undefined,
+                }
+              : {
+                  ...invoice,
+                  paidAt: undefined,
+                  paymentState: "none" as const,
+                  selectedPaymentMethod: undefined,
+                  status: "draft" as const,
+                  unpaidReason: undefined,
+                };
+
+      return {
+        invoices: state.invoices.map((item) =>
+          item.id === invoiceId ? nextInvoice : item,
+        ),
+        payments: target === "paid"
+          ? [...clearApprovedPayments, approvedPayment]
+          : clearApprovedPayments,
+      };
+    }),
   toggleInvoiceSelection: (invoiceId) =>
     set((state) => {
       const selectedInvoiceIds = state.selectedInvoiceIds.includes(invoiceId)

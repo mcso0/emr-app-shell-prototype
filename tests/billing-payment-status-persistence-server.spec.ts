@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
+  createSupabaseDemoBillingPermissionAdapter,
+  shouldUseSupabaseBillingPersistenceGateway,
+} from "../src/features/billing/server-demo-billing-persistence-boundary";
+import {
   createMockBillingPaymentStatusGateway,
   createSupabaseBillingPaymentStatusGateway,
   saveBillingPaymentStatus,
@@ -83,6 +87,26 @@ test("payment status route requires an actor and persists completed payment stat
   const readBody = await readBack.json() as typeof savedBody;
   expect(readBody.invoice.status).toBe("paid");
   expect(readBody.payments).toContainEqual(expect.objectContaining({ paymentMethod: "transfer" }));
+});
+
+test("payment status route rejects unpaid processing without a reason", async ({ request }) => {
+  const rejected = await request.patch(`/api/workspaces/${workspaceId}/billing/payment-status`, {
+    data: {
+      action: "mark_unpaid",
+      invoiceId,
+      paymentMethod: "cash",
+    },
+    headers: { "x-clair-demo-session-user-id": "user-tech" },
+  });
+
+  expect(rejected.status()).toBe(400);
+  await expectJson(rejected, {
+    ok: false,
+    error: "invalid_input",
+    fieldErrors: {
+      unpaidReason: "미납 처리 사유를 입력해 주세요.",
+    },
+  });
 });
 
 test("payment status core blocks unauthorized billing mutations and cross-workspace invoice access", async () => {
@@ -204,6 +228,94 @@ test("payment status core persists method, unpaid, and completed states without 
   );
 });
 
+test("payment status demo ids stay on mock persistence even for Supabase sessions", async () => {
+  const supabaseActorUserId = "00000000-0000-4000-8000-000000000002";
+
+  expect(
+    shouldUseSupabaseBillingPersistenceGateway({
+      identitySource: "supabase_session",
+      invoiceId,
+    })
+  ).toBe(false);
+  expect(
+    shouldUseSupabaseBillingPersistenceGateway({
+      identitySource: "supabase_session",
+      invoiceId: "00000000-0000-4000-8000-000000000401",
+    })
+  ).toBe(true);
+
+  const result = await saveBillingPaymentStatus({
+    actorUserId: supabaseActorUserId,
+    workspaceId,
+    input: {
+      action: "complete_payment",
+      invoiceId,
+      paymentMethod: "card",
+    },
+    gateway: createMockBillingPaymentStatusGateway(
+      undefined,
+      () => "2026-05-20T11:00:00.000Z",
+      "supabase-demo-payment-status-boundary-test"
+    ),
+    permissionAdapter: createSupabaseDemoBillingPermissionAdapter({
+      actorUserId: supabaseActorUserId,
+      workspaceId,
+    }),
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    invoice: {
+      id: invoiceId,
+      paidAt: "2026-05-20T11:00:00.000Z",
+      paymentState: "paid",
+      selectedPaymentMethod: "card",
+      status: "paid",
+    },
+  });
+});
+
+test("payment status core requires a reason before marking an invoice unpaid", async () => {
+  const missingReason = await saveBillingPaymentStatus({
+    actorUserId: "user-tech",
+    workspaceId,
+    input: {
+      action: "mark_unpaid",
+      invoiceId,
+      paymentMethod: "cash",
+    },
+  });
+
+  expect(missingReason).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: {
+      unpaidReason: "미납 처리 사유를 입력해 주세요.",
+    },
+  });
+
+  const blankReason = await saveBillingPaymentStatus({
+    actorUserId: "user-tech",
+    workspaceId,
+    input: {
+      action: "mark_unpaid",
+      invoiceId,
+      paymentMethod: "cash",
+      unpaidReason: "   ",
+    },
+  });
+
+  expect(blankReason).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: {
+      unpaidReason: "미납 처리 사유를 입력해 주세요.",
+    },
+  });
+});
+
 test("payment status Supabase gateway keeps actor, workspace, invoice, action, and method in RPC calls", async () => {
   const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
   const gateway = createSupabaseBillingPaymentStatusGateway({
@@ -280,6 +392,7 @@ test("payment status persistence migration defines local-first RPC boundary with
   expect(migration).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
   expect(migration).toContain("selected_payment_method");
   expect(migration).toContain("payment_state");
+  expect(migration).toContain("unpaid_reason_required");
   expect(migration).toContain("paid_at");
   expect(migration).toContain("payments");
   expect(migration).toContain("encounters");

@@ -52,7 +52,7 @@ export function ShellMain({
 
   return (
     <div
-      className="grid h-full min-h-0 grid-cols-[48px_minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
+      className="grid h-full min-h-0 grid-cols-[56px_minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
       style={{
         "--clair-shell-main-columns": `${navigationColumnWidth}px minmax(0, 1fr)`,
         gap: SHELL_LAYOUT.shell.gap,
@@ -68,13 +68,13 @@ export function ShellMain({
       >
         <WorkspaceSwitcher
           collapsed={!shouldShowModuleSidePanel}
-          className="max-md:w-12 max-md:justify-start max-md:[&>[data-slot=workspace-switcher-label]]:hidden max-md:[&>svg]:hidden"
+          className="max-md:w-14 max-md:min-w-14 max-md:max-w-14 max-md:[&>[data-slot=workspace-switcher-label]]:hidden"
           workspaceId={workspaceId}
         />
 
         <div
           data-testid="module-panel-area"
-          className="grid min-h-0 flex-1 grid-cols-[48px] transition-[grid-template-columns] md:grid-cols-[var(--clair-module-panel-columns)]"
+          className="grid min-h-0 flex-1 grid-cols-[56px] transition-[grid-template-columns] md:grid-cols-[var(--clair-module-panel-columns)]"
           style={{
             "--clair-module-panel-columns": shouldShowModuleSidePanel
               ? `${SHELL_LAYOUT.navRailWidth}px minmax(0, ${SHELL_LAYOUT.moduleSidePanel.defaultWidth}px)`
@@ -93,7 +93,7 @@ export function ShellMain({
 
           <aside
             className={cn(
-              "min-h-0 min-w-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-panel)] shadow-xs max-md:hidden",
+              "min-h-0 min-w-0 overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-sidepanel)] shadow-xs max-md:hidden",
               !shouldShowModuleSidePanel && "pointer-events-none border-transparent opacity-0"
             )}
           >

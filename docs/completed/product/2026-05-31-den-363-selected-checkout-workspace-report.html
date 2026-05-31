@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-363 Selected Checkout Workspace Report</title>
+    <style>
+      body { margin: 0; background: #f7f7f8; color: #17181c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+      section { margin-top: 24px; padding: 24px; border: 1px solid #e2e4e8; border-radius: 10px; background: #fff; }
+      h1, h2 { margin: 0 0 12px; line-height: 1.25; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 18px; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f0f2f5; }
+      .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: #eef6ff; color: #155eef; font-size: 13px; font-weight: 700; }
+      .decision { background: #f6ffed; color: #237804; }
+      a { color: #155eef; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-363 - Human Review ready</p>
+      <h1>Selected Checkout Workspace Report</h1>
+      <p>
+        DEN-363 reframes the center billing area from a generic invoice editor into a selected checkout workspace.
+        The selected ledger rows are now grouped by patient, encounter, and invoice before the editable checkout item table.
+      </p>
+
+      <section>
+        <h2>그룹/Row 정보 구조</h2>
+        <ul>
+          <li>Added checkout group selectors for selected invoice IDs using current invoice, invoice line, payment, encounter, patient, guardian, and order mock context.</li>
+          <li>Center workspace now shows <code>선택된 checkout 작업대</code> with group count, line count, and total amount.</li>
+          <li>Each group shows patient, encounter number, invoice number, guardian, status, group total, and balance.</li>
+          <li>Each row shows item name, source badge, candidate badge when applicable, category, order status, work status, unit price, quantity, and subtotal.</li>
+          <li>The editable table heading is now <code>선택된 checkout 항목</code> and uses selected checkout lines.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>수납 후보 구분 방식</h2>
+        <p class="status decision">Candidate rows stay payable and visibly distinct.</p>
+        <ul>
+          <li>Candidate-backed rows keep the existing <code>수납 후보</code> badge.</li>
+          <li>Candidate rows remain non-editable in the quantity field to avoid inventing a server-side edit contract.</li>
+          <li>Existing DEN-348 candidate readback behavior remains covered by focused Playwright regression.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Add-on Placeholder 정책</h2>
+        <ul>
+          <li>Each checkout group exposes a <code>수납 추가 항목</code> placeholder.</li>
+          <li>The placeholder is explicitly scoped to non-clinical sale items such as food or general goods.</li>
+          <li>No inventory, catalog, prescription, approval-required item, DB/RPC, or payment allocation implementation was added.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing workspace renders waiting invoice|billing invoice line table supports|billing maps encounter candidates" --reporter=line</code> passed.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../../src/features/billing/data.ts">src/features/billing/data.ts</a></li>
+          <li><a href="../../../src/features/billing/module.tsx">src/features/billing/module.tsx</a></li>
+          <li><a href="../../../tests/billing.spec.ts">tests/billing.spec.ts</a></li>
+          <li><a href="../../design/changelog.md">docs/design/changelog.md</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

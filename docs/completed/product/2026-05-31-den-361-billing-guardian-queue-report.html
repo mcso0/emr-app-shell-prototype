@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-361 Billing Guardian Queue Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef6ff;
+        color: #155eef;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-361 - Human Review ready</p>
+      <h1>Billing Guardian Queue Report</h1>
+      <p>
+        DEN-361 changes the billing side-panel queue from the older <code>대기 / 미납 / 종료</code>
+        wording to a guardian-centered work queue: <code>수납대기 / 미납 / 완료</code>. The left
+        queue now explains who should pay, which patient the bill belongs to, how many billable
+        order lines are included, how much is due, and when the request was last created or issued.
+      </p>
+
+      <section>
+        <h2>큐 상태 기준</h2>
+        <p class="status decision">
+          Same-day payable items are 수납대기, not 미납.
+        </p>
+        <ul>
+          <li><code>수납대기</code>: payable draft/issued invoices that are not terminal and do not have an unpaid reason/state.</li>
+          <li><code>미납</code>: invoices with an explicit unpaid/failed payment state or unpaid reason.</li>
+          <li><code>완료</code>: paid, refunded, or voided invoices.</li>
+          <li>This keeps old <code>issued</code> rows from being misread as overdue before DEN-366 adds richer unpaid semantics.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li>Updated side-panel group labels to <code>수납대기</code>, <code>미납</code>, and <code>완료</code>.</li>
+          <li>Added reason-backed unpaid classification in <code>src/features/billing/data.ts</code>.</li>
+          <li>Queue rows now lead with guardian name and explicit billing state badge.</li>
+          <li>Rows show patient chip, billable order-line count, payable/unpaid amount, invoice number, encounter number, and request/update time.</li>
+          <li>Billing header waiting/unpaid summary now uses the same queue classification so <code>issued</code> without unpaid reason remains waiting.</li>
+          <li>Existing invoice selection, candidate readback, row action menu, and payment panel behavior were preserved.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+          <li><code>npx eslint src/features/billing/data.ts src/features/billing/module.tsx tests/billing.spec.ts</code> passed.</li>
+          <li><code>npm run docs:check</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing workspace renders waiting invoice|billing side panel switches" --reporter=line</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing renders live candidate rows|billing maps encounter candidates|billing workspace renders waiting invoice|billing side panel switches" --reporter=line</code> passed.</li>
+          <li><code>npm run security:secrets</code> passed.</li>
+          <li><code>git diff --check</code> passed.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../../src/features/billing/data.ts">src/features/billing/data.ts</a></li>
+          <li><a href="../../../src/features/billing/module.tsx">src/features/billing/module.tsx</a></li>
+          <li><a href="../../../tests/billing.spec.ts">tests/billing.spec.ts</a></li>
+          <li><a href="../../design/changelog.md">docs/design/changelog.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <ul>
+          <li>No guardian ledger multi-select implementation was performed.</li>
+          <li>No payment persistence, DB/RPC, RLS, or migration changes were made.</li>
+          <li>No remote staging replay, production deploy, real data, or payment provider integration was performed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -24,7 +24,7 @@ test("customer workspace renders animal master list and opens the common patient
   expect(inpatientNavBox).not.toBeNull();
   expect(customerNavBox).not.toBeNull();
   expect(hospitalAdminNavBox).not.toBeNull();
-  expect(customerNavBox!.y - inpatientNavBox!.y).toBeGreaterThan(60);
+  expect(customerNavBox!.y - inpatientNavBox!.y).toBeGreaterThanOrEqual(56);
   expect(hospitalAdminNavBox!.y - customerNavBox!.y).toBeLessThan(52);
   await expect(page.getByTestId("customer-patient-table")).toBeVisible();
   const patientTable = page.getByRole("table", { name: "동물 고객관리 테이블" });

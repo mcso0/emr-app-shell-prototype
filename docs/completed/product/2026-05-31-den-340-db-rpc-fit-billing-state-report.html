@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-340 DB/RPC Fit for Separated Billing State Report</title>
+    <style>
+      body {
+        color: #111827;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 960px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        margin: 16px 0;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #d1d5db;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .gate {
+        color: #92400e;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-340 DB/RPC Fit for Separated Billing State Report</h1>
+    <p>
+      2026-05-31 기준으로 현재 DB/RPC 구조가 업무 상태와 수납 상태 분리를
+      감당하는지 검수했다. 결론은 <strong>DEN-341 staging replay에는 새
+      migration 없이 충분</strong>하다는 것이다.
+    </p>
+
+    <h2>판정</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>질문</th>
+          <th>판정</th>
+          <th>근거</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>업무 상태와 수납 상태를 분리해 담을 수 있는가?</td>
+          <td class="ok">가능</td>
+          <td>
+            <code>orders.status</code>, <code>orders.work_status</code>,
+            <code>orders.task_status</code>,
+            <code>order_fulfillment_work_items.status</code>와
+            <code>orders.billing_candidate_status</code>,
+            <code>invoices</code>, <code>invoice_lines</code>가 분리되어 있다.
+          </td>
+        </tr>
+        <tr>
+          <td>chart <code>Order 청구</code>가 업무 상태를 바꾸는가?</td>
+          <td class="ok">아니오</td>
+          <td>
+            <code>clair_save_chart_order_action(action = 'bill')</code>는
+            <code>billing_candidate_status</code>와
+            <code>billing_candidate_id</code>만 전진시키고,
+            order/work/fulfillment status는 변경하지 않는다.
+          </td>
+        </tr>
+        <tr>
+          <td>invoice candidate sync가 실제 후보 라인을 만들 수 있는가?</td>
+          <td class="ok">가능</td>
+          <td>
+            <code>clair_sync_billing_invoice_candidates</code>는 workspace,
+            encounter, selected order scope를 검증하고, cancelled/non-billable
+            row를 제외하며, draft invoice anchor와 invoice line을 생성 또는
+            갱신한다.
+          </td>
+        </tr>
+        <tr>
+          <td>단일 transaction/RPC migration이 지금 필수인가?</td>
+          <td class="ok">필수 아님</td>
+          <td>
+            현재 두 RPC 구조는 부분 실패 후 재시도가 가능하다. chart bill RPC가
+            먼저 성공해도 invoice sync RPC는
+            <code>billing_candidate_status = 'candidate_created'</code>를 허용하므로
+            같은 order를 다시 청구해 후보 라인을 복구할 수 있다.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Migration 판단</h2>
+    <p>
+      이번 DEN-340에서는 새 schema/RPC migration을 만들지 않는다. 현재 구조는
+      local-first MVP와 synthetic staging QA에서 필요한 분리 상태, idempotent
+      후보 생성, 서버 금액 snapshot 기반 동기화를 제공한다.
+    </p>
+    <p class="gate">
+      승인 게이트: 대표 검수 기준이 “chart bill action과 invoice candidate
+      생성이 반드시 하나의 DB transaction으로 함께 성공 또는 함께 실패해야
+      한다”로 올라가면 consolidated RPC migration을 별도 승인 후 진행한다.
+    </p>
+
+    <h2>승인 필요 시 제안할 RPC</h2>
+    <ul>
+      <li>
+        함수명:
+        <code>public.clair_bill_chart_orders_and_sync_invoice_candidates</code>
+      </li>
+      <li>
+        입력:
+        <code>p_workspace_id text</code>,
+        <code>p_actor_user_id uuid</code>,
+        <code>p_encounter_id uuid</code>,
+        <code>p_order_ids uuid[]</code>
+      </li>
+      <li>
+        처리:
+        workspace membership, encounter, selected order, cancellation,
+        billing reflection validation 후 order billing candidate update,
+        invoice anchor create/reuse, invoice line upsert, invoice total
+        recalculation, order event insert를 한 function 안에서 수행한다.
+      </li>
+      <li>
+        검증:
+        migration static tests, rollback/retry server specs, invoice candidate
+        specs, <code>npx tsc --noEmit --pretty false</code>,
+        <code>npm run security:secrets</code>, 승인된 staging synthetic replay.
+      </li>
+    </ul>
+
+    <h2>남은 위험</h2>
+    <ul>
+      <li>
+        두 RPC 사이에서 network/API 실패가 나면 잠시
+        <code>candidate_created</code> order와 미생성 invoice line이 공존할 수
+        있다. 다만 같은 chart bill action을 재시도하면 복구 가능한 상태다.
+      </li>
+      <li>
+        여러 active draft/issued invoice가 같은 encounter에 동시에 존재하는
+        경우 sync는 최신 invoice를 선택한다. 현재 앱 경로에서는 일반적으로
+        하나의 anchor만 쓰지만, 미래 고급 invoice split 정책 전에는 이 점을
+        QA에서 관찰해야 한다.
+      </li>
+      <li>
+        remote RLS replay, production deploy, 실데이터 import, remote migration
+        push는 이번 작업 범위 밖이며 실행하지 않았다.
+      </li>
+    </ul>
+
+    <h2>DEN-341 준비</h2>
+    <ul>
+      <li>
+        lab, imaging, dispensing, treatment 각각에서 requested, in_progress,
+        re_requested, completed 상태의 <code>Order 청구</code>와 billing readback을
+        synthetic staging에서 확인한다.
+      </li>
+      <li>
+        미완료 오더 확인 다이얼로그와 이미 candidate인 오더의 재청구 idempotency를
+        확인한다.
+      </li>
+      <li>
+        billing 화면에서 같은 encounter의 invoice candidate line, 금액, order
+        trace가 보이는지 확인한다.
+      </li>
+      <li>
+        staging replay 중 단일 transaction이 없어서 생기는 실제 blocker가
+        관찰되면 consolidated RPC migration 승인 요청으로 멈춘다.
+      </li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li class="ok">PASS: <code>npm run docs:check</code></li>
+      <li class="ok">PASS: <code>npx tsc --noEmit --pretty false</code></li>
+      <li class="ok">PASS: <code>npm run security:secrets</code></li>
+      <li class="ok">
+        PASS:
+        <code
+          >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test
+          tests/chart-order-action-persistence-server.spec.ts
+          --reporter=line</code
+        >
+      </li>
+      <li class="ok">
+        PASS:
+        <code
+          >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test
+          tests/billing-invoice-candidate-sync-server.spec.ts
+          --reporter=line</code
+        >
+      </li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li>
+        <code>docs/engineering/data-model/order-fulfillment-handoff-contract.md</code>
+      </li>
+      <li><code>docs/product/changelog.md</code></li>
+      <li><code>docs/engineering/changelog.md</code></li>
+      <li>
+        <code>docs/completed/product/2026-05-31-den-340-db-rpc-fit-billing-state-report.html</code>
+      </li>
+    </ul>
+  </body>
+</html>

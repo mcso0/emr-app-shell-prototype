@@ -67,7 +67,7 @@ export function EmrInstructionHistoryToggle({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="bg-card data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
+            className="size-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] [&_svg]:size-4"
             aria-label={`${ariaLabelPrefix} 패널 ${expanded ? "접기" : "열기"}`}
             aria-controls={controls}
             aria-expanded={expanded}
@@ -96,18 +96,18 @@ export function EmrInstructionHeaderStack({
   return (
     <div data-slot="instruction-header-stack" className={cn("flex shrink-0 flex-col", className)}>
       <div data-slot="instruction-header-title-bar">{titleBar}</div>
-      <div data-slot="instruction-header-order-info" className="mt-4">
+      <div data-slot="instruction-header-order-info" className="mt-3">
         {orderInfo}
       </div>
       {filters ? (
-        <div data-slot="instruction-header-filters" className="mt-4">
+        <div data-slot="instruction-header-filters" className="mt-3">
           {filters}
         </div>
       ) : null}
       {resultDivider ? (
         <div
           data-slot="instruction-header-result-divider"
-          className="mt-4 h-px w-full shrink-0 bg-[var(--emr-line-hairline)]"
+          className="mt-3 h-px w-full shrink-0 bg-[var(--emr-line-hairline)]"
         />
       ) : null}
     </div>

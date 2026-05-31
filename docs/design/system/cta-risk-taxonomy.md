@@ -86,8 +86,9 @@ why the action cannot proceed.
 | Chart | `차트 작성완료` | `state-changing` | confirm dialog with patient/encounter context, clinical artifact summary, and failure feedback | DEN-209 |
 | Chart order table | `Order 확정` | `state-changing` | selected-order summary before commit; toast or inline success after local/session save | DEN-209 |
 | Chart/order tools | `Order 추가`, `출력`, external-provider tools | `unavailable` when disconnected | info/warning notice with MVP boundary and no silent failure | DEN-209 |
-| Billing | `청구 확정` | `financial` | financial preflight summary, confirm dialog, persistent save failure recovery | DEN-208 |
-| Billing | `수납 완료` | `financial` | amount/payment-state preflight, local/session boundary copy, persistent success/error feedback | DEN-208 |
+| Billing | `수납 진행` / `결제 진행` | `financial` | final amount preflight, payment method/adjustment summary, persistent save failure recovery | DEN-364 |
+| Billing | `수납 완료` | `financial` | amount/payment-state preflight, local/session boundary copy, persistent success/error feedback | DEN-366 |
+| Billing | `미납 처리` | `financial` | secondary/overflow action, required unpaid reason dialog, persistent follow-up state feedback | DEN-364 / DEN-366 |
 | Customer management | delete/restore guardian or patient | `destructive` | destructive confirmation with affected object identity and restore/undo boundary | DEN-210 or future customer issue |
 | Hospital admin | `삭제` for order catalog items | `destructive` | destructive confirmation with order name and session/local boundary | DEN-210 or future admin issue |
 | Reception registration | final registration submit | `state-changing` | identity/visit preflight in the final step; persistent failure recovery if save fails | Future reception/profile issue |
@@ -95,8 +96,9 @@ why the action cannot proceed.
 
 ## Copy Rules
 
-- Use verbs that match the consequence: `확정`, `작성완료`, `수납 완료`, `삭제`, `초기화`, `복원`.
+- Use verbs that match the consequence: `작성완료`, `수납 진행`, `수납 완료`, `미납 처리`, `삭제`, `초기화`, `복원`.
 - Avoid generic labels such as `확인` when the user is committing money, completion, or deletion.
+- Billing should not use user-facing `청구 확정` as a required primary CTA after chart `Order 청구`; use `수납 진행` / `결제 진행` for checkout and `수납 완료` for payment completion.
 - Mention session-only, local-first, or disconnected external integration state when it affects trust.
 - For unavailable actions, avoid implying that a provider action was queued or sent.
 - For financial actions, avoid wording that claims real payment, receipt, VAT, refund, settlement, or accounting integration.

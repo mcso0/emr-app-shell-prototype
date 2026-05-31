@@ -6,23 +6,18 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import { EmrContentHistoryGroup } from "@/components/emr/content-history-list";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import {
+  EmrInstructionHeaderStack,
+  EmrInstructionHistoryToggle,
+  EmrInstructionTitleBar,
+} from "@/components/emr/instruction-header-stack";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
-import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
-import {
-  createInitialEmrTableFilterBuilderModel,
-  filterRowsByEmrTableFilterBuilder,
-  getEmrTableFilterBuilderActiveCount,
-  type EmrTableFilterBuilderField,
-} from "@/components/emr/table-filter-builder-model";
-import {
-  EmrTableCellText,
-  EmrTableHeaderCell,
-} from "@/components/emr/table-primitives";
-import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
   EmrSidePanelCard,
   emrSidePanelCardHoverActionButtonClassName,
@@ -42,53 +37,41 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   getBillingDetail,
+  getBillingCheckoutGroups,
   getBillingFilterForInvoice,
+  getBillingGuardianLedgerRows,
   getBillingGuardianGroups,
   getBillingQueueRows,
+  hasGuardianCoGuardianContext,
+  isReasonBackedUnpaidInvoice,
   type BillingDetail,
-  type BillingGuardianGroup,
+  type BillingCheckoutGroup,
+  type BillingGuardianLedgerRow,
   type BillingQueueRow,
 } from "@/features/billing/data";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
-import { useBillingStore, type BillingFilter } from "@/features/billing/store";
 import {
-  getPatientDisplayAge,
-  getPatientSexLabel,
-  getSpeciesLabel,
-} from "@/features/reception/data";
+  useBillingStore,
+  type BillingFilter,
+  type BillingInvoiceStatusTransitionTarget,
+} from "@/features/billing/store";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import { useLayoutStore } from "@/stores/layout-store";
-import type {
-  EmrColumnResize,
-  EmrTableCellTextMode,
-  EmrTableDensity,
-  EmrTableHeaderInteraction,
-} from "@/components/emr/table-density";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   InvoiceLine,
   InvoiceStatus,
   Invoice,
+  EmrOrderStatus,
+  EmrOrderWorkStatus,
   Payment,
   PaymentMethod,
 } from "@/types/emr-domain";
@@ -98,23 +81,53 @@ const billingQueueGroups: Array<{
   label: string;
   value: BillingFilter;
 }> = [
-  { label: "대기", value: "waiting", colorToken: "--emr-status-info-text" },
+  { label: "수납대기", value: "waiting", colorToken: "--emr-status-info-text" },
   { label: "미납", value: "unpaid", colorToken: "--emr-status-warning-text" },
-  { label: "종료", value: "closed", colorToken: "--emr-status-success-text" },
+  { label: "완료", value: "closed", colorToken: "--emr-status-success-text" },
+];
+
+type BillingLedgerDateRange = "1w" | "2w" | "1m" | "3m" | "6m" | "custom";
+
+const billingLedgerDateRangeItems: Array<{
+  label: string;
+  value: BillingLedgerDateRange;
+}> = [
+  { label: "1주", value: "1w" },
+  { label: "2주", value: "2w" },
+  { label: "1달", value: "1m" },
+  { label: "3달", value: "3m" },
+  { label: "6개월", value: "6m" },
+  { label: "직접", value: "custom" },
+];
+
+type BillingLedgerStatusFilter = "all" | BillingFilter | "cancelled";
+
+const billingLedgerStatusFilterItems: Array<{
+  label: string;
+  value: BillingLedgerStatusFilter;
+}> = [
+  { label: "전체", value: "all" },
+  { label: "대기", value: "waiting" },
+  { label: "미납", value: "unpaid" },
+  { label: "완료", value: "closed" },
+  { label: "취소", value: "cancelled" },
 ];
 
 const paymentMethodItems: Array<{ label: string; value: PaymentMethod }> = [
   { label: "카드", value: "card" },
   { label: "현금", value: "cash" },
   { label: "계좌이체", value: "transfer" },
-  { label: "기타", value: "other" },
+  { label: "간편결제", value: "other" },
 ];
 
 const formatAmount = (amount: number) => `${amount.toLocaleString()}원`;
 const formatShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
+const formatShortDate = (dateTime?: string) =>
+  dateTime ? dateTime.slice(2, 10).replaceAll("-", ".") : "-";
 const getBillingPaymentMethodLabel = (method: PaymentMethod) =>
   paymentMethodItems.find((item) => item.value === method)?.label ?? method;
+const billingCandidateInvoiceLineIdPrefix = "invoice-line-billcand-";
 
 type BillingFinancialAction = "issue_invoice" | "mark_unpaid" | "mark_paid";
 type BillingPaymentFailureContext =
@@ -197,7 +210,7 @@ type BillingPersistedInvoiceSnapshot = {
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   draft: "수납대기",
-  issued: "청구확정",
+  issued: "수납진행",
   paid: "수납완료",
   refund_requested: "환불요청",
   refunded: "환불완료",
@@ -231,91 +244,6 @@ const billingLineCategoryOrder = [
   "기타",
 ] as const;
 type BillingLineCategory = (typeof billingLineCategoryOrder)[number];
-const billingInvoiceLineColumns = {
-  category: "w-[88px]",
-  description: "min-w-[220px]",
-  unitPrice: "w-[104px]",
-  quantity: "w-[86px]",
-  discount: "w-[96px]",
-  lineTotal: "w-[116px]",
-} as const;
-const billingAmountCellClassName = "whitespace-nowrap text-right tabular-nums";
-type BillingInvoiceLineColumnKey = keyof typeof billingInvoiceLineColumns;
-type BillingInvoiceLineColumnPolicy = {
-  align?: "left" | "center" | "right";
-  headerInteraction: EmrTableHeaderInteraction;
-  label: string;
-  resize: EmrColumnResize;
-  textMode: EmrTableCellTextMode;
-};
-const billingInvoiceLineColumnPolicies: Record<
-  BillingInvoiceLineColumnKey,
-  BillingInvoiceLineColumnPolicy
-> = {
-  category: {
-    headerInteraction: "filterable",
-    label: "업무",
-    resize: "data-column",
-    textMode: "one-line",
-  },
-  description: {
-    headerInteraction: "compound",
-    label: "항목",
-    resize: "data-column",
-    textMode: "two-line-if-long",
-  },
-  unitPrice: {
-    align: "right",
-    headerInteraction: "sortable",
-    label: "단가",
-    resize: "data-column",
-    textMode: "one-line",
-  },
-  quantity: {
-    align: "center",
-    headerInteraction: "static",
-    label: "수량",
-    resize: "none",
-    textMode: "one-line",
-  },
-  discount: {
-    align: "right",
-    headerInteraction: "static",
-    label: "할인",
-    resize: "none",
-    textMode: "one-line",
-  },
-  lineTotal: {
-    align: "right",
-    headerInteraction: "static",
-    label: "청구금액",
-    resize: "none",
-    textMode: "one-line",
-  },
-};
-
-type BillingInvoiceLineSortKey =
-  | "category"
-  | "description"
-  | "unitPrice"
-  | "quantity"
-  | "discount"
-  | "lineTotal";
-type BillingInvoiceLineSortDirection = "asc" | "desc";
-type BillingInvoiceLineSortState = {
-  direction: BillingInvoiceLineSortDirection;
-  key: BillingInvoiceLineSortKey;
-} | null;
-
-const billingInvoiceLineSortLabels: Record<BillingInvoiceLineSortKey, string> =
-  {
-    category: "업무",
-    description: "항목",
-    unitPrice: "단가",
-    quantity: "수량",
-    discount: "할인",
-    lineTotal: "청구금액",
-  };
 
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
@@ -326,112 +254,6 @@ const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
 
   return "기타";
 };
-
-const billingInvoiceLineFilterFields: Array<
-  EmrTableFilterBuilderField<InvoiceLine>
-> = [
-  {
-    getValue: (line) => getBillingLineCategory(line),
-    id: "category",
-    label: "업무",
-    operators: [{ id: "is", label: "Is" }],
-    options: billingLineCategoryOrder.map((category) => ({
-      label: category,
-      value: category,
-    })),
-    valuePlaceholder: "업무 선택",
-  },
-  {
-    getValue: (line) => line.lineTotal,
-    id: "lineTotal",
-    label: "청구금액",
-    operators: [
-      {
-        id: "gte",
-        label: "이상",
-        match: (fieldValue, ruleValue) => {
-          const amount = Number(fieldValue);
-          const threshold = Number(ruleValue);
-
-          return Number.isFinite(amount) && Number.isFinite(threshold)
-            ? amount >= threshold
-            : false;
-        },
-      },
-      {
-        id: "lte",
-        label: "이하",
-        match: (fieldValue, ruleValue) => {
-          const amount = Number(fieldValue);
-          const threshold = Number(ruleValue);
-
-          return Number.isFinite(amount) && Number.isFinite(threshold)
-            ? amount <= threshold
-            : false;
-        },
-      },
-    ],
-    valueKind: "text",
-    valuePlaceholder: "금액 입력",
-  },
-];
-
-const sortInvoiceLinesForDemoFlow = (lines: InvoiceLine[]) =>
-  [...lines].sort((a, b) => {
-    const categoryOrder =
-      billingLineCategoryOrder.indexOf(getBillingLineCategory(a)) -
-      billingLineCategoryOrder.indexOf(getBillingLineCategory(b));
-
-    if (categoryOrder !== 0) return categoryOrder;
-
-    return a.description.localeCompare(b.description);
-  });
-
-function compareBillingInvoiceLineValues(
-  a: InvoiceLine,
-  b: InvoiceLine,
-  key: BillingInvoiceLineSortKey,
-) {
-  if (key === "category") {
-    return (
-      billingLineCategoryOrder.indexOf(getBillingLineCategory(a)) -
-      billingLineCategoryOrder.indexOf(getBillingLineCategory(b))
-    );
-  }
-
-  if (key === "description") {
-    return a.description.localeCompare(b.description, "ko-KR", {
-      numeric: true,
-      sensitivity: "base",
-    });
-  }
-
-  if (key === "discount") return 0;
-
-  return a[key] - b[key];
-}
-
-function sortBillingInvoiceLines(
-  lines: InvoiceLine[],
-  sortState: BillingInvoiceLineSortState,
-) {
-  const baseLines = sortInvoiceLinesForDemoFlow(lines);
-  if (!sortState) return baseLines;
-
-  return baseLines
-    .map((line, index) => ({ index, line }))
-    .sort((a, b) => {
-      const compared = compareBillingInvoiceLineValues(
-        a.line,
-        b.line,
-        sortState.key,
-      );
-      if (compared === 0) return a.index - b.index;
-
-      return sortState.direction === "asc" ? compared : -compared;
-    })
-    .map((entry) => entry.line);
-}
 
 const getBillingFlowLabel = (lines: InvoiceLine[]) => {
   const categories = billingLineCategoryOrder.filter(
@@ -626,18 +448,22 @@ async function saveBillingPaymentStatus({
 const mergeInvoiceCandidateLines = (
   invoiceLines: InvoiceLine[],
   candidates: BillingInvoiceCandidateSnapshot[],
+  targetInvoiceId?: string,
 ) => {
   let nextLines = invoiceLines;
 
   for (const candidate of candidates) {
+    const invoiceId = targetInvoiceId ?? candidate.invoiceId;
     const existingLine = nextLines.find(
       (line) =>
-        line.invoiceId === candidate.invoiceId &&
+        line.invoiceId === invoiceId &&
         line.orderId === candidate.orderId,
     );
     const candidateLine = {
-      id: existingLine?.id ?? `invoice-line-${candidate.billingCandidateId}`,
-      invoiceId: candidate.invoiceId,
+      id:
+        existingLine?.id ??
+        `${billingCandidateInvoiceLineIdPrefix}${candidate.billingCandidateId}`,
+      invoiceId,
       serviceItemId: existingLine?.serviceItemId,
       orderId: candidate.orderId,
       description: candidate.description,
@@ -656,6 +482,12 @@ const mergeInvoiceCandidateLines = (
   return nextLines;
 };
 
+const isBillingCandidateInvoiceLine = (line: InvoiceLine) =>
+  line.id.startsWith(billingCandidateInvoiceLineIdPrefix);
+
+const getPersistedInvoiceLines = (lines: InvoiceLine[]) =>
+  lines.filter((line) => !isBillingCandidateInvoiceLine(line));
+
 function createLiveCandidateBillingDetail({
   candidates,
   encounterId,
@@ -672,7 +504,7 @@ function createLiveCandidateBillingDetail({
 
   const invoiceId = candidates[0]?.invoiceId ?? `invoice-live-${encounterId}`;
   const invoiceLines = candidates.map((candidate) => ({
-    id: `invoice-line-${candidate.billingCandidateId}`,
+    id: `${billingCandidateInvoiceLineIdPrefix}${candidate.billingCandidateId}`,
     invoiceId: candidate.invoiceId,
     orderId: candidate.orderId,
     description: candidate.description,
@@ -703,6 +535,7 @@ function createLiveCandidateBillingDetail({
     guardian: handoff.primaryGuardian,
     invoice,
     invoiceLines,
+    lineCount: invoiceLines.length,
     paidAmount: 0,
     patient: handoff.patient,
     payments: [],
@@ -744,7 +577,11 @@ function useBillingWorkspaceData() {
     getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
   const effectiveInvoiceLines =
     baseDetail && persistedCandidates.encounterId === baseDetail.encounter.id
-      ? mergeInvoiceCandidateLines(invoiceLines, persistedCandidates.candidates)
+      ? mergeInvoiceCandidateLines(
+          invoiceLines,
+          persistedCandidates.candidates,
+          baseDetail.invoice.id,
+        )
       : invoiceLines;
   const effectiveInvoices = useMemo(
     () =>
@@ -893,7 +730,9 @@ function useBillingWorkspaceData() {
   return {
     detail: queryEncounterId && liveCandidateDetail ? liveCandidateDetail : detail,
     groups,
+    invoiceLines: effectiveInvoiceLines,
     invoices: effectiveInvoices,
+    payments,
     queryInvoiceId,
     selectedInvoiceId,
   };
@@ -901,6 +740,151 @@ function useBillingWorkspaceData() {
 
 function getBillingBalance(detail: BillingDetail) {
   return Math.max(0, detail.invoice.totalAmount - detail.paidAmount);
+}
+
+function getBillingCheckoutGroupBalance(group: BillingCheckoutGroup) {
+  return Math.max(0, group.totalAmount - group.paidAmount);
+}
+
+function isCheckoutSummaryExcludedInvoice(invoice: Invoice) {
+  return invoice.status === "paid" || invoice.status === "refunded" || invoice.status === "voided";
+}
+
+function getBillingCheckoutTransitionTargets(
+  invoice: Invoice,
+): BillingInvoiceStatusTransitionTarget[] {
+  if (invoice.status === "paid") return ["waiting", "unpaid", "voided"];
+  if (invoice.status === "voided") return ["waiting", "unpaid", "paid"];
+
+  return [];
+}
+
+function getBillingCheckoutTransitionLabel(
+  target: BillingInvoiceStatusTransitionTarget,
+) {
+  if (target === "waiting") return "대기";
+  if (target === "unpaid") return "미납";
+  if (target === "paid") return "완료";
+
+  return "취소";
+}
+
+function getBillingCheckoutGroupStatusLabel(invoice: Invoice) {
+  if (invoice.status === "voided") return "취소";
+
+  const filter = getBillingFilterForInvoice(invoice);
+  if (filter === "waiting") return "대기";
+
+  return getBillingFilterLabel(filter);
+}
+
+function getBillingQueueStateLabel(row: BillingQueueRow) {
+  const filter = getBillingFilterForInvoice(row.invoice);
+
+  if (filter === "closed") return "완료";
+  if (filter === "unpaid") return "미납";
+
+  return "수납대기";
+}
+
+function getBillingQueueAmountLabel(row: BillingQueueRow) {
+  const balance = Math.max(0, row.invoice.totalAmount - row.paidAmount);
+  const stateLabel = getBillingQueueStateLabel(row);
+
+  if (stateLabel === "완료" || balance === 0) return "정산 완료";
+
+  return `${stateLabel} ${formatAmount(balance)}`;
+}
+
+function getBillingFilterLabel(filter: BillingFilter) {
+  if (filter === "closed") return "완료";
+  if (filter === "unpaid") return "미납";
+
+  return "수납대기";
+}
+
+function getBillingLedgerRowStatusLabel(row: BillingGuardianLedgerRow) {
+  if (isBillingLedgerRowCancelled(row)) return "취소";
+  if (row.status === "waiting") return "대기";
+
+  return getBillingFilterLabel(row.status);
+}
+
+function getOrderStatusBadgeLabel(status?: EmrOrderStatus) {
+  if (!status) return "수납 추가";
+  if (status === "requested") return "요청";
+  if (status === "re_requested") return "재요청";
+  if (status === "in_progress") return "진행중";
+  if (status === "confirmed") return "확인";
+  if (status === "completed") return "완료";
+  if (status === "cancelled") return "취소";
+
+  return status;
+}
+
+function getOrderWorkStatusBadgeLabel(status?: EmrOrderWorkStatus) {
+  if (!status) return "비임상";
+
+  return status === "completed" ? "업무완료" : "업무진행";
+}
+
+function getBillingLedgerRangeStart(range: BillingLedgerDateRange) {
+  const current = new Date("2026-05-01T23:59:59+09:00");
+  const start = new Date(current);
+
+  if (range === "1w") start.setDate(current.getDate() - 7);
+  if (range === "2w") start.setDate(current.getDate() - 14);
+  if (range === "1m") start.setMonth(current.getMonth() - 1);
+  if (range === "3m") start.setMonth(current.getMonth() - 3);
+  if (range === "6m") start.setMonth(current.getMonth() - 6);
+  if (range === "custom") start.setMonth(current.getMonth() - 6);
+
+  return start;
+}
+
+function isBillingLedgerRowInRange(
+  row: BillingGuardianLedgerRow,
+  range: BillingLedgerDateRange,
+) {
+  return new Date(row.activityAt) >= getBillingLedgerRangeStart(range);
+}
+
+function isBillingLedgerRowCancelled(row: BillingGuardianLedgerRow) {
+  return row.invoice.status === "voided";
+}
+
+function isBillingLedgerRowMatchingStatusFilter(
+  row: BillingGuardianLedgerRow,
+  statusFilters: Set<BillingLedgerStatusFilter>,
+) {
+  if (statusFilters.has("all")) return true;
+  if (statusFilters.has("cancelled") && isBillingLedgerRowCancelled(row)) {
+    return true;
+  }
+
+  if (row.status === "closed" && isBillingLedgerRowCancelled(row)) {
+    return false;
+  }
+
+  return statusFilters.has(row.status);
+}
+
+function groupBillingLedgerRowsByDate(rows: BillingGuardianLedgerRow[]) {
+  return rows.reduce<Array<{ dateLabel: string; rows: BillingGuardianLedgerRow[] }>>(
+    (groups, row) => {
+      const dateLabel = formatShortDate(row.activityAt);
+      const currentGroup = groups.find((group) => group.dateLabel === dateLabel);
+
+      if (currentGroup) {
+        currentGroup.rows.push(row);
+      } else {
+        groups.push({ dateLabel, rows: [row] });
+      }
+
+      return groups;
+    },
+    [],
+  );
 }
 
 function QueueItem({
@@ -912,7 +896,10 @@ function QueueItem({
   row: BillingQueueRow;
   selected: boolean;
 }) {
-  const balance = Math.max(0, row.invoice.totalAmount - row.paidAmount);
+  const stateLabel = getBillingQueueStateLabel(row);
+  const amountLabel = getBillingQueueAmountLabel(row);
+  const guardianName = row.guardian?.name ?? "보호자 미지정";
+  const patientName = row.patient?.name ?? "환자 미상";
 
   return (
     <EmrSidePanelCard
@@ -923,16 +910,23 @@ function QueueItem({
     >
       <div className="flex min-h-6 items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate emr-text-dense font-semibold leading-5 text-[var(--emr-text-primary)]">
-            {row.patient?.name ?? "환자 미상"} · {row.invoice.invoiceNo}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="truncate emr-text-dense font-semibold leading-5 text-[var(--emr-text-primary)]">
+              {guardianName}
+            </span>
+            <Badge
+              variant={stateLabel === "미납" ? "destructive" : "secondary"}
+              className="h-5 shrink-0 px-1.5 emr-text-micro"
+            >
+              {stateLabel}
+            </Badge>
           </div>
           <div className="truncate emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
-            {row.guardian?.name ?? "보호자 미지정"} ·{" "}
-            {row.encounter.encounterNo}
+            {row.invoice.invoiceNo} · {row.encounter.encounterNo}
           </div>
         </div>
         <EmrRowActionMenu
-          ariaLabel={`${row.patient?.name ?? "환자 미상"} ${row.invoice.invoiceNo} 수납 작업`}
+          ariaLabel={`${guardianName} ${row.invoice.invoiceNo} 수납 작업`}
           contentClassName="w-52"
           items={[
             {
@@ -946,8 +940,16 @@ function QueueItem({
           triggerClassName={emrSidePanelCardHoverActionButtonClassName}
         />
       </div>
-      <div className="mt-1 min-w-0 truncate emr-text-metadata leading-4 text-muted-foreground">
-        {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <Badge variant="outline" className="h-5 max-w-full px-1.5 emr-text-micro">
+          {patientName}
+        </Badge>
+        <Badge variant="outline" className="h-5 px-1.5 emr-text-micro">
+          오더 {row.lineCount}건
+        </Badge>
+      </div>
+      <div className="mt-1 min-w-0 truncate emr-text-metadata font-semibold leading-4 text-[var(--emr-text-primary)]">
+        {amountLabel}
       </div>
       <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 emr-text-micro text-muted-foreground">
         <span>
@@ -961,6 +963,7 @@ function QueueItem({
 
 export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
   const invoices = useBillingStore((state) => state.invoices);
+  const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const selectInvoice = useBillingStore((state) => state.selectInvoice);
@@ -974,9 +977,9 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
     () =>
       billingQueueGroups.map((group) => ({
         ...group,
-        rows: getBillingQueueRows(invoices, payments, group.value),
+        rows: getBillingQueueRows(invoices, invoiceLines, payments, group.value),
       })),
-    [invoices, payments],
+    [invoiceLines, invoices, payments],
   );
   const totalRowCount = groupedRows.reduce(
     (total, group) => total + group.rows.length,
@@ -1079,6 +1082,233 @@ function BillingQueueGroup({
   );
 }
 
+type BillingGuardianMetric = {
+  amount: number;
+  count: number;
+};
+
+function getInvoicePaidAmount(invoiceId: string, payments: Payment[]) {
+  return payments
+    .filter(
+      (payment) =>
+        payment.invoiceId === invoiceId && payment.status === "approved",
+    )
+    .reduce((total, payment) => total + payment.amount, 0);
+}
+
+function getInvoiceBalanceAmount(invoice: Invoice, payments: Payment[]) {
+  return Math.max(0, invoice.totalAmount - getInvoicePaidAmount(invoice.id, payments));
+}
+
+function getGuardianBillingHeaderSummary(detail: BillingDetail) {
+  const invoices = detail.guardianGroup?.invoices ?? [detail.invoice];
+  const payments = detail.guardianGroup?.payments ?? detail.payments;
+  const patientNames = detail.guardianGroup?.patients.length
+    ? detail.guardianGroup.patients.map((patient) => patient.name)
+    : detail.patient
+      ? [detail.patient.name]
+      : [];
+  const waiting = invoices.reduce<BillingGuardianMetric>(
+    (summary, invoice) => {
+      if (getBillingFilterForInvoice(invoice) !== "waiting") return summary;
+
+      return {
+        amount: summary.amount + getInvoiceBalanceAmount(invoice, payments),
+        count: summary.count + 1,
+      };
+    },
+    { amount: 0, count: 0 },
+  );
+  const unpaid = invoices.reduce<BillingGuardianMetric>(
+    (summary, invoice) => {
+      if (!isReasonBackedUnpaidInvoice(invoice)) return summary;
+
+      const balance = getInvoiceBalanceAmount(invoice, payments);
+      if (balance <= 0) return summary;
+
+      return {
+        amount: summary.amount + balance,
+        count: summary.count + 1,
+      };
+    },
+    { amount: 0, count: 0 },
+  );
+  const recentPayment = [...payments]
+    .filter((payment) => payment.status === "approved" && payment.paidAt)
+    .sort((a, b) => (b.paidAt ?? "").localeCompare(a.paidAt ?? ""))
+    .at(0);
+
+  return {
+    patientNames,
+    recentPaymentAt: recentPayment?.paidAt,
+    unpaid,
+    waiting,
+  };
+}
+
+function getMaskedGuardianContact(detail: BillingDetail) {
+  const contact = detail.guardian?.mobilePhone ?? detail.guardian?.phone;
+  if (!contact) return "연락처 없음";
+
+  return contact.replace(
+    /^(\d{2,3})-?(\d{3,4})-?(\d{4})$/,
+    (_match, prefix: string, _middle: string, suffix: string) =>
+      `${prefix}-****-${suffix}`,
+  );
+}
+
+function getBillingHeaderStatusLabel(status: InvoiceStatus) {
+  if (status === "issued") return "수납진행";
+
+  return getInvoiceStatusLabel(status);
+}
+
+function BillingGuardianContextBadge({
+  label,
+  tone = "neutral",
+  value,
+}: {
+  label: ReactNode;
+  tone?: "neutral" | "warning";
+  value: ReactNode;
+}) {
+  return (
+    <Badge
+      variant="secondary"
+      className={cn(
+        "emr-text-dense-label h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 font-medium",
+        tone === "warning" &&
+          "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
+      )}
+    >
+      <span
+        className={cn(
+          "text-[var(--emr-text-tertiary)]",
+          tone === "warning" && "text-[var(--emr-status-warning-text)]",
+        )}
+      >
+        {label}
+      </span>
+      <span
+        className={cn(
+          "max-w-[220px] truncate text-[var(--emr-text-secondary)]",
+          tone === "warning" && "text-[var(--emr-status-warning-text)]",
+        )}
+      >
+        {value}
+      </span>
+    </Badge>
+  );
+}
+
+function BillingGuardianContextDivider() {
+  return <div className="h-[18px] w-px shrink-0 bg-border" aria-hidden="true" />;
+}
+
+function BillingGuardianContextBar({
+  detail,
+  hasRightPanel,
+  onToggleRightPanel,
+  rightPanelOpen,
+}: {
+  detail: BillingDetail;
+  hasRightPanel: boolean;
+  onToggleRightPanel: () => void;
+  rightPanelOpen: boolean;
+}) {
+  const summary = getGuardianBillingHeaderSummary(detail);
+  const guardianName = detail.guardian?.name ?? "보호자 미지정";
+  const patientNames = summary.patientNames.length
+    ? summary.patientNames.join(", ")
+    : "환자 미상";
+  const cautionLabel =
+    summary.unpaid.count > 0
+      ? "미납 주의"
+      : detail.guardian?.memo
+        ? "수납메모 있음"
+        : "수납메모 없음";
+
+  return (
+    <div className="border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)]">
+      <div className="flex h-12 items-center gap-3 px-4">
+        <div className="relative min-w-0 flex-1">
+          <div
+            className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="보호자 수납 컨텍스트 정보"
+          >
+            <div className="flex shrink-0 items-center gap-1.5">
+              <BillingGuardianContextBadge label="보호자" value={guardianName} />
+              <BillingGuardianContextBadge label="관계" value="주 보호자" />
+              <BillingGuardianContextBadge
+                label="연락처"
+                value={getMaskedGuardianContact(detail)}
+              />
+            </div>
+            <BillingGuardianContextDivider />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <BillingGuardianContextBadge label="환자" value={patientNames} />
+              <BillingGuardianContextBadge
+                label="최근 수납"
+                value={
+                  summary.recentPaymentAt
+                    ? formatShortDateTime(summary.recentPaymentAt)
+                    : "기록 없음"
+                }
+              />
+            </div>
+            <BillingGuardianContextDivider />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <BillingGuardianContextBadge
+                label="수납대기"
+                value={`${summary.waiting.count}건 · ${formatAmount(summary.waiting.amount)}`}
+              />
+              <BillingGuardianContextBadge
+                label="미납"
+                value={`${summary.unpaid.count}건 · ${formatAmount(summary.unpaid.amount)}`}
+                tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
+              />
+              <BillingGuardianContextBadge
+                label="결제 주의"
+                value={cautionLabel}
+                tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
+              />
+            </div>
+          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-transparent to-[var(--emr-surface-workspace)]"
+            aria-hidden="true"
+          />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <BillingGuardianContextDivider />
+          <Badge
+            variant="secondary"
+            className="emr-text-dense-label h-[22px] max-w-[148px] shrink-0 truncate rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 font-medium text-[var(--emr-text-secondary)]"
+          >
+            {detail.invoice.invoiceNo}
+          </Badge>
+          <EmrStatusBadge
+            className="h-[22px] rounded-[var(--clair-radius-atomic-6)]"
+            label={getBillingHeaderStatusLabel(detail.invoice.status)}
+            marker="none"
+          />
+          <Button
+            size="xs"
+            variant={rightPanelOpen ? "secondary" : "outline"}
+            className="emr-text-status h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2"
+            disabled={!hasRightPanel}
+            aria-pressed={rightPanelOpen}
+            onClick={onToggleRightPanel}
+          >
+            수납 요약
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BillingHeader({ hasRightPanel }: ShellComponentProps) {
   const { detail } = useBillingWorkspaceData();
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
@@ -1087,333 +1317,202 @@ export function BillingHeader({ hasRightPanel }: ShellComponentProps) {
   if (!detail) return null;
 
   return (
-    <EmrPatientContextBar
-      patientItems={[
-        { label: "환자", value: detail.patient?.name ?? "환자 미상" },
-        { label: "보호자", value: detail.guardian?.name ?? "보호자 미지정" },
-        {
-          label: "품종",
-          value: detail.patient
-            ? (detail.patient.breed ?? getSpeciesLabel(detail.patient))
-            : "-",
-        },
-        {
-          label: "나이",
-          value: detail.patient ? getPatientDisplayAge(detail.patient) : "-",
-        },
-        {
-          label: "성별",
-          value: detail.patient ? getPatientSexLabel(detail.patient) : "-",
-        },
-      ]}
-      memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "수납메모" },
-      ]}
-      trailingItems={[
-        { label: "청구서", value: detail.invoice.invoiceNo },
-        { label: "상태", value: getInvoiceStatusLabel(detail.invoice.status) },
-      ]}
-      rightPanelToggleLabel="수납 요약"
-      rightPanelDisabled={!hasRightPanel}
+    <BillingGuardianContextBar
+      detail={detail}
+      hasRightPanel={Boolean(hasRightPanel)}
       rightPanelOpen={rightPanelOpen}
       onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
     />
   );
 }
 
-function BillingTitleCard({ detail }: { detail: BillingDetail }) {
+function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {
   const balance = getBillingBalance(detail);
   const flowLabel = getBillingFlowLabel(detail.invoiceLines);
+  const paymentStatus =
+    detail.invoice.status === "paid" || balance === 0
+      ? {
+          label: "수납완료",
+          description: "정산 완료",
+          tone: "success" as const,
+        }
+      : isReasonBackedUnpaidInvoice(detail.invoice)
+        ? {
+            label: "미납 처리",
+            description: detail.invoice.unpaidReason ?? "사유 기록됨",
+            tone: "warning" as const,
+          }
+        : detail.invoice.status === "issued"
+          ? {
+              label: "결제 대기",
+              description: detail.invoice.selectedPaymentMethod
+                ? `${getBillingPaymentMethodLabel(detail.invoice.selectedPaymentMethod)} 선택`
+                : "결제 수단 미선택",
+              tone: "info" as const,
+            }
+          : {
+              label: "수납대기",
+              description: "보호자 안내 전",
+              tone: "info" as const,
+            };
+  const statusTextClassName =
+    paymentStatus.tone === "success"
+      ? "text-[var(--emr-status-success-text)]"
+      : paymentStatus.tone === "warning"
+        ? "text-[var(--emr-status-warning-text)]"
+        : "text-[var(--emr-status-info-text)]";
+  const infoItems: Array<{ label: string; value: ReactNode }> = [
+    {
+      label: "청구서",
+      value: (
+        <span className="grid gap-0.5">
+          <span className="font-semibold">{detail.invoice.invoiceNo}</span>
+          <span className="emr-text-metadata font-medium text-muted-foreground">
+            {detail.encounter.encounterNo}
+          </span>
+        </span>
+      ),
+    },
+    {
+      label: "보호자 / 환자",
+      value: (
+        <span className="grid gap-0.5">
+          <span className="font-semibold">
+            {detail.guardian?.name ?? "보호자 미지정"} ·{" "}
+            {detail.patient?.name ?? "환자 미상"}
+          </span>
+          <span className="emr-text-metadata font-medium text-muted-foreground">
+            {flowLabel} 항목
+          </span>
+        </span>
+      ),
+    },
+    {
+      label: "수납 상태",
+      value: (
+        <span className="grid gap-0.5">
+          <span className="font-semibold text-[var(--emr-status-info-text)]">
+            {getInvoiceStatusLabel(detail.invoice.status)}
+          </span>
+          <span className="emr-text-metadata font-medium text-muted-foreground">
+            {formatShortDateTime(detail.invoice.issuedAt ?? detail.invoice.createdAt)}
+          </span>
+        </span>
+      ),
+    },
+    {
+      label: "결제 상태",
+      value: (
+        <span className="grid gap-0.5">
+          <span className={cn("font-semibold", statusTextClassName)}>
+            {paymentStatus.label}
+          </span>
+          <span className="emr-text-metadata font-medium text-muted-foreground">
+            {paymentStatus.description}
+          </span>
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <section className="rounded-lg border bg-card px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[18px] font-semibold leading-[26px]">수납</h1>
+    <div className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4">
+      {infoItems.map(({ label, value }) => (
+        <div
+          key={label}
+          className="border-b border-[var(--emr-line-hairline)] px-0 py-3 last:border-b-0 md:border-b-0 md:border-r md:px-3 md:py-0 md:last:border-r-0"
+        >
+          <div className="emr-text-metadata font-medium text-muted-foreground">
+            {label}
+          </div>
+          <div className="mt-1 flex min-h-8 items-center emr-text-dense font-medium text-foreground">
+            {value}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BillingTitleCard({ detail }: { detail: BillingDetail }) {
+  const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
+
+  return (
+    <EmrInstructionHeaderStack
+      titleBar={
+        <EmrInstructionTitleBar
+          title="수납"
+          icon={
+            <EmrInstructionHistoryToggle
+              ariaLabelPrefix="수납이력"
+              controls="billing-content-aside"
+              expanded={contentAsideOpen}
+              tooltipLabel="수납이력"
+              onClick={() => setContentAsideOpen(!contentAsideOpen)}
+            />
+          }
+          badge={
+            <Badge
+              variant="secondary"
+              className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
+            >
+              {detail.invoice.invoiceNo}
+            </Badge>
+          }
+          actions={
             <EmrStatusBadge
               label={getInvoiceStatusLabel(detail.invoice.status)}
               marker="none"
             />
-          </div>
-          <div className="mt-1 emr-text-dense text-muted-foreground">
-            {detail.invoice.invoiceNo} · {detail.patient?.name ?? "환자 미상"} ·{" "}
-            {detail.guardian?.name ?? "보호자 미지정"} ·{" "}
-            {detail.encounter.encounterNo}
-          </div>
-          <div className="mt-2 emr-text-dense font-medium text-[var(--emr-text-secondary)]">
-            {flowLabel} 항목을 보호자 {detail.guardian?.name ?? "보호자"}에게
-            안내합니다.
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[20px] font-semibold">
-            {formatAmount(detail.invoice.totalAmount)}
-          </div>
-          <div className="emr-text-metadata text-muted-foreground">
-            {balance === 0 ? "정산 완료" : `미납 ${formatAmount(balance)}`}
-          </div>
-        </div>
-      </div>
-    </section>
+          }
+        />
+      }
+      orderInfo={<BillingInstructionInfo detail={detail} />}
+    />
   );
 }
 
-function GuardianGroups({
+function SelectedCheckoutWorkspace({
   groups,
-  selectedGuardianId,
-}: {
-  groups: BillingGuardianGroup[];
-  selectedGuardianId?: string;
-}) {
-  return (
-    <section className="rounded-lg border bg-card">
-      <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="emr-text-body font-semibold">보호자 청구 묶음</h2>
-        <Badge variant="secondary">{groups.length}</Badge>
-      </div>
-      <div className="grid gap-3 p-4 md:grid-cols-3">
-        {groups.map((group) => {
-          const active = group.guardian.id === selectedGuardianId;
-
-          return (
-            <div
-              key={group.guardian.id}
-              className={cn(
-                "rounded-md border bg-card p-3",
-                active &&
-                  "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]",
-              )}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="font-medium">{group.guardian.name}</div>
-                <Badge variant="outline">{group.invoices.length}건</Badge>
-              </div>
-              <div className="mt-2 truncate emr-text-metadata text-muted-foreground">
-                {group.patients.map((patient) => patient.name).join(", ")}
-              </div>
-              <div className="mt-3 text-[15px] font-semibold">
-                {formatAmount(group.totalDueAmount)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function CombinePanel({
-  group,
-  selectedInvoiceIds,
-  combinedInvoiceIds,
-  onClear,
-  onCombine,
-  onToggle,
-}: {
-  combinedInvoiceIds: string[];
-  group?: BillingGuardianGroup;
-  onClear: () => void;
-  onCombine: () => void;
-  onToggle: (invoiceId: string) => void;
-  selectedInvoiceIds: string[];
-}) {
-  return (
-    <section className="rounded-lg border bg-card">
-      <div className="flex h-11 items-center justify-between border-b px-4">
-        <h2 className="emr-text-body font-semibold">합산/해제</h2>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onCombine}>
-            합산
-          </Button>
-          <Button size="sm" variant="outline" onClick={onClear}>
-            합산 해제
-          </Button>
-        </div>
-      </div>
-      <div className="divide-y">
-        {(group?.invoices ?? []).map((invoice) => (
-          <label
-            key={invoice.id}
-            className="flex cursor-pointer items-center gap-3 px-4 py-3 emr-text-dense"
-          >
-            <Checkbox
-              aria-label={`${invoice.invoiceNo} 합산 선택`}
-              checked={selectedInvoiceIds.includes(invoice.id)}
-              onClick={(event) => {
-                event.preventDefault();
-                onToggle(invoice.id);
-              }}
-            />
-            <span className="font-medium">{invoice.invoiceNo}</span>
-            <span className="text-muted-foreground">
-              {getInvoiceStatusLabel(invoice.status)}
-            </span>
-            <span className="ml-auto font-semibold">
-              {formatAmount(invoice.totalAmount)}
-            </span>
-          </label>
-        ))}
-      </div>
-      <div className="border-t px-4 py-3 emr-text-metadata text-muted-foreground">
-        합산 대상 {selectedInvoiceIds.length}건 · 적용{" "}
-        {combinedInvoiceIds.length}건
-      </div>
-    </section>
-  );
-}
-
-function BillingInvoiceLineSortableHead({
-  align = "left",
-  className,
-  columnKey,
-  label,
-  onSort,
-  sortState,
-}: {
-  align?: "left" | "center" | "right";
-  className?: string;
-  columnKey: BillingInvoiceLineSortKey;
-  label: string;
-  onSort: (key: BillingInvoiceLineSortKey) => void;
-  sortState: BillingInvoiceLineSortState;
-}) {
-  const active = sortState?.key === columnKey;
-  const nextAction =
-    !active || !sortState
-      ? `${label} 오름차순 정렬`
-      : sortState.direction === "asc"
-        ? `${label} 내림차순 정렬`
-        : `${label} 정렬 해제`;
-  const activeDirectionLabel =
-    sortState?.direction === "asc"
-      ? "오름차순"
-      : sortState?.direction === "desc"
-        ? "내림차순"
-        : "";
-  const ariaLabel = active
-    ? `현재 정렬: ${label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
-    : `정렬 없음. 클릭하면 ${nextAction}.`;
-  const policy = billingInvoiceLineColumnPolicies[columnKey];
-
-  return (
-    <EmrTableHeaderCell
-      align={align}
-      className={className}
-      interaction={policy.headerInteraction}
-      resize={policy.resize}
-      sortDirection={active ? sortState.direction : undefined}
-      sortLabel={ariaLabel}
-      title={ariaLabel}
-      onSort={() => onSort(columnKey)}
-    >
-      {label}
-    </EmrTableHeaderCell>
-  );
-}
-
-function InvoiceLinesTable({
-  lines,
   persistenceState,
-  totalAmount,
+  onTransitionStatus,
   onUpdateQuantity,
 }: {
-  lines: InvoiceLine[];
+  groups: BillingCheckoutGroup[];
+  onTransitionStatus: (
+    invoiceId: string,
+    target: BillingInvoiceStatusTransitionTarget,
+  ) => void;
   persistenceState: "idle" | "saving" | "saved" | "error";
-  totalAmount: number;
   onUpdateQuantity: (lineId: string, quantity: number) => void;
 }) {
-  const [density, setDensity] = useState<EmrTableDensity>("standard");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filterModel, setFilterModel] = useState(() =>
-    createInitialEmrTableFilterBuilderModel(
-      "billing-invoice-line-filter",
-      "billing-invoice-line-filter-rule-1",
-    ),
-  );
-  const [sortState, setSortState] = useState<BillingInvoiceLineSortState>(null);
-  const activeFilterCount = getEmrTableFilterBuilderActiveCount(
-    filterModel,
-    billingInvoiceLineFilterFields,
-  );
-  const filteredLines = useMemo(
-    () =>
-      filterRowsByEmrTableFilterBuilder(
-        lines,
-        filterModel,
-        billingInvoiceLineFilterFields,
-      ),
-    [filterModel, lines],
-  );
-  const sortedLines = useMemo(
-    () => sortBillingInvoiceLines(filteredLines, sortState),
-    [filteredLines, sortState],
-  );
-  const flowLabel = getBillingFlowLabel(lines);
-  const handleSort = (key: BillingInvoiceLineSortKey) => {
-    setSortState((current) => {
-      if (current?.key !== key) return { direction: "asc", key };
-      if (current.direction === "asc") return { direction: "desc", key };
+  const checkoutTotalAmount = groups
+    .filter((group) => !isCheckoutSummaryExcludedInvoice(group.invoice))
+    .reduce((total, group) => total + group.totalAmount, 0);
+  const excludedGroupCount = groups.filter((group) =>
+    isCheckoutSummaryExcludedInvoice(group.invoice),
+  ).length;
+  const lineCount = groups.reduce((total, group) => total + group.lines.length, 0);
 
-      return null;
-    });
-  };
   return (
     <section className="rounded-lg border bg-card">
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <div>
-          <h2 className="emr-text-body font-semibold">청구 항목 편집</h2>
+          <h2 className="emr-text-body font-semibold">선택된 checkout 작업대</h2>
           <div className="mt-1 emr-text-metadata text-muted-foreground">
-            {flowLabel} 항목이 오늘 수납액 {formatAmount(totalAmount)}으로
-            묶입니다.
+            보호자 ledger에서 선택한 수납 건을 환자, 진료, 청구서별로 확인합니다.
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  type="button"
-                  variant={activeFilterCount > 0 ? "secondary" : "outline"}
-                  size="sm"
-                  className={cn(
-                    "bg-card",
-                    activeFilterCount > 0 &&
-                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
-                  )}
-                  aria-label={
-                    activeFilterCount > 0
-                      ? `청구 항목 필터 ${activeFilterCount}개 설정`
-                      : "청구 항목 필터 설정"
-                  }
-                />
-              }
-            >
-              <CdsActionsListFilterIcon
-                aria-hidden="true"
-                className="size-3.5"
-              />
-              Filter{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              className="w-[min(860px,calc(100vw-32px))] gap-3 p-3"
-              initialFocus={false}
-            >
-              <EmrTableFilterBuilder
-                clearAllLabel="초기화"
-                description="청구 항목 필터는 완성된 조건만 AND로 적용됩니다."
-                fields={billingInvoiceLineFilterFields}
-                model={filterModel}
-                title="Filters"
-                onClose={() => setFilterOpen(false)}
-                onModelChange={setFilterModel}
-              />
-            </PopoverContent>
-          </Popover>
+          <Badge variant="secondary">
+            {groups.length}건 · {lineCount}항목 · 수납 합산{" "}
+            {formatAmount(checkoutTotalAmount)}
+          </Badge>
+          {excludedGroupCount ? (
+            <Badge variant="outline">
+              합산 제외 {excludedGroupCount}건
+            </Badge>
+          ) : null}
           <Badge
             variant={persistenceState === "error" ? "destructive" : "secondary"}
           >
@@ -1423,160 +1522,428 @@ function InvoiceLinesTable({
                 ? "저장됨"
                 : persistenceState === "error"
                   ? "저장 실패"
-                  : `${sortedLines.length}/${lines.length}`}
+                  : "편집 가능"}
           </Badge>
         </div>
       </div>
       <BillingScopeNotice>
         실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과
-        청구 확정만 저장합니다.
+        수납 진행 snapshot만 저장합니다.
       </BillingScopeNotice>
-      <div>
-        <Table
-          aria-label="청구 항목 테이블"
-          density={density}
-          layout="scroll"
-          minWidth={720}
-          className="table-fixed"
-        >
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <BillingInvoiceLineSortableHead
-                className={billingInvoiceLineColumns.category}
-                columnKey="category"
-                label={billingInvoiceLineSortLabels.category}
-                sortState={sortState}
-                onSort={handleSort}
-              />
-              <BillingInvoiceLineSortableHead
-                className={billingInvoiceLineColumns.description}
-                columnKey="description"
-                label={billingInvoiceLineSortLabels.description}
-                sortState={sortState}
-                onSort={handleSort}
-              />
-              <BillingInvoiceLineSortableHead
-                align="right"
-                className={cn(
-                  billingInvoiceLineColumns.unitPrice,
-                  billingAmountCellClassName,
-                )}
-                columnKey="unitPrice"
-                label={billingInvoiceLineSortLabels.unitPrice}
-                sortState={sortState}
-                onSort={handleSort}
-              />
-              <BillingInvoiceLineSortableHead
-                align="center"
-                className={billingInvoiceLineColumns.quantity}
-                columnKey="quantity"
-                label={billingInvoiceLineSortLabels.quantity}
-                sortState={sortState}
-                onSort={handleSort}
-              />
-              <BillingInvoiceLineSortableHead
-                align="right"
-                className={cn(
-                  billingInvoiceLineColumns.discount,
-                  billingAmountCellClassName,
-                )}
-                columnKey="discount"
-                label={billingInvoiceLineSortLabels.discount}
-                sortState={sortState}
-                onSort={handleSort}
-              />
-              <BillingInvoiceLineSortableHead
-                align="right"
-                className={cn(
-                  billingInvoiceLineColumns.lineTotal,
-                  billingAmountCellClassName,
-                )}
-                columnKey="lineTotal"
-                label={billingInvoiceLineSortLabels.lineTotal}
-                sortState={sortState}
-                onSort={handleSort}
-              />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedLines.map((line) => (
-              <TableRow key={line.id}>
-                <TableCell className={billingInvoiceLineColumns.category}>
-                  <Badge variant="outline">
-                    <EmrTableCellText
-                      as="span"
-                      mode={billingInvoiceLineColumnPolicies.category.textMode}
-                    >
-                      {getBillingLineCategory(line)}
-                    </EmrTableCellText>
-                  </Badge>
-                </TableCell>
-                <TableCell className={billingInvoiceLineColumns.description}>
-                  <EmrTableCellText
-                    mode={billingInvoiceLineColumnPolicies.description.textMode}
-                    fullText={line.description}
-                    className="font-medium"
+      <div className="grid gap-3 p-4">
+        {groups.length ? (
+          groups.map((group) => {
+            const isSummaryExcluded = isCheckoutSummaryExcludedInvoice(group.invoice);
+            const transitionTargets = getBillingCheckoutTransitionTargets(
+              group.invoice,
+            );
+            return (
+              <div
+                key={group.invoice.id}
+                className="overflow-hidden rounded-md border bg-[var(--emr-surface-panel)]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-[var(--emr-surface-muted)] px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="emr-text-dense font-semibold">
+                        {group.patient?.name ?? "환자 미상"}
+                      </span>
+                      <Badge variant="outline">
+                        {group.encounter.encounterNo}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {getBillingCheckoutGroupStatusLabel(group.invoice)}
+                      </Badge>
+                      {isSummaryExcluded ? (
+                        <Badge variant="outline">수납 합산 제외</Badge>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 emr-text-metadata text-muted-foreground">
+                      {group.invoice.invoiceNo} · {group.guardian?.name ?? "보호자 미지정"}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {transitionTargets.length ? (
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        <span className="emr-text-micro text-muted-foreground">
+                          상태 변경
+                        </span>
+                        {transitionTargets.map((target) => (
+                          <Button
+                            key={target}
+                            type="button"
+                            size="xs"
+                            variant="outline"
+                            className="bg-card"
+                            onClick={() =>
+                              onTransitionStatus(group.invoice.id, target)
+                            }
+                          >
+                            {getBillingCheckoutTransitionLabel(target)}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="rounded-md border bg-card px-2.5 py-1.5 text-right">
+                      <div className="emr-text-micro text-muted-foreground">
+                        그룹 합계
+                      </div>
+                      <div className="emr-text-dense font-semibold tabular-nums">
+                        {formatAmount(group.totalAmount)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {isSummaryExcluded ? (
+                  <div className="border-b bg-[var(--emr-status-warning-bg)] px-3 py-2 emr-text-metadata text-[var(--emr-status-warning-text)]">
+                    완료/취소 이력은 세부 내역 확인용으로 표시되며, 현재 수납
+                    요약 금액에는 합산되지 않습니다.
+                  </div>
+                ) : null}
+                <div className="overflow-x-auto">
+                  <table
+                    aria-label="청구 항목 테이블"
+                    className="w-full min-w-[720px] border-collapse emr-text-dense"
                   >
-                    {line.description}
-                  </EmrTableCellText>
-                </TableCell>
-                <TableCell className={billingAmountCellClassName}>
-                  <EmrTableCellText
-                    mode={billingInvoiceLineColumnPolicies.unitPrice.textMode}
-                  >
-                    {formatAmount(line.unitPrice)}
-                  </EmrTableCellText>
-                </TableCell>
-                <TableCell className={billingInvoiceLineColumns.quantity}>
-                  <Input
-                    aria-label={`${line.description} 수량`}
-                    className="mx-auto h-8 w-16 text-right tabular-nums"
-                    inputMode="numeric"
-                    type="number"
-                    value={line.quantity}
-                    onChange={(event) =>
-                      onUpdateQuantity(line.id, Number(event.target.value))
-                    }
-                  />
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    billingAmountCellClassName,
-                    "text-muted-foreground",
-                  )}
-                >
-                  <EmrTableCellText
-                    mode={billingInvoiceLineColumnPolicies.discount.textMode}
-                  >
-                    0원
-                  </EmrTableCellText>
-                </TableCell>
-                <TableCell
-                  className={cn(billingAmountCellClassName, "font-semibold")}
-                >
-                  <EmrTableCellText
-                    mode={billingInvoiceLineColumnPolicies.lineTotal.textMode}
-                  >
-                    {formatAmount(line.lineTotal)}
-                  </EmrTableCellText>
-                </TableCell>
-              </TableRow>
-            ))}
-            {sortedLines.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="h-24 text-center emr-text-dense text-muted-foreground"
-                >
-                  조건에 맞는 청구 항목이 없습니다. Filter에서 조건을 조정하거나
-                  초기화하세요.
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
+                    <thead>
+                      <tr className="border-b bg-[var(--emr-surface-muted)] emr-text-metadata text-muted-foreground">
+                        <th className="w-[42%] px-3 py-2 text-left font-medium">
+                          항목
+                        </th>
+                        <th className="w-[22%] px-3 py-2 text-left font-medium">
+                          출처 / 진행
+                        </th>
+                        <th className="w-[12%] px-3 py-2 text-right font-medium">
+                          단가
+                        </th>
+                        <th className="w-[10%] px-3 py-2 text-center font-medium">
+                          수량
+                        </th>
+                        <th className="w-[14%] px-3 py-2 text-right font-medium">
+                          청구금액
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.lines.map(({ line, order, source }) => (
+                        <tr key={line.id} className="border-b last:border-b-0">
+                          <td className="px-3 py-2 align-top">
+                            <div className="min-w-0">
+                              <div className="truncate font-medium">
+                                {line.description}
+                              </div>
+                              <div className="mt-1 emr-text-metadata text-muted-foreground">
+                                {getBillingLineCategory(line)}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge variant="outline">
+                                {source === "chart_order" ? "차트 청구" : "수납 추가"}
+                              </Badge>
+                              {isBillingCandidateInvoiceLine(line) ? (
+                                <Badge variant="secondary">수납 후보</Badge>
+                              ) : null}
+                            </div>
+                            <div className="mt-1 emr-text-metadata text-muted-foreground">
+                              {getOrderStatusBadgeLabel(order?.status)} ·{" "}
+                              {getOrderWorkStatusBadgeLabel(order?.workStatus)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-right align-top tabular-nums">
+                            {formatAmount(line.unitPrice)}
+                          </td>
+                          <td className="px-3 py-2 text-center align-top">
+                            {isBillingCandidateInvoiceLine(line) ? (
+                              <span className="block text-center tabular-nums">
+                                {line.quantity}
+                              </span>
+                            ) : (
+                              <Input
+                                aria-label={`${line.description} 수량`}
+                                className="mx-auto h-7 w-14 bg-card text-right tabular-nums"
+                                inputMode="numeric"
+                                type="number"
+                                value={line.quantity}
+                                onChange={(event) =>
+                                  onUpdateQuantity(
+                                    line.id,
+                                    Number(event.target.value),
+                                  )
+                                }
+                              />
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right align-top font-semibold tabular-nums">
+                            {formatAmount(line.lineTotal)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t bg-[var(--emr-surface-muted)]">
+                        <td colSpan={3} className="px-3 py-2">
+                          <Button size="sm" variant="outline" className="bg-card">
+                            수납 추가 항목
+                          </Button>
+                          <span className="ml-2 align-middle emr-text-metadata text-muted-foreground">
+                            사료, 일반 판매품 같은 비임상 항목 placeholder
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-right emr-text-metadata font-medium text-muted-foreground">
+                          {isSummaryExcluded ? "합산 제외" : "그룹 합계"}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold tabular-nums">
+                          {isSummaryExcluded
+                            ? formatAmount(0)
+                            : formatAmount(group.totalAmount)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-md border border-dashed p-4 emr-text-dense text-muted-foreground">
+            왼쪽 보호자 ledger에서 수납할 건을 선택해 주세요.
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+function GuardianBillingLedgerRow({
+  row,
+  selected,
+  onToggle,
+}: {
+  onToggle: (invoiceId: string) => void;
+  row: BillingGuardianLedgerRow;
+  selected: boolean;
+}) {
+  const balance = Math.max(0, row.invoice.totalAmount - row.paidAmount);
+  const statusLabel = getBillingLedgerRowStatusLabel(row);
+
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer gap-3 border-b border-[var(--emr-line-subtle)] px-2 py-2.5 transition-colors hover:bg-[var(--emr-state-hover)]",
+        selected && "bg-[var(--emr-state-selected)]",
+      )}
+      data-testid={`billing-ledger-row-${row.invoice.id}`}
+    >
+      <Checkbox
+        aria-label={`${row.invoice.invoiceNo} 수납 ledger 선택`}
+        checked={selected}
+        onClick={(event) => {
+          event.preventDefault();
+          onToggle(row.invoice.id);
+        }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate emr-text-body font-semibold text-[var(--emr-text-secondary)]">
+              {row.patient?.name ?? "환자 미상"}
+            </div>
+            <div className="mt-0.5 truncate emr-text-metadata text-muted-foreground">
+              {row.lineSummary}
+            </div>
+          </div>
+          <Badge
+            variant={
+              row.status === "unpaid" || isBillingLedgerRowCancelled(row)
+                ? "destructive"
+                : "secondary"
+            }
+            className="shrink-0"
+          >
+            {statusLabel}
+          </Badge>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 emr-text-metadata">
+          <span className="truncate text-muted-foreground">
+            {row.requestedByName}
+          </span>
+          <span className="font-semibold tabular-nums text-[var(--emr-text-primary)]">
+            {statusLabel === "완료" || balance === 0
+              ? formatAmount(row.invoice.totalAmount)
+              : formatAmount(balance)}
+          </span>
+        </div>
+      </div>
+    </label>
+  );
+}
+
+export function BillingContentAside() {
+  const { detail } = useBillingWorkspaceData();
+  const invoiceLines = useBillingStore((state) => state.invoiceLines);
+  const invoices = useBillingStore((state) => state.invoices);
+  const payments = useBillingStore((state) => state.payments);
+  const selectedInvoiceIds = useBillingStore((state) => state.selectedInvoiceIds);
+  const toggleInvoiceSelection = useBillingStore(
+    (state) => state.toggleInvoiceSelection,
+  );
+  const setContentAsideOpen = useLayoutStore(
+    (state) => state.setContentAsideOpen,
+  );
+  const [dateRange, setDateRange] = useState<BillingLedgerDateRange>("3m");
+  const [statusFilters, setStatusFilters] = useState<
+    Set<BillingLedgerStatusFilter>
+  >(
+    () => new Set(["all"]),
+  );
+  const [includeCoGuardianInvoices, setIncludeCoGuardianInvoices] =
+    useState(false);
+  const guardianId = detail?.guardian?.id;
+  const hasCoGuardianContext = hasGuardianCoGuardianContext(guardianId);
+  const ledgerRows = useMemo(
+    () =>
+      getBillingGuardianLedgerRows({
+        guardianId,
+        includeCoGuardianInvoices,
+        invoiceLines,
+        invoices,
+        payments,
+      }),
+    [guardianId, includeCoGuardianInvoices, invoiceLines, invoices, payments],
+  );
+  const visibleRows = useMemo(
+    () =>
+      ledgerRows.filter(
+        (row) =>
+          isBillingLedgerRowMatchingStatusFilter(row, statusFilters) &&
+          isBillingLedgerRowInRange(row, dateRange),
+      ),
+    [dateRange, ledgerRows, statusFilters],
+  );
+  const visibleRowGroups = useMemo(
+    () => groupBillingLedgerRowsByDate(visibleRows),
+    [visibleRows],
+  );
+  const toggleStatusFilter = (filter: BillingLedgerStatusFilter) => {
+    setStatusFilters((current) => {
+      if (filter === "all") return new Set(["all"]);
+
+      const next = new Set(current);
+      next.delete("all");
+
+      if (next.has(filter)) {
+        next.delete(filter);
+      } else {
+        next.add(filter);
+      }
+
+      return next.size ? next : new Set(["all"]);
+    });
+  };
+
+  return (
+    <EmrContentAsidePanel id="billing-content-aside">
+      <EmrListHeader
+        className="mx-0 h-6 border-y-0"
+        count={visibleRows.length}
+        label="수납이력"
+        leadingAction={
+          <EmrListHeaderIconButton
+            ariaLabel="보호자 수납 이력 접기"
+            iconSize="md"
+            onClick={() => setContentAsideOpen(false)}
+          >
+            <CdsNavigationChevronsLeftIcon className="size-4" />
+          </EmrListHeaderIconButton>
+        }
+        headerActions={
+          <>
+            <EmrListHeaderIconButton ariaLabel="정렬">
+              <CdsUtilitiesSortIcon className="size-4" />
+            </EmrListHeaderIconButton>
+            <EmrListHeaderIconButton ariaLabel="검색">
+              <CdsActionsSearchIcon className="size-4" />
+            </EmrListHeaderIconButton>
+          </>
+        }
+      />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-line-hairline)]" />
+      <div className="flex flex-wrap gap-1.5">
+        {billingLedgerDateRangeItems.map((item) => (
+          <Button
+            key={item.value}
+            type="button"
+            size="sm"
+            variant={dateRange === item.value ? "secondary" : "outline"}
+            className="h-7 bg-card px-2 emr-text-metadata"
+            aria-pressed={dateRange === item.value}
+            onClick={() => setDateRange(item.value)}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {billingLedgerStatusFilterItems.map((group) => (
+          <Button
+            key={group.value}
+            type="button"
+            size="sm"
+            variant={statusFilters.has(group.value) ? "secondary" : "outline"}
+            className="h-7 bg-card px-1.5 emr-text-metadata"
+            aria-pressed={statusFilters.has(group.value)}
+            onClick={() => toggleStatusFilter(group.value)}
+          >
+            {group.label}
+          </Button>
+        ))}
+      </div>
+      {hasCoGuardianContext ? (
+        <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-2 emr-text-metadata">
+          <Checkbox
+            aria-label="타 보호자 청구서 포함"
+            checked={includeCoGuardianInvoices}
+            onClick={(event) => {
+              event.preventDefault();
+              setIncludeCoGuardianInvoices((current) => !current);
+            }}
+          />
+          <span>타 보호자 청구서 포함</span>
+        </label>
+      ) : null}
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="emr-density-stack-sm">
+          {visibleRowGroups.length ? (
+            visibleRowGroups.map((group) => (
+              <EmrContentHistoryGroup
+                key={group.dateLabel}
+                count={group.rows.length}
+                dataTestId="billing-guardian-ledger-group"
+                label={group.dateLabel}
+              >
+                {group.rows.map((row) => (
+                  <GuardianBillingLedgerRow
+                    key={row.invoice.id}
+                    row={row}
+                    selected={selectedInvoiceIds.includes(row.invoice.id)}
+                    onToggle={toggleInvoiceSelection}
+                  />
+                ))}
+              </EmrContentHistoryGroup>
+            ))
+          ) : (
+            <div className="rounded-md border border-dashed p-4 emr-text-dense text-muted-foreground">
+              조건에 맞는 수납 이력이 없습니다.
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+      <div className="shrink-0 border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] py-3 emr-text-metadata text-muted-foreground">
+        선택 {selectedInvoiceIds.length}건 · 중앙 checkout에 반영
+      </div>
+    </EmrContentAsidePanel>
   );
 }
 
@@ -1589,7 +1956,14 @@ function BillingScopeNotice({ children }: { children: ReactNode }) {
 }
 
 export function BillingContent() {
-  const { detail, groups, invoices, queryInvoiceId, selectedInvoiceId } =
+  const {
+    detail,
+    invoiceLines,
+    invoices,
+    payments,
+    queryInvoiceId,
+    selectedInvoiceId,
+  } =
     useBillingWorkspaceData();
   const { session: authSession } = useAuthClient();
   const actorHeaders = useMemo(
@@ -1599,22 +1973,13 @@ export function BillingContent() {
   const applyInvoiceSnapshot = useBillingStore(
     (state) => state.applyInvoiceSnapshot,
   );
-  const combinedInvoiceIds = useBillingStore(
-    (state) => state.combinedInvoiceIds,
-  );
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );
-  const clearCombinedInvoices = useBillingStore(
-    (state) => state.clearCombinedInvoices,
-  );
   const selectInvoice = useBillingStore((state) => state.selectInvoice);
-  const setCombinedInvoices = useBillingStore(
-    (state) => state.setCombinedInvoices,
-  );
   const setFilter = useBillingStore((state) => state.setFilter);
-  const toggleInvoiceSelection = useBillingStore(
-    (state) => state.toggleInvoiceSelection,
+  const transitionInvoiceStatus = useBillingStore(
+    (state) => state.transitionInvoiceStatus,
   );
   const updateInvoiceLineQuantity = useBillingStore(
     (state) => state.updateInvoiceLineQuantity,
@@ -1622,7 +1987,66 @@ export function BillingContent() {
   const [linePersistenceState, setLinePersistenceState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const checkoutGroups = useMemo(() => {
+    const detailInvoiceIsOutsideStore = detail
+      ? !invoices.some((invoice) => invoice.id === detail.invoice.id)
+      : false;
+    if (detailInvoiceIsOutsideStore && detail) {
+      return [
+        {
+          encounter: detail.encounter,
+          guardian: detail.guardian,
+          invoice: detail.invoice,
+          lines: detail.invoiceLines.map((line) => ({
+            line,
+            source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
+          })),
+          paidAmount: detail.paidAmount,
+          patient: detail.patient,
+          totalAmount: detail.invoiceLines.reduce(
+            (total, line) => total + line.lineTotal,
+            0,
+          ),
+        },
+      ];
+    }
 
+    const groups = getBillingCheckoutGroups({
+      invoiceLines,
+      invoices,
+      payments,
+      selectedInvoiceIds,
+    });
+
+    if (groups.length || !detail) return groups;
+
+    return [
+      {
+        encounter: detail.encounter,
+        guardian: detail.guardian,
+        invoice: detail.invoice,
+        lines: detail.invoiceLines.map((line) => ({
+          line,
+          source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
+        })),
+        paidAmount: detail.paidAmount,
+        patient: detail.patient,
+        totalAmount: detail.invoiceLines.reduce(
+          (total, line) => total + line.lineTotal,
+          0,
+        ),
+      },
+    ];
+  }, [detail, invoiceLines, invoices, payments, selectedInvoiceIds]);
+  const checkoutTableLines = useMemo(
+    () =>
+      checkoutGroups.length
+        ? checkoutGroups.flatMap((group) =>
+            group.lines.map((checkoutLine) => checkoutLine.line),
+          )
+        : (detail?.invoiceLines ?? []),
+    [checkoutGroups, detail?.invoiceLines],
+  );
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
 
@@ -1647,14 +2071,23 @@ export function BillingContent() {
   ) {
     if (!detail) return;
     const safeQuantity = Math.max(1, Math.round(quantity * 1000) / 1000 || 1);
+    const targetLine =
+      checkoutTableLines.find((line) => line.id === lineId) ??
+      detail.invoiceLines.find((line) => line.id === lineId);
+    const targetInvoice =
+      targetLine
+        ? invoices.find((invoice) => invoice.id === targetLine.invoiceId)
+        : detail.invoice;
+    if (!targetLine || !targetInvoice) return;
+
     updateInvoiceLineQuantity(lineId, safeQuantity);
     setLinePersistenceState("saving");
 
     const result = await saveBillingInvoiceLines({
       actorHeaders,
-      invoiceId: detail.invoice.id,
+      invoiceId: targetInvoice.id,
       lines: [{ invoiceLineId: lineId, quantity: safeQuantity }],
-      workspaceId: detail.invoice.workspaceId,
+      workspaceId: targetInvoice.workspaceId,
     });
 
     if (!result.ok) {
@@ -1671,22 +2104,10 @@ export function BillingContent() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-4 p-4">
           <BillingTitleCard detail={detail} />
-          <GuardianGroups
-            groups={groups}
-            selectedGuardianId={detail.guardian?.id}
-          />
-          <CombinePanel
-            group={detail.guardianGroup}
-            selectedInvoiceIds={selectedInvoiceIds}
-            combinedInvoiceIds={combinedInvoiceIds}
-            onToggle={toggleInvoiceSelection}
-            onCombine={setCombinedInvoices}
-            onClear={clearCombinedInvoices}
-          />
-          <InvoiceLinesTable
-            lines={detail.invoiceLines}
+          <SelectedCheckoutWorkspace
+            groups={checkoutGroups}
             persistenceState={linePersistenceState}
-            totalAmount={detail.invoice.totalAmount}
+            onTransitionStatus={transitionInvoiceStatus}
             onUpdateQuantity={handleUpdateInvoiceLineQuantity}
           />
         </div>
@@ -1794,7 +2215,13 @@ export function BillingRightPanel() {
   const applyPaymentStatusSnapshot = useBillingStore(
     (state) => state.applyPaymentStatusSnapshot,
   );
+  const invoiceLines = useBillingStore((state) => state.invoiceLines);
+  const invoices = useBillingStore((state) => state.invoices);
   const paymentMethod = useBillingStore((state) => state.paymentMethod);
+  const payments = useBillingStore((state) => state.payments);
+  const selectedInvoiceIds = useBillingStore(
+    (state) => state.selectedInvoiceIds,
+  );
   const setPaymentMethod = useBillingStore((state) => state.setPaymentMethod);
   const [confirmationState, setConfirmationState] = useState<
     "idle" | "saving" | "saved" | "error"
@@ -1806,22 +2233,88 @@ export function BillingRightPanel() {
     useState<BillingPaymentFailureContext | null>(null);
   const [pendingFinancialAction, setPendingFinancialAction] =
     useState<BillingFinancialAction | null>(null);
+  const [unpaidReason, setUnpaidReason] = useState("");
+  const [paymentMemo, setPaymentMemo] = useState("");
+  const [adjustmentReason, setAdjustmentReason] = useState("");
 
   if (!detail) return null;
 
-  const balance = getBillingBalance(detail);
-  const statusLabel = getInvoiceStatusLabel(detail.invoice.status);
+  const selectedCheckoutGroups = getBillingCheckoutGroups({
+    invoiceLines,
+    invoices,
+    payments,
+    selectedInvoiceIds,
+  });
+  const summaryGroups = selectedCheckoutGroups.length
+    ? selectedCheckoutGroups
+    : [
+        {
+          encounter: detail.encounter,
+          guardian: detail.guardian,
+          invoice: detail.invoice,
+          lines: detail.invoiceLines.map((line) => ({
+            line,
+            source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
+          })),
+          paidAmount: detail.paidAmount,
+          patient: detail.patient,
+          totalAmount: detail.invoiceLines.reduce(
+            (total, line) => total + line.lineTotal,
+            0,
+          ),
+        },
+      ];
+  const payableSummaryGroups = summaryGroups.filter(
+    (group) => !isCheckoutSummaryExcludedInvoice(group.invoice),
+  );
+  const excludedSummaryGroupCount =
+    summaryGroups.length - payableSummaryGroups.length;
+  const summaryTotalAmount = payableSummaryGroups.reduce(
+    (total, group) => total + group.totalAmount,
+    0,
+  );
+  const summaryPaidAmount = payableSummaryGroups.reduce(
+    (total, group) => total + group.paidAmount,
+    0,
+  );
+  const summaryBalance = payableSummaryGroups.reduce(
+    (total, group) => total + getBillingCheckoutGroupBalance(group),
+    0,
+  );
+  const actionDetail =
+    payableSummaryGroups.length === 1
+      ? getBillingDetail(
+          payableSummaryGroups[0].invoice.id,
+          invoices,
+          invoiceLines,
+          payments,
+        )
+      : null;
+  const actionBalance = actionDetail ? getBillingBalance(actionDetail) : 0;
+  const statusLabel =
+    payableSummaryGroups.length === 0
+      ? "합산 제외"
+      : payableSummaryGroups.length > 1
+        ? "합산 수납"
+        : getBillingHeaderStatusLabel(payableSummaryGroups[0].invoice.status);
+  const summaryInvoiceLabel =
+    summaryGroups.length === 1
+      ? summaryGroups[0].invoice.invoiceNo
+      : `${summaryGroups.length}건 선택`;
+  const financialActionDisabled =
+    !actionDetail || payableSummaryGroups.length !== 1;
   const handleIssueInvoice = async () => {
+    if (!actionDetail) return false;
     setConfirmationState("saving");
     const result = await saveBillingInvoiceLines({
       actorHeaders,
       confirmBilling: true,
-      invoiceId: detail.invoice.id,
-      lines: detail.invoiceLines.map((line) => ({
+      invoiceId: actionDetail.invoice.id,
+      lines: getPersistedInvoiceLines(actionDetail.invoiceLines).map((line) => ({
         invoiceLineId: line.id,
         quantity: line.quantity,
       })),
-      workspaceId: detail.invoice.workspaceId,
+      workspaceId: actionDetail.invoice.workspaceId,
     });
 
     if (!result.ok) {
@@ -1836,14 +2329,15 @@ export function BillingRightPanel() {
   const handlePaymentMethodChange = async (
     nextPaymentMethod: PaymentMethod,
   ) => {
+    if (!actionDetail) return false;
     setPaymentMethod(nextPaymentMethod);
     setPaymentState("saving");
     const result = await saveBillingPaymentStatus({
       action: "select_payment_method",
       actorHeaders,
-      invoiceId: detail.invoice.id,
+      invoiceId: actionDetail.invoice.id,
       paymentMethod: nextPaymentMethod,
-      workspaceId: detail.invoice.workspaceId,
+      workspaceId: actionDetail.invoice.workspaceId,
     });
 
     if (!result.ok) {
@@ -1858,14 +2352,18 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkUnpaid = async () => {
+    if (!actionDetail) return false;
+    const normalizedUnpaidReason = unpaidReason.trim();
+    if (!normalizedUnpaidReason) return false;
+
     setPaymentState("saving");
     const result = await saveBillingPaymentStatus({
       action: "mark_unpaid",
       actorHeaders,
-      invoiceId: detail.invoice.id,
+      invoiceId: actionDetail.invoice.id,
       paymentMethod,
-      unpaidReason: "owner_will_pay_later",
-      workspaceId: detail.invoice.workspaceId,
+      unpaidReason: normalizedUnpaidReason,
+      workspaceId: actionDetail.invoice.workspaceId,
     });
 
     if (!result.ok) {
@@ -1876,17 +2374,19 @@ export function BillingRightPanel() {
 
     applyPaymentStatusSnapshot(result.invoice, result.payments);
     setPaymentFailureContext(null);
+    setUnpaidReason("");
     setPaymentState("saved");
     return true;
   };
   const handleMarkPaid = async () => {
+    if (!actionDetail) return false;
     setPaymentState("saving");
     const result = await saveBillingPaymentStatus({
       action: "complete_payment",
       actorHeaders,
-      invoiceId: detail.invoice.id,
+      invoiceId: actionDetail.invoice.id,
       paymentMethod,
-      workspaceId: detail.invoice.workspaceId,
+      workspaceId: actionDetail.invoice.workspaceId,
     });
 
     if (!result.ok) {
@@ -1922,40 +2422,72 @@ export function BillingRightPanel() {
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-4 py-3">
           <div className="emr-text-metadata text-muted-foreground">
-            {detail.invoice.invoiceNo}
+            {summaryInvoiceLabel}
           </div>
           <div className="mt-1 text-[18px] font-semibold">
-            {formatAmount(detail.invoice.totalAmount)}
+            {formatAmount(summaryBalance)}
           </div>
           <div className="mt-1 emr-text-metadata text-muted-foreground">
-            {getInvoiceStatusDescription(detail.invoice.status, balance)}
+            {excludedSummaryGroupCount
+              ? `완료/취소 ${excludedSummaryGroupCount}건은 현재 수납 합산에서 제외됩니다.`
+              : actionDetail
+                ? getInvoiceStatusDescription(actionDetail.invoice.status, actionBalance)
+                : "여러 수납 가능 건은 checkout session 확정 후 처리합니다."}
           </div>
 
           <div className="mt-4">
             <SummaryLine
-              label="청구액"
-              value={formatAmount(detail.invoice.totalAmount)}
+              label="최종 결제금액"
+              value={formatAmount(summaryBalance)}
               emphasis
             />
             <SummaryLine
+              label="청구액"
+              value={formatAmount(summaryTotalAmount)}
+            />
+            <SummaryLine
               label="수납액"
-              value={formatAmount(detail.paidAmount)}
-              emphasis={detail.paidAmount > 0}
+              value={formatAmount(summaryPaidAmount)}
+              emphasis={summaryPaidAmount > 0}
             />
             <SummaryLine
               label="미납액"
-              value={formatAmount(balance)}
-              emphasis={balance > 0}
+              value={formatAmount(summaryBalance)}
+              emphasis={summaryBalance > 0}
             />
             <SummaryLine
               label="할인"
-              value={formatAmount(detail.invoice.discountAmount)}
+              value={formatAmount(
+                payableSummaryGroups.reduce(
+                  (total, group) => total + group.invoice.discountAmount,
+                  0,
+                ),
+              )}
+            />
+            <SummaryLine
+              label="할증"
+              value={formatAmount(0)}
+              muted
             />
             <SummaryLine
               label="발행"
-              value={formatShortDateTime(detail.invoice.issuedAt)}
+              value={
+                actionDetail
+                  ? formatShortDateTime(actionDetail.invoice.issuedAt)
+                  : `${payableSummaryGroups.length}건 대상`
+              }
             />
           </div>
+          {excludedSummaryGroupCount ? (
+            <EmrInlineAlert
+              severity="warning"
+              title="수납 합산에서 제외된 이력이 있어"
+              className="mt-3 emr-text-metadata"
+            >
+              완료/취소 건은 중앙 작업대에서 세부 내역과 상태 변경만 확인하고,
+              오른쪽 결제 금액에는 더하지 않습니다.
+            </EmrInlineAlert>
+          ) : null}
 
           <div className="mt-5 emr-text-dense font-semibold">
             읽기 전용 수납 정보
@@ -1977,19 +2509,63 @@ export function BillingRightPanel() {
               onPaymentMethodChange={handlePaymentMethodChange}
             />
           </div>
+          <div className="mt-2 rounded-md border bg-[var(--emr-surface-muted)] px-3 py-2">
+            <SummaryLine
+              label="카드 개월 수"
+              value={paymentMethod === "card" ? "일시불" : "해당 없음"}
+              muted
+            />
+            <SummaryLine
+              label="간편결제"
+              value={paymentMethod === "other" ? "선택됨" : "미선택"}
+              muted
+            />
+          </div>
+
+          <div className="mt-5 emr-text-dense font-semibold">할인/할증 사유</div>
+          <div className="mt-2">
+            <Input
+              aria-label="할인 또는 할증 사유"
+              placeholder="할인/할증이 있을 때 사유를 입력"
+              value={adjustmentReason}
+              onChange={(event) => setAdjustmentReason(event.target.value)}
+            />
+          </div>
+
+          <div className="mt-5 emr-text-dense font-semibold">수납 메모</div>
+          <div className="mt-2">
+            <Input
+              aria-label="수납 메모"
+              placeholder="수납 이력에 남길 메모"
+              value={paymentMemo}
+              onChange={(event) => setPaymentMemo(event.target.value)}
+            />
+          </div>
 
           <div className="mt-4">
-            <PaymentStatusNote
-              balance={balance}
-              invoiceStatus={detail.invoice.status}
-              paidAmount={detail.paidAmount}
-              payments={detail.payments}
-            />
+            {actionDetail ? (
+              <PaymentStatusNote
+                balance={actionBalance}
+                invoiceStatus={actionDetail.invoice.status}
+                paidAmount={summaryPaidAmount}
+                payments={actionDetail.payments}
+              />
+            ) : (
+              <div className="rounded-md border bg-[var(--emr-surface-muted)] px-3 py-2">
+                <div className="emr-text-dense font-semibold">
+                  조회 전용 수납 이력
+                </div>
+                <div className="mt-1 emr-text-metadata leading-5 text-muted-foreground">
+                  완료/취소만 선택되어 있거나 여러 수납 가능 건이 선택된 경우,
+                  이 패널에서는 결제 상태를 변경하지 않습니다.
+                </div>
+              </div>
+            )}
           </div>
           {confirmationState === "error" ? (
             <BillingPaymentErrorMessage
-              title="청구 확정이 저장되지 않았어"
-              actionLabel="청구 확정 다시 시도"
+              title="수납 진행이 저장되지 않았어"
+              actionLabel="수납 진행 다시 시도"
               onRetry={() => setPendingFinancialAction("issue_invoice")}
             >
               금액과 항목은 화면에 남아 있지만 서버 저장은 완료되지 않았어. 실제
@@ -2031,6 +2607,7 @@ export function BillingRightPanel() {
       </ScrollArea>
       <BillingPaymentActionFooter
         confirmationState={confirmationState}
+        disabled={financialActionDisabled}
         paymentState={paymentState}
         onIssueInvoice={() => setPendingFinancialAction("issue_invoice")}
         onMarkPaid={() => setPendingFinancialAction("mark_paid")}
@@ -2038,11 +2615,13 @@ export function BillingRightPanel() {
       />
       <BillingFinancialPreflightDialog
         action={pendingFinancialAction}
-        balance={balance}
-        detail={detail}
+        balance={actionBalance}
+        detail={actionDetail ?? detail}
         paymentMethod={paymentMethod}
+        unpaidReason={unpaidReason}
         confirmationState={confirmationState}
         paymentState={paymentState}
+        onUnpaidReasonChange={setUnpaidReason}
         onConfirm={handleConfirmFinancialAction}
         onOpenChange={(open) => {
           if (!open) setPendingFinancialAction(null);
@@ -2087,8 +2666,10 @@ function BillingFinancialPreflightDialog({
   detail,
   onConfirm,
   onOpenChange,
+  onUnpaidReasonChange,
   paymentMethod,
   paymentState,
+  unpaidReason,
 }: {
   action: BillingFinancialAction | null;
   balance: number;
@@ -2096,10 +2677,14 @@ function BillingFinancialPreflightDialog({
   detail: BillingDetail;
   onConfirm: () => void;
   onOpenChange: (open: boolean) => void;
+  onUnpaidReasonChange: (reason: string) => void;
   paymentMethod: PaymentMethod;
   paymentState: "idle" | "saving" | "saved" | "error";
+  unpaidReason: string;
 }) {
   const isIssueAction = action === "issue_invoice";
+  const isUnpaidAction = action === "mark_unpaid";
+  const normalizedUnpaidReason = unpaidReason.trim();
   const isSaving = isIssueAction
     ? confirmationState === "saving"
     : paymentState === "saving";
@@ -2107,13 +2692,13 @@ function BillingFinancialPreflightDialog({
   const lineCount = detail.invoiceLines.length;
   const dialogTitle =
     action === "issue_invoice"
-      ? "청구 확정 전 확인"
+      ? "수납 진행 전 확인"
       : action === "mark_unpaid"
         ? "미납 처리 전 확인"
         : "수납 완료 전 확인";
   const primaryLabel =
     action === "issue_invoice"
-      ? "청구 확정 저장"
+      ? "수납 진행 저장"
       : action === "mark_unpaid"
         ? "미납 처리 저장"
         : "수납 완료 저장";
@@ -2125,7 +2710,7 @@ function BillingFinancialPreflightDialog({
         : "수납 저장 중";
   const nextStateLabel =
     action === "issue_invoice"
-      ? "청구확정"
+      ? "수납진행"
       : action === "mark_unpaid"
         ? "미납"
         : "수납완료";
@@ -2141,7 +2726,7 @@ function BillingFinancialPreflightDialog({
           <Button
             type="button"
             size="sm"
-            disabled={isSaving}
+            disabled={isSaving || (isUnpaidAction && !normalizedUnpaidReason)}
             onClick={onConfirm}
           >
             {isSaving ? savingLabel : primaryLabel}
@@ -2184,6 +2769,25 @@ function BillingFinancialPreflightDialog({
             emphasis
           />
         </div>
+        {isUnpaidAction ? (
+          <div className="mt-3">
+            <label className="emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
+              미납 처리 사유
+            </label>
+            <Input
+              className="mt-2"
+              aria-label="미납 처리 사유"
+              placeholder="예: 보호자 요청으로 다음 방문 시 결제"
+              value={unpaidReason}
+              onChange={(event) => onUnpaidReasonChange(event.target.value)}
+            />
+            {!normalizedUnpaidReason ? (
+              <div className="mt-1 emr-text-metadata text-[var(--emr-status-warning-text)]">
+                미납 처리는 사유를 입력해야 저장할 수 있습니다.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <EmrInlineAlert
           severity="warning"
           title="저장 실패 시 상태는 확정되지 않아"
@@ -2220,47 +2824,51 @@ function BillingPreflightLine({
 
 function BillingPaymentActionFooter({
   confirmationState,
+  disabled = false,
   paymentState,
   onIssueInvoice,
   onMarkPaid,
   onMarkUnpaid,
 }: {
   confirmationState: "idle" | "saving" | "saved" | "error";
+  disabled?: boolean;
   paymentState: "idle" | "saving" | "saved" | "error";
   onIssueInvoice: () => void;
   onMarkPaid: () => void;
   onMarkUnpaid: () => void;
 }) {
   return (
-    <div className="grid shrink-0 grid-cols-2 gap-2 border-t p-4">
+    <div className="grid shrink-0 gap-2 border-t p-4">
       <Button
         size="sm"
-        variant="outline"
-        disabled={paymentState === "saving"}
-        onClick={onMarkUnpaid}
-      >
-        미납 처리
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={confirmationState === "saving"}
+        className="w-full"
+        disabled={disabled || confirmationState === "saving"}
         onClick={onIssueInvoice}
       >
         {confirmationState === "saving"
-          ? "확정 중"
+          ? "진행 중"
           : confirmationState === "saved"
-            ? "확정됨"
-            : "청구 확정"}
+            ? "수납 진행됨"
+            : "수납 진행"}
       </Button>
-      <Button
-        className="col-span-2"
-        size="sm"
-        disabled={paymentState === "saving"}
-        onClick={onMarkPaid}
-      >
-        {paymentState === "saving" ? "저장 중" : "수납 완료"}
-      </Button>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={disabled || paymentState === "saving"}
+          onClick={onMarkPaid}
+        >
+          {paymentState === "saving" ? "저장 중" : "수납 완료"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={disabled || paymentState === "saving"}
+          onClick={onMarkUnpaid}
+        >
+          미납 처리
+        </Button>
+      </div>
     </div>
   );
 }

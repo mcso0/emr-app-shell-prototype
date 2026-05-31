@@ -8,11 +8,13 @@ import {
   BellGnbIcon,
   SidebarGnbIcon,
 } from "@/components/gnb-icons";
+import { CdsGnbHeadphonesGnbIcon } from "@/components/cds-icons/gnb";
 import { modules } from "@/modules/registry";
 import { moduleIconById, moduleNavLabelById, type GnbIcon } from "@/shell/module-nav-icons";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { GlobalCommandPalette } from "@/shell/global-command-palette";
 
 type NavRailProps = {
   activeModuleId: string;
@@ -44,10 +46,10 @@ const RAIL_LAYOUT_TRANSITION: Transition = {
 
 const RAIL_REDUCED_TRANSITION: Transition = { duration: 0 };
 const RAIL_ROOT_CLASS_NAME =
-  "flex min-h-0 min-w-12 max-w-12 flex-col items-center rounded-lg bg-primary p-2 text-primary-foreground/70";
+  "flex min-h-0 min-w-[var(--emr-navrail-width)] max-w-[var(--emr-navrail-width)] flex-col items-center gap-[var(--emr-navrail-root-gap)] overflow-hidden rounded-[var(--emr-navrail-radius)] bg-[var(--emr-navrail-bg)] p-[var(--emr-navrail-padding)] text-[var(--emr-navrail-icon)]";
 const RAIL_ITEM_CLASS_NAME =
-  "flex size-8 items-center justify-center rounded-[6px] text-primary-foreground/55 outline-none transition-colors hover:text-primary-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
-const RAIL_ICON_FRAME_CLASS_NAME = "flex size-[26px] items-center justify-center";
+  "flex size-[var(--emr-navrail-item-size)] items-center justify-center rounded-[var(--emr-navrail-item-radius)] p-[var(--emr-navrail-item-padding)] text-[var(--emr-navrail-icon)] outline-none transition-colors hover:bg-[var(--emr-navrail-item-hover)] hover:text-[var(--emr-navrail-icon-hover)] focus-visible:ring-3 focus-visible:ring-ring/50";
+const RAIL_ICON_FRAME_CLASS_NAME = "flex size-[var(--emr-navrail-icon-frame-size)] items-center justify-center";
 const RAIL_TOOLTIP_SIDE_OFFSET = 16;
 const RAIL_TOP_ENTER_TRANSITION: Transition = {
   duration: 0.22,
@@ -92,7 +94,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
 
   return (
     <nav className={RAIL_ROOT_CLASS_NAME} aria-label="워크스페이스 주요 메뉴">
-      <div className="flex min-h-0 w-8 flex-1 flex-col items-center gap-2 overflow-y-auto">
+      <div className="flex min-h-0 w-[var(--emr-navrail-content-width)] flex-1 flex-col items-center gap-[var(--emr-navrail-content-gap)] overflow-y-auto">
         <AnimatePresence initial={false}>
           {!modulePanelOpen ? (
             <motion.div
@@ -101,7 +103,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
               animate={{ height: "auto", opacity: 1, y: 0 }}
               exit={reduceMotion ? { height: 0 } : { height: 0, opacity: 0, y: -8 }}
               transition={collapsedTopTransition}
-              className="flex w-full shrink-0 flex-col items-center gap-2 overflow-hidden"
+              className="flex w-full shrink-0 flex-col items-center gap-[var(--emr-navrail-content-gap)] overflow-hidden"
             >
               <Tooltip>
                 <TooltipTrigger
@@ -135,6 +137,13 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
           workspaceId={workspaceId}
           onNavigateModule={onNavigateModule}
         />
+        <RailLayoutItem transition={railLayoutTransition}>
+          <GlobalCommandPalette
+            triggerVariant="rail"
+            tooltipSideOffset={RAIL_TOOLTIP_SIDE_OFFSET}
+            workspaceId={workspaceId}
+          />
+        </RailLayoutItem>
         <RailActionItem
           icon={BellGnbIcon}
           iconClassName="h-[17.3px] w-[17.6px]"
@@ -160,16 +169,14 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
           onNavigateModule={onNavigateModule}
         />
       </div>
-      <button
-        type="button"
-        className="relative mt-2 flex size-8 items-center justify-center rounded-[6px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-label="사용자 프로필"
-      >
-        <span className="relative flex size-6 items-center justify-center rounded-full bg-primary-foreground/70 text-[8px] font-medium leading-none text-primary">
-          SH
-          <span className="absolute bottom-0 right-0 size-1.5 rounded-full border border-primary bg-[var(--emr-status-success-text)]" />
-        </span>
-      </button>
+      <div className="flex w-[var(--emr-navrail-content-width)] shrink-0 flex-col items-center justify-center pb-[var(--emr-navrail-footer-padding-bottom)]">
+        <RailActionItem
+          icon={CdsGnbHeadphonesGnbIcon}
+          iconClassName="h-[17.5px] w-[18.5px]"
+          label="고객센터"
+          transition={railLayoutTransition}
+        />
+      </div>
     </nav>
   );
 }
@@ -251,7 +258,7 @@ function RailModuleItem({
               href={href}
               className={cn(
                 RAIL_ITEM_CLASS_NAME,
-                active && "bg-primary-foreground/15 text-primary-foreground"
+                active && "bg-[var(--emr-navrail-item-selected)] text-[var(--emr-navrail-icon-selected)]"
               )}
               aria-current={active ? "page" : undefined}
               aria-label={item.label}
@@ -334,9 +341,9 @@ function NavDivider({ transition }: { transition: Transition }) {
     <motion.div
       layout="position"
       transition={transition}
-      className="flex w-full shrink-0 flex-col items-start overflow-hidden px-1.5 py-2.5"
+      className="flex w-full shrink-0 flex-col items-center justify-center overflow-hidden px-[var(--emr-navrail-divider-padding-x)] py-0"
     >
-      <div className="h-px w-full bg-primary-foreground/15" />
+      <div className="h-[var(--emr-navrail-divider-height)] w-[var(--emr-navrail-divider-width)] bg-[var(--emr-navrail-divider)]" />
     </motion.div>
   );
 }

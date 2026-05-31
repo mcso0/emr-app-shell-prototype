@@ -210,7 +210,7 @@ test("login creates a localStorage-backed session and opens the requested worksp
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
   await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
-  await expect(page.getByText("INV-260501-0001 · 코코 · 이지은")).toBeVisible();
+  await expect(page.getByText("INV-260501-0001 · E-260501-0001")).toBeVisible();
 
   const stored = await page.evaluate((key) => {
     const value = window.localStorage.getItem(key);

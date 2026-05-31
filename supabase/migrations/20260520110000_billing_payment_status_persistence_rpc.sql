@@ -110,6 +110,10 @@ begin
     raise exception 'invoice_unavailable';
   end if;
 
+  if p_action = 'mark_unpaid' and nullif(btrim(p_unpaid_reason), '') is null then
+    raise exception 'unpaid_reason_required';
+  end if;
+
   select i.*
   into v_invoice
   from public.invoices i
@@ -138,7 +142,7 @@ begin
       status = 'issued',
       payment_state = 'unpaid',
       selected_payment_method = p_payment_method,
-      unpaid_reason = coalesce(nullif(btrim(p_unpaid_reason), ''), 'billing_unpaid'),
+      unpaid_reason = nullif(btrim(p_unpaid_reason), ''),
       issued_by_user_id = coalesce(i.issued_by_user_id, p_actor_user_id),
       issued_at = coalesce(i.issued_at, v_now),
       paid_at = null,

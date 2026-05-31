@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guardian-centered Billing Checkout UX/DB Proposal</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 19px;
+      }
+      h3 {
+        margin-top: 20px;
+        font-size: 16px;
+      }
+      ul,
+      ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 4px;
+      }
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        vertical-align: top;
+        text-align: left;
+      }
+      th {
+        background: #f3f4f6;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef6ff;
+        color: #155eef;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      .warning {
+        background: #fff7e6;
+        color: #8a5a00;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Product proposal - implementation not performed</p>
+      <h1>수납: 보호자 중심 Checkout UX/DB 제안</h1>
+      <p>
+        이 보고서는 과거 Figma 수납 화면, 현재 구현 화면, 그리고 2026-05-31 승욱의 제품 설명을 기준으로
+        수납 흐름을 다시 정리한다. 핵심 정정은 <code>Order 청구</code>가 이미 수납 요청이라는 점이다.
+        따라서 수납 화면의 기본 CTA는 별도 <code>청구 확정</code>이 아니라 <code>수납 진행</code> / <code>결제 진행</code>이어야 한다.
+      </p>
+
+      <section>
+        <h2>핵심 결론</h2>
+        <p class="status decision">
+          권장 방향: 차트 <code>Order 청구</code> = 수납대기 생성, 수납 화면 = 보호자 단위 checkout, 결제 성공 = 수납 완료.
+        </p>
+        <ul>
+          <li>수의사가 차트에서 선택한 오더를 <code>Order 청구</code>하면 해당 오더는 진행 상태와 무관하게 수납대기/수납 후보가 된다. 단, 취소 오더는 제외한다.</li>
+          <li>수납 담당자는 수납 화면에서 보호자 기준으로 대기/미납/완료 이력과 여러 환자 건을 확인하고, 이번에 결제할 항목 묶음을 선택한다.</li>
+          <li>가운데 영역은 선택된 청구 항목과 추가 판매 항목을 검토/수정하는 작업대이고, 오른쪽은 할인/할증/결제수단/메모를 포함한 최종 수납 요약이다.</li>
+          <li><code>미납</code>은 모든 미결제 대기건의 기본 상태가 아니라, 보호자가 결제를 미루거나 당일 결제가 실패/보류되었을 때 이유와 함께 남기는 상태여야 한다.</li>
+          <li>현재 후보 sync가 draft <code>invoice_lines</code>를 만드는 구조는 이 흐름과 잘 맞는다. 별도 candidate-to-line promotion migration은 지금 필수는 아니다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>과거 Figma 화면 분석</h2>
+        <p>
+          추가 캡처 기준으로 과거 화면은 크게 5개 영역이다:
+          왼쪽 수납 대기열, 보호자 정보/보호자 ledger 사이드바, 상단 메모 strip, 중앙 청구서 항목, 오른쪽 수납 정보 패널.
+          기능 의도는 좋지만, 각 영역의 우선순위가 비슷한 강도로 노출되어 담당자가 "지금 무엇을 먼저 해야 하는지"를 빠르게 읽기 어렵다.
+        </p>
+        <h3>좋았던 점</h3>
+        <ul>
+          <li>왼쪽에 대기/미납/종료 탭이 있어 수납 담당자의 업무 큐 개념이 드러난다.</li>
+          <li>보호자 정보, 메모, 청구 항목, 수납 정보가 한 화면에 있어 데스크 업무를 빠르게 처리하려는 의도가 보인다.</li>
+          <li>합산 청구와 여러 환자 건을 한 번에 처리하려는 방향이 이미 포함되어 있다.</li>
+          <li>청구 항목 그룹별 합계와 최종 수납 요약을 분리하려는 구조는 유지할 가치가 있다.</li>
+          <li>오른쪽 하단에 <code>미납</code>과 <code>수납</code> action을 나눈 흔적이 있어, 운영상 "지금 못 받는 돈"을 기록하려는 필요도 포착되어 있다.</li>
+        </ul>
+        <h3>헷갈리는 점</h3>
+        <ul>
+          <li>정보 밀도가 높고 보호자/환자/청구서/메모/수납 정보의 위계가 한눈에 잡히지 않는다.</li>
+          <li>상단이 환자 중심처럼 읽히지만, 실제 수납 업무는 보호자와 보호자 소유 환자들의 미수납 이력 중심이다.</li>
+          <li>대기와 미납의 기준이 화면에서 명확하지 않아 담당자가 어떤 버튼을 언제 눌러야 하는지 애매하다.</li>
+          <li>수의사 승인 없이 추가 구매 가능한 항목과 임상 오더 항목의 차이가 더 분명해야 한다.</li>
+          <li>왼쪽 대기열의 색상은 상태를 암시하지만, <code>재요청</code>, <code>수납대기</code>, <code>일부미납</code> 같은 라벨의 의미가 중앙/오른쪽 상태와 바로 연결되지 않는다.</li>
+          <li>보호자 영역에 "미납금 총계"가 보이지만, 이번 checkout에 포함되는 금액인지 단순 주의 정보인지 구분이 약하다.</li>
+          <li>중앙 청구서 항목에 코멘트 warning, 테이블, 추가 버튼, 그룹 합계가 모두 섞여 있어 그룹별 결제 대상 선택과 항목 편집의 경계가 흐리다.</li>
+          <li>오른쪽 수납 정보 패널은 금액 계산, 결제 수단, 할인/할증 사유가 모두 세로로 길게 이어져 있어 최종 결제금액과 CTA가 묻힌다.</li>
+        </ul>
+        <h3>살려야 할 구조</h3>
+        <ul>
+          <li>왼쪽의 날짜별 수납 업무 큐와 <code>대기/미납/종료</code> 개념은 유지하되, 라벨을 <code>수납대기/미납/완료</code>로 명확히 한다.</li>
+          <li>보호자 정보 아래에서 보호자 소유 환자들의 청구 이력을 선택하는 구조는 유지하되, 이를 "보호자 ledger"로 명명하고 날짜/상태 필터를 강화한다.</li>
+          <li>중앙은 선택된 checkout 항목만 다루는 작업대로 좁히고, 메모 strip은 중요한 경고만 접이식/요약형으로 정리한다.</li>
+          <li>오른쪽은 계산서가 아니라 "결제를 진행하기 위한 요약"으로 재정의해서 최종 결제금액, 결제수단, 조정 사유, CTA가 먼저 보이게 한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>권장 제품 흐름</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>단계</th>
+              <th>사용자 의미</th>
+              <th>상태/데이터 의미</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>차트 <code>Order 청구</code></td>
+              <td>수의사가 선택 오더를 보호자에게 청구하겠다고 요청한다.</td>
+              <td>오더의 업무 상태는 그대로 두고, 수납대기/수납 후보를 만든다.</td>
+            </tr>
+            <tr>
+              <td>수납 화면 진입</td>
+              <td>담당자가 보호자 기준으로 청구 대상과 이력을 확인한다.</td>
+              <td>보호자 ledger에서 대기/미납/완료 건을 날짜 범위로 조회한다.</td>
+            </tr>
+            <tr>
+              <td>항목 선택/합산</td>
+              <td>한 보호자의 여러 환자 건 또는 허용된 공동 보호자 건을 묶는다.</td>
+              <td>여러 invoice/patient를 하나의 checkout 묶음으로 선택한다.</td>
+            </tr>
+            <tr>
+              <td><code>수납 진행</code></td>
+              <td>최종 금액, 결제수단, 할인/할증 사유, 메모를 확정하고 결제로 넘긴다.</td>
+              <td>서버가 금액을 재계산하고 checkout snapshot 또는 issued invoice를 만든다.</td>
+            </tr>
+            <tr>
+              <td><code>수납 완료</code></td>
+              <td>결제가 성공했다.</td>
+              <td>payment approved, invoice paid, 필요 시 encounter 완료 처리.</td>
+            </tr>
+            <tr>
+              <td><code>미납 처리</code></td>
+              <td>보호자가 지금 결제하지 않거나 결제가 보류/실패되어 추후 결제가 필요하다.</td>
+              <td>unpaid reason, actor, follow-up visibility를 남긴다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>UI/UX 구조 제안</h2>
+        <h3>1. 상단: 보호자 정보바</h3>
+        <ul>
+          <li>환자 바이탈/품종/나이 대신 보호자 이름, 연락처, 주 보호자 여부, 공동 보호자 관계를 우선 표시한다.</li>
+          <li>수납 업무에 유용한 요약: 현재 수납대기 금액/건수, 미납 금액/건수, 마지막 수납일, 선호 결제수단, 결제 주의 메모.</li>
+          <li><code>블랙리스트</code> 같은 표현은 내부적으로도 신중해야 하므로 UI에는 <code>결제 주의</code>, <code>미납 주의</code>, <code>수납 메모</code>처럼 중립적인 라벨을 권장한다.</li>
+          <li>보호자 정보바의 오른쪽에는 이번 checkout 합계와 상태를 작게 노출하고, 오른쪽 수납 요약 패널 토글을 유지한다.</li>
+        </ul>
+        <p>
+          예시 정보 구성:
+          보호자명, 연락처, 주 보호자/공동 보호자 chip, 보호자 소유 환자 chip,
+          오늘 수납대기 합계, 기존 미납 합계, 최근 수납일, 결제 주의 메모 1줄, 수납 메모 바로가기.
+        </p>
+
+        <h3>2. 왼쪽: 수납 업무 큐</h3>
+        <ul>
+          <li>탭은 <code>수납대기</code>, <code>미납</code>, <code>완료</code>가 가장 직관적이다.</li>
+          <li>큐 row는 보호자명, 환자명 chip, 요청 오더 수, 이번 대기금액, 최근 요청시각을 보여준다.</li>
+          <li>검색은 보호자명/환자명/전화번호/청구서번호를 지원한다.</li>
+          <li>수납대기와 미납을 섞지 않는다. 대기는 "지금 받을 수 있는 건", 미납은 "이유가 남은 지연/연체 건"이다.</li>
+        </ul>
+        <p>
+          과거 화면처럼 row 배경색만으로 상태를 암시하기보다, <code>수납대기</code>, <code>재요청 포함</code>,
+          <code>일부미납</code>, <code>수납완료</code> 같은 badge를 직접 보여주는 편이 더 안전하다.
+        </p>
+
+        <h3>3. 컨텐츠 사이드바: 보호자 수납 ledger</h3>
+        <ul>
+          <li>보호자에게 속한 모든 환자의 수납대기/미납/완료 이력을 보여준다.</li>
+          <li>날짜 chip은 <code>1주</code>, <code>2주</code>, <code>1달</code>, <code>3달</code>, <code>6개월</code>, 직접 선택을 둔다.</li>
+          <li>기본 필터는 업무상 가장 중요한 <code>수납대기 + 미납</code>이고, 완료건은 쉽게 켜서 조회할 수 있게 한다.</li>
+          <li><code>타 보호자 청구서 포함</code>은 공동 보호자 관계가 있는 경우에만 보이고, 켜면 왜 포함되는지 관계 라벨을 같이 보여준다.</li>
+          <li>ledger row는 checkbox 선택을 지원해서 한 환자 여러 건 또는 여러 환자 건을 중앙 청구 항목 영역으로 보낼 수 있어야 한다.</li>
+        </ul>
+
+        <h3>4. 중앙: 청구 항목 작업대</h3>
+        <ul>
+          <li>선택된 건을 환자/진료/청구서 그룹으로 나누고, 각 그룹 합계와 전체 합계를 모두 보여준다.</li>
+          <li>각 row는 항목명, 출처(<code>차트 청구</code> / <code>수납 추가</code>), 오더 진행 상태, 수량, 단가, 할인/할증, 소계를 포함한다.</li>
+          <li>진행중/완료 같은 오더 업무 상태는 badge로 표시하되 수납 가능 여부를 막지 않는다.</li>
+          <li>사료, 일반 판매품, 수의사 승인 없이 구매 가능한 항목은 <code>수납 추가</code>로 넣고, 임상 승인 필요한 약/처방성 항목은 별도 권한/흐름으로 제한한다.</li>
+        </ul>
+
+        <h3>5. 오른쪽: 수납 요약</h3>
+        <ul>
+          <li>항목 합계, 할인, 할증, VAT/세금, 최종 결제금액을 고정된 위계로 보여준다.</li>
+          <li>할인/할증이 있으면 사유 입력을 필수로 하고, 필요 시 승인자 필드를 미래 확장으로 둔다.</li>
+          <li>결제수단은 카드/현금/계좌/간편결제, 카드 개월 수, 복합결제 확장을 고려한다.</li>
+          <li>주 CTA는 <code>수납 진행</code>. 보조 action은 메뉴나 secondary 버튼의 <code>미납 처리</code>로 두고, 선택 시 사유 dialog를 띄운다.</li>
+        </ul>
+        <p>
+          과거 화면의 오른쪽 패널은 금액 항목이 많아 스크롤이 길다. 새 구조에서는 상단에
+          <code>최종 결제금액</code>과 CTA를 고정하고, 세부 계산은 접을 수 있는 breakdown으로 두는 편이 담당자에게 빠르다.
+        </p>
+      </section>
+
+      <section>
+        <h2>미납 버튼 기준</h2>
+        <p class="status warning">
+          권장: 항상 보이는 <code>미납</code> primary 버튼은 두지 않는다.
+        </p>
+        <ul>
+          <li><code>수납대기</code>: 차트에서 청구 요청이 들어왔고 아직 결제하지 않은 정상 대기 상태다.</li>
+          <li><code>미납</code>: 보호자에게 금액을 안내했으나 결제를 미루거나, 결제 실패 후 나중에 받기로 했거나, 운영상 마감/기한을 넘긴 상태다.</li>
+          <li>즉, 같은 날 아직 데스크가 처리하지 않은 건은 미납이 아니라 수납대기다.</li>
+          <li>미납 처리는 사유가 필요하다. 예: 보호자 추후 결제, 카드 결제 실패, 원장 승인 후 후불, 연락 필요.</li>
+          <li>필요하면 하루 마감 시 미처리 수납대기를 자동으로 미납 전환할지, 다음날에도 수납대기로 둘지는 별도 운영 정책으로 결정한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>DB/RPC 제안</h2>
+        <h3>현재 구조로 가능한 것</h3>
+        <ul>
+          <li>현재 chart <code>Order 청구</code>와 invoice candidate sync는 오더 업무 상태와 수납 후보 상태를 분리한다.</li>
+          <li><code>clair_sync_billing_invoice_candidates</code>가 draft invoice line을 만들기 때문에, "청구 요청된 오더가 수납대기에 보인다"는 제품 흐름과 맞다.</li>
+          <li>따라서 <code>청구 확정</code>이라는 별도 candidate promotion migration은 지금 필수 요구사항이 아니다.</li>
+        </ul>
+
+        <h3>곧 필요해질 DB 확장</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>영역</th>
+              <th>필요 이유</th>
+              <th>권장 모델</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>보호자 ledger</td>
+              <td>한 보호자 소유 여러 환자의 대기/미납/완료 조회</td>
+              <td>기존 guardian/patient/invoice 관계 조회 + 추후 guardian billing summary view</td>
+            </tr>
+            <tr>
+              <td>합산 checkout</td>
+              <td>여러 환자/청구서를 한 번에 결제</td>
+              <td><code>billing_checkout_sessions</code>: guardian, selected invoices, selected patients, amount snapshot, status</td>
+            </tr>
+            <tr>
+              <td>결제 배분</td>
+              <td>하나의 카드 결제가 여러 invoice를 정산</td>
+              <td><code>payment_allocations</code>: payment_id, invoice_id, amount, status</td>
+            </tr>
+            <tr>
+              <td>할인/할증</td>
+              <td>수납 메모와 금액 변경의 감사 가능성</td>
+              <td><code>invoice_adjustments</code>: type, amount, reason, actor, optional approval</td>
+            </tr>
+            <tr>
+              <td>결제 주의 메모</td>
+              <td>데스크가 반복 미납, 후불 승인, 특이 메모를 알아야 함</td>
+              <td>guardian-level billing notes/flags, guardian-facing 출력 제외 기본값</td>
+            </tr>
+            <tr>
+              <td>공동 보호자 포함</td>
+              <td>부부/커플 등 공동 보호자 청구서 조회</td>
+              <td>patient_guardians 관계 기반 조회 + explicit include toggle + audit</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>승인 게이트</h3>
+        <ul>
+          <li>보고서 단계에서는 migration을 만들거나 remote Supabase에 적용하지 않는다.</li>
+          <li>합산 checkout, 결제 배분, adjustment audit은 실제 결제/회계 의미가 있으므로 구현 전 DB/RPC 설계 승인 게이트가 필요하다.</li>
+          <li>payment provider, 실결제, 정산, 환불, 회계 연동은 별도 승인 범위다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>추천 작업 순서</h2>
+        <ol>
+          <li>수납 화면 용어 정리: <code>청구 확정</code> primary CTA를 <code>수납 진행</code> / <code>결제 진행</code>으로 바꾸고, <code>미납 처리</code>는 reason dialog가 있는 보조 action으로 둔다.</li>
+          <li>상단 환자 정보바를 보호자 정보바로 교체한다. 바이탈/품종/나이 대신 결제 업무 정보와 주의 메모를 보여준다.</li>
+          <li>컨텐츠 사이드바를 보호자 ledger로 재구성한다. 날짜 범위, 대기/미납/완료 필터, 공동 보호자 포함 toggle, 선택 checkbox를 넣는다.</li>
+          <li>중앙 청구 항목을 선택된 checkout 작업대로 정리한다. 환자/진료 그룹, 항목 출처, 오더 상태 badge, 그룹 합계를 명확히 한다.</li>
+          <li>오른쪽 수납 요약에 할인/할증 사유, 결제수단, 수납 메모, 최종 CTA를 정리한다.</li>
+          <li>그 다음 합산 checkout과 payment allocation DB/RPC 설계를 승인받고 구현한다.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>이번에 업데이트한 기준 문서</h2>
+        <ul>
+          <li><a href="../../product/domain/order-fulfillment-handoff.md">docs/product/domain/order-fulfillment-handoff.md</a></li>
+          <li><a href="../../product/domain/outpatient-workflow-state-model.md">docs/product/domain/outpatient-workflow-state-model.md</a></li>
+          <li><a href="../../engineering/data-model/order-fulfillment-handoff-contract.md">docs/engineering/data-model/order-fulfillment-handoff-contract.md</a></li>
+          <li><a href="../../product/changelog.md">docs/product/changelog.md</a></li>
+          <li><a href="../../engineering/changelog.md">docs/engineering/changelog.md</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
