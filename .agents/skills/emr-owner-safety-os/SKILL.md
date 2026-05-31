@@ -1,0 +1,95 @@
+---
+name: emr-owner-safety-os
+description: Use for CLAiR EMR Owner Safety OS requests, especially when the user says "안전 점검 게이트", "안전 점검 게이트 열어줘", "작업 점검", "안전운영체계", "Safety OS", "PR 전 점검", "수정하지 말고 리뷰", "Safe fixes만", "비개발자 안전검토", or asks to review code/security/DB/testing/design/documentation risk before or after Codex work. This skill starts with a lightweight intake gate and waits for explicit user approval before any full review or safe-fix execution.
+---
+
+# EMR Owner Safety OS
+
+Use this skill to help 승욱 run a token-efficient safety gate around Codex work without needing to remember skill names or checklists.
+
+## Core Rule
+
+When the user says `안전 점검 게이트 열어줘`, `안전 점검 게이트`, `작업 점검 하자`, `안전운영체계`, `Safety OS`, or a similar safety-review request:
+
+1. Do a lightweight intake first.
+2. Do not modify files.
+3. Do not run a full review yet.
+4. Do not load all checklist references.
+5. Brief 승욱 with the proposed checks, skills, and reasons.
+6. Wait for explicit approval before running the selected review.
+
+Approval can be broad (`승인`, `진행해`) or scoped (`디자인 패턴만`, `DB/Supabase 제외`, `Safe fixes만`).
+
+## Lightweight Intake
+
+Read only enough to classify the work:
+
+- Current thread context and latest user request.
+- `git status --short`.
+- `git diff --stat` when local changes matter.
+- Active Linear issue or `docs/work/` item when known.
+- `docs/agent-start-here.md` and `docs/engineering/current-status.md` if not already read in the current session.
+
+Do not read checklist references during intake unless the user already approved a specific review.
+
+## Intake Brief Format
+
+Use this concise Korean format:
+
+```text
+승욱, 현재 작업은 <작업 요약>로 보여.
+
+추천 점검:
+- <점검 A>: <이유>
+- <점검 B>: <이유>
+
+사용할 스킬:
+- emr-owner-safety-os: <이유>
+- 필요 시 emr-docs-sync/manual-linear-ops: <이유>
+
+진행 범위:
+- 코드 수정 없음
+- remote Supabase/배포/실데이터 접근 없음
+- 승인 후 선택한 점검만 실행
+
+진행할까?
+```
+
+## After Approval
+
+Load only the references needed for the approved scope:
+
+- Intake mechanics: `references/intake-gate.md`
+- Code quality, lint, typecheck, build, dependency risk: `references/code-quality-checklist.md`
+- Security, auth, DB, RLS, migration, Supabase gates: `references/security-db-checklist.md`
+- Loading, empty, error, duplicate submit, unsaved changes: `references/runtime-ux-checklist.md`
+- Tokens, shadcn, EMR alias tokens, component consistency: `references/design-system-checklist.md`
+- Navigation, list/detail, forms, tables, status, permission UX: `references/design-pattern-checklist.md`
+- Review report shape: `references/review-output-format.md`
+- Safe fix execution: `references/safe-fix-rules.md`
+
+If the request involves Linear project, issue, milestone, Human Review, or Done/Rework status, also use `$manual-linear-ops`.
+
+If the request involves docs sync or GitBook-facing docs updates, also use `$emr-docs-sync`.
+
+## Approval Gates
+
+Stop and ask for explicit approval before:
+
+- remote Supabase staging/live validation
+- migration push or remote RLS work
+- production deploy
+- real email, KakaoTalk, PACS, device, payment, or provider integration
+- real hospital, patient, guardian, payment, or identity data
+- role/permission policy changes
+- broad UI direction changes beyond the active scope
+
+Do not route around a gated action with a weaker workaround if the gated action is required for correctness. Explain the gate and wait.
+
+## Default Output Expectations
+
+For review results, use the report shape from `references/review-output-format.md`.
+
+For requested fixes, use `references/safe-fix-rules.md`: apply only Safe fixes, preserve behavior, keep scope narrow, and report verification.
+
+Reply to 승욱 in Korean unless asked otherwise. Keep agent-facing notes and durable docs concise English.

@@ -30,4 +30,5 @@
 - Keep changes inside the user request and active work item scope.
 - Do not treat client-only permission gating as complete security.
 - Do not implement live Supabase validation, migrations, RLS, or server enforcement unless explicitly scoped.
+- If a prohibited or approval-gated action is the correct or necessary path for the active work, do not work around it with a weaker solution. Stop, explain why the gated action is needed, and ask the user for explicit approval before proceeding.
 - For OpenAI, Codex, or API questions, use official OpenAI docs or configured Docs MCP and cite sources.

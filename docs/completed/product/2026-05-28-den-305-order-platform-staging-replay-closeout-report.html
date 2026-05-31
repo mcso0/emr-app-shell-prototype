@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-305 Order Platform Staging Replay Closeout</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        color: #17202a;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f5f7;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d8dee4;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f6f8fa;
+      }
+      .ok {
+        color: #116329;
+        font-weight: 700;
+      }
+      .note {
+        background: #fff8c5;
+        border-left: 4px solid #d4a72c;
+        padding: 10px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-305 Order Platform Staging Replay Closeout</h1>
+    <p>
+      DEN-302부터 DEN-305까지의 rework는 병원관리 Order Catalog 저장 실패에서 시작해
+      차트 후보 검색, draft 추가, 확정, fulfillment/billing readback까지 staging에서
+      실제 DB mutation으로 다시 검증하는 범위였다.
+    </p>
+
+    <h2>결론</h2>
+    <p class="ok">
+      Staging preview에서 synthetic Supabase 세션으로 Order Catalog 생성/수정/사용 중지,
+      chart search, chart draft insert, order confirm, confirmed snapshot 보존,
+      fulfillment queue 생성, billing candidate 생성/읽기를 통과했다.
+    </p>
+
+    <h2>주요 변경</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>영역</th>
+          <th>변경 내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Hospital Admin</td>
+          <td>
+            Order Catalog API가 Supabase workspace membership/permission adapter,
+            live catalog gateway, live audit gateway를 사용하도록 연결됐다.
+            신규 오더 drawer는 비어 있는 입력, 필수값 저장 비활성화, 저장 확인 모달,
+            성공 toast, 생성 row 선택 상태를 갖도록 정리됐다.
+          </td>
+        </tr>
+        <tr>
+          <td>Chart Draft</td>
+          <td>
+            catalog 후보를 chart draft에 추가할 때 UUID order id와 catalog snapshot
+            metadata를 함께 보내고, Supabase RPC가 없는 <code>orders</code> row를
+            encounter-scoped draft order로 생성하도록 보강했다.
+          </td>
+        </tr>
+        <tr>
+          <td>Chart Confirm</td>
+          <td>
+            live confirmation 응답과 readback이 confirmed snapshot을
+            <code>billingName</code>, <code>priceKrw</code>,
+            <code>lineTotalSnapshot</code> 형태로 유지하도록 정규화했다.
+          </td>
+        </tr>
+        <tr>
+          <td>Fulfillment/Billing</td>
+          <td>
+            Supabase 세션 기반 chart/billing/fulfillment route에 DB permission adapter를
+            연결해, UI/API가 같은 workspace membership 기준으로 read/write 되도록 했다.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Staging Replay Evidence</h2>
+    <ul>
+      <li>Preview: <code>https://emr-app-shell-prototype-hmb735xcy-mcso0s-projects.vercel.app</code></li>
+      <li>Deployment: <code>dpl_63pQYDBdnhVpCdWwv83yYAozLCQM</code></li>
+      <li>Replay suffix: <code>mpouax4r</code></li>
+      <li>Catalog candidates: <code>std-den-304-lab-mpouax4r</code>, <code>std-den-304-billing-mpouax4r</code></li>
+      <li>Confirmed lab order: <code>94eec965-84b9-4d84-929c-f9a5554f5435</code></li>
+      <li>Confirmed billing order: <code>2bdcbbf2-b788-40d4-a140-029d8e2045ba</code></li>
+      <li>Replay result: confirmed actions 2, fulfillment work items 1, billing candidates 1</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit</code>: pass</li>
+      <li><code>npm run lint</code>: pass, 기존 warning 7개 유지</li>
+      <li><code>npm run build</code>: pass</li>
+      <li>
+        Focused Playwright/API specs:
+        <code>tests/hospital-admin.spec.ts</code>,
+        <code>tests/hospital-admin-order-catalog-server.spec.ts</code>,
+        <code>tests/chart-order-draft-persistence-server.spec.ts</code>,
+        <code>tests/chart-order-action-persistence-server.spec.ts</code>,
+        <code>tests/fulfillment-work-item-server.spec.ts</code>,
+        <code>tests/billing-invoice-candidate-sync-server.spec.ts</code>:
+        54 passed after clean dev-server restart.
+      </li>
+      <li><code>git diff --check</code>: pass</li>
+    </ul>
+
+    <h2>주의 사항</h2>
+    <p class="note">
+      Staging에는 synthetic test order/catalog rows가 생성됐다. production DB, production deploy,
+      real data import, remote production RLS replay는 수행하지 않았다.
+      Vercel preview 배포는 HEAD commit author가 팀 권한을 가진 계정이어야 해서,
+      배포 unblock용 빈 commit을 하나 추가했다.
+    </p>
+
+    <h2>대표 검수 포인트</h2>
+    <ul>
+      <li>병원관리 &gt; Order 관리에서 새 임상병리 오더를 만들고 저장되는지 확인</li>
+      <li>저장된 오더가 테이블에서 선택/활성 상태로 보이는지 확인</li>
+      <li>진료/차트 &gt; Order 추가에서 방금 만든 오더가 후보로 보이는지 확인</li>
+      <li>후보를 draft로 추가하고 확정했을 때 실패 toast 없이 확정되는지 확인</li>
+      <li>확정 후 fulfillment/billing 흐름이 이어지는지 확인</li>
+    </ul>
+  </body>
+</html>

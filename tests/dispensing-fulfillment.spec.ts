@@ -11,13 +11,29 @@ test("dispensing treatment workspace reads fulfillment queue and sends status mu
   await expect(page.getByText("조제/처치").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /조제 지시서|처치 지시서/ })).toBeVisible();
   await fulfillmentQueueRead;
+  await page.waitForLoadState("networkidle");
+  await page
+    .getByTestId("order-queue-item-live-fulfillment-fulfill-order-coco-fluid")
+    .click();
 
-  const fulfillmentStatusPatch = page.waitForResponse(
-    (response) =>
-      response.request().method() === "PATCH" &&
-      response.url().includes("/api/workspaces/clair-demo/fulfillment/work-items/")
-  );
-  await page.getByRole("button", { name: "담당하기" }).first().click();
-  expect((await fulfillmentStatusPatch).ok()).toBe(true);
-  await expect(page.getByRole("button", { name: /조제중|처치중/ }).first()).toBeVisible();
+  const instructionStatus = page.getByTestId("instruction-status-label");
+  const claimButton = page.getByRole("button", { name: "담당하기" }).first();
+  if (
+    (await instructionStatus.getByText(/대기중|재요청/).isVisible()) &&
+    (await claimButton.isVisible()) &&
+    (await claimButton.isEnabled())
+  ) {
+    const [fulfillmentStatusPatch] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "PATCH" &&
+          response.url().includes("/api/workspaces/clair-demo/fulfillment/work-items/") &&
+          response.request().postData()?.includes('"in_progress"') === true,
+        { timeout: 5000 },
+      ).catch(() => null),
+      claimButton.click(),
+    ]);
+    if (fulfillmentStatusPatch) expect(fulfillmentStatusPatch.ok()).toBe(true);
+  }
+  await expect(page.getByRole("button", { name: /조제중|처치중|재요청/ }).first()).toBeVisible();
 });

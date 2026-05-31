@@ -4,12 +4,50 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
-import { mockEncounters, mockInvoiceLines, mockInvoices, mockOrders } from "@/mocks/emr-domain";
-import type { EmrOrder, Encounter, Invoice, InvoiceLine } from "@/types/emr-domain";
+import {
+  mockEncounters,
+  mockInvoiceLines,
+  mockInvoices,
+  mockOrders,
+} from "@/mocks/emr-domain";
+import type {
+  EmrOrder,
+  Encounter,
+  Invoice,
+  InvoiceLine,
+} from "@/types/emr-domain";
 
-export type InvoiceCandidateSyncInput = {
+export type InvoiceCandidatePublicSyncInput = {
   encounterId?: string;
   orderIds?: string[];
+};
+
+export type InvoiceCandidateTrustedSyncInput = InvoiceCandidatePublicSyncInput & {
+  orderSnapshots?: InvoiceCandidateOrderSnapshotInput[];
+};
+
+export type InvoiceCandidateSyncInput = InvoiceCandidatePublicSyncInput;
+
+export type InvoiceCandidateTrustedGatewaySyncInput = {
+  actorUserId: string;
+  encounterId: string;
+  orderIds: string[];
+  orderSnapshots?: InvoiceCandidateOrderSnapshotInput[];
+  workspaceId: string;
+};
+
+export type InvoiceCandidateOrderSnapshotInput = {
+  billingName?: string;
+  billingReflectionEnabled: boolean;
+  destinationModule?: string;
+  inHospitalOrderName?: string;
+  lineTotalSnapshot?: number;
+  orderId: string;
+  priceKrw?: number;
+  quantity?: number;
+  sourcePresetId?: string;
+  standardOrderName?: string;
+  taskRequired?: boolean;
 };
 
 export type BillingInvoiceCandidateLine = {
@@ -25,7 +63,14 @@ export type BillingInvoiceCandidateLine = {
 
 export type InvoiceCandidateSyncGatewayResult =
   | { ok: true; candidates: BillingInvoiceCandidateLine[] }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "order_unavailable" | "invoice_unavailable" }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "order_unavailable"
+        | "invoice_unavailable";
+    }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type InvoiceCandidateSyncGateway = {
@@ -33,12 +78,9 @@ export type InvoiceCandidateSyncGateway = {
     encounterId: string;
     workspaceId: string;
   }): Promise<InvoiceCandidateSyncGatewayResult>;
-  syncInvoiceCandidates(input: {
-    actorUserId: string;
-    encounterId: string;
-    orderIds: string[];
-    workspaceId: string;
-  }): Promise<InvoiceCandidateSyncGatewayResult>;
+  syncInvoiceCandidates(
+    input: InvoiceCandidateTrustedGatewaySyncInput,
+  ): Promise<InvoiceCandidateSyncGatewayResult>;
 };
 
 export type InvoiceCandidateReadResult =
@@ -48,10 +90,30 @@ export type InvoiceCandidateReadResult =
       candidates: BillingInvoiceCandidateLine[];
       enforcedBy: "billing-invoice-candidate-sync";
     }
-  | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Partial<Record<"encounterId", string>> }
-  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "order_unavailable" | "invoice_unavailable" }
-  | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
+  | {
+      ok: false;
+      status: 400;
+      error: "invalid_input";
+      fieldErrors: Partial<Record<"encounterId", string>>;
+    }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "order_unavailable"
+        | "invoice_unavailable";
+    }
+  | {
+      ok: false;
+      status: 500;
+      error: "db_read_failed" | "supabase_client_missing";
+    };
 
 export type InvoiceCandidateSyncResult =
   | {
@@ -66,11 +128,29 @@ export type InvoiceCandidateSyncResult =
       error: "invalid_input";
       fieldErrors: Partial<Record<"encounterId" | "orderIds", string>>;
     }
-  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "order_unavailable" | "invoice_unavailable" }
-  | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "order_unavailable"
+        | "invoice_unavailable";
+    }
+  | {
+      ok: false;
+      status: 500;
+      error: "db_write_failed" | "supabase_client_missing";
+    };
 
-const mockInvoiceCandidateStore = new Map<string, BillingInvoiceCandidateLine[]>();
+const mockInvoiceCandidateStore = new Map<
+  string,
+  BillingInvoiceCandidateLine[]
+>();
 
 export async function readInvoiceCandidates({
   actorUserId,
@@ -87,7 +167,12 @@ export async function readInvoiceCandidates({
 }): Promise<InvoiceCandidateReadResult> {
   const normalizedEncounterId = trimToUndefined(encounterId);
   if (!normalizedEncounterId) {
-    return { ok: false, status: 400, error: "invalid_input", fieldErrors: { encounterId: "진료 차트를 선택해 주세요." } };
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: { encounterId: "진료 차트를 선택해 주세요." },
+    };
   }
 
   const permission = resolveWorkspacePermission(permissionAdapter, {
@@ -103,13 +188,21 @@ export async function readInvoiceCandidates({
     };
   }
 
-  const result = await gateway.listInvoiceCandidates({ encounterId: normalizedEncounterId, workspaceId });
+  const result = await gateway.listInvoiceCandidates({
+    encounterId: normalizedEncounterId,
+    workspaceId,
+  });
   if (!result.ok) {
     if (result.status === 409) return result;
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
-  return { ok: true, status: 200, candidates: result.candidates, enforcedBy: "billing-invoice-candidate-sync" };
+  return {
+    ok: true,
+    status: 200,
+    candidates: result.candidates,
+    enforcedBy: "billing-invoice-candidate-sync",
+  };
 }
 
 export async function syncInvoiceCandidates({
@@ -128,7 +221,12 @@ export async function syncInvoiceCandidates({
   const normalized = normalizeSyncInput(input);
   const validation = validateSyncInput(normalized);
   if (!validation.valid) {
-    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: validation.fieldErrors,
+    };
   }
 
   const permission = resolveWorkspacePermission(permissionAdapter, {
@@ -155,7 +253,12 @@ export async function syncInvoiceCandidates({
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
-  return { ok: true, status: 200, candidates: result.candidates, enforcedBy: "billing-invoice-candidate-sync" };
+  return {
+    ok: true,
+    status: 200,
+    candidates: result.candidates,
+    enforcedBy: "billing-invoice-candidate-sync",
+  };
 }
 
 export function createMockInvoiceCandidateSyncGateway(
@@ -170,7 +273,7 @@ export function createMockInvoiceCandidateSyncGateway(
     invoices: mockInvoices,
     orders: mockOrders,
   },
-  now = () => new Date().toISOString()
+  now = () => new Date().toISOString(),
 ): InvoiceCandidateSyncGateway {
   const encounters = dataset.encounters ?? [];
   const invoiceLines = dataset.invoiceLines ?? [];
@@ -180,42 +283,95 @@ export function createMockInvoiceCandidateSyncGateway(
   return {
     async listInvoiceCandidates({ encounterId, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
-      if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!encounter)
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "encounter_unavailable",
+        };
 
-      return { ok: true, candidates: getStoredOrSeedCandidates({ encounterId, invoiceLines, invoices, orders, workspaceId }) };
+      return {
+        ok: true,
+        candidates: getStoredOrSeedCandidates({
+          encounterId,
+          invoiceLines,
+          invoices,
+          orders,
+          workspaceId,
+        }),
+      };
     },
-    async syncInvoiceCandidates({ encounterId, orderIds, workspaceId }) {
+    async syncInvoiceCandidates({
+      encounterId,
+      orderIds,
+      orderSnapshots,
+      workspaceId,
+    }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
-      if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!encounter)
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "encounter_unavailable",
+        };
 
-      const invoice = invoices.find((item) => item.workspaceId === workspaceId && item.encounterId === encounterId);
-      if (!invoice) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
+      const invoice = invoices.find(
+        (item) =>
+          item.workspaceId === workspaceId && item.encounterId === encounterId,
+      );
+      if (!invoice)
+        return { ok: false, status: 409, denialReason: "invoice_unavailable" };
 
-      const candidates = getStoredOrSeedCandidates({ encounterId, invoiceLines, invoices, orders, workspaceId });
+      const candidates = getStoredOrSeedCandidates({
+        encounterId,
+        invoiceLines,
+        invoices,
+        orders,
+        workspaceId,
+      });
+      const snapshotByOrderId = new Map(
+        (orderSnapshots ?? []).map((snapshot) => [snapshot.orderId, snapshot]),
+      );
       const timestamp = now();
       const nextCandidates = [...candidates];
       const synced: BillingInvoiceCandidateLine[] = [];
 
       for (const orderId of orderIds) {
-        const order = orders.find((item) => item.workspaceId === workspaceId && item.encounterId === encounterId && item.id === orderId);
-        if (!order || order.status === "cancelled") {
+        const order = orders.find(
+          (item) =>
+            item.workspaceId === workspaceId &&
+            item.encounterId === encounterId &&
+            item.id === orderId,
+        );
+        const snapshot = snapshotByOrderId.get(orderId);
+        if (snapshot?.billingReflectionEnabled === false) continue;
+        if (!order && !snapshot) {
+          return { ok: false, status: 409, denialReason: "order_unavailable" };
+        }
+        if (order && order.status === "cancelled") {
           return { ok: false, status: 409, denialReason: "order_unavailable" };
         }
 
-        const existing = nextCandidates.find((candidate) => candidate.orderId === orderId);
+        const existing = nextCandidates.find(
+          (candidate) => candidate.orderId === orderId,
+        );
         if (existing) {
           synced.push({ ...existing, syncedAt: timestamp });
           continue;
         }
 
-        const sourceLine = invoiceLines.find((line) => line.orderId === orderId);
-        const quantity = sourceLine?.quantity ?? 1;
-        const unitPrice = sourceLine?.unitPrice ?? 0;
+        const sourceLine = invoiceLines.find(
+          (line) => line.orderId === orderId,
+        );
+        const quantity = snapshot?.quantity ?? sourceLine?.quantity ?? 1;
+        const unitPrice = snapshot?.priceKrw ?? sourceLine?.unitPrice ?? 0;
         const candidate = {
           billingCandidateId: `billcand-${orderId}`,
-          description: sourceLine?.description ?? order.displayName,
+          description: getCandidateDescription({ order, snapshot, sourceLine }),
           invoiceId: invoice.id,
-          lineTotal: roundMoney(quantity * unitPrice),
+          lineTotal: roundMoney(
+            snapshot?.lineTotalSnapshot ?? quantity * unitPrice,
+          ),
           orderId,
           quantity,
           syncedAt: timestamp,
@@ -225,31 +381,60 @@ export function createMockInvoiceCandidateSyncGateway(
         synced.push(candidate);
       }
 
-      mockInvoiceCandidateStore.set(buildCandidateKey(workspaceId, encounterId), nextCandidates);
+      mockInvoiceCandidateStore.set(
+        buildCandidateKey(workspaceId, encounterId),
+        nextCandidates,
+      );
       return { ok: true, candidates: synced };
     },
   };
 }
 
 export type SupabaseInvoiceCandidateSyncRpcClient = {
-  rpc(functionName: "clair_list_billing_invoice_candidates", args: { p_workspace_id: string; p_encounter_id: string }): Promise<{ data: unknown; error: { message?: string } | null }>;
-  rpc(functionName: "clair_sync_billing_invoice_candidates", args: { p_workspace_id: string; p_actor_user_id: string; p_encounter_id: string; p_order_ids: string[] }): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_list_billing_invoice_candidates",
+    args: { p_workspace_id: string; p_encounter_id: string },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_sync_billing_invoice_candidates",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_encounter_id: string;
+      p_order_ids: string[];
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
-export function createSupabaseInvoiceCandidateSyncGateway(client: SupabaseInvoiceCandidateSyncRpcClient): InvoiceCandidateSyncGateway {
+export function createSupabaseInvoiceCandidateSyncGateway(
+  client: SupabaseInvoiceCandidateSyncRpcClient,
+): InvoiceCandidateSyncGateway {
   return {
     async listInvoiceCandidates({ encounterId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_list_billing_invoice_candidates", { p_workspace_id: workspaceId, p_encounter_id: encounterId });
+      const { data, error } = await client.rpc(
+        "clair_list_billing_invoice_candidates",
+        { p_workspace_id: workspaceId, p_encounter_id: encounterId },
+      );
       if (error) return mapSyncError(error.message, "db_read_failed");
       return { ok: true, candidates: mapCandidateRows(data) };
     },
-    async syncInvoiceCandidates({ actorUserId, encounterId, orderIds, workspaceId }) {
-      const { data, error } = await client.rpc("clair_sync_billing_invoice_candidates", {
-        p_workspace_id: workspaceId,
-        p_actor_user_id: actorUserId,
-        p_encounter_id: encounterId,
-        p_order_ids: orderIds.map(normalizeUuidForRpc).filter((orderId): orderId is string => Boolean(orderId)),
-      });
+    async syncInvoiceCandidates({
+      actorUserId,
+      encounterId,
+      orderIds,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc(
+        "clair_sync_billing_invoice_candidates",
+        {
+          p_workspace_id: workspaceId,
+          p_actor_user_id: actorUserId,
+          p_encounter_id: encounterId,
+          p_order_ids: orderIds
+            .map(normalizeUuidForRpc)
+            .filter((orderId): orderId is string => Boolean(orderId)),
+        },
+      );
       if (error) return mapSyncError(error.message, "db_write_failed");
       return { ok: true, candidates: mapCandidateRows(data) };
     },
@@ -266,11 +451,41 @@ export function createDemoInvoiceCandidatePermissionAdapter() {
       { id: "user-tech", status: "active" },
     ],
     memberships: [
-      { id: "membership-playwright-admin", workspaceId: "clair-demo", userId: "playwright-default-session", roles: ["hospital_admin"], status: "active" },
-      { id: "membership-admin", workspaceId: "clair-demo", userId: "user-admin", roles: ["hospital_admin"], status: "active" },
-      { id: "membership-front-desk", workspaceId: "clair-demo", userId: "user-front-desk", roles: ["front_desk"], status: "active" },
-      { id: "membership-vet", workspaceId: "clair-demo", userId: "user-vet", roles: ["vet"], status: "active" },
-      { id: "membership-tech", workspaceId: "clair-demo", userId: "user-tech", roles: ["technician"], status: "active" },
+      {
+        id: "membership-playwright-admin",
+        workspaceId: "clair-demo",
+        userId: "playwright-default-session",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-admin",
+        workspaceId: "clair-demo",
+        userId: "user-admin",
+        roles: ["hospital_admin"],
+        status: "active",
+      },
+      {
+        id: "membership-front-desk",
+        workspaceId: "clair-demo",
+        userId: "user-front-desk",
+        roles: ["front_desk"],
+        status: "active",
+      },
+      {
+        id: "membership-vet",
+        workspaceId: "clair-demo",
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
+      {
+        id: "membership-tech",
+        workspaceId: "clair-demo",
+        userId: "user-tech",
+        roles: ["technician"],
+        status: "active",
+      },
     ],
   });
 }
@@ -288,15 +503,33 @@ function getStoredOrSeedCandidates({
   orders: EmrOrder[];
   workspaceId: string;
 }) {
-  const stored = mockInvoiceCandidateStore.get(buildCandidateKey(workspaceId, encounterId));
+  const stored = mockInvoiceCandidateStore.get(
+    buildCandidateKey(workspaceId, encounterId),
+  );
   if (stored) return stored;
 
-  const invoice = invoices.find((item) => item.workspaceId === workspaceId && item.encounterId === encounterId);
+  const invoice = invoices.find(
+    (item) =>
+      item.workspaceId === workspaceId && item.encounterId === encounterId,
+  );
   if (!invoice) return [];
-  const orderIds = new Set(orders.filter((order) => order.workspaceId === workspaceId && order.encounterId === encounterId).map((order) => order.id));
+  const orderIds = new Set(
+    orders
+      .filter(
+        (order) =>
+          order.workspaceId === workspaceId &&
+          order.encounterId === encounterId,
+      )
+      .map((order) => order.id),
+  );
 
   return invoiceLines
-    .filter((line) => line.invoiceId === invoice.id && line.orderId && orderIds.has(line.orderId))
+    .filter(
+      (line) =>
+        line.invoiceId === invoice.id &&
+        line.orderId &&
+        orderIds.has(line.orderId),
+    )
     .map((line) => ({
       billingCandidateId: `billcand-${line.orderId}`,
       description: line.description,
@@ -309,26 +542,44 @@ function getStoredOrSeedCandidates({
     }));
 }
 
-function normalizeSyncInput(input: InvoiceCandidateSyncInput) {
+function normalizeSyncInput(input: InvoiceCandidatePublicSyncInput) {
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
     orderIds: Array.isArray(input.orderIds)
-      ? Array.from(new Set(input.orderIds.map(trimToUndefined).filter((orderId): orderId is string => Boolean(orderId))))
+      ? Array.from(
+          new Set(
+            input.orderIds
+              .map(trimToUndefined)
+              .filter((orderId): orderId is string => Boolean(orderId)),
+          ),
+        )
       : [],
   };
 }
 
 function validateSyncInput(input: ReturnType<typeof normalizeSyncInput>) {
   const fieldErrors: Partial<Record<"encounterId" | "orderIds", string>> = {};
-  if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
+  if (!input.encounterId)
+    fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (!input.orderIds.length) fieldErrors.orderIds = "오더를 선택해 주세요.";
-  if (input.orderIds.length > 100) fieldErrors.orderIds = "선택 오더가 너무 많습니다.";
-  if (Object.keys(fieldErrors).length > 0) return { valid: false as const, fieldErrors };
+  if (input.orderIds.length > 100)
+    fieldErrors.orderIds = "선택 오더가 너무 많습니다.";
+  if (Object.keys(fieldErrors).length > 0)
+    return { valid: false as const, fieldErrors };
   return { valid: true as const, fieldErrors: {} };
 }
 
-function findEncounter(encounters: Encounter[], workspaceId: string, encounterId: string) {
-  return encounters.find((encounter) => encounter.id === encounterId && encounter.workspaceId === workspaceId && encounter.status !== "cancelled");
+function findEncounter(
+  encounters: Encounter[],
+  workspaceId: string,
+  encounterId: string,
+) {
+  return encounters.find(
+    (encounter) =>
+      encounter.id === encounterId &&
+      encounter.workspaceId === workspaceId &&
+      encounter.status !== "cancelled",
+  );
 }
 
 function buildCandidateKey(workspaceId: string, encounterId: string) {
@@ -343,14 +594,44 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function normalizeUuidForRpc(value?: string) {
-  return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : undefined;
+function getCandidateDescription({
+  order,
+  snapshot,
+  sourceLine,
+}: {
+  order?: EmrOrder;
+  snapshot?: InvoiceCandidateOrderSnapshotInput;
+  sourceLine?: InvoiceLine;
+}) {
+  return (
+    snapshot?.billingName ??
+    sourceLine?.description ??
+    snapshot?.inHospitalOrderName ??
+    snapshot?.standardOrderName ??
+    order?.displayName ??
+    "청구 후보"
+  );
 }
 
-function mapSyncError(message: string | undefined, fallback: "db_read_failed" | "db_write_failed"): InvoiceCandidateSyncGatewayResult {
-  if (message?.includes("encounter_unavailable")) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
-  if (message?.includes("order_unavailable")) return { ok: false, status: 409, denialReason: "order_unavailable" };
-  if (message?.includes("invoice_unavailable")) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
+function normalizeUuidForRpc(value?: string) {
+  return value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+    ? value
+    : undefined;
+}
+
+function mapSyncError(
+  message: string | undefined,
+  fallback: "db_read_failed" | "db_write_failed",
+): InvoiceCandidateSyncGatewayResult {
+  if (message?.includes("encounter_unavailable"))
+    return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+  if (message?.includes("order_unavailable"))
+    return { ok: false, status: 409, denialReason: "order_unavailable" };
+  if (message?.includes("invoice_unavailable"))
+    return { ok: false, status: 409, denialReason: "invoice_unavailable" };
   return { ok: false, status: 500, error: fallback };
 }
 
@@ -367,7 +648,7 @@ function mapCandidateRows(value: unknown): BillingInvoiceCandidateLine[] {
       typeof row.orderId === "string" &&
       typeof row.quantity === "number" &&
       typeof row.syncedAt === "string" &&
-      typeof row.unitPrice === "number"
+      typeof row.unitPrice === "number",
     );
   });
 }

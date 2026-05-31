@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-24"
+updated: "2026-05-25"
 linear_issue: "DEN-270"
 linear_project: "13 CLAiR EMR Table Sort & Filter Behavior"
 source_docs:
@@ -191,6 +191,137 @@ DEN-272 applied the proven pattern to the chart/order table with clinical workfl
 - Multiple filter rows compose with AND after the existing type tab filter.
 - Save view, saved filters, outer Clear controls, active chip rows, multi-sort, URL persistence, Supabase, and server-side behavior remain excluded.
 - Order draft editing, quantity validation, selection, order update, order billing, order confirmation, chart workflow, mock auth, and session behavior remain in scope for preservation.
+
+## DEN-273 Customer Table Adoption Result
+
+DEN-273 applied the proven pattern to the customer management patient and guardian tables with customer-workflow guardrails:
+
+- Table headers provide single-column sort controls only.
+- Sorting is limited to stable visible customer fields: patient code, patient name, birth date/age, patient registration date, guardian name, and guardian registration date.
+- The customer table section action area adds a Filter button with active count shown as `Filter N`.
+- The filter builder supports patient breed, sex, status badge, message consent, and guardian consent summary conditions.
+- Multiple filter rows compose with AND after the existing customer search query.
+- Header filter triggers, active chip rows, saved filters/views, multi-sort, URL persistence, Supabase, and server-side behavior remain excluded.
+- Detail drawers, row selection, row actions, column visibility, density, mock auth, and session behavior remain in scope for preservation.
+
+## DEN-274 Hospital Admin Order Catalog Adoption Result
+
+DEN-274 applied the proven pattern to the hospital admin order catalog table with admin-workflow guardrails:
+
+- Table headers provide single-column sort controls only.
+- Sorting is limited to stable visible order catalog fields: standard order name, in-hospital order name, billing name, and sale price.
+- Existing category navigation, search, status, billing, and work-type controls remain primary workflow filters.
+- The order catalog section action area adds a Filter button with active count shown as `Filter N`.
+- The filter builder supports status, target species, service item type, billing linkage, and sale price threshold conditions.
+- Multiple filter rows compose with AND after the existing category/search/filter controls.
+- Header filter triggers, active chip rows, saved filters/views, multi-sort, URL persistence, Supabase, and server-side behavior remain excluded.
+- Row selection, row actions, detail drawer, mock auth, and session behavior remain in scope for preservation.
+
+## DEN-275 Adopted Table QA Result
+
+DEN-275 ran focused QA across the Project 13 adopted table set:
+
+- Covered billing invoice lines, chart/order rows, customer management patient rows, and hospital admin order catalog rows.
+- Added cross-table QA coverage for accessible sort/filter labels, visible active sort state, `Filter N` active state, keyboard Escape close behavior, empty states, reset behavior, and narrow viewport filter reachability.
+- Captured mock-auth evidence screenshots for billing, chart/order, customer mobile, and hospital admin order catalog screens.
+- Fixed a narrow viewport shell layering issue by raising the shared popover positioner layer so filter popovers are not visually covered by shell chrome.
+- Existing focused table specs plus the DEN-275 QA spec passed together.
+- Excluded tables remain unchanged: no new table adoption, saved views, saved filters, active chip rows, multi-sort, URL/localStorage persistence, Supabase, DB/RLS, or server-side behavior.
+
+## DEN-276 Final Closeout Result
+
+DEN-276 closes Project 13 for representative review:
+
+- The approved contract is stable: table headers expose single-column sort only, and filters live in the section header/action area.
+- Active filter state is represented by the section Filter button count as `Filter N`.
+- Filter builder rows compose with AND and keep `초기화`, `Apply filters`, and `Close` in the footer.
+- Display-only, checkbox, action, icon-only, summary, total, and command columns remain static.
+- The adopted table set covers billing invoice lines, chart/order rows, customer management patient/guardian workflows, and the hospital admin order catalog.
+- Cross-table QA verified the representative implementation set with mock-auth workspace screens and evidence images.
+- Project 13 is ready for Human Review and can be closed after representative acceptance.
+
+Remaining exclusions stay explicit:
+
+- No broad all-table rollout.
+- No saved views, saved filters, active chip rows, multi-sort, URL/localStorage/session persistence, Supabase persistence, DB/RLS, migrations, server-side sorting/filtering, live validation, pricing model, role policy, production data, or external integration changes.
+- Any next expansion should start as a new scoped Linear issue or project.
+
+## DEN-293 Advanced Filter Builder Foundation
+
+DEN-293 starts the next Project 13 extension for the approved advanced filter builder direction:
+
+- The UI should not import an external query-builder surface wholesale.
+- CLAiR should use its own EMR component composition and table primitives, while keeping the internal data model query-builder-like.
+- The reusable model starts with one top-level AND group and completed rules only; broader OR and nested group behavior remains explicit follow-up scope.
+- First open must show one incomplete draft condition row, not the multi-row design reference state.
+- A rule becomes active only when field, operator, and value are complete.
+- Incomplete draft rules are ignored by filtering and by the `Filter N` count.
+- The builder footer uses `+ Add filter` and `Clear all`; Apply/Close footer buttons are excluded from this advanced auto-apply pattern.
+- Close behavior is handled by parent popover outside-click/Escape plus a top-right close icon when provided.
+- Table consumers must expose only table-specific filter fields; checkbox, action, icon-only, and display-only columns stay out of the field list.
+
+The foundation code lives in:
+
+- `src/components/emr/table-filter-builder-model.ts`
+- `src/components/emr/table-filter-builder.tsx`
+
+## DEN-294 Advanced Filter Builder Adoption
+
+DEN-294 applies the DEN-293 shared builder to two real Project 13 table surfaces:
+
+- Billing invoice lines now use the shared builder for `업무` and `청구금액`.
+- Chart/order rows now use the shared builder for `상태` and `수의사`.
+- Both screens keep the section Filter button and `Filter N` active count.
+- Both screens now auto-apply completed builder rules; there is no `Apply filters` or footer `Close` button in the shared builder.
+- First open shows one incomplete draft rule row.
+- Incomplete draft rules are ignored by filtering and active count.
+- Customer management and hospital admin order catalog still use their existing feature-local builders after DEN-294 and should be migrated only in a separate scoped follow-up.
+- The shared select popup layer is above popover content so dropdowns inside the builder remain clickable.
+
+## DEN-295 Advanced Filter Builder Rollout QA
+
+DEN-295 verifies and documents the advanced filter builder rollout:
+
+- Shared builder foundation behavior passed focused model QA.
+- Billing invoice line table passed focused sort/filter QA with the shared builder.
+- Chart/order table passed focused sort/filter QA with the shared builder.
+- Cross-table QA passed for billing, chart/order, customer management, and hospital admin order catalog.
+- Browser evidence was captured on real mock-auth workspace screens for billing and chart/order.
+- The rollout is intentionally partial: billing and chart/order use the shared builder; customer and hospital admin still use their previous feature-local builders.
+- The known full-suite caveats are unrelated existing lint/test failures outside this rollout scope.
+
+## DEN-296 Customer Advanced Filter Builder Migration
+
+DEN-296 migrates the customer management table from the DEN-273 feature-local filter builder to the DEN-293 reusable advanced builder:
+
+- Customer patient and guardian tables now use `EmrTableFilterBuilder` and the shared model helpers.
+- Table headers remain single-column sort only; filter controls stay in the customer table section action area.
+- The Filter button keeps the active count as `Filter N`, counting only completed field/operator/value rules.
+- First open shows one incomplete draft rule row.
+- Incomplete draft rows are ignored by customer row filtering and by the active count.
+- Patient filter fields remain breed, sex, status badge, and message consent.
+- Guardian filter fields remain consent summary.
+- Checkbox, action, phone, relationship summary, work summary, and other display-only columns remain outside the filter field configuration.
+- Existing search, mock/session behavior, row selection, row actions, column visibility, density, and detail drawer routing remain preserved.
+- Saved views/filters, active chip rows, persisted filter presets, server-side filtering, Supabase, DB/RLS, migrations, and live validation remain excluded.
+
+After DEN-296, the shared advanced builder is adopted by billing invoice lines, chart/order rows, and customer management tables. Hospital admin order catalog remains on its feature-local builder until DEN-297.
+
+## DEN-297 Hospital Admin Advanced Filter Builder Migration
+
+DEN-297 migrates the hospital admin order catalog table from the DEN-274 feature-local filter builder to the DEN-293 reusable advanced builder:
+
+- Hospital admin order catalog now uses `EmrTableFilterBuilder` and the shared model helpers.
+- Table headers remain single-column sort only; filter controls stay in the order catalog section action area.
+- The Filter button keeps the active count as `Filter N`, counting only completed field/operator/value rules.
+- First open shows one incomplete draft rule row.
+- Incomplete draft rows are ignored by order row filtering and by the active count.
+- Order catalog filter fields remain status, target species, service item type, billing linkage, and sale price threshold.
+- Checkbox, action, and display-only columns remain outside the filter field configuration.
+- Existing category navigation, search, status/billing/work-type filters, mock/session behavior, row selection, row actions, and drawer workflows remain preserved.
+- Saved views/filters, active chip rows, persisted filter presets, server-side filtering, Supabase, DB/RLS, migrations, and live validation remain excluded.
+
+After DEN-297, the shared advanced builder is adopted by billing invoice lines, chart/order rows, customer management tables, and the hospital admin order catalog.
 
 ## Verification Expectations
 

@@ -117,6 +117,57 @@ test("supabase reception lookup gateway maps DB rows and keeps workspace scope i
   });
 });
 
+test("supabase reception lookup gateway resolves Korean staging display aliases", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseReceptionPatientGuardianLookupGateway({
+    async rpc(functionName, args) {
+      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_query}`);
+      return {
+        data:
+          args.p_query === "nabi"
+            ? [
+                {
+                  patient: {
+                    id: "19421000-0000-4000-8000-000000000002",
+                    workspaceId: "clair-demo",
+                    patientNo: "P-DEN194-02",
+                    name: "Nabi Synthetic",
+                    species: "cat",
+                    sex: "female",
+                    status: "active",
+                    createdAt: "2026-05-19T00:00:00.000Z",
+                    updatedAt: "2026-05-19T00:00:00.000Z",
+                  },
+                  primaryGuardian: {
+                    id: "19420000-0000-4000-8000-000000000002",
+                    workspaceId: "clair-demo",
+                    name: "DEN-194 Guardian 02",
+                    createdAt: "2026-05-19T00:00:00.000Z",
+                    updatedAt: "2026-05-19T00:00:00.000Z",
+                  },
+                },
+              ]
+            : [],
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.searchPatientGuardianLookup({
+    workspaceId: "clair-demo",
+    query: "나비",
+  });
+
+  expect(calls).toEqual([
+    "clair_search_reception_patient_guardian_lookup:clair-demo:나비",
+    "clair_search_reception_patient_guardian_lookup:clair-demo:nabi",
+  ]);
+  expect(result).toMatchObject({
+    ok: true,
+    patients: [{ patient: { name: "Nabi Synthetic" } }],
+  });
+});
+
 test("reception lookup route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/patient-guardian-lookup/route.ts",
@@ -129,6 +180,9 @@ test("reception lookup route stays server-owned and avoids secret-shaped values"
 
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
+  expect(routeSource).toContain("permissionAdapter");
   expect(serverSource).toContain('import "server-only"');
   expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });

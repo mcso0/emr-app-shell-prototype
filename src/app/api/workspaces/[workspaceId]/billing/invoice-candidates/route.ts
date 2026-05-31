@@ -1,13 +1,18 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
 import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
+import {
   createSupabaseInvoiceCandidateSyncGateway,
   readInvoiceCandidates,
   syncInvoiceCandidates,
-  type InvoiceCandidateSyncInput,
+  type InvoiceCandidatePublicSyncInput,
   type SupabaseInvoiceCandidateSyncRpcClient,
 } from "@/features/billing/server-invoice-candidate-sync";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
@@ -34,10 +39,20 @@ export async function GET(request: Request, { params }: RouteContext) {
   const url = new URL(request.url);
   const encounterId = url.searchParams.get("encounterId");
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await readInvoiceCandidates({
     actorUserId: identity.actorUserId,
     workspaceId,
     encounterId,
+    permissionAdapter,
     gateway: client
       ? createSupabaseInvoiceCandidateSyncGateway(
           client as unknown as SupabaseInvoiceCandidateSyncRpcClient
@@ -70,10 +85,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await syncInvoiceCandidates({
     actorUserId: identity.actorUserId,
     workspaceId,
     input,
+    permissionAdapter,
     gateway: client
       ? createSupabaseInvoiceCandidateSyncGateway(
           client as unknown as SupabaseInvoiceCandidateSyncRpcClient
@@ -84,10 +109,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   return Response.json(result, { status: result.status });
 }
 
-async function readJsonBody(request: Request): Promise<InvoiceCandidateSyncInput> {
+async function readJsonBody(
+  request: Request,
+): Promise<InvoiceCandidatePublicSyncInput> {
   try {
     const value = (await request.json()) as unknown;
-    return value && typeof value === "object" ? value as InvoiceCandidateSyncInput : {};
+    if (!value || typeof value !== "object") return {};
+    const row = value as Partial<InvoiceCandidatePublicSyncInput>;
+    return {
+      encounterId: typeof row.encounterId === "string" ? row.encounterId : undefined,
+      orderIds: Array.isArray(row.orderIds)
+        ? row.orderIds.filter((orderId): orderId is string => typeof orderId === "string")
+        : undefined,
+    };
   } catch {
     return {};
   }

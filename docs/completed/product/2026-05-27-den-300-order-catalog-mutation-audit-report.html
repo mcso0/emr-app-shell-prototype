@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-300 Order Catalog Mutation Audit</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 44px 28px 60px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 29px;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .info {
+        background: #eef4ff;
+        color: #1d4ed8;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-300 / 2026-05-27 / Security Follow-up</p>
+      <h1>Order Catalog Mutation Audit Event 추가</h1>
+      <p>
+        병원관리 Order Catalog의 생성, 수정, 사용 중지 mutation에 감사 이벤트를
+        남기도록 구현했다.
+      </p>
+      <span class="badge">Status: Human Review 준비</span>
+      <span class="badge info">DEN-289 P2 finding mitigated</span>
+      <span class="badge warn">Remote DB/RLS/Deploy: Not run</span>
+
+      <section>
+        <h2>비개발자용 요약</h2>
+        <p>
+          오더 카탈로그는 진료 선택지와 수납 금액의 기준이다. 누가 어떤 오더명,
+          청구명, 가격, 사용 상태를 바꿨는지 나중에 추적할 수 있도록 성공한
+          변경마다 감사 이벤트를 남기게 했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            <code>order_catalog.created</code>,
+            <code>order_catalog.updated</code>,
+            <code>order_catalog.paused</code> event type을 추가했다.
+          </li>
+          <li>
+            Catalog mutation 성공 후 actor, workspace, request id, target item id,
+            changed fields, before/after snapshot을 audit payload에 남긴다.
+          </li>
+          <li>
+            Hospital-admin catalog route에서 Supabase session일 때 live audit append
+            gateway를 연결했다.
+          </li>
+          <li>
+            Audit event type check constraint를 넓히는 repo-local migration을
+            추가했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/audit/server-audit-log-persistence-core.ts</code></li>
+          <li><code>src/features/hospital-admin/server-order-catalog-core.ts</code></li>
+          <li><code>src/app/api/workspaces/[workspaceId]/hospital-admin/order-catalog/route.ts</code></li>
+          <li><code>supabase/migrations/20260527091000_order_catalog_audit_event_types.sql</code></li>
+          <li><code>tests/hospital-admin-order-catalog-server.spec.ts</code></li>
+          <li><code>docs/product/domain/workspace-order-catalog-platform.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li>
+            <code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/hospital-admin-order-catalog-server.spec.ts</code>
+            통과: 10 tests
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 범위</h2>
+        <p>
+          Audit payload는 raw SOAP, provider payload, token, secret을 포함하지
+          않도록 regression을 추가했다. Remote Supabase 적용, 원격 RLS replay,
+          production deploy, 실데이터 import는 수행하지 않았다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

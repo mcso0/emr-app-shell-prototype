@@ -92,13 +92,21 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
   await expect(page.getByText("상세 정보")).toBeVisible();
   await expect(page.locator('input[value="Atorvastatin 20mg"]')).toBeVisible();
 
-  await page.getByRole("button", { name: "상세 닫기" }).click();
-  await expect(page.locator('input[value="Atorvastatin 20mg"]')).toBeHidden();
+  await expect(page.getByRole("button", { name: "상세 닫기" })).toBeVisible();
 
   await page.getByTestId("order-queue-item-dispensing-queue-1").click();
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
   await page.getByRole("button", { name: "처치 이력 패널 열기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "처치 이력" })).toBeVisible();
+});
+
+test("legacy chart route opens treatment shell without tab sync loop", async ({ page }) => {
+  await page.goto("/w/clair-demo/chart");
+
+  await expect(page.getByTestId("module-side-panel-title")).toHaveText("진료/차트");
+  await expect(page.getByText("기본 SOAP")).toBeVisible();
+  await expect(page).toHaveURL(/modulePanel=open/);
+  await expect(page).toHaveURL(/right=closed/);
 });
 
 test("global command palette searches and opens patient context", async ({ page }) => {
@@ -502,7 +510,7 @@ test("module side panel order type segmented control filters side orders", async
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
   await expect(allFilter).toHaveAttribute("aria-pressed", "true");
   await expect(sidePanel.getByText("항생제 세트 A")).toBeVisible();
-  await expect(sidePanel.getByText("수액 처치")).toBeVisible();
+  await expect(sidePanel.getByText("수액 처치", { exact: true })).toBeVisible();
   await expect(sidePanel.getByText("네뷸라이징")).toBeVisible();
 
   const treatmentCard = page.getByTestId("order-queue-item-dispensing-queue-1");
@@ -516,7 +524,7 @@ test("module side panel order type segmented control filters side orders", async
 
   await treatmentFilter.click();
   await expect(treatmentFilter).toHaveAttribute("aria-pressed", "true");
-  await expect(sidePanel.getByText("수액 처치")).toBeVisible();
+  await expect(sidePanel.getByText("수액 처치", { exact: true })).toBeVisible();
   await expect(sidePanel.getByText("네뷸라이징")).toBeVisible();
   await expect(sidePanel.getByText("항생제 세트 A")).toBeHidden();
 

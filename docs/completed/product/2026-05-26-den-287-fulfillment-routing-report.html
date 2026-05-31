@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-287 Fulfillment Routing</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        letter-spacing: 0;
+      }
+      h2 {
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+      .danger {
+        background: #fff1f2;
+        color: #9f1239;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border-top: 1px solid #d9dee8;
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      a {
+        color: #1f5eff;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-287 / 2026-05-26 / Fulfillment Routing</p>
+      <h1>확정 Order 후속 업무 라우팅 보고서</h1>
+      <p>
+        차트에서 workspace catalog 오더를 확정하면, 서버가 저장한 applied
+        snapshot의 destination과 task 필요 여부를 기준으로 lab, imaging,
+        dispensing, treatment 업무 queue에 fulfillment work item을 만들도록
+        연결했다. 같은 오더 확정을 다시 시도해도 같은 work item을 재사용한다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+      <span class="badge warn">Inpatient queue: Follow-up</span>
+      <span class="badge danger">Remote DB: Not applied</span>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li>
+            차트 확정 결과의 <code>appliedSnapshot</code>을 fulfillment sync
+            boundary로 전달한다.
+          </li>
+          <li>
+            기존 mock orders fixture에 없는 catalog 기반 신규 확정 오더도
+            snapshot으로 안전한 virtual order를 만들어 queue에 넣는다.
+          </li>
+          <li>
+            work item id는 <code>fulfill-{orderId}</code> 형태로 유지해 같은
+            확정 재시도에서 중복 work item이 생기지 않게 했다.
+          </li>
+          <li>
+            fulfillment source snapshot에는 업무 수행에 필요한 최소한의 이름,
+            청구명, 가격 snapshot, 수량, 지시사항, destination, source preset
+            id만 담는다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>라우팅 규칙</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Catalog destination</th>
+              <th>이번 구현</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>lab</code></td>
+              <td>Lab queue work item 생성</td>
+              <td>
+                검사 완료 후 수의사 확인 gate는 후속 billing 흐름에서 다룸
+              </td>
+            </tr>
+            <tr>
+              <td><code>imaging</code></td>
+              <td>Imaging queue work item 생성</td>
+              <td>PACS/device integration은 범위 밖</td>
+            </tr>
+            <tr>
+              <td><code>dispensing</code></td>
+              <td>Dispensing queue work item 생성</td>
+              <td>재고/라벨 출력은 범위 밖</td>
+            </tr>
+            <tr>
+              <td><code>treatment</code></td>
+              <td>Treatment queue work item 생성</td>
+              <td>처치/치료성 업무의 1차 queue</td>
+            </tr>
+            <tr>
+              <td><code>billing_only</code>, <code>chart_only</code></td>
+              <td>Fulfillment work item 생성 안 함</td>
+              <td>청구 후보 생성은 별도 이슈 범위</td>
+            </tr>
+            <tr>
+              <td><code>taskRequired: false</code></td>
+              <td>Fulfillment work item 생성 안 함</td>
+              <td>업무 queue가 필요 없는 catalog row</td>
+            </tr>
+            <tr>
+              <td><code>inpatient</code></td>
+              <td>
+                이번 구현에서는 shared fulfillment queue로 라우팅하지 않음
+              </td>
+              <td>
+                현재 fulfillment queue type과 권한 모델이 입원 전용 queue를 아직
+                지원하지 않아 명시 follow-up으로 남김
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>보안 및 데이터 경계</h2>
+        <ul>
+          <li>
+            client가 보낸 가격이나 이름이 아니라, DEN-286에서 서버가 저장한
+            applied snapshot을 fulfillment source로 사용한다.
+          </li>
+          <li>
+            source snapshot에는 SOAP 본문, secret, token, 외부 provider payload,
+            불필요한 개인정보를 넣지 않는다.
+          </li>
+          <li>
+            이번 작업은 app/API/core와 local test만 수행했다. remote Supabase
+            적용, 원격 RLS replay, production deploy, 실데이터 import는 하지
+            않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li>
+            <a
+              href="../../../src/features/chart/server-order-action-persistence-core.ts"
+              >src/features/chart/server-order-action-persistence-core.ts</a
+            >
+          </li>
+          <li>
+            <a
+              href="../../../src/features/fulfillment/server-fulfillment-work-item-core.ts"
+              >src/features/fulfillment/server-fulfillment-work-item-core.ts</a
+            >
+          </li>
+          <li>
+            <a
+              href="../../../tests/chart-order-action-persistence-server.spec.ts"
+              >tests/chart-order-action-persistence-server.spec.ts</a
+            >
+          </li>
+          <li>
+            <a href="../../../tests/fulfillment-work-item-server.spec.ts"
+              >tests/fulfillment-work-item-server.spec.ts</a
+            >
+          </li>
+          <li>
+            <a href="../../engineering/changelog.md"
+              >docs/engineering/changelog.md</a
+            >
+          </li>
+          <li>
+            <a href="../../product/domain/workspace-order-catalog-platform.md"
+              >docs/product/domain/workspace-order-catalog-platform.md</a
+            >
+          </li>
+          <li>
+            <a href="../../product/domain/order-fulfillment-handoff.md"
+              >docs/product/domain/order-fulfillment-handoff.md</a
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>명령</th>
+              <th>결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart-order-action-persistence-server.spec.ts
+                  --reporter=line</code
+                >
+              </td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/fulfillment-work-item-server.spec.ts
+                  --reporter=line</code
+                >
+              </td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart.spec.ts -g "chart order add searches active
+                  workspace catalog" --reporter=line</code
+                >
+              </td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td><code>npx tsc --noEmit --pretty false</code></td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td><code>npm run docs:check</code></td>
+              <td>통과</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>남은 범위</h2>
+        <ul>
+          <li>
+            <code>inpatient</code>는 현재 fulfillment queue type과 권한 모델에
+            없어 후속 이슈로 분리해야 한다.
+          </li>
+          <li>
+            <code>billing_only</code> 오더의 차트 확정 즉시 billing candidate
+            생성은 별도 billing 이슈에서 처리해야 한다.
+          </li>
+          <li>
+            lab/imaging 결과가 차트로 돌아온 뒤 담당 수의사가 확인해야 billing이
+            진행되는 gate는 후속 workflow 이슈에서 구현해야 한다.
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

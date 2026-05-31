@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/input-otp";
 import {
   MOCK_AUTH_ROLES,
+  resolveDemoMockAuthRoleFromEmail,
   type MockAuthRole,
   type MockSessionStorageMode,
 } from "@/features/auth/mock-session";
@@ -56,6 +57,7 @@ const mockInviteOtpToken = "0".repeat(inviteOtpLength);
 const loginFormClassName = "flex w-full flex-col gap-5";
 const loginSupportPanelClassName =
   "rounded-[var(--clair-radius-lg)] border border-border bg-[var(--emr-surface-panel)] p-4 shadow-[var(--clair-shadow-sm)]";
+const isProductionRuntime = process.env.NODE_ENV === "production";
 
 function getSafeNextHref(value: string | null) {
   if (!value) return defaultWorkspaceHref;
@@ -144,11 +146,15 @@ export function LoginForm() {
     supabaseConfigured,
   } = useAuthClient();
   const usesSupabaseProvider = authProvider === "supabase";
+  const showsMockDevelopmentControls =
+    !usesSupabaseProvider && !isProductionRuntime;
   const reason = searchParams.get("reason");
   const authSessionNotice = getAuthSessionNotice(reason);
   const inviteEmail = searchParams.get("inviteEmail");
   const isInviteLogin = isInviteLoginReason(reason);
   const isInviteOtpLogin = isInviteOtpReason(reason);
+  const showsInviteSupportPanel =
+    (isInviteLogin || isInviteOtpLogin) && !isProductionRuntime;
   const safeInviteNext = getSafeInviteNextHref(searchParams.get("next"));
 
   useEffect(() => {
@@ -248,7 +254,15 @@ export function LoginForm() {
 
         await signInWithPassword({ email, password });
       } else {
-        await signInWithMockRole(selectedRole, storageMode, {
+        const mockRole = isProductionRuntime
+          ? resolveDemoMockAuthRoleFromEmail(email)
+          : selectedRole;
+
+        if (!mockRole) {
+          throw new Error("mock-demo-account-not-found");
+        }
+
+        await signInWithMockRole(mockRole, storageMode, {
           forceProviderError: searchParams.get("mockProviderError") === "1",
         });
       }
@@ -265,6 +279,8 @@ export function LoginForm() {
               : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
           : usesSupabaseProvider
           ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
+          : errorCode === "mock-demo-account-not-found"
+            ? "스테이징 테스트 계정을 확인할 수 없습니다. 제공된 계정 이메일을 다시 확인하세요."
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
       );
       setIsSubmitting(false);
@@ -497,7 +513,7 @@ export function LoginForm() {
             </div>
 
             <aside className="mx-auto w-full max-w-[760px]">
-              {usesSupabaseProvider || isInviteLogin ? (
+              {showsInviteSupportPanel ? (
                 <div className={loginSupportPanelClassName}>
                   <InviteLoginContext inviteEmail={inviteEmail} />
                   <SessionStatus
@@ -506,7 +522,7 @@ export function LoginForm() {
                     signOut={signOut}
                   />
                 </div>
-              ) : (
+              ) : showsMockDevelopmentControls ? (
                 <div className={cn(loginSupportPanelClassName, "flex flex-col gap-4")}>
                   <div className="flex flex-col gap-1.5">
                     <p className="text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]">
@@ -604,7 +620,7 @@ export function LoginForm() {
 
                   <SessionStatus hydrated={hydrated} session={session} signOut={signOut} />
                 </div>
-              )}
+              ) : null}
             </aside>
           </div>
         </section>

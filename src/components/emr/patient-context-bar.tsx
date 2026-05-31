@@ -21,8 +21,11 @@ import {
 } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrIconButton } from "@/components/emr/icon-button";
+import { EmrPopoverFieldRow, EmrPopoverShell } from "@/components/emr/popover-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -64,9 +67,67 @@ type ScrollState = {
   canScrollRight: boolean;
 };
 
+type VitalDraftState = {
+  key: string;
+  values: string[];
+};
+
 const SCROLL_EDGE_TOLERANCE = 2;
 const getAssetSrc = (asset: string | { src?: string }) =>
   typeof asset === "string" ? asset : asset.src ?? "";
+
+function getNodeText(value: ReactNode): string {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  return "";
+}
+
+function getVitalUnit(label: ReactNode, value: ReactNode): string {
+  const labelText = getNodeText(label);
+  const valueText = getNodeText(value);
+  const suffix = valueText.match(/(kg|°C|bpm|rpm|mmHg)$/)?.[1];
+
+  if (suffix) return suffix;
+  if (labelText.includes("체중")) return "kg";
+  if (labelText.includes("체온")) return "°C";
+  if (labelText.includes("심박")) return "bpm";
+  if (labelText.includes("호흡")) return "rpm";
+  if (labelText.includes("혈압")) return "mmHg";
+
+  return "";
+}
+
+function getVitalInputValue(value: ReactNode, unit: string): string {
+  const text = getNodeText(value);
+
+  if (!unit) return text;
+
+  return text.replace(new RegExp(`\\s*${unit}$`), "");
+}
+
+function getVitalDraft(items: PatientContextDatum[]) {
+  return items.map((item) => getVitalInputValue(item.value, getVitalUnit(item.label, item.value)));
+}
+
+function getVitalItemsKey(items: PatientContextDatum[]) {
+  return items
+    .map((item) => `${getNodeText(item.label)}=${getNodeText(item.value)}`)
+    .join("|");
+}
+
+function applyVitalDraft(items: PatientContextDatum[], draft: string[]) {
+  return items.map((item, index) => {
+    const unit = getVitalUnit(item.label, item.value);
+    const value = draft[index]?.trim() ?? "";
+
+    return {
+      ...item,
+      value: unit && value ? `${value} ${unit}` : value,
+    };
+  });
+}
 
 function getScrollState(element: HTMLDivElement | null): ScrollState {
   if (!element) {
@@ -104,6 +165,11 @@ export function EmrPatientContextBar({
     canScrollLeft: false,
     canScrollRight: false,
   }));
+  const [vitalPopoverOpen, setVitalPopoverOpen] = useState(false);
+  const [savedVitalDraft, setSavedVitalDraft] =
+    useState<VitalDraftState | null>(null);
+  const [editingVitalDraft, setEditingVitalDraft] =
+    useState<VitalDraftState | null>(null);
   const updateScrollState = useCallback(() => {
     setScrollState(getScrollState(scrollRef.current));
   }, []);
@@ -118,6 +184,16 @@ export function EmrPatientContextBar({
     });
   }, []);
   const shouldShowRightPanelToggle = Boolean(onToggleRightPanel);
+  const vitalItemsKey = getVitalItemsKey(vitalItems);
+  const committedVitalDraft =
+    savedVitalDraft?.key === vitalItemsKey
+      ? savedVitalDraft.values
+      : getVitalDraft(vitalItems);
+  const vitalDraft =
+    editingVitalDraft?.key === vitalItemsKey
+      ? editingVitalDraft.values
+      : committedVitalDraft;
+  const displayedVitalItems = applyVitalDraft(vitalItems, committedVitalDraft);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -169,17 +245,67 @@ export function EmrPatientContextBar({
               <PatientContextDatumGroup items={patientItems} />
             </div>
 
-            {vitalItems.length ? (
+            {displayedVitalItems.length ? (
               <div className="flex shrink-0 items-center gap-1.5">
                 <IllustrationIcon src={getAssetSrc(vitalHeartPulseIcon)} alt="" />
-                <PatientContextDatumGroup items={vitalItems} />
-                <EmrIconButton
-                  type="button"
-                  aria-label="바이탈 입력"
-                  className="size-[26px] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"
+                <PatientContextDatumGroup items={displayedVitalItems} />
+                <Popover
+                  open={vitalPopoverOpen}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      setEditingVitalDraft({
+                        key: vitalItemsKey,
+                        values: committedVitalDraft,
+                      });
+                    }
+
+                    setVitalPopoverOpen(open);
+                  }}
                 >
-                  <CdsActionsPlusIcon />
-                </EmrIconButton>
+                  <PopoverTrigger
+                    render={
+                      <EmrIconButton
+                        type="button"
+                        aria-label="바이탈 입력"
+                        aria-expanded={vitalPopoverOpen}
+                        className="size-[26px] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"
+                      >
+                        <CdsActionsPlusIcon />
+                      </EmrIconButton>
+                    }
+                  />
+                  <PatientVitalPopover
+                    draft={vitalDraft}
+                    vitalItems={displayedVitalItems}
+                    onCancel={() => {
+                      setEditingVitalDraft(null);
+                      setVitalPopoverOpen(false);
+                    }}
+                    onDraftChange={(index, value) => {
+                      setEditingVitalDraft((current) => {
+                        const currentValues =
+                          current?.key === vitalItemsKey
+                            ? current.values
+                            : committedVitalDraft;
+                        const next = [...currentValues];
+                        next[index] = value;
+
+                        return {
+                          key: vitalItemsKey,
+                          values: next,
+                        };
+                      });
+                    }}
+                    onSave={() => {
+                      setSavedVitalDraft({
+                        key: vitalItemsKey,
+                        values: vitalDraft,
+                      });
+                      setEditingVitalDraft(null);
+                      setVitalPopoverOpen(false);
+                    }}
+                  />
+                </Popover>
               </div>
             ) : null}
 
@@ -315,6 +441,61 @@ function RightPanelToggleButton({
         {tooltipLabel}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function PatientVitalPopover({
+  draft,
+  onCancel,
+  onDraftChange,
+  onSave,
+  vitalItems,
+}: {
+  draft: string[];
+  onCancel: () => void;
+  onDraftChange: (index: number, value: string) => void;
+  onSave: () => void;
+  vitalItems: PatientContextDatum[];
+}) {
+  return (
+    <EmrPopoverShell
+      align="start"
+      width="md"
+      title="바이탈"
+      meta="환자 인포바"
+      description="현재 진료에서 확인한 수치를 빠르게 수정합니다."
+      onClose={onCancel}
+      footer={
+        <>
+          <Button type="button" variant="outline" size="xs" onClick={onCancel}>
+            취소
+          </Button>
+          <Button type="button" size="xs" onClick={onSave}>
+            저장
+          </Button>
+        </>
+      }
+    >
+      {vitalItems.slice(0, 4).map((item, index) => {
+        const unit = getVitalUnit(item.label, item.value);
+
+        return (
+          <EmrPopoverFieldRow
+            key={`${String(item.label)}-${index}`}
+            label={item.label}
+            required={index < 2}
+            unit={unit}
+          >
+            <Input
+              aria-label={`${getNodeText(item.label)} 입력`}
+              className={cn("h-8 bg-card", unit && "pr-10")}
+              value={draft[index] ?? ""}
+              onValueChange={(value) => onDraftChange(index, value)}
+            />
+          </EmrPopoverFieldRow>
+        );
+      })}
+    </EmrPopoverShell>
   );
 }
 

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-294 고급 필터 빌더 테이블 적용 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --line: #d8e0ea;
+        --muted: #64748b;
+        --text: #111827;
+        --soft: #eef2f7;
+        --accent: #2563eb;
+        --danger: #dc2626;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef2ff;
+        padding: 2px 5px;
+        color: #1d4ed8;
+        font-size: 0.92em;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .lead {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      .card {
+        margin-top: 22px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 22px;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--soft);
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .evidence {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 12px;
+      }
+
+      .evidence img {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .pass {
+        color: #15803d;
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 28px 16px 56px;
+        }
+
+        .grid,
+        .evidence {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-294 고급 필터 빌더 테이블 적용</h1>
+      <p class="lead">
+        DEN-293에서 만든 공용 advanced filter builder를 실제 수납과 진료/차트 오더 테이블에
+        적용했다. 두 화면 모두 기존 정렬 정책은 유지하고, 필터는 섹션 Filter 버튼에서 열리는
+        공용 builder로 동작한다.
+      </p>
+
+      <section class="card">
+        <h2>적용 범위</h2>
+        <div class="grid">
+          <div class="metric">
+            <strong>수납 청구 항목</strong>
+            <code>업무</code>, <code>청구금액</code> 필드를 공용 builder config로 연결했다.
+          </div>
+          <div class="metric">
+            <strong>진료/차트 오더</strong>
+            <code>상태</code>, <code>수의사</code> 필드를 공용 builder config로 연결했다.
+          </div>
+          <div class="metric">
+            <strong>첫 open 상태</strong>
+            조건 1개짜리 빈 draft row만 표시한다.
+          </div>
+          <div class="metric">
+            <strong>active 계산</strong>
+            필드, 조건, 값이 완성된 row만 필터와 <code>Filter N</code>에 반영한다.
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>변경 사항</h2>
+        <ul>
+          <li><code>src/features/billing/module.tsx</code>: feature-local billing filter builder를 공용 builder로 교체했다.</li>
+          <li><code>src/features/chart/module.tsx</code>: feature-local chart/order filter builder를 공용 builder로 교체했다.</li>
+          <li><code>src/components/ui/select.tsx</code>: filter popover 안의 select dropdown이 클릭 가능하도록 overlay layer를 조정했다.</li>
+          <li><code>tests/billing.spec.ts</code>, <code>tests/chart.spec.ts</code>, <code>tests/table-sort-filter-qa.spec.ts</code>: 새 auto-apply builder UX에 맞춰 검증을 갱신했다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>증거 이미지</h2>
+        <div class="evidence">
+          <figure>
+            <img src="evidence/2026-05-26-den-294-billing-advanced-filter-builder.png" alt="수납 청구 항목 공용 필터 빌더 적용 화면" />
+            <figcaption>수납 청구 항목 필터 builder</figcaption>
+          </figure>
+          <figure>
+            <img src="evidence/2026-05-26-den-294-chart-order-advanced-filter-builder.png" alt="진료 차트 오더 공용 필터 빌더 적용 화면" />
+            <figcaption>진료/차트 오더 필터 builder</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>검증 결과</h2>
+        <ul>
+          <li class="pass"><code>npx tsc --noEmit</code> 통과</li>
+          <li class="pass">DEN-294 관련 파일 대상 ESLint 통과, 기존 chart hook 경고 2개만 남음</li>
+          <li class="pass">공용 builder foundation spec 통과, 3 passed</li>
+          <li class="pass">billing focused sort/filter spec 통과</li>
+          <li class="pass">chart focused sort/filter spec 통과</li>
+          <li class="pass">cross-table QA spec 통과, 3 passed</li>
+          <li class="pass"><code>npm run docs:check</code> 통과</li>
+          <li class="pass"><code>git diff --check</code> 통과</li>
+          <li class="warn"><code>npm run lint</code> 전체 실행은 기존 dirty worktree의 <code>src/features/hospital-admin/module.tsx:1848</code> 오류에서 중단됨</li>
+          <li class="warn"><code>tests/billing.spec.ts tests/chart.spec.ts</code> 전체 실행은 25 passed, 1 failed. 실패는 SOAP route-backed save 텍스트 불일치로 이번 필터 변경과 직접 관련 없음</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>남은 범위</h2>
+        <ul>
+          <li>고객관리와 병원관리 order catalog는 DEN-294에서 교체하지 않았고 기존 feature-local builder를 유지한다.</li>
+          <li>saved views, saved filters, active chip row, URL/storage persistence는 계속 제외한다.</li>
+          <li>OR/nested group 실제 동작, Supabase/DB/RLS/server-side filtering은 별도 승인 범위가 필요하다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

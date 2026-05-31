@@ -16,6 +16,7 @@ Use this repo's manual Linear workflow as a lightweight Symphony replacement. Ke
 - Stop meaningful issue work at `Human Review`; move to `Done` only when 승욱 explicitly accepts or asks.
 - Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo, link, or wording fixes.
 - Do not enter live Supabase, DB migration, RLS, payment or subscription, email delivery, production deploy, or role and permission policy changes without explicit approval.
+- If an approval-gated action is the better or necessary path for the active issue, do not choose a weaker workaround just to avoid the gate. Stop, explain the required gated operation, and ask 승욱 for explicit approval before continuing.
 
 ## Required Workflow
 

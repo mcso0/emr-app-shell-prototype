@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR Popover Component Research Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #eef2f7;
+        --panel: #ffffff;
+        --surface: #f7fafc;
+        --muted: #f5f5f5;
+        --line: #e5e5e5;
+        --line-strong: #a3a3a3;
+        --ink: #171717;
+        --secondary: #404040;
+        --tertiary: #737373;
+        --disabled: #a3a3a3;
+        --blue: #005fc4;
+        --blue-soft: #ebf8ff;
+        --red: #c53030;
+        --red-soft: #fff5f5;
+        --green: #276749;
+        --green-soft: #f0fff4;
+        --shadow: 0 16px 40px rgba(23, 23, 23, 0.1), 0 2px 6px rgba(23, 23, 23, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(238, 242, 247, 0.92)),
+          var(--bg);
+        color: var(--ink);
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        letter-spacing: 0;
+        line-height: 1.58;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 44px 24px 72px;
+      }
+
+      header,
+      section {
+        margin-bottom: 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 1px 2px rgba(23, 23, 23, 0.04);
+      }
+
+      header {
+        padding: 28px;
+      }
+
+      section {
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin-bottom: 10px;
+        font-size: 28px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      p {
+        margin-bottom: 10px;
+      }
+
+      .meta,
+      .note {
+        color: var(--tertiary);
+        font-size: 13px;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .metric {
+        min-height: 86px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--secondary);
+        background: var(--surface);
+        font-weight: 700;
+      }
+
+      code {
+        border-radius: 5px;
+        background: #edf2f7;
+        padding: 2px 5px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 5px 0;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      .callout {
+        border-left: 4px solid var(--blue);
+        background: var(--blue-soft);
+      }
+
+      .mock-stage {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .context-bar {
+        overflow: hidden;
+        border: 1px solid #d8dde6;
+        border-radius: 12px;
+        background: #f8fafc;
+      }
+
+      .context-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 24px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: var(--muted);
+        padding: 0 8px;
+        color: var(--secondary);
+        font-size: 12px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .pill span {
+        color: var(--tertiary);
+        font-weight: 600;
+      }
+
+      .icon-button {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #ffffff;
+        color: var(--secondary);
+        font-weight: 800;
+      }
+
+      .popover-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 280px;
+        padding: 22px;
+        background:
+          linear-gradient(90deg, rgba(229, 229, 229, 0.42) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(229, 229, 229, 0.42) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+
+      .trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 0 10px;
+        color: var(--secondary);
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 1px 2px rgba(23, 23, 23, 0.06);
+      }
+
+      .popover {
+        width: 280px;
+        border: 1px solid rgba(23, 23, 23, 0.12);
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: var(--shadow);
+      }
+
+      .popover.compact {
+        width: 236px;
+      }
+
+      .popover.wide {
+        width: 360px;
+      }
+
+      .popover.reception {
+        width: min(520px, 100%);
+      }
+
+      .popover.dual {
+        width: min(320px, 100%);
+      }
+
+      .pop-head {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 12px 10px;
+      }
+
+      .head-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .title {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .subtle {
+        color: var(--tertiary);
+        font-size: 12px;
+      }
+
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 99px;
+        background: var(--blue);
+      }
+
+      .pop-body {
+        display: grid;
+        gap: 8px;
+        padding: 0 12px 12px;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+      }
+
+      .label {
+        color: var(--secondary);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .req {
+        color: var(--red);
+      }
+
+      .input {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 0 9px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .input small {
+        color: var(--tertiary);
+        font-size: 11px;
+      }
+
+      .pop-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 26px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #ffffff;
+        padding: 0 9px;
+        color: var(--secondary);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .button.primary {
+        border-color: #171717;
+        background: #171717;
+        color: #ffffff;
+      }
+
+      .button.danger {
+        border-color: #feb2b2;
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .list-option {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 8px;
+      }
+
+      .list-option.active {
+        border-color: #a3a3a3;
+        background: #f5f5f5;
+      }
+
+      .selection-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        padding: 13px;
+      }
+
+      .selection-card.active {
+        border-color: var(--line-strong);
+        background: #f8fafc;
+      }
+
+      .control-dot,
+      .control-check {
+        display: inline-flex;
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d4d4d4;
+        color: #ffffff;
+        font-size: 10px;
+        line-height: 1;
+      }
+
+      .control-dot {
+        border-radius: 999px;
+      }
+
+      .control-check {
+        border-radius: 4px;
+      }
+
+      .selection-card.active .control-dot,
+      .selection-card.active .control-check,
+      .list-option.active .control-check {
+        border-color: var(--line-strong);
+        background: var(--line-strong);
+      }
+
+      .selection-copy {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .option-title {
+        display: block;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .option-meta {
+        display: block;
+        margin-top: 2px;
+        color: var(--tertiary);
+        font-size: 11px;
+      }
+
+      .tag {
+        border-radius: 999px;
+        background: var(--green-soft);
+        padding: 2px 7px;
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .anatomy {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .anatomy-card {
+        min-height: 108px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        padding: 12px;
+      }
+
+      .anatomy-card strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      @media (max-width: 900px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        .summary,
+        .grid-2,
+        .mock-stage,
+        .anatomy {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-30 · Design-system research · Popover component proposal</p>
+        <h1>재사용 Popover 컴포넌트 조사 및 시안</h1>
+        <p>
+          Figma의 바이탈 입력 popover를 바로 도메인 전용으로 만들기보다, 환자 인포바와 여러 업무 화면에서 반복 가능한
+          조회·입력·선택·액션 popover 패턴으로 승격하는 방향을 검토했다.
+        </p>
+        <div class="summary">
+          <div class="metric">
+            <span class="meta">Figma reference</span>
+            <strong>280×279</strong>
+            <span class="note">header / content / footer 구조</span>
+          </div>
+          <div class="metric">
+            <span class="meta">Current primitive</span>
+            <strong>Base UI</strong>
+            <span class="note"><code>src/components/ui/popover.tsx</code></span>
+          </div>
+          <div class="metric">
+            <span class="meta">Direct popover use</span>
+            <strong>검색/선택</strong>
+            <span class="note">품종, 보호자, 멀티 선택</span>
+          </div>
+          <div class="metric">
+            <span class="meta">Recommendation</span>
+            <strong>EMR shell</strong>
+            <span class="note">generic popover 위에 업무용 wrapper</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="callout">
+        <h2>결론</h2>
+        <p>
+          새 엔진을 만들지 말고 기존 <code>Popover</code> primitive를 유지한 채, <code>src/components/emr</code>에
+          <code>EmrPopoverShell</code> 계열을 추가하는 것이 가장 안전하다. 이 shell은 헤더, 설명, body scroll, footer action,
+          width, density, dirty/disabled 상태를 표준화하고, 바이탈·메모·간단 편집·검색 결과 선택 같은 도메인 내용은 호출부가 소유한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>현재 내부 사용 패턴</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>패턴</th>
+              <th>대표 위치</th>
+              <th>현재 역할</th>
+              <th>공용화 시사점</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Popover</td>
+              <td><code>profile-drawer.tsx</code></td>
+              <td>입력 필드에 붙는 자동완성, 보호자 검색, 품종 멀티 선택</td>
+              <td>입력 anchor 너비 동기화, listbox, mouseDown prevent, focus 유지가 반복됨</td>
+            </tr>
+            <tr>
+              <td>DropdownMenu</td>
+              <td><code>row-action-menu.tsx</code>, status action, home filters</td>
+              <td>행/카드 액션, 체크박스 필터, 작은 상태 변경 메뉴</td>
+              <td>단순 command list는 popover가 아니라 menu로 유지해야 함</td>
+            </tr>
+            <tr>
+              <td>Select</td>
+              <td>table filter, reception forms, home filters</td>
+              <td>단일 값 선택</td>
+              <td>선택 전용은 Select가 더 적합. popover는 복합 입력/조회에 한정</td>
+            </tr>
+            <tr>
+              <td>Tooltip</td>
+              <td>nav rail, workspace tabs, density selector</td>
+              <td>짧은 설명만 제공</td>
+              <td>interactive content를 tooltip에 넣지 않는 규칙 유지</td>
+            </tr>
+            <tr>
+              <td>Patient context bar trigger</td>
+              <td><code>patient-context-bar.tsx</code></td>
+              <td>바이탈 추가 버튼은 있으나 아직 popover 연결 없음</td>
+              <td>이번 Figma reference의 첫 적용 후보</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Popover 변형 제안</h2>
+        <div class="anatomy">
+          <div class="anatomy-card">
+            <strong>form</strong>
+            <span class="note">바이탈, 간단 메모, 수치 입력. header + compact fields + footer actions.</span>
+          </div>
+          <div class="anatomy-card">
+            <strong>picker</strong>
+            <span class="note">보호자, 품종, 간단 항목 선택. search/input anchor + listbox body.</span>
+          </div>
+          <div class="anatomy-card">
+            <strong>single-select</strong>
+            <span class="note">접수 등록 유형, 빠른 상태 전환. radio/card option + optional confirm footer.</span>
+          </div>
+          <div class="anatomy-card">
+            <strong>multi-select</strong>
+            <span class="note">업무 필터, 표시 옵션, 다중 선택. checkbox list + apply/reset footer.</span>
+          </div>
+          <div class="anatomy-card">
+            <strong>action-list</strong>
+            <span class="note">짧은 옵션/액션. 단순 row action은 menu, 값 조정은 popover로 제한.</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>시안 A · 환자 인포바 바이탈 입력</h2>
+        <div class="mock-stage">
+          <div class="context-bar">
+            <div class="context-row">
+              <span class="pill"><span>환자</span> 토리 · 4.2kg</span>
+              <span class="pill"><span>보호자</span> 김보호</span>
+            </div>
+            <div class="popover-row">
+              <button class="trigger">♡ 바이탈 <strong>3시간 전</strong></button>
+              <article class="popover">
+                <div class="pop-head">
+                  <div class="head-line">
+                    <div class="title"><span class="dot"></span> 바이탈</div>
+                    <button class="icon-button">×</button>
+                  </div>
+                  <div class="subtle">최근 측정 3시간 전 · 이번 진료 기록에 저장</div>
+                </div>
+                <div class="pop-body">
+                  <div class="field-row"><span class="label">체중 <span class="req">*</span></span><span class="input">4.20 <small>kg</small></span></div>
+                  <div class="field-row"><span class="label">체온 <span class="req">*</span></span><span class="input">38.7 <small>°C</small></span></div>
+                  <div class="field-row"><span class="label">심박 <span class="req">*</span></span><span class="input">112 <small>bpm</small></span></div>
+                  <div class="field-row"><span class="label">호흡 <span class="req">*</span></span><span class="input">24 <small>rpm</small></span></div>
+                </div>
+                <div class="pop-footer">
+                  <button class="button">이력</button>
+                  <div>
+                    <button class="button">취소</button>
+                    <button class="button primary">저장</button>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+          <div>
+            <h3>의도</h3>
+            <ul>
+              <li>상단 환자 인포바에서 환자 문맥을 잃지 않고 빠르게 입력한다.</li>
+              <li>필수 수치 입력과 저장 액션이 있어 tooltip이나 menu가 아니라 form popover로 분류한다.</li>
+              <li>저장 전 dirty 상태, validation, 저장 중 disabled 상태를 shell이 받을 수 있어야 한다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>시안 B · 검색/선택 Popover</h2>
+        <div class="grid-2">
+          <article class="popover wide">
+            <div class="pop-head">
+              <div class="title">보호자 검색</div>
+              <div class="input">김보호 또는 010 검색 <small>⌘K</small></div>
+            </div>
+            <div class="pop-body">
+              <div class="list-option active">
+                <span><span class="option-title">김보호</span><span class="option-meta">010-1234-5678 · 연결 환자 2마리</span></span>
+                <span class="tag">선택됨</span>
+              </div>
+              <div class="list-option">
+                <span><span class="option-title">김보호자</span><span class="option-meta">010-2234-5678 · 연결 환자 1마리</span></span>
+                <span class="tag">기존</span>
+              </div>
+            </div>
+          </article>
+          <div>
+            <h3>의도</h3>
+            <ul>
+              <li>현재 profile drawer의 보호자/품종 popover를 공통 row density로 정렬한다.</li>
+              <li>입력 anchor 폭을 기본값으로 쓰되, 넓은 결과는 <code>width="wide"</code>로 확장한다.</li>
+              <li>결과 선택 후 닫기, 빈 결과 안내, 직접 입력 fallback을 호출부가 결정한다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>시안 C · 작은 옵션/액션 Popover</h2>
+        <div class="grid-2">
+          <article class="popover compact">
+            <div class="pop-head">
+              <div class="title">표시 옵션</div>
+              <div class="subtle">이번 화면에만 적용</div>
+            </div>
+            <div class="pop-body">
+              <div class="list-option active"><span class="option-title">미완료만 보기</span><span>✓</span></div>
+              <div class="list-option"><span class="option-title">내 담당만 보기</span><span></span></div>
+              <div class="list-option"><span class="option-title">응급 포함</span><span>✓</span></div>
+            </div>
+            <div class="pop-footer">
+              <button class="button danger">초기화</button>
+              <button class="button primary">적용</button>
+            </div>
+          </article>
+          <div>
+            <h3>의도</h3>
+            <ul>
+              <li>DropdownMenu로도 가능하지만, 체크/적용/초기화가 필요한 경우 popover shell이 더 명확하다.</li>
+              <li>단순 행 액션은 기존 <code>EmrRowActionMenu</code>를 유지한다.</li>
+              <li>popover는 사용자가 머무르며 값을 조정하는 표면으로 제한한다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>시안 C-1 · 접수 단일 선택 Popover</h2>
+        <div class="grid-2">
+          <article class="popover reception">
+            <div class="pop-head">
+              <div class="head-line">
+                <div class="title">신규 등록</div>
+                <button class="icon-button">×</button>
+              </div>
+              <div class="subtle">접수 화면 상단 CTA에서 열리는 등록 유형 선택</div>
+            </div>
+            <div class="pop-body">
+              <div class="selection-card active">
+                <span class="control-dot">•</span>
+                <span class="selection-copy">
+                  <span class="option-title">환자/보호자 모두 신규 등록</span>
+                  <span class="option-meta">처음 내원한 보호자와 동물을 함께 등록합니다.</span>
+                </span>
+              </div>
+              <div class="selection-card">
+                <span class="control-dot"></span>
+                <span class="selection-copy">
+                  <span class="option-title">기존 보호자에 신규 환자 등록</span>
+                  <span class="option-meta">이미 등록된 보호자에게 새 동물을 연결합니다.</span>
+                </span>
+              </div>
+            </div>
+            <div class="pop-footer">
+              <button class="button">취소</button>
+              <button class="button primary">다음</button>
+            </div>
+          </article>
+          <div>
+            <h3>의도</h3>
+            <ul>
+              <li>현재 접수 dialog의 카드형 radio 선택을 popover component contract에도 포함한다.</li>
+              <li>선택지만 바꾸는 UI는 <code>type="single-select"</code>, 다음 단계가 있으면 footer action을 켠다.</li>
+              <li>Figma에서는 <code>selection=radio</code>, <code>showFooter=true</code>, <code>showClose=true</code> 조합으로 만든다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>시안 C-2 · 단일/다중 선택 옵션</h2>
+        <div class="grid-2">
+          <article class="popover dual">
+            <div class="pop-head">
+              <div class="title">업무 표시</div>
+              <div class="subtle">단일 선택은 즉시 반영, 다중 선택은 적용 버튼 사용</div>
+            </div>
+            <div class="pop-body">
+              <div class="selection-card active">
+                <span class="control-dot">•</span>
+                <span class="selection-copy">
+                  <span class="option-title">전체 보기</span>
+                  <span class="option-meta">현재 화면의 모든 업무를 표시</span>
+                </span>
+              </div>
+              <div class="selection-card">
+                <span class="control-dot"></span>
+                <span class="selection-copy">
+                  <span class="option-title">내 담당만</span>
+                  <span class="option-meta">로그인 사용자 담당 업무만 표시</span>
+                </span>
+              </div>
+              <div class="list-option active"><span class="option-title">미완료</span><span class="control-check">✓</span></div>
+              <div class="list-option active"><span class="option-title">응급 포함</span><span class="control-check">✓</span></div>
+              <div class="list-option"><span class="option-title">완료 숨김</span><span class="control-check"></span></div>
+            </div>
+            <div class="pop-footer">
+              <button class="button danger">초기화</button>
+              <button class="button primary">적용</button>
+            </div>
+          </article>
+          <div>
+            <h3>의도</h3>
+            <ul>
+              <li><code>PopoverOptionGroup</code>은 <code>mode="single"</code>과 <code>mode="multiple"</code>을 모두 지원한다.</li>
+              <li>radio, checkbox, multi-check는 같은 row anatomy를 쓰고 control indicator만 바꾼다.</li>
+              <li>차후 필터 빌더, 상태 표시 옵션, 업무 배정 옵션이 늘어나도 option subcomponent만 확장한다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>추천 컴포넌트화</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>레이어</th>
+              <th>제안</th>
+              <th>책임</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>src/components/ui/popover.tsx</code></td>
+              <td>기존 유지</td>
+              <td>Base UI primitive, positioning, portal, generic animation</td>
+            </tr>
+            <tr>
+              <td><code>src/components/emr/popover-shell.tsx</code></td>
+              <td>신규 추천</td>
+              <td>EMR header/body/footer anatomy, width, density, scroll, action layout, option group</td>
+            </tr>
+            <tr>
+              <td><code>src/components/ui/radio-group.tsx</code></td>
+              <td>신규 추천</td>
+              <td>Base UI radio semantics for reception-style single selection</td>
+            </tr>
+            <tr>
+              <td>Feature-local wrapper</td>
+              <td><code>PatientVitalPopover</code>, <code>GuardianSearchPopover</code></td>
+              <td>도메인 데이터, validation, 저장/조회 callback, copy</td>
+            </tr>
+          </tbody>
+        </table>
+        <pre><code>type EmrPopoverShellProps = {
+  title: ReactNode;
+  description?: ReactNode;
+  meta?: ReactNode;
+  width?: "sm" | "md" | "lg" | "anchor";
+  density?: "compact" | "default";
+  footer?: ReactNode;
+  closeLabel?: string;
+  children: ReactNode;
+};
+
+type EmrPopoverOptionGroupProps = {
+  selectionMode?: "single" | "multiple";
+  closeOnSelect?: boolean;
+  onRequestClose?: () => void;
+};</code></pre>
+      </section>
+
+      <section>
+        <h2>옵션 및 상태 계약</h2>
+        <div class="grid-2">
+          <div>
+            <h3>허용 옵션</h3>
+            <ul>
+              <li><code>side</code>, <code>align</code>, <code>sideOffset</code>: 기존 Base UI positioner props 전달</li>
+              <li><code>width</code>: <code>anchor</code>, <code>sm</code> 236, <code>md</code> 280, <code>lg</code> 360</li>
+              <li><code>initialFocus</code>: 검색/입력 anchor 유지가 필요한 경우 false 허용</li>
+              <li><code>footer</code>: save/cancel, apply/reset, secondary action slot</li>
+              <li><code>bodyScroll</code>: 목록/긴 폼에서 max-height와 overflow 표준화</li>
+              <li><code>selectionMode</code>: <code>single</code>은 radio semantics, <code>multiple</code>은 checkbox semantics</li>
+              <li><code>closeOnSelect</code>: single은 기본 true, multiple은 기본 false</li>
+            </ul>
+          </div>
+          <div>
+            <h3>금지할 패턴</h3>
+            <ul>
+              <li>interactive form을 tooltip에 넣지 않기</li>
+              <li>단순 row action menu를 popover로 재작성하지 않기</li>
+              <li>popover shell이 환자/오더/수납 데이터 타입을 직접 받지 않기</li>
+              <li>각 화면에서 임의 width, shadow, radius를 반복 정의하지 않기</li>
+              <li>저장 mutation, 서버 검증, Supabase 범위를 이 컴포넌트 작업에 포함하지 않기</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>구현 이슈로 넘길 때의 권장 범위</h2>
+        <ul>
+          <li>1차: <code>EmrPopoverShell</code>, <code>EmrPopoverHeader</code>, <code>EmrPopoverFooter</code>, <code>EmrPopoverFieldRow</code> 추가</li>
+          <li>2차: <code>EmrPopoverOption</code>, <code>EmrPopoverOptionGroup</code>, <code>RadioGroup</code> 추가</li>
+          <li>3차: 환자 인포바의 바이탈 버튼에 feature-local <code>PatientVitalPopover</code> 연결</li>
+          <li>4차: 접수 등록 mode selection을 shared single-select option/card primitive로 정렬</li>
+          <li>검증: lint, typecheck, 환자 인포바 browser QA, 접수 single-select keyboard 회귀 확인</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

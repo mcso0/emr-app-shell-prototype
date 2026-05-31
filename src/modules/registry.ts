@@ -157,5 +157,13 @@ export const modules: ModuleDefinition[] = [
   },
 ];
 
+const moduleAliases: Record<string, string> = {
+  chart: "treatment",
+};
+
+export function normalizeModuleId(moduleId: string) {
+  return moduleAliases[moduleId] ?? moduleId;
+}
+
 export const getModule = (moduleId: string) =>
-  modules.find((module) => module.id === moduleId) ?? modules[5];
+  modules.find((module) => module.id === normalizeModuleId(moduleId)) ?? modules[5];

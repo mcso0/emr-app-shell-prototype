@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-336~339 Order Billing Action Sync Report</title>
+    <style>
+      body {
+        color: #111827;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        margin: 16px 0;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #d1d5db;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .warn {
+        color: #92400e;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-336~339 Order Billing Action Sync Report</h1>
+    <p>
+      2026-05-31 기준으로 chart <code>Order 청구</code> 흐름을 draft 저장
+      성공 여부와 분리하고, 실제 수납 후보 동기화 경로에 연결했다. 업무 상태와
+      수납 후보 상태는 계속 분리된다.
+    </p>
+
+    <h2>변경 요약</h2>
+    <ul>
+      <li>
+        <code>Order 청구</code>는 선택된 persisted order에 대해
+        <code>chart/order-actions</code>를 바로 호출한다. 더 이상
+        <code>chart/order-drafts</code> PATCH 성공에 의존하지 않는다.
+      </li>
+      <li>
+        저장되지 않은 신규 draft order나 선택 row의 미저장 청구명/수량 변경이
+        있으면 청구를 막고 명확한 toast를 보여준다.
+      </li>
+      <li>
+        미완료 오더가 선택된 경우 확인 다이얼로그에
+        <code>아직 완료되지 않은 오더가 있습니다. 수납을 진행할까요?</code>
+        문구와 오더명, 현재 진행 상태 badge를 표시한다.
+      </li>
+      <li>
+        lab/imaging 완료 row의 <code>수의사 확인 필요</code> billing gate와
+        테이블 내 <code>수의사 확인</code> 버튼을 제거했다.
+      </li>
+      <li>
+        서버 <code>saveChartOrderAction(action="bill")</code>이
+        <code>invoiceCandidateGateway.syncInvoiceCandidates</code>를 호출한다.
+        단순히 <code>billing_candidate_status</code>만 바꾸는 경로에서 실제
+        invoice candidate 생성/readback 경로로 연결했다.
+      </li>
+      <li>
+        re-requested order도 billing candidate로 전진할 수 있게 로컬 sync
+        boundary를 수정했다. cancelled order는 계속 제외된다.
+      </li>
+    </ul>
+
+    <h2>상태 매트릭스</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>업무 상태</th>
+          <th>Order 청구</th>
+          <th>업무 상태 변경</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>requested / in_progress / re_requested</td>
+          <td>확인 다이얼로그 후 수납 후보 생성 가능</td>
+          <td>변경하지 않음</td>
+        </tr>
+        <tr>
+          <td>completed</td>
+          <td>추가 vet billing gate 없이 수납 후보 생성 가능</td>
+          <td>변경하지 않음</td>
+        </tr>
+        <tr>
+          <td>candidate_created</td>
+          <td>재청구해도 idempotent readback</td>
+          <td>변경하지 않음</td>
+        </tr>
+        <tr>
+          <td>cancelled</td>
+          <td>billing sync 대상 제외</td>
+          <td>변경하지 않음</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li class="ok">
+        PASS:
+        <code
+          >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test
+          tests/chart.spec.ts -g "chart Order 청구 sends persisted orders
+          without draft save|chart result readback lets completed lab order bill
+          without separate veterinarian gate" --reporter=line</code
+        >
+      </li>
+      <li class="ok">
+        PASS:
+        <code
+          >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test
+          tests/chart-order-action-persistence-server.spec.ts -g "order action
+          core submits billing candidates separately from confirmation|order
+          action core creates billing candidates immediately for billing-only
+          catalog snapshots|order action route wires live catalog and billing
+          gateways" --reporter=line</code
+        >
+      </li>
+      <li class="ok">
+        PASS:
+        <code
+          >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test
+          tests/billing-invoice-candidate-sync-server.spec.ts -g "invoice
+          candidate core allows re-requested orders" --reporter=line</code
+        >
+      </li>
+      <li class="ok">PASS: <code>npx tsc --noEmit --pretty false</code></li>
+      <li class="ok">PASS: <code>npm run security:secrets</code></li>
+      <li class="warn">
+        PASS with existing warnings:
+        <code
+          >npm run lint -- src/features/chart/module.tsx
+          src/features/chart/server-order-action-persistence-core.ts
+          src/features/billing/server-invoice-candidate-sync-core.ts</code
+        >
+        returned only pre-existing chart hook dependency warnings.
+      </li>
+    </ul>
+
+    <h2>남은 게이트</h2>
+    <p>
+      새 DB migration은 이번 구현에 추가하지 않았다. 다만 chart action RPC와
+      invoice sync RPC가 아직 별도 호출이므로, 완전한 단일 트랜잭션 보장을
+      원하면 DEN-340에서 RPC consolidation 여부를 별도 승인 게이트로 판단해야
+      한다.
+    </p>
+  </body>
+</html>

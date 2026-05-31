@@ -18,6 +18,7 @@ import {
 type HospitalAdminStore = {
   activeSection: "orders" | "members" | "audit";
   billingFilter: HospitalOrderBillingFilter;
+  focusedOrderId: string | null;
   orders: HospitalOrderCatalogItem[];
   searchQuery: string;
   selectedCategoryId: HospitalOrderCategoryId;
@@ -31,9 +32,12 @@ type HospitalAdminStore = {
   duplicateOrder: (orderId: string) => HospitalOrderCatalogItem | null;
   setActiveSection: (section: "orders" | "members" | "audit") => void;
   setBillingFilter: (filter: HospitalOrderBillingFilter) => void;
+  setFocusedOrderId: (orderId: string | null) => void;
+  setOrders: (orders: HospitalOrderCatalogItem[]) => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategoryId: (categoryId: HospitalOrderCategoryId) => void;
   setSelectedSubcategoryId: (subcategoryId: HospitalOrderSubcategoryId) => void;
+  selectOrder: (orderId: string) => void;
   setStatusFilter: (filter: HospitalOrderStatusFilter) => void;
   setWorkTypeFilter: (filter: HospitalOrderWorkTypeFilter) => void;
   toggleOrderSelection: (orderId: string, selected: boolean) => void;
@@ -41,14 +45,16 @@ type HospitalAdminStore = {
   updateOrder: (orderId: string, draft: Partial<HospitalOrderDraft>) => void;
 };
 
-const defaultCategoryId = hospitalOrderCategories[0].id;
+const defaultCategoryId: HospitalOrderCategoryId = "lab";
 const defaultSubcategoryId = getDefaultSubcategoryId(defaultCategoryId) ?? "clinical-pathology";
 
-const getNextOrderId = () => `hospital-order-${Date.now().toString(36)}`;
+const localDraftOrderIdPrefix = "hospital-order-custom-";
+const getNextOrderId = () => `${localDraftOrderIdPrefix}${Date.now().toString(36)}`;
 
 export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => ({
   activeSection: "orders",
   billingFilter: "all",
+  focusedOrderId: null,
   orders: hospitalOrderSeedItems,
   searchQuery: "",
   selectedCategoryId: defaultCategoryId,
@@ -75,6 +81,7 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
 
     set((current) => ({
       orders: [order, ...current.orders],
+      focusedOrderId: order.id,
       selectedCategoryId: order.categoryId,
       selectedOrderIds: [],
       selectedSubcategoryId: order.subcategoryId,
@@ -96,20 +103,52 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
       id: getNextOrderId(),
       billingName: `${source.billingName} 복사본`,
       inHospitalName: `${source.inHospitalName} 복사본`,
+      sourceCatalogItem: undefined,
       standardName: `${source.standardName} 복사본`,
     });
   },
   setActiveSection: (activeSection) => set({ activeSection }),
   setBillingFilter: (billingFilter) => set({ billingFilter }),
+  setFocusedOrderId: (focusedOrderId) => set({ focusedOrderId }),
+  setOrders: (orders) =>
+    set((state) => {
+      const incomingOrderIds = new Set(orders.map((order) => order.id));
+      const localDraftOrders = state.orders.filter(
+        (order) =>
+          order.id.startsWith(localDraftOrderIdPrefix) &&
+          !order.sourceCatalogItem &&
+          !incomingOrderIds.has(order.id)
+      );
+      const mergedOrders = [...localDraftOrders, ...orders];
+      const orderIds = new Set(mergedOrders.map((order) => order.id));
+      const selectedOrderIds = state.selectedOrderIds.filter((id) => orderIds.has(id));
+      const focusedOrderId =
+        state.focusedOrderId && orderIds.has(state.focusedOrderId)
+          ? state.focusedOrderId
+          : null;
+      const selectedOrder = selectedOrderIds[0]
+        ? mergedOrders.find((order) => order.id === selectedOrderIds[0])
+        : undefined;
+
+      return {
+        orders: mergedOrders,
+        focusedOrderId,
+        selectedOrderIds,
+        selectedCategoryId: selectedOrder?.categoryId ?? state.selectedCategoryId,
+        selectedSubcategoryId: selectedOrder?.subcategoryId ?? state.selectedSubcategoryId,
+      };
+    }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSelectedCategoryId: (selectedCategoryId) =>
     set({
+      focusedOrderId: null,
       selectedCategoryId,
       selectedOrderIds: [],
       selectedSubcategoryId: getDefaultSubcategoryId(selectedCategoryId) ?? defaultSubcategoryId,
     }),
   setSelectedSubcategoryId: (selectedSubcategoryId) =>
-    set({ selectedOrderIds: [], selectedSubcategoryId }),
+    set({ focusedOrderId: null, selectedOrderIds: [], selectedSubcategoryId }),
+  selectOrder: (orderId) => set({ selectedOrderIds: [orderId] }),
   setStatusFilter: (statusFilter) => set({ statusFilter }),
   setWorkTypeFilter: (workTypeFilter) => set({ workTypeFilter }),
   toggleOrderSelection: (orderId, selected) =>

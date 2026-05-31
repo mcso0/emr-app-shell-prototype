@@ -1,6 +1,6 @@
 # Workspace Auth and Permission Domain
 
-Updated: 2026-05-17
+Updated: 2026-05-27
 
 This document is the product source of truth for workspace-based auth, membership, roles, and permission behavior. It captures the requirements from Linear `DEN-18` before implementation work begins.
 
@@ -95,6 +95,8 @@ Open product detail for later implementation:
 - Billing actions need a separate exact matrix before live payment integration. MVP may allow front desk billing actions, but refund approval should remain hospital admin only.
 - Technician treatment/lab/imaging mutation means operational completion/status work, not chart diagnosis/SOAP authoring.
 - Vet access to billing is view-only unless a later product decision grants billing mutation.
+- DEN-301 phase-1 policy: treatment fulfillment and dispensing fulfillment intentionally share the same permission boundary. A user with `dispensing:view` and `dispensing:complete` can read and complete both dispensing and treatment queue work in phase 1.
+- 마약류 are explicitly out of the phase-1 shared treatment/dispensing policy. Narcotic or controlled-substance workflows require a separate security and permission scope later, expected to be veterinarian-only or limited to users with explicit controlled-substance authority.
 
 ## Invitation and Membership Requirements
 

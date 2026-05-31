@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-327 Fixed Staging Live Order E2E 부분 검증 리포트</title>
+    <style>
+      body {
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 32px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .block {
+        color: #b42318;
+        font-weight: 700;
+      }
+      .note {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-327 Fixed Staging Live Order E2E 부분 검증 리포트</h1>
+    <p>
+      새 live 접수 환자 <strong>준하 / 이순재</strong>를 기준으로
+      fixed staging에서 reception, chart live queue, order confirm,
+      treatment fulfillment completion, chart lifecycle readback까지 검증했다.
+      billing candidate readback은 새 live encounter에서 비어 있어
+      DEN-329 blocker로 분리했다.
+    </p>
+
+    <h2>변경 사항</h2>
+    <ul>
+      <li>
+        <code>PATCH /api/workspaces/[workspaceId]/fulfillment/work-items/[workItemId]</code>
+        route에 DB-backed workspace permission adapter를 연결했다.
+      </li>
+      <li>
+        <code>GET/PATCH /api/workspaces/[workspaceId]/chart/order-lifecycle</code>
+        route에 DB-backed workspace permission adapter를 연결했다.
+      </li>
+      <li>
+        Supabase session actor가 admin일 때도 live fulfillment completion과
+        chart lifecycle readback 권한을 서버에서 workspace membership 기준으로 판정한다.
+      </li>
+    </ul>
+
+    <h2>Staging Replay 결과</h2>
+    <ul>
+      <li><span class="ok">통과</span>: 새 접수 <code>준하 / 이순재</code>가 reception queue와 chart live queue에 표시됨.</li>
+      <li><span class="ok">통과</span>: chart에서 <code>고정스테이징 처치 mprv3quc</code> order 추가/저장/확정 완료.</li>
+      <li><span class="ok">통과</span>: 조제/처치 queue 첫 row에 <code>준하 / 이순재</code>와 같은 order명이 표시됨.</li>
+      <li><span class="ok">통과</span>: 조제/처치 UI에서 담당하기 후 완료 처리, work item API status가 <code>completed</code>로 readback됨.</li>
+      <li><span class="ok">통과</span>: chart lifecycle API에서 해당 treatment order가 <code>completed</code>로 readback됨.</li>
+      <li><span class="block">차단</span>: billing invoice candidate API는 새 live encounter에 대해 <code>candidates: []</code>를 반환함.</li>
+    </ul>
+
+    <h2>검증 명령</h2>
+    <ul>
+      <li><code>npx eslint src/app/api/workspaces/[workspaceId]/chart/order-lifecycle/route.ts src/app/api/workspaces/[workspaceId]/fulfillment/work-items/[workItemId]/route.ts --max-warnings=999</code> 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/fulfillment-work-item-server.spec.ts -g "mutate lifecycle|phase-1 treatment|completion syncs" --reporter=line</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>배포</h2>
+    <ul>
+      <li>Latest preview: <code>https://emr-app-shell-prototype-bd9n9xhc5-mcso0s-projects.vercel.app</code></li>
+      <li>Fixed staging alias: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+    </ul>
+
+    <div class="note">
+      <strong>Safety:</strong> production deploy, 실데이터 import, 원격 RLS replay,
+      DB migration/RPC 변경은 수행하지 않았다. billing candidate blocker는 DEN-329로 분리했다.
+    </div>
+  </body>
+</html>

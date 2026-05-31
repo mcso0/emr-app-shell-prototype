@@ -43,12 +43,23 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
       headers: { "x-clair-demo-session-user-id": "user-tech" },
     }
   );
-  expect(directCompleteDenied.status()).toBe(409);
-  await expectJson(directCompleteDenied, { ok: false, denialReason: "invalid_transition" });
+  if (directCompleteDeniedWorkItem.status === "requested" || directCompleteDeniedWorkItem.status === "accepted") {
+    expect(directCompleteDenied.status()).toBe(409);
+    await expectJson(directCompleteDenied, { ok: false, denialReason: "invalid_transition" });
+  } else {
+    expect(directCompleteDenied.status()).toBe(200);
+  }
 
   for (const replayOrder of replayOrders) {
     const workItem = await readWorkItem(request, replayOrder.queueType, replayOrder.orderId);
-    await advanceWorkItemToCompleted(request, workItem.id, workItem.status);
+    const completedBody = await advanceWorkItemToCompleted(request, workItem.id, workItem.status);
+    if (replayOrder.queueType === "lab" || replayOrder.queueType === "imaging") {
+      expect(completedBody.downstreamSync).toMatchObject({
+        billingCandidateCount: 0,
+        billingSkippedReason: "vet_review_required",
+        lifecycleStatus: "completed",
+      });
+    }
   }
 
   const lifecycleReadBack = await request.get(
@@ -73,8 +84,47 @@ test("fulfillment handoff replays chart confirmation through queues, lifecycle, 
     ok: true;
     candidates: Array<{ lineTotal: number; orderId: string }>;
   };
-  for (const replayOrder of replayOrders) {
+  for (const replayOrder of replayOrders.filter(
+    (order) => order.queueType === "dispensing" || order.queueType === "treatment",
+  )) {
     expect(billingBody.candidates.find((candidate) => candidate.orderId === replayOrder.orderId)).toMatchObject({
+      lineTotal: replayOrder.expectedLineTotal,
+    });
+  }
+  const reviewed = await request.patch(
+    `/api/workspaces/${workspaceId}/chart/result-review-billing`,
+    {
+      data: {
+        encounterId,
+        orderIds: replayOrders
+          .filter((order) => order.queueType === "lab" || order.queueType === "imaging")
+          .map((order) => order.orderId),
+      },
+      headers: { "x-clair-demo-session-user-id": "user-vet" },
+    }
+  );
+  expect(reviewed.status()).toBe(200);
+  const reviewedBody = await reviewed.json() as {
+    ok: true;
+    billingCandidates: Array<{ orderId: string }>;
+    enforcedBy: string;
+  };
+  expect(reviewedBody.enforcedBy).toBe("fulfillment-vet-review-billing-gate");
+  expect(reviewedBody.billingCandidates.map((candidate) => candidate.orderId).sort()).toEqual(
+    ["order-kong-abdomen", "order-kong-cbc"]
+  );
+
+  const billingAfterReview = await request.get(
+    `/api/workspaces/${workspaceId}/billing/invoice-candidates?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } }
+  );
+  expect(billingAfterReview.status()).toBe(200);
+  const billingAfterReviewBody = await billingAfterReview.json() as {
+    ok: true;
+    candidates: Array<{ lineTotal: number; orderId: string }>;
+  };
+  for (const replayOrder of replayOrders) {
+    expect(billingAfterReviewBody.candidates.find((candidate) => candidate.orderId === replayOrder.orderId)).toMatchObject({
       lineTotal: replayOrder.expectedLineTotal,
     });
   }
@@ -135,7 +185,18 @@ async function advanceWorkItemToCompleted(
       }
     );
     expect(response.status()).toBe(200);
+    if (status === "completed") {
+      return await response.json() as {
+        downstreamSync?: {
+          billingCandidateCount: number;
+          billingSkippedReason?: string;
+          lifecycleStatus?: string;
+        };
+        ok: true;
+      };
+    }
   }
+  throw new Error("completion status was not reached");
 }
 
 async function expectJson(response: { json(): Promise<unknown> }, expected: Record<string, unknown>) {

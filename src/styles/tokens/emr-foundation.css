@@ -129,8 +129,8 @@
 
   --emr-accent: var(--emr-line-selected);
   --emr-accent-subtle: var(--emr-state-selected);
-  --emr-radius-control: var(--radius-md);
-  --emr-radius-panel: var(--radius-lg);
+  --emr-radius-control: var(--clair-radius-md);
+  --emr-radius-panel: var(--clair-radius-lg);
 
   --emr-table-header-height-compact: 36px;
   --emr-table-header-height-standard: 40px;

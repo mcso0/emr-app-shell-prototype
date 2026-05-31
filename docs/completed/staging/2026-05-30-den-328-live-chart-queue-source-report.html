@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-328 Live Chart Queue Source-of-Truth Fix</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 32px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      .note {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .warning {
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-328 Live Chart Queue Source-of-Truth Fix</h1>
+    <p>
+      fixed staging live mode에서 진료차트 대기열이 특정 demo bridge 환자에 묶이지 않고
+      live reception/encounter queue를 source of truth로 읽도록 바꿨다. 이제 chart 첫 선택,
+      chart context, downstream lab queue 표시는 live encounter의 환자/보호자 정보를 기준으로
+      이어진다.
+    </p>
+
+    <h2>변경 요약</h2>
+    <ul>
+      <li><code>/api/workspaces/[workspaceId]/chart/live-queue</code> read route를 추가했다.</li>
+      <li>server gateway가 reception queue RPC를 읽고 <code>encounter + queueEntry + patient + primaryGuardian</code> bundle로 hydrate한다.</li>
+      <li>direct <code>patients</code>/<code>guardians</code> read가 RLS로 막힐 때는 기존 reception profile lookup RPC로 fallback한다.</li>
+      <li>chart store에 live queue 상태를 추가하고, Supabase session에서는 chart side panel이 live queue를 우선 사용한다.</li>
+      <li>live mode에서는 mock-only row로 조용히 mutation하지 않도록 selected bundle fallback을 live-first로 분리했다.</li>
+      <li>chart live queue rows를 chart handoff cache에도 저장해 lab/imaging/fulfillment 표시명 보강 경로와 연결했다.</li>
+      <li>server test에 multiple encounter hydrate, permission denial, server-only boundary, RLS fallback coverage를 추가했다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+      <li><code>npx eslint ... chart live queue touched files ...</code> 통과. 기존 <code>src/features/chart/module.tsx</code> hook dependency warning 2건은 남아 있다.</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/chart-live-queue-server.spec.ts --reporter=line</code> 통과: 4 passed</li>
+      <li>fixed staging browser에서 <code>/api/workspaces/clair-demo/chart/live-queue</code>가 <code>ok: true</code>와 live encounter row를 반환하는 것을 확인했다.</li>
+      <li>fixed staging chart 화면에서 첫 live row <code>로컬환자 · 로컬보호자 / E-SEED-0001</code>가 자동 선택되는 것을 확인했다.</li>
+      <li>fixed staging lab 화면에서 첫 업무가 자동 선택되고, queue card가 <code>하루 · 강서윤</code>, <code>코코 · 이지은</code>, <code>로컬환자 · 로컬보호자</code>처럼 chart/live 이름으로 표시되는 것을 확인했다.</li>
+      <li>lab queue card에서 <code>Choco Synthetic</code>, <code>Mango Synthetic</code> 같은 fixture 원문 이름이 visible label로 남지 않는 것을 확인했다.</li>
+    </ul>
+
+    <h2>Follow-up: Admin Reception Permission</h2>
+    <ul>
+      <li>fixed staging에서 admin 계정이 현장 접수 생성 시 <code>reception:create</code> 권한 없음 toast로 막히는 문제를 확인했다.</li>
+      <li>원인은 Supabase session mutation route가 DB-backed workspace permission adapter를 core에 전달하지 않고 mock permission adapter fallback을 사용하던 것이다.</li>
+      <li>현장 접수, 예약 체크인, 보호자/환자 등록 route가 Supabase session에서 <code>loadWorkspacePermissionAdapterFromDb</code>를 사용하도록 보강했다.</li>
+      <li>patient lookup route도 같은 DB-backed permission adapter를 사용하도록 보강했다.</li>
+      <li>한국어 staging 표시명(<code>나비</code>, <code>코코</code> 등) 검색이 live synthetic lookup으로 이어지도록 fallback을 추가했다.</li>
+      <li>화면에서 mock patient id가 넘어와도 walk-in write 직전에 live patient/guardian UUID로 보정한다.</li>
+      <li>검증: <code>npx tsc --noEmit --pretty false</code>, 접수 lookup/mutation server specs 24개, secret scan, touched files lint 통과.</li>
+    </ul>
+
+    <h2>배포</h2>
+    <ul>
+      <li>Initial preview: <code>https://emr-app-shell-prototype-a4bho42uk-mcso0s-projects.vercel.app</code></li>
+      <li>Latest preview: <code>https://emr-app-shell-prototype-71ukdju7d-mcso0s-projects.vercel.app</code></li>
+      <li>Fixed staging alias: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+      <li>Production deploy는 하지 않았다.</li>
+    </ul>
+
+    <h2>Evidence</h2>
+    <ul>
+      <li><code>docs/completed/staging/evidence/2026-05-30-den-328-chart-live-queue.png</code></li>
+      <li><code>docs/completed/staging/evidence/2026-05-30-den-328-lab-live-queue.png</code></li>
+    </ul>
+
+    <div class="warning">
+      <strong>검증 caveat:</strong>
+      broad focused run <code>tests/chart.spec.ts tests/fulfillment-handoff-replay.spec.ts</code>는
+      24개 중 19개 통과, 5개 실패했다. 실패 내용은 기존 dirty local chart/order state의
+      order count drift와 fulfillment lifecycle 409 충돌로 보이며, DEN-328 live queue route/core
+      검증과 fixed staging browser replay는 통과했다.
+    </div>
+
+    <div class="note">
+      <strong>범위:</strong>
+      DB migration, 실데이터 import, 원격 RLS replay, production deploy는 수행하지 않았다.
+      live patient/guardian hydrate는 기존 direct read와 기존 reception lookup RPC만 사용했다.
+    </div>
+  </body>
+</html>

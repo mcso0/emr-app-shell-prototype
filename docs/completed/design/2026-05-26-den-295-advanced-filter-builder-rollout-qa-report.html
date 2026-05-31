@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-295 고급 필터 빌더 Rollout QA 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --line: #d8e0ea;
+        --muted: #64748b;
+        --text: #111827;
+        --soft: #eef2f7;
+        --accent: #2563eb;
+        --danger: #dc2626;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef2ff;
+        padding: 2px 5px;
+        color: #1d4ed8;
+        font-size: 0.92em;
+      }
+
+      .lead {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      .card {
+        margin-top: 22px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 22px;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--soft);
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .pass {
+        color: #15803d;
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 28px 16px 56px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-295 고급 필터 빌더 Rollout QA</h1>
+      <p class="lead">
+        공용 advanced filter builder의 첫 rollout을 QA하고 문서화했다. 이번 rollout은 수납과
+        진료/차트 오더 테이블까지 적용된 상태이며, 고객관리와 병원관리는 기존 feature-local
+        builder를 유지한다.
+      </p>
+
+      <section class="card">
+        <h2>QA 판단</h2>
+        <div class="grid">
+          <div class="metric">
+            <strong>공용 모델</strong>
+            첫 draft row, incomplete rule ignore, AND filtering, reset behavior가 검증됐다.
+          </div>
+          <div class="metric">
+            <strong>적용 화면</strong>
+            수납 청구 항목과 진료/차트 오더 화면에서 공용 builder가 동작한다.
+          </div>
+          <div class="metric">
+            <strong>기존 화면</strong>
+            고객관리와 병원관리 QA는 기존 builder 흐름을 유지한 상태로 통과했다.
+          </div>
+          <div class="metric">
+            <strong>증거</strong>
+            로그인 화면이 아니라 실제 mock-auth workspace 화면에서 screenshot evidence를 확보했다.
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>검증 결과</h2>
+        <ul>
+          <li class="pass"><code>npx tsc --noEmit</code> 통과</li>
+          <li class="pass">DEN-295 관련 targeted ESLint 통과, 기존 chart hook warning 2개만 남음</li>
+          <li class="pass"><code>tests/table-filter-builder-foundation.spec.ts</code> 통과, 3 passed</li>
+          <li class="pass">billing focused sort/filter Playwright 통과</li>
+          <li class="pass">chart/order focused sort/filter Playwright 통과</li>
+          <li class="pass"><code>tests/table-sort-filter-qa.spec.ts</code> 통과, 3 passed</li>
+          <li class="pass"><code>npm run docs:check</code> 통과</li>
+          <li class="pass"><code>git diff --check</code> 통과</li>
+          <li class="warn"><code>npm run lint</code> 전체 실행은 기존 <code>src/features/hospital-admin/module.tsx:1848</code> 오류로 실패</li>
+          <li class="warn">billing/chart 전체 spec은 25 passed / 1 failed. 실패는 SOAP 저장 텍스트 불일치로 이번 rollout 범위 밖이다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Evidence</h2>
+        <ul>
+          <li><code>docs/completed/design/evidence/2026-05-26-den-294-billing-advanced-filter-builder.png</code></li>
+          <li><code>docs/completed/design/evidence/2026-05-26-den-294-chart-order-advanced-filter-builder.png</code></li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>남은 제한</h2>
+        <ul>
+          <li>고객관리와 병원관리 order catalog를 공용 builder로 교체하는 작업은 별도 follow-up 범위다.</li>
+          <li>OR/nested group 실제 동작, saved filters/views, active chips, URL/storage persistence는 제외한다.</li>
+          <li>Supabase, DB/RLS, migration, server-side filtering, live validation은 승인 없는 범위 밖이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

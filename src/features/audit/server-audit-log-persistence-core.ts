@@ -21,6 +21,9 @@ export const liveAuditEventTypes = [
   "order.confirmed",
   "order.billing_candidate_requested",
   "order.status_changed",
+  "order_catalog.created",
+  "order_catalog.updated",
+  "order_catalog.paused",
   "billing.invoice_candidate_generated",
   "billing.invoice_line_changed",
   "billing.invoice_issued",
@@ -42,6 +45,7 @@ export type LiveAuditTargetType =
   | "soap_note"
   | "diagnosis"
   | "order"
+  | "order_catalog_item"
   | "invoice"
   | "invoice_line"
   | "payment";

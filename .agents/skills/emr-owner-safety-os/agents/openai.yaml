@@ -1,0 +1,7 @@
+interface:
+  display_name: "EMR Owner Safety OS"
+  short_description: "비개발자 오너용 Codex 안전 점검 게이트"
+  brand_color: "#26B5CE"
+  default_prompt: "Use $emr-owner-safety-os when I say 안전 점검 게이트 열어줘, and brief me before running the selected review."
+policy:
+  allow_implicit_invocation: true

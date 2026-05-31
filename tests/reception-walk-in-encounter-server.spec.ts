@@ -126,14 +126,32 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   const calls: string[] = [];
   const gateway = createSupabaseReceptionWalkInEncounterGateway({
     async rpc(functionName, args) {
-      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_walk_in.patientId}`);
+      if (functionName === "clair_search_reception_patient_guardian_lookup") {
+        const lookupArgs = args as { p_query: string; p_workspace_id: string };
+        calls.push(`${functionName}:${lookupArgs.p_workspace_id}:${lookupArgs.p_query}`);
+        return {
+          data: [
+            {
+              patient: { id: "19421000-0000-4000-8000-000000000005" },
+              primaryGuardian: { id: "19420000-0000-4000-8000-000000000005" },
+            },
+          ],
+          error: null,
+        };
+      }
+
+      const createArgs = args as {
+        p_walk_in: { patientId: string };
+        p_workspace_id: string;
+      };
+      calls.push(`${functionName}:${createArgs.p_workspace_id}:${createArgs.p_walk_in.patientId}`);
       return {
         data: {
           encounter: {
             id: "encounter-db-walkin-coco",
             workspaceId: "clair-demo",
-            patientId: "patient-coco",
-            guardianId: "guardian-lee-jieun",
+            patientId: "19421000-0000-4000-8000-000000000005",
+            guardianId: "19420000-0000-4000-8000-000000000005",
             primaryVeterinarianId: "staff-vet-lee",
             encounterNo: "E-DB-0001",
             receptionType: "walk_in",
@@ -169,7 +187,8 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   });
 
   expect(calls).toEqual([
-    "clair_create_reception_walk_in_encounter:clair-demo:patient-coco",
+    "clair_search_reception_patient_guardian_lookup:clair-demo:choco",
+    "clair_create_reception_walk_in_encounter:clair-demo:19421000-0000-4000-8000-000000000005",
   ]);
   expect(result).toMatchObject({
     ok: true,
@@ -192,6 +211,9 @@ test("walk-in encounter route stays server-owned and avoids secret-shaped values
 
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
+  expect(routeSource).toContain("permissionAdapter");
   expect(routeSource).toContain("enforceWorkspaceMutationRateLimit");
   expect(serverSource).toContain('import "server-only"');
   expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);

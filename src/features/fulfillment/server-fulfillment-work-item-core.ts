@@ -54,6 +54,23 @@ export type FulfillmentSourceSnapshot = {
   serviceItemId?: string;
 };
 
+export type FulfillmentOrderSnapshotInput = {
+  billingName?: string;
+  billingReflectionEnabled: boolean;
+  destinationModule?: string;
+  guardianName?: string;
+  inHospitalOrderName?: string;
+  internalInstruction?: string;
+  lineTotalSnapshot?: number;
+  orderId: string;
+  patientName?: string;
+  priceKrw?: number;
+  quantity?: number;
+  sourcePresetId?: string;
+  standardOrderName?: string;
+  taskRequired?: boolean;
+};
+
 export type FulfillmentWorkItem = {
   assignedToUserId?: string | null;
   cancelledAt?: string | null;
@@ -93,6 +110,11 @@ export type FulfillmentWorkItemUpdateInput = {
   status?: FulfillmentWorkItemStatus;
 };
 
+export type FulfillmentVetReviewBillingInput = {
+  encounterId?: string;
+  orderIds?: string[];
+};
+
 export type FulfillmentDownstreamSyncSummary = {
   auditEventCount: number;
   billingCandidateCount: number;
@@ -101,7 +123,8 @@ export type FulfillmentDownstreamSyncSummary = {
     | "encounter_unavailable"
     | "not_completed_status"
     | "invoice_unavailable"
-    | "order_unavailable";
+    | "order_unavailable"
+    | "vet_review_required";
   lifecycleStatus?: ChartOrderLifecycleStatus;
 };
 
@@ -118,7 +141,10 @@ export type FulfillmentGatewayResult =
         | "work_item_unavailable";
     }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
-type FulfillmentGatewayFailure = Exclude<FulfillmentGatewayResult, { ok: true }>;
+type FulfillmentGatewayFailure = Exclude<
+  FulfillmentGatewayResult,
+  { ok: true }
+>;
 
 export type FulfillmentWorkItemGateway = {
   listWorkItems(input: {
@@ -132,6 +158,7 @@ export type FulfillmentWorkItemGateway = {
     actorUserId: string;
     encounterId: string;
     orderIds: string[];
+    orderSnapshots?: FulfillmentOrderSnapshotInput[];
     workspaceId: string;
   }): Promise<FulfillmentGatewayResult>;
   updateWorkItem(input: {
@@ -157,7 +184,11 @@ export type FulfillmentWorkItemReadResult =
       error: "invalid_input";
       fieldErrors: Partial<Record<"queueType" | "status", string>>;
     }
-  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
   | FulfillmentGatewayFailure;
 
 export type FulfillmentWorkItemSyncResult =
@@ -173,7 +204,11 @@ export type FulfillmentWorkItemSyncResult =
       error: "invalid_input";
       fieldErrors: Partial<Record<"encounterId" | "orderIds", string>>;
     }
-  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
   | FulfillmentGatewayFailure;
 
 export type FulfillmentWorkItemUpdateResult =
@@ -190,8 +225,42 @@ export type FulfillmentWorkItemUpdateResult =
       error: "invalid_input";
       fieldErrors: Partial<Record<"status" | "workItemId", string>>;
     }
-  | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
   | FulfillmentGatewayFailure;
+
+export type FulfillmentVetReviewBillingResult =
+  | {
+      ok: true;
+      status: 200;
+      billingCandidates: BillingInvoiceCandidateLine[];
+      enforcedBy: "fulfillment-vet-review-billing-gate";
+      reviewedWorkItems: FulfillmentWorkItem[];
+    }
+  | {
+      ok: false;
+      status: 400;
+      error: "invalid_input";
+      fieldErrors: Partial<Record<"encounterId" | "orderIds", string>>;
+    }
+  | {
+      ok: false;
+      status: 401 | 403;
+      denialReason: WorkspacePermissionDenialReason;
+    }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "invalid_review_gate"
+        | "invoice_unavailable"
+        | "order_unavailable";
+    }
+  | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 const fulfillmentMockStore = new Map<string, FulfillmentWorkItem>();
 
@@ -220,7 +289,12 @@ export async function readFulfillmentWorkItems({
   const normalized = normalizeFilters(filters);
   const validation = validateReadFilters(normalized);
   if (!validation.valid) {
-    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: validation.fieldErrors,
+    };
   }
 
   const queueType = normalized.queueType as FulfillmentQueueType;
@@ -268,7 +342,12 @@ export async function syncFulfillmentWorkItemsFromOrders({
   const normalized = normalizeSyncInput(input);
   const validation = validateSyncInput(normalized);
   if (!validation.valid) {
-    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: validation.fieldErrors,
+    };
   }
 
   const permission = resolveWorkspacePermission(permissionAdapter, {
@@ -315,10 +394,19 @@ export async function updateFulfillmentWorkItem({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
-  gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItems" | "updateWorkItem">;
-  invoiceCandidateGateway?: Pick<InvoiceCandidateSyncGateway, "syncInvoiceCandidates">;
+  gateway?: Pick<
+    FulfillmentWorkItemGateway,
+    "listWorkItems" | "updateWorkItem"
+  >;
+  invoiceCandidateGateway?: Pick<
+    InvoiceCandidateSyncGateway,
+    "syncInvoiceCandidates"
+  >;
   input: FulfillmentWorkItemUpdateInput;
-  lifecycleGateway?: Pick<ChartOrderLifecycleGateway, "saveOrderLifecycleStatus">;
+  lifecycleGateway?: Pick<
+    ChartOrderLifecycleGateway,
+    "saveOrderLifecycleStatus"
+  >;
   permissionAdapter?: WorkspacePermissionAdapter;
   workItemId: string | null | undefined;
   workspaceId: string;
@@ -326,7 +414,12 @@ export async function updateFulfillmentWorkItem({
   const normalized = normalizeUpdateInput(workItemId, input);
   const validation = validateUpdateInput(normalized);
   if (!validation.valid) {
-    return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: validation.fieldErrors,
+    };
   }
 
   const workItem = await findWorkItemForPermission({
@@ -339,7 +432,10 @@ export async function updateFulfillmentWorkItem({
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission: permissionForQueue(workItem.workItem.queueType, "mutate"),
+    requiredPermission: permissionForQueue(
+      workItem.workItem.queueType,
+      "mutate",
+    ),
   });
   if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
 
@@ -379,6 +475,112 @@ export async function updateFulfillmentWorkItem({
   };
 }
 
+export async function syncVetReviewedBillingCandidates({
+  actorUserId,
+  gateway = createMockFulfillmentWorkItemGateway(),
+  input,
+  invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(),
+  permissionAdapter = createDemoFulfillmentPermissionAdapter(),
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  gateway?: Pick<FulfillmentWorkItemGateway, "listWorkItems">;
+  input: FulfillmentVetReviewBillingInput;
+  invoiceCandidateGateway?: Pick<
+    InvoiceCandidateSyncGateway,
+    "syncInvoiceCandidates"
+  >;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  workspaceId: string;
+}): Promise<FulfillmentVetReviewBillingResult> {
+  const normalized = normalizeVetReviewBillingInput(input);
+  const validation = validateVetReviewBillingInput(normalized);
+  if (!validation.valid) {
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_input",
+      fieldErrors: validation.fieldErrors,
+    };
+  }
+
+  const permission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: actorUserId,
+    workspaceId,
+    requiredPermission: "chart:update",
+  });
+  if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+
+  const completedReviewItems: FulfillmentWorkItem[] = [];
+  for (const queueType of ["lab", "imaging"] as const) {
+    const result = await gateway.listWorkItems({
+      encounterId: normalized.encounterId,
+      queueType,
+      workspaceId,
+    });
+    if (!result.ok) {
+      if (result.status === 409) {
+        if (result.denialReason === "encounter_unavailable") {
+          return {
+            ok: false,
+            status: 409,
+            denialReason: "encounter_unavailable",
+          };
+        }
+        if (result.denialReason === "order_unavailable") {
+          return {
+            ok: false,
+            status: 409,
+            denialReason: "order_unavailable",
+          };
+        }
+        return { ok: false, status: 409, denialReason: "invalid_review_gate" };
+      }
+      return { ok: false, status: 500, error: "db_read_failed" };
+    }
+    completedReviewItems.push(
+      ...result.workItems.filter(
+        (item) =>
+          normalized.orderIds.includes(item.orderId) &&
+          item.status === "completed",
+      ),
+    );
+  }
+
+  const reviewItemByOrderId = new Map(
+    completedReviewItems.map((item) => [item.orderId, item]),
+  );
+  if (
+    normalized.orderIds.some((orderId) => !reviewItemByOrderId.has(orderId))
+  ) {
+    return { ok: false, status: 409, denialReason: "invalid_review_gate" };
+  }
+
+  const billingResult = await invoiceCandidateGateway.syncInvoiceCandidates({
+    actorUserId: actorUserId ?? "",
+    encounterId: normalized.encounterId,
+    orderIds: normalized.orderIds,
+    orderSnapshots: normalized.orderIds.map((orderId) =>
+      mapWorkItemToBillingSnapshot(reviewItemByOrderId.get(orderId)!),
+    ),
+    workspaceId,
+  });
+  if (!billingResult.ok) {
+    if (billingResult.status === 409) return billingResult;
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    billingCandidates: billingResult.candidates,
+    enforcedBy: "fulfillment-vet-review-billing-gate",
+    reviewedWorkItems: normalized.orderIds.map(
+      (orderId) => reviewItemByOrderId.get(orderId)!,
+    ),
+  };
+}
+
 export function createMockFulfillmentWorkItemGateway(
   dataset: {
     encounters?: Encounter[];
@@ -391,7 +593,7 @@ export function createMockFulfillmentWorkItemGateway(
     orders: mockOrders,
     patients: mockPatients,
   },
-  now = () => new Date().toISOString()
+  now = () => new Date().toISOString(),
 ): FulfillmentWorkItemGateway {
   const encounters = dataset.encounters ?? [];
   const guardians = dataset.guardians ?? [];
@@ -399,46 +601,126 @@ export function createMockFulfillmentWorkItemGateway(
   const patients = dataset.patients ?? [];
 
   return {
-    async listWorkItems({ encounterId, orderId, queueType, status, workspaceId }) {
-      const seeded = seedWorkItems({ encounters, guardians, orders, patients, workspaceId });
+    async listWorkItems({
+      encounterId,
+      orderId,
+      queueType,
+      status,
+      workspaceId,
+    }) {
+      const seeded = seedWorkItems({
+        encounters,
+        guardians,
+        orders,
+        patients,
+        workspaceId,
+      });
       const rows = seeded
         .filter((item) => item.queueType === queueType)
         .filter((item) => !encounterId || item.encounterId === encounterId)
         .filter((item) => !orderId || item.orderId === orderId)
         .filter((item) => !status || item.status === status)
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+        .sort(
+          (a, b) =>
+            a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+        );
 
       return { ok: true, workItems: rows };
     },
-    async syncFromOrders({ actorUserId, encounterId, orderIds, workspaceId }) {
+    async syncFromOrders({
+      actorUserId,
+      encounterId,
+      orderIds,
+      orderSnapshots,
+      workspaceId,
+    }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
-      if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!encounter)
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "encounter_unavailable",
+        };
 
-      const selectedOrders = orders.filter(
+      const selectedSeedOrders = orders.filter(
         (order) =>
           order.workspaceId === workspaceId &&
           order.encounterId === encounterId &&
-          orderIds.includes(order.id)
+          orderIds.includes(order.id),
       );
-      if (selectedOrders.length !== orderIds.length) {
+      const snapshotByOrderId = new Map(
+        (orderSnapshots ?? []).map((snapshot) => [snapshot.orderId, snapshot]),
+      );
+      const selectedOrders = [
+        ...selectedSeedOrders.map((order) => ({
+          order,
+          snapshot: snapshotByOrderId.get(order.id),
+        })),
+        ...orderIds
+          .filter(
+            (orderId) =>
+              !selectedSeedOrders.some((order) => order.id === orderId),
+          )
+          .map((orderId) => {
+            const snapshot = snapshotByOrderId.get(orderId);
+            if (!snapshot || !isSnapshotFulfillmentRequired(snapshot))
+              return null;
+            const orderType = mapSnapshotDestinationToQueue(
+              snapshot.destinationModule,
+            );
+            if (!orderType) return null;
+            return {
+              order: createVirtualOrderFromSnapshot({
+                actorUserId,
+                encounterId,
+                now: now(),
+                orderId,
+                orderType,
+                snapshot,
+                workspaceId,
+              }),
+              snapshot,
+            };
+          })
+          .filter(
+            (
+              entry,
+            ): entry is {
+              order: EmrOrder;
+              snapshot: FulfillmentOrderSnapshotInput;
+            } => Boolean(entry),
+          ),
+      ];
+      if (
+        selectedOrders.length !==
+        orderIds.filter((orderId) => {
+          const snapshot = snapshotByOrderId.get(orderId);
+          return !snapshot || isSnapshotFulfillmentRequired(snapshot);
+        }).length
+      ) {
         return { ok: false, status: 409, denialReason: "order_unavailable" };
       }
 
       const timestamp = now();
-      const workItems = selectedOrders.map((order) => {
+      const workItems = selectedOrders.map(({ order, snapshot }) => {
         if (!isSupportedOrderType(order.orderType)) {
           return null;
         }
 
-        const existing = fulfillmentMockStore.get(buildWorkItemKey(workspaceId, order.id));
-        const item = existing ?? buildWorkItemFromOrder({
-          actorUserId,
-          encounter,
-          guardians,
-          now: timestamp,
-          order,
-          patients,
-        });
+        const existing = fulfillmentMockStore.get(
+          buildWorkItemKey(workspaceId, order.id),
+        );
+        const item =
+          existing ??
+          buildWorkItemFromOrder({
+            actorUserId,
+            encounter,
+            guardians,
+            now: timestamp,
+            order,
+            orderSnapshot: snapshot,
+            patients,
+          });
 
         const next = {
           ...item,
@@ -449,16 +731,35 @@ export function createMockFulfillmentWorkItemGateway(
       });
 
       if (workItems.some((item) => item === null)) {
-        return { ok: false, status: 409, denialReason: "unsupported_order_type" };
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "unsupported_order_type",
+        };
       }
 
       return { ok: true, workItems: workItems as FulfillmentWorkItem[] };
     },
-    async updateWorkItem({ assignedToUserId, reason, status, workItemId, workspaceId }) {
-      const item = seedWorkItems({ encounters, guardians, orders, patients, workspaceId }).find(
-        (row) => row.id === workItemId
-      );
-      if (!item) return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+    async updateWorkItem({
+      assignedToUserId,
+      reason,
+      status,
+      workItemId,
+      workspaceId,
+    }) {
+      const item = seedWorkItems({
+        encounters,
+        guardians,
+        orders,
+        patients,
+        workspaceId,
+      }).find((row) => row.id === workItemId);
+      if (!item)
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "work_item_unavailable",
+        };
       if (!canTransition(item.status, status)) {
         return { ok: false, status: 409, denialReason: "invalid_transition" };
       }
@@ -467,14 +768,20 @@ export function createMockFulfillmentWorkItemGateway(
       const next = {
         ...item,
         assignedToUserId: assignedToUserId ?? item.assignedToUserId ?? null,
-        cancelledAt: status === "cancelled" ? timestamp : item.cancelledAt ?? null,
-        completedAt: status === "completed" ? timestamp : item.completedAt ?? null,
+        cancelledAt:
+          status === "cancelled" ? timestamp : (item.cancelledAt ?? null),
+        completedAt:
+          status === "completed" ? timestamp : (item.completedAt ?? null),
         reason: normalizeOptionalField(reason) ?? item.reason ?? null,
-        returnedAt: status === "returned" ? timestamp : item.returnedAt ?? null,
+        returnedAt:
+          status === "returned" ? timestamp : (item.returnedAt ?? null),
         status,
         updatedAt: timestamp,
       } satisfies FulfillmentWorkItem;
-      fulfillmentMockStore.set(buildWorkItemKey(workspaceId, next.orderId), next);
+      fulfillmentMockStore.set(
+        buildWorkItemKey(workspaceId, next.orderId),
+        next,
+      );
 
       return { ok: true, workItems: [next] };
     },
@@ -482,6 +789,11 @@ export function createMockFulfillmentWorkItemGateway(
 }
 
 export type SupabaseFulfillmentWorkItemRpcClient = {
+  from?(tableName: "order_fulfillment_work_items"): {
+    update(values: {
+      source_snapshot: FulfillmentSourceSnapshot;
+    }): SupabaseFulfillmentWorkItemUpdateBuilder;
+  };
   rpc(
     functionName: "clair_list_fulfillment_work_items",
     args: {
@@ -490,7 +802,7 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
       p_encounter_id?: string;
       p_order_id?: string;
       p_status?: FulfillmentWorkItemStatus;
-    }
+    },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_sync_fulfillment_work_items_from_orders",
@@ -499,7 +811,7 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
       p_actor_user_id: string;
       p_encounter_id: string;
       p_order_ids: string[];
-    }
+    },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_update_fulfillment_work_item",
@@ -510,54 +822,178 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
       p_status: FulfillmentWorkItemStatus;
       p_assigned_to_user_id?: string | null;
       p_reason?: string | null;
-    }
+    },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
+type SupabaseFulfillmentWorkItemUpdateBuilder = PromiseLike<{
+  data?: unknown;
+  error: { message?: string } | null;
+}> & {
+  eq(column: string, value: string): SupabaseFulfillmentWorkItemUpdateBuilder;
+};
+
 export function createSupabaseFulfillmentWorkItemGateway(
-  client: SupabaseFulfillmentWorkItemRpcClient
+  client: SupabaseFulfillmentWorkItemRpcClient,
 ): FulfillmentWorkItemGateway {
   return {
-    async listWorkItems({ encounterId, orderId, queueType, status, workspaceId }) {
-      const { data, error } = await client.rpc("clair_list_fulfillment_work_items", {
-        p_workspace_id: workspaceId,
-        p_queue_type: queueType,
-        p_encounter_id: normalizeUuidForRpc(encounterId),
-        p_order_id: normalizeUuidForRpc(orderId),
-        p_status: status,
-      });
+    async listWorkItems({
+      encounterId,
+      orderId,
+      queueType,
+      status,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc(
+        "clair_list_fulfillment_work_items",
+        {
+          p_workspace_id: workspaceId,
+          p_queue_type: queueType,
+          p_encounter_id: normalizeUuidForRpc(encounterId),
+          p_order_id: normalizeUuidForRpc(orderId),
+          p_status: status,
+        },
+      );
       if (error) return mapGatewayError(error.message, "db_read_failed");
       return { ok: true, workItems: mapWorkItemRows(data) };
     },
-    async syncFromOrders({ actorUserId, encounterId, orderIds, workspaceId }) {
-      const { data, error } = await client.rpc("clair_sync_fulfillment_work_items_from_orders", {
-        p_workspace_id: workspaceId,
-        p_actor_user_id: actorUserId,
-        p_encounter_id: normalizeUuidForRpc(encounterId) ?? encounterId,
-        p_order_ids: orderIds.map(normalizeUuidForRpc).filter((orderId): orderId is string => Boolean(orderId)),
-      });
+    async syncFromOrders({
+      actorUserId,
+      encounterId,
+      orderIds,
+      orderSnapshots,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc(
+        "clair_sync_fulfillment_work_items_from_orders",
+        {
+          p_workspace_id: workspaceId,
+          p_actor_user_id: actorUserId,
+          p_encounter_id: normalizeUuidForRpc(encounterId) ?? encounterId,
+          p_order_ids: orderIds
+            .map(normalizeUuidForRpc)
+            .filter((orderId): orderId is string => Boolean(orderId)),
+        },
+      );
       if (error) return mapGatewayError(error.message, "db_write_failed");
-      return { ok: true, workItems: mapWorkItemRows(data) };
-    },
-    async updateWorkItem({ actorUserId, assignedToUserId, reason, status, workItemId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_update_fulfillment_work_item", {
-        p_workspace_id: workspaceId,
-        p_actor_user_id: actorUserId,
-        p_work_item_id: normalizeUuidForRpc(workItemId) ?? workItemId,
-        p_status: status,
-        p_assigned_to_user_id: normalizeUuidForRpc(assignedToUserId ?? undefined) ?? null,
-        p_reason: normalizeOptionalField(reason) ?? null,
+      const workItems = mapWorkItemRows(data);
+      const enriched = await persistSupabaseSnapshotEnrichment({
+        client,
+        orderSnapshots,
+        workItems,
+        workspaceId,
       });
+      return { ok: true, workItems: enriched.workItems };
+    },
+    async updateWorkItem({
+      actorUserId,
+      assignedToUserId,
+      reason,
+      status,
+      workItemId,
+      workspaceId,
+    }) {
+      const { data, error } = await client.rpc(
+        "clair_update_fulfillment_work_item",
+        {
+          p_workspace_id: workspaceId,
+          p_actor_user_id: actorUserId,
+          p_work_item_id: normalizeUuidForRpc(workItemId) ?? workItemId,
+          p_status: status,
+          p_assigned_to_user_id:
+            normalizeUuidForRpc(assignedToUserId ?? undefined) ?? null,
+          p_reason: normalizeOptionalField(reason) ?? null,
+        },
+      );
       if (error) return mapGatewayError(error.message, "db_write_failed");
       return { ok: true, workItems: mapWorkItemRows(data) };
     },
   };
 }
 
+async function persistSupabaseSnapshotEnrichment({
+  client,
+  orderSnapshots,
+  workItems,
+  workspaceId,
+}: {
+  client: SupabaseFulfillmentWorkItemRpcClient;
+  orderSnapshots?: FulfillmentOrderSnapshotInput[];
+  workItems: FulfillmentWorkItem[];
+  workspaceId: string;
+}): Promise<{ ok: true; workItems: FulfillmentWorkItem[] }> {
+  if (!client.from || !orderSnapshots?.length || !workItems.length) {
+    return { ok: true, workItems };
+  }
+
+  const snapshotByOrderId = new Map(
+    orderSnapshots.map((snapshot) => [snapshot.orderId, snapshot]),
+  );
+  const enrichedWorkItems: FulfillmentWorkItem[] = [];
+
+  for (const workItem of workItems) {
+    const snapshot = snapshotByOrderId.get(workItem.orderId);
+    if (!snapshot) {
+      enrichedWorkItems.push(workItem);
+      continue;
+    }
+
+    const sourceSnapshot = mergeOrderSnapshotIntoSourceSnapshot(
+      workItem.sourceSnapshot,
+      snapshot,
+    );
+    const nextWorkItem = { ...workItem, sourceSnapshot };
+    await client
+      .from("order_fulfillment_work_items")
+      .update({ source_snapshot: sourceSnapshot })
+      .eq("workspace_id", workspaceId)
+      .eq(
+        "order_id",
+        normalizeUuidForRpc(workItem.orderId) ?? workItem.orderId,
+      );
+
+    enrichedWorkItems.push(nextWorkItem);
+  }
+
+  return { ok: true, workItems: enrichedWorkItems };
+}
+
+function mergeOrderSnapshotIntoSourceSnapshot(
+  sourceSnapshot: FulfillmentSourceSnapshot,
+  orderSnapshot: FulfillmentOrderSnapshotInput,
+): FulfillmentSourceSnapshot {
+  return {
+    ...sourceSnapshot,
+    billingReflectionEnabled:
+      orderSnapshot.billingReflectionEnabled ??
+      sourceSnapshot.billingReflectionEnabled,
+    detail: {
+      ...sourceSnapshot.detail,
+      billingName: orderSnapshot.billingName,
+      destinationModule: orderSnapshot.destinationModule,
+      lineTotalSnapshot: orderSnapshot.lineTotalSnapshot,
+      quantity: orderSnapshot.quantity,
+      standardOrderName: orderSnapshot.standardOrderName,
+      unitPriceSnapshot: orderSnapshot.priceKrw,
+    },
+    guardianName: orderSnapshot.guardianName ?? sourceSnapshot.guardianName,
+    instruction:
+      orderSnapshot.internalInstruction ?? sourceSnapshot.instruction,
+    orderDisplayName:
+      orderSnapshot.inHospitalOrderName ?? sourceSnapshot.orderDisplayName,
+    patientName: orderSnapshot.patientName ?? sourceSnapshot.patientName,
+    serviceItemId: orderSnapshot.sourcePresetId ?? sourceSnapshot.serviceItemId,
+  };
+}
+
 export function createDemoFulfillmentPermissionAdapter() {
   return createMockWorkspacePermissionAdapter({
     users: [
-      { id: "playwright-default-session", status: "active", displayName: "Playwright Admin" },
+      {
+        id: "playwright-default-session",
+        status: "active",
+        displayName: "Playwright Admin",
+      },
       { id: "user-admin", status: "active", displayName: "송민재" },
       { id: "user-front-desk", status: "active", displayName: "최유나" },
       { id: "user-vet", status: "active", displayName: "이수지" },
@@ -616,7 +1052,12 @@ async function findWorkItemForPermission({
   | { ok: false; status: 409; denialReason: "work_item_unavailable" }
   | { ok: false; status: 500; error: "db_read_failed" }
 > {
-  for (const queueType of ["lab", "imaging", "dispensing", "treatment"] satisfies FulfillmentQueueType[]) {
+  for (const queueType of [
+    "lab",
+    "imaging",
+    "dispensing",
+    "treatment",
+  ] satisfies FulfillmentQueueType[]) {
     const result = await gateway.listWorkItems({ queueType, workspaceId });
     if (!result.ok) {
       if (result.status === 409) continue;
@@ -643,18 +1084,28 @@ function seedWorkItems({
   workspaceId: string;
 }) {
   const rows = orders
-    .filter((order) => order.workspaceId === workspaceId && order.status !== "cancelled")
+    .filter(
+      (order) =>
+        order.workspaceId === workspaceId && order.status !== "cancelled",
+    )
     .map((order) => {
-      const encounter = findEncounter(encounters, workspaceId, order.encounterId);
+      const encounter = findEncounter(
+        encounters,
+        workspaceId,
+        order.encounterId,
+      );
       if (!encounter || !isSupportedOrderType(order.orderType)) return null;
-      return fulfillmentMockStore.get(buildWorkItemKey(workspaceId, order.id)) ?? buildWorkItemFromOrder({
-        actorUserId: order.requestedByUserId,
-        encounter,
-        guardians,
-        now: order.updatedAt,
-        order,
-        patients,
-      });
+      return (
+        fulfillmentMockStore.get(buildWorkItemKey(workspaceId, order.id)) ??
+        buildWorkItemFromOrder({
+          actorUserId: order.requestedByUserId,
+          encounter,
+          guardians,
+          now: order.updatedAt,
+          order,
+          patients,
+        })
+      );
     })
     .filter((item): item is FulfillmentWorkItem => Boolean(item));
 
@@ -667,6 +1118,7 @@ function buildWorkItemFromOrder({
   guardians,
   now,
   order,
+  orderSnapshot,
   patients,
 }: {
   actorUserId: string;
@@ -674,6 +1126,7 @@ function buildWorkItemFromOrder({
   guardians: Guardian[];
   now: string;
   order: EmrOrder;
+  orderSnapshot?: FulfillmentOrderSnapshotInput;
   patients: Patient[];
 }): FulfillmentWorkItem {
   const patient = patients.find((item) => item.id === encounter.patientId);
@@ -682,7 +1135,10 @@ function buildWorkItemFromOrder({
   return {
     assignedToUserId: order.currentAssigneeUserId ?? null,
     cancelledAt: null,
-    completedAt: order.status === "completed" || order.workStatus === "completed" ? order.updatedAt : null,
+    completedAt:
+      order.status === "completed" || order.workStatus === "completed"
+        ? order.updatedAt
+        : null,
     createdAt: order.createdAt,
     dueAt: order.dueAt ?? null,
     encounterId: order.encounterId,
@@ -695,13 +1151,13 @@ function buildWorkItemFromOrder({
     requestedByUserId: actorUserId || order.requestedByUserId,
     returnedAt: null,
     sourceSnapshot: {
-      billingReflectionEnabled: true,
-      detail: buildSnapshotDetail(order),
-      guardianName: guardian?.name,
-      instruction: order.instruction,
-      orderDisplayName: order.displayName,
-      patientName: patient?.name,
-      serviceItemId: order.serviceItemId,
+      billingReflectionEnabled: orderSnapshot?.billingReflectionEnabled ?? true,
+      detail: buildSnapshotDetail(order, orderSnapshot),
+      guardianName: orderSnapshot?.guardianName ?? guardian?.name,
+      instruction: orderSnapshot?.internalInstruction ?? order.instruction,
+      orderDisplayName: orderSnapshot?.inHospitalOrderName ?? order.displayName,
+      patientName: orderSnapshot?.patientName ?? patient?.name,
+      serviceItemId: orderSnapshot?.sourcePresetId ?? order.serviceItemId,
     },
     status: mapOrderStatusToWorkItemStatus(order.status, order.workStatus),
     updatedAt: now,
@@ -724,14 +1180,27 @@ async function syncDownstreamFromFulfillmentUpdate({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
-  invoiceCandidateGateway: Pick<InvoiceCandidateSyncGateway, "syncInvoiceCandidates">;
-  lifecycleGateway: Pick<ChartOrderLifecycleGateway, "saveOrderLifecycleStatus">;
+  invoiceCandidateGateway: Pick<
+    InvoiceCandidateSyncGateway,
+    "syncInvoiceCandidates"
+  >;
+  lifecycleGateway: Pick<
+    ChartOrderLifecycleGateway,
+    "saveOrderLifecycleStatus"
+  >;
   requestedStatus: FulfillmentWorkItemStatus;
   updatedWorkItem: FulfillmentWorkItem | undefined;
   workspaceId: string;
 }): Promise<
   | { ok: true; summary: FulfillmentDownstreamSyncSummary }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "order_unavailable" | "invalid_transition" }
+  | {
+      ok: false;
+      status: 409;
+      denialReason:
+        | "encounter_unavailable"
+        | "order_unavailable"
+        | "invalid_transition";
+    }
   | { ok: false; status: 500; error: "db_write_failed" }
 > {
   const summary: FulfillmentDownstreamSyncSummary = {
@@ -740,7 +1209,8 @@ async function syncDownstreamFromFulfillmentUpdate({
   };
   if (!updatedWorkItem) return { ok: true, summary };
 
-  const lifecycleStatus = mapFulfillmentStatusToLifecycleStatus(requestedStatus);
+  const lifecycleStatus =
+    mapFulfillmentStatusToLifecycleStatus(requestedStatus);
   if (lifecycleStatus) {
     const lifecycleResult = await saveLifecycleWithBridge({
       actorUserId: actorUserId ?? "",
@@ -760,13 +1230,18 @@ async function syncDownstreamFromFulfillmentUpdate({
   if (requestedStatus === "completed") {
     if (updatedWorkItem.sourceSnapshot.billingReflectionEnabled === false) {
       summary.billingSkippedReason = "billing_reflection_disabled";
+    } else if (requiresVetReviewBeforeBilling(updatedWorkItem.queueType)) {
+      summary.billingSkippedReason = "vet_review_required";
     } else {
-      const billingResult = await invoiceCandidateGateway.syncInvoiceCandidates({
-        actorUserId: actorUserId ?? "",
-        encounterId: updatedWorkItem.encounterId,
-        orderIds: [updatedWorkItem.orderId],
-        workspaceId,
-      });
+      const billingResult = await invoiceCandidateGateway.syncInvoiceCandidates(
+        {
+          actorUserId: actorUserId ?? "",
+          encounterId: updatedWorkItem.encounterId,
+          orderIds: [updatedWorkItem.orderId],
+          orderSnapshots: [mapWorkItemToBillingSnapshot(updatedWorkItem)],
+          workspaceId,
+        },
+      );
       if (billingResult.ok) {
         billingCandidates = billingResult.candidates;
         summary.billingCandidateCount = billingCandidates.length;
@@ -791,7 +1266,8 @@ async function syncDownstreamFromFulfillmentUpdate({
     workItem: updatedWorkItem,
     workspaceId,
   });
-  if (!auditResult.ok) return { ok: false, status: 500, error: "db_write_failed" };
+  if (!auditResult.ok)
+    return { ok: false, status: 500, error: "db_write_failed" };
   summary.auditEventCount = auditResult.eventCount;
 
   return { ok: true, summary };
@@ -805,20 +1281,31 @@ async function saveLifecycleWithBridge({
   workspaceId,
 }: {
   actorUserId: string;
-  lifecycleGateway: Pick<ChartOrderLifecycleGateway, "saveOrderLifecycleStatus">;
+  lifecycleGateway: Pick<
+    ChartOrderLifecycleGateway,
+    "saveOrderLifecycleStatus"
+  >;
   status: ChartOrderLifecycleStatus;
   workItem: FulfillmentWorkItem;
   workspaceId: string;
 }) {
   const result = await lifecycleGateway.saveOrderLifecycleStatus({
     actorUserId,
-    cancellationReason: status === "cancelled" ? workItem.reason ?? "fulfillment_cancelled" : undefined,
+    cancellationReason:
+      status === "cancelled"
+        ? (workItem.reason ?? "fulfillment_cancelled")
+        : undefined,
     encounterId: workItem.encounterId,
     orderId: workItem.orderId,
     status,
     workspaceId,
   });
-  if (result.ok || result.status !== 409 || result.denialReason !== "invalid_transition" || status === "in_progress") {
+  if (
+    result.ok ||
+    result.status !== 409 ||
+    result.denialReason !== "invalid_transition" ||
+    status === "in_progress"
+  ) {
     return result;
   }
 
@@ -829,11 +1316,18 @@ async function saveLifecycleWithBridge({
     status: "in_progress",
     workspaceId,
   });
-  if (!bridge.ok && (bridge.status !== 409 || bridge.denialReason !== "invalid_transition")) return bridge;
+  if (
+    !bridge.ok &&
+    (bridge.status !== 409 || bridge.denialReason !== "invalid_transition")
+  )
+    return bridge;
 
   return lifecycleGateway.saveOrderLifecycleStatus({
     actorUserId,
-    cancellationReason: status === "cancelled" ? workItem.reason ?? "fulfillment_cancelled" : undefined,
+    cancellationReason:
+      status === "cancelled"
+        ? (workItem.reason ?? "fulfillment_cancelled")
+        : undefined,
     encounterId: workItem.encounterId,
     orderId: workItem.orderId,
     status,
@@ -922,7 +1416,7 @@ async function emitFulfillmentDownstreamAuditEvents({
 }
 
 function mapFulfillmentStatusToLifecycleStatus(
-  status: FulfillmentWorkItemStatus
+  status: FulfillmentWorkItemStatus,
 ): ChartOrderLifecycleStatus | null {
   if (status === "accepted" || status === "in_progress") return "in_progress";
   if (status === "completed") return "completed";
@@ -931,28 +1425,139 @@ function mapFulfillmentStatusToLifecycleStatus(
   return null;
 }
 
-function buildSnapshotDetail(order: EmrOrder) {
+function requiresVetReviewBeforeBilling(queueType: FulfillmentQueueType) {
+  return queueType === "lab" || queueType === "imaging";
+}
+
+function mapWorkItemToBillingSnapshot(workItem: FulfillmentWorkItem) {
+  const detail = workItem.sourceSnapshot.detail;
   return {
+    billingName:
+      typeof detail.billingName === "string" ? detail.billingName : undefined,
+    billingReflectionEnabled: workItem.sourceSnapshot.billingReflectionEnabled,
+    destinationModule:
+      typeof detail.destinationModule === "string"
+        ? detail.destinationModule
+        : workItem.queueType,
+    inHospitalOrderName: workItem.sourceSnapshot.orderDisplayName,
+    lineTotalSnapshot:
+      typeof detail.lineTotalSnapshot === "number"
+        ? detail.lineTotalSnapshot
+        : undefined,
+    orderId: workItem.orderId,
+    priceKrw:
+      typeof detail.unitPriceSnapshot === "number"
+        ? detail.unitPriceSnapshot
+        : undefined,
+    quantity: typeof detail.quantity === "number" ? detail.quantity : undefined,
+    sourcePresetId: workItem.sourceSnapshot.serviceItemId,
+    standardOrderName:
+      typeof detail.standardOrderName === "string"
+        ? detail.standardOrderName
+        : undefined,
+    taskRequired: true,
+  };
+}
+
+function buildSnapshotDetail(
+  order: EmrOrder,
+  orderSnapshot?: FulfillmentOrderSnapshotInput,
+) {
+  return {
+    billingName: orderSnapshot?.billingName,
+    destinationModule: orderSnapshot?.destinationModule,
+    lineTotalSnapshot: orderSnapshot?.lineTotalSnapshot,
     orderType: order.orderType,
     priority: order.priority,
+    quantity: orderSnapshot?.quantity,
+    standardOrderName: orderSnapshot?.standardOrderName,
+    unitPriceSnapshot: orderSnapshot?.priceKrw,
     warningMessage: order.warningMessage,
+  };
+}
+
+function isSnapshotFulfillmentRequired(
+  snapshot: FulfillmentOrderSnapshotInput,
+) {
+  if (snapshot.taskRequired === false) return false;
+  return Boolean(mapSnapshotDestinationToQueue(snapshot.destinationModule));
+}
+
+function mapSnapshotDestinationToQueue(
+  value?: string,
+): FulfillmentQueueType | null {
+  if (
+    value === "lab" ||
+    value === "imaging" ||
+    value === "dispensing" ||
+    value === "treatment"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function createVirtualOrderFromSnapshot({
+  actorUserId,
+  encounterId,
+  now,
+  orderId,
+  orderType,
+  snapshot,
+  workspaceId,
+}: {
+  actorUserId: string;
+  encounterId: string;
+  now: string;
+  orderId: string;
+  orderType: FulfillmentQueueType;
+  snapshot: FulfillmentOrderSnapshotInput;
+  workspaceId: string;
+}): EmrOrder {
+  return {
+    id: orderId,
+    workspaceId,
+    encounterId,
+    serviceItemId: snapshot.sourcePresetId,
+    orderType,
+    displayName:
+      snapshot.inHospitalOrderName ??
+      snapshot.standardOrderName ??
+      snapshot.billingName ??
+      "Catalog Order",
+    status: "confirmed",
+    workStatus: "pending",
+    priority: "normal",
+    requestedByUserId: actorUserId,
+    requestedAt: now,
+    instruction: snapshot.internalInstruction,
+    sortOrder: 0,
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
 function mapOrderStatusToWorkItemStatus(
   orderStatus: EmrOrder["status"],
-  workStatus: EmrOrder["workStatus"]
+  workStatus: EmrOrder["workStatus"],
 ): FulfillmentWorkItemStatus {
   if (orderStatus === "cancelled") return "cancelled";
   if (orderStatus === "re_requested") return "returned";
   if (orderStatus === "in_progress") return "in_progress";
-  if (orderStatus === "completed" || workStatus === "completed") return "completed";
+  if (orderStatus === "completed" || workStatus === "completed")
+    return "completed";
   return "requested";
 }
 
-function canTransition(current: FulfillmentWorkItemStatus, next: FulfillmentWorkItemStatus) {
+function canTransition(
+  current: FulfillmentWorkItemStatus,
+  next: FulfillmentWorkItemStatus,
+) {
   if (current === next) return true;
-  const allowed: Record<FulfillmentWorkItemStatus, FulfillmentWorkItemStatus[]> = {
+  const allowed: Record<
+    FulfillmentWorkItemStatus,
+    FulfillmentWorkItemStatus[]
+  > = {
     requested: ["accepted", "cancelled", "returned"],
     accepted: ["in_progress", "cancelled", "returned"],
     in_progress: ["completed", "cancelled", "returned"],
@@ -967,8 +1572,12 @@ function normalizeFilters(input: FulfillmentWorkItemFilters) {
   return {
     encounterId: trimToUndefined(input.encounterId),
     orderId: trimToUndefined(input.orderId),
-    queueType: trimToUndefined(input.queueType) as FulfillmentQueueType | undefined,
-    status: trimToUndefined(input.status) as FulfillmentWorkItemStatus | undefined,
+    queueType: trimToUndefined(input.queueType) as
+      | FulfillmentQueueType
+      | undefined,
+    status: trimToUndefined(input.status) as
+      | FulfillmentWorkItemStatus
+      | undefined,
   };
 }
 
@@ -989,14 +1598,21 @@ function normalizeSyncInput(input: FulfillmentSyncInput) {
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
     orderIds: Array.isArray(input.orderIds)
-      ? [...new Set(input.orderIds.map(trimToUndefined).filter((item): item is string => Boolean(item)))]
+      ? [
+          ...new Set(
+            input.orderIds
+              .map(trimToUndefined)
+              .filter((item): item is string => Boolean(item)),
+          ),
+        ]
       : [],
   };
 }
 
 function validateSyncInput(input: ReturnType<typeof normalizeSyncInput>) {
   const fieldErrors: Partial<Record<"encounterId" | "orderIds", string>> = {};
-  if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
+  if (!input.encounterId)
+    fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (input.orderIds.length < 1 || input.orderIds.length > 100) {
     fieldErrors.orderIds = "연결할 오더를 확인해 주세요.";
   }
@@ -1005,7 +1621,22 @@ function validateSyncInput(input: ReturnType<typeof normalizeSyncInput>) {
     : { valid: true as const, fieldErrors: {} };
 }
 
-function normalizeUpdateInput(workItemId: string | null | undefined, input: FulfillmentWorkItemUpdateInput) {
+function normalizeVetReviewBillingInput(
+  input: FulfillmentVetReviewBillingInput,
+) {
+  return normalizeSyncInput(input);
+}
+
+function validateVetReviewBillingInput(
+  input: ReturnType<typeof normalizeVetReviewBillingInput>,
+) {
+  return validateSyncInput(input);
+}
+
+function normalizeUpdateInput(
+  workItemId: string | null | undefined,
+  input: FulfillmentWorkItemUpdateInput,
+) {
   return {
     assignedToUserId: normalizeOptionalField(input.assignedToUserId),
     reason: normalizeOptionalField(input.reason),
@@ -1025,35 +1656,54 @@ function validateUpdateInput(input: ReturnType<typeof normalizeUpdateInput>) {
     : { valid: true as const, fieldErrors: {} };
 }
 
-function permissionForQueue(queueType: FulfillmentQueueType, action: "mutate" | "read"): PermissionId {
-  if (queueType === "lab") return action === "read" ? "lab:view" : "lab:complete";
-  if (queueType === "imaging") return action === "read" ? "imaging:view" : "imaging:complete";
+function permissionForQueue(
+  queueType: FulfillmentQueueType,
+  action: "mutate" | "read",
+): PermissionId {
+  if (queueType === "lab")
+    return action === "read" ? "lab:view" : "lab:complete";
+  if (queueType === "imaging")
+    return action === "read" ? "imaging:view" : "imaging:complete";
+  // DEN-301: phase 1 intentionally shares dispensing permissions with treatment.
   return action === "read" ? "dispensing:view" : "dispensing:complete";
 }
 
 function mapPermissionDenial(denialReason?: WorkspacePermissionDenialReason) {
   return {
     ok: false as const,
-    status: denialReason === "unauthenticated" ? 401 as const : 403 as const,
-    denialReason: denialReason ?? "permission_missing" as const,
+    status:
+      denialReason === "unauthenticated" ? (401 as const) : (403 as const),
+    denialReason: denialReason ?? ("permission_missing" as const),
   };
 }
 
-function mapGatewayError(message: string | undefined, fallback: "db_read_failed" | "db_write_failed"): FulfillmentGatewayResult {
-  if (message?.includes("encounter_unavailable")) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
-  if (message?.includes("invalid_transition")) return { ok: false, status: 409, denialReason: "invalid_transition" };
-  if (message?.includes("order_unavailable")) return { ok: false, status: 409, denialReason: "order_unavailable" };
-  if (message?.includes("unsupported_order_type")) return { ok: false, status: 409, denialReason: "unsupported_order_type" };
-  if (message?.includes("work_item_unavailable")) return { ok: false, status: 409, denialReason: "work_item_unavailable" };
+function mapGatewayError(
+  message: string | undefined,
+  fallback: "db_read_failed" | "db_write_failed",
+): FulfillmentGatewayResult {
+  if (message?.includes("encounter_unavailable"))
+    return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+  if (message?.includes("invalid_transition"))
+    return { ok: false, status: 409, denialReason: "invalid_transition" };
+  if (message?.includes("order_unavailable"))
+    return { ok: false, status: 409, denialReason: "order_unavailable" };
+  if (message?.includes("unsupported_order_type"))
+    return { ok: false, status: 409, denialReason: "unsupported_order_type" };
+  if (message?.includes("work_item_unavailable"))
+    return { ok: false, status: 409, denialReason: "work_item_unavailable" };
   return { ok: false, status: 500, error: fallback };
 }
 
-function findEncounter(encounters: Encounter[], workspaceId: string, encounterId: string) {
+function findEncounter(
+  encounters: Encounter[],
+  workspaceId: string,
+  encounterId: string,
+) {
   return encounters.find(
     (encounter) =>
       encounter.id === encounterId &&
       encounter.workspaceId === workspaceId &&
-      encounter.status !== "cancelled"
+      encounter.status !== "cancelled",
   );
 }
 
@@ -1062,10 +1712,17 @@ function buildWorkItemKey(workspaceId: string, orderId: string) {
 }
 
 function isSupportedOrderType(value: unknown): value is FulfillmentQueueType {
-  return value === "lab" || value === "imaging" || value === "dispensing" || value === "treatment";
+  return (
+    value === "lab" ||
+    value === "imaging" ||
+    value === "dispensing" ||
+    value === "treatment"
+  );
 }
 
-function isFulfillmentStatus(value: unknown): value is FulfillmentWorkItemStatus {
+function isFulfillmentStatus(
+  value: unknown,
+): value is FulfillmentWorkItemStatus {
   return fulfillmentStatuses.includes(value as FulfillmentWorkItemStatus);
 }
 
@@ -1078,7 +1735,10 @@ function trimToUndefined(value?: string | null) {
 }
 
 function normalizeUuidForRpc(value?: string | null) {
-  return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  return value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
     ? value
     : undefined;
 }

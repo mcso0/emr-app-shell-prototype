@@ -120,12 +120,14 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
-  await expect(sidePanel.getByRole("button", { name: "판독중 접기" })).toHaveAttribute("aria-expanded", "true");
+  const readingGroupToggle = sidePanel.getByRole("button", { name: /확인|판독(중|완료) 접기/ }).first();
+  await expect(readingGroupToggle).toHaveAttribute("aria-expanded", "true");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
-  await sidePanel.getByRole("button", { name: "판독중 접기" }).click();
-  await expect(sidePanel.getByRole("button", { name: "판독중 펼치기" })).toHaveAttribute("aria-expanded", "false");
+  await readingGroupToggle.click();
+  const collapsedReadingGroupToggle = sidePanel.getByRole("button", { name: /확인|판독(중|완료) 펼치기/ }).first();
+  await expect(collapsedReadingGroupToggle).toHaveAttribute("aria-expanded", "false");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
-  await sidePanel.getByRole("button", { name: "판독중 펼치기" }).click();
+  await collapsedReadingGroupToggle.click();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
   await queueViewFilter.getByRole("button", { name: "차트별" }).click();
   await expect(sidePanel.getByText("차트별 영상")).toBeVisible();
@@ -138,7 +140,7 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("흉부 방사선").first()).toBeVisible();
   await expect(page.getByTestId("imaging-study-status-label")).toHaveText("판독중");
-  await expect(page.getByText("Order 상세정보")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Order 상세정보 접기" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "스터디 판독의견" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "영상 판독 내용" })).toContainText("복부 가스 음영 증가");
   await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText("위장관염 가능성");

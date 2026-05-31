@@ -3,6 +3,11 @@ import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   createReceptionAppointmentCheckIn,
   createSupabaseReceptionAppointmentCheckInGateway,
@@ -52,10 +57,20 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await createReceptionAppointmentCheckIn({
     actorUserId: identity.actorUserId,
     appointmentId,
     workspaceId,
+    permissionAdapter,
     gateway: client
       ? createSupabaseReceptionAppointmentCheckInGateway(
           client as unknown as SupabaseReceptionAppointmentCheckInRpcClient

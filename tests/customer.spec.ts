@@ -75,6 +75,49 @@ test("customer side panel switches to guardians and search filters rows", async 
   await expect(page).toHaveURL(/drawer=guardian%3Aguardian-kim-haneul|drawer=guardian:guardian-kim-haneul/);
 });
 
+test("customer patient table supports single sort and section filter builder", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+
+  const patientTableSection = page.getByTestId("customer-patient-table");
+  const patientRows = patientTableSection.locator('[data-testid^="customer-patient-row-"]');
+
+  await patientTableSection.getByRole("button", { name: /등록일시 오름차순 정렬/ }).click();
+  await expect(patientRows.first()).toContainText("코코");
+
+  await patientTableSection.getByRole("button", { name: /현재 정렬: 등록일시 오름차순/ }).click();
+  await expect(patientRows.first()).toContainText("콩이");
+
+  await patientTableSection.getByRole("button", { name: "동물 필터 설정" }).click();
+  const filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await expect(
+    filterBuilder.getByRole("combobox", { name: "필터 필드" }),
+  ).toHaveCount(1);
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await page.getByRole("option", { name: "품종" }).click();
+  await expect(
+    patientTableSection.getByRole("button", { name: "동물 필터 설정" }),
+  ).toBeVisible();
+  await expect(patientRows).toHaveCount(5);
+
+  await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
+  await page.getByRole("option", { name: "푸들" }).click();
+  await filterBuilder.getByRole("button", { name: "Add filter" }).click();
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).nth(1).click();
+  await page.getByRole("option", { name: "상태" }).click();
+  await filterBuilder.getByRole("combobox", { name: "필터 값" }).nth(1).click();
+  await page.getByRole("option", { name: "오더진행" }).click();
+
+  await expect(patientTableSection.getByRole("button", { name: "동물 필터 2개 설정" })).toBeVisible();
+  await expect(patientRows).toHaveCount(1);
+  await expect(patientRows.first()).toContainText("콩이");
+
+  await filterBuilder.getByRole("button", { name: "초기화" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(patientTableSection.getByRole("button", { name: "동물 필터 설정" })).toBeVisible();
+  await expect(patientRows).toHaveCount(5);
+});
+
 test("customer row action menu closes with Escape and explains unavailable actions", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 

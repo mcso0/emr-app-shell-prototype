@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Advanced Filter Builder Pattern Draft</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --muted-panel: #f6f7f9;
+        --line: #d8e0ea;
+        --line-strong: #c4ceda;
+        --text: #111827;
+        --muted: #64748b;
+        --soft: #f1f5f9;
+        --accent: #2563eb;
+        --accent-soft: #dbeafe;
+        --danger: #dc2626;
+        --shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin-top: 30px;
+        font-size: 20px;
+      }
+
+      h3 {
+        font-size: 15px;
+      }
+
+      .lead {
+        margin-top: 10px;
+        max-width: 900px;
+        color: var(--muted);
+      }
+
+      .stage {
+        position: relative;
+        min-height: 660px;
+        margin-top: 24px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #eef2f7;
+      }
+
+      .workspace {
+        padding: 22px;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 0 12px;
+        color: #334155;
+        font-size: 14px;
+        font-weight: 650;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      }
+
+      .button.active {
+        border-color: #93c5fd;
+        background: var(--accent-soft);
+        color: #1d4ed8;
+      }
+
+      .button.danger {
+        border-color: #fecaca;
+        background: #ffffff;
+        color: var(--danger);
+      }
+
+      .button.ghost {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .icon-button {
+        display: inline-grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: #64748b;
+        font-size: 18px;
+      }
+
+      .table-shell {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #ffffff;
+      }
+
+      .section-head {
+        display: flex;
+        min-height: 56px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+        padding: 12px 16px;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 780;
+      }
+
+      .meta {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 12px 14px;
+        text-align: left;
+        font-size: 14px;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: start center;
+        padding: 76px 22px 22px;
+        background: rgba(15, 23, 42, 0.08);
+      }
+
+      .filter-panel {
+        width: min(100%, 830px);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .filter-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 20px 10px;
+      }
+
+      .filter-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 17px;
+        font-weight: 780;
+      }
+
+      .info {
+        display: inline-grid;
+        width: 17px;
+        height: 17px;
+        place-items: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .filter-body {
+        display: grid;
+        gap: 10px;
+        padding: 10px 20px 8px;
+      }
+
+      .filter-line {
+        display: grid;
+        grid-template-columns: 70px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+      }
+
+      .side-label {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 720;
+        text-align: right;
+      }
+
+      .group {
+        display: grid;
+        gap: 8px;
+        border-radius: 10px;
+        background: var(--muted-panel);
+        padding: 10px;
+      }
+
+      .rule-grid {
+        display: grid;
+        grid-template-columns: 92px 160px 118px minmax(210px, 1fr) 30px;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .rule-grid.first {
+        grid-template-columns: 160px 118px minmax(210px, 1fr) 30px;
+        padding-left: 100px;
+      }
+
+      .control,
+      select,
+      input {
+        width: 100%;
+        min-height: 32px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        background: #ffffff;
+        padding: 0 10px;
+        color: #1f2937;
+        font: inherit;
+        font-size: 14px;
+      }
+
+      .control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .control.placeholder,
+      select.placeholder {
+        color: #94a3b8;
+      }
+
+      .search-icon {
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .trash {
+        color: #64748b;
+        font-size: 16px;
+      }
+
+      .nested-add {
+        justify-self: start;
+        min-height: 26px;
+        padding: 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 720;
+      }
+
+      .draft {
+        outline: 1px dashed #93c5fd;
+        outline-offset: 2px;
+      }
+
+      .filter-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 20px 18px;
+      }
+
+      .research {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #ffffff;
+        padding: 14px;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .card ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+
+      .code {
+        margin-top: 18px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #0f172a;
+        color: #dbeafe;
+        padding: 16px;
+        font-size: 13px;
+      }
+
+      @media (max-width: 880px) {
+        main {
+          padding: 24px 14px 48px;
+        }
+
+        .stage {
+          min-height: 820px;
+        }
+
+        .overlay {
+          padding-top: 56px;
+        }
+
+        .filter-line,
+        .rule-grid,
+        .rule-grid.first {
+          grid-template-columns: 1fr;
+          padding-left: 0;
+        }
+
+        .side-label {
+          text-align: left;
+        }
+
+        .research {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Advanced Filter Builder Pattern Draft</h1>
+      <p class="lead">
+        용어는 advanced filter builder, query builder, rule/group builder로 정리한다.
+        이 시안은 레퍼런스처럼 자동 적용형 builder를 기준으로 다시 잡았다. footer에는 확정/닫기 버튼을 두지 않고,
+        완료된 조건만 active filter로 계산한다.
+      </p>
+
+      <section class="stage" aria-label="필터 builder 시안">
+        <div class="workspace" aria-hidden="true">
+          <div class="toolbar">
+            <button class="button">Sort</button>
+            <button class="button active">Filter 2</button>
+            <button class="button">진료의</button>
+            <button class="button">내 차트</button>
+          </div>
+          <div class="table-shell">
+            <div class="section-head">
+              <div>
+                <div class="title">처방/오더 테이블</div>
+                <div class="meta">현재 분류 탭과 검색 결과 안에서 필터가 적용된다.</div>
+              </div>
+              <button class="button active">Filter 2</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>분류</th>
+                  <th>상태</th>
+                  <th>Order명</th>
+                  <th>수의사</th>
+                  <th>청구금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>임상</td>
+                  <td>진행중</td>
+                  <td>CBC 검사</td>
+                  <td>이수지</td>
+                  <td>30,000</td>
+                </tr>
+                <tr>
+                  <td>영상</td>
+                  <td>재확인</td>
+                  <td>복부 초음파</td>
+                  <td>이수지</td>
+                  <td>69,500</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="overlay" aria-label="바깥 영역 클릭 시 닫히는 overlay">
+          <div class="filter-panel" role="dialog" aria-label="처방/오더 advanced filter builder">
+            <div class="filter-head">
+              <div class="filter-title">Filters <span class="info">i</span></div>
+              <button class="icon-button" aria-label="필터 닫기">×</button>
+            </div>
+
+            <div class="filter-body">
+              <div class="filter-line">
+                <div class="side-label">Where</div>
+                <div class="group">
+                  <div class="rule-grid first">
+                    <select aria-label="필터 필드">
+                      <option>Status</option>
+                      <option>Vet</option>
+                    </select>
+                    <select aria-label="필터 조건">
+                      <option>Is</option>
+                    </select>
+                    <div class="control placeholder">
+                      <span class="search-icon">⌕</span>
+                      <span>Select option</span>
+                    </div>
+                    <button class="icon-button trash" aria-label="필터 조건 삭제">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4h8v2" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v5" />
+                        <path d="M14 11v5" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="rule-grid">
+                    <select aria-label="조건 연결자">
+                      <option>AND</option>
+                      <option>OR</option>
+                    </select>
+                    <select aria-label="필터 필드">
+                      <option>Vet</option>
+                      <option>Status</option>
+                    </select>
+                    <select aria-label="필터 조건">
+                      <option>Is</option>
+                    </select>
+                    <div class="control">
+                      <span class="search-icon">⌕</span>
+                      <span>이수지</span>
+                    </div>
+                    <button class="icon-button trash" aria-label="필터 조건 삭제">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4h8v2" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v5" />
+                        <path d="M14 11v5" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <button class="button ghost nested-add">Add nested filter</button>
+                </div>
+              </div>
+
+              <div class="filter-line">
+                <select aria-label="조건 그룹 연결자">
+                  <option>AND</option>
+                  <option>OR</option>
+                </select>
+                <div class="group">
+                  <div class="rule-grid first">
+                    <select aria-label="필터 필드">
+                      <option>Status</option>
+                      <option>Vet</option>
+                    </select>
+                    <select aria-label="필터 조건">
+                      <option>Is</option>
+                    </select>
+                    <div class="control placeholder">
+                      <span class="search-icon">⌕</span>
+                      <span>Select option</span>
+                    </div>
+                    <button class="icon-button trash" aria-label="필터 조건 삭제">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4h8v2" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v5" />
+                        <path d="M14 11v5" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="rule-grid">
+                    <select aria-label="조건 연결자" disabled>
+                      <option>AND</option>
+                    </select>
+                    <select class="placeholder" aria-label="필터 필드">
+                      <option selected>Select field</option>
+                      <option>Status</option>
+                      <option>Vet</option>
+                    </select>
+                    <select class="placeholder" aria-label="필터 조건" disabled>
+                      <option>Select condition</option>
+                    </select>
+                    <div class="control placeholder draft">
+                      <span class="search-icon">⌕</span>
+                      <span>Select value</span>
+                    </div>
+                    <button class="icon-button trash" aria-label="필터 조건 삭제">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4h8v2" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v5" />
+                        <path d="M14 11v5" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <button class="button ghost nested-add">Add nested filter</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-footer">
+              <button class="button">+ Add filter</button>
+              <button class="button danger">Clear all</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <h2>조사 요약</h2>
+      <section class="research">
+        <article class="card">
+          <h3>이름</h3>
+          <p>
+            이 UI는 advanced filter builder 또는 query builder다. 사용자는 rule을 만들고 group에서 AND/OR 관계를 정한다.
+          </p>
+        </article>
+        <article class="card">
+          <h3>구조</h3>
+          <ul>
+            <li>Rule: field + operator + value</li>
+            <li>Group: combinator + rules/groups</li>
+            <li>Draft row: 미완성 조건, 적용 제외</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>동작</h3>
+          <p>
+            조건을 완성하면 자동 적용한다. 팝업 바깥 클릭, Escape, 상단 X로 닫힌다. footer는 Add filter와 Clear all만 둔다.
+          </p>
+        </article>
+      </section>
+
+      <pre class="code"><code>type FilterRule = {
+  id: string;
+  field: "status" | "vet";
+  operator: "is";
+  value: string | string[] | null;
+};
+
+type FilterGroup = {
+  id: string;
+  combinator: "AND" | "OR";
+  children: Array&lt;FilterRule | FilterGroup&gt;;
+};
+
+function isCompleteRule(rule: FilterRule) {
+  return Boolean(rule.field && rule.operator && rule.value);
+}</code></pre>
+    </main>
+  </body>
+</html>

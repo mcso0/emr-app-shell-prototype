@@ -1,18 +1,41 @@
 "use client";
 
 import type { ServiceItemType } from "@/types/emr-domain";
+import type {
+  OrderCatalogItem,
+  OrderCatalogMutationInput,
+  OrderCatalogPriceBasis,
+  OrderCatalogSalesUnit,
+} from "@/features/hospital-admin/server-order-catalog";
 
-export type HospitalOrderCategoryId = "lab" | "dispensing" | "treatment" | "imaging";
+export type HospitalOrderCategoryId =
+  | "consultation"
+  | "prevention"
+  | "lab"
+  | "imaging"
+  | "treatment"
+  | "surgery"
+  | "hospitalization"
+  | "therapy"
+  | "dispensing"
+  | "medical-supply";
 export type HospitalOrderSubcategoryId =
+  | "basic-consultation"
+  | "other-consultation"
+  | "prevention"
   | "clinical-pathology"
   | "blood-chemistry"
   | "external-lab"
+  | "radiography"
+  | "ultrasound"
+  | "basic-treatment"
+  | "anesthesia"
+  | "surgery"
+  | "hospitalization"
+  | "therapy"
   | "oral-medication"
   | "injection"
-  | "fluid"
-  | "basic-treatment"
-  | "radiography"
-  | "ultrasound";
+  | "medical-supply";
 export type HospitalOrderDelivery = "deliver" | "do-not-deliver";
 export type HospitalOrderTarget = "all" | "dog-cat" | "dog" | "cat" | "other";
 export type HospitalOrderSaleUnit = "each" | "day" | "session" | "pack";
@@ -61,6 +84,7 @@ export type HospitalOrderCatalogItem = {
   roundRule: HospitalOrderRoundRule;
   saleUnit: HospitalOrderSaleUnit;
   serviceItemType: ServiceItemType;
+  sourceCatalogItem?: OrderCatalogItem;
   standardName: string;
   subcategoryId: HospitalOrderSubcategoryId;
   target: HospitalOrderTarget;
@@ -73,6 +97,18 @@ export type HospitalOrderDraft = Omit<HospitalOrderCatalogItem, "id"> & {
 };
 
 export const hospitalOrderCategories: HospitalOrderCategory[] = [
+  {
+    id: "consultation",
+    label: "진료",
+    description: "진료비와 상담성 오더를 관리합니다.",
+    sortOrder: 5,
+  },
+  {
+    id: "prevention",
+    label: "예방",
+    description: "백신과 예방 관련 오더를 관리합니다.",
+    sortOrder: 8,
+  },
   {
     id: "lab",
     label: "검사",
@@ -97,9 +133,54 @@ export const hospitalOrderCategories: HospitalOrderCategory[] = [
     description: "영상 촬영과 판독 업무 항목입니다.",
     sortOrder: 40,
   },
+  {
+    id: "surgery",
+    label: "수술",
+    description: "마취와 수술 관련 오더를 관리합니다.",
+    sortOrder: 50,
+  },
+  {
+    id: "hospitalization",
+    label: "입원",
+    description: "입원료와 입원 중 관리 항목입니다.",
+    sortOrder: 60,
+  },
+  {
+    id: "therapy",
+    label: "치료",
+    description: "치료 프로그램과 반복 치료 항목입니다.",
+    sortOrder: 70,
+  },
+  {
+    id: "medical-supply",
+    label: "의료물품",
+    description: "진료와 조제에 쓰이는 의료물품입니다.",
+    sortOrder: 90,
+  },
 ];
 
 export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
+  {
+    id: "basic-consultation",
+    categoryId: "consultation",
+    label: "기본 진료비",
+    description: "기본 진찰과 상담료",
+    sortOrder: 10,
+  },
+  {
+    id: "other-consultation",
+    categoryId: "consultation",
+    label: "기타 진료비",
+    description: "기타 진료 관련 항목",
+    sortOrder: 20,
+  },
+  {
+    id: "prevention",
+    categoryId: "prevention",
+    label: "예방",
+    description: "백신과 예방 관리 항목",
+    sortOrder: 10,
+  },
   {
     id: "clinical-pathology",
     categoryId: "lab",
@@ -136,18 +217,39 @@ export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
     sortOrder: 20,
   },
   {
-    id: "fluid",
+    id: "basic-treatment",
     categoryId: "treatment",
-    label: "수액",
-    description: "피하/정맥 수액 처치",
+    label: "처치",
+    description: "드레싱, 처치, 간호 업무",
     sortOrder: 10,
   },
   {
-    id: "basic-treatment",
-    categoryId: "treatment",
-    label: "기본 처치",
-    description: "드레싱, 처치, 간호 업무",
+    id: "anesthesia",
+    categoryId: "surgery",
+    label: "마취",
+    description: "마취 관련 항목",
+    sortOrder: 10,
+  },
+  {
+    id: "surgery",
+    categoryId: "surgery",
+    label: "수술",
+    description: "수술 관련 항목",
     sortOrder: 20,
+  },
+  {
+    id: "hospitalization",
+    categoryId: "hospitalization",
+    label: "입원",
+    description: "입원료와 입원 관리 항목",
+    sortOrder: 10,
+  },
+  {
+    id: "therapy",
+    categoryId: "therapy",
+    label: "치료",
+    description: "치료 프로그램 항목",
+    sortOrder: 10,
   },
   {
     id: "radiography",
@@ -162,6 +264,13 @@ export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
     label: "초음파",
     description: "초음파 촬영과 판독",
     sortOrder: 20,
+  },
+  {
+    id: "medical-supply",
+    categoryId: "medical-supply",
+    label: "의료물품",
+    description: "소모품과 의료물품",
+    sortOrder: 10,
   },
 ];
 
@@ -335,7 +444,7 @@ export const hospitalOrderSeedItems: HospitalOrderCatalogItem[] = [
     saleUnit: "session",
     serviceItemType: "treatment",
     standardName: "피하 수액 처치",
-    subcategoryId: "fluid",
+    subcategoryId: "basic-treatment",
     target: "all",
     updatedAtLabel: "2026년 5월 3일 오전 10:31:08",
     updatedBy: "송민재",
@@ -461,12 +570,12 @@ export function createEmptyHospitalOrderDraft(
   return {
     aliases: "",
     billable: true,
-    billingName: "신규 청구서명",
+    billingName: "",
     careGuide: "",
     categoryId,
     delivery: "deliver",
     hospitalInstruction: "",
-    inHospitalName: "신규 원내 Order",
+    inHospitalName: "",
     isActive: true,
     isTaxable: false,
     memo: "",
@@ -480,7 +589,7 @@ export function createEmptyHospitalOrderDraft(
     roundRule: "none",
     saleUnit: "each",
     serviceItemType: "lab",
-    standardName: "신규 Order",
+    standardName: "",
     subcategoryId,
     target: "all",
     updatedAtLabel: "방금",
@@ -490,4 +599,308 @@ export function createEmptyHospitalOrderDraft(
 
 export function formatHospitalOrderAmount(amount: number) {
   return `${amount.toLocaleString()}원`;
+}
+
+export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): HospitalOrderCatalogItem {
+  const placement = resolveHospitalOrderPlacement(item);
+
+  return {
+    id: item.id,
+    aliases: item.aliases.join(", "),
+    billable: item.billingReflectionEnabled,
+    billingName: item.billingName,
+    careGuide: item.careGuide ?? "",
+    categoryId: placement.categoryId,
+    delivery: item.defaultTaskRequired ? "deliver" : "do-not-deliver",
+    hospitalInstruction: item.internalInstruction ?? "",
+    inHospitalName: item.inHospitalOrderName,
+    isActive: item.availabilityStatus === "active",
+    isTaxable: item.taxIncluded,
+    memo: buildCatalogMemo(item),
+    orderType: "individual",
+    price: item.priceKrw,
+    referenceItems: [
+      { label: "Source preset", value: item.standardOrderId },
+      { label: "Preset version", value: item.sourcePresetVersion },
+      { label: "Destination", value: item.defaultDestinationModule },
+    ],
+    roundRule: mapRoundRule(item.roundingRule),
+    saleUnit: mapSaleUnit(item.salesUnit),
+    serviceItemType: item.categoryGroup,
+    sourceCatalogItem: item,
+    standardName: item.standardOrderName,
+    subcategoryId: placement.subcategoryId,
+    target: mapTargetSpecies(item.targetSpecies),
+    updatedAtLabel: formatCatalogUpdatedAt(item.updatedAt),
+    updatedBy: item.lastCustomizedByUserId ?? "CLAiR preset",
+  };
+}
+
+export function mapWorkspaceCatalogItemsToHospitalOrders(items: OrderCatalogItem[]) {
+  return items.map(mapWorkspaceCatalogItemToHospitalOrder);
+}
+
+export function buildWorkspaceCatalogMutationFromHospitalOrder({
+  draft,
+  source,
+  workspaceId,
+}: {
+  draft: HospitalOrderDraft;
+  source?: OrderCatalogItem;
+  workspaceId: string;
+}): OrderCatalogMutationInput {
+  if (source) {
+    return {
+      action: "update",
+      itemId: source.id,
+      patch: buildWorkspaceCatalogPatchFromHospitalOrder(draft, source),
+    };
+  }
+
+  return {
+    action: "create",
+    item: buildWorkspaceCatalogCreateInputFromHospitalOrder(draft, workspaceId),
+  };
+}
+
+export function buildWorkspaceCatalogPauseMutation(orderId: string): OrderCatalogMutationInput {
+  return { action: "pause", itemId: orderId };
+}
+
+function buildWorkspaceCatalogPatchFromHospitalOrder(
+  draft: HospitalOrderDraft,
+  source: OrderCatalogItem
+): Partial<OrderCatalogItem> {
+  const salesUnit = mapHospitalSaleUnitToCatalogSalesUnit(draft.saleUnit);
+  const pricingRule = {
+    ...source.pricingRule,
+    billingReflectionEnabled: draft.billable,
+    priceKrw: draft.price,
+    salesUnit,
+    taxIncluded: draft.isTaxable,
+  };
+
+  return {
+    aliases: splitAliases(draft.aliases),
+    availabilityStatus: draft.isActive ? "active" : "paused",
+    billingName: draft.billingName,
+    billingReflectionEnabled: draft.billable,
+    careGuide: draft.careGuide,
+    defaultTaskRequired: draft.delivery === "deliver",
+    inHospitalOrderName: draft.inHospitalName,
+    internalInstruction: draft.hospitalInstruction,
+    priceKrw: draft.price,
+    pricingRule,
+    roundingRule: mapHospitalRoundRuleToCatalogRoundRule(draft.roundRule),
+    salesUnit,
+    standardOrderName: draft.standardName,
+    targetSpecies: mapHospitalTargetToSpecies(draft.target),
+    taxIncluded: draft.isTaxable,
+  };
+}
+
+function buildWorkspaceCatalogCreateInputFromHospitalOrder(
+  draft: HospitalOrderDraft,
+  workspaceId: string
+): Omit<OrderCatalogItem, "id" | "updatedAt"> & { id?: string } {
+  const catalogDefaults = resolveCatalogDefaultsFromHospitalOrder(draft);
+  const salesUnit = mapHospitalSaleUnitToCatalogSalesUnit(draft.saleUnit);
+  const priceBasis: OrderCatalogPriceBasis = salesUnit === "per_day" ? "unit_price" : "fixed_order_price";
+
+  return {
+    id: draft.id,
+    workspaceId,
+    standardOrderId: `custom-${draft.id ?? Date.now().toString(36)}`,
+    sourcePresetVersion: "custom-v1",
+    initialImportedPresetVersion: "custom-v1",
+    lastAutoMergedPresetVersion: undefined,
+    customizationState: "detached",
+    customizedFields: ["*"],
+    presetMergeStatus: "detached",
+    categoryGroup: catalogDefaults.categoryGroup,
+    categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? catalogDefaults.categoryLabel,
+    standardOrderName: draft.standardName,
+    inHospitalOrderName: draft.inHospitalName,
+    billingName: draft.billingName,
+    aliases: splitAliases(draft.aliases),
+    availabilityStatus: draft.isActive ? "active" : "paused",
+    priceKrw: draft.price,
+    salesUnit,
+    targetSpecies: mapHospitalTargetToSpecies(draft.target),
+    defaultDestinationModule: catalogDefaults.defaultDestinationModule,
+    defaultTaskRequired: draft.delivery === "deliver",
+    billingReflectionEnabled: draft.billable,
+    careGuide: draft.careGuide,
+    internalInstruction: draft.hospitalInstruction,
+    taxIncluded: draft.isTaxable,
+    roundingRule: mapHospitalRoundRuleToCatalogRoundRule(draft.roundRule),
+    linkedLabItemIds: [],
+    linkedLabCategoryIds: [],
+    pricingRule: {
+      priceBasis,
+      priceKrw: draft.price,
+      salesUnit,
+      taxIncluded: draft.isTaxable,
+      roundingRule: "as_is",
+      billingReflectionEnabled: draft.billable,
+    },
+  };
+}
+
+function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
+  categoryId: HospitalOrderCategoryId;
+  subcategoryId: HospitalOrderSubcategoryId;
+} {
+  const label = item.categoryLabel;
+
+  if (item.categoryGroup === "consultation") {
+    return {
+      categoryId: "consultation",
+      subcategoryId: label.includes("기타") ? "other-consultation" : "basic-consultation",
+    };
+  }
+
+  if (item.categoryGroup === "lab") {
+    if (label.includes("화학")) return { categoryId: "lab", subcategoryId: "blood-chemistry" };
+    if (label.includes("의뢰")) return { categoryId: "lab", subcategoryId: "external-lab" };
+    return { categoryId: "lab", subcategoryId: "clinical-pathology" };
+  }
+
+  if (item.categoryGroup === "imaging") {
+    return {
+      categoryId: "imaging",
+      subcategoryId: label.includes("초음파") ? "ultrasound" : "radiography",
+    };
+  }
+
+  if (item.categoryGroup === "hospitalization") {
+    return { categoryId: "hospitalization", subcategoryId: "hospitalization" };
+  }
+
+  if (item.categoryGroup === "medication") {
+    if (label.includes("주사")) return { categoryId: "dispensing", subcategoryId: "injection" };
+    if (label.includes("물품")) return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
+    return { categoryId: "dispensing", subcategoryId: "oral-medication" };
+  }
+
+  if (item.categoryGroup === "treatment") {
+    if (item.vaccineMetadata || label.includes("예방") || label.includes("백신")) {
+      return { categoryId: "prevention", subcategoryId: "prevention" };
+    }
+    if (label.includes("마취")) return { categoryId: "surgery", subcategoryId: "anesthesia" };
+    if (label.includes("수술")) return { categoryId: "surgery", subcategoryId: "surgery" };
+    if (label.includes("치료")) return { categoryId: "therapy", subcategoryId: "therapy" };
+    return { categoryId: "treatment", subcategoryId: "basic-treatment" };
+  }
+
+  return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
+}
+
+function mapTargetSpecies(species: OrderCatalogItem["targetSpecies"]): HospitalOrderTarget {
+  const values = new Set(species);
+  if (values.has("dog") && values.has("cat") && values.has("other")) return "all";
+  if (values.has("dog") && values.has("cat")) return "dog-cat";
+  if (values.has("dog")) return "dog";
+  if (values.has("cat")) return "cat";
+  return "other";
+}
+
+function mapSaleUnit(unit: OrderCatalogItem["salesUnit"]): HospitalOrderSaleUnit {
+  if (unit === "per_day") return "day";
+  if (unit === "per_order" || unit === "per_frequency") return "session";
+  return "each";
+}
+
+function mapRoundRule(rule: OrderCatalogItem["roundingRule"]): HospitalOrderRoundRule {
+  return rule === "as_is" ? "none" : "round-100";
+}
+
+function mapHospitalTargetToSpecies(target: HospitalOrderTarget): OrderCatalogItem["targetSpecies"] {
+  if (target === "all") return ["dog", "cat", "other"];
+  if (target === "dog-cat") return ["dog", "cat"];
+  if (target === "dog") return ["dog"];
+  if (target === "cat") return ["cat"];
+  return ["other"];
+}
+
+function mapHospitalSaleUnitToCatalogSalesUnit(unit: HospitalOrderSaleUnit): OrderCatalogSalesUnit {
+  if (unit === "day") return "per_day";
+  if (unit === "session") return "per_order";
+  return "per_each";
+}
+
+function mapHospitalRoundRuleToCatalogRoundRule(rule: HospitalOrderRoundRule): OrderCatalogItem["roundingRule"] {
+  return rule === "none" ? "as_is" : "round";
+}
+
+function splitAliases(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function resolveCatalogDefaultsFromHospitalOrder(draft: HospitalOrderDraft): {
+  categoryGroup: ServiceItemType;
+  categoryLabel: string;
+  defaultDestinationModule: OrderCatalogItem["defaultDestinationModule"];
+} {
+  if (draft.categoryId === "consultation") {
+    return {
+      categoryGroup: "consultation",
+      categoryLabel: "진료",
+      defaultDestinationModule: "chart_only",
+    };
+  }
+
+  if (draft.categoryId === "lab") {
+    return {
+      categoryGroup: "lab",
+      categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? "검사",
+      defaultDestinationModule: "lab",
+    };
+  }
+
+  if (draft.categoryId === "imaging") {
+    return {
+      categoryGroup: "imaging",
+      categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? "영상",
+      defaultDestinationModule: "imaging",
+    };
+  }
+
+  if (draft.categoryId === "dispensing" || draft.categoryId === "medical-supply") {
+    return {
+      categoryGroup: "medication",
+      categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? "처방/조제",
+      defaultDestinationModule: "dispensing",
+    };
+  }
+
+  if (draft.categoryId === "hospitalization") {
+    return {
+      categoryGroup: "hospitalization",
+      categoryLabel: "입원",
+      defaultDestinationModule: "chart_only",
+    };
+  }
+
+  return {
+    categoryGroup: "treatment",
+    categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? "처치",
+    defaultDestinationModule: "treatment",
+  };
+}
+
+function formatCatalogUpdatedAt(value: string) {
+  return value.replace("T", " ").replace(".000Z", "Z");
+}
+
+function buildCatalogMemo(item: OrderCatalogItem) {
+  const parts = [
+    item.customizationState ? `customization:${item.customizationState}` : null,
+    item.presetMergeStatus ? `merge:${item.presetMergeStatus}` : null,
+  ];
+
+  return parts.filter(Boolean).join(" / ");
 }

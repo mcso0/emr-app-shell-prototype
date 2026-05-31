@@ -1,15 +1,30 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
 import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
+import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
+import {
+  createSupabaseLiveAuditAppendGateway,
+  type SupabaseLiveAuditAppendRpcClient,
+} from "@/features/audit/server-audit-log-persistence";
+import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
+import {
   listOrderCatalogForAdmin,
+  getDemoOrderCatalogGateway,
   mutateOrderCatalogItem,
   searchOrderCatalogForChart,
+  createSupabaseOrderCatalogGateway,
   type OrderCatalogMutationInput,
+  type SupabaseOrderCatalogRpcClient,
 } from "@/features/hospital-admin/server-order-catalog";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
+import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
   params: Promise<{ workspaceId: string }>;
@@ -22,10 +37,38 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   const url = new URL(request.url);
   const mode = url.searchParams.get("mode");
+  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
+  const gateway =
+    identity.source === "demo_header_mock_mode"
+      ? getDemoOrderCatalogGateway(getDemoClientSessionId(request))
+      : client
+        ? createSupabaseOrderCatalogGateway(
+            client as unknown as SupabaseOrderCatalogRpcClient
+          )
+        : undefined;
   const result =
     mode === "chart-search"
-      ? await searchOrderCatalogForChart({ actorUserId: identity.actorUserId, workspaceId })
-      : await listOrderCatalogForAdmin({ actorUserId: identity.actorUserId, workspaceId });
+      ? await searchOrderCatalogForChart({
+          actorUserId: identity.actorUserId,
+          gateway,
+          permissionAdapter,
+          workspaceId,
+        })
+      : await listOrderCatalogForAdmin({
+          actorUserId: identity.actorUserId,
+          gateway,
+          permissionAdapter,
+          workspaceId,
+        });
 
   return Response.json(result, { status: result.status });
 }
@@ -52,10 +95,37 @@ async function mutate(request: Request, workspaceId: string) {
   });
   if (rateLimitResponse) return rateLimitResponse;
 
+  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
+
   const result = await mutateOrderCatalogItem({
     actorUserId: identity.actorUserId,
     workspaceId,
     input: await readJsonBody(request),
+    gateway:
+      identity.source === "demo_header_mock_mode"
+        ? getDemoOrderCatalogGateway(getDemoClientSessionId(request))
+        : client
+          ? createSupabaseOrderCatalogGateway(
+              client as unknown as SupabaseOrderCatalogRpcClient
+            )
+          : undefined,
+    permissionAdapter,
+    auditGateway:
+      client
+        ? createSupabaseLiveAuditAppendGateway(
+            client as unknown as SupabaseLiveAuditAppendRpcClient
+          )
+        : undefined,
+    auditRequestId: getAuditRequestId(request),
   });
 
   return Response.json(result, { status: result.status });
@@ -83,7 +153,11 @@ async function resolveIdentity(request: Request) {
     };
   }
 
-  return { ok: true as const, actorUserId: identity.actorUserId };
+  return {
+    ok: true as const,
+    actorUserId: identity.actorUserId,
+    source: identity.source,
+  };
 }
 
 async function readJsonBody(request: Request): Promise<OrderCatalogMutationInput> {
@@ -95,4 +169,8 @@ async function readJsonBody(request: Request): Promise<OrderCatalogMutationInput
   } catch {
     return { action: "pause", itemId: "" };
   }
+}
+
+function getDemoClientSessionId(request: Request) {
+  return request.headers.get(demoClientSessionIdHeader) ?? "shared";
 }

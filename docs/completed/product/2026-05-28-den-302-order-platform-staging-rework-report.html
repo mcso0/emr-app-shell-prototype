@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-302 Order Platform staging 저장 흐름 복구 리포트</title>
+    <style>
+      body {
+        margin: 40px;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+      code {
+        border-radius: 4px;
+        background: #f3f4f6;
+        padding: 2px 4px;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .warn {
+        color: #b45309;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-302 Order Platform staging 저장 흐름 복구 리포트</h1>
+    <p><strong>일자:</strong> 2026-05-28</p>
+    <p><strong>Linear:</strong> DEN-302 / DEN-303 / DEN-304 / DEN-305, DEN-290 rework hub</p>
+    <p>
+      병원관리 Order 관리에서 새 Order가 화면에만 생기고 staging DB에 저장되지 않는 문제를
+      우선 복구했다. Supabase 세션에서는 mock gateway가 아니라 live Order Catalog gateway와
+      DB permission adapter를 사용하도록 바꿨고, staging DB에는 catalog 검색, mutation audit,
+      fulfillment queue, Order Catalog RLS/write 정책을 적용했다.
+    </p>
+
+    <h2>제품 변경</h2>
+    <ul>
+      <li class="ok">
+        병원관리 Order Catalog API가 Supabase 세션에서 live DB gateway로
+        <code>listAdminCatalog</code>, <code>create</code>, <code>update</code>, <code>pause</code>를 처리한다.
+      </li>
+      <li class="ok">
+        새 Order 드로어는 <code>임상병리 오더 추가</code>처럼 목적이 보이는 제목으로 열리고,
+        표준 Order명, 원내 Order명, 청구서명, 판매금액은 빈 입력과 placeholder로 시작한다.
+      </li>
+      <li class="ok">
+        필수값이 비어 있으면 저장 버튼이 비활성화되고, 저장 전 확인 모달을 거친다.
+        등록 성공 후 토스트와 상태 메시지를 보여주고, 등록된 Order가 선택된 상태로 남는다.
+      </li>
+      <li class="ok">
+        새 Order 생성 드로어에서는 <code>사용 중지</code> 액션을 숨겼고, 기존 Order 상세에서는 유지했다.
+      </li>
+    </ul>
+
+    <h2>Staging DB 적용</h2>
+    <ul>
+      <li class="ok"><code>20260523094400_order_fulfillment_work_item_contract.sql</code> 적용.</li>
+      <li class="ok"><code>20260527090000_order_catalog_chart_search_rpc.sql</code> 적용.</li>
+      <li class="ok"><code>20260527091000_order_catalog_audit_event_types.sql</code> 적용.</li>
+      <li class="ok"><code>20260528093000_order_catalog_staging_mutation_rls.sql</code> 적용.</li>
+      <li class="ok">
+        위 4개는 staging remote migration history에 <code>applied</code>로 표시했다.
+      </li>
+      <li class="warn">
+        <code>20260524121000</code> / <code>20260524121849</code> invite hotfix의 로컬-원격 버전명 차이는
+        이번 Order 흐름과 무관하므로 변경하지 않았다.
+      </li>
+    </ul>
+
+    <h2>Preview 배포</h2>
+    <ul>
+      <li class="ok">
+        Vercel Preview:
+        <code>https://emr-app-shell-prototype-deg8pvudu-mcso0s-projects.vercel.app</code>
+      </li>
+      <li class="ok">Deployment: <code>dpl_7X2GwXitMqKbFgsEExTXg3P9DAXq</code>, status <code>READY</code>.</li>
+      <li class="ok">HTML route smoke: <code>/w/clair-demo/orders?modulePanel=open</code> returned HTTP 200.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li class="ok"><code>npx tsc --noEmit</code> passed.</li>
+      <li class="ok"><code>npm run lint</code> passed with existing warnings only.</li>
+      <li class="ok"><code>npm run build</code> passed.</li>
+      <li class="ok">
+        <code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/hospital-admin.spec.ts tests/hospital-admin-order-catalog-server.spec.ts --reporter=line</code>
+        passed, 21 tests.
+      </li>
+      <li class="ok">
+        <code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/chart-order-action-persistence-server.spec.ts tests/billing-invoice-candidate-sync-server.spec.ts tests/fulfillment-work-item-server.spec.ts --reporter=line</code>
+        passed, 28 tests.
+      </li>
+      <li class="ok"><code>git diff --check</code> passed.</li>
+    </ul>
+
+    <h2>남은 확인</h2>
+    <p class="warn">
+      Headless Playwright의 remote browser replay는 Vercel Preview SSO 보호 화면에서 막혔다.
+      따라서 로그인된 staging 브라우저 세션에서 새 Preview URL을 열어 병원관리 새 Order 생성,
+      저장 후 테이블 readback, 차트 Order 추가 검색 노출, 확정까지 사람이 한 번 확인해야 한다.
+    </p>
+  </body>
+</html>

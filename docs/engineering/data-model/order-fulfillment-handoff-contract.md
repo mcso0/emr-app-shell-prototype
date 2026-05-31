@@ -12,9 +12,10 @@ related_work:
   - DEN-240
   - DEN-241
   - DEN-242
+  - DEN-335
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-23
+last_updated: 2026-05-31
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -101,14 +102,14 @@ Type-specific `detail` examples:
 
 | Fulfillment status | Order lifecycle effect | Billing effect |
 | --- | --- | --- |
-| `requested` | order remains `requested` or `in_progress` depending on chart action | none |
-| `accepted` | order can remain `in_progress` | none |
-| `in_progress` | order should be `in_progress` | none |
-| `completed` | order becomes `completed` for the local-first fulfillment path | billable candidate is created or refreshed when `billingReflectionEnabled` is not false |
+| `requested` | order remains `requested` or `in_progress` depending on chart action | none automatically; chart `Order 청구` may create or refresh a billing candidate after unfinished-work confirmation |
+| `accepted` | order can remain `in_progress` | none automatically; chart `Order 청구` may create or refresh a billing candidate after unfinished-work confirmation |
+| `in_progress` | order should be `in_progress` | none automatically; chart `Order 청구` may create or refresh a billing candidate after unfinished-work confirmation |
+| `completed` | order becomes `completed` for the local-first fulfillment path | chart `Order 청구` may create or refresh a billing candidate without additional unfinished-work confirmation |
 | `cancelled` | order becomes `cancelled` | candidate is not created from this fulfillment update |
-| `returned` | order becomes `re_requested` | candidate must not advance |
+| `returned` | order becomes `re_requested` | candidate does not advance automatically; chart user confirmation is required if billing is intentionally requested |
 
-`DEN-235` does not decide every review policy. The implementation issues must preserve explicit decision points for lab/imaging vet review and cancellation after candidate creation.
+`DEN-335` establishes the current policy: chart `Order 청구` is the trusted chart action for billing candidate creation across lab, imaging, dispensing, and treatment. The action must not change order or fulfillment work status.
 
 ## Permission And Scope Requirements
 
@@ -116,8 +117,11 @@ Type-specific `detail` examples:
 - Every work item read/mutation must validate `workspaceId`.
 - `orderId` and `encounterId` must belong to the same workspace.
 - Chart confirmation remains a vet/chart authority action.
+- Chart `Order 청구` remains a chart authority action for moving selected billable orders to billing candidate state.
 - Fulfillment status mutation is primarily technician authority unless a later role policy explicitly expands it.
 - Billing candidate sync must not trust client-submitted amounts.
+- Unfinished selected orders must require explicit UI confirmation before chart billing action continues.
+- Chart billing action must preserve `orders.status`, `orders.task_status`, and `order_fulfillment_work_items.status`.
 - Cross-workspace, inactive member, non-member, invalid transition, duplicate creation, and unsupported order type cases must be covered by tests.
 
 ## Migration Gate

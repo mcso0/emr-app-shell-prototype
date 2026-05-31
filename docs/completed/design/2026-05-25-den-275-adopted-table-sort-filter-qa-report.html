@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-275 Adopted Table Sort/Filter QA</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --line: #d9e1ea;
+        --text: #111827;
+        --muted: #64748b;
+        --accent: #2563eb;
+        --ok: #047857;
+        --warn: #b45309;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 40px 28px 64px;
+      }
+      h1,
+      h2 {
+        letter-spacing: 0;
+        line-height: 1.25;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 30px;
+      }
+      h2 {
+        margin: 34px 0 12px;
+        font-size: 21px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      code {
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        background: #f1f5f9;
+        padding: 1px 5px;
+        font-size: 0.92em;
+      }
+      .meta,
+      .note {
+        color: var(--muted);
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      .callout {
+        border-left: 4px solid var(--accent);
+      }
+      .ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0 22px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+      th {
+        background: #f1f5f9;
+        color: #334155;
+        font-weight: 700;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      .evidence-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+      figure {
+        margin: 0;
+      }
+      img {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      figcaption {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      @media (max-width: 820px) {
+        main {
+          padding: 28px 16px 48px;
+        }
+        .evidence-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-275 · 2026-05-25 · Project 13 CLAiR EMR Table Sort &amp; Filter Behavior</p>
+      <h1>Adopted Table Sort / Filter QA</h1>
+      <section class="panel callout">
+        <p>
+          이번 작업은 Project 13에서 이미 적용한 정렬/필터 테이블들이 같은 정책으로 안정적으로 동작하는지 확인한 QA이다.
+          새 테이블 채택이나 새 기능 추가 없이, 수납·차트 오더·고객관리·병원관리 오더 카탈로그의 핵심 동작과 화면 evidence를 확인했다.
+        </p>
+      </section>
+
+      <h2>QA 범위</h2>
+      <ul>
+        <li>수납 청구 항목 테이블: 단일 정렬, 섹션 Filter, empty state, reset, 기존 수납 workflow.</li>
+        <li>차트 오더 테이블: 단일 정렬, 분류 탭과 필터 AND 조합, empty state, reset, 기존 오더 draft workflow.</li>
+        <li>고객관리 동물 테이블: 단일 정렬, Filter N, 다중 조건 AND, narrow viewport 접근성.</li>
+        <li>병원관리 오더 카탈로그: 단일 정렬, 기존 카테고리/검색/상태/청구 필터와 table filter 조합.</li>
+      </ul>
+
+      <h2>확인한 항목</h2>
+      <ul>
+        <li>헤더에는 정렬만 있고, active sort 상태가 헤더 버튼 이름과 화면 상태에 남는다.</li>
+        <li>필터는 섹션 header/action area의 Filter 버튼에서 열리고, 조건이 적용되면 <code>Filter N</code>으로 표시된다.</li>
+        <li>필터 builder footer에 <code>초기화</code>, <code>Apply filters</code>, <code>Close</code>가 유지된다.</li>
+        <li>Escape 키로 popover를 닫을 수 있다.</li>
+        <li>조건 결과가 없을 때 각 테이블의 empty state 문구가 보인다.</li>
+        <li>초기화 후 기존 visible row가 복구된다.</li>
+        <li>mock auth 상태로 실제 workspace 화면을 캡처했고, evidence에는 로그인 화면이 없다.</li>
+      </ul>
+
+      <h2>QA 중 발견 및 조치</h2>
+      <ul>
+        <li>
+          <span class="warn">Found / Fixed</span>
+          390px narrow viewport에서 고객관리 Filter popover가 shell chrome에 시각적으로 가려질 수 있어 shared popover positioner layer를 올렸다.
+        </li>
+        <li>
+          <span class="ok">No blocker</span>
+          adopted table sort/filter 동작, empty state, reset, 기존 workflow regression에서 blocking defect는 발견하지 못했다.
+        </li>
+      </ul>
+
+      <h2>Evidence</h2>
+      <p class="note">각 이미지는 mock auth storage state로 실제 workspace 화면을 열어 캡처했다.</p>
+      <div class="evidence-grid">
+        <figure>
+          <img src="./evidence/2026-05-25-den-275-billing-sort-filter-qa.png" alt="Billing sort/filter QA evidence" />
+          <figcaption>수납 청구 항목: 청구금액 정렬 + Filter 1</figcaption>
+        </figure>
+        <figure>
+          <img src="./evidence/2026-05-25-den-275-chart-order-sort-filter-qa.png" alt="Chart order sort/filter QA evidence" />
+          <figcaption>차트 오더: 청구금액 정렬 + 오더 Filter 1</figcaption>
+        </figure>
+        <figure>
+          <img src="./evidence/2026-05-25-den-275-customer-mobile-sort-filter-qa.png" alt="Customer mobile sort/filter QA evidence" />
+          <figcaption>고객관리 모바일 폭: 등록일시 정렬 + Filter 1</figcaption>
+        </figure>
+        <figure>
+          <img src="./evidence/2026-05-25-den-275-hospital-admin-sort-filter-qa.png" alt="Hospital admin order catalog sort/filter QA evidence" />
+          <figcaption>병원관리 오더 카탈로그: 판매금액 정렬 + Filter 2</figcaption>
+        </figure>
+      </div>
+
+      <h2>변경 파일</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>파일</th>
+            <th>내용</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>tests/table-sort-filter-qa.spec.ts</code></td>
+            <td>adopted table cross-QA spec을 추가했다.</td>
+          </tr>
+          <tr>
+            <td><code>src/components/ui/popover.tsx</code></td>
+            <td>narrow viewport에서 filter popover가 shell chrome에 가려지지 않도록 positioner layer를 올렸다.</td>
+          </tr>
+          <tr>
+            <td><code>docs/design/system/table-sort-filter-behavior.md</code></td>
+            <td>DEN-275 QA 결과와 residual exclusion을 기록했다.</td>
+          </tr>
+          <tr>
+            <td><code>docs/work/design-system/DESIGN-SYSTEM-PR-031-adopted-table-sort-filter-qa.md</code></td>
+            <td>DEN-275 repo work item을 추가했다.</td>
+          </tr>
+          <tr>
+            <td><code>docs/work/index.md</code></td>
+            <td>DEN-270~274를 Done으로 맞추고 DEN-275를 Human Review로 추가했다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li><span class="ok">Passed</span> <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test tests/table-sort-filter-qa.spec.ts --reporter=line</code></li>
+        <li><span class="ok">Passed</span> <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test tests/billing.spec.ts tests/chart.spec.ts tests/customer.spec.ts tests/hospital-admin.spec.ts tests/table-sort-filter-qa.spec.ts --reporter=line</code></li>
+        <li><span class="ok">Passed</span> Mock-auth Playwright screenshot evidence capture.</li>
+        <li><span class="ok">Passed</span> <code>npm run lint</code></li>
+        <li><span class="ok">Passed</span> <code>npx tsc --noEmit</code></li>
+        <li><span class="ok">Passed</span> <code>npm run docs:check</code></li>
+      </ul>
+
+      <h2>남은 범위</h2>
+      <p>
+        DEN-275는 적용된 테이블 QA만 다룬다. 저장된 view/filter, active chip row, multi-sort, URL/localStorage persistence,
+        Supabase/DB/RLS/server-side sorting and filtering, 그리고 다른 테이블 전체 적용은 여전히 제외다.
+        다음 단계는 DEN-276 final Project 13 closeout이다.
+      </p>
+    </main>
+  </body>
+</html>

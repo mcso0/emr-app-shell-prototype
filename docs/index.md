@@ -42,6 +42,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | GitBook private operations | [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md) |
 | GitBook site setup | [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md) |
 | Codex reading rules | [Agent RAG Map](_meta/agent-rag-map.md) |
+| Owner Safety OS | [Owner Safety OS](_meta/owner-safety-os.md), [Non-Developer Codex Workflow](_meta/non-developer-codex-workflow.md) |
 | Product docs | [Product Docs](product/README.md) |
 | Design docs | [Design Docs](design/README.md) |
 | Engineering docs | [Engineering Docs](engineering/README.md) |

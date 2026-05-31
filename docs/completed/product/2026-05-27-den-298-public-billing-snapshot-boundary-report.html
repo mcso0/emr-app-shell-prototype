@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-298 Public Billing Snapshot Boundary</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 44px 28px 60px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 29px;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .info {
+        background: #eef4ff;
+        color: #1d4ed8;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-298 / 2026-05-27 / Security Follow-up</p>
+      <h1>Public Billing Candidate Snapshot 신뢰 경계 차단</h1>
+      <p>
+        Public billing invoice candidate API가 클라이언트가 보낸 금액, 청구명,
+        snapshot을 서버 소유 데이터처럼 사용하지 못하도록 입력 경계를 분리했다.
+      </p>
+      <span class="badge">Status: Human Review 준비</span>
+      <span class="badge info">DEN-289 P1 finding mitigated</span>
+      <span class="badge warn">Remote DB/RLS/Deploy: Not run</span>
+
+      <section>
+        <h2>비개발자용 요약</h2>
+        <p>
+          수납 금액은 화면이나 브라우저 요청이 보낸 값을 믿으면 안 된다. 이번
+          변경으로 외부 PATCH API는 오더 선택 정보만 받고, 금액과 청구명은 차트
+          확정 또는 fulfillment 완료처럼 서버가 소유한 snapshot 경로에서만
+          청구 후보에 반영된다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            Public sync input을 <code>encounterId</code>,
+            <code>orderIds</code>만 받는 타입으로 분리했다.
+          </li>
+          <li>
+            Public route의 JSON body parser가 <code>orderSnapshots</code>,
+            <code>priceKrw</code>, <code>lineTotalSnapshot</code>,
+            <code>billingName</code>을 전달하지 않도록 했다.
+          </li>
+          <li>
+            Trusted gateway input은 chart/fulfillment 내부 서버 경로가 적용
+            snapshot을 넘길 수 있도록 유지했다.
+          </li>
+          <li>
+            존재하지 않는 orderId와 client-submitted snapshot으로 청구 후보가
+            생성되지 않는 regression을 추가했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/app/api/workspaces/[workspaceId]/billing/invoice-candidates/route.ts</code></li>
+          <li><code>src/features/billing/server-invoice-candidate-sync-core.ts</code></li>
+          <li><code>tests/billing-invoice-candidate-sync-server.spec.ts</code></li>
+          <li><code>docs/product/domain/workspace-order-catalog-platform.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li>
+            <code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/billing-invoice-candidate-sync-server.spec.ts</code>
+            통과: 8 tests
+          </li>
+          <li>
+            <code>npm run test -- --grep "invoice candidate"</code>는 repo에
+            <code>test</code> script가 없어 실행 불가했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 범위</h2>
+        <p>
+          Remote Supabase migration push, 원격 RLS replay, production deploy,
+          실데이터 import는 수행하지 않았다. DEN-299에서 live chart confirmation
+          gateway fallback 경계를 이어서 처리해야 한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

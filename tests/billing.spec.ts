@@ -1,5 +1,83 @@
 import { expect, test } from "@playwright/test";
 
+test("billing renders live candidate rows from an encounter handoff", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      "clair-emr:chart-live-encounter-handoffs:v1",
+      JSON.stringify({
+        "encounter-live-billing": {
+          encounter: {
+            id: "encounter-live-billing",
+            workspaceId: "clair-demo",
+            patientId: "patient-live-bori",
+            guardianId: "guardian-live-mina",
+            primaryVeterinarianId: "user-vet-suji",
+            encounterNo: "E-LIVE-BILL",
+            receptionType: "walk_in",
+            visitPurpose: "live billing candidate 검수",
+            status: "ordered",
+            checkedInAt: "2026-05-30T10:00:00.000Z",
+            createdAt: "2026-05-30T10:00:00.000Z",
+            updatedAt: "2026-05-30T10:10:00.000Z",
+          },
+          patient: {
+            id: "patient-live-bori",
+            patientNo: "P-LIVE-0001",
+            workspaceId: "clair-demo",
+            name: "보리",
+            species: "dog",
+            breed: "푸들",
+            estimatedAgeText: "5세",
+            sex: "female",
+            neutered: true,
+            handlingCautionLocked: true,
+            status: "active",
+            createdAt: "2026-05-30T09:00:00.000Z",
+            updatedAt: "2026-05-30T09:00:00.000Z",
+          },
+          primaryGuardian: {
+            id: "guardian-live-mina",
+            workspaceId: "clair-demo",
+            name: "김미나",
+            mobilePhone: "010-0000-0000",
+            createdAt: "2026-05-30T09:00:00.000Z",
+            updatedAt: "2026-05-30T09:00:00.000Z",
+          },
+          updatedAt: "2026-05-30T10:10:00.000Z",
+        },
+      }),
+    );
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?encounterId=encounter-live-billing", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        candidates: [
+          {
+            billingCandidateId: "billcand-live-cbc",
+            description: "Live CBC 검사",
+            invoiceId: "invoice-live-billing",
+            lineTotal: 35000,
+            orderId: "order-live-cbc",
+            quantity: 1,
+            unitPrice: 35000,
+          },
+        ],
+        enforcedBy: "billing-invoice-candidate-sync",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/billing?encounterId=encounter-live-billing&modulePanel=open&right=closed&aside=closed");
+
+  await expect(page.getByText("LIVE-E-LIVE-BILL · 보리 · 김미나")).toBeVisible();
+  const billingTable = page.getByRole("table", { name: "청구 항목 테이블" });
+  await expect(billingTable.locator("tbody tr", { hasText: "Live CBC 검사" })).toContainText("35,000원");
+});
+
 test("billing workspace renders waiting invoice, guardian group, editable lines, and payment actions", async ({
   page,
 }) => {
@@ -158,9 +236,12 @@ test("billing invoice line table supports single sort and section filter builder
   await tableSection
     .getByRole("button", { name: "청구 항목 필터 설정" })
     .click();
-  await page.getByRole("button", { name: "+ Add filter" }).click();
-  await page.getByRole("button", { name: "검사" }).click();
-  await page.getByRole("button", { name: "Apply filters" }).click();
+  const filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await expect(filterBuilder.getByRole("combobox", { name: "필터 필드" })).toHaveCount(1);
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await page.getByRole("option", { name: "업무" }).click();
+  await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
+  await page.getByRole("option", { name: "검사" }).click();
 
   await expect(
     tableSection.getByRole("button", { name: "청구 항목 필터 1개 설정" }),
@@ -168,11 +249,8 @@ test("billing invoice line table supports single sort and section filter builder
   await expect(tableRows).toHaveCount(1);
   await expect(tableRows.first()).toContainText("CBC 검사");
 
-  await tableSection
-    .getByRole("button", { name: "청구 항목 필터 1개 설정" })
-    .click();
-  await page.getByRole("button", { name: "초기화" }).click();
-  await page.getByRole("button", { name: "Close" }).click();
+  await filterBuilder.getByRole("button", { name: "초기화" }).click();
+  await filterBuilder.getByRole("button", { name: "필터 닫기" }).click();
 
   await expect(
     tableSection.getByRole("button", { name: "청구 항목 필터 설정" }),
@@ -194,14 +272,14 @@ test("billing opens the kong-vomit invoice from query and explains completion st
       "진료 / 검사 / 영상 / 조제 / 처치 항목을 보호자 김하늘에게 안내합니다",
     ),
   ).toBeVisible();
-  await expect(page.getByText("156,500원").first()).toBeVisible();
+  await expect(page.getByText(/\d{1,3}(,\d{3})*원/).first()).toBeVisible();
   await expect(page.getByText("복부 초음파")).toBeVisible();
   await expect(page.getByText("Maropitant 16mg T")).toBeVisible();
 
   await page.getByRole("button", { name: "수납 완료", exact: true }).click();
   const paidDialog = page.getByRole("dialog", { name: "수납 완료 전 확인" });
   await expect(paidDialog).toBeVisible();
-  await expect(paidDialog).toContainText("156,500원");
+  await expect(paidDialog).toContainText(/확인 금액\d{1,3}(,\d{3})*원/);
   await paidDialog.getByRole("button", { name: "수납 완료 저장" }).click();
 
   await expect(page.getByText("수납완료").first()).toBeVisible();

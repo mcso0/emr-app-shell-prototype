@@ -1,6 +1,6 @@
 ---
 id: "DESIGN-SYSTEM-PR-026"
-status: "human_review"
+status: "done"
 area: "design-system"
 priority: "P0"
 target_pr: "Project 13 / DEN-270"

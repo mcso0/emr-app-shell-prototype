@@ -8,9 +8,16 @@ import { mockEncounters, mockInvoiceLines, mockOrders } from "@/mocks/emr-domain
 import type { EmrOrder, Encounter, InvoiceLine } from "@/types/emr-domain";
 
 export type ChartOrderDraftLineInput = {
+  appliedSnapshot?: unknown;
   orderId?: string;
   billingDisplayName?: string;
+  categoryGroup?: string;
+  displayName?: string;
   quantity?: number;
+  rowType?: string;
+  sourcePresetId?: string;
+  sourcePresetVersion?: string;
+  unitPriceSnapshot?: number | string;
 };
 
 export type ChartOrderDraftInput = {
@@ -28,7 +35,18 @@ export type ChartOrderDraftLine = {
   updatedAt: string;
 };
 
-type NormalizedOrderDraftLineInput = Required<ChartOrderDraftLineInput>;
+type NormalizedOrderDraftLineInput = {
+  appliedSnapshot?: unknown;
+  billingDisplayName: string;
+  categoryGroup?: string;
+  displayName?: string;
+  orderId: string;
+  quantity: number;
+  rowType?: string;
+  sourcePresetId?: string;
+  sourcePresetVersion?: string;
+  unitPriceSnapshot?: number;
+};
 
 export type ChartOrderDraftGatewayResult =
   | { ok: true; orderDrafts: ChartOrderDraftLine[] }
@@ -265,9 +283,16 @@ export type SupabaseChartOrderDraftRpcClient = {
       p_actor_user_id: string;
       p_encounter_id: string;
       p_orders: Array<{
+        appliedSnapshot?: unknown;
         billingDisplayName: string;
+        categoryGroup?: string;
+        displayName?: string;
         orderId?: string;
         quantity: number;
+        rowType?: string;
+        sourcePresetId?: string;
+        sourcePresetVersion?: string;
+        unitPriceSnapshot?: number;
       }>;
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
@@ -300,7 +325,14 @@ export function createSupabaseChartOrderDraftGateway(
         p_orders: orders.map((order) => ({
           orderId: normalizeUuidForRpc(order.orderId),
           billingDisplayName: order.billingDisplayName,
+          appliedSnapshot: order.appliedSnapshot,
+          categoryGroup: order.categoryGroup,
+          displayName: order.displayName,
           quantity: order.quantity,
+          rowType: order.rowType,
+          sourcePresetId: order.sourcePresetId,
+          sourcePresetVersion: order.sourcePresetVersion,
+          unitPriceSnapshot: order.unitPriceSnapshot,
         })),
       });
 
@@ -419,7 +451,19 @@ function normalizeOrderDraftInput(input: ChartOrderDraftInput) {
       ? input.orders.map((row) => ({
           orderId: trimToUndefined(row.orderId) ?? "",
           billingDisplayName: normalizeField(row.billingDisplayName),
+          appliedSnapshot: row.appliedSnapshot,
+          categoryGroup: trimToUndefined(row.categoryGroup),
+          displayName: normalizeField(row.displayName),
           quantity: typeof row.quantity === "number" ? row.quantity : Number(row.quantity),
+          rowType: trimToUndefined(row.rowType),
+          sourcePresetId: trimToUndefined(row.sourcePresetId),
+          sourcePresetVersion: trimToUndefined(row.sourcePresetVersion),
+          unitPriceSnapshot:
+            typeof row.unitPriceSnapshot === "number"
+              ? row.unitPriceSnapshot
+              : typeof row.unitPriceSnapshot === "string"
+                ? Number(row.unitPriceSnapshot)
+                : undefined,
         }))
       : [],
   };

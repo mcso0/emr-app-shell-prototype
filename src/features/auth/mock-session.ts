@@ -53,6 +53,19 @@ export const MOCK_AUTH_ROLES: Array<{
 
 const roleLabels = new Map(MOCK_AUTH_ROLES.map((role) => [role.id, role.label]));
 const roleIds = new Set(MOCK_AUTH_ROLES.map((role) => role.id));
+const demoEmailRoleMap = new Map<string, MockAuthRole>([
+  ["admin@clair.local", "hospital_admin"],
+  ["vet@clair.local", "vet"],
+  ["technician@clair.local", "nurse"],
+  ["front-desk@clair.local", "front_desk"],
+  ["vet2@clair.local", "vet"],
+  ["vet3@clair.local", "vet"],
+  ["tech2@clair.local", "nurse"],
+  ["tech3@clair.local", "nurse"],
+  ["tech4@clair.local", "nurse"],
+  ["front-desk2@clair.local", "front_desk"],
+  ["front-desk3@clair.local", "front_desk"],
+]);
 
 export function isMockAuthRole(value: unknown): value is MockAuthRole {
   return typeof value === "string" && roleIds.has(value as MockAuthRole);
@@ -60,6 +73,10 @@ export function isMockAuthRole(value: unknown): value is MockAuthRole {
 
 export function getMockRoleLabel(role: MockAuthRole) {
   return roleLabels.get(role) ?? role;
+}
+
+export function resolveDemoMockAuthRoleFromEmail(email: string): MockAuthRole | null {
+  return demoEmailRoleMap.get(email.trim().toLowerCase()) ?? null;
 }
 
 export function createMockAuthSession(

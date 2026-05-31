@@ -30,8 +30,21 @@ test("order lifecycle route updates selected order status via mock fallback and 
   expect(unauthenticated.status()).toBe(401);
   await expectJson(unauthenticated, { ok: false, denialReason: "unauthenticated" });
 
+  const initialRead = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-lifecycle?encounterId=${encounterId}`,
+    { headers: { "x-clair-demo-session-user-id": "user-vet" } }
+  );
+  expect(initialRead.status()).toBe(200);
+  const initialReadBody = await initialRead.json() as {
+    ok: true;
+    lifecycles: Array<{ orderId: string; status: typeof validLifecycleInput.status }>;
+  };
+  const currentStatus =
+    initialReadBody.lifecycles.find((row) => row.orderId === orderId)?.status ??
+    validLifecycleInput.status;
+
   const saved = await request.patch(`/api/workspaces/${workspaceId}/chart/order-lifecycle`, {
-    data: validLifecycleInput,
+    data: { ...validLifecycleInput, status: currentStatus },
     headers: { "x-clair-demo-session-user-id": "user-vet" },
   });
   expect(saved.status()).toBe(200);
@@ -44,7 +57,7 @@ test("order lifecycle route updates selected order status via mock fallback and 
   expect(savedBody.enforcedBy).toBe("chart-order-lifecycle-persistence");
   expect(savedBody.lifecycle).toMatchObject({
     orderId,
-    status: "in_progress",
+    status: currentStatus,
     updatedByUserId: "user-vet",
   });
 
@@ -57,7 +70,7 @@ test("order lifecycle route updates selected order status via mock fallback and 
     ok: true;
     lifecycles: Array<{ orderId: string; status: string }>;
   };
-  expect(readBody.lifecycles.find((row) => row.orderId === orderId)?.status).toBe("in_progress");
+  expect(readBody.lifecycles.find((row) => row.orderId === orderId)?.status).toBe(currentStatus);
 });
 
 test("order lifecycle core rejects invalid transitions, permission gaps, and encounter scope mismatches", async () => {

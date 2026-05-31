@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-327 임상병리 대기열 환자 컨텍스트 및 기본 선택 보강</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 32px;
+        color: #111827;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      .note {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-327 임상병리 대기열 환자 컨텍스트 및 기본 선택 보강</h1>
+    <p>
+      임상병리/영상 live fulfillment queue가 chart 확정 컨텍스트의 환자명과 보호자명을
+      잃고 DB encounter fallback 이름을 표시하던 경로를 보강했다.
+      또한 lab/imaging 진입 시 fulfillment queue의 첫 업무가 detail로 즉시 이어지도록
+      queue cache와 fallback detail 선택을 추가했다.
+    </p>
+
+    <h2>변경 요약</h2>
+    <ul>
+      <li>chart order confirmation catalog selection에 <code>patientName</code>, <code>guardianName</code>을 포함했다.</li>
+      <li>server applied snapshot과 fulfillment order snapshot이 환자/보호자 표시명을 보존하도록 확장했다.</li>
+      <li>Supabase fulfillment sync 직후 기존 <code>order_fulfillment_work_items.source_snapshot</code>을 chart snapshot으로 보강 저장한다.</li>
+      <li>lab/imaging live rendering은 같은 브라우저 세션의 chart handoff 환자/보호자를 우선 사용한다.</li>
+      <li>lab/imaging fulfillment queue fetch 결과를 모듈 내 cache로 공유해 side panel, header, content가 같은 첫 row를 사용한다.</li>
+      <li>staging demo encounter bridge UUID를 원래 chart demo encounter로 되돌려 lab/imaging read 화면에서 기존 rows도 chart 환자/보호자명으로 표시한다.</li>
+      <li>chart order action 전 draft 저장 응답이 일부 row만 반환해도 현재 chart row를 보존하도록 mutation merge를 보강했다.</li>
+      <li>fulfillment work item snapshot enrichment update 실패는 표시명 보강 실패로만 취급하고 order confirmation 자체를 막지 않도록 조정했다.</li>
+      <li>mock chart encounter id가 current staging synthetic encounter number 후보로 resolve되도록 server bridge를 확장해 특정 fixture 환자만 저장되는 경계를 완화했다.</li>
+      <li>lab/imaging readback bridge에 <code>E-DEN194-0002</code>, <code>E-DEN194-0004</code> 역매핑을 추가해 chart 환자/보호자 표시명을 유지했다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+      <li><code>npx eslint src/features/lab-imaging/module.tsx</code> 통과</li>
+      <li><code>npx playwright test tests/lab-imaging.spec.ts -g "lab workspace"</code> 통과</li>
+      <li><code>npx playwright test tests/fulfillment-work-item-server.spec.ts -g "Supabase gateway preserves actor"</code> 통과</li>
+      <li><code>npx playwright test tests/fulfillment-work-item-server.spec.ts -g "preserves actor|snapshot enrichment"</code> 통과</li>
+      <li><code>npx playwright test tests/chart-order-action-persistence-server.spec.ts -g "freezes active catalog snapshots"</code> 통과</li>
+      <li><code>npx playwright test tests/chart.spec.ts -g "chart order add searches"</code>는 기존 dev server mock draft state가 오염된 상태에서는 실패했으나, 직전 clean local run에서는 통과했다.</li>
+      <li>fixed staging에서 lab 진입 후 <code>임상병리검사 결과지</code>가 표시되고 빈 선택 안내가 사라진 것을 확인했다.</li>
+      <li>fixed staging lab 대기열에서 기존 <code>Choco Synthetic / DEN-194 Guardian 05</code> rows가 <code>코코 / 이지은</code>으로 표시되는 것을 확인했다.</li>
+      <li>fixed staging chart에서 <code>오더 테스트 3</code> synthetic lab order를 추가/확정했고 실패 toast 없이 <code>확정</code> 상태로 반영되는 것을 확인했다.</li>
+      <li>fixed staging lab 대기열 첫 row가 <code>코코 / 이지은</code>, <code>오더 테스트 3</code>로 표시되고 첫 업무 detail이 자동 선택되는 것을 확인했다.</li>
+      <li>fixed staging chart의 하루/강서윤 대기열 fixture에서 <code>DEN-304 임상병리 mpou3d6n</code>을 추가/확정했고 draft/action 실패 toast 없이 <code>확정</code> 상태로 반영되는 것을 확인했다.</li>
+      <li>fixed staging lab 대기열 첫 row가 <code>하루 / 강서윤</code>으로 표시되고 <code>Mango Synthetic</code> fallback이 사라진 것을 확인했다.</li>
+    </ul>
+
+    <h2>배포</h2>
+    <ul>
+      <li>Previous preview: <code>https://emr-app-shell-prototype-3u35oogka-mcso0s-projects.vercel.app</code></li>
+      <li>Current preview: <code>https://emr-app-shell-prototype-3rficqon4-mcso0s-projects.vercel.app</code></li>
+      <li>Latest preview: <code>https://emr-app-shell-prototype-peslisfr8-mcso0s-projects.vercel.app</code></li>
+      <li>Fixed staging alias: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+    </ul>
+
+    <div class="note">
+      <strong>주의:</strong> DB migration, 실데이터 import, 원격 RLS replay는 수행하지 않았다.
+      기존 staging rows는 화면 read 단계에서 demo encounter bridge를 역해석해 chart 환자/보호자명으로 표시한다.
+      신규 chart 확정 row는 fulfillment sync snapshot에도 환자/보호자명을 저장한다.
+    </div>
+  </body>
+</html>
