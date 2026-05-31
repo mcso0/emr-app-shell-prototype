@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import {
+  createSupabaseDemoBillingPermissionAdapter,
+  shouldUseSupabaseBillingPersistenceGateway,
+} from "../src/features/billing/server-demo-billing-persistence-boundary";
+import {
   createMockInvoiceLinePersistenceGateway,
   createSupabaseInvoiceLinePersistenceGateway,
   saveInvoiceLineEdits,
@@ -160,6 +164,47 @@ test("invoice line core validates quantities and keeps server-owned unit prices"
     ok: false,
     status: 400,
     error: "invalid_input",
+  });
+});
+
+test("invoice line demo ids stay on mock persistence even for Supabase sessions", async () => {
+  const supabaseActorUserId = "00000000-0000-4000-8000-000000000002";
+
+  expect(
+    shouldUseSupabaseBillingPersistenceGateway({
+      identitySource: "supabase_session",
+      invoiceId,
+    })
+  ).toBe(false);
+  expect(
+    shouldUseSupabaseBillingPersistenceGateway({
+      identitySource: "supabase_session",
+      invoiceId: "00000000-0000-4000-8000-000000000401",
+    })
+  ).toBe(true);
+
+  const result = await saveInvoiceLineEdits({
+    actorUserId: supabaseActorUserId,
+    workspaceId,
+    input: validInput,
+    gateway: createMockInvoiceLinePersistenceGateway(
+      undefined,
+      () => "2026-05-20T10:00:00.000Z",
+      "supabase-demo-invoice-line-boundary-test"
+    ),
+    permissionAdapter: createSupabaseDemoBillingPermissionAdapter({
+      actorUserId: supabaseActorUserId,
+      workspaceId,
+    }),
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    invoice: {
+      id: invoiceId,
+      issuedByUserId: supabaseActorUserId,
+      status: "issued",
+    },
   });
 });
 

@@ -53,19 +53,6 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
   }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
 
-    await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
-    const billingSection = page.locator("section.rounded-lg").filter({
-      has: page.getByRole("heading", { name: "청구 항목 편집" }),
-    });
-    await expectWorkspaceScreen(page, billingSection);
-    await billingSection.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
-    await expect(
-      billingSection.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }),
-    ).toBeVisible();
-    await billingSection.getByRole("button", { name: "청구 항목 필터 설정" }).click();
-    await expectFilterControls(page.locator('[data-slot="popover-content"]'));
-    await expectEscapeClosesFilter(page);
-
     await page.goto(kongScenarioUrl);
     await restoreKongOrderDraftDefaults(page);
     const orderArea = page.locator("section").filter({
@@ -108,24 +95,6 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
   }) => {
     test.setTimeout(60_000);
 
-    await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
-    const billingSection = page.locator("section.rounded-lg").filter({
-      has: page.getByRole("heading", { name: "청구 항목 편집" }),
-    });
-    await billingSection.getByRole("button", { name: "청구 항목 필터 설정" }).click();
-    let popover = page.locator('[data-slot="popover-content"]');
-    await popover.getByRole("combobox", { name: "필터 필드" }).click();
-    await page.getByRole("option", { name: "청구금액" }).click();
-    await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
-    await expect(billingSection).toContainText("조건에 맞는 청구 항목이 없습니다.");
-    await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
-      (button as HTMLButtonElement).click();
-    });
-    await popover.getByRole("button", { name: "필터 닫기" }).evaluate((button) => {
-      (button as HTMLButtonElement).click();
-    });
-    await expect(billingSection.locator("tbody tr")).toHaveCount(5);
-
     await page.goto(kongScenarioUrl);
     await restoreKongOrderDraftDefaults(page);
     const orderArea = page.locator("section").filter({
@@ -133,7 +102,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     }).last();
     await orderArea.getByRole("tab", { name: /임상/ }).click();
     await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
-    popover = page.locator('[data-slot="popover-content"]');
+    let popover = page.locator('[data-slot="popover-content"]');
     await popover.getByRole("combobox", { name: "필터 필드" }).click();
     await page.getByRole("option", { name: "상태" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).first().click();

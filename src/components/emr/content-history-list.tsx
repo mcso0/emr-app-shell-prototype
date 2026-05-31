@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { KeyboardEvent, ReactNode } from "react";
-import { ChevronDownIcon } from "@/components/icons";
+import { CalendarIcon, ChevronDownIcon, ClockIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 type EmrContentHistoryGroupProps = {
@@ -57,40 +57,52 @@ export function EmrContentHistoryGroup({
 
   const titleContent = (
     <>
-      <div className="emr-text-dense-label flex min-w-0 flex-1 items-center gap-1.5 font-medium">
-        <span className="truncate text-muted-foreground">
+      <div className="emr-text-body flex min-w-0 flex-1 items-center gap-[var(--emr-content-history-group-title-left-gap)] font-medium">
+        <CalendarIcon
+          className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]"
+          aria-hidden="true"
+        />
+        <span className="truncate text-[var(--emr-content-history-group-title-text)]">
           {label}
         </span>
-        <span className="shrink-0 text-[var(--emr-text-tertiary)]">
+        <span className="shrink-0 text-[var(--emr-content-history-group-title-count)]">
           {count}
         </span>
       </div>
       <motion.span
-        className="flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+        className="flex size-[var(--emr-content-history-group-action-size)] shrink-0 items-center justify-center text-[var(--emr-content-history-group-title-icon)]"
         animate={{ rotate: collapsed ? 180 : 0 }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: CONTENT_HISTORY_GROUP_EASE }}
       >
-        <ChevronDownIcon className="size-4 shrink-0" aria-hidden="true" />
+        <ChevronDownIcon
+          className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0"
+          aria-hidden="true"
+        />
       </motion.span>
     </>
   );
 
   return (
-    <section className="emr-density-stack-sm flex flex-col rounded-[10px]" data-testid={dataTestId}>
+    <section className="flex flex-col gap-[var(--emr-content-history-list-gap)]" data-testid={dataTestId}>
       {onToggle ? (
         <button
           type="button"
-          className="emr-density-list-compact flex h-8 w-full items-center justify-between gap-3 rounded-md text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex h-[var(--emr-content-history-group-title-height)] w-full items-center justify-between gap-[var(--emr-content-history-group-title-gap)] rounded-[var(--emr-content-history-group-title-radius)] p-[var(--emr-content-history-group-title-padding)] text-left outline-none transition-colors hover:bg-[var(--emr-content-history-group-title-hover-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-expanded={!collapsed}
+          data-slot="content-history-group-title"
           data-testid={toggleTestId}
           onClick={onToggle}
         >
           {titleContent}
         </button>
       ) : (
-        <div className="emr-density-list-compact flex h-8 items-center justify-between gap-3 rounded-md">{titleContent}</div>
+        <div
+          className="flex h-[var(--emr-content-history-group-title-height)] items-center justify-between gap-[var(--emr-content-history-group-title-gap)] rounded-[var(--emr-content-history-group-title-radius)] p-[var(--emr-content-history-group-title-padding)]"
+          data-slot="content-history-group-title"
+        >
+          {titleContent}
+        </div>
       )}
-      <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <AnimatePresence initial={false}>
         {collapsed ? null : (
           <motion.div
@@ -100,7 +112,20 @@ export function EmrContentHistoryGroup({
             animate={{ height: "auto", opacity: 1, y: 0, transition: contentTransition }}
             exit={{ height: 0, opacity: 0, y: -4, transition: contentExitTransition }}
           >
-            {children}
+            <div className="flex min-w-0">
+              <div
+                className="flex shrink-0 self-stretch pl-[var(--emr-content-history-timeline-gutter)] pr-[var(--emr-content-history-timeline-padding-right)]"
+                aria-hidden="true"
+              >
+                <div className="w-px bg-[var(--emr-content-history-timeline-line)]" />
+              </div>
+              <div
+                className="flex min-w-0 flex-1 flex-col gap-[var(--emr-content-history-list-gap)]"
+                data-slot="content-history-group-list"
+              >
+                {children}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -122,29 +147,30 @@ export function EmrContentHistoryItem({
   const content = (
     <>
       <div className="flex min-w-0 items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="emr-text-body truncate font-semibold text-[var(--emr-text-secondary)]">
-            {title}
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-[var(--emr-content-history-card-gap)]">
           {subtitle ? (
-            <div className="emr-text-dense mt-0.5 min-w-0 truncate font-medium text-[var(--emr-text-tertiary)]">
-              {subtitle}
+            <div className="emr-text-metadata flex min-w-0 items-center gap-1 font-medium text-[var(--emr-content-history-card-meta)]">
+              <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 truncate">{subtitle}</span>
             </div>
           ) : null}
+          <div className="emr-text-body truncate font-semibold text-[var(--emr-content-history-card-title)]">
+            {title}
+          </div>
         </div>
         {badge ? <div className="shrink-0">{badge}</div> : null}
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {meta ? (
-        <div className="emr-text-dense mt-1 flex min-w-0 items-center gap-2 font-medium text-[var(--emr-text-tertiary)]">
+        <div className="emr-text-metadata flex min-w-0 flex-wrap items-center gap-[var(--emr-content-history-card-gap)] font-medium text-[var(--emr-content-history-card-meta)] [&>span]:inline-flex [&>span]:h-6 [&>span]:min-w-0 [&>span]:items-center [&>span]:rounded-[var(--clair-radius-atomic-6)] [&>span]:border [&>span]:border-[var(--emr-content-history-card-chip-border)] [&>span]:bg-[var(--emr-content-history-card-chip-bg)] [&>span]:px-[var(--clair-spacing-6)] [&>span]:py-[var(--clair-spacing-2)] [&>span]:text-[var(--emr-content-history-card-chip-text)]">
           {meta}
         </div>
       ) : null}
     </>
   );
   const itemClassName = cn(
-    "emr-density-list-item block w-full border-b border-[var(--emr-line-subtle)] text-left outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-    selected && "bg-transparent",
+    "block w-full rounded-[var(--emr-content-history-card-radius)] p-[var(--emr-content-history-card-padding)] text-left outline-none transition-colors hover:bg-[var(--emr-content-history-card-hover-bg)] focus-visible:bg-[var(--emr-content-history-card-hover-bg)] focus-visible:ring-3 focus-visible:ring-ring/50",
+    selected && "bg-[var(--emr-content-history-card-selected-bg)]",
     className
   );
 
@@ -154,6 +180,7 @@ export function EmrContentHistoryItem({
         role="button"
         tabIndex={0}
         className={itemClassName}
+        data-slot="content-history-item"
         data-selected={selected ? "true" : undefined}
         data-testid={testId}
         aria-pressed={selected}
@@ -175,7 +202,7 @@ export function EmrContentHistoryItem({
   }
 
   return (
-    <div className={itemClassName} data-testid={testId}>
+    <div className={itemClassName} data-slot="content-history-item" data-testid={testId}>
       {content}
     </div>
   );

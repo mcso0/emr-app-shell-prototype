@@ -22,39 +22,34 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
       size="default"
       data-testid="workspace-switcher"
       className={cn(
-        "h-8 items-center rounded-[var(--emr-radius-control)] border-0 bg-transparent p-0 text-[var(--emr-text-secondary)] tracking-normal shadow-none transition-[background-color,width] hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)] focus-visible:ring-ring/40",
+        "h-8 items-center justify-center gap-[var(--clair-border-width-atomic-4)] rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-workspace-button-border)] bg-[var(--emr-workspace-button-bg)] px-[var(--clair-spacing-8)] py-[var(--clair-radius-atomic-6)] text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--emr-workspace-button-text)] shadow-[var(--clair-shadow-xs)] transition-[background-color,border-color,width] hover:border-[var(--emr-workspace-button-border)] hover:bg-[var(--emr-workspace-button-hover-bg)] hover:text-[var(--emr-workspace-button-text)] focus-visible:ring-ring/40 active:bg-[var(--emr-workspace-button-bg)] active:shadow-none",
         collapsed
-          ? "w-12 justify-start"
-          : "w-fit max-w-full min-w-0 justify-start pr-2 text-[13px] font-semibold",
+          ? "w-14"
+          : "w-fit max-w-full min-w-48",
         className,
       )}
       aria-label={`${workspaceId} 워크스페이스 선택`}
     >
       <span
-        data-slot="workspace-switcher-mark-slot"
-        className="flex h-8 w-12 shrink-0 items-center justify-center"
+        data-slot="workspace-switcher-mark"
+        className="flex size-[18px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-workspace-button-logo-bg)] text-[var(--emr-workspace-button-logo-fg)]"
         aria-hidden="true"
       >
-        <span
-          data-slot="workspace-switcher-mark"
-          className="flex size-6 items-center justify-center overflow-hidden rounded-[7px] bg-[var(--brand)] text-[var(--brand-foreground)]"
-        >
-          <WorkspaceLogoMarkIcon className="size-6" />
-        </span>
+        <WorkspaceLogoMarkIcon size={18} className="size-[18px]" />
       </span>
       <span
         data-slot="workspace-switcher-label"
         className={cn(
-          "min-w-0 truncate transition-[opacity,transform] duration-150",
-          collapsed ? "pointer-events-none opacity-0" : "opacity-100"
+          "min-w-0 px-[var(--clair-border-width-atomic-2)] transition-[opacity,transform] duration-150",
+          collapsed ? "hidden" : "opacity-100"
         )}
       >
         {workspaceDisplayName}
       </span>
       <CdsNavigationChevronDownIcon
+        size={16}
         className={cn(
-          "ml-1.5 size-4 shrink-0 text-[var(--emr-text-tertiary)] transition-opacity duration-150",
-          collapsed && "opacity-0"
+          "size-4 shrink-0 text-[var(--emr-workspace-button-icon)] transition-opacity duration-150"
         )}
         aria-hidden="true"
       />

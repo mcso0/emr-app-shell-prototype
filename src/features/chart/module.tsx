@@ -681,6 +681,13 @@ function useScenarioEncounterSync() {
   ]);
 }
 
+function useExplicitChartEncounterId() {
+  const searchParams = useSearchParams();
+  const scenario = getDemoScenarioFromParams(searchParams);
+
+  return searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
+}
+
 export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
@@ -706,6 +713,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     [liveQueueRecords],
   );
   const items = liveMode ? liveItems : mockItems;
+  const explicitQueryEncounterId = useExplicitChartEncounterId();
 
   useEffect(() => {
     hydrateAuthSession();
@@ -740,6 +748,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
       setLiveQueueState({ records: result.queue, status: "ready" });
 
       if (
+        !explicitQueryEncounterId &&
         result.queue.length > 0 &&
         !result.queue.some((record) => record.encounter.id === selectedEncounterId)
       ) {
@@ -755,6 +764,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   }, [
     actorHeaders,
     authHydrated,
+    explicitQueryEncounterId,
     liveMode,
     selectEncounter,
     selectedEncounterId,
@@ -765,8 +775,16 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   useEffect(() => {
     if (!liveMode || liveQueueStatus !== "ready" || liveItems.length === 0) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
+    if (explicitQueryEncounterId) return;
     selectEncounter(liveItems[0].id);
-  }, [liveItems, liveMode, liveQueueStatus, selectEncounter, selectedEncounterId]);
+  }, [
+    explicitQueryEncounterId,
+    liveItems,
+    liveMode,
+    liveQueueStatus,
+    selectEncounter,
+    selectedEncounterId,
+  ]);
 
   return (
     <EmrOrderQueueSidePanel
@@ -795,9 +813,12 @@ export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowMockFallback = useChartStore(
+  const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
+  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const allowMockFallback =
+    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
   const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
@@ -847,9 +868,12 @@ export function ChartContentAside() {
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowMockFallback = useChartStore(
+  const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
+  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const allowMockFallback =
+    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
@@ -2557,9 +2581,12 @@ function ChartRightPanel() {
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowMockFallback = useChartStore(
+  const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
+  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const allowMockFallback =
+    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
@@ -4831,9 +4858,12 @@ export function ChartContent() {
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const allowMockFallback = useChartStore(
+  const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
+  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const allowMockFallback =
+    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
   const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
   const {
     hydrated: authHydrated,

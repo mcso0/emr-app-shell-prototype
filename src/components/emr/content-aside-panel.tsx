@@ -17,7 +17,11 @@ export function EmrContentAsidePanel({
   return (
     <div
       id={id}
-      className={cn("flex h-full w-full flex-col gap-2 bg-[var(--emr-surface-content-panel)] px-4 pt-4", className)}
+      data-slot="content-aside-panel"
+      className={cn(
+        "flex h-full w-full min-w-[var(--emr-content-aside-width)] flex-col gap-[var(--emr-content-aside-section-gap)] bg-[var(--emr-content-aside-bg)] px-[var(--emr-content-aside-padding-x)] pt-[var(--emr-content-aside-header-padding-top)]",
+        className
+      )}
     >
       {children}
     </div>

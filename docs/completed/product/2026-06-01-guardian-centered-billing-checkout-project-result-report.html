@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>보호자 중심 수납 Checkout 프로젝트 결과 보고서</title>
+    <style>
+      body { margin: 0; background: #f7f7f8; color: #17181c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 960px; margin: 0 auto; padding: 44px 24px; }
+      section { margin-top: 20px; padding: 22px; border: 1px solid #e1e4e8; border-radius: 10px; background: #fff; }
+      h1, h2 { margin: 0 0 10px; line-height: 1.25; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 18px; }
+      p { margin: 8px 0; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+      th, td { padding: 9px 10px; border-bottom: 1px solid #edf0f2; text-align: left; vertical-align: top; }
+      th { color: #4b5563; background: #f9fafb; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f0f2f5; }
+      .badge { display: inline-flex; padding: 3px 9px; border-radius: 999px; background: #edf8f1; color: #1f7a3a; font-weight: 700; font-size: 13px; }
+      .review { background: #eef6ff; color: #155eef; }
+      .note { background: #fff7e6; color: #8a5a00; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="badge">프로젝트 작업 완료 / 승욱 리뷰 대기</p>
+      <h1>보호자 중심 수납 Checkout 프로젝트 결과</h1>
+      <p>
+        이번 프로젝트는 수납 화면의 기준을 “환자 한 마리”에서 “보호자와 보호자 소유 환자들의 결제”로 바꾼 작업이다.
+        이제 차트에서 오더 청구를 하면 수납 화면에서 보호자 기준으로 수납대기 건을 확인하고,
+        필요한 청구 항목을 검토한 뒤 <code>수납 진행</code>, <code>미납 처리</code>, <code>수납 완료</code>를 처리하는 흐름이 정리됐다.
+      </p>
+
+      <section>
+        <h2>현재 Linear 상태</h2>
+        <p>
+          남은 실행 이슈는 없다. <code>Blocked</code>, <code>Rework</code>, <code>Todo</code>, <code>In Progress</code> 상태는 0건이다.
+          의미 있는 작업은 규칙상 <code>Human Review</code>에서 멈춰 승욱 검토를 기다린다.
+        </p>
+        <table>
+          <thead>
+            <tr><th>상태</th><th>이슈</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge">Done</span></td><td>DEN-358, DEN-359, DEN-360, DEN-361</td></tr>
+            <tr><td><span class="badge review">Human Review</span></td><td>DEN-362, DEN-363, DEN-364, DEN-365, DEN-366, DEN-367, DEN-368</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>무엇이 좋아졌나</h2>
+        <ul>
+          <li>상단 정보가 환자 바이탈/품종 중심에서 보호자 연락처, 보호자 소유 환자, 수납대기/미납 요약 중심으로 바뀌었다.</li>
+          <li>왼쪽 큐가 <code>수납대기 / 미납 / 완료</code>로 정리되어 데스크 담당자가 지금 처리할 건을 더 쉽게 찾을 수 있다.</li>
+          <li>보호자 수납이력 영역에서 기간과 상태를 보고 여러 환자의 미수납/대기 건을 선택할 수 있는 구조가 생겼다.</li>
+          <li>중앙 영역은 선택된 checkout 작업대가 되어 청구 항목과 추가 수납 항목을 함께 확인한다.</li>
+          <li>오른쪽 수납 요약은 최종 결제금액, 결제수단, 할인/할증 사유, 수납 메모, 수납 CTA 중심으로 정리됐다.</li>
+          <li><code>청구 확정</code>이라는 헷갈리는 사용자 문구를 제거하고, 수납 담당자 관점의 <code>수납 진행</code>으로 바꿨다.</li>
+          <li><code>미납 처리</code>는 사유가 있어야 저장되도록 해서 “왜 미납인지” 기록이 남게 했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li>fixed staging에서 보호자 중심 수납 화면이 최신 build로 표시되는 것을 확인했다.</li>
+          <li><code>수납 진행</code>, 사유 필수 <code>미납 처리</code>, <code>수납 완료</code> 흐름이 staging browser replay에서 통과했다.</li>
+          <li>타입체크, focused Playwright, 서버 스펙, eslint, 문서 링크 검사, secret scan을 통과했다.</li>
+          <li>Staging URL: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>아직 범위 밖인 것</h2>
+        <p class="badge note">런칭 전 MVP 범위 밖</p>
+        <ul>
+          <li>실제 카드사/PG 결제, 영수증, 환불, 정산 연동은 아직 아니다.</li>
+          <li>production deploy, real data import, remote Supabase migration push, remote RLS replay는 하지 않았다.</li>
+          <li>보호자 합산 결제를 완전한 회계 모델로 만들기 위한 checkout session/payment allocation DB 설계는 DEN-365에서 후속 승인 게이트로 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>승욱 리뷰 포인트</h2>
+        <ul>
+          <li>보호자 정보바에 데스크 담당자가 실제로 필요한 정보가 충분한지</li>
+          <li>수납대기/미납/완료 큐와 보호자 수납이력 선택 흐름이 직관적인지</li>
+          <li><code>수납 진행</code>, <code>미납 처리</code>, <code>수납 완료</code> 문구가 현장 업무 언어와 맞는지</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

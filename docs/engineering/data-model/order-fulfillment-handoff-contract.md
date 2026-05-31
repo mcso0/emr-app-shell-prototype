@@ -13,6 +13,8 @@ related_work:
   - DEN-241
   - DEN-242
   - DEN-335
+  - DEN-340
+  - DEN-349
 supersedes: []
 superseded_by: []
 last_updated: 2026-05-31
@@ -110,6 +112,60 @@ Type-specific `detail` examples:
 | `returned` | order becomes `re_requested` | candidate does not advance automatically; chart user confirmation is required if billing is intentionally requested |
 
 `DEN-335` establishes the current policy: chart `Order 청구` is the trusted chart action for billing candidate creation across lab, imaging, dispensing, and treatment. The action must not change order or fulfillment work status.
+
+`DEN-340` validates that the current table split can represent separated work and billing states without a schema migration:
+
+- `orders.status`, `orders.work_status`, and `orders.task_status` remain clinical/work execution state.
+- `order_fulfillment_work_items.status` remains downstream queue execution state.
+- `orders.billing_candidate_status`, `orders.billing_candidate_id`, `invoices`, and `invoice_lines` remain billing handoff and invoice state.
+- `clair_save_chart_order_action(action = 'bill')` marks the selected non-cancelled order as a billing candidate and preserves order/work/fulfillment status.
+- `clair_sync_billing_invoice_candidates` validates the same workspace/encounter/order scope, excludes cancelled and non-billable rows, lazily creates a draft invoice anchor when needed, upserts deterministic invoice lines, and recalculates invoice totals from server-owned order snapshots.
+
+The current two-RPC path is acceptable for local-first MVP and DEN-341 staging replay because failed invoice sync can be retried after `billing_candidate_status = 'candidate_created'`; the sync RPC accepts that state and is idempotent for the active invoice/order pair. A single consolidated RPC/transaction is not required for DEN-341, but should be treated as an approval-gated hardening option if the product requires strict all-or-nothing UX for chart billing action plus invoice candidate creation.
+
+`DEN-349` originally fixed candidate promotion language around a user-facing `청구 확정` step:
+
+- `Order 청구`: create or refresh billing candidates from server-owned order snapshots.
+- Billing workspace review: display candidates as `수납 후보`.
+- `청구 확정`: accept candidate rows as the guardian-facing invoice amount basis and move the invoice to `issued`.
+- `수납 완료`: change payment state only.
+
+Current fit check: `clair_sync_billing_invoice_candidates` already inserts/updates `invoice_lines` at candidate sync time, while `clair_save_billing_invoice_lines` can only edit existing invoice line quantities and set invoice status to `issued`. Therefore the current DB/RPC shape can represent "candidate-backed draft invoice lines" but does not yet cleanly model "physical invoice line creation only at 청구 확정". If the product requires strict candidate-to-line promotion at `청구 확정`, a migration/RPC extension is required and must be approved before remote application.
+
+The 2026-05-31 guardian-centered billing review supersedes the user-facing `청구 확정` requirement:
+
+- Chart `Order 청구` is the moment selected orders become payable billing queue items. It should create/refresh candidate-backed invoice rows and preserve order/work status.
+- Billing should present guardian-level checkout, not a patient-only confirmation screen. The primary action should be `수납 진행` / `결제 진행`.
+- A server-side issue/snapshot transition may still happen internally during `수납 진행`, but it should not appear as an extra required `청구 확정` UX step.
+- `미납 처리` should be an explicit deferred/overdue payment action with reason, not the default state for every same-day item that has not yet been paid.
+
+Revised MVP fit:
+
+- Candidate-backed draft invoice lines are acceptable and are now the preferred fit for the product flow because `Order 청구` already means payable handoff.
+- No candidate-to-line promotion migration is required merely to remove `청구 확정` from the primary UX.
+- A later migration is still likely for guardian-centered combined checkout, adjustment audit, and payment allocation across multiple patients/invoices.
+
+Candidate promotion migration options, only if stricter semantics are later required:
+
+1. Keep candidate-backed draft invoice lines: add/standardize a line status or candidate marker, expose candidate line IDs to the billing UI, and have `clair_save_billing_invoice_lines(..., p_confirm_billing = true)` issue the invoice containing those candidate-backed lines. This is the smaller DB change.
+2. Move physical invoice line creation to billing confirmation: store candidates separately or only on `orders.billing_candidate_*` until `청구 확정`, then insert invoice lines inside a new promotion RPC. This is the stricter semantic model but a larger migration.
+
+Recommended revised direction: option 1 for MVP, with user-facing copy changed from `청구 확정` to `수납 진행` / `결제 진행`. The approval-gated migration should focus on combined checkout and payment allocation before it focuses on strict candidate-to-line promotion.
+
+Guardian-centered checkout model required for later implementation:
+
+- `invoices` can remain encounter/patient anchored, but billing workspace selection must group by guardian account and allow multiple patient invoices to be paid together.
+- Add a future `billing_checkout_sessions` or equivalent aggregate object when combined payment needs persistence beyond client state. It should store workspace, guardian, selected invoice IDs, selected patient IDs, subtotal, adjustments, final amount, status, actor, and timestamps.
+- Add `payment_allocations` when one payment can settle multiple invoices. Each allocation links payment, invoice, amount, and allocation status.
+- Add `invoice_adjustments` for discount/surcharge reason, actor, amount, type, and optional approval metadata.
+- Add guardian-level billing flags/notes using neutral copy such as `결제 주의`, `미납 주의`, or `수납 메모`; avoid exposing a raw `blacklist` concept in guardian-facing outputs.
+- Co-guardian inclusion requires patient-guardian relationship queries and an explicit UI toggle before cross-guardian invoices are shown in the billing ledger.
+
+Recommended consolidated RPC shape, if later approved:
+
+- `public.clair_bill_chart_orders_and_sync_invoice_candidates(p_workspace_id text, p_actor_user_id uuid, p_encounter_id uuid, p_order_ids uuid[]) returns jsonb`
+- Transactional behavior: validate membership, encounter, selected orders, `billing_reflection_enabled`, and cancellation status; update order billing candidate fields; create or reuse the active draft/issued invoice; insert/update invoice lines; recalculate invoice totals; write order events; return both order action rows and invoice candidate rows.
+- Verification: static migration contract tests, focused chart order action server specs for rollback-on-sync-failure and retry, focused invoice candidate specs, `npx tsc --noEmit --pretty false`, `npm run security:secrets`, and DEN-341 synthetic staging replay after explicit staging application approval.
 
 ## Permission And Scope Requirements
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Context Hub Docs Router"
+  short_description: "Use chub safely for external API docs"
+  default_prompt: "Use $context-hub-docs-router before coding against external API or SDK docs."

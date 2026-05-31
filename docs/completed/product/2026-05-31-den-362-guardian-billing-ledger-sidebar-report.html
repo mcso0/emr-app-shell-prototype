@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-362 Guardian Billing Ledger Sidebar Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef6ff;
+        color: #155eef;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-362 - Human Review ready</p>
+      <h1>Guardian Billing Ledger Sidebar Report</h1>
+      <p>
+        DEN-362 adds a guardian-centered billing ledger to the billing content aside. The staff can now
+        review a guardian's payable, unpaid, and completed billing history across owned patients, filter
+        the visible ledger rows, and select rows that feed the central checkout context.
+      </p>
+
+      <section>
+        <h2>Ledger 정보 구조</h2>
+        <ul>
+          <li>The billing module now exposes <code>BillingContentAside</code> through the module registry.</li>
+          <li>The content aside title is <code>보호자 수납이력</code> and is scoped to the selected invoice's guardian.</li>
+          <li>Each ledger row shows patient name, invoice number, activity time, billable order-line count, explicit status badge, billing guardian, and amount.</li>
+          <li>Ledger row checkbox selection uses the existing <code>selectedInvoiceIds</code> store state so the central checkout summary updates from the same source of truth.</li>
+          <li>The previous central <code>보호자 청구 묶음</code> and <code>합산/해제</code> temporary sections were replaced by a compact <code>선택된 수납 건</code> summary.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>필터 기준</h2>
+        <p class="status decision">
+          Default focus is 수납대기 + 미납.
+        </p>
+        <ul>
+          <li>Date quick ranges: <code>1주</code>, <code>2주</code>, <code>1달</code>, <code>3달</code>, <code>6개월</code>, and <code>직접</code>.</li>
+          <li>Status filters: <code>수납대기</code>, <code>미납</code>, and <code>완료</code>.</li>
+          <li>Initial status selection includes <code>수납대기</code> and <code>미납</code>; <code>완료</code> is available on demand.</li>
+          <li>The ledger uses the DEN-361 rule: only reason-backed unpaid/failed invoices are <code>미납</code>.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>공동 보호자 정책</h2>
+        <ul>
+          <li><code>타 보호자 청구서 포함</code> appears only when the selected guardian shares at least one patient with another guardian in mock relationship data.</li>
+          <li>The toggle is UI-local in DEN-362 and does not change DB queries, RLS, RPCs, or remote data.</li>
+          <li>When enabled, the ledger can include invoices for the selected guardian's owned patients even if the invoice guardian differs.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+          <li><code>npx eslint src/features/billing/data.ts src/features/billing/module.tsx src/modules/registry.ts tests/billing.spec.ts</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing workspace renders waiting invoice|billing guardian ledger aside" --reporter=line</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing renders live candidate rows|billing maps encounter candidates|billing workspace renders waiting invoice|billing side panel switches|billing guardian ledger aside" --reporter=line</code> passed.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../../src/features/billing/data.ts">src/features/billing/data.ts</a></li>
+          <li><a href="../../../src/features/billing/module.tsx">src/features/billing/module.tsx</a></li>
+          <li><a href="../../../src/modules/registry.ts">src/modules/registry.ts</a></li>
+          <li><a href="../../../tests/billing.spec.ts">tests/billing.spec.ts</a></li>
+          <li><a href="../../design/changelog.md">docs/design/changelog.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <ul>
+          <li>No real co-guardian DB query, migration, RLS, or RPC change was performed.</li>
+          <li>No payment allocation persistence was implemented.</li>
+          <li>No staging replay, production deploy, real data import, or payment provider work was performed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

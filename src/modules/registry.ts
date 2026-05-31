@@ -20,6 +20,7 @@ import {
 } from "@/features/chart/module";
 import {
   BillingContent,
+  BillingContentAside,
   BillingHeader,
   BillingRightPanel,
   BillingSidePanel,
@@ -137,6 +138,7 @@ export const modules: ModuleDefinition[] = [
     icon: CreditCardIcon,
     sidePanel: BillingSidePanel,
     contentHeader: BillingHeader,
+    contentAside: BillingContentAside,
     content: BillingContent,
     rightPanel: BillingRightPanel,
     defaultRightPanelOpen: true,

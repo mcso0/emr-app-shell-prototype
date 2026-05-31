@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-348 Billing Candidate Table Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+        margin-top: 12px;
+        border: 1px solid #d8dbe2;
+        border-radius: 8px;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #f6ffed;
+        color: #237804;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .note {
+        background: #fff7e6;
+        color: #8a5a00;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Fixed staging billing table passed</p>
+      <h1>DEN-348 Billing Candidate Table Report</h1>
+      <p>
+        DEN-348은 DEN-341에서 생성된 billing candidate rows가 수납 화면의 청구 항목 편집 table에 보이지 않던 문제를 해결했다.
+        remote candidate invoice UUID와 demo invoice alias가 달라도 현재 열린 encounter/invoice context 안에서 후보 행을 표시한다.
+      </p>
+
+      <section>
+        <h2>구현</h2>
+        <ul>
+          <li>
+            <code>src/features/billing/module.tsx</code>에서 billing candidate rows를 현재 열린 invoice context에 매핑해 table에 병합했다.
+          </li>
+          <li>
+            candidate row id는 <code>invoice-line-billcand-*</code> prefix를 사용해 persisted invoice line과 구분한다.
+          </li>
+          <li>
+            candidate row description 옆에 <code>수납 후보</code> badge를 표시하고, quantity input은 표시 전용으로 둔다.
+          </li>
+          <li>
+            청구 확정 저장 payload에서는 virtual candidate row를 제외해, 아직 persisted invoice-line edit으로 오해되지 않게 했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Fixed Staging Evidence</h2>
+        <ul>
+          <li>
+            Fixed staging:
+            <a href="https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app">
+              https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app
+            </a>
+          </li>
+          <li>
+            Preview assigned to fixed staging:
+            <a href="https://emr-app-shell-prototype-hsgjd5htv-mcso0s-projects.vercel.app">
+              https://emr-app-shell-prototype-hsgjd5htv-mcso0s-projects.vercel.app
+            </a>
+          </li>
+          <li>
+            Verified URL:
+            <code>/w/clair-demo/billing?modulePanel=open&amp;encounterId=encounter-kong-260501&amp;invoiceId=invoice-kong-260501&amp;right=open</code>
+          </li>
+          <li>
+            Table readback confirmed: treatment, lab, imaging, and dispensing candidate rows all displayed with <code>수납 후보</code>.
+          </li>
+        </ul>
+        <img
+          src="./evidence/2026-05-31-den-348-fixed-staging-billing-candidate-table-pass.png"
+          alt="DEN-348 fixed staging billing candidate table pass evidence"
+        />
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>
+            <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/billing.spec.ts -g "billing renders live candidate rows|billing maps encounter candidates" --reporter=line</code>
+            통과.
+          </li>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+          <li><code>npm run security:secrets</code> 통과.</li>
+          <li><code>git diff --check</code> 통과.</li>
+          <li>Vercel preview build 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>금지/미수행</h2>
+        <ul>
+          <li>Production deploy는 하지 않았다.</li>
+          <li>remote Supabase migration push는 하지 않았다.</li>
+          <li>실데이터 import는 하지 않았다.</li>
+          <li>원격 RLS replay는 하지 않았다.</li>
+          <li>후보를 persisted invoice line으로 최종 확정하는 새 회계 정책은 구현하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 판단</h2>
+        <p class="note">
+          DEN-348은 candidate visibility를 해결한다. 후보를 실제 invoice line으로 승격하거나 재계산/확정 저장 정책에 포함하는 범위는
+          별도 제품/DB 정책 이슈로 다룬다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

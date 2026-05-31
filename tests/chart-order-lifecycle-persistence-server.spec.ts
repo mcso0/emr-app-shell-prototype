@@ -13,6 +13,8 @@ const encounterId = "encounter-kong-260501";
 const orderId = "order-kong-maropitant";
 const migrationPath = "supabase/migrations/20260519230000_chart_order_lifecycle_persistence_rpc.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const lifecycleRoutePath =
+  "src/app/api/workspaces/[workspaceId]/chart/order-lifecycle/route.ts";
 
 const validLifecycleInput = {
   encounterId,
@@ -172,6 +174,17 @@ test("order lifecycle Supabase gateway keeps status, actor, workspace, encounter
     ok: true,
     lifecycles: [{ status: "completed" }],
   });
+});
+
+test("order lifecycle route resolves demo encounter aliases before live RPC access", () => {
+  const routeSource = readFileSync(lifecycleRoutePath, "utf8");
+
+  expect(routeSource).toContain("resolveServerChartEncounterId");
+  expect(routeSource).toContain("SupabaseEncounterIdBridgeClient");
+  expect(routeSource).toContain("encounterId: resolvedEncounter.encounterId");
+  expect(routeSource).toContain(
+    "input: { ...input, encounterId: resolvedEncounter.encounterId }",
+  );
 });
 
 test("order lifecycle persistence migration defines local-first RPC boundary without secrets", () => {

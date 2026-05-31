@@ -23,17 +23,6 @@ async function resolveCssColor(page: Page, value: string) {
   }, value);
 }
 
-async function resolveCssBoxShadow(page: Page, value: string) {
-  return page.evaluate((shadowValue) => {
-    const probe = document.createElement("span");
-    probe.style.boxShadow = shadowValue;
-    document.body.appendChild(probe);
-    const shadow = getComputedStyle(probe).boxShadow;
-    probe.remove();
-    return shadow;
-  }, value);
-}
-
 function expectRect(value: Awaited<ReturnType<ReturnType<Page["locator"]>["boundingBox"]>>): asserts value is NonNullable<typeof value> {
   expect(value).not.toBeNull();
 }
@@ -86,6 +75,18 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "조제 이력" })).toBeVisible();
   await page.getByRole("button", { name: "조제 이력 패널 열기" }).click();
   await expect(page.getByText("26.04.11")).toBeVisible();
+  const contentAside = page.locator("[data-slot='content-aside-panel']");
+  await expect(contentAside).toHaveCSS("min-width", "280px");
+  await expect(contentAside).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-content-aside-bg)"));
+  await expect(contentAside).toHaveCSS("padding-left", "16px");
+  const historyGroupTitle = page.getByTestId("history-group-toggle-26.04.11");
+  await expect(historyGroupTitle).toHaveCSS("height", "32px");
+  await expect(historyGroupTitle).toHaveCSS("padding-left", "4px");
+  await expect(historyGroupTitle.locator("svg").first()).toHaveCSS("width", "14px");
+  const firstHistoryItem = page.locator("[data-slot='content-history-item']").first();
+  await expect(firstHistoryItem).toHaveCSS("border-radius", "6px");
+  await expect(firstHistoryItem).toHaveCSS("padding-top", "4px");
+  await expect(firstHistoryItem.locator("svg").first()).toHaveCSS("width", "12px");
 
   await page.getByRole("button", { name: "조제 이력 패널 접기" }).click();
   await page.getByTestId("order-row-section-0-o-10023").click({ position: { x: 100, y: 20 } });
@@ -146,6 +147,9 @@ test("app shell renders workspace switcher in the navigation column when module 
   const modulePanelBox = await modulePanelArea.boundingBox();
   const workspaceBox = await workspaceArea.boundingBox();
   const switcherBox = await workspaceSwitcher.boundingBox();
+  const switcherMark = workspaceSwitcher.locator('[data-slot="workspace-switcher-mark"]');
+  const switcherLabel = workspaceSwitcher.locator('[data-slot="workspace-switcher-label"]');
+  const switcherChevron = workspaceSwitcher.locator(":scope > svg");
 
   expectRect(tabsBox);
   expectRect(navigationBox);
@@ -155,6 +159,28 @@ test("app shell renders workspace switcher in the navigation column when module 
   expect(tabsBox.y).toBe(switcherBox.y);
   expect(Math.round(tabsBox.height)).toBe(32);
   expect(Math.round(switcherBox.height)).toBe(32);
+  expect(Math.round(switcherBox.width)).toBeGreaterThanOrEqual(192);
+  await expect(switcherLabel).not.toHaveCSS("text-overflow", "ellipsis");
+  await expect(switcherLabel).toHaveText("VIP 동물의료센터 청담점");
+  await expect(workspaceSwitcher).toHaveCSS("font-size", "14px");
+  await expect(workspaceSwitcher).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-workspace-button-bg)"));
+  await expect(workspaceSwitcher).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-workspace-button-border)"));
+  await expect(switcherMark).toHaveCSS("width", "18px");
+  await expect(switcherMark).toHaveCSS("height", "18px");
+  await expect(switcherChevron).toHaveCSS("width", "16px");
+  await expect(switcherChevron).toHaveCSS("height", "16px");
+  await expect
+    .poll(async () => {
+      const buttonBox = await workspaceSwitcher.boundingBox();
+      const markBox = await switcherMark.boundingBox();
+      const chevronBox = await switcherChevron.boundingBox();
+      if (!buttonBox || !markBox || !chevronBox) return null;
+      return {
+        left: Math.round(markBox.x - buttonBox.x),
+        right: Math.round(buttonBox.x + buttonBox.width - (chevronBox.x + chevronBox.width)),
+      };
+    })
+    .toEqual({ left: 9, right: 9 });
   expect(switcherBox.width).toBeLessThan(navigationBox.width);
   expect(workspaceBox.y - (tabsBox.y + tabsBox.height)).toBe(10);
   expect(modulePanelBox.y - (switcherBox.y + switcherBox.height)).toBe(10);
@@ -219,23 +245,25 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   expectRect(switcherBox);
   expectRect(modulePanelBox);
   expectRect(workspaceBox);
-  expect(Math.round(navigationBox.width)).toBe(48);
-  expect(Math.round(switcherBox.width)).toBe(48);
+  expect(Math.round(navigationBox.width)).toBe(56);
+  expect(Math.round(switcherBox.width)).toBe(56);
   expect(Math.round(switcherBox.height)).toBe(32);
-  expect(Math.round(modulePanelBox.width)).toBe(48);
+  expect(Math.round(modulePanelBox.width)).toBe(56);
   expect(workspaceBox.width).toBeGreaterThan(300);
 });
 
 test("app shell collapses workspace switcher with the navigation column", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=closed");
-  await waitForTestIdWidth(page, "shell-navigation-column", 48);
+  await waitForTestIdWidth(page, "shell-navigation-column", 56);
 
   const navigationColumn = page.getByTestId("shell-navigation-column");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
   const workspaceMark = workspaceSwitcher.locator('[data-slot="workspace-switcher-mark"]');
+  const workspaceChevron = workspaceSwitcher.locator(":scope > svg");
 
   await expect(workspaceSwitcher).toBeVisible();
   await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
+  await expect(workspaceChevron).toBeVisible();
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
   await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
 
@@ -246,11 +274,16 @@ test("app shell collapses workspace switcher with the navigation column", async 
   expectRect(navigationBox);
   expectRect(switcherBox);
   expectRect(markBox);
-  expect(Math.round(navigationBox.width)).toBe(48);
-  expect(Math.round(switcherBox.width)).toBe(48);
+  expect(Math.round(navigationBox.width)).toBe(56);
+  expect(Math.round(switcherBox.width)).toBe(56);
   expect(Math.round(switcherBox.height)).toBe(32);
-  expect(Math.round(markBox.width)).toBe(24);
-  expect(Math.round(markBox.x + markBox.width / 2)).toBe(Math.round(navigationBox.x + navigationBox.width / 2));
+  expect(Math.round(markBox.width)).toBe(18);
+  await expect(workspaceChevron).toHaveCSS("width", "16px");
+  await expect(workspaceChevron).toHaveCSS("height", "16px");
+  const chevronBox = await workspaceChevron.boundingBox();
+  expectRect(chevronBox);
+  expect(Math.round(markBox.x - switcherBox.x)).toBe(9);
+  expect(Math.round(switcherBox.x + switcherBox.width - (chevronBox.x + chevronBox.width))).toBe(9);
 });
 
 test("dispensing table supports hover selection and bulk completion", async ({ page }) => {
@@ -440,7 +473,7 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
 
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
   await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "조제/처치");
-  await expect(page.getByRole("button", { name: "사용자 프로필" })).toContainText("SH");
+  await expect(getNavRail(page).getByRole("button", { name: "고객센터" })).toBeVisible();
   await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
   await expect(page).toHaveURL(/modulePanel=closed/);
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
@@ -515,7 +548,7 @@ test("module side panel order type segmented control filters side orders", async
 
   const treatmentCard = page.getByTestId("order-queue-item-dispensing-queue-1");
   const treatmentCardAction = page.getByTestId("order-queue-item-action-dispensing-queue-1");
-  await expect(treatmentCard).toContainText(/나비\s*·\s*오세아\s*외래/);
+  await expect(treatmentCard).toContainText(/외래\s*나비\s*·\s*오세아/);
   await expect(treatmentCardAction).toHaveCSS("opacity", "0");
   await treatmentCard.hover();
   await expect(treatmentCardAction).toHaveCSS("opacity", "1");
@@ -535,7 +568,7 @@ test("module side panel order type segmented control filters side orders", async
   await expect(sidePanel.getByText("수액 처치")).toBeHidden();
 });
 
-test("order queue side panel renders status groups with design token colors", async ({ page }) => {
+test("order queue side panel renders status group titles with CDS V2 icon tokens", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
   const sidePanel = page.locator("aside").first();
@@ -545,16 +578,41 @@ test("order queue side panel renders status groups with design token colors", as
   await expect(sidePanel.getByTestId("order-queue-status-completed")).toContainText("완료");
   await expect(sidePanel.getByTestId("order-queue-status-canceled")).toContainText("취소");
 
-  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-warning-bg)"));
-  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-warning-text)"));
-  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-info-bg)"));
-  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-info-text)"));
-  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-neutral-bg)"));
-  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-neutral-text)"));
-  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-success-bg)"));
-  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-success-text)"));
-  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-status-danger-bg)"));
-  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-status-danger-text)"));
+  await expect(sidePanel.getByTestId("order-queue-status-reRequested-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-sidepanel-list-title-count)"));
+  await expect(sidePanel.getByTestId("order-queue-status-inProgress-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-sidepanel-list-title-count)"));
+  await expect(sidePanel.getByTestId("order-queue-status-waiting-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-sidepanel-list-title-count)"));
+  await expect(sidePanel.getByTestId("order-queue-status-completed-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-sidepanel-list-title-count)"));
+  await expect(sidePanel.getByTestId("order-queue-status-canceled-count")).toHaveCSS("color", await resolveCssColor(page, "var(--emr-sidepanel-list-title-count)"));
+
+  const reRequestedIcon = sidePanel.getByTestId("order-queue-status-reRequested-status-icon");
+  await expect(reRequestedIcon).toHaveAttribute("data-state-icon-state", "rework");
+  await expect(reRequestedIcon).toHaveCSS("width", "16px");
+  await expect(reRequestedIcon).toHaveCSS("height", "16px");
+  await expect
+    .poll(() =>
+      reRequestedIcon.evaluate((icon) => {
+        const paths = Array.from(icon.querySelectorAll("path"));
+        return {
+          accentFill: getComputedStyle(paths[1]).fill,
+          glyphFill: getComputedStyle(paths[3]).fill,
+          pathCount: paths.length,
+          stroke: getComputedStyle(paths[2]).stroke,
+          strokeWidth: getComputedStyle(paths[2]).strokeWidth,
+        };
+      }),
+    )
+    .toEqual({
+      accentFill: await resolveCssColor(page, "var(--emr-sidepanel-state-icon-rework-bg)"),
+      glyphFill: await resolveCssColor(page, "var(--emr-sidepanel-state-icon-rework-fg)"),
+      pathCount: 4,
+      stroke: await resolveCssColor(page, "var(--emr-sidepanel-state-icon-rework-border)"),
+      strokeWidth: "1.5px",
+    });
+
+  await expect(sidePanel.getByTestId("order-queue-status-inProgress-status-icon")).toHaveAttribute("data-state-icon-state", "in-progress");
+  await expect(sidePanel.getByTestId("order-queue-status-waiting-status-icon")).toHaveAttribute("data-state-icon-state", "to-do");
+  await expect(sidePanel.getByTestId("order-queue-status-completed-status-icon")).toHaveAttribute("data-state-icon-state", "done");
+  await expect(sidePanel.getByTestId("order-queue-status-canceled-status-icon")).toHaveAttribute("data-state-icon-state", "cancel");
 });
 
 test("order queue status groups can collapse and expand", async ({ page }) => {
@@ -589,11 +647,31 @@ test("orders module renders hospital admin order management instead of the place
 test("dispensing queue selection updates existing patient and instruction context", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed");
 
+  const patientContextBar = page.locator("[data-slot='patient-context-bar'] > div").first();
+  await expect(patientContextBar).toHaveCSS("min-height", "50px");
+  await expect(patientContextBar).toHaveCSS("padding-left", "16px");
+  await expect(patientContextBar).toHaveCSS("column-gap", "12px");
+  await expect(page.locator("[data-slot='emr-page-header']")).toHaveCSS("min-height", "32px");
+  const instructionInfoCard = page.locator("[data-slot='instruction-info-card']");
+  await expect(instructionInfoCard).toHaveCSS("min-height", "72px");
+  await expect(instructionInfoCard).toHaveCSS("padding-left", "16px");
+  await expect(instructionInfoCard).toHaveCSS("border-radius", "10px");
+
   await expect(page.getByTestId("order-queue-selection-summary")).toHaveCount(0);
   await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
   await expect(page.getByTestId("instruction-status-label")).toHaveCSS("background-color", "rgb(255, 250, 240)");
   await expect(page.getByTestId("instruction-status-label").locator("span")).toHaveCount(0);
   await expect(page.locator("[data-slot='instruction-header-order-info']")).toContainText(/조제 시작\s*10:34/);
+  const selectedQueueCard = page.getByTestId("order-queue-item-dispensing-queue-0");
+  await expect(selectedQueueCard).toHaveCSS("padding-top", "8px");
+  await expect(selectedQueueCard).toHaveCSS("border-radius", "10px");
+  await expect(selectedQueueCard).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-sidepanel-task-card-selected-border)"));
+  await expect(selectedQueueCard.getByText("예약")).toHaveCSS("height", "20px");
+  await expect(selectedQueueCard).toContainText("10:30 이수지 요청");
+  await expect(selectedQueueCard).toContainText("김미래");
+  await expect(page.getByTestId("order-queue-item-action-dispensing-queue-0")).toHaveCSS("width", "24px");
+  const unassignedQueueCard = page.getByTestId("order-queue-item-dispensing-queue-2");
+  await expect(unassignedQueueCard).toContainText("미지정");
 
   await page.getByTestId("order-queue-item-dispensing-queue-1").click();
 
@@ -792,30 +870,130 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   expect(navBox!.x - modulePanelBox!.x).toBeCloseTo(0, 0);
   expect(Math.round(shellBox!.height)).toBe(32);
   expect(Math.round(switcherBox!.height)).toBe(32);
-  await expect(page.getByRole("button", { name: "전역 통합 검색 열기" })).toHaveCSS("width", "32px");
-  await expect(page.getByRole("button", { name: "전역 통합 검색 열기" })).toHaveCSS("height", "32px");
-  await expect(page.getByRole("button", { name: "전역 통합 검색 열기" })).not.toContainText(
+  const searchButton = getNavRail(page).getByRole("button", { name: "전역 통합 검색 열기" });
+  const searchIcon = searchButton.locator("svg");
+  const customerCenterButton = getNavRail(page).getByRole("button", { name: "고객센터" });
+  await expect(navRail).toHaveCSS("width", "56px");
+  await expect(navRail).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-navrail-bg)"));
+  await expect(navRail).toHaveCSS("border-radius", "12px");
+  await expect(navRail).toHaveCSS("padding-left", "12px");
+  await expect(searchButton).toHaveCSS("width", "32px");
+  await expect(searchButton).toHaveCSS("height", "32px");
+  await expect(searchButton).toHaveCSS("color", await resolveCssColor(page, "var(--emr-navrail-icon)"));
+  await expect(searchIcon).toHaveCSS("width", "24px");
+  await expect(searchIcon).toHaveCSS("height", "24px");
+  await expect(customerCenterButton).toHaveCSS("width", "32px");
+  await expect(customerCenterButton).toHaveCSS("height", "32px");
+  await expect(searchButton).not.toContainText(
     "동물명 또는 보호자명으로 검색",
   );
-  const hoverColor = await resolveCssColor(page, "var(--emr-state-hover)");
-  const shadowXs = await resolveCssBoxShadow(page, "var(--clair-shadow-xs)");
-  const searchButton = page.getByRole("button", { name: "전역 통합 검색 열기" });
+  const topbarHoverColor = await resolveCssColor(page, "var(--emr-topbar-tab-hover-bg)");
+  const navRailHoverColor = await resolveCssColor(page, "var(--emr-navrail-item-hover)");
   await expect
     .poll(() => searchButton.evaluate((button) => getComputedStyle(button).boxShadow))
-    .toContain(shadowXs);
+    .toMatch(/^(none|(?:rgba\(0, 0, 0, 0\).*))/);
   await searchButton.hover();
-  await expect(searchButton).toHaveCSS("background-color", hoverColor);
+  await expect(searchButton).toHaveCSS("background-color", navRailHoverColor);
+  await expect
+    .poll(() =>
+      navRail.evaluate((rail) => {
+        const contents = rail.firstElementChild as HTMLElement | null;
+        if (!contents) return null;
+        const children = Array.from(contents.children) as HTMLElement[];
+        const boxes = children.map((child) => child.getBoundingClientRect());
+        const gaps = boxes.slice(1).map((box, index) =>
+          Math.round(box.y - (boxes[index].y + boxes[index].height)),
+        );
+        const dividers = children
+          .filter((child) => !child.querySelector("[aria-label]"))
+          .map((child) => {
+            const line = child.firstElementChild as HTMLElement | null;
+            const wrapperBox = child.getBoundingClientRect();
+            const lineBox = line?.getBoundingClientRect();
+            return {
+              wrapperHeight: Math.round(wrapperBox.height),
+              lineHeight: lineBox ? Math.round(lineBox.height) : null,
+              lineWidth: lineBox ? Math.round(lineBox.width) : null,
+              padding: getComputedStyle(child).padding,
+            };
+          });
+        return {
+          contentGap: getComputedStyle(contents).rowGap,
+          contentWidth: Math.round(contents.getBoundingClientRect().width),
+          divider: dividers[0],
+          gaps: [...new Set(gaps)],
+        };
+      }),
+    )
+    .toEqual({
+      contentGap: "12px",
+      contentWidth: 32,
+      divider: {
+        wrapperHeight: 1,
+        lineHeight: 1,
+        lineWidth: 24,
+        padding: "0px 6px",
+      },
+      gaps: [12],
+    });
   const newTabButton = page.getByRole("button", { name: "새 업무 탭" });
   await newTabButton.hover();
-  await expect(newTabButton).toHaveCSS("background-color", hoverColor);
-  await expect(getWorkspaceTablist(page).getByRole("tab").first()).toHaveCSS("height", "32px");
-  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toHaveCSS("width", "32px");
-  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toHaveCSS("width", "32px");
+  await expect(newTabButton).toHaveCSS("background-color", topbarHoverColor);
+  const activeWorkspaceTab = getWorkspaceTablist(page).getByRole("tab").first();
+  await expect(activeWorkspaceTab).toHaveCSS("height", "32px");
+  await expect(activeWorkspaceTab).toHaveCSS("font-size", "14px");
+  await expect(activeWorkspaceTab).toHaveCSS("line-height", "20px");
+  await expect(activeWorkspaceTab).toHaveCSS("letter-spacing", "0.196px");
+  await expect(activeWorkspaceTab).toHaveCSS("padding-left", "8px");
+  await expect(activeWorkspaceTab).toHaveCSS("padding-right", "10px");
+  await expect(activeWorkspaceTab.locator("xpath=ancestor::*[@role='presentation'][1]")).toHaveCSS(
+    "background-color",
+    await resolveCssColor(page, "var(--emr-topbar-tab-active-bg)"),
+  );
+  await expect(activeWorkspaceTab.locator("xpath=ancestor::*[@role='presentation'][1]")).toHaveCSS(
+    "border-color",
+    await resolveCssColor(page, "var(--emr-topbar-tab-active-border)"),
+  );
+  const backButton = page.getByRole("button", { name: "탭 뒤로가기" });
+  const forwardButton = page.getByRole("button", { name: "탭 앞으로가기" });
+  await expect(backButton).toHaveCSS("width", "32px");
+  await expect(forwardButton).toHaveCSS("width", "32px");
+  await expect(backButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(forwardButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(workspaceTabsBar.getByRole("button", { name: "알림" })).toHaveCSS("width", "32px");
   await expect(workspaceTabsBar.getByRole("button", { name: "도움말" })).toHaveCSS("width", "32px");
   await expect(workspaceTabsBar.getByRole("button", { name: "설정" })).toHaveCSS("width", "32px");
-  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
+  await expect(workspaceTabsBar.getByRole("button", { name: /프로필 메뉴/ })).toHaveCSS("width", "48px");
+  await expect(workspaceTabsBar.getByRole("button", { name: /프로필 메뉴/ })).toHaveCSS(
+    "background-color",
+    await resolveCssColor(page, "var(--emr-topbar-profile-bg)"),
+  );
+  await expect
+    .poll(() =>
+      workspaceTabsBar.evaluate((header) => {
+        const left = header.firstElementChild as HTMLElement | null;
+        const right = header.lastElementChild as HTMLElement | null;
+        const divider = left?.children[2] as HTMLElement | undefined;
+        return {
+          headerGap: getComputedStyle(header).columnGap,
+          leftGap: left ? getComputedStyle(left).columnGap : null,
+          rightGap: right ? getComputedStyle(right).columnGap : null,
+          dividerBg: divider ? getComputedStyle(divider).backgroundColor : null,
+          dividerHeight: divider ? Math.round(divider.getBoundingClientRect().height) : null,
+          dividerWidth: divider ? Math.round(divider.getBoundingClientRect().width) : null,
+        };
+      }),
+    )
+    .toEqual({
+      dividerBg: "rgba(0, 0, 0, 0.08)",
+      dividerHeight: 16,
+      dividerWidth: 1,
+      headerGap: "16px",
+      leftGap: "8px",
+      rightGap: "10px",
+    });
+  await expect(backButton).toBeDisabled();
+  await expect(forwardButton).toBeDisabled();
 });
 
 test("workspace tab close button keeps tab hover surface unified", async ({ page }) => {
@@ -825,10 +1003,14 @@ test("workspace tab close button keeps tab hover surface unified", async ({ page
   const workspaceTabs = getWorkspaceTablist(page);
   await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
 
-  const hoverColor = await resolveCssColor(page, "var(--emr-state-hover)");
+  const hoverColor = await resolveCssColor(page, "var(--emr-topbar-tab-hover-bg)");
   const closeButton = workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" }).first();
   const tabContainer = closeButton.locator("xpath=ancestor::*[@role='presentation'][1]");
+  const tabButton = tabContainer.getByRole("tab").first();
 
+  await expect(tabButton).toHaveCSS("padding-right", "0px");
+  await expect(closeButton).toHaveCSS("width", "16px");
+  await expect(closeButton).toHaveCSS("height", "16px");
   await closeButton.hover();
   await expect(tabContainer).toHaveCSS("background-color", hoverColor);
   await expect(closeButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");

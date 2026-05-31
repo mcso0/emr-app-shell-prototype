@@ -50,7 +50,7 @@ test("sales demo launcher carries the Kong scenario through the golden path", as
   await page.getByRole("link", { name: "수납" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
   await expectDemoContext(page);
-  await expect(page.getByText("INV-260501-0003 · 콩이 · 김하늘")).toBeVisible();
+  await expect(page.getByText("INV-260501-0003 · E-260501-0003")).toBeVisible();
   await expect(page.getByText("156,500원").first()).toBeVisible();
 });
 
@@ -124,7 +124,7 @@ test("golden scenario can be opened across chart, lab, imaging, and billing", as
   await expect(page).toHaveURL(/scenario=kong-vomit/);
 
   await page.goto(`/w/clair-demo/billing?${scenarioQuery}&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed`);
-  await expect(page.getByText("INV-260501-0003 · 콩이 · 김하늘")).toBeVisible();
+  await expect(page.getByText("INV-260501-0003 · E-260501-0003")).toBeVisible();
   await expect(page.getByText("156,500원").first()).toBeVisible();
   await page.getByRole("button", { name: "수납 완료" }).click();
   await expect(page.getByText("수납완료").first()).toBeVisible();

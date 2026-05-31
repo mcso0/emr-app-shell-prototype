@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-360 Billing Guardian Context Bar Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef6ff;
+        color: #155eef;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-360 - Human Review ready</p>
+      <h1>Billing Guardian Context Bar Report</h1>
+      <p>
+        DEN-360 changes the billing workspace header from patient/vitals context to guardian-centered
+        payment context. The billing header now tells the front desk who pays, which patients belong to
+        the guardian, what is waiting/unpaid, and where to open the payment summary.
+      </p>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li>Removed billing use of the shared <code>EmrPatientContextBar</code> so clinical screens are not affected.</li>
+          <li>Added a billing-only <code>BillingGuardianContextBar</code> inside <code>src/features/billing/module.tsx</code>.</li>
+          <li>Header now shows guardian name, masked contact, primary guardian chip, owned patient names, recent payment date, <code>수납대기</code> amount/count, <code>미납</code> amount/count, and neutral payment caution text.</li>
+          <li>Patient breed, age, and sex are no longer primary billing header fields.</li>
+          <li>The invoice number, billing status, and <code>수납 요약</code> toggle remain available on the right side.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>왜 중요한가</h2>
+        <p class="status decision">
+          Billing is guardian-centered, not patient-vitals-centered.
+        </p>
+        <ul>
+          <li>수납 담당자는 보호자 연락처, 미납 주의, 수납대기 금액을 먼저 봐야 한다.</li>
+          <li>한 보호자의 여러 환자를 합산 결제할 수 있어야 하므로, 상단부터 보호자 단위 맥락을 잡는다.</li>
+          <li>차트/검사 화면의 환자 컨텍스트 컴포넌트는 건드리지 않아 다른 임상 화면 회귀를 줄였다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code> passed.</li>
+          <li><code>npx eslint src/features/billing/module.tsx tests/billing.spec.ts</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing workspace renders waiting invoice" --reporter=line</code> passed.</li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing renders live candidate rows|billing maps encounter candidates|billing workspace renders waiting invoice" --reporter=line</code> passed.</li>
+          <li><code>npm run docs:check</code> passed.</li>
+          <li><code>npm run security:secrets</code> passed.</li>
+          <li><code>git diff --check</code> passed.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../../src/features/billing/module.tsx">src/features/billing/module.tsx</a></li>
+          <li><a href="../../../tests/billing.spec.ts">tests/billing.spec.ts</a></li>
+          <li><a href="../../docs/design/changelog.md">docs/design/changelog.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <ul>
+          <li>No guardian ledger implementation was performed.</li>
+          <li>No DB/RPC migration was written or applied.</li>
+          <li>No remote Supabase, production deploy, real data, or payment provider work was performed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

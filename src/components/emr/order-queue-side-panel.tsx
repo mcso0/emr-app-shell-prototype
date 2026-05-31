@@ -24,7 +24,10 @@ import {
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
-import { getEmrSidePanelStatusTitle } from "@/components/emr/side-panel-status-title";
+import {
+  getEmrSidePanelStatusIconState,
+  getEmrSidePanelStatusTitle,
+} from "@/components/emr/side-panel-status-title";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type {
   OrderQueueItem,
@@ -78,13 +81,6 @@ function getResolvedStatuses(
     .map(createFallbackStatus);
 
   return [...statuses, ...fallbackStatuses].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-function getStatusLabel(
-  statusId: string,
-  statuses: OrderQueueStatusDefinition[]
-) {
-  return statuses.find((status) => status.id === statusId)?.label ?? statusId;
 }
 
 export function EmrOrderQueueSidePanel({
@@ -177,7 +173,6 @@ export function EmrOrderQueueSidePanel({
               onToggle={() => toggleStatus(status.id)}
               selectedItemId={effectiveSelectedItemId}
               status={status}
-              statuses={resolvedStatuses}
             />
           );
         })}
@@ -193,7 +188,6 @@ function OrderQueueGroup({
   onToggle,
   selectedItemId,
   status,
-  statuses,
 }: {
   collapsed: boolean;
   items: OrderQueueItem[];
@@ -201,9 +195,13 @@ function OrderQueueGroup({
   onToggle: () => void;
   selectedItemId?: string;
   status: OrderQueueStatusDefinition;
-  statuses: OrderQueueStatusDefinition[];
 }) {
   const groupTitle = getEmrSidePanelStatusTitle({ id: status.id, label: status.label });
+  const groupIconState = getEmrSidePanelStatusIconState({
+    colorToken: status.colorToken,
+    id: status.id,
+    label: status.label,
+  });
 
   return (
     <EmrSidePanelCollapsibleGroup
@@ -215,6 +213,7 @@ function OrderQueueGroup({
       indicatorVisible={false}
       label={groupTitle}
       onToggle={onToggle}
+      stateIconState={groupIconState}
     >
       {items.map((item) => (
         <OrderQueueCard
@@ -222,49 +221,20 @@ function OrderQueueGroup({
           item={item}
           onSelect={() => onSelectItem?.(item.id)}
           selected={selectedItemId === item.id}
-          statusLabel={getStatusLabel(item.statusId, statuses)}
         />
       ))}
     </EmrSidePanelCollapsibleGroup>
   );
 }
 
-function getQueueTimeLabel(item: OrderQueueItem, statusLabel: string) {
-  if (item.statusId === "in_progress" || item.statusId === "inProgress" || statusLabel === "진료중") {
-    return `${item.time} 시작`;
-  }
-
-  if (item.statusId === "waiting" || statusLabel.includes("대기")) {
-    return item.waitMinutes !== undefined
-      ? `${item.time}(${item.waitMinutes}분 대기)`
-      : `${item.time} 대기`;
-  }
-
-  if (item.statusId === "completed" || statusLabel === "완료") {
-    return `${item.time} 완료`;
-  }
-
-  if (item.statusId === "reRequested" || statusLabel === "재요청") {
-    return `${item.time} 재요청`;
-  }
-
-  if (item.statusId === "canceled" || item.statusId === "cancelled" || statusLabel === "취소") {
-    return `${item.time} 취소`;
-  }
-
-  return `${item.time} ${statusLabel}`;
-}
-
 function OrderQueueCard({
   item,
   onSelect,
   selected,
-  statusLabel,
 }: {
   item: OrderQueueItem;
   onSelect: () => void;
   selected: boolean;
-  statusLabel: string;
 }) {
   const assigneeMetaValue = item.assigneeName ?? item.requesterName;
   const requesterDuplicated = item.assigneeName === item.requesterName;
@@ -287,27 +257,23 @@ function OrderQueueCard({
           />
         }
       />
-      <div className="emr-text-dense mt-0.5 flex h-[18px] min-w-0 items-center gap-1 font-medium text-[var(--emr-text-tertiary)]">
-        <span className="shrink-0 truncate">{item.orderType}</span>
-        <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
+      <div className="emr-text-metadata flex h-6 min-w-0 items-baseline gap-[var(--clair-spacing-4)] font-medium text-[var(--emr-sidepanel-task-card-label-text)]">
+        <span className="shrink-0 rounded-[var(--clair-radius-atomic-6)] bg-transparent px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)]">{item.orderType}</span>
         <span className="min-w-0 flex-1 truncate">{item.orderName}</span>
       </div>
-      <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
-      <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
-        <EmrSidePanelMetaBadge
-          label={requesterDuplicated ? "수의사" : "요청"}
-          maxWidthClassName="max-w-[120px]"
-          value={requesterDuplicated ? assigneeMetaValue : item.requesterName}
-        />
-        {!requesterDuplicated && item.assigneeName ? (
-          <EmrSidePanelMetaBadge label="담당" value={item.assigneeName} />
-        ) : null}
+      <div className="flex h-6 min-w-0 items-center gap-[var(--clair-spacing-6)] overflow-hidden">
         <EmrSidePanelStatusBadge
-          icon={<ClockIcon className="size-3.5" aria-hidden="true" />}
-          maxWidthClassName={requesterDuplicated ? "max-w-none" : undefined}
+          icon={<ClockIcon aria-hidden="true" />}
+          maxWidthClassName="max-w-[144px]"
         >
-          {getQueueTimeLabel(item, statusLabel)}
+          {`${item.time} ${requesterDuplicated ? assigneeMetaValue : item.requesterName} 요청`}
         </EmrSidePanelStatusBadge>
+        <EmrSidePanelMetaBadge
+          icon={<ClockIcon aria-hidden="true" />}
+          label="담당"
+          maxWidthClassName="max-w-[84px]"
+          value={item.assigneeName ?? "미지정"}
+        />
       </div>
     </EmrSidePanelCard>
   );

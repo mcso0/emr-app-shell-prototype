@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-351 CDS V2 Shell Surfaces & Command Entry Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #edf2f7;
+        color: #171717;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+
+      h2 {
+        margin-top: 36px;
+        font-size: 20px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+      }
+
+      .summary,
+      figure {
+        margin: 24px 0;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #edf2f7;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 13px;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+      }
+
+      figcaption {
+        margin-top: 10px;
+        color: #4a5568;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-351 CDS V2 Shell Surfaces & Command Entry Report</h1>
+      <p>작성일: 2026-05-31 / 프로젝트: 17 CLAiR EMR CDS V2 App Shell Refinement</p>
+
+      <section class="summary">
+        <p>
+          첫 구현 단위로 앱 셸의 배경/패널 색상 계층을 CDS V2 방향에 맞게 밝게 정리하고,
+          전역 통합 검색 버튼을 topbar에서 nav rail 안으로 옮겼다. 검색 dialog와
+          <code>Cmd/Ctrl+K</code> 단축키, 환자 검색 후 이동 동작은 그대로 유지했다.
+        </p>
+      </section>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li><code>GlobalCommandPalette</code>에 nav rail 전용 <code>rail</code> trigger variant를 추가했다.</li>
+        <li><code>NavRail</code> 상단에 전역 통합 검색 trigger를 배치하고 tooltip을 유지했다.</li>
+        <li><code>WorkspaceTabsBar</code>에서는 검색 trigger를 제거해 topbar를 다음 이슈에서 다듬기 쉬운 상태로 만들었다.</li>
+        <li><code>WorkspaceSwitcher</code>를 32px 높이, 고정 폭, hairline border, 작은 logo mark 버튼으로 조정했다.</li>
+        <li>EMR surface/line alias를 CDS V2에 가까운 밝은 gray 계층으로 정리했다.</li>
+        <li>app-shell Playwright 기대값을 nav rail command 위치와 collapsed switcher mark 크기에 맞게 갱신했다.</li>
+      </ul>
+
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>src/styles/tokens/emr-foundation.css</code></li>
+        <li><code>src/shell/global-command-palette.tsx</code></li>
+        <li><code>src/shell/nav-rail.tsx</code></li>
+        <li><code>src/shell/workspace-tabs-bar.tsx</code></li>
+        <li><code>src/shell/workspace-switcher.tsx</code></li>
+        <li><code>src/shell/shell-main.tsx</code></li>
+        <li><code>src/shell/workspace-frame.tsx</code></li>
+        <li><code>src/shell/app-shell.tsx</code></li>
+        <li><code>tests/app-shell.spec.ts</code></li>
+      </ul>
+
+      <h2>시각 증거</h2>
+      <figure>
+        <img src="evidence/2026-05-31-den-351-shell-desktop.png" alt="DEN-351 desktop shell screenshot" />
+        <figcaption>Desktop 1920x1080: nav rail 내부의 전역 통합 검색 trigger와 밝아진 shell surface.</figcaption>
+      </figure>
+      <figure>
+        <img src="evidence/2026-05-31-den-351-shell-narrow.png" alt="DEN-351 narrow shell screenshot" />
+        <figcaption>Narrow 390x844: compact workspace switcher와 nav rail command trigger 유지 확인.</figcaption>
+      </figure>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code>: 통과, 기존 unrelated warning 5개 남음.</li>
+        <li><code>npx tsc --noEmit</code>: 통과.</li>
+        <li><code>npx playwright test tests/app-shell.spec.ts --project=chromium</code>: 32개 통과.</li>
+        <li>Desktop/narrow screenshot에서 command trigger 크기 <code>32x32</code> 확인.</li>
+      </ul>
+
+      <h2>제외 및 후속</h2>
+      <ul>
+        <li>Topbar tab chrome 자체의 재설계는 DEN-352에서 진행한다.</li>
+        <li>좌측 task card, status title icon, 환자/문서 정보바, content aside는 DEN-353부터 DEN-356에서 별도로 진행한다.</li>
+        <li>중앙 조제/처치 order table 본문은 Project 17 범위에서 제외된 상태를 유지했다.</li>
+      </ul>
+    </main>
+  </body>
+</html>

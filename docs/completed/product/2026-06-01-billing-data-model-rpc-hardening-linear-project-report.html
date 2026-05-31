@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>수납 DB/RPC Hardening Linear 프로젝트 생성 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #20242a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 40px auto;
+        padding: 32px;
+        border: 1px solid #dde2ea;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      .summary {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #eef6ff;
+        color: #17456b;
+      }
+      code,
+      pre {
+        border-radius: 6px;
+        background: #f0f2f5;
+      }
+      code {
+        padding: 2px 5px;
+      }
+      pre {
+        overflow-x: auto;
+        padding: 14px;
+        white-space: pre-wrap;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>수납 DB/RPC Hardening Linear 프로젝트 생성 보고서</h1>
+      <p class="summary">
+        보호자 중심 수납 UI 작업에서 드러난 데이터 과제를 별도 Linear
+        프로젝트로 분리했다. 핵심은 수납이력 날짜 기준, 완료/취소 합산 제외,
+        합산 checkout, 결제 배분, 상태 전환 audit을 DB/RPC 계약으로 고정하는 것이다.
+      </p>
+
+      <h2>생성한 프로젝트</h2>
+      <p>
+        <a href="https://linear.app/deny-93/project/clair-emr-billing-data-model-and-rpc-hardening-ac0037c18691">
+          CLAiR EMR Billing Data Model &amp; RPC Hardening
+        </a>
+      </p>
+
+      <h2>마일스톤</h2>
+      <ul>
+        <li><code>00 Contract &amp; Fit Review</code>: UX에서 확정된 의미와 현재 DB fit을 먼저 맞춘다.</li>
+        <li><code>01 Schema &amp; RPC Design</code>: ledger, checkout session, allocation, adjustment, status transition 설계.</li>
+        <li><code>02 Local Implementation</code>: local migration/server core/API adapter 작성. Remote push 금지.</li>
+        <li><code>03 QA &amp; Staging Gate</code>: regression, synthetic QA, staging 승인 게이트.</li>
+      </ul>
+
+      <h2>이슈</h2>
+      <ul>
+        <li><code>DEN-370</code> 00-01 Reconcile guardian checkout data contract with current DB fit</li>
+        <li><code>DEN-371</code> 00-02 Define billing lifecycle activity dates and amount inclusion rules</li>
+        <li><code>DEN-372</code> 01-01 Design guardian billing ledger read model and RPC</li>
+        <li><code>DEN-373</code> 01-02 Design checkout sessions payment allocations and adjustments schema</li>
+        <li><code>DEN-374</code> 01-03 Design audited invoice status transition RPC</li>
+        <li><code>DEN-375</code> 01-04 Define order billing request timestamp and candidate promotion contract</li>
+        <li><code>DEN-376</code> 02-01 Author local billing data model migration files</li>
+        <li><code>DEN-377</code> 02-02 Implement local server cores for ledger checkout and status transitions</li>
+        <li><code>DEN-378</code> 02-03 Wire billing UI to data-backed checkout inclusion rules</li>
+        <li><code>DEN-379</code> 03-01 Add billing data model invariant regression coverage</li>
+        <li><code>DEN-380</code> 03-02 Prepare fixed staging billing DB/RPC replay approval gate</li>
+        <li><code>DEN-381</code> 03-03 Execute approved fixed staging billing data replay</li>
+      </ul>
+
+      <h2>안전 경계</h2>
+      <ul>
+        <li>기본 허용: 설계, local migration authoring, local/server mock 검증, synthetic QA 준비.</li>
+        <li>승인 필요: remote Supabase migration push, RLS replay, real data import, production deploy.</li>
+        <li>첫 시작 이슈: <code>DEN-370</code>. 이것이 끝나야 schema/RPC 설계가 흔들리지 않는다.</li>
+      </ul>
+
+      <h2>새 창 요청 프롬프트</h2>
+      <pre>루멘, 기존 수납 DB/RPC Hardening 프로젝트를 새 창에서 이어가자.
+
+반드시 먼저 읽기:
+- AGENTS.md
+- docs/agent-start-here.md
+- docs/engineering/current-status.md
+- manual-linear-ops skill
+- docs/completed/product/2026-06-01-billing-data-model-rpc-hardening-linear-project-report.html
+- docs/completed/product/2026-05-31-billing-guardian-centered-checkout-ux-db-proposal-report.html
+- docs/completed/product/2026-06-01-den-369-billing-ledger-excluded-history-status-transition-report.html
+- docs/engineering/data-model/billing-checkout-session-allocation-adjustment-model.md
+
+현재 Linear 프로젝트:
+- CLAiR EMR Billing Data Model &amp; RPC Hardening
+- Project URL: https://linear.app/deny-93/project/clair-emr-billing-data-model-and-rpc-hardening-ac0037c18691
+
+프로젝트 목표:
+- 보호자 중심 수납 UX에서 확정된 수납이력, 합산 checkout, 완료/취소 합산 제외, 상태 전환, 결제 배분 요구를 DB/RPC 계약과 검증 가능한 migration 계획으로 정리한다.
+
+중요 배경:
+- 차트 `Order 청구`는 이미 수납 요청이다.
+- 수납이력 날짜 기준은 “수납으로 오더가 넘어온 일자”가 되어야 한다.
+- 수납 화면에서는 완료/취소 건도 선택해서 세부 내역을 볼 수 있어야 한다.
+- 단, 완료/취소 건은 현재 수납 요약 금액에 합산되면 안 된다.
+- 완료 -> 대기 / 미납 / 취소, 취소 -> 대기 / 미납 / 완료 상태 전환은 실사용 DB에서는 audited RPC가 필요할 수 있다.
+- 여러 환자/여러 청구서를 한 보호자 checkout으로 묶으려면 checkout session과 payment allocation이 필요하다.
+
+현재 생성된 마일스톤:
+- 00 Contract &amp; Fit Review
+- 01 Schema &amp; RPC Design
+- 02 Local Implementation
+- 03 QA &amp; Staging Gate
+
+첫 작업:
+- DEN-370 00-01 Reconcile guardian checkout data contract with current DB fit
+- DEN-370을 In Progress로 옮기고, 현재 DB/RPC 구조와 최근 수납 UX 요구를 대조해서 단일 데이터 계약 보고서를 작성해줘.
+
+주의:
+- production deploy 금지
+- 실데이터 import 금지
+- remote Supabase migration push 금지
+- remote RLS replay 금지
+- 필요하면 local migration 파일 작성까지는 가능하지만, remote 적용은 승욱 승인 게이트를 세워야 함
+- 기존 dirty worktree가 많으니 관련 파일만 건드리고 unrelated 변경 revert 금지
+
+요청:
+1. DEN-370을 시작해줘.
+2. 현재 DB/RPC 구조가 수납이력/checkout/status transition 요구를 어디까지 감당하는지 검수해줘.
+3. 부족한 DB/RPC 항목을 DEN-371~DEN-381과 연결해서 정리해줘.
+4. 비개발자도 이해할 수 있는 짧은 HTML 결과 보고서를 남기고 Linear를 Human Review로 넘겨줘.</pre>
+    </main>
+  </body>
+</html>

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const kongScenarioUrl =
@@ -25,6 +26,18 @@ const kongDefaultOrderDraftRows = [
     quantity: 1,
   },
 ];
+
+test("chart live queue preserves explicit encounter deep links", () => {
+  const source = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(source).toContain("const explicitQueryEncounterId =");
+  expect(source).toContain("!explicitQueryEncounterId &&");
+  expect(source).toContain("if (explicitQueryEncounterId) return;");
+  expect(source).toContain("function useExplicitChartEncounterId()");
+  expect(source).toContain(
+    "allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId",
+  );
+});
 
 async function expectTopEdgeInViewport(page: Page, locator: Locator) {
   const box = await locator.boundingBox();

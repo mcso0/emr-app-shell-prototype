@@ -33,7 +33,6 @@ import {
   mockLabResults,
 } from "@/mocks/emr-domain";
 import { AuthProfileMenu } from "@/shell/auth-profile-menu";
-import { GlobalCommandPalette } from "@/shell/global-command-palette";
 import { moduleIconById } from "@/shell/module-nav-icons";
 import { WorkspaceChromeTabs } from "@/shell/workspace-chrome-tabs";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -44,7 +43,6 @@ type WorkspaceTabsBarProps = {
   canGoBack: boolean;
   canGoForward: boolean;
   tabs: WorkspaceTab[];
-  workspaceId: string;
   onActivateTab: (tabId: string) => void;
   onBack: () => void;
   onCloseTab: (tabId: string) => void;
@@ -247,7 +245,6 @@ export function WorkspaceTabsBar({
   canGoBack,
   canGoForward,
   tabs,
-  workspaceId,
   onActivateTab,
   onBack,
   onCloseTab,
@@ -279,9 +276,9 @@ export function WorkspaceTabsBar({
       ? `활동중 · ${activityModuleLabel} ${activeMinutes}분째`
       : "활동 대기";
   const topIconButtonClassName =
-    "rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)] [&_svg]:size-4";
+    "size-[var(--emr-topbar-control-size)] rounded-[var(--emr-topbar-control-radius)] border-transparent bg-transparent text-[var(--emr-topbar-icon)] shadow-none hover:bg-[var(--emr-topbar-tab-hover-bg)] hover:text-[var(--emr-topbar-icon-strong)] hover:shadow-none [&_svg]:size-4";
   const historyButtonClassName =
-    "rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card text-muted-foreground shadow-[var(--clair-shadow-xs)] hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none disabled:border-[var(--emr-line-subtle)] disabled:bg-transparent disabled:opacity-100 disabled:text-[var(--emr-text-disabled)] disabled:shadow-none disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)]";
+    "size-[var(--emr-topbar-control-size)] rounded-[var(--emr-topbar-control-radius)] border-transparent bg-transparent text-[var(--emr-topbar-icon-strong)] shadow-none hover:bg-[var(--emr-topbar-tab-hover-bg)] hover:text-[var(--emr-topbar-icon-strong)] hover:shadow-none active:bg-[var(--emr-topbar-tab-hover-bg)] disabled:border-transparent disabled:bg-transparent disabled:text-[var(--emr-topbar-icon-strong)] disabled:opacity-[var(--emr-topbar-disabled-opacity)] disabled:shadow-none disabled:hover:bg-transparent disabled:hover:text-[var(--emr-topbar-icon-strong)]";
   const previewContext = {
     selectedBillingInvoiceId,
     selectedChartEncounterId,
@@ -326,36 +323,32 @@ export function WorkspaceTabsBar({
   return (
     <header
       data-testid="workspace-tabs-bar"
-      className="relative z-20 flex h-8 items-center gap-1.5 bg-[var(--emr-surface-app)]"
+      className="relative z-20 flex h-[var(--emr-topbar-control-size)] items-center gap-[var(--emr-topbar-section-gap)] bg-[var(--emr-surface-app)]"
     >
-      <GlobalCommandPalette triggerVariant="icon" workspaceId={workspaceId} />
+      <div className="flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-item-gap)]">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="탭 뒤로가기"
+          disabled={!canGoBack}
+          onClick={onBack}
+          className={historyButtonClassName}
+        >
+          <ChevronLeftIcon className="size-4" aria-hidden="true" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="탭 앞으로가기"
+          disabled={!canGoForward}
+          onClick={onForward}
+          className={historyButtonClassName}
+        >
+          <ChevronRightIcon className="size-4" aria-hidden="true" />
+        </Button>
 
-      <div className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]" />
+        <div className="h-[var(--emr-topbar-divider-height)] w-[var(--emr-topbar-divider-width)] shrink-0 bg-[var(--emr-topbar-divider)]" />
 
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="탭 뒤로가기"
-        disabled={!canGoBack}
-        onClick={onBack}
-        className={historyButtonClassName}
-      >
-        <ChevronLeftIcon className="size-4" aria-hidden="true" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="탭 앞으로가기"
-        disabled={!canGoForward}
-        onClick={onForward}
-        className={historyButtonClassName}
-      >
-        <ChevronRightIcon className="size-4" aria-hidden="true" />
-      </Button>
-
-      <div className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]" />
-
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <WorkspaceChromeTabs
           activeTabId={activeTabId}
           tabs={chromeTabs}
@@ -365,7 +358,7 @@ export function WorkspaceTabsBar({
         />
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-[var(--emr-topbar-action-gap)]">
         <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="알림">
           <BellIcon className="size-4" />
         </Button>

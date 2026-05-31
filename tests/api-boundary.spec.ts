@@ -85,5 +85,5 @@ test("billing group selector keeps due totals independent from feature state", (
   expect(harinGroup?.patients.map((item) => item.id)).toContain("patient-dubu");
   expect(harinGroup?.totalDueAmount).toBe(28000);
   expect(jieunGroup?.invoices.map((item) => item.id)).toContain("invoice-coco-260501");
-  expect(jieunGroup?.totalDueAmount).toBe(121500);
+  expect(jieunGroup?.totalDueAmount).toBe(311000);
 });

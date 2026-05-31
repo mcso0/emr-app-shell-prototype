@@ -77,7 +77,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="emr-workspace-frame-responsive relative grid min-h-0 overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] shadow-xs transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className="emr-workspace-frame-responsive relative grid min-h-0 overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
       data-content-aside-open={ContentAside && contentAsideOpen ? "true" : "false"}
       data-right-panel-open={RightPanel && rightPanelOpen ? "true" : "false"}
       style={{

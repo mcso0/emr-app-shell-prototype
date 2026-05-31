@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-365 Checkout Session Allocation Model Report</title>
+    <style>
+      body { margin: 0; background: #f7f7f8; color: #17181c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 980px; margin: 0 auto; padding: 48px 24px; }
+      section { margin-top: 24px; padding: 24px; border: 1px solid #e2e4e8; border-radius: 10px; background: #fff; }
+      h1, h2 { margin: 0 0 12px; line-height: 1.25; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 18px; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f0f2f5; }
+      .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: #eef6ff; color: #155eef; font-size: 13px; font-weight: 700; }
+      .decision { background: #fff7e6; color: #ad6800; }
+      a { color: #155eef; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-365 - Human Review ready</p>
+      <h1>Checkout Session / Allocation / Adjustment Model</h1>
+      <p>
+        DEN-365는 보호자 중심 합산 수납을 제품 수준으로 만들 때 필요한 DB/RPC
+        구조를 승인 게이트 형태로 정리했다. 이번 작업에서는 실제 migration,
+        remote Supabase push, RLS replay, 결제 연동은 수행하지 않았다.
+      </p>
+
+      <section>
+        <h2>판단</h2>
+        <p class="status decision">현재 구조는 MVP UI에는 충분하지만, 합산 checkout의 영수/정산 모델로는 부족하다.</p>
+        <ul>
+          <li><code>invoices</code> / <code>invoice_lines</code> / <code>payments</code>는 단일 invoice payment state에는 맞다.</li>
+          <li>보호자 한 명의 여러 환자/청구서를 한 번에 결제하려면 checkout session과 allocation이 필요하다.</li>
+          <li>할인/할증은 단순 금액 컬럼보다 reason-backed adjustment audit이 필요하다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>작성한 설계</h2>
+        <ul>
+          <li><code>billing_checkout_sessions</code>: 보호자 단위 checkout 시도와 payer snapshot.</li>
+          <li><code>billing_checkout_session_invoices</code>: 선택된 invoice 묶음과 per-invoice amount snapshot.</li>
+          <li><code>invoice_adjustments</code>: 할인/할증/가격 override 사유 audit.</li>
+          <li><code>payment_allocations</code>: 하나의 payment를 여러 invoice에 배분하는 기록.</li>
+          <li>제안 RPC: <code>clair_prepare_billing_checkout_session</code>, <code>clair_apply_invoice_adjustment</code>, <code>clair_complete_billing_checkout_payment</code>, <code>clair_mark_billing_checkout_unpaid</code>.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>승인 게이트</h2>
+        <ul>
+          <li>구현 전 승욱이 target environment, migration filename, table/check/RLS scope, RPC transaction behavior를 명시 승인해야 한다.</li>
+          <li>승인 전에는 migration 적용, remote Supabase push, remote RLS replay, real data import를 하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../engineering/data-model/billing-checkout-session-allocation-adjustment-model.md">docs/engineering/data-model/billing-checkout-session-allocation-adjustment-model.md</a></li>
+          <li><a href="../../engineering/data-model/README.md">docs/engineering/data-model/README.md</a></li>
+          <li><a href="../../design/flows/guardian-centered-billing-checkout-flow.md">docs/design/flows/guardian-centered-billing-checkout-flow.md</a></li>
+          <li><a href="../../engineering/changelog.md">docs/engineering/changelog.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> passed.</li>
+          <li><code>npm run security:secrets</code> passed.</li>
+          <li><code>git diff --check</code> passed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

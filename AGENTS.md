@@ -32,3 +32,4 @@
 - Do not implement live Supabase validation, migrations, RLS, or server enforcement unless explicitly scoped.
 - If a prohibited or approval-gated action is the correct or necessary path for the active work, do not work around it with a weaker solution. Stop, explain why the gated action is needed, and ask the user for explicit approval before proceeding.
 - For OpenAI, Codex, or API questions, use official OpenAI docs or configured Docs MCP and cite sources.
+- For external API/SDK/library coding, use the repo-local `context-hub-docs-router` skill when available; treat Context Hub (`chub`) as an optional agent documentation tool, not an app dependency.

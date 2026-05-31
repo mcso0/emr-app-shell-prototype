@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SegmentedControl, type SegmentedControlItem } from "@/components/ui/segmented-control";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   mockAppointments,
   mockEncounters,
@@ -378,9 +379,11 @@ function flattenSections(sections: CommandSection[]) {
 
 export function GlobalCommandPalette({
   triggerVariant = "wide",
+  tooltipSideOffset = 16,
   workspaceId,
 }: {
-  triggerVariant?: "wide" | "icon";
+  tooltipSideOffset?: number;
+  triggerVariant?: "wide" | "icon" | "rail";
   workspaceId: string;
 }) {
   const router = useRouter();
@@ -460,25 +463,33 @@ export function GlobalCommandPalette({
     }
   };
 
-  return (
-    <>
-      <Button
+  const triggerButton = (
+    <Button
         type="button"
         variant="ghost"
-        size={triggerVariant === "icon" ? "icon" : "default"}
+        size={triggerVariant === "wide" ? "default" : "icon"}
         className={cn(
           triggerVariant === "icon"
             ? "justify-center rounded-[var(--emr-radius-control)] border-[var(--emr-line-default)] bg-card px-0 text-muted-foreground shadow-[var(--clair-shadow-xs)] hover:border-[var(--emr-line-strong)] hover:bg-[var(--emr-state-hover)] hover:text-foreground hover:shadow-[var(--clair-shadow-sm)] active:shadow-none focus-visible:ring-ring/40"
             : "mx-auto h-8 w-[min(560px,45vw)] min-w-8 rounded-lg border-border bg-card px-3 text-left shadow-sm hover:border-[var(--emr-line-strong)] hover:bg-card focus-visible:ring-ring/40 max-sm:w-8 max-sm:px-2",
+          triggerVariant === "rail" &&
+            "mx-0 size-[var(--emr-navrail-item-size)] min-w-0 justify-center rounded-[var(--emr-navrail-item-radius)] border-0 bg-transparent p-[var(--emr-navrail-item-padding)] text-[var(--emr-navrail-icon)] shadow-none hover:bg-[var(--emr-navrail-item-hover)] hover:text-[var(--emr-navrail-icon-hover)] hover:shadow-none active:bg-[var(--emr-navrail-item-selected)] active:text-[var(--emr-navrail-icon-selected)] focus-visible:ring-3 focus-visible:ring-ring/50",
         )}
         aria-label="전역 통합 검색 열기"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        {triggerVariant === "icon" ? (
-          <CdsActionsSearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        ) : (
+        {triggerVariant === "wide" ? (
           <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <CdsActionsSearchIcon
+            size={triggerVariant === "rail" ? 24 : 16}
+            className={cn(
+              "size-4 shrink-0",
+              triggerVariant === "rail" ? "size-[var(--emr-navrail-icon-frame-size)] text-current" : "text-muted-foreground"
+            )}
+            aria-hidden="true"
+          />
         )}
         {triggerVariant === "wide" ? (
           <>
@@ -492,6 +503,20 @@ export function GlobalCommandPalette({
           </>
         ) : null}
       </Button>
+  );
+
+  return (
+    <>
+      {triggerVariant === "rail" ? (
+        <Tooltip>
+          <TooltipTrigger render={triggerButton} />
+          <TooltipContent side="right" sideOffset={tooltipSideOffset}>
+            통합 검색
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        triggerButton
+      )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent

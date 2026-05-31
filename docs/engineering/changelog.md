@@ -4,6 +4,16 @@ Use this file for small engineering-planning changes that do not need a standalo
 
 ## 2026-05-31
 
+- `fixed`: DEN-368 routes demo string invoice ids through the mock billing persistence boundary even when a Supabase staging session is present, while preserving Supabase RPC usage for UUID invoices; fixed staging replay now passes proceed, unpaid, and paid billing actions.
+- `fixed`: DEN-367 adds focused guardian-centered billing regressions and fixes live encounter candidate checkout rendering so live candidate rows drive the center checkout workspace instead of falling back to the default mock invoice selection.
+- `changed`: DEN-366 aligns local-first billing unpaid semantics so `mark_unpaid` requires a non-empty reason in API/server validation, the mock store records reason-backed unpaid state, and the local payment-status RPC boundary rejects missing unpaid reasons.
+- `added`: DEN-365 adds an approval-gated guardian-centered combined checkout data model proposal for `billing_checkout_sessions`, selected invoice snapshots, invoice adjustments, payment allocations, and transactional RPC boundaries.
+- `changed`: The guardian-centered billing checkout proposal revises DEN-349 implementation guidance: candidate-backed draft invoice lines are preferred for MVP, user-facing `청구 확정` should become `수납 진행` / `결제 진행`, and future DB/RPC work should prioritize combined checkout sessions, payment allocations, and adjustment audit.
+- `changed`: DEN-349 records the candidate promotion fit check: current candidate sync already writes draft invoice lines, while invoice-line confirmation only edits existing lines and issues the invoice; strict physical line creation at `청구 확정` would require an approval-gated DB/RPC migration.
+- `fixed`: DEN-348 maps billing candidate readback rows into the active billing invoice table context when remote candidate invoice UUIDs differ from demo invoice aliases, rendering them as non-editable `수납 후보` rows and preserving focused billing regression coverage.
+- `fixed`: DEN-341 adds the shared chart encounter-id bridge to the chart order lifecycle route after fixed staging verification exposed a 500 on `encounter-kong-260501`; the fixed staging alias now returns 200 for order lifecycle and 4 billing candidates.
+- `fixed`: DEN-341 adds the shared chart encounter-id bridge to the billing invoice candidate route and preserves explicit chart encounter deep links in live mode, allowing preview replay to advance lab, imaging, dispensing, and treatment orders to billing candidates without a remote migration.
+- `changed`: DEN-340 documents that existing `orders`, `order_fulfillment_work_items`, `invoices`, `invoice_lines`, and the chart action plus invoice sync RPCs can support separated billing state for staging replay without a new migration; consolidated all-or-nothing RPC remains approval-gated hardening.
 - `changed`: DEN-336 through DEN-339 make chart `Order 청구` call the invoice candidate sync gateway, preserve operational order status during billing advance, and add focused regressions for incomplete and completed order billing flows.
 - `changed`: DEN-335 updates the fulfillment/billing engineering contract so chart `Order 청구` is the trusted billing candidate action and must preserve order/fulfillment work status while using server-owned billing snapshots.
 

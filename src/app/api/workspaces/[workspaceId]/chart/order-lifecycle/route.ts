@@ -15,6 +15,10 @@ import {
   type ChartOrderLifecycleInput,
   type SupabaseChartOrderLifecycleRpcClient,
 } from "@/features/chart/server-order-lifecycle-persistence";
+import {
+  resolveServerChartEncounterId,
+  type SupabaseEncounterIdBridgeClient,
+} from "@/features/chart/server-encounter-id-bridge";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -39,6 +43,14 @@ export async function GET(request: Request, { params }: RouteContext) {
   const url = new URL(request.url);
   const encounterId = url.searchParams.get("encounterId");
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const resolvedEncounter = await resolveServerChartEncounterId({
+    client: client as unknown as SupabaseEncounterIdBridgeClient | null,
+    encounterId,
+    workspaceId,
+  });
+  if (!resolvedEncounter.ok) {
+    return Response.json(resolvedEncounter, { status: resolvedEncounter.status });
+  }
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
         gateway: createSupabaseWorkspacePermissionGateway(
@@ -51,7 +63,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   const result = await readChartOrderLifecycles({
     actorUserId: identity.actorUserId,
     workspaceId,
-    encounterId,
+    encounterId: resolvedEncounter.encounterId,
     permissionAdapter,
     gateway: client
       ? createSupabaseChartOrderLifecycleGateway(
@@ -85,6 +97,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const resolvedEncounter = await resolveServerChartEncounterId({
+    client: client as unknown as SupabaseEncounterIdBridgeClient | null,
+    encounterId: input.encounterId,
+    workspaceId,
+  });
+  if (!resolvedEncounter.ok) {
+    return Response.json(resolvedEncounter, { status: resolvedEncounter.status });
+  }
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
         gateway: createSupabaseWorkspacePermissionGateway(
@@ -97,7 +117,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const result = await saveChartOrderLifecycleStatus({
     actorUserId: identity.actorUserId,
     workspaceId,
-    input,
+    input: { ...input, encounterId: resolvedEncounter.encounterId },
     permissionAdapter,
     gateway: client
       ? createSupabaseChartOrderLifecycleGateway(

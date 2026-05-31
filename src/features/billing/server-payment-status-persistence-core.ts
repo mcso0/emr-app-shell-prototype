@@ -77,7 +77,7 @@ export type BillingPaymentStatusSaveResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"action" | "invoiceId" | "paymentMethod", string>>;
+      fieldErrors: Partial<Record<"action" | "invoiceId" | "paymentMethod" | "unpaidReason", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
   | { ok: false; status: 409; denialReason: "invoice_unavailable" }
@@ -343,7 +343,7 @@ function getStoredOrSeedPaymentStatus({
 
 function normalizeInvoicePaymentStatus(invoice: Invoice, payments: Payment[]): BillingPaymentStatusInvoice {
   const hasApprovedPayment = payments.some((payment) => payment.status === "approved");
-  const paymentState = invoice.paymentState ?? (invoice.status === "paid" || hasApprovedPayment ? "paid" : invoice.status === "issued" ? "unpaid" : "none");
+  const paymentState = invoice.paymentState ?? (invoice.status === "paid" || hasApprovedPayment ? "paid" : invoice.unpaidReason ? "unpaid" : "none");
   const selectedPaymentMethod =
     invoice.selectedPaymentMethod ?? payments.find((payment) => payment.status === "approved")?.paymentMethod;
   return {
@@ -375,7 +375,7 @@ function applyPaymentStatusAction(
       paymentState: "unpaid",
       selectedPaymentMethod: input.paymentMethod,
       status: "issued" as InvoiceStatus,
-      unpaidReason: input.unpaidReason ?? "billing_unpaid",
+      unpaidReason: input.unpaidReason ?? "",
     };
   }
 
@@ -430,10 +430,13 @@ function normalizePaymentStatusInput(input: BillingPaymentStatusInput) {
 }
 
 function validatePaymentStatusInput(input: ReturnType<typeof normalizePaymentStatusInput>) {
-  const fieldErrors: Partial<Record<"action" | "invoiceId" | "paymentMethod", string>> = {};
+  const fieldErrors: Partial<Record<"action" | "invoiceId" | "paymentMethod" | "unpaidReason", string>> = {};
   if (!input.action) fieldErrors.action = "수납 상태 변경 작업을 선택해 주세요.";
   if (!input.invoiceId) fieldErrors.invoiceId = "청구서를 선택해 주세요.";
   if (!input.paymentMethod) fieldErrors.paymentMethod = "결제 수단을 선택해 주세요.";
+  if (input.action === "mark_unpaid" && !input.unpaidReason) {
+    fieldErrors.unpaidReason = "미납 처리 사유를 입력해 주세요.";
+  }
   if (Object.keys(fieldErrors).length > 0) return { valid: false as const, fieldErrors };
   return { valid: true as const, fieldErrors: {} };
 }

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-358 Guardian-Centered Billing Checkout UX Contract Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f3f4f6;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef6ff;
+        color: #155eef;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-358 - Human Review ready</p>
+      <h1>Guardian-Centered Billing Checkout UX Contract Report</h1>
+      <p>
+        DEN-358 turns the 2026-05-31 guardian-centered billing proposal into a durable implementation
+        contract. Follow-up billing issues should now use <code>수납 진행</code> / <code>결제 진행</code>,
+        <code>수납 완료</code>, and reason-backed <code>미납 처리</code> instead of a user-facing
+        required <code>청구 확정</code> step.
+      </p>
+
+      <section>
+        <h2>확정된 UX 기준</h2>
+        <p class="status decision">
+          Chart <code>Order 청구</code> creates payable <code>수납대기</code>; billing is guardian-level checkout.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>용어</th>
+              <th>사용자 의미</th>
+              <th>구현 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Order 청구</code></td>
+              <td>수의사가 선택 오더를 수납으로 보낸다.</td>
+              <td>오더 업무 상태를 유지하고 billing candidate를 생성/갱신한다.</td>
+            </tr>
+            <tr>
+              <td><code>수납대기</code></td>
+              <td>지금 받을 수 있는 정상 대기건이다.</td>
+              <td>same-day unpaid 대기건을 자동으로 미납 취급하지 않는다.</td>
+            </tr>
+            <tr>
+              <td><code>수납 진행</code></td>
+              <td>최종 금액과 결제수단을 확인하고 checkout을 시작한다.</td>
+              <td>primary CTA로 사용한다.</td>
+            </tr>
+            <tr>
+              <td><code>미납 처리</code></td>
+              <td>보호자가 결제를 미루거나 실패/보류되어 추후 결제가 필요하다.</td>
+              <td>secondary action이며 사유 입력이 필요하다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Figma 화면 반영</h2>
+        <ul>
+          <li>왼쪽 대기/미납/종료 구조는 <code>수납대기</code>, <code>미납</code>, <code>완료</code> 큐로 유지한다.</li>
+          <li>상단 환자 정보바는 보호자 정보바로 교체한다.</li>
+          <li>보호자 정보 아래 이력 영역은 보호자 ledger로 정리한다.</li>
+          <li>중앙 청구서 항목은 selected checkout workspace로 재정의한다.</li>
+          <li>오른쪽 수납 정보는 최종 결제금액과 CTA 우선의 payment summary로 재정의한다.</li>
+          <li><code>미납</code>은 <code>수납</code>과 같은 위계의 primary button이 아니라 reason-required secondary action이다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>업데이트한 문서</h2>
+        <ul>
+          <li><a href="../../design/flows/guardian-centered-billing-checkout-flow.md">docs/design/flows/guardian-centered-billing-checkout-flow.md</a></li>
+          <li><a href="../../design/flows/README.md">docs/design/flows/README.md</a></li>
+          <li><a href="../../design/system/cta-risk-taxonomy.md">docs/design/system/cta-risk-taxonomy.md</a></li>
+          <li><a href="../../product/domain/order-fulfillment-handoff.md">docs/product/domain/order-fulfillment-handoff.md</a></li>
+          <li><a href="../../product/features/home/home-work-generation-rules-v0.md">docs/product/features/home/home-work-generation-rules-v0.md</a></li>
+          <li><a href="../../engineering/testing/mvp-gap-analysis.md">docs/engineering/testing/mvp-gap-analysis.md</a></li>
+          <li><a href="../../product/changelog.md">docs/product/changelog.md</a></li>
+          <li><a href="../../design/changelog.md">docs/design/changelog.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>후속 이슈 영향</h2>
+        <ul>
+          <li>DEN-359 should use the contract to split component ownership.</li>
+          <li>DEN-360 through DEN-364 should implement the guardian context bar, queue, ledger, checkout workspace, and payment summary against this contract.</li>
+          <li>DEN-365 should treat combined checkout/payment allocation DB work as approval-gated.</li>
+          <li>DEN-366 should keep unpaid as reason-backed deferred/overdue state.</li>
+          <li>DEN-367 and DEN-368 should verify this contract with focused regression and fixed staging replay.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>승인 게이트</h2>
+        <ul>
+          <li>No app code was changed in DEN-358.</li>
+          <li>No DB migration was written or applied.</li>
+          <li>No remote Supabase migration push or RLS replay was performed.</li>
+          <li>No production deploy, real data import, or payment provider integration was performed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

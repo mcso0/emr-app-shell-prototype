@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-368 Fixed Staging Guardian Billing Checkout Replay Report</title>
+    <style>
+      body { margin: 0; background: #f7f7f8; color: #17181c; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
+      main { max-width: 1040px; margin: 0 auto; padding: 48px 24px; }
+      section { margin-top: 24px; padding: 24px; border: 1px solid #e2e4e8; border-radius: 10px; background: #fff; }
+      h1, h2 { margin: 0 0 12px; line-height: 1.25; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 18px; }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      code { padding: 2px 5px; border-radius: 5px; background: #f0f2f5; }
+      img { max-width: 100%; border: 1px solid #d8dce3; border-radius: 8px; }
+      .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: #edf8f1; color: #1f7a3a; font-size: 13px; font-weight: 700; }
+      .neutral { background: #eef6ff; color: #155eef; }
+      .warn { background: #fff7e6; color: #ad6800; }
+      a { color: #155eef; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">DEN-368 - Fixed staging replay passed</p>
+      <h1>Fixed Staging Guardian Billing Checkout Replay</h1>
+      <p>
+        DEN-368은 보호자 중심 수납 checkout UX가 fixed staging alias에 배포된 상태에서
+        synthetic replay를 완료했다. 이전 blocker였던 staging alias freshness 문제는 새 preview 배포와
+        alias 갱신으로 해소했고, 로그인된 staging browser에서 <code>수납 진행</code>,
+        reason-backed <code>미납 처리</code>, <code>수납 완료</code> 흐름이 모두 서버 오류 없이 통과했다.
+      </p>
+
+      <section>
+        <h2>검증 환경</h2>
+        <ul>
+          <li>Fixed staging URL: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+          <li>검증 경로: <code>/w/clair-demo/billing?modulePanel=open&amp;encounterId=encounter-kong-260501&amp;invoiceId=invoice-kong-260501&amp;right=open&amp;aside=history</code></li>
+          <li>Preview deployment: <code>https://emr-app-shell-prototype-qwq46r7xm-mcso0s-projects.vercel.app</code></li>
+          <li>Deployment id: <code>dpl_D47odEN2CavD43ZpRtswnP35VHYs</code></li>
+          <li>Vercel inspector: <code>https://vercel.com/mcso0s-projects/emr-app-shell-prototype/D47odEN2CavD43ZpRtswnP35VHYs</code></li>
+          <li>Alias result: fixed staging now points to <code>emr-app-shell-prototype-qwq46r7xm-mcso0s-projects.vercel.app</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Staging Replay 결과</h2>
+        <ul>
+          <li>상단이 환자 vitals가 아닌 보호자 중심 context bar로 표시된다: <code>김하늘</code>, 주 보호자, 연락처, 보호자 소유 환자, 수납대기/미납 요약, 결제 주의/메모 신호.</li>
+          <li>왼쪽 queue는 <code>수납대기 / 미납 / 완료</code> 축으로 표시되고, 보호자별 수납 건을 선택할 수 있다.</li>
+          <li>보호자 수납이력 aside는 기간 shortcut, 상태 filter, 수납대기/미납/완료 ledger row를 제공한다.</li>
+          <li>중앙 checkout workspace는 선택된 청구 묶음과 live billing candidate rows를 함께 보여주며, chart 청구와 수납 추가 항목을 구분한다.</li>
+          <li>사용자-facing <code>청구 확정</code> 문구는 replay 화면과 financial dialogs에서 보이지 않는다.</li>
+          <li><code>수납 진행 저장</code>은 로그인 staging 세션에서 성공했고 <code>수납진행</code> 상태로 전환됐다.</li>
+          <li><code>미납 처리</code>는 사유 입력 전 저장 버튼이 disabled이고, 사유 입력 후 저장이 성공했다.</li>
+          <li><code>수납 완료 저장</code>은 성공했고 수납 완료 상태와 세션 내 수납 완료 안내가 표시됐다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Staging Fix</h2>
+        <p>
+          새 UI 배포 뒤 첫 replay에서 <code>수납 진행 저장</code>이 실패했다. 원인은 로그인된 Supabase staging
+          세션에서 데모 문자열 invoice id(<code>invoice-kong-260501</code>)를 UUID 기반 invoice-line/payment
+          RPC로 보내는 경계 문제였다. 실제 UUID invoice는 계속 Supabase RPC를 사용하고, 데모 문자열 invoice는
+          mock persistence boundary로 분리하도록 invoice-lines/payment-status route를 보정했다.
+        </p>
+        <p class="status neutral">
+          Remote Supabase migration, remote RLS replay, production deploy, real data import는 수행하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>Evidence</h2>
+        <p>
+          <img src="./evidence/2026-05-31-den-368-fixed-staging-billing-proceed-pass.png" alt="DEN-368 fixed staging billing proceed pass evidence" />
+        </p>
+        <p>
+          <img src="./evidence/2026-05-31-den-368-fixed-staging-billing-unpaid-pass.png" alt="DEN-368 fixed staging billing unpaid pass evidence" />
+        </p>
+        <p>
+          <img src="./evidence/2026-05-31-den-368-fixed-staging-billing-paid-pass.png" alt="DEN-368 fixed staging billing paid pass evidence" />
+        </p>
+      </section>
+
+      <section>
+        <h2>검증 명령</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code></li>
+          <li><code>npx playwright test tests/billing-invoice-line-persistence-server.spec.ts tests/billing-payment-status-persistence-server.spec.ts --reporter=line</code></li>
+          <li><code>npx eslint 'src/app/api/workspaces/[workspaceId]/billing/invoice-lines/route.ts' 'src/app/api/workspaces/[workspaceId]/billing/payment-status/route.ts' src/features/billing/server-demo-billing-persistence-boundary.ts tests/billing-invoice-line-persistence-server.spec.ts tests/billing-payment-status-persistence-server.spec.ts</code></li>
+          <li><code>npx playwright test tests/billing.spec.ts -g "billing workspace renders waiting invoice|billing guardian ledger aside|billing unpaid processing requires|billing financial confirmation failure" --reporter=line</code></li>
+          <li><code>vercel deploy --scope mcso0s-projects --yes</code> preview build passed.</li>
+          <li><code>vercel alias set emr-app-shell-prototype-qwq46r7xm-mcso0s-projects.vercel.app emr-app-shell-prototype-staging-mcso0s-projects.vercel.app --scope mcso0s-projects</code></li>
+          <li>Fixed staging browser replay for proceed, unpaid, and paid financial actions.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>잔여 위험</h2>
+        <ul>
+          <li>현재 검증은 synthetic staging replay이며, real payment provider, receipt, settlement, tax, refund integration은 범위 밖이다.</li>
+          <li>데모 문자열 invoice boundary는 staging/demo deep link 안정화를 위한 보정이다. 실제 live invoice UUID 경로는 기존 Supabase RPC 경계를 유지한다.</li>
+          <li>Combined checkout session, allocation, adjustment persistence는 DEN-365에서 제안한 후속 DB/RPC scope로 남아 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>판정</h2>
+        <p class="status">Human Review 권장</p>
+        <p>
+          DEN-368은 fixed staging 기준 guardian-centered billing checkout replay를 통과했다.
+          남은 판단은 승욱이 실제 staging 화면의 정보 위계와 CTA copy를 검토하는 Human Review다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

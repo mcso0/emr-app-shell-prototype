@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-349 Candidate Promotion Confirmation Policy Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #fff7e6;
+        color: #8a5a00;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .decision {
+        background: #f6ffed;
+        color: #237804;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Policy fixed - migration gate required for stricter semantics</p>
+      <h1>DEN-349 Candidate Promotion Confirmation Policy Report</h1>
+      <p>
+        DEN-349 records the approved billing timing: chart <code>Order 청구</code> creates billing candidates,
+        billing workspace review shows <code>수납 후보</code>, <code>청구 확정</code> accepts those candidates as the
+        guardian-facing invoice amount basis, and <code>수납 완료</code> changes payment state only.
+      </p>
+
+      <section>
+        <h2>제품 타이밍</h2>
+        <ul>
+          <li><code>Order 청구</code>: chart user requests billing review for selected billable orders.</li>
+          <li>Billing workspace review: billing/front desk verifies candidate rows and amount context.</li>
+          <li><code>청구 확정</code>: candidate rows become the confirmed invoice amount basis and the invoice can move to <code>issued</code>.</li>
+          <li><code>수납 완료</code>: payment state changes against the already confirmed invoice amount.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>현재 DB/RPC Fit</h2>
+        <ul>
+          <li>
+            <code>clair_sync_billing_invoice_candidates</code> already creates or refreshes <code>invoice_lines</code>
+            when billing candidates are synced.
+          </li>
+          <li>
+            <code>clair_save_billing_invoice_lines</code> can edit existing line quantities and set the invoice to
+            <code>issued</code>, but cannot create lines from candidate IDs.
+          </li>
+          <li>
+            Therefore the current model supports "candidate-backed draft invoice lines confirmed at <code>청구 확정</code>".
+          </li>
+          <li>
+            It does not strictly support "physical invoice line creation happens only at <code>청구 확정</code>" without a DB/RPC migration.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Recommendation</h2>
+        <p class="status decision">
+          MVP recommendation: keep candidate-backed draft invoice lines and make <code>청구 확정</code> the point where those lines become financially confirmed.
+        </p>
+        <ul>
+          <li>This matches current candidate sync and invoice-line confirmation RPCs.</li>
+          <li>It avoids a larger candidate table split before representative review.</li>
+          <li>UI copy must keep <code>수납 후보</code> distinct from issued/paid state until <code>청구 확정</code>.</li>
+          <li>If stricter semantics are required, request approval for a migration that separates candidate storage from invoice line creation.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Approval Gate</h2>
+        <ul>
+          <li>No production deploy was performed.</li>
+          <li>No remote Supabase migration push was performed.</li>
+          <li>No real data import was performed.</li>
+          <li>No remote RLS replay was performed.</li>
+          <li>
+            Remote DB/RPC migration should wait for explicit approval after choosing between candidate-backed draft lines and strict
+            candidate-to-line promotion.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Updated Sources</h2>
+        <ul>
+          <li>
+            <a href="../../product/domain/order-fulfillment-handoff.md">
+              docs/product/domain/order-fulfillment-handoff.md
+            </a>
+          </li>
+          <li>
+            <a href="../../engineering/data-model/order-fulfillment-handoff-contract.md">
+              docs/engineering/data-model/order-fulfillment-handoff-contract.md
+            </a>
+          </li>
+          <li><a href="../../product/changelog.md">docs/product/changelog.md</a></li>
+          <li><a href="../../engineering/changelog.md">docs/engineering/changelog.md</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

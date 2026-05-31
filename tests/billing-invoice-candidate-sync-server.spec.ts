@@ -21,6 +21,9 @@ const den329MigrationPath =
 const den329Migration = existsSync(den329MigrationPath)
   ? readFileSync(den329MigrationPath, "utf8")
   : "";
+const routePath =
+  "src/app/api/workspaces/[workspaceId]/billing/invoice-candidates/route.ts";
+const routeSource = existsSync(routePath) ? readFileSync(routePath, "utf8") : "";
 
 const validSyncInput = {
   encounterId,
@@ -381,6 +384,17 @@ test("invoice candidate Supabase gateway keeps actor, workspace, encounter, and 
     ok: true,
     candidates: [{ lineTotal: 18000 }],
   });
+});
+
+test("invoice candidate route resolves staging demo encounter aliases before Supabase RPCs", () => {
+  expect(routeSource).toContain("resolveServerChartEncounterId");
+  expect(routeSource).toContain("SupabaseEncounterIdBridgeClient");
+  expect(routeSource).toContain(
+    "encounterId: resolvedEncounter.encounterId",
+  );
+  expect(routeSource).toContain(
+    "input: { ...input, encounterId: resolvedEncounter.encounterId }",
+  );
 });
 
 test("invoice candidate sync migration defines local-first RPC boundary without secrets", () => {

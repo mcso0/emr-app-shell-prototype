@@ -65,7 +65,7 @@ Start with `docs/engineering/current-status.md` for the current MVP state. This 
 | 오더 상태 범위 | UI는 `재요청`, `조제중`, `대기중` 등을 쓰고 DB spec은 `requested`, `re_requested`, `in_progress`를 쓴다. | `order.status`는 DB spec 값을 기준으로 정리하고 module별 label/status extension은 presentation layer로 둔다. |
 | Encounter 생성 시점 | DB spec과 feature spec 모두 접수/check-in 시 생성으로 정리되었다. | MVP 기본값은 “예약 확정 때는 appointment만 생성, 접수/check-in 때 encounter 생성”으로 고정한다. |
 | 권한/감사 로그 | 보안 요구가 MVP에 포함되지만 실제 auth/backend는 없다. | 프론트 프로토타입에서는 역할별 UI gating과 audit log mock event stream으로 검증한다. |
-| 수납 범위 | DB spec과 feature spec은 기본 수납, 할인, 환불까지 포함하고 부분수납/세금/정산은 제외한다. | MVP는 청구 후보 생성, 청구 확정, 수납 완료, 환불 요청, 병원 관리자 환불 확정까지 포함한다. |
+| 수납 범위 | DB spec과 feature spec은 기본 수납, 할인, 환불까지 포함하고 부분수납/세금/정산은 제외한다. | MVP는 chart `Order 청구`로 수납대기/후보를 생성하고, billing에서 `수납 진행` / `수납 완료` / reason-backed `미납 처리`를 다룬다. User-facing `청구 확정`은 필수 primary step이 아니다. |
 | 메시징 범위 | 기존 MVP 문서는 카카오 알림톡을 Post-MVP로 두었으나 DB spec은 템플릿/발송 이력 기반을 MVP 기본값으로 둔다. | provider 자동 연동과 카카오 승인/버전 관리는 Post-MVP로 두고, 메시지 템플릿과 발송 이력 mock은 MVP 기반에 포함한다. |
 | 검사 결과 확정 | 기존 MVP 문서는 수동 결과 입력만 명시하고 수의사 확인 상태가 약하다. | 검사 담당자 완료/전달 상태와 수의사 확인 상태를 분리하고, 차트의 오더/처방 테이블에서 상태와 결과를 확인하게 한다. |
 
