@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-286 Confirmed Order Snapshot</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        letter-spacing: 0;
+      }
+      h2 {
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+      .danger {
+        background: #fff1f2;
+        color: #9f1239;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border-top: 1px solid #d9dee8;
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      a {
+        color: #1f5eff;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-286 / 2026-05-26 / Chart Confirmation Snapshot</p>
+      <h1>차트 확정 Order Snapshot 저장 보고서</h1>
+      <p>
+        차트에서 workspace catalog 오더를 확정할 때 서버가 active catalog row를
+        다시 조회해 당시 이름, 청구명, 가격, 지시사항, destination을 applied
+        snapshot으로 고정하도록 연결했다. 이후 병원관리에서 catalog 값을 바꿔도
+        이미 확정된 차트 오더 snapshot은 바뀌지 않는다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+      <span class="badge warn">Fulfillment routing: Later issue</span>
+      <span class="badge danger">Remote DB: Not applied</span>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li>
+            <code>PATCH /chart/order-actions</code>가 catalog selection 정보를
+            받을 수 있게 됐다.
+          </li>
+          <li>
+            서버 core는 client가 보낸 이름이나 금액을 신뢰하지 않고, active
+            workspace catalog search 결과에서 snapshot을 다시 만든다.
+          </li>
+          <li>
+            확정 snapshot에는 표준 Order명, 원내 Order명, 청구명, 가격,
+            판매단위, 과세 포함 여부, 금액 기준, 대상, 케어가이드, 원내
+            지시사항, destination, task 필요 여부, 수량, line total이 들어간다.
+          </li>
+          <li>paused catalog row는 확정 전에 거절된다.</li>
+          <li>
+            order set 확정은 개별 오더 안정화 이후 범위라 이번에는 거절된다.
+          </li>
+          <li>
+            차트 UI는 catalog에서 추가한 draft row를 확정할 때 source preset
+            id와 수량을 함께 보내도록 연결됐다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>왜 중요한가</h2>
+        <p>
+          병원관리에서 나중에 오더 가격이나 이름을 바꿔도, 이미 과거에 진료한
+          기록과 청구 금액은 바뀌면 안 된다. 이번 작업은 그 경계를 차트 확정
+          시점에 만들었다. 즉, catalog는 미래 선택 후보이고, 확정된 encounter
+          order는 당시 값을 가진 별도 기록이 된다.
+        </p>
+      </section>
+
+      <section>
+        <h2>보안 및 데이터 경계</h2>
+        <ul>
+          <li>
+            client가 보낸 billing name이나 price를 snapshot 원천으로 사용하지
+            않는다.
+          </li>
+          <li>
+            server-side catalog gateway의 active chart-search 결과만 snapshot
+            원천으로 사용한다.
+          </li>
+          <li>
+            snapshot payload에는 SOAP 본문, token, provider payload, secret을
+            넣지 않는다.
+          </li>
+          <li>
+            remote Supabase 적용, 원격 RLS replay, production deploy, 실데이터
+            import는 수행하지 않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li>
+            <a
+              href="../../../src/features/chart/server-order-action-persistence-core.ts"
+              >src/features/chart/server-order-action-persistence-core.ts</a
+            >
+          </li>
+          <li>
+            <a href="../../../src/features/chart/module.tsx"
+              >src/features/chart/module.tsx</a
+            >
+          </li>
+          <li>
+            <a
+              href="../../../src/features/hospital-admin/server-order-catalog-core.ts"
+              >src/features/hospital-admin/server-order-catalog-core.ts</a
+            >
+          </li>
+          <li>
+            <a
+              href="../../../tests/chart-order-action-persistence-server.spec.ts"
+              >tests/chart-order-action-persistence-server.spec.ts</a
+            >
+          </li>
+          <li>
+            <a href="../../../tests/chart.spec.ts">tests/chart.spec.ts</a>
+          </li>
+          <li>
+            <a href="../../engineering/changelog.md"
+              >docs/engineering/changelog.md</a
+            >
+          </li>
+          <li>
+            <a href="../../product/domain/workspace-order-catalog-platform.md"
+              >docs/product/domain/workspace-order-catalog-platform.md</a
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>명령</th>
+              <th>결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>npm run docs:check</code></td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >npx prettier --check
+                  src/features/chart/server-order-action-persistence-core.ts
+                  src/features/chart/module.tsx
+                  src/features/hospital-admin/server-order-catalog-core.ts
+                  tests/chart-order-action-persistence-server.spec.ts
+                  tests/chart.spec.ts docs/engineering/changelog.md
+                  docs/product/domain/workspace-order-catalog-platform.md
+                  docs/completed/product/2026-05-26-den-286-confirmed-order-snapshot-report.html</code
+                >
+              </td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td><code>git diff --check -- DEN-286 touched files</code></td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td><code>npx tsc --noEmit --pretty false</code></td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart-order-action-persistence-server.spec.ts
+                  --reporter=line</code
+                >
+              </td>
+              <td>통과: 7개 테스트</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart.spec.ts -g "chart order add searches active
+                  workspace catalog" --reporter=line</code
+                >
+              </td>
+              <td>
+                통과: catalog 추가, 차트 확정, reload 후 snapshot row 복원 UI
+                smoke
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/hospital-admin-order-catalog-server.spec.ts
+                  --reporter=line</code
+                >
+              </td>
+              <td>통과: 7개 테스트</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>
+            확정된 catalog order를 downstream fulfillment queue로 생성하는
+            작업은 후속 issue 범위다.
+          </li>
+          <li>
+            order set을 개별 child order snapshot으로 확장하는 작업은 별도
+            단계다.
+          </li>
+          <li>
+            billing candidate sync의 최종 화면 연결과 lab/imaging review gate는
+            후속 issue 범위다.
+          </li>
+          <li>remote Supabase RPC replay와 live DB 적용은 하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          다음 구현은 확정 snapshot을 기반으로 fulfillment routing과 billing
+          candidate 흐름을 연결하되, lab/imaging은 결과가 차트로 돌아와 담당
+          수의사 확인을 거친 뒤 billing readiness로 넘어가도록 해야 한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-282 Workspace Catalog Preset Boundary</title>
+    <style>
+      body{margin:0;background:#f6f7f9;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      main{max-width:980px;margin:0 auto;padding:48px 28px 64px}
+      section{margin-top:18px;border:1px solid #d9dee8;border-radius:8px;background:#fff;padding:22px 24px}
+      h1{margin:0 0 8px;font-size:30px;letter-spacing:0}
+      h2{font-size:18px;letter-spacing:0}
+      p,li,td,th{font-size:14px;line-height:1.7}
+      .meta{color:#5f6b7a;font-size:13px}
+      .badge{display:inline-block;margin:12px 8px 0 0;border-radius:999px;background:#ecfdf3;color:#166534;padding:6px 10px;font-size:12px;font-weight:700}
+      .warn{background:#fff7e6;color:#8a4b00}
+      table{width:100%;border-collapse:collapse;margin-top:10px}
+      th,td{border-top:1px solid #d9dee8;padding:10px 8px;text-align:left;vertical-align:top}
+      code{border-radius:5px;background:#eef1f5;padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+      a{color:#1f5eff;text-decoration:none}
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-282 / 2026-05-25 / Preset &amp; Workspace Catalog</p>
+      <h1>Workspace 오더 카탈로그 프리셋 초기화 구현 보고서</h1>
+      <p>
+        CLAiR 기본 오더 프리셋을 병원별 오더 카탈로그로 안전하게 복사하고, 이후 프리셋 업데이트 시 병원이 수정한
+        값은 덮어쓰지 않는 local-first 경계를 구현했다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+      <span class="badge warn">Remote DB: Not applied</span>
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li>오더 카탈로그 row에 프리셋 출처, 최초 import version, 마지막 자동 병합 version, 커스터마이즈 상태, merge 상태를 표현할 수 있게 했다.</li>
+          <li>CLAiR system preset을 workspace catalog row로 만드는 순수 초기화 함수를 추가했다.</li>
+          <li>초기화는 같은 preset을 여러 번 실행해도 중복 row를 만들지 않는다.</li>
+          <li>프리셋이 새 버전으로 바뀌면 병원이 수정하지 않은 row만 자동 업데이트한다.</li>
+          <li>병원이 수정한 row는 값을 보존하고 <code>update_available</code> 상태로 남긴다.</li>
+          <li>Sales Demo fixture id는 기존처럼 deterministic하게 유지했다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>왜 중요한가</h2>
+        <p>
+          병원마다 오더 이름, 청구명, 가격을 다르게 운영할 수 있어야 한다. 이번 경계가 있어야 CLAiR가 기본 프리셋을 계속
+          개선해도 병원의 기존 운영값을 임의로 덮어쓰지 않고, 차트·청구 스냅샷 안정성도 후속 이슈에서 연결할 수 있다.
+        </p>
+      </section>
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../../src/features/hospital-admin/server-order-catalog-core.ts">src/features/hospital-admin/server-order-catalog-core.ts</a></li>
+          <li><a href="../../../tests/hospital-admin-order-catalog-server.spec.ts">tests/hospital-admin-order-catalog-server.spec.ts</a></li>
+          <li><a href="../../engineering/changelog.md">docs/engineering/changelog.md</a></li>
+          <li><a href="../../product/domain/workspace-order-catalog-platform.md">docs/product/domain/workspace-order-catalog-platform.md</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <table>
+          <thead><tr><th>명령</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test tests/hospital-admin-order-catalog-server.spec.ts --reporter=line</code></td><td>통과: 7개 테스트</td></tr>
+            <tr><td><code>npm run docs:check</code></td><td>통과: 822개 docs/agent markdown reference 확인</td></tr>
+            <tr><td><code>npx tsc --noEmit --pretty false</code></td><td>실패: 기존 billing module 타입 오류에서 중단. DEN-282 관련 파일 오류는 별도 필터 확인에서 나오지 않음.</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>remote Supabase migration 적용, 원격 RLS replay, production deploy는 하지 않았다.</li>
+          <li>실데이터 import와 CSV import 실행은 하지 않았다.</li>
+          <li>오더 상세 UI CRUD 연결은 후속 DEN-284 범위로 남겼다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          DEN-283에서 병원관리 오더 테이블이 workspace catalog read boundary를 사용하도록 연결하는 것이 자연스러운 다음 작업이다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

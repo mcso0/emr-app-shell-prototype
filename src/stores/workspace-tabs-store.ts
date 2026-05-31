@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { modules } from "@/modules/registry";
+import { modules, normalizeModuleId } from "@/modules/registry";
 
 export type WorkspaceTab = {
   id: string;
@@ -42,11 +42,15 @@ function getStorageKey(workspaceId: string) {
 }
 
 function getTabTitle(moduleId: string) {
-  return modules.find((module) => module.id === moduleId)?.label ?? moduleId;
+  const normalizedModuleId = normalizeModuleId(moduleId);
+
+  return modules.find((module) => module.id === normalizedModuleId)?.label ?? moduleId;
 }
 
 function getRouteModuleId(route: string) {
-  return route.split("?")[0]?.split("/")[3];
+  const routeModuleId = route.split("?")[0]?.split("/")[3];
+
+  return routeModuleId ? normalizeModuleId(routeModuleId) : routeModuleId;
 }
 
 function isWorkspaceRoute(route: string, workspaceId: string) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
@@ -112,6 +112,7 @@ import type {
   ReceptionWalkInEncounterRecord,
   ReceptionWalkInEncounterResponse,
 } from "@/features/reception/walk-in-encounter";
+import { saveChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import { useReceptionStore } from "@/features/reception/store";
 import {
   ReceptionEmptyState,
@@ -804,11 +805,13 @@ const getAppointmentTone = (status: Appointment["status"]) => {
 };
 
 function PatientCard({
+  onOpenChart,
   onUnavailableAction,
   selected,
   summary,
   onSelect,
 }: {
+  onOpenChart: (summary: ReceptionPatientSummary) => void;
   onUnavailableAction: (feedback: ReceptionCardActionFeedback) => void;
   selected: boolean;
   summary: ReceptionPatientSummary;
@@ -874,12 +877,20 @@ function PatientCard({
               {
                 key: "chart",
                 label: "차트 보러가기",
-                description: "진료/차트 탭에서 선택",
-                onSelect: () =>
+                description: summary.activeEncounter
+                  ? "진료/차트 탭에서 열기"
+                  : "접수 생성 후 이동 가능",
+                onSelect: () => {
+                  if (summary.activeEncounter) {
+                    onOpenChart(summary);
+                    return;
+                  }
+
                   onUnavailableAction({
-                    title: "차트 보기는 진료/차트 탭에서 이어가",
-                    body: `${summary.patient.name}의 차트 이동은 현재 접수 drawer를 연 뒤 진료/차트 탭에서 확인하는 흐름으로 유지돼.`,
-                  }),
+                    title: "먼저 접수를 생성해야 해",
+                    body: `${summary.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없어.`,
+                  });
+                },
               },
               {
                 key: "message",
@@ -924,6 +935,8 @@ type ReceptionCardActionFeedback = {
 };
 
 export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const queueReadError = useReceptionStore((state) => state.queueReadError);
@@ -944,6 +957,10 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const requestReceptionReadRetry = useReceptionStore((state) => state.requestReceptionReadRetry);
   const setSearchQuery = useReceptionStore((state) => state.setSearchQuery);
   const scenario = getDemoScenarioFromParams(searchParams);
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : params.workspaceId?.[0] ?? "clair-demo";
   const querySelectedPatientId = searchParams.get("patientId") ?? scenario?.patientId;
   const patientSummaries = useMemo(
     () => getReceptionPatientSummaries(draftCheckIns, { guardians, patientGuardians, patients }),
@@ -1048,6 +1065,23 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
               key={summary.patient.id}
               summary={summary}
               selected={isReceptionSideCardSelected(summary, activeDrawer, querySelectedPatientId)}
+              onOpenChart={(targetSummary) => {
+                const encounter = targetSummary.activeEncounter;
+                if (!encounter) return;
+
+                saveChartLiveEncounterHandoff({
+                  encounter,
+                  patient: targetSummary.patient,
+                  primaryGuardian: targetSummary.primaryGuardian,
+                });
+                selectEncounter(encounter.id);
+                setActiveDrawer(null);
+                router.push(buildChartRoute({
+                  encounterId: encounter.id,
+                  patientId: targetSummary.patient.id,
+                  workspaceId,
+                }));
+              }}
               onUnavailableAction={setCardActionFeedback}
               onSelect={() => {
                 selectPatient(summary.patient.id);
@@ -1107,6 +1141,26 @@ function isReceptionSideCardSelected(
   }
 
   return false;
+}
+
+function buildChartRoute({
+  encounterId,
+  patientId,
+  workspaceId,
+}: {
+  encounterId: string;
+  patientId: string;
+  workspaceId: string;
+}) {
+  const query = new URLSearchParams({
+    modulePanel: "open",
+    aside: "closed",
+    right: "closed",
+    encounterId,
+    patientId,
+  });
+
+  return `/w/${encodeURIComponent(workspaceId)}/treatment?${query.toString()}`;
 }
 
 function getReceptionSideListItems(
@@ -2266,6 +2320,9 @@ export function ReceptionContent() {
     (state) => state.applyPersistedReceptionQueue
   );
   const applyWalkInCheckIn = useReceptionStore((state) => state.applyWalkInCheckIn);
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem
+  );
   const selectAppointment = useReceptionStore((state) => state.selectAppointment);
   const selectEncounter = useReceptionStore((state) => state.selectEncounter);
   const selectPatient = useReceptionStore((state) => state.selectPatient);
@@ -2491,8 +2548,18 @@ export function ReceptionContent() {
               setEmptySlotAffordanceSuspended(true);
             }
           }}
-          onCreate={(input, walkIn) => {
+          onCreate={(input, walkIn, selectedSummary) => {
+            applyPatientGuardianLookupItem({
+              patient: selectedSummary.patient,
+              primaryGuardian: selectedSummary.primaryGuardian,
+              searchText: selectedSummary.searchText,
+            });
             applyWalkInCheckIn({ ...input, walkIn });
+            saveChartLiveEncounterHandoff({
+              encounter: walkIn.encounter,
+              patient: selectedSummary.patient,
+              primaryGuardian: selectedSummary.primaryGuardian,
+            });
             setWalkInInitialPatientId(undefined);
             setWalkInDialogOpen(false);
             setEmptySlotAffordanceSuspended(true);
@@ -2583,7 +2650,8 @@ function WalkInReceptionDialog({
   initialPatientId?: string;
   onCreate: (
     input: WalkInReceptionInput,
-    walkIn: ReceptionWalkInEncounterRecord
+    walkIn: ReceptionWalkInEncounterRecord,
+    selectedSummary: ReceptionPatientSummary
   ) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -2771,7 +2839,9 @@ function WalkInReceptionDialog({
       return;
     }
 
-    onCreate(input, result.walkIn);
+    if (selectedSummary) {
+      onCreate(input, result.walkIn, selectedSummary);
+    }
   };
 
   return (
@@ -3168,6 +3238,7 @@ function getReceptionDrawerPatientNo(
 
 export function ReceptionDrawer() {
   const params = useParams<{ workspaceId?: string | string[] }>();
+  const router = useRouter();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
@@ -3370,7 +3441,26 @@ export function ReceptionDrawer() {
           <section className="min-w-0">
             <div className="mb-2 flex items-center justify-between gap-3">
               <h3 className="text-[15px] font-semibold">Assessment History</h3>
-              <Button size="xs" variant="outline">
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={!selectedEncounter}
+                onClick={() => {
+                  if (!selectedEncounter) return;
+
+                  saveChartLiveEncounterHandoff({
+                    encounter: selectedEncounter,
+                    patient,
+                    primaryGuardian: guardian,
+                  });
+                  setActiveDrawer(null);
+                  router.push(buildChartRoute({
+                    encounterId: selectedEncounter.id,
+                    patientId: patient.id,
+                    workspaceId,
+                  }));
+                }}
+              >
                 차트보기
               </Button>
             </div>

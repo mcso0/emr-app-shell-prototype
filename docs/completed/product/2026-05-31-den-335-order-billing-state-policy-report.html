@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-335 Order Billing State Policy Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f8fa;
+        color: #1f2937;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 32px;
+      }
+      section {
+        margin: 0 0 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 4px;
+        background: #f3f4f6;
+        padding: 2px 4px;
+      }
+      .meta {
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-335 Order Billing State Policy Report</h1>
+      <p class="meta">2026-05-31 · CLAiR EMR Order Billing State Separation & Billing Sync Reliability</p>
+
+      <section>
+        <h2>요청</h2>
+        <p>
+          차트의 <code>Order 청구</code>가 업무 완료 여부나 draft 저장 성공에 묶이지 않고,
+          모든 오더 유형에서 수납 후보를 만들 수 있도록 정책 기준을 정리했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>결정된 정책</h2>
+        <ul>
+          <li>업무 상태와 수납 후보 상태는 별도 축으로 본다.</li>
+          <li><code>Order 청구</code>는 lab, imaging, dispensing, treatment 모두에서 수납 후보 생성 액션이다.</li>
+          <li>미완료 오더도 수납으로 진행할 수 있지만 확인 다이얼로그가 필요하다.</li>
+          <li>확인 문구는 <code>아직 완료되지 않은 오더가 있습니다. 수납을 진행할까요?</code>로 고정한다.</li>
+          <li>수납 후보 생성은 업무 완료 처리가 아니며, 기존 업무 상태를 바꾸지 않는다.</li>
+          <li>수의사 확인/재요청은 결과 검토 UX로 남기되 기본 billing gate로 사용하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 문서</h2>
+        <ul>
+          <li><code>docs/product/domain/order-fulfillment-handoff.md</code></li>
+          <li><code>docs/product/domain/workspace-order-catalog-platform.md</code></li>
+          <li><code>docs/engineering/data-model/order-fulfillment-handoff-contract.md</code></li>
+          <li><code>docs/product/domain/outpatient-workflow-state-model.md</code></li>
+          <li><code>docs/product/changelog.md</code></li>
+          <li><code>docs/engineering/changelog.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 작업</h2>
+        <ul>
+          <li>DEN-336: 차트 <code>Order 청구</code>를 draft 저장에서 분리</li>
+          <li>DEN-337: 미완료 오더 확인 다이얼로그 구현</li>
+          <li>DEN-338: chart bill action에서 실제 invoice candidate sync 수행</li>
+          <li>DEN-339: 청구 진행 중 업무 상태 보존 검증</li>
+          <li>DEN-340: DB/RPC 구조 적합성 검증 및 필요 시 migration gate</li>
+          <li>DEN-341: fixed staging 전체 replay</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <p>
+          <code>npm run docs:check</code> 통과. 이 리포트는 정책 closeout이며,
+          코드 구현과 staging replay는 후속 이슈 범위다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

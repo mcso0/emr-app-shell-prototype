@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR Fixed Staging & Order E2E Validation 중간 QA 리포트</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #15171a;
+        --muted: #626a73;
+        --line: #d9dde3;
+        --soft: #f5f7fa;
+        --ok: #0f7b45;
+        --warn: #9a5b00;
+        --block: #b42318;
+      }
+
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+      }
+
+      h2 {
+        margin: 36px 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      code {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--soft);
+      }
+
+      .summary {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        background: var(--soft);
+      }
+
+      .status {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .ok {
+        background: #e7f6ed;
+        color: var(--ok);
+      }
+
+      .warn {
+        background: #fff4dd;
+        color: var(--warn);
+      }
+
+      .block {
+        background: #fde7e4;
+        color: var(--block);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Fixed Staging & Order E2E Validation 중간 QA 리포트</h1>
+      <p class="summary">
+        요청 목표는 매번 바뀌는 preview/mock fallback이 아니라, 고정 staging URL과 Supabase
+        staging Auth로 병원관리 Order 생성부터 Chart 확정, fulfillment task, billing candidate까지
+        대표가 직접 검수할 수 있는 환경을 만드는 것이다. 승욱이 Vercel login을 완료한 뒤 fixed
+        staging URL에서 Supabase staging Auth와 DEN-307 핵심 흐름은 통과했다. 다만 fulfillment
+        task 완료와 billing candidate readback은 아직 UI-only 대표 검수로는 부족하고, live row
+        표시 gap이 남아 있다.
+      </p>
+
+      <h2>현재 결론</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>상태</th>
+            <th>근거</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Linear 프로젝트/이슈 생성</td>
+            <td><span class="status ok">완료</span></td>
+            <td>
+              <code>16 CLAiR EMR Fixed Staging & Order E2E Validation</code> 프로젝트와
+              DEN-310부터 DEN-319까지 실행 이슈를 생성했다. 접근 정책 blocker로 DEN-320도 추가했다.
+            </td>
+          </tr>
+          <tr>
+            <td>Fixed Vercel staging alias</td>
+            <td><span class="status warn">세션 통과</span></td>
+            <td>
+              <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code>
+              alias를 만들고 최신 preview로 연결했다. Vercel login 후 현재 브라우저 세션에서는
+              CLAiR login 화면까지 도달했다. 반복 가능한 대표 접근 정책은 DEN-320에 남아 있다.
+            </td>
+          </tr>
+          <tr>
+            <td>Supabase staging Auth env</td>
+            <td><span class="status ok">완료</span></td>
+            <td>
+              Preview 환경에 <code>NEXT_PUBLIC_AUTH_MODE=supabase</code>,
+              staging Supabase URL, publishable key를 설정했다. server-only secret은 공개 env에 넣지 않았다.
+            </td>
+          </tr>
+          <tr>
+            <td>Staging synthetic Auth baseline</td>
+            <td><span class="status ok">통과</span></td>
+            <td>
+              <code>admin@clair.local</code>, <code>vet@clair.local</code>,
+              <code>technician@clair.local</code>, <code>front-desk@clair.local</code> 계정의
+              Auth identity와 <code>clair-demo</code> membership을 확인했다.
+            </td>
+          </tr>
+          <tr>
+            <td>Order Platform RPC baseline</td>
+            <td><span class="status ok">통과</span></td>
+            <td>
+              chart draft/action, fulfillment, billing, catalog search RPC와 DEN-307 encounter bridge
+              migration baseline을 확인했다.
+            </td>
+          </tr>
+          <tr>
+            <td>DEN-307 chart draft/confirm bridge</td>
+            <td><span class="status ok">통과</span></td>
+            <td>
+              fixed staging에서 catalog 후보 추가, draft 저장, Order 확정, snapshot 보존,
+              fulfillment work item 생성까지 확인했다. 기존 실패 toast는 재발하지 않았다.
+            </td>
+          </tr>
+          <tr>
+            <td>Representative task/billing UI E2E</td>
+            <td><span class="status block">차단</span></td>
+            <td>
+              treatment fulfillment completion, Chart 완료 readback, billing candidate DB 생성은 확인했다.
+              하지만 task 화면과 billing 화면에서 신규 live row가 대표가 바로 식별할 수 있게 표시되지
+              않았다. DEN-321로 분리했다.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li><code>npx tsc --noEmit</code>: 통과</li>
+        <li><code>npm run security:secrets</code>: 통과, tracked file 1961개 검사</li>
+        <li>
+          DEN-307 focused server tests:
+          <code>tests/chart-order-draft-persistence-server.spec.ts</code>,
+          <code>tests/chart-order-action-persistence-server.spec.ts</code> 20개 통과
+        </li>
+        <li>
+          DEN-308 focused tests:
+          <code>tests/hospital-admin.spec.ts</code>,
+          <code>tests/hospital-admin-order-catalog-server.spec.ts</code> 24개 통과
+        </li>
+        <li>
+          DEN-309 focused auth/app-shell tests:
+          <code>tests/auth.spec.ts</code>, <code>tests/app-shell.spec.ts</code> 44개 통과
+        </li>
+        <li>
+          <code>tests/chart.spec.ts</code> catalog/draft/confirm grep 검증은 10개 중 4개 실패했다.
+          기존 UI 기대값과 현재 mock/table 상태 차이로 보이며 full E2E 완료 전 정리가 필요하다.
+        </li>
+        <li>
+          Fixed staging browser replay: Vercel login 이후 Supabase Auth login, 병원관리 신규 Order
+          생성/readback, Chart catalog 추가/확정, snapshot 보존, fulfillment 생성 통과.
+        </li>
+        <li>
+          Synthetic evidence:
+          <code>고정스테이징 CBC e2e-mpruvnp1</code>,
+          <code>고정스테이징 처치 mprv3quc</code>.
+        </li>
+        <li>
+          Treatment completion evidence:
+          fulfillment item <code>aa969ba6-5f33-41a6-a0c8-452bb074a99f</code> completed,
+          Chart readback <code>완료</code>, billing candidate
+          <code>billcand-54e8e895-d983-4085-8aaa-392f2e79d54b</code> 생성.
+        </li>
+      </ul>
+
+      <h2>보안 및 제외 범위</h2>
+      <ul>
+        <li>production deploy는 수행하지 않았다.</li>
+        <li>실데이터 import는 수행하지 않았다.</li>
+        <li>원격 RLS policy replay는 수행하지 않았다.</li>
+        <li>staging DB migration은 적용하지 않았다.</li>
+        <li>service_role, DB password, access token 같은 server-only secret은 공개 env에 넣지 않았다.</li>
+      </ul>
+
+      <h2>대표 검수를 위한 다음 작업</h2>
+      <p>
+        DEN-307은 Human Review로 넘길 수 있다. 다음 blocker는 DEN-321이다. fulfillment queue 화면이
+        live work item을 신규 row로 보여주고, 담당자 완료와 billing candidate readback이 화면에서
+        직접 확인되어야 DEN-318/DEN-319를 Human Review로 넘길 수 있다. DEN-320은 현재 세션에서는
+        풀렸지만, 대표/QA가 매번 같은 URL로 들어가기 위한 durable Vercel 접근 정책 결정은 남아 있다.
+      </p>
+    </main>
+  </body>
+</html>

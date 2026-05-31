@@ -558,7 +558,7 @@ test("patient guardian registration links an existing guardian to a new patient"
 
   const registrationDialog = page.getByLabel("기존 보호자에 신규 환자 등록");
   await expect(page.getByLabel("기존 보호자 검색")).toHaveValue("오세아 010-7812-4401 · 나비");
-  await expect(page.getByText("오세아", { exact: true })).toBeVisible();
+  await expect(registrationDialog).toContainText("오세아");
   await expect(page.getByText("오세아 보호자의 동물")).toBeVisible();
   await expect(registrationDialog.getByText("나비", { exact: true })).toBeVisible();
   await page.getByLabel("환자명").fill("라떼");
@@ -718,7 +718,7 @@ test("reception card action menu exposes unavailable feedback and closes on Esca
   await expect
     .poll(() => actionButton.evaluate((button) => getComputedStyle(button).opacity))
     .toBe("0");
-  await card.hover();
+  await actionButton.evaluate((button) => button.focus());
   await expect
     .poll(() => actionButton.evaluate((button) => getComputedStyle(button).opacity))
     .toBe("1");
@@ -1299,6 +1299,14 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
   await expect(dubuCard).toContainText("두부");
   await expect(dubuCard).toContainText("보행 재검 및 통증 상담");
   await expect(dubuCard).toContainText("김도윤");
+
+  await dubuCard.hover();
+  await dubuCard.getByRole("button", { name: "두부 카드 작업" }).click();
+  await page.getByText("차트 보러가기", { exact: true }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment\?.*encounterId=encounter-live-walkin-dubu/);
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("E-LIVE-0001")).toBeVisible();
+  await expect(page.getByText(/두부/).first()).toBeVisible();
 });
 
 test("walk-in persistence regression reloads from queue and calendar reads", async ({ page }) => {

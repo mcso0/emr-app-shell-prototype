@@ -218,6 +218,9 @@ test("reception registration route stays server-owned and avoids secret-shaped v
 
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
+  expect(routeSource).toContain("permissionAdapter");
   expect(routeSource).toContain("enforceWorkspaceMutationRateLimit");
   expect(serverSource).toContain('import "server-only"');
   expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-299 Live Chart Confirmation Gateways</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 44px 28px 60px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 29px;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .info {
+        background: #eef4ff;
+        color: #1d4ed8;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-299 / 2026-05-27 / Security Follow-up</p>
+      <h1>Live Chart Confirmation Gateway 연결</h1>
+      <p>
+        Supabase session에서 차트 오더 확정이 mock catalog/billing fallback이
+        아니라 live workspace catalog와 live billing gateway를 사용하도록
+        연결했다.
+      </p>
+      <span class="badge">Status: Human Review 준비</span>
+      <span class="badge info">DEN-289 P1 finding mitigated</span>
+      <span class="badge warn">Remote DB/RLS/Deploy: Not run</span>
+
+      <section>
+        <h2>비개발자용 요약</h2>
+        <p>
+          실제 로그인 세션에서는 병원별 오더 카탈로그와 청구 후보가 mock 데이터로
+          섞이면 안 된다. 이번 변경으로 live chart confirmation 경로는 병원
+          workspace catalog RPC를 통해 snapshot을 다시 읽고, billing-only 후보도
+          live billing RPC로 생성한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>
+            Chart order action route에 <code>createSupabaseOrderCatalogGateway</code>
+            를 연결했다.
+          </li>
+          <li>
+            Chart order action route에
+            <code>createSupabaseInvoiceCandidateSyncGateway</code>를 연결했다.
+          </li>
+          <li>
+            Workspace-scoped chart catalog search RPC
+            <code>clair_list_order_catalog_chart_search</code> migration 파일을
+            추가했다.
+          </li>
+          <li>
+            Supabase session route가 live catalog/billing gateway를 주입하는지
+            regression을 추가했다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/app/api/workspaces/[workspaceId]/chart/order-actions/route.ts</code></li>
+          <li><code>src/features/hospital-admin/server-order-catalog-core.ts</code></li>
+          <li><code>supabase/migrations/20260527090000_order_catalog_chart_search_rpc.sql</code></li>
+          <li><code>tests/chart-order-action-persistence-server.spec.ts</code></li>
+          <li><code>docs/product/domain/workspace-order-catalog-platform.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li>
+            <code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/chart-order-action-persistence-server.spec.ts</code>
+            통과: 11 tests
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 범위</h2>
+        <p>
+          Migration 파일은 repo-local로 작성했으며 remote Supabase 적용, 원격 RLS
+          replay, production deploy, 실데이터 import는 수행하지 않았다. 다음
+          후속은 DEN-300 catalog mutation audit event 추가다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -21,6 +21,13 @@ import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
+import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
+import {
+  createInitialEmrTableFilterBuilderModel,
+  filterRowsByEmrTableFilterBuilder,
+  getEmrTableFilterBuilderActiveCount,
+  type EmrTableFilterBuilderField,
+} from "@/components/emr/table-filter-builder-model";
 import { EmrTableCellText, EmrTableHeaderCell } from "@/components/emr/table-primitives";
 import {
   EmrTextSideNavButton,
@@ -38,6 +45,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -89,6 +101,16 @@ const customerTableMinWidths = {
   guardian: 1120,
   patient: 1320,
 } as const;
+type CustomerTableSortDirection = "asc" | "desc";
+type CustomerTableSortState = {
+  direction: CustomerTableSortDirection;
+  key: string;
+} | null;
+type CustomerTableSortValue = string | number | null | undefined;
+type CustomerTableFilterOption = {
+  label: string;
+  value: string;
+};
 
 const badgeClassName: Record<CustomerWorkBadge["tone"], string> = {
   blue:
@@ -116,12 +138,15 @@ type CustomerTableColumn<TRow> = {
   cell: (row: TRow) => ReactNode;
   className?: string;
   defaultVisible?: boolean;
+  filterOptions?: CustomerTableFilterOption[] | ((rows: TRow[]) => CustomerTableFilterOption[]);
+  filterValues?: (row: TRow) => string[];
   headerClassName?: string;
   headerInteraction?: EmrTableHeaderInteraction;
   key: string;
   label: string;
   required?: boolean;
   resize?: EmrColumnResize;
+  sortValue?: (row: TRow) => CustomerTableSortValue;
   textMode?: EmrTableCellTextMode;
 };
 
@@ -191,6 +216,139 @@ type CustomerRowActionFeedback = {
   title: string;
 };
 
+function compareCustomerTableValues(left: CustomerTableSortValue, right: CustomerTableSortValue) {
+  const leftEmpty = left === null || left === undefined || left === "";
+  const rightEmpty = right === null || right === undefined || right === "";
+
+  if (leftEmpty && rightEmpty) return 0;
+  if (leftEmpty) return 1;
+  if (rightEmpty) return -1;
+
+  if (typeof left === "number" && typeof right === "number") return left - right;
+
+  return String(left).localeCompare(String(right), "ko-KR", {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function sortCustomerTableRows<TRow>(
+  rows: TRow[],
+  columns: Array<CustomerTableColumn<TRow>>,
+  sortState: CustomerTableSortState
+) {
+  if (!sortState) return rows;
+
+  const column = columns.find((item) => item.key === sortState.key);
+  if (!column?.sortValue) return rows;
+
+  return rows
+    .map((row, index) => ({ index, row }))
+    .sort((left, right) => {
+      const compared = compareCustomerTableValues(
+        column.sortValue?.(left.row),
+        column.sortValue?.(right.row)
+      );
+      if (compared === 0) return left.index - right.index;
+
+      return sortState.direction === "asc" ? compared : -compared;
+    })
+    .map((entry) => entry.row);
+}
+
+function getCustomerTableFilterOptions<TRow>(column: CustomerTableColumn<TRow>, rows: TRow[]) {
+  const options =
+    typeof column.filterOptions === "function"
+      ? column.filterOptions(rows)
+      : column.filterOptions;
+
+  return options ?? [];
+}
+
+function getCustomerTableFilterFields<TRow>(
+  columns: Array<CustomerTableColumn<TRow>>,
+  rows: TRow[]
+): Array<EmrTableFilterBuilderField<TRow>> {
+  return columns
+    .filter((column) => column.filterValues)
+    .map((column) => ({
+      getValue: (row: TRow) => column.filterValues?.(row) ?? [],
+      id: column.key,
+      label: column.label,
+      operators: [{ id: "is", label: "Is" }],
+      options: getCustomerTableFilterOptions(column, rows),
+      valuePlaceholder: `${column.label} 선택`,
+    }));
+}
+
+function getUniqueCustomerFilterOptions<TRow>(
+  rows: TRow[],
+  getValues: (row: TRow) => string[]
+): CustomerTableFilterOption[] {
+  const options = new Map<string, CustomerTableFilterOption>();
+
+  rows.forEach((row) => {
+    getValues(row).forEach((value) => {
+      if (value && !options.has(value)) {
+        options.set(value, { label: value, value });
+      }
+    });
+  });
+
+  return Array.from(options.values()).sort((left, right) =>
+    left.label.localeCompare(right.label, "ko-KR", {
+      numeric: true,
+      sensitivity: "base",
+    })
+  );
+}
+
+function CustomerSortableHeader<TRow>({
+  align,
+  className,
+  column,
+  onSort,
+  sortState,
+}: {
+  align?: "left" | "center" | "right";
+  className?: string;
+  column: CustomerTableColumn<TRow>;
+  onSort: (key: string) => void;
+  sortState: CustomerTableSortState;
+}) {
+  const active = sortState?.key === column.key;
+  const nextAction =
+    !active || !sortState
+      ? `${column.label} 오름차순 정렬`
+      : sortState.direction === "asc"
+        ? `${column.label} 내림차순 정렬`
+        : `${column.label} 정렬 해제`;
+  const activeDirectionLabel =
+    sortState?.direction === "asc"
+      ? "오름차순"
+      : sortState?.direction === "desc"
+        ? "내림차순"
+        : "";
+  const ariaLabel = active
+    ? `현재 정렬: ${column.label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
+    : `정렬 없음. 클릭하면 ${nextAction}.`;
+
+  return (
+    <EmrTableHeaderCell
+      align={align}
+      className={className}
+      interaction={column.headerInteraction ?? "sortable"}
+      resize={column.resize ?? "data-column"}
+      sortDirection={active ? sortState.direction : undefined}
+      sortLabel={ariaLabel}
+      title={ariaLabel}
+      onSort={() => onSort(column.key)}
+    >
+      {column.label}
+    </EmrTableHeaderCell>
+  );
+}
+
 function CustomerDataTable<TRow extends { id: string }>({
   columns,
   countLabel,
@@ -208,10 +366,32 @@ function CustomerDataTable<TRow extends { id: string }>({
   const [rowSelection, setRowSelection] = useState<Set<string>>(() => new Set());
   const [rowActionFeedback, setRowActionFeedback] = useState<CustomerRowActionFeedback | null>(null);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterModel, setFilterModel] = useState(() =>
+    createInitialEmrTableFilterBuilderModel(
+      `${testId}-filter`,
+      `${testId}-filter-rule-1`
+    )
+  );
+  const [sortState, setSortState] = useState<CustomerTableSortState>(null);
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(columns.map((column) => [column.key, column.defaultVisible !== false]))
   );
-  const rowIds = useMemo(() => new Set(rows.map((row) => row.id)), [rows]);
+  const filterFields = useMemo(
+    () => getCustomerTableFilterFields(columns, rows),
+    [columns, rows]
+  );
+  const activeFilterCount = getEmrTableFilterBuilderActiveCount(filterModel, filterFields);
+  const visibleRows = useMemo(
+    () =>
+      sortCustomerTableRows(
+        filterRowsByEmrTableFilterBuilder(rows, filterModel, filterFields),
+        columns,
+        sortState
+      ),
+    [columns, filterFields, filterModel, rows, sortState]
+  );
+  const rowIds = useMemo(() => new Set(visibleRows.map((row) => row.id)), [visibleRows]);
   const visibleRowSelection = useMemo(
     () => new Set(Array.from(rowSelection).filter((id) => rowIds.has(id))),
     [rowIds, rowSelection]
@@ -220,18 +400,23 @@ function CustomerDataTable<TRow extends { id: string }>({
     (column) => column.required || columnVisibility[column.key] !== false
   );
   const selectedCount = visibleRowSelection.size;
-  const allRowsSelected = rows.length > 0 && rows.every((row) => visibleRowSelection.has(row.id));
-  const someRowsSelected = rows.some((row) => visibleRowSelection.has(row.id)) && !allRowsSelected;
+  const allRowsSelected = visibleRows.length > 0 && visibleRows.every((row) => visibleRowSelection.has(row.id));
+  const someRowsSelected = visibleRows.some((row) => visibleRowSelection.has(row.id)) && !allRowsSelected;
+  const visibleCountLabel = activeFilterCount > 0 ? `${visibleRows.length}/${rows.length}` : countLabel;
+  const emptyMessage =
+    rows.length > 0 && visibleRows.length === 0
+      ? `조건에 맞는 ${title} 정보가 없습니다.`
+      : emptyLabel;
 
   const toggleAllRows = () => {
     setRowSelection((current) => {
       const next = new Set(Array.from(current).filter((id) => !rowIds.has(id)));
 
-      if (rows.length > 0 && rows.every((row) => current.has(row.id))) {
+      if (visibleRows.length > 0 && visibleRows.every((row) => current.has(row.id))) {
         return next;
       }
 
-      rows.forEach((row) => next.add(row.id));
+      visibleRows.forEach((row) => next.add(row.id));
       return next;
     });
   };
@@ -249,7 +434,14 @@ function CustomerDataTable<TRow extends { id: string }>({
       return next;
     });
   };
+  const handleSort = (key: string) => {
+    setSortState((current) => {
+      if (current?.key !== key) return { direction: "asc", key };
+      if (current.direction === "asc") return { direction: "desc", key };
 
+      return null;
+    });
+  };
   const renderCell = (column: CustomerTableColumn<TRow>, row: TRow) => {
     const content = column.cell(row);
 
@@ -271,13 +463,54 @@ function CustomerDataTable<TRow extends { id: string }>({
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="text-[18px] font-semibold">{title}</h2>
-          <Badge variant="secondary">{countLabel}</Badge>
+          <Badge variant="secondary">{visibleCountLabel}</Badge>
           <span className="emr-text-metadata font-medium text-muted-foreground">
-            {selectedCount} / {rows.length} 선택
+            {selectedCount} / {visibleRows.length} 선택
           </span>
         </div>
         <div className="flex items-center gap-2">
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          {filterFields.length > 0 ? (
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant={activeFilterCount > 0 ? "secondary" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "bg-card",
+                      activeFilterCount > 0 &&
+                        "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                    )}
+                    aria-label={
+                      activeFilterCount > 0
+                        ? `${title} 필터 ${activeFilterCount}개 설정`
+                        : `${title} 필터 설정`
+                    }
+                  />
+                }
+              >
+                <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
+                Filter{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+                initialFocus={false}
+              >
+                <EmrTableFilterBuilder
+                  clearAllLabel="초기화"
+                  description={`${title} 필터는 완성된 조건만 AND로 적용됩니다.`}
+                  fields={filterFields}
+                  model={filterModel}
+                  title="Filters"
+                  onClose={() => setFilterOpen(false)}
+                  onModelChange={setFilterModel}
+                />
+              </PopoverContent>
+            </Popover>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger
               className={buttonVariants({
@@ -367,20 +600,28 @@ function CustomerDataTable<TRow extends { id: string }>({
                 />
               </span>
             </EmrTableHeaderCell>
-            {visibleColumns.map((column) => (
-              <EmrTableHeaderCell
-                key={column.key}
-                align={column.align}
-                className={cn(
-                  "h-11 emr-text-dense",
-                  column.headerClassName
-                )}
-                interaction={column.headerInteraction ?? "static"}
-                resize={column.resize ?? "data-column"}
-              >
-                {column.label}
-              </EmrTableHeaderCell>
-            ))}
+            {visibleColumns.map((column) =>
+              column.sortValue ? (
+                <CustomerSortableHeader
+                  key={column.key}
+                  align={column.align}
+                  className={cn("h-11 emr-text-dense", column.headerClassName)}
+                  column={column}
+                  sortState={sortState}
+                  onSort={handleSort}
+                />
+              ) : (
+                <EmrTableHeaderCell
+                  key={column.key}
+                  align={column.align}
+                  className={cn("h-11 emr-text-dense", column.headerClassName)}
+                  interaction={column.headerInteraction ?? "static"}
+                  resize={column.resize ?? "data-column"}
+                >
+                  {column.label}
+                </EmrTableHeaderCell>
+              )
+            )}
             <EmrTableHeaderCell
               aria-label={`${title} 행 작업`}
               className="w-12"
@@ -392,8 +633,8 @@ function CustomerDataTable<TRow extends { id: string }>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length ? (
-            rows.map((row) => {
+          {visibleRows.length ? (
+            visibleRows.map((row) => {
               const active = isActiveRow(row);
               const selected = visibleRowSelection.has(row.id);
               const rowLabel = getRowLabel(row);
@@ -450,7 +691,7 @@ function CustomerDataTable<TRow extends { id: string }>({
           ) : (
             <TableRow>
               <TableCell colSpan={visibleColumns.length + 2} className="h-28 text-center text-muted-foreground">
-                {emptyLabel}
+                {emptyMessage}
               </TableCell>
             </TableRow>
           )}
@@ -458,11 +699,11 @@ function CustomerDataTable<TRow extends { id: string }>({
       </Table>
       <div className="flex h-11 items-center justify-between border-t px-4 emr-text-metadata font-medium text-muted-foreground">
         <span>
-          {selectedCount} of {rows.length} row(s) selected.
+          {selectedCount} of {visibleRows.length} row(s) selected.
         </span>
         <div className="flex items-center gap-2">
           <span>
-            {rows.length ? `1-${rows.length}` : "0"} / {rows.length}
+            {visibleRows.length ? `1-${visibleRows.length}` : "0"} / {visibleRows.length}
           </span>
           <Button type="button" variant="outline" size="sm" className="h-7 bg-card" disabled>
             이전
@@ -635,10 +876,6 @@ function CustomerToolbar({
           <>
             <CustomerSearchInput value={query} onValueChange={setQuery} />
             <NewUnifiedRegistrationButton onPatientReady={(patientId) => setActiveDrawer({ type: "patient", id: patientId })} />
-            <Button type="button" variant="outline" size="sm" className="bg-card">
-              <CdsActionsListFilterIcon className="size-4" />
-              상세 검색
-            </Button>
           </>
         }
       />
@@ -670,6 +907,7 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "sortable",
         className: "whitespace-nowrap font-semibold",
         textMode: "one-line",
+        sortValue: (row) => row.patientNo,
         cell: (row) => row.patientNo,
       },
       {
@@ -679,6 +917,7 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "sortable",
         className: "max-w-40 font-semibold",
         textMode: "two-line-if-long",
+        sortValue: (row) => row.name,
         cell: (row) => row.name,
       },
       {
@@ -687,6 +926,8 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "filterable",
         className: "max-w-56",
         textMode: "one-line",
+        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.breed]),
+        filterValues: (row) => [row.breed],
         cell: (row) => row.breed,
       },
       {
@@ -695,6 +936,8 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "filterable",
         className: "whitespace-nowrap",
         textMode: "one-line",
+        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.sex]),
+        filterValues: (row) => [row.sex],
         cell: (row) => row.sex,
       },
       {
@@ -703,6 +946,7 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "sortable",
         className: "whitespace-nowrap",
         textMode: "one-line",
+        sortValue: (row) => row.patient.birthDate ?? row.age,
         cell: (row) => row.age,
       },
       {
@@ -711,6 +955,9 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "filterable",
         className: "min-w-48",
         textMode: "badge-wrap",
+        filterOptions: (rows) =>
+          getUniqueCustomerFilterOptions(rows, (row) => row.workBadges.map((badge) => badge.label)),
+        filterValues: (row) => row.workBadges.map((badge) => badge.label),
         cell: (row) => (
           <div className="flex flex-wrap gap-1">
             {row.workBadges.map((badge) => (
@@ -741,6 +988,8 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "filterable",
         className: "whitespace-nowrap",
         textMode: "one-line",
+        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.messageConsent]),
+        filterValues: (row) => [row.messageConsent],
         cell: (row) => row.messageConsent,
       },
       {
@@ -749,6 +998,7 @@ function PatientTable({ rows }: { rows: CustomerPatientRow[] }) {
         headerInteraction: "sortable",
         className: "whitespace-nowrap",
         textMode: "one-line",
+        sortValue: (row) => row.patient.createdAt,
         cell: (row) => row.registeredAt,
       },
     ],
@@ -788,6 +1038,7 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         headerInteraction: "sortable",
         className: "max-w-44 font-semibold",
         textMode: "two-line-if-long",
+        sortValue: (row) => row.name,
         cell: (row) => row.name,
       },
       {
@@ -813,6 +1064,8 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         headerInteraction: "filterable",
         className: "whitespace-nowrap",
         textMode: "one-line",
+        filterOptions: (rows) => getUniqueCustomerFilterOptions(rows, (row) => [row.consentSummary]),
+        filterValues: (row) => [row.consentSummary],
         cell: (row) => row.consentSummary,
       },
       {
@@ -837,6 +1090,7 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
         headerInteraction: "sortable",
         className: "whitespace-nowrap",
         textMode: "one-line",
+        sortValue: (row) => row.guardian.createdAt,
         cell: (row) => row.registeredAt,
       },
     ],

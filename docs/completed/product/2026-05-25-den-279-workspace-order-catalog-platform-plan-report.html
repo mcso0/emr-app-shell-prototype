@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-279 Workspace Order Catalog Platform 기획 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --text: #172033;
+        --muted: #5f6b7a;
+        --line: #d9dee8;
+        --accent: #1f5eff;
+        --accent-soft: #e8f0ff;
+        --danger: #b42318;
+        --danger-soft: #fff0ed;
+        --ok: #166534;
+        --ok-soft: #ecfdf3;
+        --warn: #8a4b00;
+        --warn-soft: #fff7e6;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 19px;
+      }
+
+      h3 {
+        margin: 20px 0 8px;
+        font-size: 15px;
+      }
+
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .lead {
+        max-width: 900px;
+        margin: 0;
+        color: #324056;
+        font-size: 16px;
+        line-height: 1.7;
+      }
+
+      section {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 22px 24px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        background: #fbfcfe;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: var(--accent-soft);
+        color: #1849b7;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .badge.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .badge.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #39465a;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+
+      .callout {
+        border-left: 4px solid var(--accent);
+        background: #f8fbff;
+      }
+
+      .risk {
+        border-left: 4px solid var(--danger);
+        background: #fffafa;
+      }
+
+      .question {
+        border-left: 4px solid var(--warn);
+        background: #fffdf7;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 32px 16px 56px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-279 / 2026-05-25 / CLAiR EMR Order Platform</p>
+      <h1>Workspace Order Catalog Platform 기획 보고서</h1>
+      <p class="lead">
+        병원관리의 Order 관리는 임상병리 화면 하나가 아니라 CLAiR EMR 전체 업무 오더의 마스터 데이터가 되어야 한다.
+        CLAiR는 기본 오더 프리셋을 제공하고, 각 병원은 자기 워크스페이스 안에서 오더를 수정, 삭제, 추가한다.
+        진료/차트에서 선택해 확정한 순간에는 환자와 진료 건에 묶인 실제 오더 snapshot이 생기고, 오더 성격에 따라 검사,
+        영상, 조제, 처치, 입원, 수납으로 이동한다.
+      </p>
+      <span class="badge ok">Status: Planning report ready</span>
+      <span class="badge warn">Implementation: Not started</span>
+      <span class="badge danger">Remote Supabase: Not touched</span>
+
+      <section>
+        <h2>1. 이번 작업에서 만든 Linear 구조</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>구분</th>
+              <th>이름</th>
+              <th>상태</th>
+              <th>링크</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Initiative</td>
+              <td>CLAiR EMR Order Platform</td>
+              <td>Active</td>
+              <td><a href="https://linear.app/deny-93/initiative/clair-emr-order-platform-8a5379a61557">Linear initiative</a></td>
+            </tr>
+            <tr>
+              <td>Project</td>
+              <td>15 CLAiR EMR Workspace Order Catalog Platform</td>
+              <td>In Progress</td>
+              <td><a href="https://linear.app/deny-93/project/15-clair-emr-workspace-order-catalog-platform-f48055d3ab6c">Linear project</a></td>
+            </tr>
+            <tr>
+              <td>Active issue</td>
+              <td>DEN-279 Plan workspace order catalog platform contract and security gates</td>
+              <td>In Progress at report time</td>
+              <td><a href="https://linear.app/deny-93/issue/DEN-279/00-01-plan-workspace-order-catalog-platform-contract-and-security">DEN-279</a></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          생성한 마일스톤은 <code>00 Product/Data Contract</code>, <code>01 Preset &amp; Workspace Catalog</code>,
+          <code>02 Hospital Admin Catalog UX</code>, <code>03 Chart Selection &amp; Snapshot</code>,
+          <code>04 Fulfillment/Billing Routing</code>, <code>05 Security QA &amp; Closeout</code>이다.
+        </p>
+        <p>
+          Linear workspace의 free issue limit에 도달해 <code>DEN-279</code>부터 <code>DEN-282</code>까지만 실제 이슈로 생성됐다.
+          나머지 실행 이슈는 이 보고서와 Linear 프로젝트 문서에 생성 대기 backlog로 남긴다.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. 제품 모델</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>System order presets</h3>
+            <p>
+              CLAiR가 제공하는 표준 오더 템플릿이다. CBC, 심전도, 방사선, 예방접종, 수액, 처치, 입원료, 약품,
+              의료물품 같은 기본 후보를 담는다. 병원 운영 데이터가 아니라 복사 원본이다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Workspace order catalog</h3>
+            <p>
+              실제 병원관리 화면에 보이는 병원별 오더 목록이다. 같은 프리셋에서 출발해도 병원마다 원내명, 청구명,
+              가격, 사용여부, 지시사항, 라우팅 destination이 달라질 수 있다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Encounter orders</h3>
+            <p>
+              진료/차트에서 선택되고 확정된 환자별 실제 오더다. 이 레이어는 catalog를 참조하되, 확정 당시 이름과
+              가격, 청구명, 지시사항을 snapshot으로 저장해야 한다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Fulfillment and billing</h3>
+            <p>
+              확정 오더 중 업무가 필요한 항목은 lab, imaging, dispensing, treatment, inpatient queue로 이동한다.
+              청구 가능한 항목은 서버가 보유한 금액 snapshot을 기준으로 billing candidate가 된다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>3. 현재 저장소 기준으로 확인한 사실</h2>
+        <ul>
+          <li>
+            Project 07 문서에서는 <code>order_catalog_items</code>, <code>order_sets</code>, <code>order_set_items</code>,
+            <code>lab_test_items</code>, <code>order_catalog_lab_test_item_links</code>를 병원관리 master data로 정의했다.
+          </li>
+          <li>
+            기존 schema plan은 chart 적용 시 이름, 청구명, 가격, 세금, 판매 단위, 대상 동물, source preset id/version,
+            metadata를 snapshot으로 복사해야 한다고 정리해 두었다.
+          </li>
+          <li>
+            현재 route는 <code>GET /api/workspaces/[workspaceId]/hospital-admin/order-catalog</code>와
+            <code>mode=chart-search</code>를 제공하고, <code>POST/PATCH</code> mutation에는 permission과 rate limit이 걸려 있다.
+          </li>
+          <li>
+            현재 core에는 <code>create</code>, <code>update</code>, <code>pause</code> mutation이 있다. 화면의 삭제 UX는 실제로는
+            과거 기록을 깨지 않는 비활성화 또는 soft delete 정책으로 정리하는 게 맞다.
+          </li>
+          <li>
+            Project 08 문서와 core는 chart-confirmed order가 fulfillment work item으로 이동하고, 완료 상태가 order lifecycle과
+            billing candidate로 반영되는 계약을 이미 갖고 있다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. 결정해야 하는 데이터 계약</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>객체</th>
+              <th>책임</th>
+              <th>핵심 필드</th>
+              <th>주의점</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>system_order_presets</code></td>
+              <td>CLAiR 기본 프리셋 원본</td>
+              <td>preset id, version, category, standard name, default price, default routing, metadata</td>
+              <td>병원 수정본을 덮어쓰지 않는다.</td>
+            </tr>
+            <tr>
+              <td><code>workspace_order_catalog</code></td>
+              <td>병원별 실제 오더 마스터</td>
+              <td>workspace id, source preset, standard name, in-hospital name, billing name, aliases, status, price, target, destination</td>
+              <td>workspace isolation과 admin permission이 필수다.</td>
+            </tr>
+            <tr>
+              <td><code>encounter_orders</code></td>
+              <td>환자/진료별 확정 오더</td>
+              <td>encounter id, catalog item id, applied snapshot, quantity, priority, status, requested by</td>
+              <td>나중에 catalog가 바뀌어도 과거 차트와 청구는 바뀌면 안 된다.</td>
+            </tr>
+            <tr>
+              <td><code>fulfillment_work_items</code></td>
+              <td>후속 부서 업무 항목</td>
+              <td>queue type, status, assignee, source snapshot, due time, completion reason</td>
+              <td>중복 생성 방지와 invalid transition 차단이 필요하다.</td>
+            </tr>
+            <tr>
+              <td><code>billing_candidates</code></td>
+              <td>수납 후보 항목</td>
+              <td>server-owned service item, amount snapshot, tax, billing status</td>
+              <td>클라이언트 제출 금액을 신뢰하면 안 된다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>5. 화면과 사용자 흐름</h2>
+        <ol>
+          <li>
+            병원 생성 또는 초기 설정 시 CLAiR 기본 프리셋이 병원별 workspace catalog로 복사된다.
+          </li>
+          <li>
+            병원관리자는 Order 관리에서 전체 오더를 조회하고, 카테고리/하위 타입/사용여부/청구/업무유형으로 필터링한다.
+          </li>
+          <li>
+            상세 drawer에서 원내 Order명, 청구서명, 별칭, 전달 여부, 대상, 케어가이드, 원내 지시사항, 메모, 가격, 사용여부를 수정한다.
+          </li>
+          <li>
+            삭제 버튼은 실제 삭제보다 inactive, paused, archived 같은 안전 상태로 처리한다. 이미 사용된 오더는 historical snapshot만 남긴다.
+          </li>
+          <li>
+            <code>+ Order</code>는 현재 병원의 workspace catalog에 새 오더를 만든다. system preset에는 영향을 주지 않는다.
+          </li>
+          <li>
+            진료/차트에서는 현재 병원의 active catalog만 검색한다. 의사가 오더를 확정하면 encounter order snapshot이 생긴다.
+          </li>
+          <li>
+            확정된 오더는 destination과 task_required에 따라 후속 queue 또는 billing candidate로 이동한다.
+          </li>
+        </ol>
+      </section>
+
+      <section class="risk">
+        <h2>6. CSO 보안·무결성 기획 보강</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>위협</th>
+              <th>위험</th>
+              <th>기획 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Spoofing</td>
+              <td>권한 없는 사용자가 병원 오더 가격이나 사용여부를 바꿀 수 있음</td>
+              <td>오더 CRUD는 <code>service_catalog:manage</code>, 차트 검색은 <code>service_catalog:view</code>로 분리한다.</td>
+            </tr>
+            <tr>
+              <td>Tampering</td>
+              <td>catalog 수정이 과거 차트와 청구 금액을 바꿔 버림</td>
+              <td>확정 시 snapshot을 저장하고 billing amount는 서버 계산값만 사용한다.</td>
+            </tr>
+            <tr>
+              <td>Repudiation</td>
+              <td>누가 가격/청구명/사용여부를 바꿨는지 추적할 수 없음</td>
+              <td>create, update, pause, archive, restore, price change에 safe audit event를 남긴다.</td>
+            </tr>
+            <tr>
+              <td>Information disclosure</td>
+              <td>후속 queue snapshot에 SOAP 원문, 토큰, 외부 provider payload가 섞임</td>
+              <td>source snapshot은 표시와 업무 수행에 필요한 최소 안전 필드만 허용한다.</td>
+            </tr>
+            <tr>
+              <td>Elevation of privilege</td>
+              <td>다른 워크스페이스 catalog item id로 cross-workspace 접근 가능</td>
+              <td>모든 read/mutation은 workspace id, actor membership, item workspace ownership을 함께 검증한다.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          이 보고서는 전문 보안 감사의 대체물이 아니다. 구현 전 기획 단계에서 공격 경로를 줄이기 위한 1차 보안 설계 기준이다.
+          민감 데이터, 결제, 실병원 운영 전에는 별도 보안 검토와 실제 RLS/server enforcement 검증이 필요하다.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. 실행 이슈 계획</h2>
+        <h3>Linear에 생성 완료</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>이슈</th>
+              <th>마일스톤</th>
+              <th>목적</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-279/00-01-plan-workspace-order-catalog-platform-contract-and-security">DEN-279</a></td>
+              <td>00 Product/Data Contract</td>
+              <td>현재 보고서와 보안 gate 정리</td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-280/00-02-reconcile-existing-order-catalog-and-fulfillment-contracts">DEN-280</a></td>
+              <td>00 Product/Data Contract</td>
+              <td>기존 Project 07/08 계약 재사용·보강 범위 정리</td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-281/01-01-define-system-presets-and-workspace-catalog-initialization">DEN-281</a></td>
+              <td>01 Preset &amp; Workspace Catalog</td>
+              <td>system preset과 workspace catalog 초기화 계약 확정</td>
+            </tr>
+            <tr>
+              <td><a href="https://linear.app/deny-93/issue/DEN-282/01-02-implement-workspace-catalog-seed-and-preset-import-boundary">DEN-282</a></td>
+              <td>01 Preset &amp; Workspace Catalog</td>
+              <td>workspace catalog seed/import boundary 구현</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Linear issue limit 때문에 생성 대기</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>예정 제목</th>
+              <th>마일스톤</th>
+              <th>목적</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>02-01 Connect hospital admin order table to workspace catalog read</td>
+              <td>02 Hospital Admin Catalog UX</td>
+              <td>병원관리 Order 테이블을 전체 workspace catalog read source에 연결</td>
+            </tr>
+            <tr>
+              <td>02-02 Implement order drawer create update and soft-delete mutations</td>
+              <td>02 Hospital Admin Catalog UX</td>
+              <td>상세 drawer 저장, 추가, 삭제/비활성화, 검증 오류 처리</td>
+            </tr>
+            <tr>
+              <td>03-01 Connect chart order search to active workspace catalog</td>
+              <td>03 Chart Selection &amp; Snapshot</td>
+              <td>차트 오더 검색을 현재 병원의 active catalog와 order set으로 연결</td>
+            </tr>
+            <tr>
+              <td>03-02 Persist confirmed encounter order snapshots from catalog</td>
+              <td>03 Chart Selection &amp; Snapshot</td>
+              <td>확정 시 이름, 청구명, 가격, 지시사항, destination snapshot 저장</td>
+            </tr>
+            <tr>
+              <td>04-01 Route confirmed orders to downstream fulfillment queues</td>
+              <td>04 Fulfillment/Billing Routing</td>
+              <td>lab, imaging, dispensing, treatment, inpatient queue 생성/갱신</td>
+            </tr>
+            <tr>
+              <td>04-02 Sync billable order snapshots to billing candidates</td>
+              <td>04 Fulfillment/Billing Routing</td>
+              <td>청구 가능 항목을 서버 금액 snapshot 기준으로 수납 후보에 반영</td>
+            </tr>
+            <tr>
+              <td>05-01 Security review order platform permissions audit and tenant isolation</td>
+              <td>05 Security QA &amp; Closeout</td>
+              <td>권한, audit payload, cross-workspace denial, amount integrity 검토</td>
+            </tr>
+            <tr>
+              <td>05-02 End-to-end order platform replay and representative closeout</td>
+              <td>05 Security QA &amp; Closeout</td>
+              <td>병원관리 catalog 수정부터 차트 확정, 후속 화면, 수납까지 replay 검증</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>8. 권장 작업 순서</h2>
+        <ol>
+          <li>먼저 <code>DEN-280</code>에서 기존 Project 07/08 코드와 문서의 재사용 범위를 확인한다.</li>
+          <li><code>DEN-281</code>에서 system preset과 workspace catalog의 데이터 계약을 고정한다.</li>
+          <li><code>DEN-282</code>에서 local-first seed/import boundary를 구현한다.</li>
+          <li>Linear issue limit이 해소되면 생성 대기 이슈를 실제 Linear 이슈로 옮긴다.</li>
+          <li>그 다음 병원관리 drawer CRUD, 차트 검색/확정 snapshot, 후속 라우팅, 보안 QA 순서로 진행한다.</li>
+        </ol>
+      </section>
+
+      <section class="callout">
+        <h2>9. 이번 작업 범위에서 하지 않은 것</h2>
+        <ul>
+          <li>앱 구현, UI 수정, DB schema 변경, migration 작성은 하지 않았다.</li>
+          <li>remote Supabase, staging migration, RLS replay, production deploy는 실행하지 않았다.</li>
+          <li>실병원 오더 데이터, 실제 환자/보호자/결제/신원 데이터는 사용하지 않았다.</li>
+          <li>의료적 추천, 처방 정확성, 법적/컴플라이언스 인증은 이 보고서의 보장 범위가 아니다.</li>
+        </ul>
+      </section>
+
+      <section class="question">
+        <h2>10. 승욱이 나중에 확인·검수·제공해야 하는 질문</h2>
+        <ol>
+          <li>초기 CLAiR 기본 프리셋의 범위는 어디까지로 할까? 검사, 영상, 예방, 처치, 수술, 입원, 치료, 처방/조제/의료물품을 모두 1차에 넣을지 결정이 필요하다.</li>
+          <li>병원이 CLAiR 기본 프리셋 업데이트를 받을 때 자동 병합을 원하나, 아니면 비교 후 수동 가져오기를 원하나?</li>
+          <li>삭제 버튼의 제품 문구는 “삭제”로 유지할까, 아니면 실제 동작에 맞춰 “사용중지” 또는 “보관”으로 바꿀까?</li>
+          <li>가격 변경은 즉시 적용만으로 충분한가, 아니면 적용 시작일과 가격 이력이 필요할까?</li>
+          <li>오더 확정 후 lab/imaging/dispensing/treatment/inpatient/billing_only/chart_only destination 분류를 이 기준으로 확정해도 될까?</li>
+          <li>technician이 후속 업무를 취소할 수 있게 할까, 아니면 chart로 반려만 가능하게 할까?</li>
+          <li>lab/imaging 완료 후 billing으로 바로 갈 수 있는 항목과 수의사 review가 필요한 항목을 어떻게 나눌까?</li>
+          <li>오더 세트는 이번 프로젝트에서 차트 검색까지 포함할까, 아니면 개별 오더 안정화 후 별도 단계로 둘까?</li>
+          <li>병원관리에서 오더 수정 권한을 hospital_admin 전용으로 둘까, manager 또는 lead technician까지 열어둘까?</li>
+          <li>실제 병원 오더 목록 import는 MVP 이후로 미룰까, 아니면 CSV 템플릿 설계만 먼저 넣을까?</li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

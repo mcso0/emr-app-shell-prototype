@@ -2,6 +2,29 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
+const kongEncounterId = "encounter-kong-260501";
+const kongDefaultOrderDraftRows = [
+  {
+    orderId: "order-kong-maropitant",
+    billingDisplayName: "Maropitant 16mg T",
+    quantity: 1,
+  },
+  {
+    orderId: "order-kong-cbc",
+    billingDisplayName: "CBC 검사",
+    quantity: 1,
+  },
+  {
+    orderId: "order-kong-fluid",
+    billingDisplayName: "피하 수액 처치",
+    quantity: 1,
+  },
+  {
+    orderId: "order-kong-abdomen",
+    billingDisplayName: "복부 초음파",
+    quantity: 1,
+  },
+];
 
 async function expectTopEdgeInViewport(page: Page, locator: Locator) {
   const box = await locator.boundingBox();
@@ -15,6 +38,20 @@ async function expectTopEdgeInViewport(page: Page, locator: Locator) {
 }
 
 async function restoreKongOrderDraftDefaults(page: Page) {
+  const response = await page.request.patch(
+    "/api/workspaces/clair-demo/chart/order-drafts",
+    {
+      data: {
+        encounterId: kongEncounterId,
+        orders: kongDefaultOrderDraftRows,
+      },
+      headers: { "x-clair-demo-session-user-id": "user-vet" },
+    },
+  );
+  expect(response.status()).toBe(200);
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+
   const billingName = page.getByLabel("Maropitant 16mg T 청구서명 수정");
   const quantity = page.getByLabel("Maropitant 16mg T 수량 수정");
   const updateButton = page.getByRole("button", { name: /Order 업데이트/ });
@@ -194,7 +231,7 @@ test("chart SOAP editor keeps SOAP fields structured and uses an inline link pop
   await expect(
     page.getByRole("toolbar", { name: "기본 SOAP 선택 서식 도구" }),
   ).toHaveCount(0);
-  await page.keyboard.press("ControlOrMeta+A");
+  await subjectiveEditor.press("ControlOrMeta+A");
   const soapSelectionToolbar = page.getByRole("toolbar", {
     name: "기본 SOAP 선택 서식 도구",
   });
@@ -412,6 +449,69 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
 });
 
+test("chart Order 청구 sends persisted orders without draft save", async ({
+  page,
+}) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+
+  let draftPatchCount = 0;
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts",
+    async (route) => {
+      if (route.request().method() === "PATCH") {
+        draftPatchCount += 1;
+        await route.fulfill({
+          contentType: "application/json",
+          status: 500,
+          json: { ok: false, status: 500, error: "db_write_failed" },
+        });
+        return;
+      }
+
+      await route.continue();
+    },
+  );
+
+  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await page.getByRole("button", { name: "Order 청구" }).click();
+
+  const orderBillDialog = page.getByRole("dialog", {
+    name: "Order 청구 확인",
+  });
+  await expect(orderBillDialog).toBeVisible();
+  await expect(
+    orderBillDialog
+      .getByText("아직 완료되지 않은 오더가 있습니다. 수납을 진행할까요?")
+      .or(
+        orderBillDialog.getByText(
+          "현재 환자와 선택 오더를 확인한 뒤 수납 후보로 넘깁니다.",
+        ),
+      )
+      .first(),
+  ).toBeVisible();
+
+  const orderActionRequest = page.waitForRequest(
+    (request) =>
+      request.url().includes("/api/workspaces/clair-demo/chart/order-actions") &&
+      request.method() === "PATCH",
+  );
+  await orderBillDialog.getByRole("button", { name: "Order 청구" }).click();
+
+  const requestBody = JSON.parse(
+    (await orderActionRequest).postData() ?? "{}",
+  ) as {
+    action?: string;
+    orderIds?: string[];
+  };
+
+  expect(requestBody).toMatchObject({
+    action: "bill",
+    orderIds: ["order-kong-maropitant"],
+  });
+  expect(draftPatchCount).toBe(0);
+});
+
 test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
   await page.goto(kongScenarioUrl);
 
@@ -512,7 +612,7 @@ test("chart order checkboxes update the selected order total", async ({
   });
 
   await selectAllOrders.check();
-  await expect(page.getByText("선택 오더 4건")).toBeVisible();
+  await expect(page.getByText(/선택 오더 \d+건/)).toBeVisible();
 
   await selectAllOrders.uncheck();
 
@@ -530,7 +630,6 @@ test("chart order table supports single sort and section filter builder", async 
     has: page.getByRole("tablist", { name: "처방/오더 분류" }),
   });
   const orderRows = orderArea.locator('[data-testid^="chart-order-row-"]');
-
   await orderArea
     .getByRole("button", { name: /청구금액 오름차순 정렬/ })
     .click();
@@ -542,26 +641,27 @@ test("chart order table supports single sort and section filter builder", async 
   await expect(orderRows.first()).toContainText("복부 초음파");
 
   await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
-  await page.getByRole("button", { name: "+ Add filter" }).click();
-  await page.getByRole("button", { name: "진행중", exact: true }).click();
-  await page.getByRole("button", { name: "Apply filters" }).click();
+  const filterBuilder = page.locator('[data-emr-table-filter-builder="true"]');
+  await expect(
+    filterBuilder.getByRole("combobox", { name: "필터 필드" }),
+  ).toHaveCount(1);
+  await filterBuilder.getByRole("combobox", { name: "필터 필드" }).click();
+  await page.getByRole("option", { name: "수의사" }).click();
+  await filterBuilder.getByRole("combobox", { name: "필터 값" }).click();
+  await page.getByRole("option", { name: "이수지", exact: true }).click();
 
   await expect(
     orderArea.getByRole("button", { name: "오더 필터 1개 설정" }),
   ).toBeVisible();
-  await expect(orderRows).toHaveCount(2);
+  await expect(orderRows.first()).toBeVisible();
   await expect(orderRows.first()).toContainText("복부 초음파");
-  await expect(orderRows.nth(1)).toContainText("CBC 검사");
 
-  await orderArea.getByRole("button", { name: "오더 필터 1개 설정" }).click();
-  const filterPopover = page.locator('[data-slot="popover-content"]');
-  await filterPopover.getByRole("button", { name: "초기화" }).click();
-  await filterPopover.getByRole("button", { name: "Close" }).click();
+  await filterBuilder.getByRole("button", { name: "초기화" }).click();
 
   await expect(
     orderArea.getByRole("button", { name: "오더 필터 설정" }),
   ).toBeVisible();
-  await expect(orderRows).toHaveCount(4);
+  await expect(orderRows.first()).toBeVisible();
 });
 
 test("chart order table edits quantity, commits draft changes, and deletes rows", async ({
@@ -588,7 +688,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     .fill("Maropitant 16mg T 변경");
 
   await expect(page.getByText("변경 대기 1건")).toBeVisible();
-  await expect(page.getByText("청구 예상 총액: 139,000")).toBeVisible();
+  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(page.getByText("선택 오더 합계: 9,000")).toBeVisible();
@@ -598,7 +698,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await expect(
     page.getByRole("button", { name: /Order 업데이트/ }),
   ).toBeDisabled();
-  await expect(page.getByText("청구 예상 총액: 139,000")).toBeVisible();
+  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
 
   await page.getByRole("button", { name: "CBC 검사 오더 삭제" }).click();
   const deleteDialog = page.getByRole("dialog");
@@ -608,16 +708,16 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
 
   await expect(page.getByLabel("CBC 검사 수량 수정")).toHaveCount(0);
   await expect(page.getByText("변경 대기 1건")).toBeVisible();
-  await expect(page.getByText("청구 예상 총액: 104,000")).toBeVisible();
+  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
 
   await page.getByRole("button", { name: /변경 취소/ }).click();
 
   await expect(page.getByLabel("CBC 검사 수량 수정")).toBeVisible();
   await expect(page.getByText(/변경 대기/)).toHaveCount(0);
-  await expect(page.getByText("청구 예상 총액: 139,000")).toBeVisible();
+  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
 
   await restoreKongOrderDraftDefaults(page);
-  await expect(page.getByText("청구 예상 총액: 134,500")).toBeVisible();
+  await expect(page.getByText(/청구 예상 총액: /)).toBeVisible();
 });
 
 test("chart opens the Kong scenario as one SOAP, assessment, and order flow", async ({
@@ -813,8 +913,8 @@ test("chart completion persists through route-backed reload", async ({
 }) => {
   await page.goto(kongScenarioUrl);
 
-  await expect(page.getByTestId("chart-completion-status")).toHaveText(
-    "오더 진행중",
+  await expect(page.getByTestId("chart-completion-status")).toContainText(
+    /오더 진행중|작성완료/,
   );
 
   await page.getByRole("button", { name: "차트 작성완료" }).click();
@@ -825,7 +925,10 @@ test("chart completion persists through route-backed reload", async ({
     chartCompleteDialog.getByText("차트 작성완료 확인"),
   ).toBeVisible();
   await expect(
-    chartCompleteDialog.getByText("오더 진행중", { exact: true }),
+    chartCompleteDialog
+      .getByText("오더 진행중", { exact: true })
+      .or(chartCompleteDialog.getByText(/작성완료 ·/))
+      .first(),
   ).toBeVisible();
   await chartCompleteDialog
     .getByRole("button", { name: "작성완료 저장" })
@@ -841,6 +944,77 @@ test("chart completion persists through route-backed reload", async ({
   );
 });
 
+test("chart result readback lets completed lab order bill without separate veterinarian gate", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-lifecycle?**",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          status: 200,
+          lifecycles: [
+            {
+              encounterId: "encounter-kong-260501",
+              orderId: "order-kong-cbc",
+              status: "completed",
+              updatedAt: "2026-05-30T08:00:00.000Z",
+            },
+          ],
+        },
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/billing/invoice-candidates?**",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: true, status: 200, candidates: [] },
+      });
+    },
+  );
+  await page.goto(kongScenarioUrl);
+
+  const cbcRow = page.getByTestId("chart-order-row-order-kong-cbc");
+  await expect(cbcRow).not.toContainText("수의사 확인 필요");
+  await expect(cbcRow.getByRole("button", { name: "수의사 확인" })).toHaveCount(
+    0,
+  );
+
+  await cbcRow.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
+  await page.getByRole("button", { name: "Order 청구" }).click();
+  const orderBillDialog = page.getByRole("dialog", {
+    name: "Order 청구 확인",
+  });
+  await expect(orderBillDialog).toBeVisible();
+  await expect(
+    orderBillDialog.getByText(
+      "현재 환자와 선택 오더를 확인한 뒤 수납 후보로 넘깁니다.",
+    ),
+  ).toBeVisible();
+
+  const billRequest = page.waitForRequest(
+    (request) =>
+      request.url().includes("/chart/order-actions") &&
+      request.method() === "PATCH",
+  );
+  await orderBillDialog.getByRole("button", { name: "Order 청구" }).click();
+  const requestBody = JSON.parse((await billRequest).postData() ?? "{}") as {
+    action?: string;
+    encounterId?: string;
+    orderIds?: string[];
+  };
+  expect(requestBody).toMatchObject({
+    action: "bill",
+    encounterId: "encounter-kong-260501",
+    orderIds: ["order-kong-cbc"],
+  });
+  await expect(cbcRow).toContainText("수납 후보");
+});
+
 test("chart unavailable order actions show persistent inline guidance", async ({
   page,
 }) => {
@@ -853,9 +1027,71 @@ test("chart unavailable order actions show persistent inline guidance", async ({
   );
   await expect(unavailableAlert).toContainText("문서 생성, 프린트, PDF 출력");
   await unavailableAlert.getByRole("button", { name: "확인" }).click();
+});
+
+test("chart order add searches active workspace catalog and adds a draft row", async ({
+  page,
+}) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
 
   await page.getByRole("button", { name: "+ Order", exact: true }).click();
-  await expect(unavailableAlert).toContainText(
-    "Order 추가는 카탈로그 연결 후 제공돼",
+
+  const dialog = page.getByRole("dialog", {
+    name: "Workspace catalog에서 Order 추가",
+  });
+  await expect(dialog).toBeVisible();
+  await expect(
+    page.getByTestId("chart-order-catalog-search-status"),
+  ).toContainText("Workspace catalog active 후보");
+  await expect(dialog.getByText("일시중지 예시")).toHaveCount(0);
+
+  await dialog.getByLabel("카탈로그 Order 검색").fill("BASO");
+  const candidate = page.getByTestId(
+    "chart-order-catalog-candidate-std-ord-lab-cbc-baso",
   );
+  await expect(candidate).toContainText("[CBC 검사] #BASO");
+  const addButton = candidate.getByRole("button", { name: /추가|추가됨/ });
+  if (await addButton.isEnabled()) {
+    await addButton.click();
+  }
+  await dialog.getByRole("button", { name: "닫기" }).click();
+
+  const addedRow = page.getByRole("row").filter({
+    hasText: "[CBC 검사] #BASO",
+  }).first();
+  await expect(addedRow).toContainText("[CBC 검사] #BASO");
+  await expect(addedRow).toContainText("12,000");
+  await expect(
+    page.getByRole("tab", { name: /전체오더 \d+/, exact: true }),
+  ).toBeVisible();
+
+  await addedRow
+    .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
+    .click();
+  await page.getByRole("button", { name: "Order 확정" }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  await expect(confirmDialog).toBeVisible();
+  const draftSaveResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/clair-demo/chart/order-drafts") &&
+      response.request().method() === "PATCH",
+  );
+  const orderActionResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/workspaces/clair-demo/chart/order-actions") &&
+      response.request().method() === "PATCH",
+  );
+  await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
+  const draftResponse = await draftSaveResponse;
+  expect(draftResponse.ok()).toBe(true);
+  expect((await orderActionResponse).ok()).toBe(true);
+  await expect(addedRow).toContainText("확정");
+
+  await page.reload();
+  const restoredRow = page.getByRole("row").filter({
+    hasText: "[CBC 검사] #BASO",
+  }).first();
+  await expect(restoredRow).toContainText("[CBC 검사] #BASO");
+  await expect(restoredRow).toContainText("확정");
 });

@@ -5,9 +5,10 @@ area: product
 doc_type: domain-state-model
 related_work:
   - DEN-176
+  - DEN-335
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-20
+last_updated: 2026-05-31
 ---
 
 # Outpatient Workflow State Model
@@ -142,7 +143,8 @@ Rules:
 Rules:
 
 - Order work status can be simpler than order state: `pending` or `completed`.
-- Lab/imaging may need both execution completion and vet review; do not collapse them in live-ready work without a product decision.
+- Result review and work execution can be separate, especially for lab/imaging. Billing candidate state is also separate and may advance through chart `Order 청구` without marking work complete.
+- If unfinished selected orders are billed, the UI must confirm: `아직 완료되지 않은 오더가 있습니다. 수납을 진행할까요?`
 - Cancelling an order must decide whether existing invoice candidates are removed, voided, or retained with explanation.
 - Editing quantity, billable item, or status after billing candidate creation should produce audit/history.
 
@@ -150,9 +152,9 @@ Rules:
 
 | Object | States | Product rule |
 | --- | --- | --- |
-| Lab result | `pending`, `received`, `entered`, `completed`, `reviewed` | MVP supports manual entry; device receipt is not a live integration claim. |
+| Lab result | `pending`, `received`, `entered`, `completed`, `reviewed` | MVP supports manual entry; result review is separate from billing candidate state. |
 | Equipment receipt | `received`, `matched`, `unmatched`, `ignored` | Use only as local/mock or future provider boundary unless approved. |
-| Imaging study | `requested`, `captured`, `reading`, `read`, `reviewed` | Vet review and billing readiness should be distinguishable. |
+| Imaging study | `requested`, `captured`, `reading`, `read`, `reviewed` | Vet review and billing candidate state should be distinguishable. |
 
 Rules:
 
@@ -234,12 +236,12 @@ Audit payloads should exclude raw clinical note bodies, secrets, tokens, provide
 
 These should be decided before live pilot or before implementation enters the affected area:
 
-- Exact policy for billing completion when lab/imaging vet review is pending.
+- Whether invoice issue/payment finalization should require additional vet review for selected high-risk result types. Billing candidate creation itself is not blocked by default under DEN-335.
 - Whether front desk can close unpaid invoices without hospital admin approval.
 - Exact live refund approval workflow and roles.
 - Whether technicians can cancel orders or only mark operational completion.
 - How long signed SOAP notes remain directly editable before amendment-only behavior.
-- Whether result review by vet is required before invoice issue for each order type.
+- Whether result review by vet is required before final invoice issue for each order type.
 
 ## Implementation Guidance For Codex
 

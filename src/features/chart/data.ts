@@ -39,6 +39,8 @@ export type ChartOrderGroup = {
   orders: EmrOrder[];
 };
 
+export type ChartEncounterBundle = NonNullable<ReturnType<typeof getMockEncounterBundle>>;
+
 const chartQueueStatuses: OrderQueueStatusDefinition[] = [
   {
     id: "in_progress",
@@ -111,6 +113,41 @@ export const getChartQueueRows = (): ChartQueueRow[] => {
 };
 
 export const getChartEncounter = (encounterId: EmrId) => getMockEncounterBundle(encounterId);
+
+export const createChartEncounterBundleFromLiveHandoff = ({
+  encounter,
+  patient,
+  primaryGuardian,
+}: {
+  encounter: Encounter;
+  patient: Patient;
+  primaryGuardian?: Guardian;
+}): ChartEncounterBundle => ({
+  encounter,
+  patient,
+  guardians: primaryGuardian ? [primaryGuardian] : [],
+  primaryGuardian,
+  appointment: undefined,
+  waitingQueueEntries: [],
+  soapNotes: [],
+  diagnoses: [],
+  prescriptions: [],
+  prescriptionItems: [],
+  orderGroups: [],
+  orders: [],
+  orderAssignments: [],
+  orderEvents: [],
+  invoices: [],
+  invoiceLines: [],
+  payments: [],
+  csHistories: [],
+  labResults: [],
+  equipmentReceipts: [],
+  imagingStudies: [],
+  attachments: [],
+  messageDeliveries: [],
+  auditLogs: [],
+});
 
 export const getChartQueueStatuses = () => chartQueueStatuses;
 

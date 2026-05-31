@@ -40,6 +40,7 @@ The active target is Product MVP. The prototype already covers the outpatient fl
 
 - Do not treat client-only permission gating as complete security.
 - Do not implement live Supabase project validation, migrations, RLS, or server enforcement unless a work item explicitly scopes it.
+- If a prohibited or approval-gated action is the better or necessary implementation path, do not route around it with a weaker workaround. Stop, state the required gated action and the reason, then ask 승욱 for explicit approval before continuing.
 - Before DB structure or migration work, check `docs/work/` issue docs and relevant `docs/product/` or `docs/engineering/` data-contract docs first.
 - For screen work, check the reference screen index and actual image existence before claiming pixel-level alignment.
 - For Next.js application code, read the relevant `node_modules/next/dist/docs/` guide first.
@@ -66,6 +67,7 @@ For Linear requests, prefer `$manual-linear-ops` when available. If the skill is
 - Stop meaningful issue work at `Human Review`; move to `Done` only when the representative explicitly accepts or asks.
 - Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo/link/wording fixes.
 - Do not enter live Supabase, DB migration, RLS, payment/subscription, email delivery, production deploy, or role/permission policy changes without explicit approval.
+- If that gated scope is needed to solve the issue correctly, pause the workaround path and request explicit approval with the target environment and operation named.
 
 ## Current Recommended Work
 

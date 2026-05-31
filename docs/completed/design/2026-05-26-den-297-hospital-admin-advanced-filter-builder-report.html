@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-297 병원관리 Order Catalog Advanced Filter Builder 마이그레이션 보고</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17202a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 24px 56px;
+      }
+      section {
+        margin-top: 18px;
+        padding: 20px;
+        border: 1px solid #d9dee7;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #eef1f5;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+      .eyebrow {
+        margin-bottom: 8px;
+        color: #5d6b7c;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .status {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 4px 9px;
+        border: 1px solid #a7d8b5;
+        border-radius: 999px;
+        background: #eefaf1;
+        color: #1f6b37;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .caveat {
+        border-color: #f0c36a;
+        background: #fff8e8;
+      }
+      img {
+        max-width: 100%;
+        border: 1px solid #d9dee7;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Project 13 / DEN-297</div>
+      <h1>병원관리 Order Catalog 필터 UI를 공용 Advanced Filter Builder로 이전</h1>
+      <p>
+        병원관리 Order catalog 테이블이 기존 feature-local 필터 UI 대신 공용
+        <code>EmrTableFilterBuilder</code>를 사용하도록 변경됐다. 이로써 billing, chart/order,
+        customer, hospital admin order catalog가 같은 필터 builder 규칙을 공유한다.
+      </p>
+      <span class="status">Human Review 준비 완료</span>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li>Order catalog의 로컬 필터 builder를 제거하고 공용 builder/model helper를 적용했다.</li>
+          <li>완성된 field/operator/value 조건만 <code>Filter N</code>과 결과 필터링에 반영된다.</li>
+          <li>처음 열면 조건 row 하나가 draft 상태로 보이고, 미완성 row는 결과에 영향을 주지 않는다.</li>
+          <li>기존 카테고리, 검색, 사용여부, 청구, 업무유형 필터를 먼저 적용한 뒤 advanced filter가 AND로 적용된다.</li>
+          <li>테이블 헤더 정렬은 기존처럼 단일 컬럼 정렬만 유지하고, 필터는 섹션 action 영역의 Filter 버튼에서 연다.</li>
+          <li>row 선택, row action, 상세 drawer, mock/session 기반 workspace catalog 흐름은 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>왜 중요한가</h2>
+        <p>
+          병원관리 Order catalog는 customer와 함께 admin 성격의 대표 테이블이다. 이번 변경으로 Project 13의
+          주요 채택 화면 모두가 같은 공용 advanced filter builder를 쓰게 되어 QA 기준과 사용 방식이 한 번 더
+          정리됐다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/hospital-admin/module.tsx</code></li>
+          <li><code>tests/hospital-admin.spec.ts</code></li>
+          <li><code>docs/design/system/table-sort-filter-behavior.md</code></li>
+          <li><code>docs/work/index.md</code></li>
+          <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-037-hospital-admin-advanced-filter-builder-migration.md</code></li>
+          <li><code>docs/completed/design/evidence/2026-05-26-den-297-hospital-admin-advanced-filter-builder.png</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/hospital-admin.spec.ts -g "hospital admin order catalog supports single sort and section filter builder" --reporter=line</code> 통과</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/hospital-admin.spec.ts --reporter=line</code> 통과, 9 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li>mock-auth Playwright screenshot evidence 캡처 완료</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section class="caveat">
+        <h2>주의할 점</h2>
+        <ul>
+          <li><code>npx eslint src/features/hospital-admin/module.tsx tests/hospital-admin.spec.ts</code>는 기존 dirty worktree의 <code>react-hooks/set-state-in-effect</code> 오류로 실패했다.</li>
+          <li><code>npm run lint</code>도 같은 오류 1건 때문에 실패했고, 그 외에는 기존 warning만 남아 있다.</li>
+          <li>저장된 view/filter, active chip row, 서버/DB/Supabase live validation, RLS, migration, server-side filtering은 여전히 제외다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Evidence</h2>
+        <p><code>docs/completed/design/evidence/2026-05-26-den-297-hospital-admin-advanced-filter-builder.png</code></p>
+        <img src="./evidence/2026-05-26-den-297-hospital-admin-advanced-filter-builder.png" alt="병원관리 Order catalog advanced filter builder 적용 화면" />
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          승욱 리뷰 후 문제가 없으면 DEN-297을 Done으로 이동하면 된다. 이후 범위를 넓힐 때는 아직 적용되지 않은
+          테이블을 별도 이슈로 목록화하고, saved view나 서버 필터링은 별도 제품 범위로 분리하는 편이 안전하다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

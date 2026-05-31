@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-290 Order Platform E2E Replay QA</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 44px 28px 60px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 29px;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      a {
+        color: #1d4ed8;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .info {
+        background: #eef4ff;
+        color: #1d4ed8;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-290 / 2026-05-27 / Order Platform E2E Replay QA</p>
+      <h1>Order Platform 화면 흐름 복구 리포트</h1>
+      <p>
+        병원관리 Order Catalog 저장부터 차트 오더 확정, fulfillment queue,
+        billing candidate까지 이어지는 대표 사용자 흐름을 다시 연결하고
+        regression으로 고정했다.
+      </p>
+      <span class="badge">Status: Human Review 준비</span>
+      <span class="badge info">localhost 화면 검수 완료</span>
+      <span class="badge warn">Remote Supabase/RLS replay 제외</span>
+
+      <section>
+        <h2>비개발자용 요약</h2>
+        <p>
+          화면에서 막히던 출발점은 병원관리 Order 저장 데이터가 같은 데모
+          브라우저 세션 안에서 다음 API 요청으로 이어지지 않는 문제였다. 또한
+          차트와 billing 화면은 임의로 생성된 UI 세션 ID를 서버 권한 체크에
+          그대로 보내서, 서버가 데모 사용자를 알아보지 못했다. 이제 병원관리에서
+          만든 Order가 차트 catalog 후보로 보이고, 확정하면 snapshot이 보존되며,
+          fulfillment와 billing 후보까지 생성되는 경로가 로컬에서 재생된다.
+        </p>
+      </section>
+
+      <section>
+        <h2>고친 흐름</h2>
+        <ul>
+          <li>병원관리 Order Catalog read, 신규 저장, 수정 저장, 사용 중지 경로를 재확인했다.</li>
+          <li>데모 UI 세션을 서버가 아는 actor로 매핑해 chart/billing 권한 실패를 제거했다.</li>
+          <li>데모 client session별 mock Order Catalog gateway를 공유해 저장 결과가 다음 read/search/confirm 요청에 유지되게 했다.</li>
+          <li>차트 Workspace catalog 검색에서 활성 Order만 후보로 노출되고, 사용 중지 Order는 제외된다.</li>
+          <li>catalog 후보를 chart draft order로 추가한 뒤 확정하면 server-owned applied snapshot이 보존된다.</li>
+          <li>확정된 catalog snapshot이 lab fulfillment queue와 billing candidate sync로 전달된다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>DEN-299 / DEN-300 / DEN-284 Rework 연결</h2>
+        <ul>
+          <li><code>DEN-284</code>: drawer mutation 자체뿐 아니라 저장 결과가 같은 데모 흐름의 chart 검색으로 이어지는 replay가 필요했다.</li>
+          <li><code>DEN-299</code>: chart catalog search/confirmation gateway가 mock actor와 mock catalog state를 공유하지 못해 후보 없음/권한 없음/확정 실패로 보일 수 있었다.</li>
+          <li><code>DEN-300</code>: mutation audit 경계는 유지하되, 이번 DEN-290에서는 remote audit/RLS replay 없이 local mock/live-boundary regression만 확인했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/demo-actor-header.spec.ts tests/order-platform-e2e-replay.spec.ts tests/hospital-admin-order-catalog-server.spec.ts tests/chart-order-action-persistence-server.spec.ts tests/billing-invoice-candidate-sync-server.spec.ts tests/fulfillment-work-item-server.spec.ts --reporter=line</code> 통과: 41 passed</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/demo-actor-header.spec.ts tests/order-platform-e2e-replay.spec.ts tests/hospital-admin.spec.ts:44 tests/hospital-admin.spec.ts:64 tests/hospital-admin.spec.ts:77 tests/chart.spec.ts:863 --reporter=line</code> 통과: 7 passed</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과, 기존 warning 7개는 남아 있음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>화면 증거</h2>
+        <ul>
+          <li><a href="./evidence/2026-05-27-den-290-hospital-admin-order-catalog.png">병원관리 Order Catalog 화면</a></li>
+          <li><a href="./evidence/2026-05-27-den-290-chart-order-workspace.png">차트 Workspace Order 화면</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/auth/demo-actor.ts</code></li>
+          <li><code>src/features/hospital-admin/module.tsx</code></li>
+          <li><code>src/features/chart/module.tsx</code></li>
+          <li><code>src/features/billing/module.tsx</code></li>
+          <li><code>src/features/hospital-admin/server-order-catalog-core.ts</code></li>
+          <li><code>src/app/api/workspaces/[workspaceId]/hospital-admin/order-catalog/route.ts</code></li>
+          <li><code>src/app/api/workspaces/[workspaceId]/chart/order-actions/route.ts</code></li>
+          <li><code>tests/demo-actor-header.spec.ts</code></li>
+          <li><code>tests/order-platform-e2e-replay.spec.ts</code></li>
+          <li><code>tests/chart.spec.ts</code></li>
+          <li><code>docs/engineering/changelog.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <ul>
+          <li>Remote Supabase 적용, 원격 RLS replay, production deploy, 실데이터 import는 하지 않았다.</li>
+          <li>DEN-292 CSV 템플릿 설계는 이번 흐름 복구 이후 별도 작업으로 남겼다.</li>
+          <li>local mock/demo replay 기준 복구이며, remote live 환경 검수는 명시 승인 후 별도 진행해야 한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

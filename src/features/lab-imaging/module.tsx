@@ -82,12 +82,15 @@ import {
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
+import { getChartEncounter } from "@/features/chart/data";
+import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 import {
   getPatientDisplayAge,
   getPatientSexLabel,
   getSpeciesLabel,
 } from "@/features/reception/data";
+import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { cn } from "@/lib/utils";
@@ -95,8 +98,10 @@ import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   EmrAttachment,
+  EmrOrder,
   Encounter,
   EquipmentReceipt,
+  Guardian,
   ImagingStudyStatus,
   ImagingStudy,
   LabResult,
@@ -255,10 +260,25 @@ type FulfillmentWorkItemStatus =
   | "returned";
 type FulfillmentWorkItem = {
   assignedToUserId?: string | null;
+  completedAt?: string | null;
+  createdAt?: string;
+  encounterId: string;
   id: string;
   orderId: string;
   queueType: FulfillmentQueueType;
+  requestedByUserId?: string;
+  sourceSnapshot?: {
+    detail?: Record<string, unknown>;
+    guardianName?: string;
+    instruction?: string;
+    orderDisplayName?: string;
+    patientName?: string;
+    requestingVetName?: string;
+    serviceItemId?: string;
+  };
   status: FulfillmentWorkItemStatus;
+  updatedAt?: string;
+  workspaceId: string;
 };
 
 const labResultTabItems = [
@@ -277,6 +297,18 @@ const imagingQueueViewItems = [
   { value: "chart" as const, label: "차트별" },
 ];
 
+const fulfillmentQueueCache = new Map<string, FulfillmentWorkItem[]>();
+const fulfillmentQueueListeners = new Map<string, Set<(workItems: FulfillmentWorkItem[]) => void>>();
+
+function getFulfillmentQueueCacheKey(workspaceId: string, queueType: FulfillmentQueueType) {
+  return `${workspaceId}:${queueType}`;
+}
+
+function setCachedFulfillmentQueue(cacheKey: string, workItems: FulfillmentWorkItem[]) {
+  fulfillmentQueueCache.set(cacheKey, workItems);
+  fulfillmentQueueListeners.get(cacheKey)?.forEach((listener) => listener(workItems));
+}
+
 function useWorkspaceIdFromPath() {
   if (typeof window === "undefined") return "clair-demo";
 
@@ -284,9 +316,140 @@ function useWorkspaceIdFromPath() {
   return match?.[1] ?? "clair-demo";
 }
 
+function isLiveAuthRuntime() {
+  return getAuthRuntimeMode().authProvider === "supabase";
+}
+
+function getSnapshotString(
+  snapshot: FulfillmentWorkItem["sourceSnapshot"] | undefined,
+  key: keyof NonNullable<FulfillmentWorkItem["sourceSnapshot"]>,
+  fallback: string,
+) {
+  const value = snapshot?.[key];
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function getSnapshotDetailString(
+  snapshot: FulfillmentWorkItem["sourceSnapshot"] | undefined,
+  key: string,
+  fallback: string,
+) {
+  const value = snapshot?.detail?.[key];
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+const stagingDemoEncounterBridgeByResolvedId: Record<string, string> = {
+  "19426000-0000-4000-8000-000000000001": "encounter-kong-260501",
+  "19426000-0000-4000-8000-000000000002": "encounter-nabi-260414",
+  "19426000-0000-4000-8000-000000000003": "encounter-dubu-260501",
+  "19426000-0000-4000-8000-000000000004": "encounter-haru-260430",
+  "19426000-0000-4000-8000-000000000005": "encounter-coco-260501",
+};
+
+function getStagingBridgeChartBundle(workItem: FulfillmentWorkItem) {
+  const bridgedEncounterId = stagingDemoEncounterBridgeByResolvedId[workItem.encounterId];
+
+  return bridgedEncounterId ? getChartEncounter(bridgedEncounterId) : null;
+}
+
+function getLivePatientFromWorkItem(workItem: FulfillmentWorkItem): Patient {
+  const handoffPatient = readChartLiveEncounterHandoff(workItem.encounterId)?.patient;
+  if (handoffPatient) return handoffPatient;
+
+  const bridgedPatient = getStagingBridgeChartBundle(workItem)?.patient;
+  if (bridgedPatient) return bridgedPatient;
+
+  const now = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+  return {
+    id: `live-patient-${workItem.id}`,
+    patientNo: `LIVE-${workItem.id.slice(0, 8)}`,
+    workspaceId: workItem.workspaceId,
+    name: getSnapshotString(workItem.sourceSnapshot, "patientName", "환자 미상"),
+    species: "cat",
+    breed: getSnapshotDetailString(workItem.sourceSnapshot, "breed", "품종 미상"),
+    estimatedAgeText: getSnapshotDetailString(workItem.sourceSnapshot, "age", "나이 미상"),
+    sex: "unknown",
+    handlingCautionLocked: false,
+    status: "active",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function getLiveGuardianFromWorkItem(workItem: FulfillmentWorkItem): Guardian | undefined {
+  const handoffGuardian = readChartLiveEncounterHandoff(workItem.encounterId)?.primaryGuardian;
+  if (handoffGuardian) return handoffGuardian;
+
+  const bridgedGuardian = getStagingBridgeChartBundle(workItem)?.primaryGuardian;
+  if (bridgedGuardian) return bridgedGuardian;
+
+  const guardianName = getSnapshotString(workItem.sourceSnapshot, "guardianName", "");
+  if (!guardianName) return undefined;
+
+  const now = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+  return {
+    id: `live-guardian-${workItem.id}`,
+    workspaceId: workItem.workspaceId,
+    name: guardianName,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function getLiveEncounterFromWorkItem(workItem: FulfillmentWorkItem, patient: Patient): Encounter {
+  const now = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+  return {
+    id: workItem.encounterId,
+    workspaceId: workItem.workspaceId,
+    patientId: patient.id,
+    guardianId: getLiveGuardianFromWorkItem(workItem)?.id,
+    encounterNo: `LIVE-${workItem.encounterId.slice(0, 8)}`,
+    receptionType: "walk_in",
+    chiefComplaint: getSnapshotDetailString(workItem.sourceSnapshot, "chiefComplaint", "오더 수행"),
+    status: workItem.status === "completed" ? "completed" : "in_consultation",
+    checkedInAt: workItem.createdAt,
+    startedAt: workItem.createdAt,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): EmrOrder {
+  const now = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+  return {
+    id: workItem.orderId,
+    workspaceId: workItem.workspaceId,
+    encounterId: workItem.encounterId,
+    serviceItemId: workItem.sourceSnapshot?.serviceItemId,
+    orderType: workItem.queueType,
+    displayName: getSnapshotString(workItem.sourceSnapshot, "orderDisplayName", "Live order"),
+    status: workItem.status === "completed" ? "completed" : workItem.status === "returned" ? "re_requested" : "in_progress",
+    workStatus: workItem.status === "completed" ? "completed" : "pending",
+    priority: "normal",
+    requestedByUserId: "user-vet",
+    requestedAt: workItem.createdAt ?? now,
+    currentAssigneeUserId: workItem.assignedToUserId ?? undefined,
+    instruction: workItem.sourceSnapshot?.instruction,
+    sortOrder: 0,
+    createdAt: workItem.createdAt ?? now,
+    updatedAt: now,
+  };
+}
+
 function useFulfillmentQueue(queueType: FulfillmentQueueType) {
   const workspaceId = useWorkspaceIdFromPath();
-  const [workItems, setWorkItems] = useState<FulfillmentWorkItem[]>([]);
+  const cacheKey = getFulfillmentQueueCacheKey(workspaceId, queueType);
+  const [queueState, setQueueState] = useState<{
+    cacheKey: string;
+    workItems: FulfillmentWorkItem[];
+  }>(() => ({
+    cacheKey,
+    workItems: fulfillmentQueueCache.get(cacheKey) ?? [],
+  }));
+  const workItems =
+    queueState.cacheKey === cacheKey
+      ? queueState.workItems
+      : fulfillmentQueueCache.get(cacheKey) ?? [];
 
   const refresh = useCallback(async () => {
     try {
@@ -295,17 +458,33 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType) {
         { headers: { "x-clair-demo-session-user-id": "user-tech" } }
       );
       const body = await response.json() as { ok?: boolean; workItems?: FulfillmentWorkItem[] };
-      setWorkItems(response.ok && body.ok && Array.isArray(body.workItems) ? body.workItems : []);
+      setCachedFulfillmentQueue(
+        cacheKey,
+        response.ok && body.ok && Array.isArray(body.workItems) ? body.workItems : [],
+      );
     } catch {
-      setWorkItems([]);
+      setCachedFulfillmentQueue(cacheKey, []);
     }
-  }, [queueType, workspaceId]);
+  }, [cacheKey, queueType, workspaceId]);
 
   useEffect(() => {
-    // Fetching the server queue is an external sync; fixture fallback stays in place on failure.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const listener = (nextWorkItems: FulfillmentWorkItem[]) =>
+      setQueueState({ cacheKey, workItems: nextWorkItems });
+
+    const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
+    listeners.add(listener);
+    fulfillmentQueueListeners.set(cacheKey, listeners);
+
+    return () => {
+      listeners.delete(listener);
+      if (listeners.size === 0) fulfillmentQueueListeners.delete(cacheKey);
+    };
+  }, [cacheKey]);
 
   const updateStatus = useCallback(async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
     for (const status of statuses) {
@@ -369,6 +548,136 @@ function applyFulfillmentToImagingItems(
       radiologistName: getStaffName(workItem.assignedToUserId ?? undefined) ?? item.radiologistName,
     };
   });
+}
+
+function createLiveLabItems(workItems: FulfillmentWorkItem[]): LabWorkItem[] {
+  return workItems
+    .filter((workItem) => workItem.queueType === "lab")
+    .map((workItem) => {
+      const patient = getLivePatientFromWorkItem(workItem);
+      const primaryGuardian = getLiveGuardianFromWorkItem(workItem);
+      const encounter = getLiveEncounterFromWorkItem(workItem, patient);
+      const order = getLiveOrderFromWorkItem(workItem);
+      const timestamp = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+
+      return {
+        encounter,
+        order,
+        patient,
+        primaryGuardian,
+        result: {
+          id: `live-lab-${workItem.id}`,
+          workspaceId: workItem.workspaceId,
+          patientId: patient.id,
+          encounterId: workItem.encounterId,
+          orderId: workItem.orderId,
+          resultName: order.displayName,
+          status: mapFulfillmentToLabStatus(workItem.status, "pending"),
+          rows: [],
+          collectedAt: workItem.createdAt ?? timestamp,
+          receivedAt: timestamp,
+          enteredAt: workItem.status === "in_progress" || workItem.status === "completed" ? timestamp : undefined,
+          performedByUserId: workItem.assignedToUserId ?? undefined,
+        },
+        technicianName: workItem.assignedToUserId ? currentLabAssignee.name : undefined,
+      };
+    })
+    .sort((a, b) => {
+      const aTime = a.result.receivedAt ?? a.result.collectedAt ?? "";
+      const bTime = b.result.receivedAt ?? b.result.collectedAt ?? "";
+      return bTime.localeCompare(aTime);
+    });
+}
+
+function createLiveImagingItems(workItems: FulfillmentWorkItem[]): ImagingWorkItem[] {
+  return workItems
+    .filter((workItem) => workItem.queueType === "imaging")
+    .map((workItem) => {
+      const patient = getLivePatientFromWorkItem(workItem);
+      const primaryGuardian = getLiveGuardianFromWorkItem(workItem);
+      const encounter = getLiveEncounterFromWorkItem(workItem, patient);
+      const order = getLiveOrderFromWorkItem(workItem);
+      const timestamp = workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+
+      return {
+        encounter,
+        order,
+        patient,
+        primaryGuardian,
+        radiologistName: workItem.assignedToUserId ? currentLabAssignee.name : undefined,
+        study: {
+          id: `live-imaging-${workItem.id}`,
+          workspaceId: workItem.workspaceId,
+          patientId: patient.id,
+          encounterId: workItem.encounterId,
+          orderId: workItem.orderId,
+          modality: getSnapshotDetailString(workItem.sourceSnapshot, "modality", "영상"),
+          bodyPart: getSnapshotDetailString(workItem.sourceSnapshot, "bodyPart", order.displayName),
+          status: mapFulfillmentToImagingStatus(workItem.status, "requested"),
+          requestedAt: workItem.createdAt ?? timestamp,
+          capturedAt: workItem.status === "in_progress" || workItem.status === "completed" ? timestamp : undefined,
+          readAt: workItem.status === "completed" ? timestamp : undefined,
+          radiologistUserId: workItem.assignedToUserId ?? undefined,
+        },
+      };
+    })
+    .sort((a, b) => {
+      const aTime = a.study.capturedAt ?? a.study.requestedAt;
+      const bTime = b.study.capturedAt ?? b.study.requestedAt;
+      return bTime.localeCompare(aTime);
+    });
+}
+
+function getLabItemsForRuntime(baseItems: LabWorkItem[], workItems: FulfillmentWorkItem[]) {
+  return isLiveAuthRuntime() ? createLiveLabItems(workItems) : applyFulfillmentToLabItems(baseItems, workItems);
+}
+
+function getImagingItemsForRuntime(baseItems: ImagingWorkItem[], workItems: FulfillmentWorkItem[]) {
+  return isLiveAuthRuntime() ? createLiveImagingItems(workItems) : applyFulfillmentToImagingItems(baseItems, workItems);
+}
+
+function getLiveLabDetail(labResultId: string, workItems: FulfillmentWorkItem[]): LabDetail | null {
+  const item = createLiveLabItems(workItems).find(({ result }) => result.id === labResultId);
+  if (!item) return null;
+
+  return {
+    ...item,
+    allEquipmentReceipts: [],
+    attachments: [],
+    equipmentReceipts: [],
+  };
+}
+
+function getFirstLiveLabDetail(workItems: FulfillmentWorkItem[]): LabDetail | null {
+  const firstItem = createLiveLabItems(workItems)[0];
+  if (!firstItem) return null;
+
+  return {
+    ...firstItem,
+    allEquipmentReceipts: [],
+    attachments: [],
+    equipmentReceipts: [],
+  };
+}
+
+function getLiveImagingDetail(imagingStudyId: string, workItems: FulfillmentWorkItem[]): ImagingDetail | null {
+  const item = createLiveImagingItems(workItems).find(({ study }) => study.id === imagingStudyId);
+  if (!item) return null;
+
+  return {
+    ...item,
+    attachments: [],
+  };
+}
+
+function getFirstLiveImagingDetail(workItems: FulfillmentWorkItem[]): ImagingDetail | null {
+  const firstItem = createLiveImagingItems(workItems)[0];
+  if (!firstItem) return null;
+
+  return {
+    ...firstItem,
+    attachments: [],
+  };
 }
 
 function mapFulfillmentToLabStatus(
@@ -462,28 +771,34 @@ function getLabResultDocumentId(result: LabResult) {
 
 function getLabDetailFromSearchParams(
   searchParams: { get: (name: string) => string | null },
-  selectedLabResultId: string
+  selectedLabResultId: string,
+  workItems: FulfillmentWorkItem[] = [],
 ) {
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryLabResultId = searchParams.get("labResultId") ?? scenario?.labResultId;
   const effectiveLabResultId = queryLabResultId ?? selectedLabResultId;
+  const liveDetail = getLiveLabDetail(effectiveLabResultId, workItems);
+  const liveFallbackDetail = isLiveAuthRuntime() ? getFirstLiveLabDetail(workItems) : null;
 
   return {
-    detail: getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc"),
+    detail: liveDetail ?? liveFallbackDetail ?? (isLiveAuthRuntime() ? null : getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc")),
     queryLabResultId,
   };
 }
 
 function getImagingDetailFromSearchParams(
   searchParams: { get: (name: string) => string | null },
-  selectedImagingStudyId: string
+  selectedImagingStudyId: string,
+  workItems: FulfillmentWorkItem[] = [],
 ) {
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryImagingStudyId = searchParams.get("imagingStudyId") ?? scenario?.imagingStudyId;
   const effectiveImagingStudyId = queryImagingStudyId ?? selectedImagingStudyId;
+  const liveDetail = getLiveImagingDetail(effectiveImagingStudyId, workItems);
+  const liveFallbackDetail = isLiveAuthRuntime() ? getFirstLiveImagingDetail(workItems) : null;
 
   return {
-    detail: getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax"),
+    detail: liveDetail ?? liveFallbackDetail ?? (isLiveAuthRuntime() ? null : getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax")),
     queryImagingStudyId,
   };
 }
@@ -900,9 +1215,16 @@ export function LabSidePanel() {
   const fulfillmentQueue = useFulfillmentQueue("lab");
   const baseItems = useMemo(() => getLabWorkItems(), []);
   const items = useMemo(
-    () => applyFulfillmentToLabItems(baseItems, fulfillmentQueue.workItems),
+    () => getLabItemsForRuntime(baseItems, fulfillmentQueue.workItems),
     [baseItems, fulfillmentQueue.workItems]
   );
+  useEffect(() => {
+    if (!items.length || items.some((item) => item.result.id === selectedLabResultId)) return;
+    selectLabResult(items[0].result.id);
+  }, [items, selectLabResult, selectedLabResultId]);
+  const effectiveSelectedLabResultId = items.some((item) => item.result.id === selectedLabResultId)
+    ? selectedLabResultId
+    : items[0]?.result.id;
   const latestLabDate = items[0]?.result.receivedAt ?? items[0]?.result.collectedAt;
   const dateLabel = latestLabDate ? `${latestLabDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getLabChartGroups(items), [items]);
@@ -963,7 +1285,7 @@ export function LabSidePanel() {
                 items={group.items}
                 onSelectItem={selectLabResult}
                 onToggle={() => toggleStatus(group.status)}
-                selectedLabResultId={selectedLabResultId}
+                selectedLabResultId={effectiveSelectedLabResultId}
                 status={group.status}
               />
             ))
@@ -971,7 +1293,7 @@ export function LabSidePanel() {
               <LabChartQueueItem
                 key={group.encounter.id}
                 group={group}
-                selected={group.items.some((item) => item.result.id === selectedLabResultId)}
+                selected={group.items.some((item) => item.result.id === effectiveSelectedLabResultId)}
                 onSelect={() => {
                   const firstResultId = group.items[0]?.result.id;
 
@@ -995,9 +1317,16 @@ export function ImagingSidePanel() {
   const fulfillmentQueue = useFulfillmentQueue("imaging");
   const baseItems = useMemo(() => getImagingWorkItems(), []);
   const items = useMemo(
-    () => applyFulfillmentToImagingItems(baseItems, fulfillmentQueue.workItems),
+    () => getImagingItemsForRuntime(baseItems, fulfillmentQueue.workItems),
     [baseItems, fulfillmentQueue.workItems]
   );
+  useEffect(() => {
+    if (!items.length || items.some((item) => item.study.id === selectedImagingStudyId)) return;
+    selectImagingStudy(items[0].study.id);
+  }, [items, selectImagingStudy, selectedImagingStudyId]);
+  const effectiveSelectedImagingStudyId = items.some((item) => item.study.id === selectedImagingStudyId)
+    ? selectedImagingStudyId
+    : items[0]?.study.id;
   const latestImagingDate = items[0]?.study.capturedAt ?? items[0]?.study.requestedAt;
   const dateLabel = latestImagingDate ? `${latestImagingDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getImagingChartGroups(items), [items]);
@@ -1057,7 +1386,7 @@ export function ImagingSidePanel() {
                 items={group.items}
                 onSelectItem={selectImagingStudy}
                 onToggle={() => toggleStatus(group.status)}
-                selectedImagingStudyId={selectedImagingStudyId}
+                selectedImagingStudyId={effectiveSelectedImagingStudyId}
                 status={group.status}
               />
             ))
@@ -1065,7 +1394,7 @@ export function ImagingSidePanel() {
               <ImagingChartQueueItem
                 key={group.encounter.id}
                 group={group}
-                selected={group.items.some((item) => item.study.id === selectedImagingStudyId)}
+                selected={group.items.some((item) => item.study.id === effectiveSelectedImagingStudyId)}
                 onSelect={() => {
                   const firstStudyId = group.items[0]?.study.id;
 
@@ -1441,8 +1770,9 @@ function AttachmentStrip({
 function useCurrentLabDetail() {
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
+  const fulfillmentQueue = useFulfillmentQueue("lab");
 
-  return getLabDetailFromSearchParams(searchParams, selectedLabResultId);
+  return getLabDetailFromSearchParams(searchParams, selectedLabResultId, fulfillmentQueue.workItems);
 }
 
 export function LabHeader({ hasRightPanel }: ShellComponentProps) {
@@ -1802,8 +2132,12 @@ export function LabContent() {
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
-  const { detail, queryLabResultId } = getLabDetailFromSearchParams(searchParams, selectedLabResultId);
   const fulfillmentQueue = useFulfillmentQueue("lab");
+  const { detail, queryLabResultId } = getLabDetailFromSearchParams(
+    searchParams,
+    selectedLabResultId,
+    fulfillmentQueue.workItems,
+  );
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
     [detail?.order?.id, fulfillmentQueue.workItems]
@@ -1851,8 +2185,12 @@ export function LabContent() {
   useEffect(() => {
     if (queryLabResultId && queryLabResultId !== selectedLabResultId) {
       selectLabResult(queryLabResultId);
+      return;
     }
-  }, [queryLabResultId, selectLabResult, selectedLabResultId]);
+    if (!queryLabResultId && detail?.result.id && detail.result.id !== selectedLabResultId) {
+      selectLabResult(detail.result.id);
+    }
+  }, [detail?.result.id, queryLabResultId, selectLabResult, selectedLabResultId]);
 
   if (!detail) {
     return (
@@ -1969,8 +2307,9 @@ export function LabContent() {
 function useCurrentImagingDetail() {
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
+  const fulfillmentQueue = useFulfillmentQueue("imaging");
 
-  return getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId);
+  return getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId, fulfillmentQueue.workItems);
 }
 
 export function ImagingHeader({ hasRightPanel }: ShellComponentProps) {
@@ -2248,8 +2587,12 @@ export function ImagingContent() {
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
-  const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId);
   const fulfillmentQueue = useFulfillmentQueue("imaging");
+  const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(
+    searchParams,
+    selectedImagingStudyId,
+    fulfillmentQueue.workItems,
+  );
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
     [detail?.order?.id, fulfillmentQueue.workItems]
@@ -2296,8 +2639,12 @@ export function ImagingContent() {
   useEffect(() => {
     if (queryImagingStudyId && queryImagingStudyId !== selectedImagingStudyId) {
       selectImagingStudy(queryImagingStudyId);
+      return;
     }
-  }, [queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
+    if (!queryImagingStudyId && detail?.study.id && detail.study.id !== selectedImagingStudyId) {
+      selectImagingStudy(detail.study.id);
+    }
+  }, [detail?.study.id, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
 
   if (!detail) {
     return (

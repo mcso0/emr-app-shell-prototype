@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-284 Order Drawer Mutations</title>
+    <style>
+      body{margin:0;background:#f6f7f9;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      main{max-width:980px;margin:0 auto;padding:48px 28px 64px}
+      section{margin-top:18px;border:1px solid #d9dee8;border-radius:8px;background:#fff;padding:22px 24px}
+      h1{margin:0 0 8px;font-size:30px;letter-spacing:0}
+      h2{font-size:18px;letter-spacing:0}
+      p,li,td,th{font-size:14px;line-height:1.7}
+      .meta{color:#5f6b7a;font-size:13px}
+      .badge{display:inline-block;margin:12px 8px 0 0;border-radius:999px;background:#ecfdf3;color:#166534;padding:6px 10px;font-size:12px;font-weight:700}
+      .warn{background:#fff7e6;color:#8a4b00}
+      .danger{background:#fff1f2;color:#9f1239}
+      table{width:100%;border-collapse:collapse;margin-top:10px}
+      th,td{border-top:1px solid #d9dee8;padding:10px 8px;text-align:left;vertical-align:top}
+      code{border-radius:5px;background:#eef1f5;padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+      a{color:#1f5eff;text-decoration:none}
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-284 / 2026-05-26 / Hospital Admin Catalog UX</p>
+      <h1>병원관리 Order Drawer Mutation 연결 보고서</h1>
+      <p>
+        병원관리 Order 상세 drawer의 저장, 신규 추가, 사용 중지 흐름을 workspace catalog mutation boundary에 연결했다.
+        이제 화면에서 바꾼 오더 이름, 청구명, 금액, 사용여부 같은 값이 catalog mutation 입력으로 변환된다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+      <span class="badge warn">Remote DB: Not applied</span>
+      <span class="badge danger">Hard delete: Not used</span>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li>drawer 저장 버튼이 <code>/api/workspaces/{workspaceId}/hospital-admin/order-catalog</code> mutation route를 호출한다.</li>
+          <li><code>+ Order</code>로 만든 local draft가 저장 전 catalog 재조회로 사라지지 않도록 draft 보존 규칙을 추가했다.</li>
+          <li>신규 오더는 workspace catalog create input으로 변환하고, 기존 오더는 catalog update patch로 변환한다.</li>
+          <li>삭제 UX는 hard delete가 아니라 <code>사용 중지</code>로 바꿨다. 성공 시 row는 남고 상태만 중지로 바뀐다.</li>
+          <li>필수 이름, 청구서명, 금액 검증과 권한 없음/입력 오류 메시지를 drawer footer에 표시한다.</li>
+          <li>복제된 row는 기존 source catalog item을 그대로 수정하지 않도록 local custom draft로 취급한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>왜 중요한가</h2>
+        <p>
+          이 작업으로 병원별 오더 카탈로그가 단순 조회 화면에서 병원관리자가 실제로 관리할 수 있는 작업 화면으로 한 단계 이동했다.
+          특히 사용 중지는 과거 진료와 청구 기록을 보존하면서 future chart selection에서만 제외하는 안전한 정책이다.
+        </p>
+      </section>
+
+      <section>
+        <h2>보안 및 데이터 경계</h2>
+        <ul>
+          <li>mutation은 기존 server/API permission boundary인 <code>service_catalog:manage</code>를 통과해야 한다.</li>
+          <li>UI 버튼 숨김만 보안으로 보지 않고, API permission failure를 drawer에 표시한다.</li>
+          <li>remote Supabase 적용, 원격 RLS replay, production deploy, 실데이터 import는 수행하지 않았다.</li>
+          <li>과거 encounter order snapshot, fulfillment source snapshot, billing candidate amount를 변경하는 작업은 하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><a href="../../../src/features/hospital-admin/module.tsx">src/features/hospital-admin/module.tsx</a></li>
+          <li><a href="../../../src/features/hospital-admin/data.ts">src/features/hospital-admin/data.ts</a></li>
+          <li><a href="../../../src/features/hospital-admin/store.ts">src/features/hospital-admin/store.ts</a></li>
+          <li><a href="../../../tests/hospital-admin.spec.ts">tests/hospital-admin.spec.ts</a></li>
+          <li><a href="../../engineering/changelog.md">docs/engineering/changelog.md</a></li>
+          <li><a href="../../product/domain/workspace-order-catalog-platform.md">docs/product/domain/workspace-order-catalog-platform.md</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <table>
+          <thead><tr><th>명령</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test tests/hospital-admin.spec.ts --reporter=line</code></td><td>통과: 9개 테스트</td></tr>
+            <tr><td><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test tests/hospital-admin-order-catalog-server.spec.ts --reporter=line</code></td><td>통과: 7개 테스트</td></tr>
+            <tr><td><code>npx tsc --noEmit --pretty false</code></td><td>실패: 기존 <code>src/components/emr/table-filter-builder-model.ts</code> implicit any 오류. DEN-284 변경 파일 오류는 확인되지 않음.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>chart order selection 화면 연결은 후속 issue 범위다.</li>
+          <li>fulfillment routing, lab/imaging vet review gate, billing candidate sync 연결은 후속 issue 범위다.</li>
+          <li>실제 DB migration 적용, remote Supabase 검증, RLS replay는 하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          다음 구현은 진료/차트 화면의 order search가 workspace catalog를 읽고, 확정 시 당시 catalog 값을 snapshot으로 복사하는 흐름이다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

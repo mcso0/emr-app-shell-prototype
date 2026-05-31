@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
   readSessionWorkspacesState,
@@ -123,17 +124,63 @@ export function AuthGate({ children, workspaceId }: AuthGateProps) {
   }, [hydrated, pathname, router, search, session, workspaceId]);
 
   if (!hydrated || !session || workspaceAccess !== "allowed") {
-    return (
-      <main className="grid min-h-screen place-items-center bg-[var(--emr-surface-muted)] px-6 text-foreground">
-        <div className="rounded-[var(--clair-radius-lg)] border border-border bg-card px-6 py-5 text-center shadow-sm">
-          <p className="text-[14px] font-semibold">로그인 확인 중</p>
-          <p className="mt-1 text-[12px] text-muted-foreground">
-            워크스페이스 접근 권한을 확인합니다.
-          </p>
-        </div>
-      </main>
-    );
+    return <AuthGateShellSkeleton />;
   }
 
   return <>{children}</>;
+}
+
+function AuthGateShellSkeleton() {
+  return (
+    <main
+      aria-busy="true"
+      className="min-h-svh bg-[var(--emr-surface-app)] p-3 text-foreground"
+      data-testid="auth-gate-shell-skeleton"
+    >
+      <span className="sr-only">세션과 워크스페이스 접근 권한을 확인하는 중입니다.</span>
+      <div className="grid min-h-[calc(100svh-24px)] grid-rows-[56px_minmax(0,1fr)] overflow-hidden rounded-lg border border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] shadow-xs">
+        <header className="flex items-center justify-between border-b bg-card px-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-8 rounded-[var(--clair-radius-md)]" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-24 rounded-[var(--clair-radius-md)]" />
+            <Skeleton className="size-8 rounded-full" />
+          </div>
+        </header>
+        <div className="grid min-h-0 grid-cols-[64px_minmax(0,1fr)]">
+          <aside className="flex flex-col items-center gap-3 border-r bg-card px-2 py-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <Skeleton key={index} className="size-9 rounded-[var(--clair-radius-md)]" />
+            ))}
+          </aside>
+          <section className="grid min-h-0 grid-cols-[280px_minmax(0,1fr)] max-md:grid-cols-1">
+            <div className="min-h-0 border-r bg-[var(--emr-surface-content-panel)] p-4 max-md:hidden">
+              <Skeleton className="mb-5 h-6 w-36" />
+              <div className="space-y-2">
+                {Array.from({ length: 8 }, (_, index) => (
+                  <Skeleton key={index} className="h-9 w-full rounded-[var(--clair-radius-md)]" />
+                ))}
+              </div>
+            </div>
+            <div className="min-h-0 p-5">
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-7 w-44" />
+                  <Skeleton className="h-4 w-64 max-w-[60vw]" />
+                </div>
+                <Skeleton className="h-9 w-28 rounded-[var(--clair-radius-md)]" />
+              </div>
+              <div className="grid gap-3">
+                {Array.from({ length: 7 }, (_, index) => (
+                  <Skeleton key={index} className="h-12 w-full rounded-[var(--clair-radius-md)]" />
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  );
 }

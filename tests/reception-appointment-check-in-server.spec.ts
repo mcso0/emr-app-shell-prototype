@@ -202,6 +202,9 @@ test("appointment check-in route stays server-owned and avoids secret-shaped val
   );
 
   expect(routeSource).toContain("readServerSession");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
+  expect(routeSource).toContain("permissionAdapter");
   expect(routeSource).toContain("enforceWorkspaceMutationRateLimit");
   expect(routeSource).not.toContain("SUPABASE_SERVICE_ROLE");
   expect(routeSource).not.toContain("service_role");

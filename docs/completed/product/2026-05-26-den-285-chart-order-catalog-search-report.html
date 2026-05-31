@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-285 Chart Order Catalog Search</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        letter-spacing: 0;
+      }
+      h2 {
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+      .danger {
+        background: #fff1f2;
+        color: #9f1239;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border-top: 1px solid #d9dee8;
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      a {
+        color: #1f5eff;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-285 / 2026-05-26 / Chart Order Selection</p>
+      <h1>차트 Order 검색을 병원별 Catalog에 연결한 보고서</h1>
+      <p>
+        진료/차트 화면의 <code>+ Order</code>가 더 이상 임시 안내만 보여주지
+        않고, 현재 병원의 active workspace catalog를 검색한다. 사용자는
+        병원관리에서 관리되는 오더 후보를 선택해 차트의 draft order row에 추가할
+        수 있다.
+      </p>
+      <span class="badge">Status: Human Review</span>
+      <span class="badge warn">Snapshot persistence: DEN-286</span>
+      <span class="badge danger">Remote DB: Not applied</span>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li>
+            차트 <code>+ Order</code>와 테이블 하단
+            <code>+ Order 추가하기</code>가 workspace catalog 검색 drawer를
+            연다.
+          </li>
+          <li>
+            <code
+              >/api/workspaces/{workspaceId}/hospital-admin/order-catalog?mode=chart-search</code
+            >를 호출해 active catalog rows와 active order sets만 읽는다.
+          </li>
+          <li>
+            검색어는 Order명, 청구서명, source preset id, category를 대상으로
+            적용된다.
+          </li>
+          <li>
+            환자 종에 맞는 후보만 화면에 보여준다. 예를 들어 환자가 dog/cat이면
+            해당 대상이 포함된 후보를 우선 표시한다.
+          </li>
+          <li>
+            중지된 catalog row는 chart-search route에서 제외되어 신규 차트 오더
+            후보로 나오지 않는다.
+          </li>
+          <li>
+            후보를 추가하면 display name, billing name, instruction 후보, price
+            후보가 차트 draft row에 채워진다.
+          </li>
+          <li>
+            기존 차트 오더 필터 테스트가 새 공통 filter builder 동작에 맞도록
+            안정화됐다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>왜 중요한가</h2>
+        <p>
+          이제 차트에서 선택하는 오더의 출처가 CLAiR 고정 샘플이 아니라 병원별로
+          관리되는 catalog가 된다. 병원관리에서 이름, 청구명, 금액, 사용여부를
+          조정한 값이 미래 차트 선택 후보에 반영되는 흐름이 생겼다.
+        </p>
+      </section>
+
+      <section>
+        <h2>보안 및 데이터 경계</h2>
+        <ul>
+          <li>
+            chart search는 기존 catalog API route와 actor headers를 통과한다.
+          </li>
+          <li>
+            중지된 오더 제외는 UI 표시 조건만이 아니라 chart-search 결과
+            자체에서 보장된다.
+          </li>
+          <li>
+            차트 draft에 금액 후보를 표시하지만, 최종 청구 금액 신뢰 경계는 후속
+            confirmation snapshot/server boundary에서 처리해야 한다.
+          </li>
+          <li>
+            remote Supabase 적용, 원격 RLS replay, production deploy, 실데이터
+            import는 수행하지 않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li>
+            <a href="../../../src/features/chart/module.tsx"
+              >src/features/chart/module.tsx</a
+            >
+          </li>
+          <li>
+            <a href="../../../tests/chart.spec.ts">tests/chart.spec.ts</a>
+          </li>
+          <li>
+            <a href="../../engineering/changelog.md"
+              >docs/engineering/changelog.md</a
+            >
+          </li>
+          <li>
+            <a href="../../product/domain/workspace-order-catalog-platform.md"
+              >docs/product/domain/workspace-order-catalog-platform.md</a
+            >
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>명령</th>
+              <th>결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>npx tsc --noEmit --pretty false</code></td>
+              <td>통과</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart.spec.ts -g "chart order add searches active
+                  workspace catalog" --reporter=line</code
+                >
+              </td>
+              <td>통과: DEN-285 신규 흐름</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/hospital-admin-order-catalog-server.spec.ts
+                  --reporter=line</code
+                >
+              </td>
+              <td>통과: 7개 테스트</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart.spec.ts -g "chart order table supports single sort
+                  and section filter builder|chart order add searches active
+                  workspace catalog" --reporter=line</code
+                >
+              </td>
+              <td>통과: 2개 테스트</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart.spec.ts -g "chart completion persists through
+                  route-backed reload|chart order add searches active workspace
+                  catalog" --reporter=line</code
+                >
+              </td>
+              <td>통과: 2개 테스트</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3107 npx playwright test
+                  tests/chart.spec.ts --reporter=line</code
+                >
+              </td>
+              <td>
+                부분 통과: 20/21. SOAP inline link popover 테스트가 full-run에서
+                toolbar visibility timing으로 실패했지만, 같은 테스트는 단독
+                실행 시 통과했다.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>확정 시점의 immutable applied snapshot 저장은 DEN-286 범위다.</li>
+          <li>
+            order set을 개별 오더로 확장해 저장하는 정책은 별도 후속 범위다.
+          </li>
+          <li>
+            fulfillment routing, lab/imaging review gate, billing candidate sync
+            연결은 후속 issue 범위다.
+          </li>
+          <li>
+            실제 DB migration 적용, remote Supabase 검증, RLS replay는 하지
+            않았다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          다음 구현은 차트에서 오더를 확정하는 순간 현재 catalog 값의 이름,
+          청구명, 금액, 지시사항, 출처 정보를 encounter order snapshot으로
+          복사해 과거 기록을 보호하는 작업이다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

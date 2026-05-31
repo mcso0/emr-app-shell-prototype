@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-301 Treatment Dispensing Permission Policy</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 44px 28px 60px;
+      }
+      section {
+        margin-top: 18px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 29px;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+      p,
+      li {
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-block;
+        margin: 12px 8px 0 0;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #166534;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .info {
+        background: #eef4ff;
+        color: #1d4ed8;
+      }
+      .warn {
+        background: #fff7e6;
+        color: #8a4b00;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-301 / 2026-05-27 / Security Policy Follow-up</p>
+      <h1>Treatment / Dispensing Fulfillment 권한 정책 정리</h1>
+      <p>
+        치료(treatment)와 조제/처방(dispensing)는 phase 1에서 같은 fulfillment
+        권한으로 처리한다는 결정을 문서화하고 regression으로 고정했다.
+      </p>
+      <span class="badge">Status: Human Review 준비</span>
+      <span class="badge info">DEN-289 P2 finding resolved by policy</span>
+      <span class="badge warn">마약류: 별도 후속 보안·권한 범위</span>
+
+      <section>
+        <h2>비개발자용 요약</h2>
+        <p>
+          1차 출시 범위에서는 치료와 조제 업무를 같은 운영 권한으로 둔다. 이건
+          누락이 아니라 의도된 정책이다. 다만 마약류는 이 정책에 포함하지 않고,
+          나중에 수의사 전용 또는 명시 권한 기반으로 별도 설계해야 한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>결정</h2>
+        <ul>
+          <li>
+            <code>dispensing:view</code>와 <code>dispensing:complete</code>는
+            phase 1에서 dispensing과 treatment queue 모두에 적용된다.
+          </li>
+          <li>
+            별도 <code>treatment:view</code> 또는
+            <code>treatment:complete</code> 권한은 이번 작업에서 만들지 않았다.
+          </li>
+          <li>
+            마약류 기능, DB, RLS, UI, server enforcement는 구현하지 않았다.
+          </li>
+          <li>
+            마약류는 별도 후속 보안·권한 범위이며, 수의사 전용 또는 명시 권한
+            기반으로 다시 설계해야 한다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/features/fulfillment/server-fulfillment-work-item-core.ts</code></li>
+          <li><code>tests/fulfillment-work-item-server.spec.ts</code></li>
+          <li><code>docs/product/domain/workspace-auth-permissions.md</code></li>
+          <li><code>docs/product/domain/order-fulfillment-handoff.md</code></li>
+          <li><code>docs/product/domain/workspace-order-catalog-platform.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li>
+            <code>PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test tests/fulfillment-work-item-server.spec.ts -g "phase-1 treatment"</code>
+            통과: 1 test
+          </li>
+          <li>
+            전체 <code>tests/fulfillment-work-item-server.spec.ts</code> 실행은
+            기존 dev server의 in-memory mock 상태가 남아 첫 route lifecycle
+            테스트에서 기존 completed 상태를 읽어 실패했다. DEN-301 regression은
+            격리 실행으로 통과했다.
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

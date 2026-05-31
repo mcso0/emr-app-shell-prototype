@@ -1,0 +1,214 @@
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+const kongScenarioUrl =
+  "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
+
+async function expectWorkspaceScreen(page: Page, marker: Locator) {
+  await expect(page).not.toHaveURL(/\/login/);
+  await expect(marker).toBeVisible();
+}
+
+async function restoreKongOrderDraftDefaults(page: Page) {
+  const billingName = page.getByLabel("Maropitant 16mg T 청구서명 수정");
+  const quantity = page.getByLabel("Maropitant 16mg T 수량 수정");
+  const updateButton = page.getByRole("button", { name: /Order 업데이트/ });
+
+  await expect(billingName).toBeVisible();
+  await billingName.fill("Maropitant 16mg T");
+  await quantity.fill("1");
+
+  if (await updateButton.isEnabled()) {
+    await updateButton.click();
+    await expect(page.getByText(/변경 대기/)).toHaveCount(0);
+    await expect(updateButton).toBeDisabled();
+  }
+
+  await expect(quantity).toHaveValue("1");
+  await expect(billingName).toHaveValue("Maropitant 16mg T");
+}
+
+async function expectFilterControls(popover: Locator) {
+  await expect(popover.getByRole("button", { name: "초기화" })).toBeVisible();
+  await expect(popover.getByRole("button", { name: /Add filter/ })).toBeVisible();
+
+  if ((await popover.locator('[data-emr-table-filter-builder="true"]').count()) > 0) {
+    await expect(popover.getByRole("button", { name: "필터 닫기" })).toBeVisible();
+    await expect(popover.getByRole("button", { name: "Apply filters" })).toHaveCount(0);
+    await expect(popover.getByRole("button", { name: "Close" })).toHaveCount(0);
+    return;
+  }
+
+  await expect(popover.getByRole("button", { name: "Apply filters" })).toBeVisible();
+  await expect(popover.getByRole("button", { name: "Close" })).toBeVisible();
+}
+
+async function expectEscapeClosesFilter(page: Page) {
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+}
+
+test.describe("DEN-275 adopted table sort/filter QA", () => {
+  test("adopted tables expose accessible sort and filter active states", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+
+    await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
+    const billingSection = page.locator("section.rounded-lg").filter({
+      has: page.getByRole("heading", { name: "청구 항목 편집" }),
+    });
+    await expectWorkspaceScreen(page, billingSection);
+    await billingSection.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
+    await expect(
+      billingSection.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }),
+    ).toBeVisible();
+    await billingSection.getByRole("button", { name: "청구 항목 필터 설정" }).click();
+    await expectFilterControls(page.locator('[data-slot="popover-content"]'));
+    await expectEscapeClosesFilter(page);
+
+    await page.goto(kongScenarioUrl);
+    await restoreKongOrderDraftDefaults(page);
+    const orderArea = page.locator("section").filter({
+      has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+    }).last();
+    await expectWorkspaceScreen(page, orderArea);
+    await orderArea.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
+    await expect(
+      orderArea.getByRole("button", { name: /현재 정렬: 청구금액 오름차순/ }),
+    ).toBeVisible();
+    await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
+    await expectFilterControls(page.locator('[data-slot="popover-content"]'));
+    await expectEscapeClosesFilter(page);
+
+    await page.goto("/w/clair-demo/customer?modulePanel=open");
+    const patientTable = page.getByTestId("customer-patient-table");
+    await expectWorkspaceScreen(page, patientTable);
+    await patientTable.getByRole("button", { name: /등록일시 오름차순 정렬/ }).click();
+    await expect(
+      patientTable.getByRole("button", { name: /현재 정렬: 등록일시 오름차순/ }),
+    ).toBeVisible();
+    await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
+    await expectFilterControls(page.locator('[data-slot="popover-content"]'));
+    await expectEscapeClosesFilter(page);
+
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+    const orderTable = page.getByTestId("hospital-order-table");
+    await expectWorkspaceScreen(page, orderTable);
+    await orderTable.getByRole("button", { name: /판매금액 오름차순 정렬/ }).click();
+    await expect(
+      orderTable.getByRole("button", { name: /현재 정렬: 판매금액 오름차순/ }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "오더 필터 설정" }).click();
+    await expectFilterControls(page.locator('[data-slot="popover-content"]'));
+    await expectEscapeClosesFilter(page);
+  });
+
+  test("adopted filters show empty states and reset back to visible rows", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+
+    await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=closed");
+    const billingSection = page.locator("section.rounded-lg").filter({
+      has: page.getByRole("heading", { name: "청구 항목 편집" }),
+    });
+    await billingSection.getByRole("button", { name: "청구 항목 필터 설정" }).click();
+    let popover = page.locator('[data-slot="popover-content"]');
+    await popover.getByRole("combobox", { name: "필터 필드" }).click();
+    await page.getByRole("option", { name: "청구금액" }).click();
+    await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
+    await expect(billingSection).toContainText("조건에 맞는 청구 항목이 없습니다.");
+    await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await popover.getByRole("button", { name: "필터 닫기" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect(billingSection.locator("tbody tr")).toHaveCount(5);
+
+    await page.goto(kongScenarioUrl);
+    await restoreKongOrderDraftDefaults(page);
+    const orderArea = page.locator("section").filter({
+      has: page.getByRole("tablist", { name: "처방/오더 분류" }),
+    }).last();
+    await orderArea.getByRole("tab", { name: /임상/ }).click();
+    await orderArea.getByRole("button", { name: "오더 필터 설정" }).click();
+    popover = page.locator('[data-slot="popover-content"]');
+    await popover.getByRole("combobox", { name: "필터 필드" }).click();
+    await page.getByRole("option", { name: "상태" }).click();
+    await popover.getByRole("combobox", { name: "필터 값" }).first().click();
+    await page.getByRole("option", { name: "요청", exact: true }).click();
+    await expect(orderArea).toContainText("현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.");
+    await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await popover.getByRole("button", { name: "필터 닫기" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect(orderArea.locator('[data-testid^="chart-order-row-"]').first()).toBeVisible();
+
+    await page.goto("/w/clair-demo/customer?modulePanel=open");
+    const patientTable = page.getByTestId("customer-patient-table");
+    await patientTable.getByRole("button", { name: "동물 필터 설정" }).click();
+    popover = page.locator('[data-slot="popover-content"]').last();
+    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByLabel("필터 필드").first().click();
+    await page.getByRole("option", { name: "품종" }).click();
+    await popover.getByRole("combobox", { name: "필터 값" }).first().click();
+    await page.getByRole("option", { name: "푸들" }).click();
+    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByLabel("필터 필드").nth(1).click();
+    await page.getByRole("option", { name: "성별" }).click();
+    await popover.getByRole("combobox", { name: "필터 값" }).nth(1).click();
+    await page.getByRole("option", { name: "암컷", exact: true }).click();
+    await expect(patientTable).toContainText("조건에 맞는 동물 정보가 없습니다.");
+    await patientTable.getByRole("button", { name: "동물 필터 2개 설정" }).click();
+    popover = page.locator('[data-slot="popover-content"]').last();
+    await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await popover.getByRole("button", { name: "필터 닫기" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect(patientTable.locator('[data-testid^="customer-patient-row-"]')).toHaveCount(5);
+
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+    const orderTable = page.getByTestId("hospital-order-table");
+    await page.getByRole("button", { name: "오더 필터 설정" }).click();
+    popover = page.locator('[data-slot="popover-content"]').last();
+    await popover.getByRole("button", { name: "Add filter" }).click();
+    await popover.getByLabel("필터 필드").last().click();
+    await page.getByRole("option", { name: "판매금액" }).click();
+    await popover.getByRole("textbox", { name: "필터 값" }).fill("999999");
+    await expect(orderTable).toContainText("조건에 맞는 Order가 없습니다.");
+    await page.getByRole("button", { name: "오더 필터 1개 설정" }).click();
+    popover = page.locator('[data-slot="popover-content"]').last();
+    await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await popover.getByRole("button", { name: "필터 닫기" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect(orderTable.locator('[data-testid^="hospital-order-row-"]')).toHaveCount(2);
+  });
+
+  test("section filter controls remain reachable in a narrow viewport", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto("/w/clair-demo/customer?modulePanel=open");
+    await expectWorkspaceScreen(page, page.getByTestId("customer-patient-table"));
+    await expect(page.getByRole("button", { name: "동물 필터 설정" })).toBeVisible();
+    await page.getByRole("button", { name: "동물 필터 설정" }).click();
+    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
+    await expectEscapeClosesFilter(page);
+
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+    await expectWorkspaceScreen(page, page.getByTestId("hospital-order-table"));
+    await expect(page.getByRole("button", { name: "오더 필터 설정" })).toBeVisible();
+    await page.getByRole("button", { name: "오더 필터 설정" }).click();
+    await expect(page.locator('[data-slot="popover-content"]')).toBeVisible();
+    await expectEscapeClosesFilter(page);
+  });
+});

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-330 Popover Component System Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f5f5f5;
+        color: #171717;
+        font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 24px 72px;
+      }
+      section,
+      header {
+        margin-bottom: 16px;
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      code {
+        border-radius: 5px;
+        background: #edf2f7;
+        padding: 2px 5px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+      }
+      .meta {
+        color: #737373;
+        font-size: 13px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        background: #fafafa;
+        padding: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-05-30 · DEN-330~334 · Design system / Figma / Frontend</p>
+        <h1>Popover 컴포넌트 시스템 실행 리포트</h1>
+        <p>
+          Popover를 바이탈 입력, 접수 단일 선택, 다중 선택, 검색 선택, 작은 액션에 공통으로 쓸 수 있도록
+          리포트, Figma 컴포넌트, 코드 primitive, pilot 적용까지 연결했다.
+        </p>
+      </header>
+
+      <section>
+        <h2>핵심 변경</h2>
+        <ul>
+          <li>Linear 프로젝트 <code>CLAiR EMR Popover Component System</code>와 DEN-330~334 이슈를 생성했다.</li>
+          <li>기존 HTML 리포트에 접수형 단일 선택 popover와 single/multiple option 시안을 추가했다.</li>
+          <li>Figma 섹션 <code>27344:9927</code> 안에 <code>Popover</code> 단일 컴포넌트셋을 생성했다.</li>
+          <li>초기 과생성된 240개 variant 구조는 제거하고, 최종은 <code>type</code> 5개 variant만 남겼다.</li>
+          <li>코드에는 <code>EmrPopoverShell</code> 계열과 Base UI 기반 <code>RadioGroup</code> primitive를 추가했다.</li>
+          <li>환자 인포바 바이탈 버튼과 접수 등록 유형 선택을 pilot 적용했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Figma 최종 구조</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>Component set</strong>
+            <p><code>Popover</code> · node <code>27374:150</code></p>
+          </div>
+          <div class="card">
+            <strong>Variants</strong>
+            <p><code>form</code>, <code>single-select</code>, <code>multi-select</code>, <code>search-select</code>, <code>action-list</code></p>
+          </div>
+          <div class="card">
+            <strong>Instance properties</strong>
+            <p><code>showHeader</code>, <code>showDescription</code>, <code>showClose</code>, <code>showFooter</code>, text action/title props</p>
+          </div>
+          <div class="card">
+            <strong>Radius rule</strong>
+            <p>container, option, input, button은 8px 이하. 원형 radio indicator만 round 유지.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: 통과</li>
+          <li><code>npx tsc --noEmit</code>: 통과</li>
+          <li><code>npm run lint</code>: error 0개, 기존 warning 6개 유지</li>
+          <li>Figma audit: 이전 generated nodes 잔여 0개, 8px 초과 radius 0개(radio 원형 제외)</li>
+          <li>Figma screenshot/readback: <code>Popover</code> 5 variants가 접히지 않고 실제 높이로 렌더링되는 것을 확인</li>
+          <li>Browser QA: 차트 바이탈 popover 열기/입력/저장/닫힘, 접수 radio 단일 선택 role/checked 상태 확인</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>리서치 반영</h2>
+        <ul>
+          <li>Figma Help Center의 variants 문서는 component set 안에서 variant property가 작동하는 구조를 설명한다.</li>
+          <li>Figma component management 가이드는 content-level 변경은 component properties로 처리해 variant 수를 늘리지 않는 방향을 권장한다.</li>
+          <li>이번 Popover는 그 기준에 맞춰 시각적으로 의미 있는 <code>type</code>만 variant로 두고, 나머지는 boolean/text property로 낮췄다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 리스크</h2>
+        <ul>
+          <li>Figma 생성 폰트는 API 환경에서 Pretendard 로드가 실패해 NanumGothic으로 생성했다. 실제 파일에서는 텍스트 스타일/타이포는 승욱이 별도로 정리 가능하다.</li>
+          <li>QA는 mock app 기준으로 완료했다. 실제 환자 데이터 저장이나 서버 저장은 이번 범위에 포함하지 않았다.</li>
+          <li>live backend 저장, Supabase, RLS, production deploy는 범위 밖이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

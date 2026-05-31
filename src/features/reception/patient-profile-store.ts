@@ -10,6 +10,7 @@ import {
 } from "@/mocks/emr-domain";
 import type { Consent, ConsentType, EmrId, Guardian, Patient, PatientGuardian, PatientSex } from "@/types/emr-domain";
 import type { ReceptionPatientGuardianRegistrationRecord } from "@/features/reception/patient-guardian-registration";
+import type { ReceptionPatientGuardianLookupItem } from "@/features/reception/patient-guardian-lookup";
 
 type NewPatientInput = {
   birthDate?: string;
@@ -46,6 +47,7 @@ type PatientProfileStore = {
   patients: Patient[];
   addGuardian: (input: NewGuardianInput) => { duplicateGuardianId?: EmrId; error?: string; guardianId?: EmrId };
   addPatient: (input: NewPatientInput) => { duplicateGuardianId?: EmrId; error?: string; patientId?: EmrId };
+  applyPatientGuardianLookupItem: (item: ReceptionPatientGuardianLookupItem) => EmrId;
   applyPatientGuardianRegistration: (registration: ReceptionPatientGuardianRegistrationRecord) => EmrId;
   hasDuplicatePatientNameForGuardian: (guardianId: EmrId, patientName: string) => boolean;
   setPrimaryGuardian: (patientId: EmrId, guardianId: EmrId) => void;
@@ -220,6 +222,33 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
     }));
 
     return { patientId };
+  },
+  applyPatientGuardianLookupItem: (item) => {
+    set((state) => {
+      const primaryLink: PatientGuardian | undefined = item.primaryGuardian
+        ? {
+            id: `live-pg-${item.patient.id}-${item.primaryGuardian.id}`,
+            patientId: item.patient.id,
+            guardianId: item.primaryGuardian.id,
+            relationship: "주보호자",
+            isPrimary: true,
+            canReceiveMessages: true,
+            createdAt: item.patient.createdAt,
+          }
+        : undefined;
+
+      return {
+        guardians: item.primaryGuardian
+          ? mergeById(state.guardians, [item.primaryGuardian])
+          : state.guardians,
+        patientGuardians: primaryLink
+          ? mergeById(state.patientGuardians, [primaryLink])
+          : state.patientGuardians,
+        patients: mergeById(state.patients, [item.patient]),
+      };
+    });
+
+    return item.patient.id;
   },
   applyPatientGuardianRegistration: (registration) => {
     set((state) => ({

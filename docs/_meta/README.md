@@ -9,6 +9,8 @@ This folder defines how humans and agents operate `docs/` as the repo-native kno
 - Intake rules: `docs/_meta/intake-rules.md`
 - Documentation depth rules: `docs/_meta/documentation-depth-rules.md`
 - Agent RAG map: `docs/_meta/agent-rag-map.md`
+- Owner Safety OS: `docs/_meta/owner-safety-os.md`
+- Non-developer Codex workflow: `docs/_meta/non-developer-codex-workflow.md`
 - GitBook structure rules: `docs/_meta/gitbook-structure-rules.md`
 - GitBook private operations checklist: `docs/_meta/gitbook-private-operations-checklist.md`
 - GitBook docs site creation plan: `docs/_meta/gitbook-docs-site-creation-plan.md`
@@ -21,6 +23,9 @@ This folder defines how humans and agents operate `docs/` as the repo-native kno
 - `docs/_meta/intake-rules.md`: how to classify chat instructions into source docs, work items, decisions, closeouts, or archive records.
 - `docs/_meta/documentation-depth-rules.md`: how much to record, and when GitHub PR/Issue records are enough.
 - `docs/_meta/agent-rag-map.md`: minimal reading map for Codex task startup and token-efficient source-doc selection.
+- `docs/_meta/owner-safety-os.md`: Safety OS intake gate, approval gates, review buckets, and official source standards.
+- `docs/_meta/non-developer-codex-workflow.md`: short Korean usage guide so 승욱 can invoke Safety OS without remembering skill names.
+- `docs/_meta/owner-safety-os-scenario-validation.md`: dry-run scenario expectations for validating Safety OS behavior.
 - `docs/_meta/coding-discipline.md`: concise implementation discipline for non-trivial coding work.
 - `docs/_meta/gitbook-structure-rules.md`: GitBook sidebar, area README, current-vs-history, and private-first reader-boundary rules.
 - `docs/_meta/gitbook-private-operations-checklist.md`: private/internal GitBook access, sharing, sensitive-area, and external-public conversion checklist.

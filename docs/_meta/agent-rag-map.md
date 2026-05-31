@@ -44,6 +44,7 @@ Skip these unless the active issue explicitly links them or the task needs histo
 | Testing, CI, or regression | `docs/engineering/testing/mvp-gap-analysis.md`, active work item verification section, relevant `tests/*.spec.ts` | Prefer narrow verification first, then broaden when risk requires it. |
 | Release, deployment, or operations | `docs/engineering/operations/README.md`, `docs/engineering/auth-security/auth-login/live-supabase-readiness-execution-mode.md`, `docs/engineering/auth-security/auth-login/auth-db-env-secret-verification-gates.md`, relevant launch readiness docs | Production deploy, real email, payment, and remote Supabase remain approval-gated. |
 | Linear operations | `docs/engineering/agent-orchestration/manual-linear-operations.md`, active Linear project/issue, `docs/work/index.md` | Keep one Linear issue, one owner, one branch, and one PR by default. |
+| Owner Safety OS or 안전 점검 게이트 | `docs/_meta/owner-safety-os.md`, `docs/_meta/non-developer-codex-workflow.md`, `.agents/skills/emr-owner-safety-os/SKILL.md` | Start with lightweight intake only. Do not load full checklists, modify files, or run full review until 승욱 approves the proposed scope. `작업 점검 하자` remains a legacy alias. |
 
 ## Reading Depth Rules
 

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-321 Live Fulfillment Row QA Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f7f8;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e2e4e8;
+        border-radius: 10px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef7f1;
+        color: #176b37;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .warning {
+        background: #fff7e6;
+        color: #8a5a00;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">부분 완료 / 대표 수동 검수 필요</p>
+      <h1>DEN-321 Live Fulfillment Row QA Report</h1>
+      <p>
+        2026-05-30에 fixed staging 배포를 갱신하고, Supabase Auth staging runtime에서
+        fulfillment work item이 더미 fixture가 아니라 live row로 보이도록 1차 rework를 적용했다.
+        이후 DEN-323 범위로 접수에서 생성한 live encounter를 차트로 넘기는 handoff를 추가했고,
+        DEN-326 범위로 <code>encounterId</code> 기반 billing candidate readback을 추가했다.
+      </p>
+
+      <section>
+        <h2>검수 링크</h2>
+        <ul>
+          <li>
+            Fixed staging:
+            <a href="https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app">
+              https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app
+            </a>
+          </li>
+          <li>
+            Current preview:
+            <a href="https://emr-app-shell-prototype-72mpsg5sd-mcso0s-projects.vercel.app">
+              https://emr-app-shell-prototype-72mpsg5sd-mcso0s-projects.vercel.app
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>수정 내용</h2>
+        <ul>
+          <li>
+            임상병리/영상 화면은 Supabase Auth runtime에서
+            <code>/fulfillment/work-items?queueType=lab|imaging</code> 결과를 실제 queue/detail row로 변환한다.
+          </li>
+          <li>
+            조제/처치 화면은 Supabase Auth runtime에서 fixture queue에 덮어쓰지 않고 live fulfillment work item을 standalone row로 보여준다.
+          </li>
+          <li>
+            local/mock demo runtime에서는 기존 Sales Demo fixture fallback을 유지한다.
+          </li>
+          <li>
+            담당자 action은 기존 <code>PATCH /fulfillment/work-items/[workItemId]</code> 경로를 계속 사용한다.
+          </li>
+          <li>
+            접수 화면에서 live 환자/보호자 lookup 결과를 세션 profile store에 병합해,
+            Supabase Auth runtime에서 walk-in 생성 직후 side panel과 drawer가 같은 환자/보호자 context를 유지한다.
+          </li>
+          <li>
+            접수 카드와 drawer의 <code>차트보기</code> 액션은 live encounter/patient/guardian context를
+            sessionStorage handoff로 저장한 뒤 <code>/w/:workspaceId/treatment?encounterId=...</code>로 이동한다.
+          </li>
+          <li>
+            차트 화면은 mock bundle에 없는 live encounter id라도 handoff가 있으면 같은 encounter id로
+            환자 context와 chart draft/order confirm API 경계를 열 수 있다.
+          </li>
+          <li>
+            Billing 화면은 <code>?encounterId=...</code>로 들어온 live encounter handoff와
+            <code>/billing/invoice-candidates?encounterId=...</code> 결과를 합쳐
+            <code>LIVE-&lt;진료번호&gt;</code> 청구 detail과 candidate line을 렌더링한다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과</li>
+          <li><code>npm run security:secrets</code>: 통과</li>
+          <li><code>npx eslint src/features/lab-imaging/module.tsx src/features/dispensing/module.tsx</code>: 통과</li>
+          <li>
+            Focused Playwright:
+            <code>tests/dispensing-fulfillment.spec.ts</code> 통과,
+            <code>tests/lab-imaging.spec.ts</code> 6개 중 5개 통과.
+          </li>
+          <li>
+            DEN-323 focused Playwright:
+            <code>tests/reception.spec.ts</code>의 server-backed walk-in, persistence reload,
+            card action menu 회귀 3개 통과.
+          </li>
+          <li>
+            DEN-323 focused Chart:
+            <code>tests/chart.spec.ts</code>의 scenario query, queue selection,
+            chart catalog add 회귀 3개 통과.
+          </li>
+          <li>
+            DEN-326 focused Billing:
+            <code>tests/billing.spec.ts</code>의 live candidate row readback과 기존 waiting invoice 회귀 2개 통과.
+          </li>
+          <li>
+            새 회귀 케이스는 server-backed walk-in 생성 후 카드 메뉴에서 차트로 이동하고,
+            차트 header가 live encounter 번호 <code>E-LIVE-0001</code>를 표시하는지 확인한다.
+          </li>
+          <li>
+            새 billing 회귀 케이스는 session handoff가 있는 live encounter에 대해
+            <code>Live CBC 검사</code> candidate line과 <code>35,000원</code> 금액이 화면에 표시되는지 확인한다.
+          </li>
+          <li>
+            남은 Playwright 실패는 <code>Order 상세정보</code> 텍스트가 숨겨진 중복 node를 먼저 잡는 locator 문제다.
+            error snapshot에서는 실제 Order 상세정보 섹션이 렌더링된 것이 확인된다.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제한 사항</h2>
+        <ul>
+          <li class="warning">
+            Headless/curl staging 검증은 Vercel SSO 보호로 <code>401</code>에서 막혔다.
+            대표 로그인 세션의 in-app browser에서 수동 검수가 필요하다.
+          </li>
+          <li>production deploy는 하지 않았다.</li>
+          <li>실데이터 import, 원격 RLS replay, 승인 없는 staging DB migration은 하지 않았다.</li>
+          <li>
+            접수부터 chart 진입은 DEN-323에서 같은 브라우저 세션 기준으로 연결했다.
+            새로고침 이후 live 환자/보호자 context까지 완전 복원하려면 reception queue RPC가 patient/guardian snapshot을 반환하거나
+            별도 live chart encounter read API가 필요하다. 이 DB/API 확장은 승인 gate 전에는 적용하지 않았다.
+          </li>
+          <li>
+            lab/imaging 수의사 확인 gate와 billing candidate 화면 readback은
+            DEN-326의 최소 readback까지 연결했다. 단, lab/imaging 담당 수의사 확인 후 billing advance는
+            아직 별도 버튼/API 흐름으로 staging 수동 검수가 필요하다.
+          </li>
+          <li>
+            전체 fixed staging replay와 Human Review 이동은 후속 하위 이슈 DEN-327에서 계속 진행해야 한다.
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

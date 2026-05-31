@@ -119,7 +119,10 @@ export function EmrTableHeaderCell({
             type="button"
             aria-label={sortLabel ?? `${label} 정렬`}
             title={sortLabel ?? `${label} 정렬`}
-            className="inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-muted-foreground hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50"
+            className={cn(
+              "inline-flex size-5 shrink-0 items-center justify-center rounded-[var(--emr-radius-control)] text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
+              sortDirection && "text-[var(--emr-text-secondary)]",
+            )}
             onClick={(event) => {
               event.stopPropagation();
               onSort?.();

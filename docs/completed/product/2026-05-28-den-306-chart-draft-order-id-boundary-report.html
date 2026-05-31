@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-306 차트 draft 오더 ID 분리 리포트</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #111827; }
+      h1, h2 { line-height: 1.25; }
+      code { background: #f3f4f6; border-radius: 4px; padding: 2px 4px; }
+      .ok { color: #047857; font-weight: 700; }
+      .warn { color: #92400e; font-weight: 700; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #e5e7eb; padding: 8px 10px; vertical-align: top; }
+      th { background: #f9fafb; text-align: left; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-306 차트 draft 오더 ID 분리 리포트</h1>
+    <p>
+      병원관리 Order Catalog의 source id와 진료 차트 draft order의 DB id가 섞이던 문제를 분리했다.
+      이제 catalog 후보를 차트에 추가하면 차트 draft row는 UUID를 사용하고, 원본 catalog 정보는
+      <code>sourcePresetId</code>, <code>source_order_id</code>, snapshot에 따로 보존된다.
+    </p>
+
+    <h2>핵심 변경</h2>
+    <ul>
+      <li>차트 catalog 추가 모달의 중복 판정을 order id가 아니라 catalog source id 기준으로 변경했다.</li>
+      <li>저장 직전 레거시 <code>catalog-...</code> 형태의 draft id가 남아 있으면 UUID draft id로 보정한다.</li>
+      <li>staging DB 함수 <code>clair_save_chart_order_draft</code>가 catalog source id를 UUID로 직접 cast하지 않도록 방어했다.</li>
+      <li>비UUID catalog id가 들어와도 DB가 500을 내지 않고 UUID draft order로 저장할 수 있게 보강했다.</li>
+    </ul>
+
+    <h2>Staging 적용</h2>
+    <table>
+      <tr><th>항목</th><th>결과</th></tr>
+      <tr><td>Preview URL</td><td><a href="https://emr-app-shell-prototype-pruzt7tq4-mcso0s-projects.vercel.app">https://emr-app-shell-prototype-pruzt7tq4-mcso0s-projects.vercel.app</a></td></tr>
+      <tr><td>DB migration</td><td class="ok">staging Supabase에 DEN-306 함수 교체 SQL 적용 완료</td></tr>
+      <tr><td>DB replay</td><td class="ok">비UUID <code>catalog-individual-...</code> 입력을 rollback 트랜잭션으로 검증, UUID orderId 반환 확인</td></tr>
+      <tr><td>Vercel deployment</td><td class="ok">READY, deployment id <code>dpl_25kWtRb1HDK6eGG99XLLSUu8fNL1</code></td></tr>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><span class="ok">PASS</span> <code>npx tsc --noEmit</code></li>
+      <li><span class="ok">PASS</span> <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/chart-order-draft-persistence-server.spec.ts</code></li>
+      <li><span class="ok">PASS</span> <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/chart.spec.ts -g "chart order add searches active workspace catalog and adds a draft row"</code></li>
+      <li><span class="ok">PASS</span> <code>npm run build</code> with staging Supabase public env</li>
+      <li><span class="ok">PASS</span> <code>npm run security:secrets</code></li>
+      <li><span class="ok">PASS</span> staging DB rollback replay: 비UUID catalog id 입력 시 UUID draft order 반환</li>
+      <li><span class="ok">PASS</span> Vercel smoke: deployment READY, unauthenticated workspace API는 인증 필요 응답 유지</li>
+    </ul>
+
+    <h2>검수 포인트</h2>
+    <ol>
+      <li>Preview URL에서 수의사 계정으로 로그인한다.</li>
+      <li>진료 화면에서 병원관리에서 만든 catalog 오더를 추가한다.</li>
+      <li>추가 직후 선택 후 <strong>Order 확정</strong>을 누른다.</li>
+      <li>기대 결과: draft 저장 실패 토스트 없이 확정 성공 토스트가 뜨고, row 상태가 확정으로 바뀐다.</li>
+      <li>병원관리 catalog source는 유지되고, 차트 order는 별도 UUID draft/order로 저장된다.</li>
+    </ol>
+
+    <h2>주의</h2>
+    <p class="warn">
+      remote migration history에 과거 로컬에 없는 migration 기록이 있어 <code>supabase db push</code> 전체 실행은 사용하지 않았다.
+      DEN-306 SQL만 staging DB에 직접 적용했고, production 배포나 실데이터 import는 하지 않았다.
+    </p>
+  </body>
+</html>

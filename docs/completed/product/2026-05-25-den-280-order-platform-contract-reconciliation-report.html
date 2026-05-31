@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-280 Order Platform Contract Reconciliation</title>
+    <style>
+      body{margin:0;background:#f6f7f9;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      main{max-width:980px;margin:0 auto;padding:48px 28px 64px}
+      section{margin-top:18px;border:1px solid #d9dee8;border-radius:8px;background:#fff;padding:22px 24px}
+      h1{margin:0 0 8px;font-size:30px;letter-spacing:0}
+      h2{font-size:18px;letter-spacing:0}
+      p,li,td,th{font-size:14px;line-height:1.7}
+      .meta{color:#5f6b7a;font-size:13px}
+      .badge{display:inline-block;margin:12px 8px 0 0;border-radius:999px;background:#ecfdf3;color:#166534;padding:6px 10px;font-size:12px;font-weight:700}
+      .warn{background:#fff7e6;color:#8a4b00}
+      table{width:100%;border-collapse:collapse;margin-top:10px}
+      th,td{border-top:1px solid #d9dee8;padding:10px 8px;text-align:left;vertical-align:top}
+      code{border-radius:5px;background:#eef1f5;padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+      a{color:#1f5eff;text-decoration:none}
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">DEN-280 / 2026-05-25 / Workspace Order Catalog Platform</p>
+      <h1>Order Platform 기존 구조 대조 및 정책 고정</h1>
+      <p>기존 Project 07의 오더 카탈로그 기반과 Project 08의 후속 업무 전달 기반을 재사용 대상으로 확인하고, 구현 전에 필요한 제품 정책을 새 source-of-truth 문서로 고정했다.</p>
+      <span class="badge">Status: Human Review</span>
+      <span class="badge warn">Implementation: Not started</span>
+      <section>
+        <h2>무엇이 결정됐나</h2>
+        <ul>
+          <li>1차 오더 범위는 검사, 영상, 예방, 처치, 수술, 입원, 치료, 처방/조제/의료물품을 모두 포함한다.</li>
+          <li>1차 오더 관리 권한은 병원관리자만 가진다.</li>
+          <li>CLAiR 기본 프리셋은 자동 병합하되, 병원이 수정한 값은 덮어쓰지 않는다.</li>
+          <li>삭제 UX는 <code>사용 중지</code>로 잡고, 과거 차트/청구 snapshot은 유지한다.</li>
+          <li>가격 변경은 1차에서 즉시 적용하되, 과거 기록은 확정 시점 snapshot으로 보호한다.</li>
+          <li>lab/imaging은 결과 완료 후 차트로 돌아가 담당 수의사 확인을 거친 뒤 수납으로 갈 수 있다.</li>
+          <li>technician은 오더 업무를 취소하지 않고 차트로 반려만 할 수 있다.</li>
+          <li>CSV는 1차에서 import 기능 없이 템플릿 설계만 한다.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>재사용할 기존 기반</h2>
+        <table>
+          <thead><tr><th>기반</th><th>재사용 이유</th></tr></thead>
+          <tbody>
+            <tr><td>Project 07 order catalog foundation</td><td>workspace catalog row, admin/chart read, mutation, order set, lab item linkage, pricing snapshot 기반이 이미 있다.</td></tr>
+            <tr><td>Project 08 fulfillment handoff foundation</td><td>chart-confirmed order가 downstream work item으로 이동하고 lifecycle/billing으로 돌아오는 경계가 이미 있다.</td></tr>
+            <tr><td>Existing permission and audit boundaries</td><td><code>service_catalog:view</code>, <code>service_catalog:manage</code>, workspace-scoped mutation, rate limit 기반을 확장할 수 있다.</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section>
+        <h2>생성/수정한 문서</h2>
+        <ul>
+          <li><a href="../../product/domain/workspace-order-catalog-platform.md">docs/product/domain/workspace-order-catalog-platform.md</a></li>
+          <li><a href="../../product/domain/order-fulfillment-handoff.md">docs/product/domain/order-fulfillment-handoff.md</a></li>
+          <li><a href="../../product/domain/README.md">docs/product/domain/README.md</a></li>
+          <li><a href="../../product/changelog.md">docs/product/changelog.md</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2>검증</h2>
+        <p><code>npm run docs:check</code>를 실행해 내부 docs reference를 확인했다.</p>
+      </section>
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>앱 구현, UI 수정, DB migration, remote Supabase, RLS replay, production deploy는 진행하지 않았다.</li>
+          <li>CSV import 기능은 만들지 않았다. 템플릿 설계는 <code>DEN-292</code>로 분리했다.</li>
+          <li>매니저/수의사 catalog 관리 권한 확장은 1차 범위에서 제외했다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

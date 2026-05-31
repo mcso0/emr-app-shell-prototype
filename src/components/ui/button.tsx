@@ -34,7 +34,7 @@ const buttonVariants = cva(
       },
       roundness: {
         default: "emr-control-radius",
-        round: "rounded-full",
+        round: "rounded-[9999px]",
       },
     },
     defaultVariants: {

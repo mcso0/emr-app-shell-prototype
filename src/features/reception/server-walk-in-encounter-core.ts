@@ -249,6 +249,14 @@ export type SupabaseReceptionWalkInEncounterRpcClient = {
       p_walk_in: ReceptionWalkInEncounterInput;
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_search_reception_patient_guardian_lookup",
+    args: {
+      p_workspace_id: string;
+      p_query: string;
+      p_limit: number;
+    }
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export function createSupabaseReceptionWalkInEncounterGateway(
@@ -256,10 +264,19 @@ export function createSupabaseReceptionWalkInEncounterGateway(
 ): ReceptionWalkInEncounterGateway {
   return {
     async createWalkInEncounter({ actorUserId, workspaceId, input }) {
+      const resolvedInput = await resolveStagingSyntheticWalkInInput({
+        client,
+        input,
+        workspaceId,
+      });
+      if (!resolvedInput.ok) {
+        return { ok: false, status: 409, denialReason: "patient_unavailable" };
+      }
+
       const { data, error } = await client.rpc("clair_create_reception_walk_in_encounter", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
-        p_walk_in: input,
+        p_walk_in: resolvedInput.input,
       });
 
       if (error) {
@@ -272,6 +289,61 @@ export function createSupabaseReceptionWalkInEncounterGateway(
       if (!walkIn) return { ok: false, status: 500, error: "db_write_failed" };
 
       return { ok: true, walkIn };
+    },
+  };
+}
+
+async function resolveStagingSyntheticWalkInInput({
+  client,
+  input,
+  workspaceId,
+}: {
+  client: SupabaseReceptionWalkInEncounterRpcClient;
+  input: ReceptionWalkInEncounterInput;
+  workspaceId: string;
+}): Promise<{ ok: true; input: ReceptionWalkInEncounterInput } | { ok: false }> {
+  if (uuidPattern.test(input.patientId)) return { ok: true, input };
+
+  const inputWithDisplayName = input as ReceptionWalkInEncounterInput & { patientName?: string };
+  const lookupQuery = stagingMockPatientLookupTerms[input.patientId] ?? inputWithDisplayName.patientName;
+  if (!lookupQuery) return { ok: true, input };
+
+  const { data, error } = await client.rpc("clair_search_reception_patient_guardian_lookup", {
+    p_workspace_id: workspaceId,
+    p_query: lookupQuery,
+    p_limit: 5,
+  });
+  if (error || !Array.isArray(data)) return { ok: false };
+
+  const resolved = data
+    .map((row) => {
+      const value = row as {
+        patient?: { id?: unknown };
+        primaryGuardian?: { id?: unknown };
+        primary_guardian?: { id?: unknown };
+      };
+      const patientId = typeof value.patient?.id === "string" ? value.patient.id : undefined;
+      const primaryGuardian = value.primaryGuardian ?? value.primary_guardian;
+      const guardianId =
+        typeof primaryGuardian?.id === "string" ? primaryGuardian.id : undefined;
+
+      return patientId && uuidPattern.test(patientId) ? { guardianId, patientId } : null;
+    })
+    .find((row): row is { guardianId: string | undefined; patientId: string } =>
+      Boolean(row)
+    );
+
+  if (!resolved) return { ok: false };
+
+  return {
+    ok: true,
+    input: {
+      ...input,
+      guardianId:
+        input.guardianId && uuidPattern.test(input.guardianId)
+          ? input.guardianId
+          : resolved.guardianId,
+      patientId: resolved.patientId,
     },
   };
 }
@@ -308,6 +380,9 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
 
 function mapWalkInDbDenial(message?: string) {
   if (!message) return null;
+  if (message.includes("invalid input syntax for type uuid")) {
+    return "patient_unavailable" as const;
+  }
   if (message.includes("patient_unavailable")) return "patient_unavailable" as const;
   if (message.includes("guardian_unavailable")) return "guardian_unavailable" as const;
   if (message.includes("patient_guardian_link_missing")) {
@@ -433,3 +508,14 @@ function createDemoReceptionWalkInPermissionAdapter() {
 function trimToUndefined(value?: string) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
+
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const stagingMockPatientLookupTerms: Record<string, string> = {
+  "patient-coco": "choco",
+  "patient-dubu": "dubu",
+  "patient-haru": "mango",
+  "patient-kong": "kong",
+  "patient-nabi": "nabi",
+};

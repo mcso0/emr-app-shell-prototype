@@ -7,6 +7,7 @@ import {
   canViewBilling,
   getMockAuthCapabilities,
 } from "../src/features/auth/permissions";
+import { resolveDemoMockAuthRoleFromEmail } from "../src/features/auth/mock-session";
 import {
   PERSONAL_PROFILE_STORAGE_KEY,
   upsertSessionPersonalProfile,
@@ -142,6 +143,31 @@ test("auth runtime mode matrix keeps mock fallback and Supabase session sources 
       missingConfigBehavior: "auto_mock_fallback",
     });
   });
+});
+
+test("production login does not expose mock development controls", () => {
+  const source = readFileSync("src/features/auth/login-form.tsx", "utf8");
+
+  expect(source).toContain("process.env.NODE_ENV === \"production\"");
+  expect(source).toContain("showsMockDevelopmentControls");
+  expect(source).toContain("resolveDemoMockAuthRoleFromEmail");
+  expect(source).toContain("showsInviteSupportPanel");
+  expect(source).toContain("(isInviteLogin || isInviteOtpLogin) && !isProductionRuntime");
+});
+
+test("production hidden mock fallback maps synthetic account emails to roles", () => {
+  expect(resolveDemoMockAuthRoleFromEmail("admin@clair.local")).toBe("hospital_admin");
+  expect(resolveDemoMockAuthRoleFromEmail(" VET@CLAIR.LOCAL ")).toBe("vet");
+  expect(resolveDemoMockAuthRoleFromEmail("technician@clair.local")).toBe("nurse");
+  expect(resolveDemoMockAuthRoleFromEmail("unknown@clair.local")).toBeNull();
+});
+
+test("auth gate uses workspace shell skeleton while checking access", () => {
+  const source = readFileSync("src/features/auth/auth-gate.tsx", "utf8");
+
+  expect(source).toContain("auth-gate-shell-skeleton");
+  expect(source).toContain("AuthGateShellSkeleton");
+  expect(source).not.toContain("로그인 확인 중");
 });
 
 test("root starts at login", async ({ page }) => {

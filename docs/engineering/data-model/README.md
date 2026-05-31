@@ -8,6 +8,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | --- | --- |
 | Current broad DB structure and domain schema draft | `emr-saas-db-structure-spec.ko.md` |
 | English reference for the same DB structure draft | `emr-saas-db-structure-spec.en.md` |
+| CLAiR system presets to workspace order catalog initialization and auto-merge | `order-catalog-preset-initialization-contract.md` |
 | Chart-confirmed order handoff into fulfillment queues and billing candidates | `order-fulfillment-handoff-contract.md` |
 
 ## Current Files
@@ -16,6 +17,7 @@ Canonical engineering data model documents live here. Use this README as the Git
 | --- | --- |
 | `emr-saas-db-structure-spec.ko.md` | Primary Korean data model draft for organization, workspace, auth, patient/guardian, reception, chart, orders, fulfillment, billing, operations, and app-shell state. |
 | `emr-saas-db-structure-spec.en.md` | English companion reference for the DB structure draft. Keep it aligned when material schema guidance changes. |
+| `order-catalog-preset-initialization-contract.md` | Engineering contract for CLAiR system presets, workspace catalog source tracking, idempotent initialization, automatic preset merge, customization protection, and DEN-282 implementation boundaries. |
 | `order-fulfillment-handoff-contract.md` | Engineering contract for order fulfillment route shape, source snapshot, status mapping, permission requirements, migration gate, and verification baseline. |
 
 ## Boundaries

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -11,6 +11,13 @@ import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
+import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
+import {
+  createInitialEmrTableFilterBuilderModel,
+  filterRowsByEmrTableFilterBuilder,
+  getEmrTableFilterBuilderActiveCount,
+  type EmrTableFilterBuilderField,
+} from "@/components/emr/table-filter-builder-model";
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
@@ -59,6 +66,7 @@ import {
   type BillingQueueRow,
 } from "@/features/billing/data";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
+import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { useBillingStore, type BillingFilter } from "@/features/billing/store";
 import {
   getPatientDisplayAge,
@@ -68,6 +76,7 @@ import {
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
+import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
   EmrColumnResize,
@@ -79,6 +88,7 @@ import type { ShellComponentProps } from "@/types/emr";
 import type {
   InvoiceLine,
   InvoiceStatus,
+  Invoice,
   Payment,
   PaymentMethod,
 } from "@/types/emr-domain";
@@ -296,19 +306,6 @@ type BillingInvoiceLineSortState = {
   direction: BillingInvoiceLineSortDirection;
   key: BillingInvoiceLineSortKey;
 } | null;
-type BillingInvoiceLineFilter =
-  | {
-      field: "category";
-      id: string;
-      operator: "is";
-      values: BillingLineCategory[];
-    }
-  | {
-      field: "lineTotal";
-      id: string;
-      operator: "gte" | "lte";
-      value: number | null;
-    };
 
 const billingInvoiceLineSortLabels: Record<BillingInvoiceLineSortKey, string> =
   {
@@ -319,12 +316,6 @@ const billingInvoiceLineSortLabels: Record<BillingInvoiceLineSortKey, string> =
     discount: "할인",
     lineTotal: "청구금액",
   };
-let billingInvoiceLineFilterId = 0;
-
-function createBillingInvoiceLineFilterId() {
-  billingInvoiceLineFilterId += 1;
-  return `billing-line-filter-${billingInvoiceLineFilterId}`;
-}
 
 const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
   if (line.serviceItemId?.startsWith("svc-consult")) return "진료";
@@ -335,6 +326,55 @@ const getBillingLineCategory = (line: InvoiceLine): BillingLineCategory => {
 
   return "기타";
 };
+
+const billingInvoiceLineFilterFields: Array<
+  EmrTableFilterBuilderField<InvoiceLine>
+> = [
+  {
+    getValue: (line) => getBillingLineCategory(line),
+    id: "category",
+    label: "업무",
+    operators: [{ id: "is", label: "Is" }],
+    options: billingLineCategoryOrder.map((category) => ({
+      label: category,
+      value: category,
+    })),
+    valuePlaceholder: "업무 선택",
+  },
+  {
+    getValue: (line) => line.lineTotal,
+    id: "lineTotal",
+    label: "청구금액",
+    operators: [
+      {
+        id: "gte",
+        label: "이상",
+        match: (fieldValue, ruleValue) => {
+          const amount = Number(fieldValue);
+          const threshold = Number(ruleValue);
+
+          return Number.isFinite(amount) && Number.isFinite(threshold)
+            ? amount >= threshold
+            : false;
+        },
+      },
+      {
+        id: "lte",
+        label: "이하",
+        match: (fieldValue, ruleValue) => {
+          const amount = Number(fieldValue);
+          const threshold = Number(ruleValue);
+
+          return Number.isFinite(amount) && Number.isFinite(threshold)
+            ? amount <= threshold
+            : false;
+        },
+      },
+    ],
+    valueKind: "text",
+    valuePlaceholder: "금액 입력",
+  },
+];
 
 const sortInvoiceLinesForDemoFlow = (lines: InvoiceLine[]) =>
   [...lines].sort((a, b) => {
@@ -393,70 +433,6 @@ function sortBillingInvoiceLines(
     .map((entry) => entry.line);
 }
 
-function isBillingInvoiceLineFilterActive(filter: BillingInvoiceLineFilter) {
-  if (filter.field === "category") return filter.values.length > 0;
-
-  return typeof filter.value === "number" && Number.isFinite(filter.value);
-}
-
-function doesBillingInvoiceLineMatchFilter(
-  line: InvoiceLine,
-  filter: BillingInvoiceLineFilter,
-) {
-  if (!isBillingInvoiceLineFilterActive(filter)) return true;
-
-  if (filter.field === "category") {
-    return filter.values.includes(getBillingLineCategory(line));
-  }
-
-  return filter.operator === "gte"
-    ? line.lineTotal >= (filter.value ?? 0)
-    : line.lineTotal <= (filter.value ?? 0);
-}
-
-function filterBillingInvoiceLines(
-  lines: InvoiceLine[],
-  filters: BillingInvoiceLineFilter[],
-) {
-  const activeFilters = filters.filter(isBillingInvoiceLineFilterActive);
-  if (activeFilters.length === 0) return lines;
-
-  return lines.filter((line) =>
-    activeFilters.every((filter) =>
-      doesBillingInvoiceLineMatchFilter(line, filter),
-    ),
-  );
-}
-
-function createBillingInvoiceLineFilter(
-  field: BillingInvoiceLineFilter["field"] = "category",
-): BillingInvoiceLineFilter {
-  if (field === "lineTotal") {
-    return {
-      field,
-      id: createBillingInvoiceLineFilterId(),
-      operator: "gte",
-      value: null,
-    };
-  }
-
-  return {
-    field,
-    id: createBillingInvoiceLineFilterId(),
-    operator: "is",
-    values: [],
-  };
-}
-
-function cloneBillingInvoiceLineFilter(
-  filter: BillingInvoiceLineFilter,
-): BillingInvoiceLineFilter {
-  if (filter.field === "category")
-    return { ...filter, values: [...filter.values] };
-
-  return { ...filter };
-}
-
 const getBillingFlowLabel = (lines: InvoiceLine[]) => {
   const categories = billingLineCategoryOrder.filter(
     (category) =>
@@ -468,28 +444,7 @@ const getBillingFlowLabel = (lines: InvoiceLine[]) => {
 };
 
 function getDemoActorHeader(session: AuthSession | null) {
-  return session &&
-    (!("provider" in session) || session.provider !== "supabase")
-    ? {
-        "x-clair-demo-client-session-id": getDemoClientSessionId(),
-        "x-clair-demo-session-user-id": session.id,
-      }
-    : undefined;
-}
-
-function getDemoClientSessionId() {
-  if (typeof window === "undefined") return "server-render";
-
-  const storageKey = "clair-demo-client-session-id";
-  const existing = window.sessionStorage.getItem(storageKey);
-  if (existing) return existing;
-
-  const next =
-    typeof window.crypto?.randomUUID === "function"
-      ? window.crypto.randomUUID()
-      : `demo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  window.sessionStorage.setItem(storageKey, next);
-  return next;
+  return getDemoActorHeaders(session);
 }
 
 async function loadBillingInvoiceCandidates({
@@ -701,7 +656,61 @@ const mergeInvoiceCandidateLines = (
   return nextLines;
 };
 
+function createLiveCandidateBillingDetail({
+  candidates,
+  encounterId,
+  workspaceId,
+}: {
+  candidates: BillingInvoiceCandidateSnapshot[];
+  encounterId?: string;
+  workspaceId: string;
+}): BillingDetail | null {
+  if (!encounterId) return null;
+
+  const handoff = readChartLiveEncounterHandoff(encounterId);
+  if (!handoff) return null;
+
+  const invoiceId = candidates[0]?.invoiceId ?? `invoice-live-${encounterId}`;
+  const invoiceLines = candidates.map((candidate) => ({
+    id: `invoice-line-${candidate.billingCandidateId}`,
+    invoiceId: candidate.invoiceId,
+    orderId: candidate.orderId,
+    description: candidate.description,
+    quantity: candidate.quantity,
+    unitPrice: candidate.unitPrice,
+    lineTotal: candidate.lineTotal,
+  }) satisfies InvoiceLine);
+  const subtotalAmount = invoiceLines.reduce(
+    (total, line) => total + line.lineTotal,
+    0,
+  );
+  const invoice: Invoice = {
+    id: invoiceId,
+    workspaceId,
+    encounterId,
+    guardianId: handoff.primaryGuardian?.id,
+    invoiceNo: `LIVE-${handoff.encounter.encounterNo}`,
+    status: "draft",
+    subtotalAmount,
+    discountAmount: 0,
+    taxAmount: 0,
+    totalAmount: subtotalAmount,
+    createdAt: handoff.updatedAt,
+  };
+
+  return {
+    encounter: handoff.encounter,
+    guardian: handoff.primaryGuardian,
+    invoice,
+    invoiceLines,
+    paidAmount: 0,
+    patient: handoff.patient,
+    payments: [],
+  };
+}
+
 function useBillingWorkspaceData() {
+  const params = useParams<{ workspaceId?: string | string[] }>();
   const searchParams = useSearchParams();
   const { session: authSession } = useAuthClient();
   const applyInvoiceSnapshot = useBillingStore(
@@ -715,7 +724,12 @@ function useBillingWorkspaceData() {
   const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const scenario = getDemoScenarioFromParams(searchParams);
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : params.workspaceId?.[0] ?? "clair-demo";
   const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
+  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
   const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
   const [persistedCandidates, setPersistedCandidates] = useState<{
     candidates: BillingInvoiceCandidateSnapshot[];
@@ -768,22 +782,24 @@ function useBillingWorkspaceData() {
   const baseInvoiceId = baseDetail?.invoice.id;
   const baseInvoiceWorkspaceId = baseDetail?.invoice.workspaceId;
   useEffect(() => {
-    if (!baseEncounterId || !baseEncounterWorkspaceId) return;
-    const encounterId = baseEncounterId;
-    const workspaceId = baseEncounterWorkspaceId;
+    const encounterId = queryEncounterId ?? baseEncounterId;
+    const candidateWorkspaceId = queryEncounterId ? workspaceId : baseEncounterWorkspaceId;
+    if (!encounterId || !candidateWorkspaceId) return;
+    const resolvedEncounterId = encounterId;
+    const resolvedWorkspaceId = candidateWorkspaceId;
     let cancelled = false;
 
     async function loadPersistedCandidates() {
       const result = await loadBillingInvoiceCandidates({
         actorHeaders,
-        encounterId,
-        workspaceId,
+        encounterId: resolvedEncounterId,
+        workspaceId: resolvedWorkspaceId,
       });
 
       if (cancelled || !result.ok) return;
       setPersistedCandidates({
         candidates: result.candidates,
-        encounterId,
+        encounterId: resolvedEncounterId,
       });
     }
 
@@ -792,7 +808,13 @@ function useBillingWorkspaceData() {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, baseEncounterId, baseEncounterWorkspaceId]);
+  }, [
+    actorHeaders,
+    baseEncounterId,
+    baseEncounterWorkspaceId,
+    queryEncounterId,
+    workspaceId,
+  ]);
   useEffect(() => {
     if (!baseInvoiceId || !baseInvoiceWorkspaceId) return;
     const invoiceId = baseInvoiceId;
@@ -859,8 +881,17 @@ function useBillingWorkspaceData() {
     [effectiveInvoiceLines, effectiveInvoices, payments],
   );
 
+  const liveCandidateDetail =
+    queryEncounterId && persistedCandidates.encounterId === queryEncounterId
+      ? createLiveCandidateBillingDetail({
+          candidates: persistedCandidates.candidates,
+          encounterId: queryEncounterId,
+          workspaceId,
+        })
+      : null;
+
   return {
-    detail,
+    detail: queryEncounterId && liveCandidateDetail ? liveCandidateDetail : detail,
     groups,
     invoices: effectiveInvoices,
     queryInvoiceId,
@@ -1283,174 +1314,6 @@ function BillingInvoiceLineSortableHead({
   );
 }
 
-function BillingInvoiceLineFilterBuilder({
-  draftFilters,
-  onAdd,
-  onApply,
-  onChangeField,
-  onChangeLineTotalOperator,
-  onChangeLineTotalValue,
-  onClose,
-  onRemove,
-  onReset,
-  onToggleCategory,
-}: {
-  draftFilters: BillingInvoiceLineFilter[];
-  onAdd: () => void;
-  onApply: () => void;
-  onChangeField: (
-    filterId: string,
-    field: BillingInvoiceLineFilter["field"],
-  ) => void;
-  onChangeLineTotalOperator: (
-    filterId: string,
-    operator: "gte" | "lte",
-  ) => void;
-  onChangeLineTotalValue: (filterId: string, value: number | null) => void;
-  onClose: () => void;
-  onRemove: (filterId: string) => void;
-  onReset: () => void;
-  onToggleCategory: (filterId: string, category: BillingLineCategory) => void;
-}) {
-  return (
-    <div className="grid gap-3">
-      <div>
-        <div className="emr-text-body font-semibold">Filters</div>
-        <div className="emr-text-metadata text-muted-foreground">
-          다중 조건은 AND로 적용됩니다.
-        </div>
-      </div>
-      <div className="grid gap-2">
-        {draftFilters.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-4 text-center emr-text-metadata text-muted-foreground">
-            적용할 필터 조건이 없습니다.
-          </div>
-        ) : (
-          draftFilters.map((filter) => (
-            <div
-              key={filter.id}
-              className="grid gap-2 rounded-lg bg-[var(--emr-surface-muted)] p-2 md:grid-cols-[132px_108px_minmax(0,1fr)_32px]"
-            >
-              <select
-                aria-label="필터 필드"
-                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)]"
-                value={filter.field}
-                onChange={(event) =>
-                  onChangeField(
-                    filter.id,
-                    event.target.value as BillingInvoiceLineFilter["field"],
-                  )
-                }
-              >
-                <option value="category">업무</option>
-                <option value="lineTotal">청구금액</option>
-              </select>
-              <select
-                aria-label="필터 조건"
-                className="h-8 rounded-[var(--emr-radius-control)] border border-input bg-card px-2 emr-control-text-compact text-[var(--emr-text-secondary)] disabled:text-muted-foreground"
-                disabled={filter.field === "category"}
-                value={filter.operator}
-                onChange={(event) =>
-                  filter.field === "lineTotal"
-                    ? onChangeLineTotalOperator(
-                        filter.id,
-                        event.target.value as "gte" | "lte",
-                      )
-                    : undefined
-                }
-              >
-                {filter.field === "category" ? (
-                  <option value="is">Is</option>
-                ) : (
-                  <>
-                    <option value="gte">이상</option>
-                    <option value="lte">이하</option>
-                  </>
-                )}
-              </select>
-              {filter.field === "category" ? (
-                <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-[var(--emr-radius-control)] border border-input bg-card px-1.5 py-1">
-                  {billingLineCategoryOrder.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      aria-pressed={filter.values.includes(category)}
-                      className={cn(
-                        "min-h-6 rounded-full border border-transparent px-2 emr-text-metadata font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]",
-                        filter.values.includes(category) &&
-                          "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]",
-                      )}
-                      onClick={() => onToggleCategory(filter.id, category)}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <Input
-                  aria-label="청구금액 필터 값"
-                  className="h-8 bg-card text-right tabular-nums"
-                  inputMode="numeric"
-                  min={0}
-                  step={1000}
-                  type="number"
-                  value={filter.value ?? ""}
-                  onChange={(event) =>
-                    onChangeLineTotalValue(
-                      filter.id,
-                      event.target.value === ""
-                        ? null
-                        : Number(event.target.value),
-                    )
-                  }
-                />
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="필터 조건 삭제"
-                className="justify-self-end text-[var(--emr-text-danger)]"
-                onClick={() => onRemove(filter.id)}
-              >
-                ×
-              </Button>
-            </div>
-          ))
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="bg-card"
-          onClick={onAdd}
-        >
-          + Add filter
-        </Button>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button type="button" size="sm" onClick={onApply}>
-            Apply filters
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-[var(--emr-text-danger)]"
-            onClick={onReset}
-          >
-            초기화
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function InvoiceLinesTable({
   lines,
   persistenceState,
@@ -1464,17 +1327,25 @@ function InvoiceLinesTable({
 }) {
   const [density, setDensity] = useState<EmrTableDensity>("standard");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<BillingInvoiceLineFilter[]>([]);
-  const [draftFilters, setDraftFilters] = useState<BillingInvoiceLineFilter[]>(
-    [],
+  const [filterModel, setFilterModel] = useState(() =>
+    createInitialEmrTableFilterBuilderModel(
+      "billing-invoice-line-filter",
+      "billing-invoice-line-filter-rule-1",
+    ),
   );
   const [sortState, setSortState] = useState<BillingInvoiceLineSortState>(null);
-  const activeFilterCount = filters.filter(
-    isBillingInvoiceLineFilterActive,
-  ).length;
+  const activeFilterCount = getEmrTableFilterBuilderActiveCount(
+    filterModel,
+    billingInvoiceLineFilterFields,
+  );
   const filteredLines = useMemo(
-    () => filterBillingInvoiceLines(lines, filters),
-    [filters, lines],
+    () =>
+      filterRowsByEmrTableFilterBuilder(
+        lines,
+        filterModel,
+        billingInvoiceLineFilterFields,
+      ),
+    [filterModel, lines],
   );
   const sortedLines = useMemo(
     () => sortBillingInvoiceLines(filteredLines, sortState),
@@ -1489,25 +1360,6 @@ function InvoiceLinesTable({
       return null;
     });
   };
-  const handleFilterOpenChange = (open: boolean) => {
-    setFilterOpen(open);
-    if (open) {
-      setDraftFilters(
-        filters.length > 0 ? filters.map(cloneBillingInvoiceLineFilter) : [],
-      );
-    }
-  };
-  const updateDraftFilter = (
-    filterId: string,
-    updater: (filter: BillingInvoiceLineFilter) => BillingInvoiceLineFilter,
-  ) => {
-    setDraftFilters((current) =>
-      current.map((filter) =>
-        filter.id === filterId ? updater(filter) : filter,
-      ),
-    );
-  };
-
   return (
     <section className="rounded-lg border bg-card">
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
@@ -1520,7 +1372,7 @@ function InvoiceLinesTable({
         </div>
         <div className="flex items-center gap-2">
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
-          <Popover open={filterOpen} onOpenChange={handleFilterOpenChange}>
+          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
             <PopoverTrigger
               render={
                 <Button
@@ -1548,64 +1400,17 @@ function InvoiceLinesTable({
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+              className="w-[min(860px,calc(100vw-32px))] gap-3 p-3"
               initialFocus={false}
             >
-              <BillingInvoiceLineFilterBuilder
-                draftFilters={draftFilters}
-                onAdd={() =>
-                  setDraftFilters((current) => [
-                    ...current,
-                    createBillingInvoiceLineFilter(),
-                  ])
-                }
-                onApply={() => {
-                  setFilters(draftFilters);
-                  setFilterOpen(false);
-                }}
-                onChangeField={(filterId, field) =>
-                  updateDraftFilter(filterId, () =>
-                    createBillingInvoiceLineFilter(field),
-                  )
-                }
-                onChangeLineTotalOperator={(filterId, operator) =>
-                  updateDraftFilter(filterId, (filter) =>
-                    filter.field === "lineTotal"
-                      ? { ...filter, operator }
-                      : filter,
-                  )
-                }
-                onChangeLineTotalValue={(filterId, value) =>
-                  updateDraftFilter(filterId, (filter) =>
-                    filter.field === "lineTotal"
-                      ? { ...filter, value }
-                      : filter,
-                  )
-                }
+              <EmrTableFilterBuilder
+                clearAllLabel="초기화"
+                description="청구 항목 필터는 완성된 조건만 AND로 적용됩니다."
+                fields={billingInvoiceLineFilterFields}
+                model={filterModel}
+                title="Filters"
                 onClose={() => setFilterOpen(false)}
-                onRemove={(filterId) =>
-                  setDraftFilters((current) =>
-                    current.filter((filter) => filter.id !== filterId),
-                  )
-                }
-                onReset={() => {
-                  setDraftFilters([]);
-                  setFilters([]);
-                }}
-                onToggleCategory={(filterId, category) =>
-                  updateDraftFilter(filterId, (filter) => {
-                    if (filter.field !== "category") return filter;
-
-                    return filter.values.includes(category)
-                      ? {
-                          ...filter,
-                          values: filter.values.filter(
-                            (value) => value !== category,
-                          ),
-                        }
-                      : { ...filter, values: [...filter.values, category] };
-                  })
-                }
+                onModelChange={setFilterModel}
               />
             </PopoverContent>
           </Popover>

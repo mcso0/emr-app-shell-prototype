@@ -1,8 +1,13 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   createSupabaseFulfillmentWorkItemGateway,
   readFulfillmentWorkItems,
@@ -38,9 +43,19 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   const url = new URL(request.url);
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await readFulfillmentWorkItems({
     actorUserId: identity.actorUserId,
     workspaceId,
+    permissionAdapter,
     filters: {
       encounterId: url.searchParams.get("encounterId"),
       orderId: url.searchParams.get("orderId"),

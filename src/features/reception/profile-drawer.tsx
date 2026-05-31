@@ -40,6 +40,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -2598,35 +2599,28 @@ function RegistrationModeCard({
   checked,
   description,
   title,
-  onClick,
+  value,
 }: {
   checked: boolean;
   description: string;
   title: string;
-  onClick: () => void;
+  value: RegistrationMode;
 }) {
   return (
-    <button
-      type="button"
+    <label
       className={cn(
-        "flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-[var(--emr-state-hover)]",
+        "flex w-full cursor-pointer items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-[var(--emr-state-hover)] focus-within:ring-3 focus-within:ring-ring/50",
         checked && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
       )}
-      onClick={onClick}
     >
-      <span
-        aria-hidden="true"
+      <Radio
+        value={value}
+        aria-label={title}
         className={cn(
-          "flex size-4 shrink-0 items-center justify-center rounded-full border",
-          checked
-            ? "border-[var(--emr-state-selected-border)]"
-            : "border-[var(--emr-line-default)]"
+          checked &&
+            "border-[var(--emr-state-selected-border)] text-[var(--emr-state-selected-border)]"
         )}
-      >
-        {checked ? (
-          <span className="size-2 rounded-full bg-[var(--emr-state-selected-border)]" />
-        ) : null}
-      </span>
+      />
       <span className="min-w-0">
         <span className="block text-[15px] font-bold text-foreground">
           {title}
@@ -2635,7 +2629,7 @@ function RegistrationModeCard({
           {description}
         </span>
       </span>
-    </button>
+    </label>
   );
 }
 
@@ -3200,20 +3194,26 @@ function PatientGuardianRegistrationButton({
           <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
             <div className="flex flex-col gap-6 px-1 pb-6 pt-3">
               {step === "mode" ? (
-                <div className="grid gap-4">
+                <RadioGroup
+                  aria-label="등록 유형 선택"
+                  value={mode}
+                  onValueChange={(nextMode) =>
+                    setMode(nextMode as RegistrationMode)
+                  }
+                >
                   <RegistrationModeCard
                     checked={mode === "new_guardian_patient"}
+                    value="new_guardian_patient"
                     title="환자/보호자 모두 신규 등록"
                     description="처음 내원한 보호자와 동물을 함께 등록합니다."
-                    onClick={() => setMode("new_guardian_patient")}
                   />
                   <RegistrationModeCard
                     checked={mode === "existing_guardian_patient"}
+                    value="existing_guardian_patient"
                     title="기존 보호자에 신규 환자 등록"
                     description="이미 등록된 보호자에게 새 동물을 연결합니다."
-                    onClick={() => setMode("existing_guardian_patient")}
                   />
-                </div>
+                </RadioGroup>
               ) : null}
 
               {step === "guardian" ? (

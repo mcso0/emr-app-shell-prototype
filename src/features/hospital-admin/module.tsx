@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
+  CdsActionsListFilterIcon,
   CdsActionsCopyIcon,
   CdsActionsSettingsIcon,
 } from "@/components/cds-icons/actions-and-controls";
@@ -19,6 +21,13 @@ import {
   EmrTableHeaderCell,
 } from "@/components/emr/table-primitives";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
+import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
+import {
+  createInitialEmrTableFilterBuilderModel,
+  filterRowsByEmrTableFilterBuilder,
+  getEmrTableFilterBuilderActiveCount,
+  type EmrTableFilterBuilderField,
+} from "@/components/emr/table-filter-builder-model";
 import {
   EmrTextSideNavButton,
   EmrTextSideNavSection,
@@ -26,7 +35,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Field,
   FieldContent,
@@ -36,6 +51,11 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LineTabs } from "@/components/ui/line-tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -57,11 +77,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { SearchIcon, SlidersIcon } from "@/components/icons";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
+import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import {
   deliveryLabels,
   formatHospitalOrderAmount,
+  buildWorkspaceCatalogMutationFromHospitalOrder,
+  buildWorkspaceCatalogPauseMutation,
   getHospitalOrderCategory,
   getHospitalOrderSubcategory,
+  mapWorkspaceCatalogItemToHospitalOrder,
+  mapWorkspaceCatalogItemsToHospitalOrders,
   roundRuleLabels,
   saleUnitLabels,
   serviceItemTypeLabels,
@@ -84,6 +109,8 @@ import type {
   EmrTableDensity,
   EmrTableHeaderInteraction,
 } from "@/components/emr/table-density";
+import type { OrderCatalogItem } from "@/features/hospital-admin/server-order-catalog";
+import type { OrderCatalogMutationInput } from "@/features/hospital-admin/server-order-catalog";
 import type { ShellComponentProps } from "@/types/emr";
 
 const orderSetPlaceholderId = "order-set-placeholder";
@@ -102,10 +129,13 @@ const billingFilterItems: Array<{ label: string; value: HospitalOrderBillingFilt
 
 const workTypeFilterItems: Array<{ label: string; value: HospitalOrderWorkTypeFilter }> = [
   { label: "업무 전체", value: "all" },
+  { label: "진료", value: "consultation" },
   { label: "검사", value: "lab" },
   { label: "의약품", value: "medication" },
   { label: "처치", value: "treatment" },
   { label: "영상", value: "imaging" },
+  { label: "입원", value: "hospitalization" },
+  { label: "기타", value: "misc" },
 ];
 
 const drawerTabs = [
@@ -130,6 +160,16 @@ const hospitalOrderTableColumnClasses = {
 } as const;
 
 type HospitalOrderTableColumnKey = keyof typeof hospitalOrderTableColumnClasses;
+type HospitalOrderTableSortDirection = "asc" | "desc";
+type HospitalOrderTableSortKey = "standardName" | "inHospitalName" | "billingName" | "price";
+type HospitalOrderTableSortState = {
+  direction: HospitalOrderTableSortDirection;
+  key: HospitalOrderTableSortKey;
+} | null;
+type HospitalOrderTableFilterOption = {
+  label: string;
+  value: string;
+};
 
 type HospitalOrderTableHeaderColumn = {
   align?: "left" | "right";
@@ -138,6 +178,7 @@ type HospitalOrderTableHeaderColumn = {
   key: HospitalOrderTableColumnKey;
   label: string;
   resize: EmrColumnResize;
+  sortKey?: HospitalOrderTableSortKey;
 };
 
 const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
@@ -152,18 +193,21 @@ const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
     label: "표준 Order명",
     interaction: "sortable",
     resize: "data-column",
+    sortKey: "standardName",
   },
   {
     key: "inHospitalName",
     label: "원내 Order명",
     interaction: "sortable",
     resize: "data-column",
+    sortKey: "inHospitalName",
   },
   {
     key: "billingName",
     label: "청구서명",
     interaction: "sortable",
     resize: "data-column",
+    sortKey: "billingName",
   },
   {
     key: "status",
@@ -177,6 +221,7 @@ const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
     align: "right",
     interaction: "sortable",
     resize: "data-column",
+    sortKey: "price",
   },
   {
     key: "target",
@@ -187,7 +232,20 @@ const hospitalOrderTableHeaderColumns: HospitalOrderTableHeaderColumn[] = [
 ];
 
 const hospitalOrderNameTextMode: EmrTableCellTextMode = "two-line-if-long";
-
+const hospitalOrderTableSortLabels: Record<HospitalOrderTableSortKey, string> = {
+  billingName: "청구서명",
+  inHospitalName: "원내 Order명",
+  price: "판매금액",
+  standardName: "표준 Order명",
+};
+const hospitalOrderStatusFilterOptions: HospitalOrderTableFilterOption[] = [
+  { label: "사용", value: "active" },
+  { label: "중지", value: "inactive" },
+];
+const hospitalOrderBillingFilterOptions: HospitalOrderTableFilterOption[] = [
+  { label: "청구 가능", value: "billable" },
+  { label: "비청구", value: "not-billable" },
+];
 type OrderMenuChild = {
   label: string;
   categoryId?: HospitalOrderCategoryId;
@@ -224,12 +282,15 @@ const orderMenuGroups: OrderMenuGroup[] = [
   {
     id: "care",
     label: "진료",
-    children: [{ label: "기본 진료비", disabled: true }, { label: "기타 진료비", disabled: true }],
+    children: [
+      { label: "기본 진료비", categoryId: "consultation" as const, subcategoryId: "basic-consultation" as const },
+      { label: "기타 진료비", categoryId: "consultation" as const, subcategoryId: "other-consultation" as const },
+    ],
   },
   {
     id: "prevention",
     label: "예방",
-    children: [{ label: "예방", disabled: true }],
+    children: [{ label: "예방", categoryId: "prevention" as const, subcategoryId: "prevention" as const }],
   },
   {
     id: "lab",
@@ -249,17 +310,20 @@ const orderMenuGroups: OrderMenuGroup[] = [
   {
     id: "surgery",
     label: "수술",
-    children: [{ label: "마취", disabled: true }, { label: "수술", disabled: true }],
+    children: [
+      { label: "마취", categoryId: "surgery" as const, subcategoryId: "anesthesia" as const },
+      { label: "수술", categoryId: "surgery" as const, subcategoryId: "surgery" as const },
+    ],
   },
   {
     id: "inpatient",
     label: "입원",
-    children: [{ label: "입원", disabled: true }],
+    children: [{ label: "입원", categoryId: "hospitalization" as const, subcategoryId: "hospitalization" as const }],
   },
   {
     id: "therapy",
     label: "치료",
-    children: [{ label: "치료", disabled: true }],
+    children: [{ label: "치료", categoryId: "therapy" as const, subcategoryId: "therapy" as const }],
   },
   {
     id: "inventory",
@@ -267,7 +331,7 @@ const orderMenuGroups: OrderMenuGroup[] = [
     children: [
       { label: "처방", categoryId: "dispensing" as const, subcategoryId: "oral-medication" as const },
       { label: "조제", categoryId: "dispensing" as const, subcategoryId: "injection" as const },
-      { label: "의료물품", disabled: true },
+      { label: "의료물품", categoryId: "medical-supply" as const, subcategoryId: "medical-supply" as const },
     ],
   },
 ];
@@ -330,6 +394,89 @@ type AuditReviewEventRow = {
   metadata?: Record<string, unknown>;
 };
 
+type OrderCatalogReadStatus = "idle" | "loading" | "ready" | "fallback" | "denied";
+
+type OrderCatalogAdminReadResponse =
+  | { ok: true; items: OrderCatalogItem[] }
+  | { ok: false; denialReason?: string; error?: string };
+
+type OrderCatalogAdminMutationResponse =
+  | { ok: true; item: OrderCatalogItem }
+  | { ok: false; denialReason?: string; error?: string };
+
+type OrderCatalogMutationStatus = "idle" | "saving" | "stopping" | "saved" | "denied" | "error";
+
+async function mutateHospitalAdminOrderCatalog({
+  input,
+  method,
+  session,
+  workspaceId,
+}: {
+  input: OrderCatalogMutationInput;
+  method: "POST" | "PATCH";
+  session: AuthSession;
+  workspaceId: string;
+}): Promise<OrderCatalogAdminMutationResponse> {
+  const response = await fetch(
+    `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-catalog`,
+    {
+      method,
+      headers: {
+        ...getDemoActorHeaders(session),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    }
+  );
+  const body = (await response.json()) as OrderCatalogAdminMutationResponse;
+
+  if (!response.ok || !body.ok) {
+    return {
+      ok: false,
+      denialReason: !body.ok ? body.denialReason : undefined,
+      error: !body.ok ? body.error : "request_failed",
+    };
+  }
+
+  return body;
+}
+
+function validateHospitalOrderDraft(draft: HospitalOrderDraft, options: { creating: boolean } = { creating: false }) {
+  if (!draft.standardName.trim()) return "표준 Order명을 입력해 주세요.";
+  if (!draft.inHospitalName.trim()) return "원내 Order명을 입력해 주세요.";
+  if (!draft.billingName.trim()) return "청구서명을 입력해 주세요.";
+  if (!draft.delivery) return "일감전달여부를 선택해 주세요.";
+  if (!draft.target) return "대상을 선택해 주세요.";
+  if (!draft.saleUnit) return "판매 단위를 선택해 주세요.";
+  if (options.creating && (!Number.isFinite(draft.price) || draft.price <= 0)) {
+    return "판매금액을 입력해 주세요.";
+  }
+  if (!Number.isFinite(draft.price) || draft.price < 0) return "판매금액은 0원 이상이어야 합니다.";
+
+  return null;
+}
+
+function getNewOrderDrawerTitle(subcategoryLabel?: string) {
+  if (subcategoryLabel === "임상병리 검사") return "임상병리 오더 추가";
+  if (!subcategoryLabel) return "오더 추가";
+
+  return `${subcategoryLabel} 오더 추가`;
+}
+
+function getOrderCatalogMutationFailureMessage(result: Extract<OrderCatalogAdminMutationResponse, { ok: false }>) {
+  if (result.denialReason === "permission_missing") {
+    return "병원관리자 권한이 있는 사용자만 Order를 변경할 수 있습니다.";
+  }
+  if (result.denialReason === "order_not_found") {
+    return "변경할 Order를 찾지 못했습니다. 목록을 새로고침해 주세요.";
+  }
+  if (result.error === "invalid_input") {
+    return "필수값이나 금액 형식이 올바르지 않습니다.";
+  }
+
+  return "Order 변경을 저장하지 못했습니다.";
+}
+
 function getVisibleOrders(
   orders: HospitalOrderCatalogItem[],
   {
@@ -379,8 +526,185 @@ function getVisibleOrders(
     .sort((left, right) => left.standardName.localeCompare(right.standardName));
 }
 
+function compareHospitalOrderValues(left: string | number | null | undefined, right: string | number | null | undefined) {
+  const leftEmpty = left === null || left === undefined || left === "";
+  const rightEmpty = right === null || right === undefined || right === "";
+
+  if (leftEmpty && rightEmpty) return 0;
+  if (leftEmpty) return 1;
+  if (rightEmpty) return -1;
+  if (typeof left === "number" && typeof right === "number") return left - right;
+
+  return String(left).localeCompare(String(right), "ko-KR", {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function getHospitalOrderSortValue(order: HospitalOrderCatalogItem, key: HospitalOrderTableSortKey) {
+  if (key === "price") return order.price;
+
+  return order[key];
+}
+
+function sortHospitalOrderTableRows(
+  orders: HospitalOrderCatalogItem[],
+  sortState: HospitalOrderTableSortState
+) {
+  if (!sortState) return orders;
+
+  return orders
+    .map((order, index) => ({ index, order }))
+    .sort((left, right) => {
+      const compared = compareHospitalOrderValues(
+        getHospitalOrderSortValue(left.order, sortState.key),
+        getHospitalOrderSortValue(right.order, sortState.key)
+      );
+      if (compared === 0) return left.index - right.index;
+
+      return sortState.direction === "asc" ? compared : -compared;
+    })
+    .map((entry) => entry.order);
+}
+
+function getUniqueHospitalOrderFilterOptions(
+  orders: HospitalOrderCatalogItem[],
+  getValue: (order: HospitalOrderCatalogItem) => string,
+  labels: Record<string, string>
+): HospitalOrderTableFilterOption[] {
+  const values = new Set(orders.map(getValue).filter(Boolean));
+
+  return Array.from(values)
+    .map((value) => ({ label: labels[value] ?? value, value }))
+    .sort((left, right) =>
+      left.label.localeCompare(right.label, "ko-KR", {
+        numeric: true,
+        sensitivity: "base",
+      })
+    );
+}
+
+function parseHospitalOrderPriceFilterValue(value: string) {
+  const normalized = value.replaceAll(",", "").trim();
+  if (!normalized) return null;
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getHospitalOrderTableFilterFields(
+  orders: HospitalOrderCatalogItem[]
+): Array<EmrTableFilterBuilderField<HospitalOrderCatalogItem>> {
+  return [
+    {
+      getValue: (order) => (order.isActive ? "active" : "inactive"),
+      id: "status",
+      label: "사용여부",
+      operators: [{ id: "is", label: "Is" }],
+      options: hospitalOrderStatusFilterOptions,
+      valuePlaceholder: "사용여부 선택",
+    },
+    {
+      getValue: (order) => order.target,
+      id: "target",
+      label: "대상",
+      operators: [{ id: "is", label: "Is" }],
+      options: getUniqueHospitalOrderFilterOptions(orders, (order) => order.target, targetLabels),
+      valuePlaceholder: "대상 선택",
+    },
+    {
+      getValue: (order) => order.serviceItemType,
+      id: "serviceItemType",
+      label: "업무유형",
+      operators: [{ id: "is", label: "Is" }],
+      options: getUniqueHospitalOrderFilterOptions(
+        orders,
+        (order) => order.serviceItemType,
+        serviceItemTypeLabels
+      ),
+      valuePlaceholder: "업무유형 선택",
+    },
+    {
+      getValue: (order) => (order.billable ? "billable" : "not-billable"),
+      id: "billing",
+      label: "청구",
+      operators: [{ id: "is", label: "Is" }],
+      options: hospitalOrderBillingFilterOptions,
+      valuePlaceholder: "청구 선택",
+    },
+    {
+      getValue: (order) => order.price,
+      id: "price",
+      label: "판매금액",
+      operators: [
+        {
+          id: "gte",
+          label: "이상",
+          match: (fieldValue, ruleValue) => {
+            const threshold = parseHospitalOrderPriceFilterValue(ruleValue);
+            return threshold === null ? true : Number(fieldValue ?? 0) >= threshold;
+          },
+        },
+        {
+          id: "lte",
+          label: "이하",
+          match: (fieldValue, ruleValue) => {
+            const threshold = parseHospitalOrderPriceFilterValue(ruleValue);
+            return threshold === null ? true : Number(fieldValue ?? 0) <= threshold;
+          },
+        },
+      ],
+      valueKind: "text",
+      valuePlaceholder: "금액 입력",
+    },
+  ];
+}
+
 function getSubcategoryCount(orders: HospitalOrderCatalogItem[], subcategoryId: string) {
   return orders.filter((order) => order.subcategoryId === subcategoryId).length;
+}
+
+function HospitalOrderSortableHeader({
+  column,
+  onSort,
+  sortState,
+}: {
+  column: HospitalOrderTableHeaderColumn & { sortKey: HospitalOrderTableSortKey };
+  onSort: (key: HospitalOrderTableSortKey) => void;
+  sortState: HospitalOrderTableSortState;
+}) {
+  const active = sortState?.key === column.sortKey;
+  const label = hospitalOrderTableSortLabels[column.sortKey];
+  const nextAction =
+    !active || !sortState
+      ? `${label} 오름차순 정렬`
+      : sortState.direction === "asc"
+        ? `${label} 내림차순 정렬`
+        : `${label} 정렬 해제`;
+  const activeDirectionLabel =
+    sortState?.direction === "asc"
+      ? "오름차순"
+      : sortState?.direction === "desc"
+        ? "내림차순"
+        : "";
+  const ariaLabel = active
+    ? `현재 정렬: ${label} ${activeDirectionLabel}. 클릭하면 ${nextAction}.`
+    : `정렬 없음. 클릭하면 ${nextAction}.`;
+
+  return (
+    <EmrTableHeaderCell
+      align={column.align}
+      className={cn(hospitalOrderTableColumnClasses[column.key], column.className)}
+      interaction={column.interaction}
+      resize={column.resize}
+      sortDirection={active ? sortState.direction : undefined}
+      sortLabel={ariaLabel}
+      title={ariaLabel}
+      onSort={() => onSort(column.sortKey)}
+    >
+      {column.label}
+    </EmrTableHeaderCell>
+  );
 }
 
 export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
@@ -516,18 +840,23 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
 }
 
 export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
+  const { hydrated, hydrate, session } = useAuthClient();
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const billingFilter = useHospitalAdminStore((state) => state.billingFilter);
   const clearSelectedOrders = useHospitalAdminStore((state) => state.clearSelectedOrders);
   const createOrder = useHospitalAdminStore((state) => state.createOrder);
   const duplicateOrder = useHospitalAdminStore((state) => state.duplicateOrder);
+  const focusedOrderId = useHospitalAdminStore((state) => state.focusedOrderId);
   const orders = useHospitalAdminStore((state) => state.orders);
   const searchQuery = useHospitalAdminStore((state) => state.searchQuery);
   const selectedCategoryId = useHospitalAdminStore((state) => state.selectedCategoryId);
   const selectedOrderIds = useHospitalAdminStore((state) => state.selectedOrderIds);
   const selectedSubcategoryId = useHospitalAdminStore((state) => state.selectedSubcategoryId);
+  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setBillingFilter = useHospitalAdminStore((state) => state.setBillingFilter);
+  const setFocusedOrderId = useHospitalAdminStore((state) => state.setFocusedOrderId);
+  const setOrders = useHospitalAdminStore((state) => state.setOrders);
   const setSearchQuery = useHospitalAdminStore((state) => state.setSearchQuery);
   const setStatusFilter = useHospitalAdminStore((state) => state.setStatusFilter);
   const setWorkTypeFilter = useHospitalAdminStore((state) => state.setWorkTypeFilter);
@@ -537,7 +866,16 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     (state) => state.toggleVisibleOrderSelection
   );
   const workTypeFilter = useHospitalAdminStore((state) => state.workTypeFilter);
+  const [catalogReadStatus, setCatalogReadStatus] = useState<OrderCatalogReadStatus>("idle");
   const [tableDensity, setTableDensity] = useState<EmrTableDensity>("standard");
+  const [orderFilterOpen, setOrderFilterOpen] = useState(false);
+  const [orderFilterModel, setOrderFilterModel] = useState(() =>
+    createInitialEmrTableFilterBuilderModel(
+      "hospital-order-catalog-filter",
+      "hospital-order-catalog-filter-rule-1"
+    )
+  );
+  const [orderSortState, setOrderSortState] = useState<HospitalOrderTableSortState>(null);
   const selectedSubcategory = getHospitalOrderSubcategory(selectedSubcategoryId);
   const orderTypeTabs = orderTypeTabsBySubcategory[selectedSubcategoryId] ?? defaultOrderTypeTabs;
   const selectedLeafLabel =
@@ -550,7 +888,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       )?.label ??
     selectedSubcategory?.label ??
     "Order 관리";
-  const visibleOrders = useMemo(
+  const baseVisibleOrders = useMemo(
     () =>
       getVisibleOrders(orders, {
         billingFilter,
@@ -570,10 +908,90 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       workTypeFilter,
     ]
   );
+  const orderFilterFields = useMemo(
+    () => getHospitalOrderTableFilterFields(baseVisibleOrders),
+    [baseVisibleOrders]
+  );
+  const activeOrderFilterCount = getEmrTableFilterBuilderActiveCount(
+    orderFilterModel,
+    orderFilterFields
+  );
+  const visibleOrders = useMemo(
+    () =>
+      sortHospitalOrderTableRows(
+        filterRowsByEmrTableFilterBuilder(
+          baseVisibleOrders,
+          orderFilterModel,
+          orderFilterFields
+        ),
+        orderSortState
+      ),
+    [baseVisibleOrders, orderFilterFields, orderFilterModel, orderSortState]
+  );
   const visibleOrderIds = visibleOrders.map((order) => order.id);
   const selectedVisibleCount = visibleOrderIds.filter((id) => selectedOrderIds.includes(id)).length;
   const allVisibleSelected = visibleOrderIds.length > 0 && selectedVisibleCount === visibleOrderIds.length;
   const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+  const handleOrderSort = (key: HospitalOrderTableSortKey) => {
+    setOrderSortState((current) => {
+      if (current?.key !== key) return { direction: "asc", key };
+      if (current.direction === "asc") return { direction: "desc", key };
+
+      return null;
+    });
+  };
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const controller = new AbortController();
+    let canceled = false;
+
+    const loadCatalog = async () => {
+      await Promise.resolve();
+      if (canceled) return;
+
+      if (!session) {
+        setCatalogReadStatus("denied");
+        return;
+      }
+
+      setCatalogReadStatus("loading");
+
+      try {
+        const response = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-catalog`,
+          {
+            headers: getDemoActorHeaders(session),
+            signal: controller.signal,
+          }
+        );
+        const body = (await response.json()) as OrderCatalogAdminReadResponse;
+        if (canceled) return;
+
+        if (!response.ok || !body.ok) {
+          setCatalogReadStatus(response.status === 401 || response.status === 403 ? "denied" : "fallback");
+          return;
+        }
+
+        setOrders(mapWorkspaceCatalogItemsToHospitalOrders(body.items));
+        setCatalogReadStatus("ready");
+      } catch (error: unknown) {
+        if ((error as { name?: string }).name === "AbortError") return;
+        setCatalogReadStatus("fallback");
+      }
+    };
+
+    void loadCatalog();
+
+    return () => {
+      canceled = true;
+      controller.abort();
+    };
+  }, [hydrated, session, setOrders, workspaceId]);
 
   if (activeSection === "members") {
     return <WorkspaceMembershipManagement workspaceId={workspaceId} />;
@@ -584,8 +1002,13 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   }
 
   const openDrawer = (order: HospitalOrderCatalogItem) => {
-    if (selectedOrderIds.length > 0) return;
+    const hospitalOrderDrawerOpen = activeDrawer?.type === "hospital-order";
+    if (selectedOrderIds.length > 0 && !hospitalOrderDrawerOpen) return;
 
+    if (hospitalOrderDrawerOpen && selectedOrderIds.length > 0) {
+      clearSelectedOrders();
+    }
+    setFocusedOrderId(order.id);
     setActiveDrawer({
       type: "hospital-order",
       id: order.id,
@@ -594,13 +1017,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   };
 
   const handleCreateOrder = () => {
-    const order = createOrder({
-      billingName: `${selectedSubcategory?.label ?? "신규"} Order 청구`,
-      inHospitalName: `${selectedSubcategory?.label ?? "신규"} Order`,
-      standardName: `${selectedSubcategory?.label ?? "신규"} Order`,
-    });
+    const order = createOrder();
 
-    setActiveDrawer({ type: "hospital-order", id: order.id, subtitle: order.inHospitalName });
+    setFocusedOrderId(order.id);
+    setActiveDrawer({ type: "hospital-order", id: order.id, subtitle: getNewOrderDrawerTitle(selectedSubcategory?.label) });
   };
 
   const handleDuplicateFirstSelected = () => {
@@ -608,6 +1028,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     clearSelectedOrders();
 
     if (duplicated) {
+      setFocusedOrderId(duplicated.id);
       setActiveDrawer({
         type: "hospital-order",
         id: duplicated.id,
@@ -627,6 +1048,20 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             </div>
             <div className="mt-1 max-w-2xl emr-text-dense leading-5 text-muted-foreground">
               병원관리 / Order 관리 / {selectedLeafLabel}
+            </div>
+            <div
+              className="mt-1 emr-text-metadata text-muted-foreground"
+              data-testid="hospital-order-catalog-read-status"
+            >
+              {catalogReadStatus === "loading"
+                ? "Workspace catalog 불러오는 중"
+                : catalogReadStatus === "ready"
+                  ? "Workspace catalog 기준"
+                  : catalogReadStatus === "denied"
+                    ? "Workspace catalog 접근 제한"
+                    : catalogReadStatus === "fallback"
+                      ? "세션 seed 기준"
+                      : "Workspace catalog 대기"}
             </div>
             <LineTabs
               aria-label={`${selectedLeafLabel} 하위 타입`}
@@ -695,6 +1130,45 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           </SelectContent>
         </Select>
         <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
+        <Popover open={orderFilterOpen} onOpenChange={setOrderFilterOpen}>
+          <PopoverTrigger
+            render={
+              <Button
+                type="button"
+                variant={activeOrderFilterCount > 0 ? "secondary" : "outline"}
+                size="sm"
+                className={cn(
+                  "bg-card",
+                  activeOrderFilterCount > 0 &&
+                    "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                )}
+                aria-label={
+                  activeOrderFilterCount > 0
+                    ? `오더 필터 ${activeOrderFilterCount}개 설정`
+                    : "오더 필터 설정"
+                }
+              />
+            }
+          >
+            <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
+            Filter{activeOrderFilterCount > 0 ? ` ${activeOrderFilterCount}` : ""}
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+            initialFocus={false}
+          >
+            <EmrTableFilterBuilder
+              clearAllLabel="초기화"
+              description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 AND로 적용됩니다."
+              fields={orderFilterFields}
+              model={orderFilterModel}
+              title="Filters"
+              onClose={() => setOrderFilterOpen(false)}
+              onModelChange={setOrderFilterModel}
+            />
+          </PopoverContent>
+        </Popover>
         <Button size="icon-sm" variant="outline" aria-label="컬럼 표시 설정">
           <SlidersIcon />
         </Button>
@@ -725,17 +1199,26 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     }
                   />
                 </EmrTableHeaderCell>
-                {hospitalOrderTableHeaderColumns.map((column) => (
-                  <EmrTableHeaderCell
-                    key={column.key}
-                    align={column.align}
-                    className={cn(hospitalOrderTableColumnClasses[column.key], column.className)}
-                    interaction={column.interaction}
-                    resize={column.resize}
-                  >
-                    {column.label}
-                  </EmrTableHeaderCell>
-                ))}
+                {hospitalOrderTableHeaderColumns.map((column) =>
+                  column.sortKey ? (
+                    <HospitalOrderSortableHeader
+                      key={column.key}
+                      column={column as HospitalOrderTableHeaderColumn & { sortKey: HospitalOrderTableSortKey }}
+                      sortState={orderSortState}
+                      onSort={handleOrderSort}
+                    />
+                  ) : (
+                    <EmrTableHeaderCell
+                      key={column.key}
+                      align={column.align}
+                      className={cn(hospitalOrderTableColumnClasses[column.key], column.className)}
+                      interaction={column.interaction}
+                      resize={column.resize}
+                    >
+                      {column.label}
+                    </EmrTableHeaderCell>
+                  )
+                )}
                 <EmrTableHeaderCell
                   align="right"
                   className={hospitalOrderTableColumnClasses.actions}
@@ -747,15 +1230,24 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleOrders.map((order) => {
+              {catalogReadStatus === "loading" ? (
+                <HospitalOrderTableSkeletonRows />
+              ) : null}
+              {catalogReadStatus !== "loading" ? visibleOrders.map((order) => {
                 const selected = selectedOrderIds.includes(order.id);
+                const focused = focusedOrderId === order.id;
 
                 return (
                   <TableRow
                     key={order.id}
                     data-testid={`hospital-order-row-${order.id}`}
+                    data-focused={focused ? "true" : undefined}
                     data-state={selected ? "selected" : undefined}
-                    className="h-11 cursor-pointer bg-card hover:bg-[var(--emr-state-hover)] data-[state=selected]:bg-[var(--emr-state-selected)]"
+                    className={cn(
+                      "h-11 cursor-pointer bg-card hover:bg-[var(--emr-state-hover)] data-[state=selected]:bg-[var(--emr-state-selected)]",
+                      focused &&
+                        "bg-[var(--emr-state-selected)] shadow-[inset_3px_0_0_var(--emr-state-selected-border)]"
+                    )}
                     onClick={() => openDrawer(order)}
                   >
                     <TableCell onClick={(event) => event.stopPropagation()}>
@@ -827,8 +1319,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                     </TableCell>
                   </TableRow>
                 );
-              })}
-              {visibleOrders.length === 0 ? (
+              }) : null}
+              {catalogReadStatus !== "loading" && visibleOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                     조건에 맞는 Order가 없습니다.
@@ -855,6 +1347,44 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function HospitalOrderTableSkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 6 }, (_, index) => (
+        <TableRow key={`hospital-order-skeleton-${index}`} data-testid="hospital-order-table-skeleton-row">
+          <TableCell>
+            <div className="h-4 w-4 rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="h-5 w-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="h-4 w-36 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="h-4 w-32 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="h-4 w-28 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="h-4 w-12 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="ml-auto h-4 w-16 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="h-4 w-14 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+          <TableCell>
+            <div className="ml-auto h-7 w-7 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
   );
 }
 
@@ -893,7 +1423,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
 
       try {
         const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/audit/events?${params.toString()}`, {
-          headers: getAuditActorHeaders(session),
+          headers: getDemoActorHeaders(session),
           signal: controller.signal,
         });
         const body = await response.json() as {
@@ -1024,20 +1554,6 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-function getAuditActorHeaders(session: AuthSession): HeadersInit {
-  if (session.role === "supabase") return {};
-
-  const actorByRole: Partial<Record<AuthSession["role"], string>> = {
-    hospital_admin: "user-admin",
-    vet: "user-vet",
-    front_desk: "user-front-desk",
-    nurse: "user-tech",
-    billing_admin: "user-tech",
-  };
-  const actorUserId = actorByRole[session.role] ?? session.id;
-  return { "x-clair-demo-session-user-id": actorUserId };
-}
-
 function formatAuditTime(value: string) {
   return value.replace("T", " ").replace("+09:00", "");
 }
@@ -1119,13 +1635,16 @@ function DrawerSelect({
   );
 }
 
-export function HospitalAdminDrawer() {
+export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
+  const { hydrated, hydrate, session } = useAuthClient();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const deleteOrder = useHospitalAdminStore((state) => state.deleteOrder);
+  const clearSelectedOrders = useHospitalAdminStore((state) => state.clearSelectedOrders);
   const orders = useHospitalAdminStore((state) => state.orders);
+  const setFocusedOrderId = useHospitalAdminStore((state) => state.setFocusedOrderId);
   const updateOrder = useHospitalAdminStore((state) => state.updateOrder);
   const order = orders.find((item) => item.id === activeDrawer?.id);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const [draftState, setDraftState] = useState<{
     draft: HospitalOrderDraft | null;
     orderId: string | null;
@@ -1134,8 +1653,12 @@ export function HospitalAdminDrawer() {
     orderId: order?.id ?? null,
   });
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [mutationStatus, setMutationStatus] = useState<OrderCatalogMutationStatus>("idle");
+  const [mutationMessage, setMutationMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<DrawerTab>("meta");
   const draft = draftState.orderId === order?.id ? draftState.draft : order ?? null;
+  const mutationInFlight = mutationStatus === "saving" || mutationStatus === "stopping";
   const setDraft = (
     nextDraft:
       | HospitalOrderDraft
@@ -1150,6 +1673,43 @@ export function HospitalAdminDrawer() {
     }));
   };
 
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  useEffect(() => {
+    const resetId = window.setTimeout(() => {
+      setMutationStatus("idle");
+      setMutationMessage(null);
+    }, 0);
+
+    return () => window.clearTimeout(resetId);
+  }, [order?.id]);
+
+  useEffect(() => {
+    if (activeDrawer?.type !== "hospital-order") return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (drawerRef.current?.contains(target)) return;
+      if (target.closest('[data-testid^="hospital-order-row-"]')) return;
+      if (
+        target.closest(
+          '[data-slot="dialog-content"], [data-slot="dialog-overlay"], [data-slot="popover-content"], [role="menu"]'
+        )
+      ) {
+        return;
+      }
+
+      setActiveDrawer(null);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [activeDrawer?.type, setActiveDrawer]);
+
   if (activeDrawer?.type !== "hospital-order" || !order || !draft) {
     return (
       <div className="flex h-full items-center justify-center emr-text-dense text-muted-foreground">
@@ -1162,37 +1722,142 @@ export function HospitalAdminDrawer() {
     setDraft((current) => current ? { ...current, ...nextDraft } : current);
   const category = getHospitalOrderCategory(draft.categoryId);
   const subcategory = getHospitalOrderSubcategory(draft.subcategoryId);
+  const creatingNewOrder = !order.sourceCatalogItem;
+  const saveValidationMessage = validateHospitalOrderDraft(draft, { creating: creatingNewOrder });
+  const saveDisabled = mutationInFlight || Boolean(saveValidationMessage);
+  const drawerTitle = creatingNewOrder
+    ? getNewOrderDrawerTitle(subcategory?.label)
+    : draft.standardName || "오더 상세";
 
-  const handleSave = () => {
-    updateOrder(order.id, draft);
+  const handleSave = async () => {
+    const validationMessage = validateHospitalOrderDraft(draft, { creating: creatingNewOrder });
+    if (validationMessage) {
+      setMutationStatus("error");
+      setMutationMessage(validationMessage);
+      return;
+    }
+
+    if (!hydrated || !session) {
+      setMutationStatus("denied");
+      setMutationMessage("로그인된 병원관리자 세션을 확인한 뒤 다시 시도해 주세요.");
+      return;
+    }
+
+    setMutationStatus("saving");
+    setMutationMessage("Order 변경사항을 저장하는 중입니다.");
+
+    const input = buildWorkspaceCatalogMutationFromHospitalOrder({
+      draft,
+      source: order.sourceCatalogItem,
+      workspaceId,
+    });
+    const result = await mutateHospitalAdminOrderCatalog({
+      input,
+      method: input.action === "create" ? "POST" : "PATCH",
+      session,
+      workspaceId,
+    });
+
+    if (!result.ok) {
+      setMutationStatus(result.denialReason === "permission_missing" ? "denied" : "error");
+      setMutationMessage(getOrderCatalogMutationFailureMessage(result));
+      return;
+    }
+
+    const nextOrder = mapWorkspaceCatalogItemToHospitalOrder(result.item);
+    updateOrder(order.id, nextOrder);
+    setDraft(nextOrder);
+    clearSelectedOrders();
+    setFocusedOrderId(nextOrder.id);
     setActiveDrawer({
       type: "hospital-order",
-      id: order.id,
-      subtitle: draft.inHospitalName,
+      id: nextOrder.id,
+      subtitle: nextOrder.standardName,
     });
+    setMutationStatus("saved");
+    setMutationMessage(creatingNewOrder ? "Order를 등록했습니다." : "Order 변경사항을 저장했습니다.");
+    toast.success(creatingNewOrder ? "Order를 등록했어요." : "Order 변경사항을 저장했어요.");
   };
 
-  const handleDelete = () => {
-    deleteOrder(order.id);
+  const handleDelete = async () => {
+    if (!hydrated || !session) {
+      setMutationStatus("denied");
+      setMutationMessage("로그인된 병원관리자 세션을 확인한 뒤 다시 시도해 주세요.");
+      setConfirmDeleteOpen(false);
+      return;
+    }
+
+    setMutationStatus("stopping");
+    setMutationMessage("Order 사용을 중지하는 중입니다.");
+
+    if (!order.sourceCatalogItem) {
+      updateOrder(order.id, { isActive: false });
+      setMutationStatus("saved");
+      setMutationMessage("Order 사용을 중지했습니다.");
+      setConfirmDeleteOpen(false);
+      setActiveDrawer(null);
+      return;
+    }
+
+    const result = await mutateHospitalAdminOrderCatalog({
+      input: buildWorkspaceCatalogPauseMutation(order.sourceCatalogItem.id),
+      method: "PATCH",
+      session,
+      workspaceId,
+    });
+
+    if (!result.ok) {
+      setMutationStatus(result.denialReason === "permission_missing" ? "denied" : "error");
+      setMutationMessage(getOrderCatalogMutationFailureMessage(result));
+      setConfirmDeleteOpen(false);
+      return;
+    }
+
+    updateOrder(order.id, mapWorkspaceCatalogItemToHospitalOrder(result.item));
+    setFocusedOrderId(order.id);
+    setMutationStatus("saved");
+    setMutationMessage("Order 사용을 중지했습니다.");
     setConfirmDeleteOpen(false);
     setActiveDrawer(null);
   };
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-card" data-testid="hospital-order-drawer">
+    <div
+      ref={drawerRef}
+      className="relative flex h-full min-h-0 flex-col bg-card"
+      data-testid="hospital-order-drawer"
+    >
+      <Dialog open={mutationInFlight}>
+        {mutationInFlight ? (
+          <DialogContent
+            className="sm:max-w-[360px]"
+            showCloseButton={false}
+            data-testid="hospital-order-saving-dialog"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {mutationStatus === "stopping" ? "Order 사용을 중지하는 중" : "Order 저장 중"}
+              </DialogTitle>
+              <DialogDescription>
+                {mutationMessage ?? "Workspace catalog 변경사항을 반영하고 있습니다."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--emr-surface-muted)]">
+              <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
       <header className="flex min-h-[72px] shrink-0 items-center gap-3 border-b px-6">
-        <Badge className="shrink-0">개별</Badge>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[20px] font-semibold leading-7">{draft.standardName}</h2>
-          <div className="truncate emr-text-metadata text-muted-foreground">
-            {category?.label} / {subcategory?.label}
-          </div>
+          <h2 className="truncate text-[20px] font-semibold leading-7">{drawerTitle}</h2>
         </div>
         <label className="flex shrink-0 items-center gap-2 emr-text-dense font-semibold">
           사용여부
           <Switch
             aria-label="오더 사용여부"
             checked={draft.isActive}
+            disabled={mutationInFlight}
             onCheckedChange={(checked) => updateDraft({ isActive: Boolean(checked) })}
           />
         </label>
@@ -1208,16 +1873,32 @@ export function HospitalAdminDrawer() {
             </div>
           </DrawerField>
           <DrawerField label="표준 Order명">
-            <Input value={draft.standardName} onChange={(event) => updateDraft({ standardName: event.target.value })} />
+            <Input
+              placeholder="표준 Order명을 입력해 주세요"
+              value={draft.standardName}
+              onChange={(event) => updateDraft({ standardName: event.target.value })}
+            />
           </DrawerField>
           <DrawerField label="원내 Order명" required hint="진료항목을 원내에서 사용하는 국문 이름으로 변경할 수 있습니다.">
-            <Input value={draft.inHospitalName} onChange={(event) => updateDraft({ inHospitalName: event.target.value })} />
+            <Input
+              placeholder="원내에서 사용할 Order명을 입력해 주세요"
+              value={draft.inHospitalName}
+              onChange={(event) => updateDraft({ inHospitalName: event.target.value })}
+            />
           </DrawerField>
           <DrawerField label="청구서명" required hint="보호자에게 표시하는 청구서명을 별도로 지정할 수 있습니다.">
-            <Input value={draft.billingName} onChange={(event) => updateDraft({ billingName: event.target.value })} />
+            <Input
+              placeholder="청구서에 표시할 이름을 입력해 주세요"
+              value={draft.billingName}
+              onChange={(event) => updateDraft({ billingName: event.target.value })}
+            />
           </DrawerField>
           <DrawerField label="별칭" hint="진료항목을 검색하기 위한 별칭입니다. 쉼표로 여러 개를 입력할 수 있습니다.">
-            <Input value={draft.aliases} onChange={(event) => updateDraft({ aliases: event.target.value })} />
+            <Input
+              placeholder="검색 별칭을 입력해 주세요"
+              value={draft.aliases}
+              onChange={(event) => updateDraft({ aliases: event.target.value })}
+            />
           </DrawerField>
           <DrawerField label="일감전달여부" required hint="조제/처치, 임상병리, 영상검사실에 일감을 전달할지 설정합니다.">
             <DrawerSelect
@@ -1287,7 +1968,8 @@ export function HospitalAdminDrawer() {
               <Input
                 aria-label="판매 금액"
                 inputMode="numeric"
-                value={draft.price}
+                placeholder="판매 금액 입력"
+                value={creatingNewOrder && draft.price <= 0 ? "" : draft.price}
                 onChange={(event) => updateDraft({ price: Number(event.target.value.replace(/\D/g, "")) })}
               />
             </div>
@@ -1359,29 +2041,68 @@ export function HospitalAdminDrawer() {
           )}
         </FieldGroup>
       </ScrollArea>
-      <footer className="flex shrink-0 items-center justify-between border-t bg-card px-6 py-4 shadow-sm">
-        <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <Button variant="destructive" onClick={() => setConfirmDeleteOpen(true)}>
-            삭제
-          </Button>
-          {confirmDeleteOpen ? (
-            <EmrConfirmDialogContent
-              title="Order를 삭제할까요?"
-              description={`${order.standardName} 항목은 현재 세션의 병원관리 목록에서 삭제됩니다.`}
-              cancelLabel="취소"
-              confirmLabel="삭제"
-              confirmButtonVariant="destructive"
-              closeAriaLabel="Order 삭제 확인 닫기"
-              onCancel={() => setConfirmDeleteOpen(false)}
-              onConfirm={handleDelete}
-            />
-          ) : null}
-        </Dialog>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setDraft(order)}>
+      <footer className="flex shrink-0 items-center justify-between gap-3 border-t bg-card px-6 py-4 shadow-sm">
+        {creatingNewOrder ? <div /> : (
+          <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+            <Button variant="destructive" disabled={mutationInFlight} onClick={() => setConfirmDeleteOpen(true)}>
+              사용 중지
+            </Button>
+            {confirmDeleteOpen ? (
+              <EmrConfirmDialogContent
+                title="Order 사용을 중지할까요?"
+                description={`${order.standardName} 항목은 차트 신규 선택에서 제외되고, 과거 진료와 청구 기록은 유지됩니다.`}
+                cancelLabel="취소"
+                confirmLabel="사용 중지"
+                confirmButtonVariant="destructive"
+                closeAriaLabel="Order 사용 중지 확인 닫기"
+                onCancel={() => setConfirmDeleteOpen(false)}
+                onConfirm={handleDelete}
+              />
+            ) : null}
+          </Dialog>
+        )}
+        <div
+          className={cn(
+            "min-w-0 flex-1 text-right emr-text-metadata",
+            mutationStatus === "denied" || mutationStatus === "error"
+              ? "text-[var(--emr-text-danger)]"
+              : "text-muted-foreground"
+          )}
+          data-testid="hospital-order-mutation-status"
+        >
+          {mutationMessage}
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" disabled={mutationInFlight} onClick={() => setDraft(order)}>
             취소
           </Button>
-          <Button onClick={handleSave}>저장</Button>
+          <Dialog open={confirmSaveOpen} onOpenChange={setConfirmSaveOpen}>
+            <Button
+              disabled={saveDisabled}
+              title={saveValidationMessage ?? undefined}
+              onClick={() => setConfirmSaveOpen(true)}
+            >
+              {mutationStatus === "saving" ? "저장 중" : "저장"}
+            </Button>
+            {confirmSaveOpen ? (
+              <EmrConfirmDialogContent
+                title={creatingNewOrder ? "오더를 등록할까요?" : "Order 변경사항을 저장할까요?"}
+                description={
+                  creatingNewOrder
+                    ? `${draft.standardName} 항목이 이 병원의 Order Catalog에 등록되고, 저장 후 차트의 Order 추가 검색 후보로 표시됩니다.`
+                    : "병원관리 Order Catalog와 차트 선택 후보에 변경값이 반영됩니다. 이미 확정된 과거 Order snapshot은 유지됩니다."
+                }
+                cancelLabel="취소"
+                confirmLabel={creatingNewOrder ? "등록" : "저장"}
+                closeAriaLabel="Order 저장 확인 닫기"
+                onCancel={() => setConfirmSaveOpen(false)}
+                onConfirm={() => {
+                  setConfirmSaveOpen(false);
+                  void handleSave();
+                }}
+              />
+            ) : null}
+          </Dialog>
         </div>
       </footer>
     </div>

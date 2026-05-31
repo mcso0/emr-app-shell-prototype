@@ -30,16 +30,41 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   moduleSidePanelWidth: SHELL_LAYOUT.moduleSidePanel.defaultWidth,
   contentAsideWidth: SHELL_LAYOUT.contentAside.defaultWidth,
   rightPanelWidth: SHELL_LAYOUT.rightPanel.defaultWidth,
-  setActiveDrawer: (activeDrawer) => set({ activeDrawer }),
-  setContentAsideOpen: (contentAsideOpen) => set({ contentAsideOpen }),
-  setModulePanelOpen: (modulePanelOpen) => set({ modulePanelOpen }),
-  setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
+  setActiveDrawer: (activeDrawer) =>
+    set((state) => {
+      if (
+        state.activeDrawer?.type === activeDrawer?.type &&
+        state.activeDrawer?.id === activeDrawer?.id &&
+        state.activeDrawer?.subtitle === activeDrawer?.subtitle
+      ) {
+        return state;
+      }
+
+      return { activeDrawer };
+    }),
+  setContentAsideOpen: (contentAsideOpen) =>
+    set((state) =>
+      state.contentAsideOpen === contentAsideOpen ? state : { contentAsideOpen }
+    ),
+  setModulePanelOpen: (modulePanelOpen) =>
+    set((state) =>
+      state.modulePanelOpen === modulePanelOpen ? state : { modulePanelOpen }
+    ),
+  setRightPanelOpen: (rightPanelOpen) =>
+    set((state) =>
+      state.rightPanelOpen === rightPanelOpen ? state : { rightPanelOpen }
+    ),
   setSelectedQueueItem: (moduleId, itemId) =>
-    set((state) => ({
-      selectedQueueItemIds: {
-        ...state.selectedQueueItemIds,
-        [moduleId]: itemId,
-      },
-    })),
-  enterModule: () => set({ activeDrawer: null }),
+    set((state) =>
+      state.selectedQueueItemIds[moduleId] === itemId
+        ? state
+        : {
+            selectedQueueItemIds: {
+              ...state.selectedQueueItemIds,
+              [moduleId]: itemId,
+            },
+          }
+    ),
+  enterModule: () =>
+    set((state) => (state.activeDrawer === null ? state : { activeDrawer: null })),
 }));

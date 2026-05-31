@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-329 Billing Candidate Anchor Report</title>
+    <style>
+      body {
+        color: #111827;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 960px;
+        padding: 0 24px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      table {
+        border-collapse: collapse;
+        margin: 16px 0;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #d1d5db;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .warn {
+        color: #b45309;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-329 Billing Candidate Anchor Report</h1>
+    <p>
+      새 live reception encounter가 처치 완료 후 billing candidate readback까지
+      가지 못하던 문제를 고쳤다. 원인은 새 encounter에 draft invoice anchor가
+      없고, 기존 billing sync RPC가 seeded invoice가 있는 fixture에만 정상
+      동작하던 구조였다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        <code>clair_sync_billing_invoice_candidates</code> RPC를 forward
+        migration으로 교체했다.
+      </li>
+      <li>
+        RPC가 먼저 encounter/order/billable 상태를 검증한 뒤, draft/issued
+        invoice가 없으면 draft invoice anchor를 생성한다.
+      </li>
+      <li>
+        이후 기존처럼 <code>invoice_lines</code> candidate를 생성/갱신하고
+        invoice subtotal/total을 재계산한다.
+      </li>
+      <li>
+        잘못된 order 요청은 invoice 생성 전에 <code>order_unavailable</code>로
+        중단되도록 static contract test를 추가했다.
+      </li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>파일</th>
+          <th>내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <code
+              >supabase/migrations/20260530141423_den_329_billing_candidate_invoice_anchor.sql</code
+            >
+          </td>
+          <td>billing candidate sync RPC의 lazy invoice anchor 생성</td>
+        </tr>
+        <tr>
+          <td>
+            <code>tests/billing-invoice-candidate-sync-server.spec.ts</code>
+          </td>
+          <td>DEN-329 migration contract coverage 추가</td>
+        </tr>
+        <tr>
+          <td>
+            <code>AGENTS.md</code>,
+            <code>docs/agent-start-here.md</code>,
+            <code>.agents/skills/manual-linear-ops/SKILL.md</code>
+          </td>
+          <td>
+            승인 게이트가 더 나은 해결책이면 우회하지 않고 멈춰서 승인 요청하는
+            운영 규칙 추가
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Fixed Staging 적용</h2>
+    <ul>
+      <li>
+        대상: <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>,
+        workspace <code>clair-demo</code>
+      </li>
+      <li>
+        <code>supabase db push --linked --dry-run</code>은 기존 remote-only
+        migration history 3건 때문에 중단됐다.
+      </li>
+      <li>
+        범위를 DEN-329로 제한하기 위해 승인된 SQL 파일만
+        <code>supabase db query --linked --file ...</code>로 적용했다.
+      </li>
+      <li>
+        적용 후 <code>supabase migration repair --linked --status applied
+        20260530141423</code>로 해당 version만 remote history에 표시했다.
+      </li>
+      <li>
+        기존 history drift(<code>20260524121849</code>,
+        <code>20260529090705</code>, <code>20260529090827</code>)는 건드리지
+        않았다.
+      </li>
+    </ul>
+
+    <h2>Staging Readback</h2>
+    <table>
+      <tbody>
+        <tr>
+          <th>Encounter</th>
+          <td><code>e82e0a65-c820-46ea-a7d2-6df3a938a9b2</code></td>
+        </tr>
+        <tr>
+          <th>Order</th>
+          <td><code>f51aad0d-3602-481b-8aa8-19b86a618a86</code></td>
+        </tr>
+        <tr>
+          <th>Created invoice</th>
+          <td><code>cab80334-88a6-43f2-8202-b2ac13bbef20</code></td>
+        </tr>
+        <tr>
+          <th>Candidate</th>
+          <td>
+            <code>billcand-f51aad0d-3602-481b-8aa8-19b86a618a86</code>,
+            18,200 KRW
+          </td>
+        </tr>
+        <tr>
+          <th>App API readback</th>
+          <td class="ok">
+            <code>GET /billing/invoice-candidates?encounterId=...</code> returned
+            1 candidate
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li class="ok">
+        <code
+          >PLAYWRIGHT_BASE_URL=http://localhost:3109 npx playwright test
+          tests/billing-invoice-candidate-sync-server.spec.ts --reporter=line</code
+        >: 9 passed
+      </li>
+      <li class="ok">
+        <code>npx tsc --noEmit --pretty false</code>: passed
+      </li>
+      <li class="ok"><code>npm run security:secrets</code>: passed</li>
+      <li class="ok"><code>npm run lint</code>: passed, existing warnings only</li>
+      <li class="ok"><code>npm run docs:check</code>: passed</li>
+      <li class="ok"><code>git diff --check</code>: passed for touched files</li>
+      <li class="warn">
+        <code>npx supabase migration list --local</code>: local Postgres
+        <code>127.0.0.1:54322</code> not running
+      </li>
+      <li class="warn">
+        <code>tests/fulfillment-work-item-server.spec.ts</code>: existing dev
+        server in-memory state caused the first case to see an already-completed
+        mock work item; 9/10 passed. A clean server could not be started because
+        Next dev already held the project lock at <code>localhost:3109</code>.
+      </li>
+      <li class="warn">
+        <code>supabase db lint --linked</code>: no DEN-329-specific issue found;
+        existing warnings plus existing
+        <code>clair_save_chart_order_draft</code> temp-table lint error remain.
+      </li>
+    </ul>
+
+    <h2>남은 리스크와 다음 단계</h2>
+    <ul>
+      <li>
+        Billing candidate API readback은 복구됐다. DEN-327 fixed staging full
+        replay를 재개할 수 있다.
+      </li>
+      <li>
+        수납 화면의 좌측 invoice 목록은 아직 seeded invoice 중심으로 보이며,
+        새 draft invoice를 목록 카드로 보여주는 안정화는 별도 후속 이슈 후보로
+        남긴다.
+      </li>
+      <li>
+        remote migration history에 기존 drift가 남아 있으므로, 나중에 별도
+        maintenance issue로 정리하는 편이 좋다.
+      </li>
+    </ul>
+  </body>
+</html>

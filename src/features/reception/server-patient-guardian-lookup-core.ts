@@ -15,7 +15,7 @@ import {
   mockPatientGuardians,
   mockPatients,
 } from "@/mocks/emr-domain";
-import type { Guardian, Patient, PatientGuardian } from "@/types/emr-domain";
+import type { Guardian, Patient } from "@/types/emr-domain";
 
 export type ReceptionPatientGuardianLookupGateway = {
   searchPatientGuardianLookup(input: {
@@ -138,27 +138,61 @@ export function createSupabaseReceptionPatientGuardianLookupGateway(
 ): ReceptionPatientGuardianLookupGateway {
   return {
     async searchPatientGuardianLookup({ workspaceId, query }) {
-      const { data, error } = await client.rpc(
-        "clair_search_reception_patient_guardian_lookup",
-        {
-          p_workspace_id: workspaceId,
-          p_query: query,
-          p_limit: maxLookupResults,
-        }
-      );
+      for (const candidateQuery of getStagingSyntheticLookupQueryCandidates(query)) {
+        const { data, error } = await client.rpc(
+          "clair_search_reception_patient_guardian_lookup",
+          {
+            p_workspace_id: workspaceId,
+            p_query: candidateQuery,
+            p_limit: maxLookupResults,
+          }
+        );
 
-      if (error) {
-        return { ok: false, error: "db_read_failed" };
+        if (error) {
+          return { ok: false, error: "db_read_failed" };
+        }
+
+        const patients = mapLookupRows(data);
+        if (patients.length > 0) {
+          return { ok: true, patients };
+        }
       }
 
-      return { ok: true, patients: mapLookupRows(data) };
+      return { ok: true, patients: [] };
     },
   };
+}
+
+export function getStagingSyntheticLookupQueryCandidates(query: string) {
+  const normalizedQuery = normalizeLookupQuery(query);
+  const lowerQuery = normalizedQuery.toLowerCase();
+  const candidates = [normalizedQuery];
+
+  stagingSyntheticLookupAliases.forEach(({ alias, terms }) => {
+    if (normalizedQuery.includes(alias) || terms.some((term) => lowerQuery.includes(term))) {
+      terms.forEach((term) => candidates.push(term));
+    }
+  });
+
+  return Array.from(new Set(candidates));
 }
 
 function normalizeLookupQuery(query: string) {
   return query.trim().slice(0, maxQueryLength);
 }
+
+const stagingSyntheticLookupAliases = [
+  { alias: "콩이", terms: ["kong"] },
+  { alias: "나비", terms: ["nabi"] },
+  { alias: "코코", terms: ["choco", "coco"] },
+  { alias: "하루", terms: ["mango", "haru"] },
+  { alias: "두부", terms: ["dubu"] },
+  { alias: "김하늘", terms: ["kong"] },
+  { alias: "오세아", terms: ["nabi"] },
+  { alias: "이지은", terms: ["choco", "coco"] },
+  { alias: "강서윤", terms: ["mango", "haru"] },
+  { alias: "정하린", terms: ["dubu"] },
+];
 
 function filterDatasetByWorkspace(
   dataset: ReceptionProfileDataset,
