@@ -1857,26 +1857,8 @@ function EmptyReceptionSlotButton({
       }}
       onPointerLeave={() => setAffordanceSuppressed(false)}
     >
-      <span
-        className={cn(
-          "flex h-full min-h-12 items-center justify-center gap-1.5 opacity-0 transition-opacity",
-          !affordanceHidden &&
-            "group-hover/empty-slot:!opacity-100 group-focus/empty-slot:!opacity-100 group-focus-visible/empty-slot:!opacity-100"
-        )}
-        data-testid={`${testId}-affordance`}
-      >
-        <CdsActionsPlusIcon
-          className="size-3.5 text-[var(--emr-status-info-text)]"
-          aria-hidden="true"
-          data-testid={`${testId}-icon`}
-        />
-        <span
-          className="whitespace-nowrap emr-text-metadata font-semibold leading-4 text-[var(--emr-status-info-text)]"
-          aria-hidden="true"
-          data-testid={`${testId}-label`}
-        >
-          접수/예약
-        </span>
+      <span className="sr-only" data-testid={`${testId}-affordance`}>
+        접수 생성
       </span>
     </button>
   );
@@ -1909,8 +1891,6 @@ function ScheduleSelectionCell({
     startMinutes: number;
     endMinutes: number;
   } | null>(null);
-  const [affordanceSuppressed, setAffordanceSuppressed] = useState(false);
-  const affordanceHidden = affordanceSuppressed || affordanceSuspended || Boolean(dragState);
   const selectionStart = dragState
     ? snapScheduleStartMinutes(Math.min(dragState.startMinutes, dragState.endMinutes))
     : undefined;
@@ -1936,7 +1916,6 @@ function ScheduleSelectionCell({
       snapScheduleEndMinutes(endMinutes)
     );
 
-    setAffordanceSuppressed(true);
     onCreateDraft({
       durationMinutes: snappedEnd - snappedStart,
       plannedStartAt: getReceptionIsoAtMinutes(snappedStart),
@@ -1983,7 +1962,6 @@ function ScheduleSelectionCell({
           }),
         });
       }}
-      onPointerLeave={() => setAffordanceSuppressed(false)}
       onPointerCancel={() => setDragState(null)}
       onPointerUp={(event) => {
         if (!dragState || dragState.pointerId !== event.pointerId) return;
@@ -2036,22 +2014,7 @@ function ScheduleSelectionCell({
                 event.preventDefault();
                 createDraftFromMinutes(slotMinutes, slotMinutes + scheduleSlotMinutes);
               }}
-            >
-              <span
-                className={cn(
-                  "flex items-center gap-1 opacity-0 transition-opacity",
-                  !affordanceHidden && "group-hover/slot:opacity-100 group-focus/slot:opacity-100"
-                )}
-              >
-                <CdsActionsPlusIcon
-                  className="size-3.5 text-[var(--emr-status-info-text)]"
-                  aria-hidden="true"
-                />
-                <span className="whitespace-nowrap emr-text-micro font-semibold text-[var(--emr-status-info-text)]">
-                  접수/예약
-                </span>
-              </span>
-            </button>
+            />
           );
         })}
       </div>

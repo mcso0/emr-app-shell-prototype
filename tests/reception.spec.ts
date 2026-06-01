@@ -1502,7 +1502,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   const quarterSlot = page.getByTestId("day-empty-slot-14-user-vet-suji-slot-1415");
 
   await emptySlot.hover();
-  await expect(quarterSlot).toContainText("접수/예약");
+  await expect(quarterSlot).toBeVisible();
   await quarterSlot.click();
 
   const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
