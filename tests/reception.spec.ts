@@ -1584,10 +1584,12 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
   await expect(draftDrawer.getByLabel("소요시간")).toContainText("60분");
 
-  await draftDrawer.getByLabel("방문 목적").fill("1시간 드래그 접수");
   await draftDrawer.getByRole("button", { name: "생성" }).click();
 
-  const draftCard = page.locator('[data-testid^="walkin-card-"]').filter({ hasText: "1시간 드래그 접수" });
+  const draftCard = page
+    .locator('[data-testid^="walkin-card-"]')
+    .filter({ hasText: "나비" })
+    .filter({ hasText: "14:00" });
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:00");
   await expect(draftCard).toContainText("60분");

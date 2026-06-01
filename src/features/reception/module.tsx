@@ -1843,7 +1843,7 @@ function EmptyReceptionSlotButton({
       type="button"
       aria-label={ariaLabel}
       className={cn(
-        "group/empty-slot min-h-12 min-w-0 flex-1 rounded-lg border border-dashed border-[var(--emr-line-subtle)] bg-[var(--emr-surface-muted)]/70 text-[var(--emr-text-tertiary)] outline-none transition-colors",
+        "group/empty-slot min-h-12 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent text-[var(--emr-text-tertiary)] outline-none transition-colors",
         !affordanceHidden &&
           "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
       )}
@@ -1946,7 +1946,7 @@ function ScheduleSelectionCell({
 
   return (
     <div
-      className="relative h-full min-h-0 min-w-0 flex-1 touch-none rounded-lg border border-dashed border-[var(--emr-line-subtle)] bg-[var(--emr-surface-muted)]/70 outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)]"
+      className="relative h-full min-h-0 min-w-0 flex-1 touch-none rounded-lg border border-transparent bg-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)]"
       data-testid={testId}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -2028,7 +2028,7 @@ function ScheduleSelectionCell({
               key={slotMinutes}
               type="button"
               aria-label={`${getScheduleTimeLabelFromMinutes(slotMinutes)} ${veterinarian.name} 접수/예약 생성`}
-              className="group/slot flex min-h-0 items-center justify-center border-b border-dashed border-[var(--emr-line-subtle)] outline-none last:border-b-0 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="group/slot flex min-h-0 items-center justify-center outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               data-testid={`${testId}-slot-${getScheduleTimeLabelFromMinutes(slotMinutes).replace(":", "")}`}
               tabIndex={dragState ? -1 : 0}
               onKeyDown={(event) => {
@@ -3657,7 +3657,7 @@ function ReceptionDraftTaskDrawer({
               aria-label="방문 목적"
               value={visitPurpose}
               className="h-9 bg-card"
-              onValueChange={setVisitPurpose}
+              onChange={(event) => setVisitPurpose(event.target.value)}
             />
           </ReceptionFormField>
 
