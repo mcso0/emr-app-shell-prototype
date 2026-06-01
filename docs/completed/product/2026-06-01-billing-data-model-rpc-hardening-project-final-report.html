@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>수납 DB/RPC Hardening 프로젝트 최종 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #20242a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 1040px;
+        margin: 40px auto;
+        padding: 32px;
+        border: 1px solid #dde2ea;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 17px;
+      }
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        border: 1px solid #dde2ea;
+        padding: 9px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f0f2f5;
+      }
+      .summary {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #eef6ff;
+        color: #17456b;
+      }
+      .ok {
+        color: #047857;
+        font-weight: 700;
+      }
+      .gate {
+        color: #9a3412;
+        font-weight: 700;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f0f2f5;
+      }
+      a {
+        color: #155eef;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>수납 DB/RPC Hardening 프로젝트 최종 보고서</h1>
+      <p class="summary">
+        보호자 중심 수납 화면에서 확정한 규칙을 local-first 데이터 계약,
+        local migration 초안, server/API core, regression test로 끌어내렸다.
+        이제 앱은 “완료/취소 이력은 볼 수 있지만 현재 받을 돈에는 합산하지 않는다”는
+        규칙을 코드와 테스트에서 같은 기준으로 사용한다.
+      </p>
+
+      <h2>핵심 결과</h2>
+      <ul>
+        <li><span class="ok">완료</span>: 수납이력 날짜 기준과 합산 포함/제외 규칙을 <code>billing-data-contract</code>로 고정했다.</li>
+        <li><span class="ok">완료</span>: 보호자 ledger, checkout session, selected invoice snapshot, adjustment, payment allocation, audited transition의 local migration 초안을 작성했다.</li>
+        <li><span class="ok">완료</span>: guardian checkout server core와 API route를 추가해 ledger 조회, checkout 준비, 상태 전환을 local/mock 및 future Supabase RPC gateway 형태로 검증했다.</li>
+        <li><span class="ok">완료</span>: 기존 billing UI의 합산 제외 계산이 새 데이터 계약 함수를 쓰도록 연결했다.</li>
+        <li><span class="gate">게이트</span>: remote Supabase migration push, remote RLS replay, fixed staging replay, production deploy, 실데이터 import는 실행하지 않았다.</li>
+      </ul>
+
+      <h2>이슈별 처리</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>이슈</th>
+            <th>결과</th>
+            <th>상태 판단</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>DEN-370</code></td>
+            <td>현재 DB/RPC fit 검수 보고서 작성.</td>
+            <td>Human Review</td>
+          </tr>
+          <tr>
+            <td><code>DEN-371</code></td>
+            <td><code>activityAt</code>, lifecycle status, payable/excluded rule을 문서와 코드에 고정.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-372</code></td>
+            <td><code>clair_list_guardian_billing_ledger</code> 계약과 local core/API route 추가.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-373</code></td>
+            <td>checkout session, selected invoice snapshot, adjustment, payment allocation schema 초안 작성.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-374</code></td>
+            <td>audited invoice status transition RPC와 local status transition core 추가.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-375</code></td>
+            <td><code>billing_requested_at</code>를 수납이력 기본 날짜 기준으로 정하고 migration backfill 초안 작성.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-376</code></td>
+            <td>local migration 파일 <code>20260601093000_billing_guardian_checkout_hardening.sql</code> 작성.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-377</code></td>
+            <td>guardian ledger, checkout prepare, audited status transition server core와 Supabase RPC gateway adapter 추가.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-378</code></td>
+            <td>기존 UI 합산 제외 계산을 새 data-backed contract 함수로 연결.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-379</code></td>
+            <td>server/API/migration/기존 billing UI invariant regression 추가 및 통과.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-380</code></td>
+            <td>staging replay에 필요한 승인 게이트를 명확히 분리: remote migration/RLS/replay는 별도 실행 승인 필요.</td>
+            <td>Human Review 준비</td>
+          </tr>
+          <tr>
+            <td><code>DEN-381</code></td>
+            <td>fixed staging replay는 실행하지 않음. 새 local migration/RPC가 remote에 적용되지 않았고, 원격 작업은 대상 환경/작업명 단위 승인이 필요함.</td>
+            <td>Blocked / approval gate</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>docs/engineering/data-model/billing-checkout-session-allocation-adjustment-model.md</code></li>
+        <li><code>docs/completed/product/2026-06-01-den-370-guardian-checkout-db-fit-report.html</code></li>
+        <li><code>src/features/billing/billing-data-contract.ts</code></li>
+        <li><code>src/features/billing/server-guardian-checkout-core.ts</code></li>
+        <li><code>src/features/billing/server-guardian-checkout.ts</code></li>
+        <li><code>src/app/api/workspaces/[workspaceId]/billing/guardian-checkout/route.ts</code></li>
+        <li><code>src/features/billing/data.ts</code></li>
+        <li><code>src/features/billing/module.tsx</code></li>
+        <li><code>supabase/migrations/20260601093000_billing_guardian_checkout_hardening.sql</code></li>
+        <li><code>tests/billing-guardian-checkout-hardening-server.spec.ts</code></li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx eslint ...billing hardening touched files...</code> 통과.</li>
+        <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+        <li><code>npm run docs:check</code> 통과.</li>
+        <li><code>npm run security:secrets</code> 통과.</li>
+        <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/billing-guardian-checkout-hardening-server.spec.ts --reporter=line</code> 통과: 7개.</li>
+        <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/billing.spec.ts -g "billing guardian ledger aside|billing completed and cancelled ledger selections|billing selected checkout renders one grouped invoice table" --reporter=line</code> 통과: 3개.</li>
+      </ul>
+
+      <h2>남은 승인 게이트</h2>
+      <p>
+        다음 단계에서 fixed staging까지 가려면 승욱이 별도 문장으로
+        <code>target environment</code>, <code>remote migration push 여부</code>,
+        <code>RLS replay 여부</code>, <code>synthetic replay 범위</code>를 명시 승인해야 한다.
+        이번 작업은 local 파일 작성과 local/server 검증까지만 수행했다.
+      </p>
+    </main>
+  </body>
+</html>

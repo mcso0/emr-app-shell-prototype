@@ -13,6 +13,7 @@ import type {
   EmrId,
   Encounter,
   Guardian,
+  IsoDateTime,
   Patient,
   PatientGuardian,
   WaitingQueueEntry,
@@ -24,6 +25,7 @@ export type ReceptionDraftCheckIn = {
   durationMinutes?: number;
   encounter: Encounter;
   memo?: string;
+  plannedStartAt?: IsoDateTime;
   queueEntry: WaitingQueueEntry;
   receptionType?: "appointment" | "walk_in";
   source?: "persisted_calendar" | "persisted_queue" | "session";

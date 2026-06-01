@@ -1492,54 +1492,105 @@ test("reception walk-in dialog uses DB-backed patient lookup states", async ({ p
   ).toBeVisible();
 });
 
-test("reception opens the walk-in form from an empty calendar slot", async ({ page }) => {
+test("reception creates a draft task from a 15-minute calendar click", async ({ page }) => {
   await page.goto(
     "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
   );
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
   const emptySlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
-  const emptySlotLabel = page.getByTestId("day-empty-slot-14-user-vet-suji-label");
-  const emptySlotIcon = page.getByTestId("day-empty-slot-14-user-vet-suji-icon");
-  const emptySlotAffordance = page.getByTestId("day-empty-slot-14-user-vet-suji-affordance");
+  const quarterSlot = page.getByTestId("day-empty-slot-14-user-vet-suji-slot-1415");
 
-  await expect
-    .poll(() => emptySlotAffordance.evaluate((affordance) => getComputedStyle(affordance).opacity))
-    .toBe("0");
   await emptySlot.hover();
-  await expect(emptySlotIcon).toBeVisible();
-  await expect(emptySlotLabel).toHaveText("접수");
-  await expect
-    .poll(() => emptySlotAffordance.evaluate((affordance) => getComputedStyle(affordance).opacity))
-    .toBe("1");
-  await emptySlot.focus();
-  await expect(emptySlot).toBeFocused();
-  await expect
-    .poll(() => emptySlotAffordance.evaluate((affordance) => getComputedStyle(affordance).opacity))
-    .toBe("1");
-  await emptySlot.click();
+  await expect(quarterSlot).toContainText("접수/예약");
+  await quarterSlot.click();
 
-  await expect(page).not.toHaveURL(/drawer=/);
-  const walkInForm = page.getByTestId("walk-in-reception-dialog");
-  await expect(walkInForm.getByRole("heading", { name: "진료 접수" })).toBeVisible();
-  await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
-    "placeholder",
-    "동물명 또는 보호자명으로 검색"
+  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+  await expect(draftDrawer.getByText("접수 task 생성")).toBeVisible();
+  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toHaveValue(/나비/);
+  await expect(draftDrawer.getByLabel("담당의")).toContainText("이수지");
+  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:15");
+  await expect(draftDrawer.getByLabel("소요시간")).toContainText("15분");
+
+  await draftDrawer.getByLabel("방문 목적").fill("15분 슬롯 테스트");
+  await draftDrawer.getByRole("button", { name: "생성" }).click();
+
+  const draftCard = page.locator('[data-testid^="walkin-card-"]').filter({ hasText: "15분 슬롯 테스트" });
+  await expect(draftCard).toBeVisible();
+  await expect(draftCard).toContainText("14:15");
+  await expect(draftCard).toContainText("15분");
+});
+
+test("reception creates a draft task from a dragged calendar range", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
   );
-  await walkInForm.getByRole("button", { name: "취소" }).click();
-  await expect(walkInForm).toBeHidden();
-  await expect
-    .poll(() => emptySlotAffordance.evaluate((affordance) => getComputedStyle(affordance).opacity))
-    .toBe("0");
-  await expect
-    .poll(() =>
-      page
-        .locator('[data-testid$="-affordance"]')
-        .evaluateAll((affordances) =>
-          Math.max(...affordances.map((affordance) => Number(getComputedStyle(affordance).opacity)))
-        )
-    )
-    .toBe(0);
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const emptySlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
+  const slotBox = await emptySlot.boundingBox();
+  expect(slotBox).not.toBeNull();
+  if (!slotBox) return;
+
+  await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.bottom - 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: rect.left + 16,
+        clientY: rect.bottom - 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+
+  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
+  await expect(draftDrawer.getByLabel("소요시간")).toContainText("60분");
+
+  await draftDrawer.getByLabel("방문 목적").fill("1시간 드래그 접수");
+  await draftDrawer.getByRole("button", { name: "생성" }).click();
+
+  const draftCard = page.locator('[data-testid^="walkin-card-"]').filter({ hasText: "1시간 드래그 접수" });
+  await expect(draftCard).toBeVisible();
+  await expect(draftCard).toContainText("14:00");
+  await expect(draftCard).toContainText("60분");
 });
 
 test("reception walk-in keeps selected veterinarian and form details", async ({ page }) => {

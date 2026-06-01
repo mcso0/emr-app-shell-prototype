@@ -48,6 +48,8 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
             ? "입원 상세"
             : activeDrawer?.type === "reception-appointment"
               ? "예약 상세"
+              : activeDrawer?.type === "reception-draft-task"
+                ? "접수 task 생성"
               : activeDrawer?.type === "reception-encounter"
                 ? "접수 정보"
                 : "상세 정보";

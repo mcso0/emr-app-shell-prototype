@@ -53,6 +53,7 @@ import {
   type BillingGuardianLedgerRow,
   type BillingQueueRow,
 } from "@/features/billing/data";
+import { resolveBillingAmountInclusion } from "@/features/billing/billing-data-contract";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import {
@@ -747,7 +748,7 @@ function getBillingCheckoutGroupBalance(group: BillingCheckoutGroup) {
 }
 
 function isCheckoutSummaryExcludedInvoice(invoice: Invoice) {
-  return invoice.status === "paid" || invoice.status === "refunded" || invoice.status === "voided";
+  return resolveBillingAmountInclusion(invoice) === "excluded";
 }
 
 function getBillingCheckoutTransitionTargets(
