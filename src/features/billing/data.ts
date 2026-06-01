@@ -17,6 +17,11 @@ import type {
   Payment,
 } from "@/types/emr-domain";
 import type { BillingFilter } from "@/features/billing/store";
+import {
+  getInvoiceApprovedPaidAmount,
+  resolveBillingActivityAt,
+  resolveBillingLifecycleStatus,
+} from "@/features/billing/billing-data-contract";
 
 export type BillingQueueRow = {
   encounter: Encounter;
@@ -66,24 +71,20 @@ export type BillingDetail = BillingQueueRow & {
   payments: Payment[];
 };
 
-const closedStatuses = new Set(["paid", "refunded", "voided"]);
-
 export const isReasonBackedUnpaidInvoice = (invoice: Invoice) =>
   invoice.paymentState === "unpaid" ||
   invoice.paymentState === "failed" ||
   Boolean(invoice.unpaidReason);
 
 export const getBillingFilterForInvoice = (invoice: Invoice): BillingFilter => {
-  if (closedStatuses.has(invoice.status)) return "closed";
-  if (isReasonBackedUnpaidInvoice(invoice)) return "unpaid";
+  const lifecycleStatus = resolveBillingLifecycleStatus(invoice);
+  if (lifecycleStatus === "paid" || lifecycleStatus === "refunded" || lifecycleStatus === "voided") {
+    return "closed";
+  }
+  if (lifecycleStatus === "unpaid") return "unpaid";
 
   return "waiting";
 };
-
-const getPaidAmount = (invoiceId: EmrId, payments: Payment[]) =>
-  payments
-    .filter((payment) => payment.invoiceId === invoiceId && payment.status === "approved")
-    .reduce((total, payment) => total + payment.amount, 0);
 
 const isBillingHistoryDemoInvoice = (invoice: Invoice) =>
   invoice.id.includes("-history-");
@@ -138,7 +139,7 @@ export const getBillingQueueRows = (
           : undefined,
         invoice,
         lineCount: invoiceLines.filter((line) => line.invoiceId === invoice.id).length,
-        paidAmount: getPaidAmount(invoice.id, payments),
+        paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
         patient: mockPatients.find((patient) => patient.id === encounter.patientId),
       });
 
@@ -202,7 +203,7 @@ export const getBillingGuardianLedgerRows = ({
       const invoiceScopedLines = invoiceLines.filter((line) => line.invoiceId === invoice.id);
 
       rows.push({
-        activityAt: invoice.issuedAt ?? invoice.createdAt,
+        activityAt: resolveBillingActivityAt(invoice).activityAt,
         encounter,
         guardian: invoice.guardianId
           ? mockGuardians.find((item) => item.id === invoice.guardianId)
@@ -210,7 +211,7 @@ export const getBillingGuardianLedgerRows = ({
         invoice,
         lineCount: invoiceScopedLines.length,
         lineSummary: getInvoiceBillingLineSummary(invoiceScopedLines),
-        paidAmount: getPaidAmount(invoice.id, payments),
+        paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
         patient: mockPatients.find((patient) => patient.id === encounter.patientId),
         requestedByName: getInvoiceBillingRequesterName(invoice, invoiceScopedLines),
         status: getBillingFilterForInvoice(invoice),
@@ -261,7 +262,7 @@ export const getBillingCheckoutGroups = ({
           : undefined,
         invoice,
         lines,
-        paidAmount: getPaidAmount(invoice.id, payments),
+        paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
         patient: mockPatients.find((patient) => patient.id === encounter.patientId),
         totalAmount: lines.reduce((total, item) => total + item.line.lineTotal, 0),
       });
@@ -297,7 +298,7 @@ export const getBillingGuardianGroups = (
         patients: mockPatients.filter((patient) => patientIds.has(patient.id)),
         payments: guardianPayments,
         totalDueAmount: guardianInvoices
-          .filter((invoice) => !closedStatuses.has(invoice.status))
+          .filter((invoice) => getBillingFilterForInvoice(invoice) !== "closed")
           .reduce((total, invoice) => total + invoice.totalAmount, 0),
       };
     })
@@ -329,7 +330,7 @@ export const getBillingDetail = (
     invoice,
     invoiceLines: detailInvoiceLines,
     lineCount: detailInvoiceLines.length,
-    paidAmount: getPaidAmount(invoice.id, payments),
+    paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
     patient: mockPatients.find((item) => item.id === encounter.patientId),
     payments: payments.filter((payment) => payment.invoiceId === invoice.id),
   };

@@ -19,6 +19,7 @@ type ReceptionDraftCheckIn = {
   durationMinutes?: number;
   encounter: Encounter;
   memo?: string;
+  plannedStartAt?: string;
   queueEntry: WaitingQueueEntry;
   receptionType?: "appointment" | "walk_in";
   source?: "persisted_calendar" | "persisted_queue" | "session";
@@ -26,7 +27,15 @@ type ReceptionDraftCheckIn = {
 
 type ReceptionQueueReadStatus = "idle" | "loading" | "ready" | "error";
 
+export type ReceptionCalendarDraftSelection = {
+  durationMinutes: number;
+  id: EmrId;
+  plannedStartAt: string;
+  primaryVeterinarianId?: EmrId;
+};
+
 type ReceptionStore = {
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
   messageDeliveries: MessageDelivery[];
   searchQuery: string;
   selectedAppointmentId?: EmrId;
@@ -42,6 +51,7 @@ type ReceptionStore = {
   applyPersistedReceptionCalendar: (records: ReceptionCalendarReadRecord[]) => void;
   applyPersistedReceptionQueue: (queue: ReceptionQueueReadRecord[]) => void;
   requestReceptionReadRetry: () => void;
+  setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
   setSearchQuery: (query: string) => void;
   setReceptionCalendarReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
   setReceptionQueueReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
@@ -59,6 +69,7 @@ type ReceptionStore = {
     guardianId?: EmrId;
     memo?: string;
     patientId: EmrId;
+    plannedStartAt?: string;
     primaryVeterinarianId?: EmrId;
     sendKakaoMessage?: boolean;
     guardianMobilePhone?: string;
@@ -73,6 +84,7 @@ type ReceptionStore = {
     memo?: string;
     patientId: EmrId;
     patientName?: string;
+    plannedStartAt?: string;
     sendKakaoMessage?: boolean;
     visitPurpose?: string;
     walkIn: ReceptionWalkInEncounterRecord;
@@ -90,6 +102,7 @@ const createDraftEncounter = ({
   patientId,
   primaryVeterinarianId,
   visitPurpose,
+  plannedStartAt,
 }: {
   appointmentId?: EmrId;
   guardianId?: EmrId;
@@ -97,9 +110,11 @@ const createDraftEncounter = ({
   patientId: EmrId;
   primaryVeterinarianId?: EmrId;
   visitPurpose?: string;
+  plannedStartAt?: string;
 }): Encounter => {
   const suffix = String(index + 10).padStart(4, "0");
   const id = appointmentId ? `draft-encounter-${appointmentId}` : `draft-encounter-walkin-${patientId}`;
+  const eventTime = plannedStartAt ?? DEFAULT_NOW;
 
   return {
     id,
@@ -112,9 +127,9 @@ const createDraftEncounter = ({
     chiefComplaint: visitPurpose,
     visitPurpose: visitPurpose ?? "현장 접수",
     status: "waiting",
-    checkedInAt: DEFAULT_NOW,
-    createdAt: DEFAULT_NOW,
-    updatedAt: DEFAULT_NOW,
+    checkedInAt: eventTime,
+    createdAt: eventTime,
+    updatedAt: eventTime,
   };
 };
 
@@ -167,6 +182,7 @@ const createSessionCheckInMessage = ({
 });
 
 export const useReceptionStore = create<ReceptionStore>()((set) => ({
+  calendarDraftSelection: undefined,
   messageDeliveries: [],
   searchQuery: "",
   selectedPatientId: DEFAULT_PATIENT_ID,
@@ -243,6 +259,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
     set((state) => ({
       readRetryNonce: state.readRetryNonce + 1,
     })),
+  setCalendarDraftSelection: (calendarDraftSelection) => set({ calendarDraftSelection }),
   setReceptionCalendarReadStatus: (calendarReadStatus, calendarReadError) =>
     set({ calendarReadError, calendarReadStatus }),
   setReceptionQueueReadStatus: (queueReadStatus, queueReadError) =>
@@ -345,6 +362,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
     memo,
     patientId,
     patientName,
+    plannedStartAt,
     primaryVeterinarianId,
     sendKakaoMessage,
     visitPurpose,
@@ -366,6 +384,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         guardianId,
         index,
         patientId,
+        plannedStartAt,
         primaryVeterinarianId,
         visitPurpose,
       });
@@ -389,6 +408,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
             durationMinutes,
             encounter,
             memo,
+            plannedStartAt,
             queueEntry,
             receptionType: "walk_in",
             source: "session",
@@ -409,8 +429,8 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
     memo,
     patientId,
     patientName,
+    plannedStartAt,
     sendKakaoMessage,
-    visitPurpose,
     walkIn,
   }) =>
     set((state) => {
@@ -444,6 +464,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
             durationMinutes,
             encounter: walkIn.encounter,
             memo,
+            plannedStartAt,
             queueEntry: walkIn.queueEntry,
             receptionType: "walk_in",
             source: "session",

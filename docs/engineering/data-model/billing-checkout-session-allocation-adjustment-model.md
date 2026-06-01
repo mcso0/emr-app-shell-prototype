@@ -7,7 +7,12 @@ related_work:
   - DEN-365
   - DEN-358
   - DEN-366
-last_updated: 2026-05-31
+  - DEN-371
+  - DEN-372
+  - DEN-373
+  - DEN-374
+  - DEN-375
+last_updated: 2026-06-01
 ---
 
 # Billing Checkout Session, Allocation, And Adjustment Model
@@ -33,6 +38,54 @@ Recommended path:
 - Do not change live schema until 승욱 approves the migration target and timing.
 - When approved, add a checkout-session layer that references existing invoices
   instead of replacing them.
+
+## Billing Lifecycle Date And Inclusion Contract
+
+`activityAt` for the guardian ledger should represent when a charge became a
+billing desk item, not when it was later paid or voided.
+
+Recommended precedence:
+
+1. `invoices.billing_requested_at`: chart `Order 청구` or candidate sync time.
+2. `invoices.issued_at`: fallback for older rows already promoted to issued.
+3. `invoices.paid_at` or future `voided_at`: only for legacy rows where no
+   billing request timestamp exists.
+4. `invoices.created_at`: final compatibility fallback.
+
+Amount inclusion is a derived contract:
+
+| Derived status | DB basis | Checkout amount |
+| --- | --- | --- |
+| `waiting` | not terminal and not reason-backed unpaid | included |
+| `unpaid` | `payment_state in ('unpaid', 'failed')` or `unpaid_reason` present | included |
+| `paid` | `status = 'paid'` or `payment_state = 'paid'` | excluded |
+| `voided` | `status = 'voided'` | excluded |
+| `refunded` | `status = 'refunded'` or `payment_state = 'refunded'` | excluded |
+
+Same-day unprocessed charges stay `waiting`; `unpaid` is only for explicit
+defer/failed/overdue cases with a reason. Completed and cancelled rows remain
+selectable for detail review but must not contribute to the current checkout
+total.
+
+## Guardian Ledger Read Model
+
+The ledger read model should return rows scoped by `workspace_id` and
+`guardian_id`, with an explicit `includeCoGuardianInvoices` parameter before
+showing invoices billed to another guardian for the same patient.
+
+Recommended row shape:
+
+- `invoiceId`, `invoiceNo`, `encounterId`, `patientId`, `guardianId`
+- `activityAt`, `activityBasis`
+- derived `status`
+- `amountInclusion`, `totalAmount`, `paidAmount`, `balanceAmount`,
+  `payableAmount`
+- `lineCount`, `lineSummary`
+- `requestedByName` or source label
+
+The RPC should be read-only and should not trust client-side amount
+calculation. The UI may group and format, but the payable/excluded split should
+come from server/data-backed logic.
 
 ## Current Fit
 
@@ -217,6 +270,70 @@ Responsibilities:
 - mark session `unpaid`
 - mark included invoices `payment_state = 'unpaid'`
 - preserve selected invoice and amount snapshots for follow-up work
+
+### `clair_list_guardian_billing_ledger`
+
+Input:
+
+- `workspaceId`
+- `guardianId`
+- `includeCoGuardianInvoices`
+- optional status/date filters
+
+Responsibilities:
+
+- verify active workspace membership and billing read permission
+- derive lifecycle status from invoice/payment fields
+- use `billing_requested_at` as the primary ledger activity date
+- return server-calculated `amountInclusion` and payable balance
+- keep completed/cancelled/refunded rows selectable but excluded
+
+### `clair_transition_billing_invoice_status`
+
+Input:
+
+- `workspaceId`
+- `invoiceId`
+- target: `waiting`, `unpaid`, `paid`, or `voided`
+- payment method when moving to `paid` or `unpaid`
+- required reason
+
+Responsibilities:
+
+- verify membership and billing mutation permission
+- lock the invoice row for transition
+- apply the allowed transition matrix
+- cancel or create local-first payment rows as needed
+- write an audit event with actor, reason, source screen, previous/next state,
+  amount snapshot, and payment side-effect
+
+Recommended transition matrix for the current UI:
+
+| From | To | Notes |
+| --- | --- | --- |
+| `paid` | `waiting` | cancel approved local payment, clear paid state |
+| `paid` | `unpaid` | cancel approved local payment, require reason |
+| `paid` | `voided` | cancel approved local payment, require reason |
+| `voided` | `waiting` | restore as draft/waiting, require reason |
+| `voided` | `unpaid` | restore as issued/unpaid, require reason |
+| `voided` | `paid` | restore as paid with local payment marker, require reason |
+
+Real refund, receipt cancellation, accounting settlement, and provider payment
+reversal remain separate approval-gated work.
+
+## Order Billing Request Timestamp
+
+`Order 청구` should set or preserve a billing request timestamp at the billing
+candidate/invoice layer. For MVP compatibility, candidate-backed `invoice_lines`
+remain acceptable: candidate sync may create the draft invoice anchor and rows.
+No separate user-facing `청구 확정` step is required.
+
+Recommended local migration behavior:
+
+- add `invoices.billing_requested_at`
+- backfill it from `issued_at` or `created_at` for existing rows
+- set it during candidate sync / checkout preparation in a later RPC revision
+- keep `source_order_snapshot` on `invoice_lines` as the item-level trace
 
 ## Transaction Boundary
 

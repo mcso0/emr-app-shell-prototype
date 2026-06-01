@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-382 접수 캘린더 Task 생성 UX 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f8fb;
+        color: #20242a;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+
+      h1,
+      h2 {
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 14px;
+      }
+
+      .summary {
+        border: 1px solid #d7e3f8;
+        border-radius: 8px;
+        background: #eef6ff;
+        padding: 16px 18px;
+      }
+
+      .meta {
+        color: #68727f;
+        font-size: 13px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #edf1f7;
+        padding: 1px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">2026-06-01 · Project 18 · DEN-382-DEN-385</p>
+      <h1>접수 캘린더 Task 생성 UX 완료 보고서</h1>
+      <section class="summary">
+        <p>
+          접수/예약 day 캘린더에서 피그마 CDS V2의 <code>celanderTask</code> 스타일을 기준으로 task 카드를 정리하고,
+          사용자가 캘린더 빈 시간대를 클릭하거나 드래그해서 15분 단위 접수 task를 만들 수 있게 했다.
+        </p>
+      </section>
+
+      <h2>요청 사항</h2>
+      <ul>
+        <li>피그마 컴포넌트를 기준으로 접수 캘린더 task 카드에 적용할 위치와 수정 대상을 파악하고 반영.</li>
+        <li>Notion Calendar처럼 빈 시간대를 클릭하거나 드래그해 접수 task를 생성.</li>
+        <li>생성 단위는 임의 시간이 아니라 <code>HH:00</code>, <code>HH:15</code>, <code>HH:30</code>, <code>HH:45</code>로 고정.</li>
+        <li>생성 UX는 팝오버가 아니라 기존 CLAiR 우측 드로어로 연결.</li>
+      </ul>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li>예약, 접수완료, 노쇼, 추가 상태를 피그마 task 카드 톤에 맞춰 day 캘린더 카드로 정리했다.</li>
+        <li>day view 빈 슬롯을 15분 단위 버튼/드래그 영역으로 나눴다.</li>
+        <li>클릭 시 기본 15분 접수 task 드로어가 열리고, 드래그 시 선택 범위가 15분 단위로 스냅된다.</li>
+        <li>드로어에서 환자, 담당의, 시작 시간, 소요시간, 방문 목적을 확인한 뒤 생성하면 세션 전용 접수 task가 캘린더와 대기 목록에 반영된다.</li>
+      </ul>
+
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>src/features/reception/module.tsx</code></li>
+        <li><code>src/features/reception/store.ts</code></li>
+        <li><code>src/features/reception/data.ts</code></li>
+        <li><code>src/shell/workspace-frame.tsx</code></li>
+        <li><code>tests/reception.spec.ts</code></li>
+        <li><code>docs/product/features/reception-appointment-spec.md</code></li>
+        <li><code>docs/design/ux-flows/reception-appointment-flow.md</code></li>
+        <li><code>docs/work/reception/RECEPTION-PR-005-calendar-task-creation-ux.md</code></li>
+        <li><code>docs/work/index.md</code></li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li><code>npm run docs:check</code> 통과.</li>
+        <li>접수 관련 파일 대상 <code>npm run lint</code> 통과.</li>
+        <li><code>npx tsc --noEmit</code> 통과.</li>
+        <li>접수 캘린더 클릭/드래그 생성과 기존 day card 회귀 Playwright 4개 시나리오 통과.</li>
+      </ul>
+
+      <h2>남은 리스크와 범위 밖 항목</h2>
+      <ul>
+        <li>이번 구현은 세션 전용 UI 생성이다. 실제 예약/접수 영속화, DB 스키마, RLS, RPC는 별도 승인 범위가 필요하다.</li>
+        <li>기존 task의 드래그 이동/리사이즈 편집은 이번 범위가 아니다.</li>
+        <li>week/month view 생성은 이번 범위가 아니며 day view를 우선 완성했다.</li>
+      </ul>
+
+      <h2>권장 다음 단계</h2>
+      <p>
+        대표 확인 후, 실제 운영 데이터 저장이 필요하면 <code>plannedStartAt</code> 또는 동등 필드를 포함한 접수/예약 생성 API와 권한 정책을 별도 프로젝트로 분리하는 것이 좋다.
+      </p>
+    </main>
+  </body>
+</html>

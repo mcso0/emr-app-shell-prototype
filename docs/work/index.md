@@ -148,6 +148,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-PR-002            | done         | reception            | P1       | PR 2                 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md`                                           |
 | RECEPTION-PR-003            | done         | reception            | P1       | PR 3                 | `docs/work/reception/RECEPTION-PR-003-registration-quality-ux.md`                                      |
 | RECEPTION-PR-004            | done         | reception            | P1       | PR 4                 | `docs/work/reception/RECEPTION-PR-004-unified-registration-entry.md`                                   |
+| RECEPTION-PR-005            | done         | reception            | P1       | Project 18 / DEN-382-DEN-385 | `docs/work/reception/RECEPTION-PR-005-calendar-task-creation-ux.md`                             |
 | RECEPTION-LIVE-PR-001       | human_review | reception            | P0       | Project 03 / DEN-54  | `docs/work/reception/RECEPTION-LIVE-PR-001-encounter-persistence-contract.md`                          |
 | RECEPTION-LIVE-PR-002       | human_review | reception            | P0       | Project 03 / DEN-55  | `docs/work/reception/RECEPTION-LIVE-PR-002-schema-extension-plan.md`                                   |
 | RECEPTION-LIVE-PR-003       | human_review | reception            | P0       | Project 03 / DEN-56  | `docs/work/reception/RECEPTION-LIVE-PR-003-schema-migration.md`                                        |

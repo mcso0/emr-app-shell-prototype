@@ -38,6 +38,8 @@ last_updated: 2026-05-05
 - 동물 이름과 내원 목적을 보호자명/전화번호보다 높은 위계로 표시하고, 반복 목적은 작은 icon label을 병행한다.
 - day view의 현재 시간 line에는 현재 시각 label을 함께 표시한다.
 - 스케줄 운영 toolbar의 registration action은 `환자/보호자 등록`으로 단일화하고, 기존 환자 즉시 접수를 위한 primary `진료 접수`, `더보기`를 함께 배치한다.
+- 빈 시간대는 클릭 또는 드래그로 접수 task 생성 진입점이 된다. Notion Calendar처럼 calendar grid에서 직접 시간대를 선택하지만, 설정 UI는 popover가 아니라 우측 Detail Drawer를 사용한다.
+- 생성 시간은 15분 고정 슬롯만 허용한다: `HH:00`, `HH:15`, `HH:30`, `HH:45`.
 
 ### Detail Drawer
 
@@ -69,9 +71,9 @@ last_updated: 2026-05-05
 1. 데스크 직원이 접수/예약 화면에 진입한다.
 2. 사이드 패널 검색에서 보호자 또는 환자를 찾는다.
 3. 환자를 선택하면 현재 예약/접수 맥락이 화면 상단 또는 drawer에서 확인된다.
-4. 데스크 직원이 `진료 접수` 액션을 선택한다.
-5. 신규 진료 접수 dialog가 열리며, 기존 대기열 선택 환자가 자동으로 접수 대상에 채워지지 않는다.
-6. 데스크 직원이 dialog 안에서 보호자/동물을 선택하고 방문 목적, 진료과, 담당 수의사, 소요 시간, 접수/예약 메모를 입력한다.
+4. 데스크 직원이 `진료 접수` 액션을 선택하거나, day calendar의 빈 시간대를 클릭/드래그한다.
+5. 캘린더에서 시작한 경우 우측 drawer에 접수일, 담당 수의사, 진료시작시간, 소요 시간이 미리 채워진다. `진료 접수` 버튼에서 시작한 경우 시간은 기본값으로 시작한다.
+6. 데스크 직원이 보호자/동물을 선택하고 방문 목적, 진료과, 담당 수의사, 소요 시간, 접수/예약 메모를 입력한다.
 7. 담당 수의사는 미지정으로 둘 수 있다.
 8. 생성 액션을 누르면 encounter가 생성되고 진료대기 상태로 표시된다.
 9. 사이드 패널과 대기열에서 새 현장 접수 row가 확인된다.
@@ -126,7 +128,7 @@ last_updated: 2026-05-05
 - 예약확정 card의 `접수 처리` action은 card background와 충분히 대비되는 solid button으로 표시한다.
 - 오늘 운영 흐름에서 취소/노쇼는 주요 대기보다 낮은 시각적 우선순위를 가진다.
 - 좌측 환자 카드 선택 강조와 스케줄 card 강조는 별개의 상태로 다룬다.
-- Drag and drop schedule editing is deferred until appointment mutation behavior is scoped.
+- Existing task drag/drop schedule editing remains deferred until appointment mutation behavior is scoped. New session-only task creation by clicking or dragging empty time ranges is in scope for the calendar creation UX.
 
 ## Secondary Flow 4: 예약 생성/변경/취소
 

@@ -116,6 +116,7 @@ last_updated: 2026-05-03
 - 좌측 진료 대기열/환자 카드의 선택 여부는 스케줄 영역을 필터링하거나 연결하지 않는다.
 - 데스크 직원은 스케줄 영역에서 수의사별 예약/접수 현황과 빈 시간대를 확인한 뒤, 현장 접수 환자를 적절한 시간대 또는 담당 수의사로 배정한다.
 - 스케줄 운영 toolbar는 schedule controls 뒤에 divider를 두고, 업무 action을 `환자 등록`, `보호자 등록`, primary `접수`, `더보기` 순서로 제공한다.
+- Day view empty time slots can create session-only reception tasks by click or drag. The interaction must snap to exact 15-minute boundaries only: `HH:00`, `HH:15`, `HH:30`, and `HH:45`. The creation surface is the CLAiR right drawer, not a calendar popover.
 
 ## State Model
 
@@ -173,6 +174,7 @@ last_updated: 2026-05-03
 4. 좌측 환자 카드 선택은 환자 상세/접수 맥락 선택이며, 스케줄 board의 표시 범위와 직접 연결하지 않는다.
 5. 데스크 직원은 스케줄의 빈 시간대와 수의사별 부하를 보고 현장 접수 환자를 배정한다.
 6. 접수 완료된 환자는 진료 화면에서 같은 encounter 맥락으로 이어진다.
+7. 데스크 직원은 빈 시간대를 클릭해 15분 기본 접수 task를 만들거나, 빈 시간대를 드래그해 선택한 시간 범위의 접수 task를 만든다. 모든 시간은 15분 경계로만 생성된다.
 
 ### 4. 예약 생성/변경/취소
 
@@ -207,6 +209,7 @@ last_updated: 2026-05-03
 - The UI may use mock/session-only state until persistence work is explicitly scoped.
 - Later API boundaries should provide reads for today appointments, effective encounters, queue rows, and patient/guardian search.
 - Later write boundaries should cover create appointment, update appointment, cancel appointment, mark no-show, check-in appointment, create walk-in encounter, assign veterinarian, and update queue status.
+- Session-only calendar task creation may carry a planned start time in frontend state before persistence work exists. Persisting this time live requires a separate schema/API contract such as `scheduledStartAt` or `plannedStartAt`.
 
 ## Source Documents
 
