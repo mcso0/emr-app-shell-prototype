@@ -1,4 +1,69 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function mockReceptionWalkInCreate(
+  page: Page,
+  {
+    checkedInAt,
+    encounterId,
+    guardianId,
+    patientId,
+    primaryVeterinarianId,
+    queueId,
+  }: {
+    checkedInAt: string;
+    encounterId: string;
+    guardianId: string;
+    patientId: string;
+    primaryVeterinarianId?: string;
+    queueId: string;
+  }
+) {
+  const state = { count: 0, latestBody: undefined as Record<string, unknown> | undefined };
+
+  await page.route("**/api/workspaces/clair-demo/reception/walk-in-encounters", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    state.count += 1;
+    state.latestBody = body;
+
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 201,
+        workspaceId: "clair-demo",
+        walkIn: {
+          encounter: {
+            id: encounterId,
+            workspaceId: "clair-demo",
+            patientId,
+            guardianId,
+            primaryVeterinarianId,
+            encounterNo: "E-LIVE-CALENDAR",
+            chiefComplaint: body.visitPurpose ?? "현장 접수",
+            visitPurpose: body.visitPurpose ?? "현장 접수",
+            status: "waiting",
+            checkedInAt,
+            createdAt: checkedInAt,
+            updatedAt: checkedInAt,
+          },
+          queueEntry: {
+            id: queueId,
+            workspaceId: "clair-demo",
+            encounterId,
+            queueType: "consultation",
+            status: "waiting",
+            priority: "normal",
+            enteredAt: checkedInAt,
+          },
+        },
+        enforcedBy: "reception-walk-in-encounter",
+      }),
+    });
+  });
+
+  return state;
+}
 
 test("reception renders the first-path workspace instead of the placeholder", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
@@ -1534,6 +1599,15 @@ test("reception walk-in dialog uses DB-backed patient lookup states", async ({ p
 });
 
 test("reception creates a draft task from a 15-minute calendar click", async ({ page }) => {
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T14:15:00+09:00",
+    encounterId: "encounter-calendar-click-nabi",
+    guardianId: "guardian-oh-sea",
+    patientId: "patient-nabi",
+    primaryVeterinarianId: "user-vet-suji",
+    queueId: "queue-calendar-click-nabi",
+  });
+
   await page.goto(
     "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
   );
@@ -1556,9 +1630,24 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   const calendarDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:15"]');
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:15 - 14:30");
-  await expect(calendarDraftCard).toContainText("15분");
+  await expect(calendarDraftCard).not.toContainText("임시 선택");
+  await expect(calendarDraftCard).not.toContainText("생성 전");
+
+  await expect(
+    page
+      .locator('[data-testid^="walkin-card-"]')
+      .filter({ hasText: "나비" })
+      .filter({ hasText: "14:15" })
+  ).toHaveCount(0);
 
   await draftDrawer.getByRole("button", { name: "생성" }).click();
+  await expect.poll(() => walkInCreate.count).toBe(1);
+  expect(walkInCreate.latestBody).toMatchObject({
+    durationMinutes: 15,
+    patientId: "patient-nabi",
+    primaryVeterinarianId: "user-vet-suji",
+    visitPurpose: "현장 접수",
+  });
   await expect(calendarDraftCard).toHaveCount(0);
 
   const draftCard = page
@@ -1593,6 +1682,101 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   expect(draftCardInsets.right).toBeLessThanOrEqual(9);
 });
 
+test("reception keeps only one active calendar selection preview", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const firstSlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
+  const secondSlot = page.getByTestId("day-empty-slot-15-user-vet-suji");
+
+  await firstSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await firstSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await expect(page.locator('[data-testid$="-selection-preview"]')).toHaveCount(1);
+
+  await secondSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 2,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await secondSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height,
+        isPrimary: true,
+        pointerId: 2,
+        pointerType: "mouse",
+      })
+    );
+  });
+
+  await expect(page.getByTestId("day-empty-slot-14-user-vet-suji-selection-preview")).toHaveCount(0);
+  await expect(page.getByTestId("day-empty-slot-15-user-vet-suji-selection-preview")).toBeVisible();
+  await expect(page.locator('[data-testid$="-selection-preview"]')).toHaveCount(1);
+
+  await secondSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height,
+        isPrimary: true,
+        pointerId: 2,
+        pointerType: "mouse",
+      })
+    );
+  });
+
+  await expect(page.locator('[data-testid$="-selection-preview"]')).toHaveCount(0);
+});
+
 test("reception clears the draft schedule card on cancel or another selection", async ({ page }) => {
   await page.goto(
     "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
@@ -1615,12 +1799,181 @@ test("reception clears the draft schedule card on cancel or another selection", 
   draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
   await expect(draftDrawer).toBeVisible();
   await expect(calendarDraftCard).toBeVisible();
+  await page.evaluate(() => {
+    const drawer = document.querySelector('[data-testid="workspace-drawer"]');
+    const drawerHost = drawer?.parentElement;
+
+    if (!drawerHost) throw new Error("Expected workspace drawer host");
+
+    (window as unknown as { __workspaceDrawerRemovals: number }).__workspaceDrawerRemovals = 0;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.removedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          if (
+            node.matches('[data-testid="workspace-drawer"]') ||
+            node.querySelector('[data-testid="workspace-drawer"]')
+          ) {
+            (window as unknown as { __workspaceDrawerRemovals: number }).__workspaceDrawerRemovals += 1;
+          }
+        }
+      }
+    });
+    observer.observe(drawerHost, { childList: true });
+    (window as unknown as { __workspaceDrawerObserver: MutationObserver }).__workspaceDrawerObserver = observer;
+  });
+
+  await page.getByTestId("day-empty-slot-15-user-vet-suji-slot-1500").click();
+  const replacementDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T15:00"]');
+  draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("15:00");
+  await expect(page.getByTestId("workspace-drawer")).toHaveCount(1);
+  await page.waitForTimeout(250);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __workspaceDrawerRemovals?: number }).__workspaceDrawerRemovals ?? 0
+    )
+  ).toBe(0);
+  await expect(calendarDraftCard).toHaveCount(0);
+  await expect(replacementDraftCard).toBeVisible();
+  await expect(page.locator('[data-testid^="calendar-draft-card-"]')).toHaveCount(1);
 
   await page.getByTestId("appointment-card-appointment-kong-260501").click();
-  await expect(calendarDraftCard).toHaveCount(0);
+  await expect(replacementDraftCard).toHaveCount(0);
+});
+
+test("reception blocks invalid calendar draft selections", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await expect(page.getByText("영업시간 09:00-19:00")).toBeVisible();
+
+  const outsideBusinessSlot = page.getByTestId("day-empty-slot-19-user-vet-suji-slot-1900");
+  await expect(outsideBusinessSlot).toHaveAttribute("aria-disabled", "true");
+  await outsideBusinessSlot.click({ force: true });
+  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="calendar-draft-card-"]')).toHaveCount(0);
+
+  const lunchSlot = page.getByTestId("day-empty-slot-12-user-vet-suji-slot-1215");
+  await expect(lunchSlot).toHaveAttribute("aria-disabled", "false");
+  await lunchSlot.click();
+  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("12:15");
+  await draftDrawer.getByRole("button", { name: "취소" }).click();
+  await expect(page.locator('[data-testid^="calendar-draft-card-"]')).toHaveCount(0);
+
+  const overlapSlot = page.getByTestId("day-empty-slot-9-user-vet-doyun");
+  await overlapSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height * 0.75,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await overlapSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height * 2.5,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await expect(page.getByTestId("day-empty-slot-9-user-vet-doyun-selection-preview")).toHaveCount(0);
+  await overlapSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height * 2.5,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+
+  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="calendar-draft-card-"]')).toHaveCount(0);
+
+  const tooLongSlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
+  await tooLongSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top,
+        isPrimary: true,
+        pointerId: 2,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await tooLongSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height * 4.5,
+        isPrimary: true,
+        pointerId: 2,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await expect(page.getByTestId("day-empty-slot-14-user-vet-suji-selection-preview")).toHaveCount(0);
+  await tooLongSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height * 4.5,
+        isPrimary: true,
+        pointerId: 2,
+        pointerType: "mouse",
+      })
+    );
+  });
+
+  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="calendar-draft-card-"]')).toHaveCount(0);
 });
 
 test("reception creates a draft task from a dragged calendar range", async ({ page }) => {
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T14:00:00+09:00",
+    encounterId: "encounter-calendar-drag-nabi",
+    guardianId: "guardian-oh-sea",
+    patientId: "patient-nabi",
+    primaryVeterinarianId: "user-vet-suji",
+    queueId: "queue-calendar-drag-nabi",
+  });
+
   await page.goto(
     "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
   );
@@ -1654,7 +2007,7 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
         button: 0,
         buttons: 1,
         clientX: rect.left + 16,
-        clientY: rect.top + rect.height * 2.5,
+        clientY: rect.top + rect.height * 2.3,
         isPrimary: true,
         pointerId: 1,
         pointerType: "mouse",
@@ -1693,7 +2046,7 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
         button: 0,
         buttons: 0,
         clientX: rect.left + 16,
-        clientY: rect.top + rect.height * 2.5,
+        clientY: rect.top + rect.height * 2.3,
         isPrimary: true,
         pointerId: 1,
         pointerType: "mouse",
@@ -1708,9 +2061,15 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
   const calendarDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:00"]');
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:00 - 16:30");
-  await expect(calendarDraftCard).toContainText("150분");
 
   await draftDrawer.getByRole("button", { name: "생성" }).click();
+  await expect.poll(() => walkInCreate.count).toBe(1);
+  expect(walkInCreate.latestBody).toMatchObject({
+    durationMinutes: 150,
+    patientId: "patient-nabi",
+    primaryVeterinarianId: "user-vet-suji",
+    visitPurpose: "현장 접수",
+  });
   await expect(calendarDraftCard).toHaveCount(0);
 
   const draftCard = page
@@ -1720,6 +2079,71 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:00");
   await expect(draftCard).toContainText("150분");
+});
+
+test("reception normalizes a reverse dragged calendar range", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const reverseSlot = page.getByTestId("day-empty-slot-15-user-vet-suji");
+  await reverseSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height * 0.5,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await reverseSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top - rect.height,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await expect(page.getByTestId("day-empty-slot-15-user-vet-suji-selection-preview")).toContainText(
+    "14:00 - 15:30"
+  );
+  await reverseSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: rect.left + 16,
+        clientY: rect.top - rect.height,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+
+  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  const calendarDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:00"]');
+  await expect(draftDrawer).toBeVisible();
+  await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
+  await expect(draftDrawer.getByLabel("소요시간")).toContainText("90분");
+  await expect(calendarDraftCard).toBeVisible();
+  await expect(calendarDraftCard).toContainText("14:00 - 15:30");
 });
 
 test("reception walk-in keeps selected veterinarian and form details", async ({ page }) => {

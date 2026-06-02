@@ -178,6 +178,9 @@ const dayBusinessOpenHour = 9;
 const dayBusinessCloseHour = 19;
 const dayScheduleHourRowHeight = 112;
 const scheduleSlotMinutes = 15;
+const maxReceptionCalendarDraftDurationMinutes = 240;
+const receptionCalendarDragStartEvent = "reception-calendar-drag-start";
+const receptionCalendarDragClearEvent = "reception-calendar-drag-clear";
 const dayCurrentTimeMinutes = 11 * 60 + 20;
 const dayScheduleHours = Array.from(
   { length: dayScheduleEndHour - dayScheduleStartHour },
@@ -215,6 +218,18 @@ type WalkInReceptionInput = {
   visitPurpose?: string;
 };
 const unassignedVeterinarianValue = "unassigned";
+
+const dispatchReceptionCalendarDragStart = (testId: string) => {
+  window.dispatchEvent(
+    new CustomEvent<{ testId: string }>(receptionCalendarDragStartEvent, {
+      detail: { testId },
+    })
+  );
+};
+
+const dispatchReceptionCalendarDragClear = () => {
+  window.dispatchEvent(new Event(receptionCalendarDragClearEvent));
+};
 
 function getReceptionDemoActorId(role?: string) {
   if (role === "hospital_admin" || role === "billing_admin") return "user-admin";
@@ -591,6 +606,197 @@ const snapScheduleStartMinutes = (minutes: number) =>
 
 const snapScheduleEndMinutes = (minutes: number) =>
   clampScheduleMinutes(Math.ceil(minutes / scheduleSlotMinutes) * scheduleSlotMinutes);
+
+type ReceptionCalendarSelectionInvalidReason =
+  | "outside-business-hours"
+  | "unavailable-time"
+  | "overlap"
+  | "too-short"
+  | "too-long"
+  | "lane-boundary"
+  | "date-boundary";
+
+type ReceptionCalendarScheduleBlock = {
+  endMinutes: number;
+  label: string;
+  startMinutes: number;
+  veterinarianId?: string;
+};
+
+type ReceptionCalendarSelectionValidationResult =
+  | {
+      durationMinutes: number;
+      endMinutes: number;
+      plannedStartAt: string;
+      startMinutes: number;
+      valid: true;
+    }
+  | {
+      message: string;
+      reason: ReceptionCalendarSelectionInvalidReason;
+      valid: false;
+    };
+
+const dayBusinessOpenMinutes = dayBusinessOpenHour * 60;
+const dayBusinessCloseMinutes = dayBusinessCloseHour * 60;
+const receptionCalendarUnavailableBlocks: ReceptionCalendarScheduleBlock[] = [];
+
+const rangesOverlap = (startMinutes: number, endMinutes: number, blockStart: number, blockEnd: number) =>
+  startMinutes < blockEnd && endMinutes > blockStart;
+
+const normalizeReceptionCalendarSelection = ({
+  endMinutes,
+  startMinutes,
+}: {
+  endMinutes: number;
+  startMinutes: number;
+}) => {
+  const rawStart = Math.min(startMinutes, endMinutes);
+  const rawEnd = Math.max(startMinutes, endMinutes);
+  const snappedStart = snapScheduleStartMinutes(rawStart);
+  const snappedEnd = Math.max(
+    snappedStart + scheduleSlotMinutes,
+    snapScheduleEndMinutes(rawEnd)
+  );
+
+  return {
+    durationMinutes: snappedEnd - snappedStart,
+    endMinutes: snappedEnd,
+    startMinutes: snappedStart,
+  };
+};
+
+const getAppointmentScheduleBlock = (appointment: Appointment): ReceptionCalendarScheduleBlock | undefined => {
+  const startMinutes = getMinutesInDayFromDateTime(appointment.scheduledStartAt);
+
+  if (startMinutes === undefined) return undefined;
+
+  const endMinutes =
+    getMinutesInDayFromDateTime(appointment.scheduledEndAt) ?? startMinutes + scheduleSlotMinutes;
+
+  return {
+    endMinutes,
+    label: getAppointmentPatient(appointment)?.name ?? "예약",
+    startMinutes,
+    veterinarianId: appointment.assignedVeterinarianId,
+  };
+};
+
+const getDraftScheduleBlock = (draft: ReceptionDraftCheckIn): ReceptionCalendarScheduleBlock | undefined => {
+  const startMinutes = getMinutesInDayFromDateTime(getDraftScheduleStartAt(draft));
+  const durationMinutes = draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration) ?? 30;
+
+  if (startMinutes === undefined) return undefined;
+
+  return {
+    endMinutes: startMinutes + durationMinutes,
+    label: draft.encounter.visitPurpose ?? "접수",
+    startMinutes,
+    veterinarianId: draft.encounter.primaryVeterinarianId,
+  };
+};
+
+const getReceptionCalendarSelectionMessage = (
+  reason: ReceptionCalendarSelectionInvalidReason,
+  block?: ReceptionCalendarScheduleBlock
+) => {
+  if (reason === "outside-business-hours") {
+    return `영업시간 ${getBusinessHoursTimeRangeLabel()} 안에서만 접수/예약을 만들 수 있어.`;
+  }
+  if (reason === "unavailable-time") {
+    return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없어.`;
+  }
+  if (reason === "overlap") {
+    return `${block?.label ?? "기존 일정"}과 겹치는 시간에는 접수/예약을 만들 수 없어.`;
+  }
+  if (reason === "too-long") {
+    return `접수 task는 최대 ${maxReceptionCalendarDraftDurationMinutes}분까지 만들 수 있어.`;
+  }
+  if (reason === "too-short") {
+    return "접수 task는 최소 15분 이상이어야 해.";
+  }
+
+  return "선택한 캘린더 위치에서는 접수/예약을 만들 수 없어.";
+};
+
+const validateReceptionCalendarSelection = ({
+  appointments,
+  draftCheckIns,
+  endMinutes,
+  startMinutes,
+  veterinarianId,
+}: {
+  appointments: Appointment[];
+  draftCheckIns: ReceptionDraftCheckIn[];
+  endMinutes: number;
+  startMinutes: number;
+  veterinarianId: string;
+}): ReceptionCalendarSelectionValidationResult => {
+  const normalized = normalizeReceptionCalendarSelection({ endMinutes, startMinutes });
+
+  if (normalized.durationMinutes < scheduleSlotMinutes) {
+    return {
+      message: getReceptionCalendarSelectionMessage("too-short"),
+      reason: "too-short",
+      valid: false,
+    };
+  }
+
+  if (normalized.durationMinutes > maxReceptionCalendarDraftDurationMinutes) {
+    return {
+      message: getReceptionCalendarSelectionMessage("too-long"),
+      reason: "too-long",
+      valid: false,
+    };
+  }
+
+  if (
+    normalized.startMinutes < dayBusinessOpenMinutes ||
+    normalized.endMinutes > dayBusinessCloseMinutes
+  ) {
+    return {
+      message: getReceptionCalendarSelectionMessage("outside-business-hours"),
+      reason: "outside-business-hours",
+      valid: false,
+    };
+  }
+
+  const unavailableBlock = receptionCalendarUnavailableBlocks.find((block) =>
+    (!block.veterinarianId || block.veterinarianId === veterinarianId) &&
+    rangesOverlap(normalized.startMinutes, normalized.endMinutes, block.startMinutes, block.endMinutes)
+  );
+
+  if (unavailableBlock) {
+    return {
+      message: getReceptionCalendarSelectionMessage("unavailable-time", unavailableBlock),
+      reason: "unavailable-time",
+      valid: false,
+    };
+  }
+
+  const scheduleBlocks = [
+    ...appointments.map(getAppointmentScheduleBlock),
+    ...draftCheckIns.map(getDraftScheduleBlock),
+  ].filter((block): block is ReceptionCalendarScheduleBlock => Boolean(block));
+  const overlappingBlock = scheduleBlocks.find((block) =>
+    block.veterinarianId === veterinarianId &&
+    rangesOverlap(normalized.startMinutes, normalized.endMinutes, block.startMinutes, block.endMinutes)
+  );
+
+  if (overlappingBlock) {
+    return {
+      message: getReceptionCalendarSelectionMessage("overlap", overlappingBlock),
+      reason: "overlap",
+      valid: false,
+    };
+  }
+
+  return {
+    ...normalized,
+    plannedStartAt: getReceptionIsoAtMinutes(normalized.startMinutes),
+    valid: true,
+  };
+};
 
 const getScheduleSelectionFromPointer = ({
   bounds,
@@ -1900,9 +2106,6 @@ function ScheduleDraftSelectionCard({
       <div className="truncate emr-text-micro font-semibold text-[var(--emr-status-info-text)]">
         {getScheduleTimeLabelFromMinutes(startMinutes)} - {getScheduleTimeLabelFromMinutes(endMinutes)}
       </div>
-      <div className="mt-1 truncate emr-text-micro text-[var(--emr-status-info-text)]">
-        접수 예정 · {selection.durationMinutes}분
-      </div>
     </div>
   );
 }
@@ -1910,6 +2113,8 @@ function ScheduleDraftSelectionCard({
 function ScheduleSelectionCell({
   affordanceSuspended,
   calendarDraftSelection,
+  appointments,
+  draftCheckIns,
   hour,
   onAffordancePointerMove,
   onCreateDraft,
@@ -1918,6 +2123,8 @@ function ScheduleSelectionCell({
 }: {
   affordanceSuspended: boolean;
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
+  appointments: Appointment[];
+  draftCheckIns: ReceptionDraftCheckIn[];
   hour: number;
   onAffordancePointerMove: () => void;
   onCreateDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -1930,6 +2137,24 @@ function ScheduleSelectionCell({
     startMinutes: number;
     endMinutes: number;
   } | null>(null);
+  useEffect(() => {
+    const clearDragState = () => setDragState(null);
+    const clearOtherCellDragState = (event: Event) => {
+      const nextTestId = (event as CustomEvent<{ testId?: string }>).detail?.testId;
+
+      if (nextTestId !== testId) clearDragState();
+    };
+
+    window.addEventListener(receptionCalendarDragStartEvent, clearOtherCellDragState);
+    window.addEventListener(receptionCalendarDragClearEvent, clearDragState);
+    window.addEventListener("blur", clearDragState);
+
+    return () => {
+      window.removeEventListener(receptionCalendarDragStartEvent, clearOtherCellDragState);
+      window.removeEventListener(receptionCalendarDragClearEvent, clearDragState);
+      window.removeEventListener("blur", clearDragState);
+    };
+  }, [testId]);
   const selectionStart = dragState
     ? snapScheduleStartMinutes(Math.min(dragState.startMinutes, dragState.endMinutes))
     : undefined;
@@ -1947,17 +2172,33 @@ function ScheduleSelectionCell({
     selectionStart !== undefined && selectionEnd !== undefined
       ? Math.max(selectionSlotRowHeight, ((selectionEnd - selectionStart) / 60) * selectionCellHeight)
       : selectionSlotRowHeight;
+  const selectionValidation =
+    dragState && selectionStart !== undefined && selectionEnd !== undefined
+      ? validateReceptionCalendarSelection({
+          appointments,
+          draftCheckIns,
+          endMinutes: selectionEnd,
+          startMinutes: selectionStart,
+          veterinarianId: veterinarian.id,
+        })
+      : undefined;
 
   const createDraftFromMinutes = (startMinutes: number, endMinutes: number) => {
-    const snappedStart = snapScheduleStartMinutes(startMinutes);
-    const snappedEnd = Math.max(
-      snappedStart + scheduleSlotMinutes,
-      snapScheduleEndMinutes(endMinutes)
-    );
+    const selection = validateReceptionCalendarSelection({
+      appointments,
+      draftCheckIns,
+      endMinutes,
+      startMinutes,
+      veterinarianId: veterinarian.id,
+    });
+
+    if (!selection.valid) {
+      return;
+    }
 
     onCreateDraft({
-      durationMinutes: snappedEnd - snappedStart,
-      plannedStartAt: getReceptionIsoAtMinutes(snappedStart),
+      durationMinutes: selection.durationMinutes,
+      plannedStartAt: selection.plannedStartAt,
       primaryVeterinarianId: veterinarian.id,
     });
   };
@@ -1969,12 +2210,25 @@ function ScheduleSelectionCell({
       onPointerDown={(event) => {
         if (event.button !== 0) return;
 
+        dispatchReceptionCalendarDragStart(testId);
         const bounds = event.currentTarget.getBoundingClientRect();
         const startMinutes = getScheduleSelectionFromPointer({
           baseHour: hour,
           bounds,
           clientY: event.clientY,
         });
+        const startSlotValidation = validateReceptionCalendarSelection({
+          appointments,
+          draftCheckIns,
+          endMinutes: startMinutes + scheduleSlotMinutes,
+          startMinutes,
+          veterinarianId: veterinarian.id,
+        });
+
+        if (!startSlotValidation.valid) {
+          dispatchReceptionCalendarDragClear();
+          return;
+        }
 
         try {
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -2001,7 +2255,10 @@ function ScheduleSelectionCell({
           }),
         });
       }}
-      onPointerCancel={() => setDragState(null)}
+      onPointerCancel={() => {
+        setDragState(null);
+        dispatchReceptionCalendarDragClear();
+      }}
       onPointerUp={(event) => {
         if (!dragState || dragState.pointerId !== event.pointerId) return;
 
@@ -2019,19 +2276,23 @@ function ScheduleSelectionCell({
         const end = moved ? Math.max(dragState.startMinutes, endMinutes) : dragState.startMinutes;
 
         setDragState(null);
+        dispatchReceptionCalendarDragClear();
         createDraftFromMinutes(start, end);
       }}
     >
-      {dragState && selectionStart !== undefined && selectionEnd !== undefined ? (
+      {dragState &&
+      selectionStart !== undefined &&
+      selectionEnd !== undefined &&
+      selectionValidation?.valid !== false ? (
         <div
-          className="pointer-events-none absolute left-1 right-1 z-20 rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)]/90 px-2 py-1 shadow-[var(--clair-shadow-sm)]"
+          className="pointer-events-none absolute left-1 right-1 z-20 rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)]/90 px-2 py-1 text-[var(--emr-status-info-text)]"
           data-testid={`${testId}-selection-preview`}
           style={{
             height: selectionHeight,
             top: selectionTop,
           }}
         >
-          <div className="truncate emr-text-micro font-semibold text-[var(--emr-status-info-text)]">
+          <div className="truncate emr-text-micro font-semibold">
             {getScheduleTimeLabelFromMinutes(selectionStart)} - {getScheduleTimeLabelFromMinutes(selectionEnd)}
           </div>
         </div>
@@ -2045,13 +2306,26 @@ function ScheduleSelectionCell({
       <div className="grid h-full min-h-0 grid-rows-4">
         {Array.from({ length: 60 / scheduleSlotMinutes }, (_, index) => {
           const slotMinutes = hour * 60 + index * scheduleSlotMinutes;
+          const slotValidation = validateReceptionCalendarSelection({
+            appointments,
+            draftCheckIns,
+            endMinutes: slotMinutes + scheduleSlotMinutes,
+            startMinutes: slotMinutes,
+            veterinarianId: veterinarian.id,
+          });
 
           return (
             <button
               key={slotMinutes}
               type="button"
               aria-label={`${getScheduleTimeLabelFromMinutes(slotMinutes)} ${veterinarian.name} 접수/예약 생성`}
-              className="group/slot mx-1 flex min-h-0 items-center justify-center rounded-md border border-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
+              aria-disabled={!slotValidation.valid}
+              className={cn(
+                "group/slot mx-1 flex min-h-0 items-center justify-center rounded-md border border-transparent outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                slotValidation.valid
+                  ? "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)]"
+                  : "cursor-default"
+              )}
               data-testid={`${testId}-slot-${getScheduleTimeLabelFromMinutes(slotMinutes).replace(":", "")}`}
               tabIndex={dragState ? -1 : 0}
               onKeyDown={(event) => {
@@ -2304,6 +2578,8 @@ function DayScheduleBoard({
                         <ScheduleSelectionCell
                           affordanceSuspended={emptySlotAffordanceSuspended}
                           calendarDraftSelection={calendarDraftSelection}
+                          appointments={appointments}
+                          draftCheckIns={draftCheckIns}
                           hour={hour}
                           onAffordancePointerMove={onEmptySlotAffordancePointerMove}
                           testId={`day-empty-slot-${hour}-${veterinarian.id}`}
@@ -2732,6 +3008,7 @@ export function ReceptionContent() {
     const id = `calendar-draft-${draft.plannedStartAt}-${draft.primaryVeterinarianId ?? "unassigned"}`;
     const draftPatientId = selectedAppointment?.patientId ?? selectedEncounter?.patientId ?? selectedPatientId;
 
+    dispatchReceptionCalendarDragClear();
     setWalkInDialogOpen(false);
     setWalkInInitialPatientId(undefined);
     selectPatient(draftPatientId);
@@ -3573,15 +3850,18 @@ function ReceptionDraftTaskDrawer({
 }: {
   selection: ReceptionCalendarDraftSelection;
 }) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
+  const applyWalkInCheckIn = useReceptionStore((state) => state.applyWalkInCheckIn);
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection
   );
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const authSession = useMockAuthStore((state) => state.session);
   const [department, setDepartment] = useState(defaultWalkInDepartment);
   const [duration, setDuration] = useState(`${selection.durationMinutes}분`);
   const [memo, setMemo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [veterinarianId, setVeterinarianId] = useState(
     selection.primaryVeterinarianId ?? unassignedVeterinarianValue
   );
@@ -3590,25 +3870,54 @@ function ReceptionDraftTaskDrawer({
   const patient = bundle?.patient;
   const guardian = bundle?.primaryGuardian;
   const startTime = getShortTime(selection.plannedStartAt);
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : params.workspaceId?.[0] ?? "clair-demo";
   const close = () => {
+    if (submitting) return;
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
-  const create = () => {
-    if (!patient) return;
+  const create = async () => {
+    if (!patient || submitting) return;
 
-    createWalkInCheckIn({
+    const durationMinutes = getDurationMinutesFromLabel(duration);
+    const input: ReceptionWalkInEncounterInput = {
       department,
-      durationMinutes: getDurationMinutesFromLabel(duration),
+      durationMinutes,
       guardianId: guardian?.id,
-      guardianMobilePhone: guardian?.mobilePhone,
       memo,
       patientId: patient.id,
-      patientName: patient.name,
-      plannedStartAt: selection.plannedStartAt,
       primaryVeterinarianId:
         veterinarianId === unassignedVeterinarianValue ? undefined : veterinarianId,
       visitPurpose,
+    };
+
+    setSubmitting(true);
+    const result = await submitWalkInEncounter({
+      actorRole: authSession?.role,
+      input,
+      workspaceId,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(getWalkInRouteErrorMessage(result));
+      return;
+    }
+
+    applyWalkInCheckIn({
+      ...input,
+      guardianMobilePhone: guardian?.mobilePhone,
+      patientName: patient.name,
+      plannedStartAt: selection.plannedStartAt,
+      walkIn: result.walkIn,
+    });
+    saveChartLiveEncounterHandoff({
+      encounter: result.walkIn.encounter,
+      patient,
+      primaryGuardian: guardian,
     });
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
@@ -3634,7 +3943,7 @@ function ReceptionDraftTaskDrawer({
                   {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · {startTime} 시작
                 </div>
               </div>
-              <CalendarTaskBadge label="접수 예정" tone="appointment" />
+              <CalendarTaskBadge label="임시 선택" tone="appointment" />
             </div>
           </section>
 
@@ -3748,10 +4057,13 @@ function ReceptionDraftTaskDrawer({
         <Button
           variant="outline"
           onClick={close}
+          disabled={submitting}
         >
           취소
         </Button>
-        <Button onClick={create}>생성</Button>
+        <Button onClick={create} disabled={submitting}>
+          {submitting ? "저장 중" : "생성"}
+        </Button>
       </div>
     </div>
   );
