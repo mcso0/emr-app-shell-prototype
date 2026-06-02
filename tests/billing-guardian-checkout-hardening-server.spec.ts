@@ -199,6 +199,42 @@ test("guardian checkout route exposes ledger, prepared checkout, and status tran
   expect(transitionedBody.invoice).toMatchObject({ status: "draft", paymentState: "none" });
 });
 
+test("billing screen uses guardian checkout route for ledger and checkout totals", async ({ page }) => {
+  const guardianCheckoutCalls: Array<{ method: string; status: number; url: string }> = [];
+  page.on("response", (response) => {
+    const url = response.url();
+    if (!url.includes(`/api/workspaces/${workspaceId}/billing/guardian-checkout`)) return;
+
+    guardianCheckoutCalls.push({
+      method: response.request().method(),
+      status: response.status(),
+      url,
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/billing?modulePanel=open&aside=open&right=open`);
+  await expect(page.getByTestId("billing-ledger-row-invoice-coco-260501")).toBeVisible();
+  await expect
+    .poll(() => guardianCheckoutCalls.some((call) => call.method === "GET" && call.status === 200))
+    .toBe(true);
+  await expect
+    .poll(() => guardianCheckoutCalls.some((call) => call.method === "POST" && call.status === 200))
+    .toBe(true);
+
+  for (const invoiceId of [
+    "invoice-coco-history-unpaid-260429",
+    "invoice-coco-history-paid-260414",
+    "invoice-coco-history-voided-260328",
+  ]) {
+    await page.getByTestId(`billing-ledger-row-${invoiceId}`).scrollIntoViewIfNeeded();
+    await page.getByTestId(`billing-ledger-row-${invoiceId}`).click({ position: { x: 14, y: 14 } });
+  }
+
+  await expect(page.getByTestId("shell-right-section")).toContainText("최종 결제금액");
+  await expect(page.getByTestId("shell-right-section")).toContainText("179,500원");
+  await expect(page.getByTestId("shell-right-section")).toContainText("완료/취소 2건은 현재 수납 합산에서 제외됩니다.");
+});
+
 test("billing checkout hardening migration contains local schema and RPC contract", () => {
   expect(migration).toContain("add column if not exists billing_requested_at");
   expect(migration).toContain("create table if not exists public.billing_checkout_sessions");
@@ -209,6 +245,7 @@ test("billing checkout hardening migration contains local schema and RPC contrac
   expect(migration).toContain("create or replace function public.clair_list_guardian_billing_ledger");
   expect(migration).toContain("create or replace function public.clair_prepare_billing_checkout_session");
   expect(migration).toContain("create or replace function public.clair_transition_billing_invoice_status");
+  expect(migration).toContain("min(i.guardian_id::text)::uuid");
   expect(migration).toContain("grant execute on function public.clair_prepare_billing_checkout_session");
   expect(migration).toContain("Remote Supabase push");
 });

@@ -5,6 +5,7 @@ import {
   IconBone,
   IconBusiness,
   IconCalendarDates,
+  IconCalendarCheck,
   IconCheck,
   IconChevronDown,
   IconChevronLeft,
@@ -19,22 +20,34 @@ import {
   IconClock3,
   IconClose,
   IconCommand,
+  IconContactBook,
+  IconDatabase,
+  IconDocument,
+  IconDocumentCheck,
   IconDownload,
   IconFilter,
   IconFlask,
+  IconFolder,
+  IconGrid,
   IconHome,
   IconImage,
+  IconLayers,
   IconMenu,
+  IconMessages,
   IconNotification,
   IconPill,
   IconPrint,
   IconSearch,
+  IconSend,
   IconSettings,
+  IconShield,
   IconSidebar,
   IconSliders,
   IconSpinnerBall,
   IconStethoscope,
   IconUser,
+  IconUserCross,
+  IconUsers,
   IconWarningTriangle,
 } from "obra-icons-react";
 
@@ -56,6 +69,7 @@ type ObraIcon = AppIcon & {
 };
 
 const svgPropAliases = {
+  "clip-path": "clipPath",
   "clip-rule": "clipRule",
   "fill-rule": "fillRule",
   "stroke-dasharray": "strokeDasharray",
@@ -135,6 +149,10 @@ export const BedIcon = createIcon(IconBed, "BedIcon");
 export const ActivityIcon = createIcon(IconBusiness, "ActivityIcon");
 export const BuildingIcon = createIcon(IconBusiness, "BuildingIcon");
 export const CalendarIcon = createIcon(IconCalendarDates, "CalendarIcon");
+export const CalendarCheckIcon = createIcon(
+  IconCalendarCheck,
+  "CalendarCheckIcon",
+);
 export const CheckIcon = createIcon(IconCheck, "CheckIcon");
 export const ChevronDownIcon = createIcon(IconChevronDown, "ChevronDownIcon");
 export const ChevronLeftIcon = createIcon(IconChevronLeft, "ChevronLeftIcon");
@@ -158,6 +176,16 @@ export const ClipboardListIcon = createIcon(
 export const ClockIcon = createIcon(IconClock3, "ClockIcon");
 export const CloseIcon = createIcon(IconClose, "CloseIcon");
 export const CommandIcon = createIcon(IconCommand, "CommandIcon");
+export const ContactBookIcon = createIcon(
+  IconContactBook,
+  "ContactBookIcon",
+);
+export const DatabaseIcon = createIcon(IconDatabase, "DatabaseIcon");
+export const DocumentIcon = createIcon(IconDocument, "DocumentIcon");
+export const DocumentCheckIcon = createIcon(
+  IconDocumentCheck,
+  "DocumentCheckIcon",
+);
 export const DownloadIcon = createIcon(IconDownload, "DownloadIcon");
 export const ExcelFileIcon = React.forwardRef<SVGSVGElement, AppIconProps>(
   ({ size = 16, style, ...props }, ref) =>
@@ -211,15 +239,21 @@ export const ExcelFileIcon = React.forwardRef<SVGSVGElement, AppIconProps>(
 ExcelFileIcon.displayName = "ExcelFileIcon";
 export const FilterIcon = createIcon(IconFilter, "FilterIcon");
 export const FlaskIcon = createIcon(IconFlask, "FlaskIcon");
+export const FolderIcon = createIcon(IconFolder, "FolderIcon");
+export const GridIcon = createIcon(IconGrid, "GridIcon");
 export const HomeIcon = createIcon(IconHome, "HomeIcon");
 export const BoneIcon = createIcon(IconBone, "BoneIcon");
 export const ImagesIcon = createIcon(IconImage, "ImagesIcon");
+export const LayersIcon = createIcon(IconLayers, "LayersIcon");
 export const MenuIcon = createIcon(IconMenu, "MenuIcon");
+export const MessagesIcon = createIcon(IconMessages, "MessagesIcon");
 export const BellIcon = createIcon(IconNotification, "BellIcon");
 export const PillIcon = createIcon(IconPill, "PillIcon");
 export const PrinterIcon = createIcon(IconPrint, "PrinterIcon");
 export const SearchIcon = createIcon(IconSearch, "SearchIcon");
+export const SendIcon = createIcon(IconSend, "SendIcon");
 export const SettingsIcon = createIcon(IconSettings, "SettingsIcon");
+export const ShieldIcon = createIcon(IconShield, "ShieldIcon");
 export const PanelCloseIcon = createIcon(IconSidebar, "PanelCloseIcon");
 export const PanelOpenIcon = createIcon(IconSidebar, "PanelOpenIcon");
 export const SlidersIcon = createIcon(IconSliders, "SlidersIcon");
@@ -229,6 +263,8 @@ export const StethoscopeIcon = createIcon(
   "StethoscopeIcon",
 );
 export const UserIcon = createIcon(IconUser, "UserIcon");
+export const UserCrossIcon = createIcon(IconUserCross, "UserCrossIcon");
+export const UsersIcon = createIcon(IconUsers, "UsersIcon");
 export const WarningIcon = createIcon(IconWarningTriangle, "WarningIcon");
 
 export const WorkspaceLogoMarkIcon = React.forwardRef<

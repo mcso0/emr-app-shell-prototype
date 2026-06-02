@@ -223,7 +223,7 @@ export function EmrPatientContextBar({
             <Button
               variant="outline"
               size="xs"
-              className="h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
+              className="h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)]"
               aria-expanded={historyButton.expanded}
               aria-pressed={historyButton.expanded}
               aria-controls={historyButton.controls}
@@ -410,7 +410,7 @@ function RightPanelToggleButton({
       type="button"
       variant="outline"
       size="xs"
-      className="emr-text-status relative h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--emr-state-selected-border)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
+      className="emr-text-status relative h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
       aria-label={`${label} ${open ? "접기" : "열기"}`}
       aria-expanded={open}
       aria-pressed={open}

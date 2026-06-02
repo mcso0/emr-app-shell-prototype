@@ -13,12 +13,6 @@ import {
   CdsFilesClockIcon,
   CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
-import {
-  CdsMedicalClipboardCheckIcon,
-  CdsMedicalHeartPulseIcon,
-  CdsMedicalStethoscopeIcon,
-  CdsMedicalSyringeIcon,
-} from "@/components/cds-icons/medical-and-domain";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   EmrListHeader,
@@ -36,7 +30,12 @@ import {
   emrSidePanelCardActionButtonClassName,
 } from "@/components/emr/side-panel-card";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { ChevronLeftIcon, ChevronRightIcon, CircleCloseFillIcon, ExcelFileIcon } from "@/components/icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CircleCloseFillIcon,
+  ExcelFileIcon,
+} from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -78,7 +77,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getAppointmentPatient,
-  getAppointmentVeterinarianName,
   getFilteredReceptionPatients,
   getGuardianDisplay,
   getReceptionPatientSummaries,
@@ -124,18 +122,27 @@ import {
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
-import { getMockPatientBundle, mockEncounters, mockStaffUsers } from "@/mocks/emr-domain";
+import {
+  getMockPatientBundle,
+  mockEncounters,
+  mockStaffUsers,
+} from "@/mocks/emr-domain";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { Appointment, Encounter, Patient } from "@/types/emr-domain";
 import type { ShellComponentProps } from "@/types/emr";
 
-const allVeterinarians = mockStaffUsers.filter((user) => user.role === "veterinarian");
-const todayWorkingVeterinarianIds = new Set(["user-vet-suji", "user-vet-doyun"]);
+const allVeterinarians = mockStaffUsers.filter(
+  (user) => user.role === "veterinarian",
+);
+const todayWorkingVeterinarianIds = new Set([
+  "user-vet-suji",
+  "user-vet-doyun",
+]);
 const todayWorkingVeterinarians = allVeterinarians.filter((user) =>
-  todayWorkingVeterinarianIds.has(user.id)
+  todayWorkingVeterinarianIds.has(user.id),
 );
 const otherVeterinarians = allVeterinarians.filter(
-  (user) => !todayWorkingVeterinarianIds.has(user.id)
+  (user) => !todayWorkingVeterinarianIds.has(user.id),
 );
 const defaultVeterinarian = allVeterinarians[0];
 const veterinarianHeaderToneClasses = [
@@ -178,14 +185,18 @@ const dayBusinessOpenHour = 9;
 const dayBusinessCloseHour = 19;
 const dayScheduleHourRowHeight = 112;
 const scheduleSlotMinutes = 15;
+const scheduleSlotCountPerHour = 60 / scheduleSlotMinutes;
+const maxReceptionCalendarDraftDurationMinutes = 240;
+const receptionCalendarDragStartEvent = "reception-calendar-drag-start";
+const receptionCalendarDragClearEvent = "reception-calendar-drag-clear";
 const dayCurrentTimeMinutes = 11 * 60 + 20;
 const dayScheduleHours = Array.from(
   { length: dayScheduleEndHour - dayScheduleStartHour },
-  (_, index) => dayScheduleStartHour + index
+  (_, index) => dayScheduleStartHour + index,
 );
 const dayScheduleHourLabels = Array.from(
   { length: dayScheduleEndHour - dayScheduleStartHour + 1 },
-  (_, index) => dayScheduleStartHour + index
+  (_, index) => dayScheduleStartHour + index,
 );
 const weekDays = [
   { label: "월", day: "27" },
@@ -216,8 +227,21 @@ type WalkInReceptionInput = {
 };
 const unassignedVeterinarianValue = "unassigned";
 
+const dispatchReceptionCalendarDragStart = (testId: string) => {
+  window.dispatchEvent(
+    new CustomEvent<{ testId: string }>(receptionCalendarDragStartEvent, {
+      detail: { testId },
+    }),
+  );
+};
+
+const dispatchReceptionCalendarDragClear = () => {
+  window.dispatchEvent(new Event(receptionCalendarDragClearEvent));
+};
+
 function getReceptionDemoActorId(role?: string) {
-  if (role === "hospital_admin" || role === "billing_admin") return "user-admin";
+  if (role === "hospital_admin" || role === "billing_admin")
+    return "user-admin";
   if (role === "vet") return "user-vet";
   return "user-front-desk";
 }
@@ -235,7 +259,9 @@ function getVeterinarianFilterLabel(selectedVeterinarians: Veterinarian[]) {
 }
 
 function getVeterinarianToneIndex(veterinarian: Veterinarian) {
-  const veterinarianIndex = allVeterinarians.findIndex((item) => item.id === veterinarian.id);
+  const veterinarianIndex = allVeterinarians.findIndex(
+    (item) => item.id === veterinarian.id,
+  );
 
   return veterinarianIndex >= 0 ? veterinarianIndex : 0;
 }
@@ -243,10 +269,14 @@ function getVeterinarianToneIndex(veterinarian: Veterinarian) {
 function getVeterinarianAccentClassName(veterinarianId?: string) {
   if (!veterinarianId) return "bg-[var(--emr-line-strong)]";
 
-  const veterinarian = allVeterinarians.find((item) => item.id === veterinarianId);
+  const veterinarian = allVeterinarians.find(
+    (item) => item.id === veterinarianId,
+  );
   const toneIndex = veterinarian ? getVeterinarianToneIndex(veterinarian) : 0;
 
-  return veterinarianAccentToneClasses[toneIndex % veterinarianAccentToneClasses.length];
+  return veterinarianAccentToneClasses[
+    toneIndex % veterinarianAccentToneClasses.length
+  ];
 }
 
 function VeterinarianLaneHeader({
@@ -260,18 +290,26 @@ function VeterinarianLaneHeader({
     <div
       className={cn(
         "flex h-12 min-w-0 items-center gap-2 rounded-md border px-2.5 text-primary-foreground shadow-sm",
-        veterinarianHeaderToneClasses[toneIndex % veterinarianHeaderToneClasses.length]
+        veterinarianHeaderToneClasses[
+          toneIndex % veterinarianHeaderToneClasses.length
+        ],
       )}
     >
       <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[var(--emr-text-inverse)] bg-[var(--emr-state-hover)] text-[10px] font-semibold leading-none text-primary-foreground">
         {veterinarian.initial}
       </span>
-      <span className="min-w-0 truncate emr-text-dense font-semibold">{veterinarian.name}</span>
+      <span className="min-w-0 truncate emr-text-dense font-semibold">
+        {veterinarian.name}
+      </span>
     </div>
   );
 }
 
-function VeterinarianMenuItemLabel({ veterinarian }: { veterinarian: Veterinarian }) {
+function VeterinarianMenuItemLabel({
+  veterinarian,
+}: {
+  veterinarian: Veterinarian;
+}) {
   const toneIndex = getVeterinarianToneIndex(veterinarian);
 
   return (
@@ -279,7 +317,9 @@ function VeterinarianMenuItemLabel({ veterinarian }: { veterinarian: Veterinaria
       <span
         className={cn(
           "flex size-5 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold leading-none text-primary-foreground",
-          veterinarianHeaderToneClasses[toneIndex % veterinarianHeaderToneClasses.length]
+          veterinarianHeaderToneClasses[
+            toneIndex % veterinarianHeaderToneClasses.length
+          ],
         )}
       >
         {veterinarian.initial}
@@ -291,9 +331,15 @@ function VeterinarianMenuItemLabel({ veterinarian }: { veterinarian: Veterinaria
 const defaultWalkInDepartment = "영상의학과 · 방사선종양학과";
 const defaultWalkInDuration = "30분";
 const receptionDurationOptions = [15, 30, 45, 60, 90, 120, 180, 240].map(
-  (minutes) => `${minutes}분`
+  (minutes) => `${minutes}분`,
 );
-const receptionPurposeChips = ["예방접종", "구토/설사", "피부", "수술 후 확인", "건강검진"];
+const receptionPurposeChips = [
+  "예방접종",
+  "구토/설사",
+  "피부",
+  "수술 후 확인",
+  "건강검진",
+];
 
 const getReceptionPatientAgeText = (patient: Patient) => {
   if (patient.estimatedAgeText) return patient.estimatedAgeText;
@@ -307,7 +353,9 @@ const getReceptionPatientAgeText = (patient: Patient) => {
 const getReceptionPatientOptionLabel = (summary: ReceptionPatientSummary) =>
   [
     summary.patient.name,
-    [getSpeciesLabel(summary.patient.species), summary.patient.breed].filter(Boolean).join("/"),
+    [getSpeciesLabel(summary.patient.species), summary.patient.breed]
+      .filter(Boolean)
+      .join("/"),
     getReceptionPatientAgeText(summary.patient),
     summary.primaryGuardian?.name ?? "보호자 미지정",
   ]
@@ -316,7 +364,7 @@ const getReceptionPatientOptionLabel = (summary: ReceptionPatientSummary) =>
 
 const getReceptionPatientSearchText = (
   patient: Patient,
-  primaryGuardian?: ReceptionPatientSummary["primaryGuardian"]
+  primaryGuardian?: ReceptionPatientSummary["primaryGuardian"],
 ) =>
   [
     patient.name,
@@ -332,11 +380,13 @@ const getReceptionPatientSearchText = (
     .toLowerCase();
 
 const mapLookupItemToReceptionPatientSummary = (
-  item: ReceptionPatientGuardianLookupItem
+  item: ReceptionPatientGuardianLookupItem,
 ): ReceptionPatientSummary => ({
   patient: item.patient,
   primaryGuardian: item.primaryGuardian,
-  searchText: item.searchText ?? getReceptionPatientSearchText(item.patient, item.primaryGuardian),
+  searchText:
+    item.searchText ??
+    getReceptionPatientSearchText(item.patient, item.primaryGuardian),
 });
 
 async function submitWalkInEncounter({
@@ -358,7 +408,7 @@ async function submitWalkInEncounter({
           "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
         },
         body: JSON.stringify(input),
-      }
+      },
     );
     const body = (await response.json()) as ReceptionWalkInEncounterResponse;
 
@@ -390,7 +440,7 @@ async function submitAppointmentCheckIn({
         headers: {
           "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
         },
-      }
+      },
     );
     const body = (await response.json()) as ReceptionAppointmentCheckInResponse;
 
@@ -417,8 +467,10 @@ async function loadReceptionQueue({
       `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/queue`,
       {
         cache: "no-store",
-        headers: actorId ? { "x-clair-demo-session-user-id": actorId } : undefined,
-      }
+        headers: actorId
+          ? { "x-clair-demo-session-user-id": actorId }
+          : undefined,
+      },
     );
     const body = (await response.json()) as ReceptionQueueReadResponse;
 
@@ -447,8 +499,10 @@ async function loadReceptionCalendar({
       `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/calendar/day?date=${encodeURIComponent(date)}`,
       {
         cache: "no-store",
-        headers: actorId ? { "x-clair-demo-session-user-id": actorId } : undefined,
-      }
+        headers: actorId
+          ? { "x-clair-demo-session-user-id": actorId }
+          : undefined,
+      },
     );
     const body = (await response.json()) as ReceptionCalendarReadResponse;
 
@@ -464,14 +518,19 @@ async function loadReceptionCalendar({
 }
 
 function getWalkInRouteErrorMessage(
-  result: Extract<ReceptionWalkInEncounterResponse, { ok: false }>
+  result: Extract<ReceptionWalkInEncounterResponse, { ok: false }>,
 ) {
-  if (result.error === "rate_limited") return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (result.error === "rate_limited")
+    return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
   if (result.error === "invalid_input") {
-    return Object.values(result.fieldErrors ?? {})[0] ?? "접수 정보를 확인해 주세요.";
+    return (
+      Object.values(result.fieldErrors ?? {})[0] ?? "접수 정보를 확인해 주세요."
+    );
   }
-  if (result.denialReason === "patient_unavailable") return "접수할 환자를 찾을 수 없습니다.";
-  if (result.denialReason === "guardian_unavailable") return "연결할 보호자를 찾을 수 없습니다.";
+  if (result.denialReason === "patient_unavailable")
+    return "접수할 환자를 찾을 수 없습니다.";
+  if (result.denialReason === "guardian_unavailable")
+    return "연결할 보호자를 찾을 수 없습니다.";
   if (result.denialReason === "patient_guardian_link_missing") {
     return "선택한 보호자와 환자 연결을 확인해 주세요.";
   }
@@ -488,10 +547,12 @@ function getWalkInRouteErrorMessage(
 }
 
 function getAppointmentCheckInRouteErrorMessage(
-  result: Extract<ReceptionAppointmentCheckInResponse, { ok: false }>
+  result: Extract<ReceptionAppointmentCheckInResponse, { ok: false }>,
 ) {
-  if (result.error === "rate_limited") return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
-  if (result.denialReason === "appointment_unavailable") return "예약 정보를 찾을 수 없습니다.";
+  if (result.error === "rate_limited")
+    return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (result.denialReason === "appointment_unavailable")
+    return "예약 정보를 찾을 수 없습니다.";
   if (result.denialReason === "appointment_already_checked_in") {
     return "이미 접수된 예약입니다.";
   }
@@ -511,7 +572,10 @@ function getAppointmentCheckInRouteErrorMessage(
 }
 
 function getReceptionReadFailureMessage(
-  result: Extract<ReceptionQueueReadResponse | ReceptionCalendarReadResponse, { ok: false }>
+  result: Extract<
+    ReceptionQueueReadResponse | ReceptionCalendarReadResponse,
+    { ok: false }
+  >,
 ) {
   if (
     result.denialReason === "permission_missing" ||
@@ -542,7 +606,7 @@ const recentPatientWeightKgByPatientId: Record<string, string> = {
 };
 
 const getRecentPatientWeightKg = (patient?: Patient) =>
-  patient ? recentPatientWeightKgByPatientId[patient.id] ?? "0.00" : "0.00";
+  patient ? (recentPatientWeightKgByPatientId[patient.id] ?? "0.00") : "0.00";
 
 const getShortTime = (dateTime?: string) => {
   if (!dateTime) return "-";
@@ -559,7 +623,8 @@ const getShortDate = (dateTime?: string) => {
 const getAppointmentHour = (appointment: Appointment) =>
   Number(appointment.scheduledStartAt.slice(11, 13));
 
-const getScheduleHourLabel = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+const getScheduleHourLabel = (hour: number) =>
+  `${String(hour).padStart(2, "0")}:00`;
 
 const getScheduleTimeLabelFromMinutes = (minutes: number) => {
   const hours = Math.floor(minutes / 60);
@@ -572,7 +637,9 @@ const getReceptionIsoAtMinutes = (minutes: number) =>
   `2026-05-01T${getScheduleTimeLabelFromMinutes(minutes)}:00+09:00`;
 
 const getDraftScheduleStartAt = (draft: ReceptionDraftCheckIn) =>
-  draft.plannedStartAt ?? draft.encounter.checkedInAt ?? draft.encounter.createdAt;
+  draft.plannedStartAt ??
+  draft.encounter.checkedInAt ??
+  draft.encounter.createdAt;
 
 const getDraftScheduleHour = (draft: ReceptionDraftCheckIn) =>
   Number(getDraftScheduleStartAt(draft).slice(11, 13));
@@ -583,14 +650,246 @@ const getDraftDurationLabel = (draft: ReceptionDraftCheckIn) =>
 const clampScheduleMinutes = (minutes: number) =>
   Math.min(
     dayScheduleEndHour * 60,
-    Math.max(dayScheduleStartHour * 60, minutes)
+    Math.max(dayScheduleStartHour * 60, minutes),
   );
 
 const snapScheduleStartMinutes = (minutes: number) =>
-  clampScheduleMinutes(Math.floor(minutes / scheduleSlotMinutes) * scheduleSlotMinutes);
+  clampScheduleMinutes(
+    Math.floor(minutes / scheduleSlotMinutes) * scheduleSlotMinutes,
+  );
 
 const snapScheduleEndMinutes = (minutes: number) =>
-  clampScheduleMinutes(Math.ceil(minutes / scheduleSlotMinutes) * scheduleSlotMinutes);
+  clampScheduleMinutes(
+    Math.ceil(minutes / scheduleSlotMinutes) * scheduleSlotMinutes,
+  );
+
+type ReceptionCalendarSelectionInvalidReason =
+  | "outside-business-hours"
+  | "unavailable-time"
+  | "overlap"
+  | "too-short"
+  | "too-long"
+  | "lane-boundary"
+  | "date-boundary";
+
+type ReceptionCalendarScheduleBlock = {
+  endMinutes: number;
+  label: string;
+  startMinutes: number;
+  veterinarianId?: string;
+};
+
+type ReceptionCalendarSelectionValidationResult =
+  | {
+      durationMinutes: number;
+      endMinutes: number;
+      plannedStartAt: string;
+      startMinutes: number;
+      valid: true;
+    }
+  | {
+      message: string;
+      reason: ReceptionCalendarSelectionInvalidReason;
+      valid: false;
+    };
+
+const dayBusinessOpenMinutes = dayBusinessOpenHour * 60;
+const dayBusinessCloseMinutes = dayBusinessCloseHour * 60;
+const receptionCalendarUnavailableBlocks: ReceptionCalendarScheduleBlock[] = [];
+
+const rangesOverlap = (
+  startMinutes: number,
+  endMinutes: number,
+  blockStart: number,
+  blockEnd: number,
+) => startMinutes < blockEnd && endMinutes > blockStart;
+
+const normalizeReceptionCalendarSelection = ({
+  endMinutes,
+  startMinutes,
+}: {
+  endMinutes: number;
+  startMinutes: number;
+}) => {
+  const rawStart = Math.min(startMinutes, endMinutes);
+  const rawEnd = Math.max(startMinutes, endMinutes);
+  const snappedStart = snapScheduleStartMinutes(rawStart);
+  const snappedEnd = Math.max(
+    snappedStart + scheduleSlotMinutes,
+    snapScheduleEndMinutes(rawEnd),
+  );
+
+  return {
+    durationMinutes: snappedEnd - snappedStart,
+    endMinutes: snappedEnd,
+    startMinutes: snappedStart,
+  };
+};
+
+const getAppointmentScheduleBlock = (
+  appointment: Appointment,
+): ReceptionCalendarScheduleBlock | undefined => {
+  const startMinutes = getMinutesInDayFromDateTime(
+    appointment.scheduledStartAt,
+  );
+
+  if (startMinutes === undefined) return undefined;
+
+  const endMinutes =
+    getMinutesInDayFromDateTime(appointment.scheduledEndAt) ??
+    startMinutes + scheduleSlotMinutes;
+
+  return {
+    endMinutes,
+    label: getAppointmentPatient(appointment)?.name ?? "예약",
+    startMinutes,
+    veterinarianId: appointment.assignedVeterinarianId,
+  };
+};
+
+const getDraftScheduleBlock = (
+  draft: ReceptionDraftCheckIn,
+): ReceptionCalendarScheduleBlock | undefined => {
+  const startMinutes = getMinutesInDayFromDateTime(
+    getDraftScheduleStartAt(draft),
+  );
+  const durationMinutes =
+    draft.durationMinutes ??
+    getDurationMinutesFromLabel(defaultWalkInDuration) ??
+    30;
+
+  if (startMinutes === undefined) return undefined;
+
+  return {
+    endMinutes: startMinutes + durationMinutes,
+    label: draft.encounter.visitPurpose ?? "접수",
+    startMinutes,
+    veterinarianId: draft.encounter.primaryVeterinarianId,
+  };
+};
+
+const getReceptionCalendarSelectionMessage = (
+  reason: ReceptionCalendarSelectionInvalidReason,
+  block?: ReceptionCalendarScheduleBlock,
+) => {
+  if (reason === "outside-business-hours") {
+    return `영업시간 ${getBusinessHoursTimeRangeLabel()} 안에서만 접수/예약을 만들 수 있어.`;
+  }
+  if (reason === "unavailable-time") {
+    return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없어.`;
+  }
+  if (reason === "overlap") {
+    return `${block?.label ?? "기존 일정"}과 겹치는 시간에는 접수/예약을 만들 수 없어.`;
+  }
+  if (reason === "too-long") {
+    return `접수 task는 최대 ${maxReceptionCalendarDraftDurationMinutes}분까지 만들 수 있어.`;
+  }
+  if (reason === "too-short") {
+    return "접수 task는 최소 15분 이상이어야 해.";
+  }
+
+  return "선택한 캘린더 위치에서는 접수/예약을 만들 수 없어.";
+};
+
+const validateReceptionCalendarSelection = ({
+  appointments,
+  draftCheckIns,
+  endMinutes,
+  startMinutes,
+  veterinarianId,
+}: {
+  appointments: Appointment[];
+  draftCheckIns: ReceptionDraftCheckIn[];
+  endMinutes: number;
+  startMinutes: number;
+  veterinarianId: string;
+}): ReceptionCalendarSelectionValidationResult => {
+  const normalized = normalizeReceptionCalendarSelection({
+    endMinutes,
+    startMinutes,
+  });
+
+  if (normalized.durationMinutes < scheduleSlotMinutes) {
+    return {
+      message: getReceptionCalendarSelectionMessage("too-short"),
+      reason: "too-short",
+      valid: false,
+    };
+  }
+
+  if (normalized.durationMinutes > maxReceptionCalendarDraftDurationMinutes) {
+    return {
+      message: getReceptionCalendarSelectionMessage("too-long"),
+      reason: "too-long",
+      valid: false,
+    };
+  }
+
+  if (
+    normalized.startMinutes < dayBusinessOpenMinutes ||
+    normalized.endMinutes > dayBusinessCloseMinutes
+  ) {
+    return {
+      message: getReceptionCalendarSelectionMessage("outside-business-hours"),
+      reason: "outside-business-hours",
+      valid: false,
+    };
+  }
+
+  const unavailableBlock = receptionCalendarUnavailableBlocks.find(
+    (block) =>
+      (!block.veterinarianId || block.veterinarianId === veterinarianId) &&
+      rangesOverlap(
+        normalized.startMinutes,
+        normalized.endMinutes,
+        block.startMinutes,
+        block.endMinutes,
+      ),
+  );
+
+  if (unavailableBlock) {
+    return {
+      message: getReceptionCalendarSelectionMessage(
+        "unavailable-time",
+        unavailableBlock,
+      ),
+      reason: "unavailable-time",
+      valid: false,
+    };
+  }
+
+  const scheduleBlocks = [
+    ...appointments.map(getAppointmentScheduleBlock),
+    ...draftCheckIns.map(getDraftScheduleBlock),
+  ].filter((block): block is ReceptionCalendarScheduleBlock => Boolean(block));
+  const overlappingBlock = scheduleBlocks.find(
+    (block) =>
+      block.veterinarianId === veterinarianId &&
+      rangesOverlap(
+        normalized.startMinutes,
+        normalized.endMinutes,
+        block.startMinutes,
+        block.endMinutes,
+      ),
+  );
+
+  if (overlappingBlock) {
+    return {
+      message: getReceptionCalendarSelectionMessage(
+        "overlap",
+        overlappingBlock,
+      ),
+      reason: "overlap",
+      valid: false,
+    };
+  }
+
+  return {
+    ...normalized,
+    plannedStartAt: getReceptionIsoAtMinutes(normalized.startMinutes),
+    valid: true,
+  };
+};
 
 const getScheduleSelectionFromPointer = ({
   bounds,
@@ -618,10 +917,12 @@ const getDayCurrentTimeOffset = () => {
   const closeMinutes = dayScheduleEndHour * 60;
   const boundedMinutes = Math.min(
     Math.max(dayCurrentTimeMinutes, openMinutes),
-    closeMinutes
+    closeMinutes,
   );
 
-  return Math.round(((boundedMinutes - openMinutes) / 60) * dayScheduleHourRowHeight);
+  return Math.round(
+    ((boundedMinutes - openMinutes) / 60) * dayScheduleHourRowHeight,
+  );
 };
 
 const getMinutesInDayFromDateTime = (dateTime?: string) => {
@@ -661,7 +962,8 @@ const getWaitingTimeTextClassName = (waitingMinutes?: number) => {
 
 const getReceptionSideListSortTime = (summary: ReceptionPatientSummary) => {
   const dateTime =
-    summary.activeEncounter?.checkedInAt ?? summary.latestAppointment?.scheduledStartAt;
+    summary.activeEncounter?.checkedInAt ??
+    summary.latestAppointment?.scheduledStartAt;
   const minutesInDay = getMinutesInDayFromDateTime(dateTime);
 
   return minutesInDay ?? Number.MAX_SAFE_INTEGER;
@@ -669,18 +971,40 @@ const getReceptionSideListSortTime = (summary: ReceptionPatientSummary) => {
 
 const sortReceptionSideListItems = (items: ReceptionPatientSummary[]) =>
   items
-    .map((summary, index) => ({ index, sortTime: getReceptionSideListSortTime(summary), summary }))
+    .map((summary, index) => ({
+      index,
+      sortTime: getReceptionSideListSortTime(summary),
+      summary,
+    }))
     .sort((a, b) => a.sortTime - b.sortTime || a.index - b.index)
     .map(({ summary }) => summary);
 
 const getAppointmentDurationLabel = (appointment: Appointment) => {
-  if (!appointment.scheduledEndAt) return "20분";
+  if (!appointment.scheduledEndAt) return "15분";
 
   const start = new Date(appointment.scheduledStartAt).getTime();
   const end = new Date(appointment.scheduledEndAt).getTime();
   const minutes = Math.max(10, Math.round((end - start) / 60000));
 
   return `${minutes}분`;
+};
+
+const getReceptionDrawerDurationLabel = ({
+  appointment,
+  encounter,
+}: {
+  appointment?: Appointment;
+  encounter?: Encounter;
+}) => {
+  if (
+    typeof encounter?.durationMinutes === "number" &&
+    Number.isFinite(encounter.durationMinutes) &&
+    encounter.durationMinutes > 0
+  ) {
+    return `${encounter.durationMinutes}분`;
+  }
+
+  return appointment ? getAppointmentDurationLabel(appointment) : "30분";
 };
 
 const getStaffDisplayName = (userId?: string) =>
@@ -704,7 +1028,7 @@ const getSpeciesLabel = (species: Patient["species"]) => {
 const getReceptionVeterinarianSelectLabel = (veterinarianId: string) =>
   veterinarianId === unassignedVeterinarianValue
     ? "수의사 미지정"
-    : getStaffDisplayName(veterinarianId) ?? "수의사 미지정";
+    : (getStaffDisplayName(veterinarianId) ?? "수의사 미지정");
 
 const getReceptionEncounterStatusLabel = (status: Encounter["status"]) =>
   status === "waiting" ? "진료대기" : getStatusLabel("encounter", status);
@@ -734,67 +1058,187 @@ function getVisitPurposeVisual(visitText?: string) {
   const normalized = visitText ?? "";
 
   if (normalized.includes("예방접종")) {
-    return { label: "예방접종", icon: <CdsMedicalSyringeIcon className="size-3" aria-hidden="true" /> };
+    return { label: "예방접종" };
   }
 
   if (normalized.includes("구토") || normalized.includes("식욕")) {
-    return { label: "구토/식욕", icon: <CdsMedicalHeartPulseIcon className="size-3" aria-hidden="true" /> };
+    return { label: "구토/식욕" };
   }
 
   if (normalized.includes("피부")) {
-    return { label: "피부", icon: <CdsMedicalClipboardCheckIcon className="size-3" aria-hidden="true" /> };
+    return { label: "피부" };
   }
 
   if (normalized.includes("수술")) {
-    return { label: "수술", icon: <CdsMedicalStethoscopeIcon className="size-3" aria-hidden="true" /> };
+    return { label: "수술" };
   }
 
-  return { label: "진료", icon: <CdsMedicalStethoscopeIcon className="size-3" aria-hidden="true" /> };
+  return { label: "진료" };
 }
 
-function VisitPurposeChip({
-  label,
-  icon,
+function CalendarTaskBadge({
   testId,
+  type = "예약",
 }: {
-  label: string;
-  icon: ReactNode;
   testId?: string;
+  type?: "예약" | "외래" | "노쇼";
 }) {
+  const outpatient = type === "외래";
+  const noShow = type === "노쇼";
+
   return (
     <span
       data-testid={testId}
-      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md border border-[var(--emr-line-subtle)] bg-[var(--emr-surface-floating)] px-1.5 text-[10px] font-semibold leading-none text-[var(--emr-text-secondary)]"
+      className={cn(
+        "inline-flex h-5 min-w-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] px-[6px] py-[2px] font-['Pretendard'] text-[12px] font-medium leading-4 tracking-[0.3px]",
+        noShow &&
+          "border border-[#feb2b2] bg-gradient-to-b from-[rgba(245,101,101,0)] to-[rgba(245,101,101,0.1)] text-[#e53e3e]",
+        outpatient &&
+          "border border-[#90cdf4] bg-gradient-to-b from-[rgba(66,153,225,0)] to-[rgba(66,153,225,0.1)] text-[#2b6cb0]",
+        !outpatient &&
+          !noShow &&
+          "border border-transparent bg-gradient-to-b from-[#2989e4] to-[#3182ce] text-white",
+      )}
     >
-      {icon}
-      {label}
+      {type}
     </span>
   );
 }
 
-function CalendarTaskBadge({
-  label,
-  tone = "appointment",
-}: {
-  label: string;
-  tone?: "appointment" | "muted" | "noShow" | "checkedIn";
-}) {
+function CalendarQuarterHourLines() {
   return (
-    <span
-      className={cn(
-        "inline-flex h-5 shrink-0 items-center justify-center rounded-md border px-1.5 emr-text-micro font-semibold leading-4",
-        tone === "appointment" &&
-          "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-text)] text-primary-foreground",
-        tone === "checkedIn" &&
-          "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
-        tone === "noShow" &&
-          "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-destructive",
-        tone === "muted" &&
-          "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
-      )}
+    <div
+      className="pointer-events-none absolute inset-0 z-0"
+      data-testid="calendar-quarter-hour-lines"
+      aria-hidden="true"
     >
-      {label}
-    </span>
+      {Array.from({ length: scheduleSlotCountPerHour - 1 }, (_, index) => (
+        <span
+          key={`quarter-line-${index}`}
+          className="absolute left-0 right-0 h-px bg-[var(--emr-line-subtle)]/70"
+          style={{ top: `${((index + 1) / scheduleSlotCountPerHour) * 100}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+type CalendarTaskCardProps = {
+  accentClassName?: string;
+  accentTestId?: string;
+  ariaLabel: string;
+  badgeType: "예약" | "외래" | "노쇼";
+  className?: string;
+  description?: string;
+  disabled?: boolean;
+  onClick: () => void;
+  onPointerDown?: () => void;
+  patientLabel: string;
+  purposeLabel: string;
+  purposeTestId?: string;
+  secondaryBadgeLabel?: string;
+  secondaryBadgeTestId?: string;
+  selected?: boolean;
+  testId: string;
+  type?: "default" | "compact" | "noShow";
+};
+
+function CalendarTaskCard({
+  accentClassName,
+  accentTestId,
+  ariaLabel,
+  badgeType,
+  className,
+  description,
+  disabled,
+  onClick,
+  onPointerDown,
+  patientLabel,
+  purposeLabel,
+  purposeTestId,
+  secondaryBadgeLabel,
+  secondaryBadgeTestId,
+  selected,
+  testId,
+  type = "default",
+}: CalendarTaskCardProps) {
+  const noShow = type === "noShow";
+  const compact = type === "compact";
+
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-pressed={selected}
+      className={cn(
+        "relative z-10 flex min-w-0 flex-1 items-start overflow-hidden rounded-[8px] border p-[8px] text-left font-['Pretendard'] outline-none transition-colors",
+        compact
+          ? "h-[36px] flex-row items-center gap-[8px]"
+          : "flex-col gap-[4px]",
+        type === "default" && "h-[80px]",
+        noShow && "h-[60px]",
+        noShow
+          ? "border-[#feb2b2] bg-[rgba(229,62,62,0.06)] text-[#e53e3e] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+          : selected
+            ? "border-[#63b3ed] bg-[rgba(66,153,225,0.16)] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+            : "border-[#63b3ed] bg-[rgba(66,153,225,0.08)] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]",
+        !noShow && "hover:bg-[rgba(66,153,225,0.16)]",
+        "focus-visible:border-[3px] focus-visible:border-[rgba(0,0,0,0.24)] focus-visible:bg-[rgba(66,153,225,0.08)] focus-visible:shadow-none",
+        disabled && "opacity-50",
+        className,
+      )}
+      data-testid={testId}
+      onPointerDown={onPointerDown}
+      onClick={onClick}
+    >
+      <span
+        data-testid={accentTestId ?? `${testId}-accent`}
+        className={cn(
+          "sr-only",
+          noShow ? "text-[#e53e3e]" : "text-[#2b6cb0]",
+          accentClassName,
+        )}
+        aria-hidden="true"
+      />
+      {compact ? (
+        <>
+          <CalendarTaskBadge type={badgeType} />
+          <span
+            data-testid={purposeTestId}
+            className="flex min-w-0 items-center gap-[4px] text-[14px] font-medium leading-5 tracking-[0.196px]"
+          >
+            <span className="truncate">{patientLabel}</span>
+            <span className="shrink-0">·</span>
+            <span className="truncate">{purposeLabel}</span>
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="flex w-full min-w-0 items-center gap-[6px] overflow-hidden">
+            <CalendarTaskBadge type={badgeType} />
+            {!noShow && secondaryBadgeLabel ? (
+              <CalendarTaskBadge
+                testId={secondaryBadgeTestId}
+                type="외래"
+              />
+            ) : null}
+          </span>
+          <span
+            data-testid={purposeTestId}
+            className="flex w-full min-w-0 items-start gap-[4px] text-[14px] font-medium leading-5 tracking-[0.196px]"
+          >
+            <span className="truncate">{patientLabel}</span>
+            <span className="shrink-0">·</span>
+            <span className="truncate">{purposeLabel}</span>
+          </span>
+          {!noShow && description ? (
+            <span className="w-full truncate text-[12px] font-normal leading-4 tracking-[0.3px]">
+              {description}
+            </span>
+          ) : null}
+        </>
+      )}
+    </button>
   );
 }
 
@@ -805,7 +1249,9 @@ const getReceptionVisitSummary = ({
   appointment?: Appointment;
   encounter?: Encounter;
 }) => {
-  const checkedInAt = encounter?.checkedInAt ? `${getShortTime(encounter.checkedInAt)} 접수` : null;
+  const checkedInAt = encounter?.checkedInAt
+    ? `${getShortTime(encounter.checkedInAt)} 접수`
+    : null;
   const appointmentAt = appointment?.scheduledStartAt
     ? `${getShortTime(appointment.scheduledStartAt)} 예약`
     : null;
@@ -815,19 +1261,23 @@ const getReceptionVisitSummary = ({
     "담당의 미지정";
   const encounterNo = encounter?.encounterNo ?? "encounter 생성 전";
 
-  return [checkedInAt ?? appointmentAt, veterinarianName, encounterNo].filter(Boolean).join(" · ");
+  return [checkedInAt ?? appointmentAt, veterinarianName, encounterNo]
+    .filter(Boolean)
+    .join(" · ");
 };
 
 const findScenarioEncounter = (
   encounters: Encounter[] | undefined,
-  encounterId?: string | null
+  encounterId?: string | null,
 ) => {
   if (!encounters?.length) return undefined;
 
   return (
     encounters.find((encounter) => encounter.id === encounterId) ??
     encounters.find((encounter) =>
-      ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
+      ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(
+        encounter.status,
+      ),
     ) ??
     encounters[0]
   );
@@ -855,8 +1305,9 @@ function ReceptionStatusBadge({
           "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] text-primary",
         tone === "red" &&
           "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-destructive",
-        tone === "default" && "border-border bg-card text-[var(--emr-text-secondary)]",
-        className
+        tone === "default" &&
+          "border-border bg-card text-[var(--emr-text-secondary)]",
+        className,
       )}
     >
       {label}
@@ -867,7 +1318,11 @@ function ReceptionStatusBadge({
 const getEncounterTone = (status: Encounter["status"]) => {
   if (status === "completed") return "green";
   if (status === "cancelled") return "red";
-  if (status === "ordered" || status === "in_consultation" || status === "ready_for_billing") {
+  if (
+    status === "ordered" ||
+    status === "in_consultation" ||
+    status === "ready_for_billing"
+  ) {
     return "sky";
   }
 
@@ -897,17 +1352,20 @@ function PatientCard({
   onSelect: () => void;
 }) {
   const guardianName = summary.primaryGuardian?.name ?? "보호자 미지정";
-  const receptionType = summary.activeDraftCheckIn?.receptionType === "walk_in"
-    ? "외래"
-    : summary.latestAppointment
-      ? "예약"
-      : "외래";
+  const receptionType =
+    summary.activeDraftCheckIn?.receptionType === "walk_in"
+      ? "외래"
+      : summary.latestAppointment
+        ? "예약"
+        : "외래";
   const visitText =
     summary.activeEncounter?.chiefComplaint ??
     summary.latestAppointment?.symptomNote ??
     summary.latestAppointment?.visitPurpose ??
     "접수할 내원 목적을 확인해 주세요.";
-  const waitingMinutes = getWaitMinutesFromTime(summary.activeEncounter?.checkedInAt);
+  const waitingMinutes = getWaitMinutesFromTime(
+    summary.activeEncounter?.checkedInAt,
+  );
   const timeContent = summary.activeEncounter?.checkedInAt ? (
     <>
       <span>{getShortTime(summary.activeEncounter.checkedInAt)} 접수</span>
@@ -915,7 +1373,7 @@ function PatientCard({
         <span
           className={cn(
             "ml-1 shrink-0 emr-text-micro font-semibold leading-none",
-            getWaitingTimeTextClassName(waitingMinutes)
+            getWaitingTimeTextClassName(waitingMinutes),
           )}
         >
           ({waitingMinutes}분 대기)
@@ -1022,39 +1480,55 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
   const [listMode, setListMode] = useState<ReceptionSideListMode>("reception");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [cardActionFeedback, setCardActionFeedback] = useState<ReceptionCardActionFeedback | null>(null);
+  const [cardActionFeedback, setCardActionFeedback] =
+    useState<ReceptionCardActionFeedback | null>(null);
   const searchQuery = useReceptionStore((state) => state.searchQuery);
-  const selectAppointment = useReceptionStore((state) => state.selectAppointment);
+  const selectAppointment = useReceptionStore(
+    (state) => state.selectAppointment,
+  );
   const selectEncounter = useReceptionStore((state) => state.selectEncounter);
   const selectPatient = useReceptionStore((state) => state.selectPatient);
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
-  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const requestReceptionReadRetry = useReceptionStore((state) => state.requestReceptionReadRetry);
+  const setModulePanelOpen = useLayoutStore(
+    (state) => state.setModulePanelOpen,
+  );
+  const requestReceptionReadRetry = useReceptionStore(
+    (state) => state.requestReceptionReadRetry,
+  );
   const setSearchQuery = useReceptionStore((state) => state.setSearchQuery);
   const scenario = getDemoScenarioFromParams(searchParams);
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : params.workspaceId?.[0] ?? "clair-demo";
-  const querySelectedPatientId = searchParams.get("patientId") ?? scenario?.patientId;
+      : (params.workspaceId?.[0] ?? "clair-demo");
+  const querySelectedPatientId =
+    searchParams.get("patientId") ?? scenario?.patientId;
   const patientSummaries = useMemo(
-    () => getReceptionPatientSummaries(draftCheckIns, { guardians, patientGuardians, patients }),
-    [draftCheckIns, guardians, patientGuardians, patients]
+    () =>
+      getReceptionPatientSummaries(draftCheckIns, {
+        guardians,
+        patientGuardians,
+        patients,
+      }),
+    [draftCheckIns, guardians, patientGuardians, patients],
   );
   const filteredPatients = useMemo(
     () => getFilteredReceptionPatients(patientSummaries, searchQuery),
-    [patientSummaries, searchQuery]
+    [patientSummaries, searchQuery],
   );
   const visiblePatients = useMemo(
     () => getReceptionSideListItems(filteredPatients, listMode),
-    [filteredPatients, listMode]
+    [filteredPatients, listMode],
   );
   const sideListLabel =
-    receptionQueueTabItems.find((item) => item.value === listMode)?.label ?? "전체";
+    receptionQueueTabItems.find((item) => item.value === listMode)?.label ??
+    "전체";
   const sideListCount = visiblePatients.length;
 
   return (
@@ -1075,7 +1549,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       {queueReadStatus === "loading" ? (
-        <ReceptionPanelStateMessage>대기열 불러오는 중</ReceptionPanelStateMessage>
+        <ReceptionPanelStateMessage>
+          대기열 불러오는 중
+        </ReceptionPanelStateMessage>
       ) : null}
       {queueReadStatus === "error" ? (
         <EmrInlineAlert
@@ -1083,13 +1559,18 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           severity="warning"
           title="서버 대기열을 불러오지 못했어"
           action={
-            <Button size="sm" variant="outline" onClick={requestReceptionReadRetry}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={requestReceptionReadRetry}
+            >
               대기열 다시 시도
             </Button>
           }
           testId="reception-queue-read-alert"
         >
-          {queueReadError ?? "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼."}
+          {queueReadError ??
+            "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼."}
         </EmrInlineAlert>
       ) : null}
       {cardActionFeedback ? (
@@ -1098,7 +1579,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           severity="info"
           title={cardActionFeedback.title}
           action={
-            <Button size="sm" variant="outline" onClick={() => setCardActionFeedback(null)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCardActionFeedback(null)}
+            >
               확인
             </Button>
           }
@@ -1143,7 +1628,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             <PatientCard
               key={summary.patient.id}
               summary={summary}
-              selected={isReceptionSideCardSelected(summary, activeDrawer, querySelectedPatientId)}
+              selected={isReceptionSideCardSelected(
+                summary,
+                activeDrawer,
+                querySelectedPatientId,
+              )}
               onOpenChart={(targetSummary) => {
                 const encounter = targetSummary.activeEncounter;
                 if (!encounter) return;
@@ -1155,11 +1644,13 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
                 });
                 selectEncounter(encounter.id);
                 setActiveDrawer(null);
-                router.push(buildChartRoute({
-                  encounterId: encounter.id,
-                  patientId: targetSummary.patient.id,
-                  workspaceId,
-                }));
+                router.push(
+                  buildChartRoute({
+                    encounterId: encounter.id,
+                    patientId: targetSummary.patient.id,
+                    workspaceId,
+                  }),
+                );
               }}
               onUnavailableAction={setCardActionFeedback}
               onSelect={() => {
@@ -1203,9 +1694,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
 function isReceptionSideCardSelected(
   summary: ReceptionPatientSummary,
   activeDrawer: { type: string; id: string } | null,
-  querySelectedPatientId?: string | null
+  querySelectedPatientId?: string | null,
 ) {
-  if (!activeDrawer) return Boolean(querySelectedPatientId && summary.patient.id === querySelectedPatientId);
+  if (!activeDrawer)
+    return Boolean(
+      querySelectedPatientId && summary.patient.id === querySelectedPatientId,
+    );
 
   if (activeDrawer.type === "reception-encounter") {
     return summary.activeEncounter?.id === activeDrawer.id;
@@ -1244,17 +1738,21 @@ function buildChartRoute({
 
 function getReceptionSideListItems(
   summaries: ReceptionPatientSummary[],
-  mode: ReceptionSideListMode
+  mode: ReceptionSideListMode,
 ) {
   if (mode === "reception") {
-    return sortReceptionSideListItems(summaries.filter((summary) => Boolean(summary.activeEncounter)));
+    return sortReceptionSideListItems(
+      summaries.filter((summary) => Boolean(summary.activeEncounter)),
+    );
   }
 
   if (mode === "appointment") {
     return sortReceptionSideListItems(
       summaries.filter(
-        (summary) => !summary.activeEncounter && summary.latestAppointment?.status === "confirmed"
-      )
+        (summary) =>
+          !summary.activeEncounter &&
+          summary.latestAppointment?.status === "confirmed",
+      ),
     );
   }
 
@@ -1263,171 +1761,105 @@ function getReceptionSideListItems(
 
 function ScheduleAppointmentCard({
   appointment,
-  onCheckIn,
+  onClearCalendarTransientSelection,
   onSelect,
   selected,
 }: {
   appointment: Appointment;
-  onCheckIn: () => void;
+  onClearCalendarTransientSelection: () => void;
   onSelect: () => void;
   selected: boolean;
 }) {
   const patient = getAppointmentPatient(appointment);
-  const canCheckIn = appointment.status === "confirmed";
   const visitPurpose = appointment.visitPurpose ?? "내원";
   const visitDetail = appointment.symptomNote ?? visitPurpose;
   const visitVisual = getVisitPurposeVisual(visitDetail);
-  const noShow = appointment.status === "no_show" || appointment.status === "cancelled";
+  const noShow =
+    appointment.status === "no_show" || appointment.status === "cancelled";
   const checkedIn = appointment.status === "checked_in";
-  const compact = checkedIn;
-  const badgeTone = noShow ? "noShow" : checkedIn ? "checkedIn" : "appointment";
+  const cardType = noShow ? "noShow" : checkedIn ? "compact" : "default";
+  const patientLabel = patient?.name ?? "환자 미지정";
+  const description = `${getShortTime(appointment.scheduledStartAt)} · ${getAppointmentDurationLabel(appointment)} · ${visitDetail}`;
 
   return (
-    <div
-      className={cn(
-        "relative min-w-0 flex-1 overflow-hidden rounded-lg border p-2 shadow-[var(--clair-shadow-sm)] transition-colors",
-        noShow
-          ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]"
-          : checkedIn
-            ? "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)]"
-            : "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)]",
-        selected && "ring-3 ring-inset ring-ring/50",
-        appointment.status !== "confirmed" && !checkedIn && "opacity-60"
+    <CalendarTaskCard
+      accentClassName={getVeterinarianAccentClassName(
+        appointment.assignedVeterinarianId,
       )}
-      data-testid={`appointment-card-${appointment.id}`}
-    >
-      <span
-        data-testid={`appointment-accent-${appointment.id}`}
-        className={cn(
-          "sr-only",
-          getVeterinarianAccentClassName(appointment.assignedVeterinarianId)
-        )}
-        aria-hidden="true"
-      />
-      <button type="button" className="block w-full text-left outline-none" onClick={onSelect}>
-        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-          <CalendarTaskBadge label={getStatusLabel("appointment", appointment.status)} tone={badgeTone} />
-          <VisitPurposeChip
-            icon={visitVisual.icon}
-            label={visitVisual.label}
-            testId={`appointment-purpose-${appointment.id}`}
-          />
-        </div>
-        <div
-          className={cn(
-            "mt-1 flex min-w-0 items-baseline gap-1.5",
-            noShow ? "text-destructive" : "text-[var(--emr-status-info-text)]"
-          )}
-        >
-          <span className="truncate emr-text-dense font-semibold leading-5">
-            {patient?.name ?? "환자 미지정"}
-          </span>
-          <span className="shrink-0 emr-text-metadata font-medium leading-5">·</span>
-          <span className="truncate emr-text-dense font-semibold leading-5">
-            {visitPurpose}
-          </span>
-        </div>
-        {!compact && visitDetail ? (
-          <div
-            className={cn(
-              "mt-0.5 truncate emr-text-micro leading-4",
-              noShow ? "text-destructive" : "text-[var(--emr-status-info-text)]"
-            )}
-          >
-            {getShortTime(appointment.scheduledStartAt)} · {getAppointmentDurationLabel(appointment)} · {visitDetail}
-          </div>
-        ) : null}
-      </button>
-      {!compact ? (
-        <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="truncate emr-text-micro text-muted-foreground">
-          {getAppointmentVeterinarianName(appointment)}
-        </span>
-        <Button
-          size="sm"
-          className="h-7 px-2 emr-text-metadata"
-          variant={canCheckIn ? "default" : "outline"}
-          disabled={!canCheckIn}
-          onClick={onCheckIn}
-        >
-          접수 처리
-        </Button>
-        </div>
-      ) : null}
-    </div>
+      accentTestId={`appointment-accent-${appointment.id}`}
+      ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${visitPurpose}`}
+      badgeType={noShow ? "노쇼" : "예약"}
+      description={cardType === "default" ? description : undefined}
+      disabled={appointment.status !== "confirmed" && !checkedIn}
+      onPointerDown={onClearCalendarTransientSelection}
+      onClick={onSelect}
+      patientLabel={patientLabel}
+      purposeLabel={visitPurpose}
+      purposeTestId={`appointment-purpose-${appointment.id}`}
+      secondaryBadgeLabel={
+        cardType === "default" ? visitVisual.label : undefined
+      }
+      secondaryBadgeTestId={`appointment-purpose-chip-${appointment.id}`}
+      selected={selected}
+      testId={`appointment-card-${appointment.id}`}
+      type={cardType}
+    />
   );
 }
 
 function ScheduleWalkInQueueCard({
   draft,
+  onClearCalendarTransientSelection,
   onSelectPatient,
 }: {
   draft: ReceptionDraftCheckIn;
+  onClearCalendarTransientSelection: () => void;
   onSelectPatient: (patientId: string) => void;
 }) {
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
-  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
-  const patient = patients.find((item) => item.id === draft.encounter.patientId);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
+  const patient = patients.find(
+    (item) => item.id === draft.encounter.patientId,
+  );
   const primaryGuardianId = patientGuardians.find(
-    (link) => link.patientId === draft.encounter.patientId && link.isPrimary
+    (link) => link.patientId === draft.encounter.patientId && link.isPrimary,
   )?.guardianId;
   const guardian =
     guardians.find((item) => item.id === primaryGuardianId) ??
     getMockPatientBundle(draft.encounter.patientId)?.primaryGuardian;
-  const veterinarianName = getStaffDisplayName(draft.encounter.primaryVeterinarianId);
+  const veterinarianName = getStaffDisplayName(
+    draft.encounter.primaryVeterinarianId,
+  );
   const durationLabel = getDraftDurationLabel(draft);
   const visitPurpose = draft.encounter.chiefComplaint ?? "현장 접수";
   const visitVisual = getVisitPurposeVisual(visitPurpose);
   const scheduledStartAt = getDraftScheduleStartAt(draft);
+  const patientLabel = patient?.name ?? "환자 미지정";
 
   return (
-    <div
-      className="relative min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 shadow-[var(--clair-shadow-sm)]"
-      data-testid={`walkin-card-${draft.encounter.id}`}
-    >
-      <span
-        data-testid={`walkin-accent-${draft.encounter.id}`}
-        className={cn(
-          "sr-only",
-          getVeterinarianAccentClassName(draft.encounter.primaryVeterinarianId)
-        )}
-        aria-hidden="true"
-      />
-      <button
-        type="button"
-        className="block w-full text-left outline-none"
-        onClick={() => onSelectPatient(draft.encounter.patientId)}
-      >
-        <div className="flex items-center gap-1.5 overflow-hidden">
-          <CalendarTaskBadge label={getReceptionEncounterStatusLabel(draft.encounter.status)} tone="checkedIn" />
-          <VisitPurposeChip
-            icon={visitVisual.icon}
-            label={visitVisual.label}
-            testId={`walkin-purpose-${draft.encounter.id}`}
-          />
-        </div>
-        <div className="mt-1 flex min-w-0 items-baseline gap-1.5 text-[var(--emr-status-success-text)]">
-          <span className="truncate emr-text-dense font-semibold leading-5">
-            {patient?.name ?? "환자 미지정"}
-          </span>
-          <span className="shrink-0 emr-text-metadata font-medium leading-5">·</span>
-          <span className="truncate emr-text-dense font-semibold leading-5">
-            {visitPurpose}
-          </span>
-        </div>
-        <div className="mt-0.5 truncate emr-text-micro leading-4 text-muted-foreground">
-          {getShortTime(scheduledStartAt)} · {durationLabel} · {getGuardianDisplay(guardian)} ·{" "}
-          {draft.department ?? defaultWalkInDepartment}
-          {draft.memo ? ` · ${draft.memo}` : ""}
-        </div>
-      </button>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="truncate emr-text-micro text-muted-foreground">
-          {veterinarianName ?? "담당의 미지정"}
-        </span>
-      </div>
-    </div>
+    <CalendarTaskCard
+      accentClassName={getVeterinarianAccentClassName(
+        draft.encounter.primaryVeterinarianId,
+      )}
+      accentTestId={`walkin-accent-${draft.encounter.id}`}
+      ariaLabel={`${getReceptionEncounterStatusLabel(draft.encounter.status)} ${patientLabel} · ${visitPurpose}`}
+      badgeType="외래"
+      description={`${getShortTime(scheduledStartAt)} · ${durationLabel} · ${getGuardianDisplay(guardian)} · ${
+        draft.department ?? defaultWalkInDepartment
+      }${draft.memo ? ` · ${draft.memo}` : ""}${veterinarianName ? ` · ${veterinarianName}` : ""}`}
+      onPointerDown={onClearCalendarTransientSelection}
+      onClick={() => onSelectPatient(draft.encounter.patientId)}
+      patientLabel={patientLabel}
+      purposeLabel={visitPurpose}
+      purposeTestId={`walkin-purpose-${draft.encounter.id}`}
+      secondaryBadgeLabel={visitVisual.label}
+      secondaryBadgeTestId={`walkin-purpose-chip-${draft.encounter.id}`}
+      testId={`walkin-card-${draft.encounter.id}`}
+      type="default"
+    />
   );
 }
 
@@ -1522,12 +1954,19 @@ const receptionMonthPickerItems = [
   "26.12",
 ];
 
-function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView }) {
+function ReceptionScheduleDateControl({
+  view,
+}: {
+  view: ReceptionCalendarView;
+}) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const dateControlLabel = receptionDateControlLabels[view];
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-1" data-testid="reception-date-control">
+    <div
+      className="flex h-7 shrink-0 items-center gap-1"
+      data-testid="reception-date-control"
+    >
       <Button
         variant="outline"
         size="icon-sm"
@@ -1562,7 +2001,11 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
           />
           <span>{dateControlLabel.dateLabel}</span>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[244px] gap-3 p-3" initialFocus={false}>
+        <PopoverContent
+          align="start"
+          className="w-[244px] gap-3 p-3"
+          initialFocus={false}
+        >
           {view === "day" ? (
             <>
               <div className="flex items-center justify-between">
@@ -1570,10 +2013,20 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                   2026년 5월
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="이전 달">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="이전 달"
+                  >
                     <ChevronLeftIcon />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="다음 달">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="다음 달"
+                  >
                     <ChevronRightIcon />
                   </Button>
                 </div>
@@ -1597,10 +2050,12 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                         ? "text-foreground"
                         : "text-muted-foreground",
                       cell.selected &&
-                        "bg-primary text-primary-foreground hover:bg-primary/90"
+                        "bg-primary text-primary-foreground hover:bg-primary/90",
                     )}
                     aria-label={
-                      cell.selected ? `${receptionToolbarDateLabel} 선택됨` : `${cell.day}일 선택`
+                      cell.selected
+                        ? `${receptionToolbarDateLabel} 선택됨`
+                        : `${cell.day}일 선택`
                     }
                     aria-pressed={cell.selected}
                     onClick={() => setDatePickerOpen(false)}
@@ -1618,10 +2073,20 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                   2026년 4월 - 5월
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="이전 주 보기">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="이전 주 보기"
+                  >
                     <ChevronLeftIcon />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="다음 주 보기">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="다음 주 보기"
+                  >
                     <ChevronRightIcon />
                   </Button>
                 </div>
@@ -1635,9 +2100,13 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                       "flex h-8 items-center rounded-md px-2 text-left emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                       week.selected
                         ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
-                        : "text-foreground"
+                        : "text-foreground",
                     )}
-                    aria-label={week.selected ? `${week.label} 선택됨` : `${week.label} 주 선택`}
+                    aria-label={
+                      week.selected
+                        ? `${week.label} 선택됨`
+                        : `${week.label} 주 선택`
+                    }
                     aria-pressed={week.selected}
                     onClick={() => setDatePickerOpen(false)}
                   >
@@ -1654,10 +2123,20 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                   2026년
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="이전 연도">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="이전 연도"
+                  >
                     <ChevronLeftIcon />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon-xs" aria-label="다음 연도">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="다음 연도"
+                  >
                     <ChevronRightIcon />
                   </Button>
                 </div>
@@ -1674,9 +2153,11 @@ function ReceptionScheduleDateControl({ view }: { view: ReceptionCalendarView })
                         "flex h-8 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                         selected
                           ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "text-foreground"
+                          : "text-foreground",
                       )}
-                      aria-label={selected ? `${month} 선택됨` : `${month} 월 선택`}
+                      aria-label={
+                        selected ? `${month} 선택됨` : `${month} 월 선택`
+                      }
                       aria-pressed={selected}
                       onClick={() => setDatePickerOpen(false)}
                     >
@@ -1719,7 +2200,7 @@ function ScheduleToolbar({
   onViewChange: (view: ReceptionCalendarView) => void;
 }) {
   const selectedVeterinarians = allVeterinarians.filter((veterinarian) =>
-    selectedVeterinarianIds.includes(veterinarian.id)
+    selectedVeterinarianIds.includes(veterinarian.id),
   );
   const veterinarianLabel = getVeterinarianFilterLabel(selectedVeterinarians);
 
@@ -1843,9 +2324,9 @@ function EmptyReceptionSlotButton({
       type="button"
       aria-label={ariaLabel}
       className={cn(
-        "group/empty-slot min-h-12 min-w-0 flex-1 rounded-lg border border-dashed border-[var(--emr-line-subtle)] bg-[var(--emr-surface-muted)]/70 text-[var(--emr-text-tertiary)] outline-none transition-colors",
+        "group/empty-slot min-h-12 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent text-[var(--emr-text-tertiary)] outline-none transition-colors",
         !affordanceHidden &&
-          "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
+          "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50",
       )}
       data-testid={testId}
       onClick={() => {
@@ -1857,26 +2338,8 @@ function EmptyReceptionSlotButton({
       }}
       onPointerLeave={() => setAffordanceSuppressed(false)}
     >
-      <span
-        className={cn(
-          "flex h-full min-h-12 items-center justify-center gap-1.5 opacity-0 transition-opacity",
-          !affordanceHidden &&
-            "group-hover/empty-slot:!opacity-100 group-focus/empty-slot:!opacity-100 group-focus-visible/empty-slot:!opacity-100"
-        )}
-        data-testid={`${testId}-affordance`}
-      >
-        <CdsActionsPlusIcon
-          className="size-3.5 text-[var(--emr-status-info-text)]"
-          aria-hidden="true"
-          data-testid={`${testId}-icon`}
-        />
-        <span
-          className="whitespace-nowrap emr-text-metadata font-semibold leading-4 text-[var(--emr-status-info-text)]"
-          aria-hidden="true"
-          data-testid={`${testId}-label`}
-        >
-          접수/예약
-        </span>
+      <span className="sr-only" data-testid={`${testId}-affordance`}>
+        접수 생성
       </span>
     </button>
   );
@@ -1888,8 +2351,46 @@ type ReceptionCalendarDraftInput = {
   primaryVeterinarianId?: string;
 };
 
+function ScheduleDraftSelectionCard({
+  selection,
+}: {
+  selection: ReceptionCalendarDraftSelection;
+}) {
+  const startMinutes = getMinutesInDayFromDateTime(selection.plannedStartAt);
+
+  if (startMinutes === undefined) return null;
+
+  const endMinutes = startMinutes + selection.durationMinutes;
+  const startHour = Math.floor(startMinutes / 60);
+  const selectionTop =
+    ((startMinutes - startHour * 60) / 60) * dayScheduleHourRowHeight;
+  const selectionHeight = Math.max(
+    dayScheduleHourRowHeight / (60 / scheduleSlotMinutes),
+    (selection.durationMinutes / 60) * dayScheduleHourRowHeight,
+  );
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 z-20 rounded-[8px] border border-[#63b3ed] bg-[rgba(66,153,225,0.08)] px-[8px] py-[6px] font-['Pretendard'] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+      data-testid={`calendar-draft-card-${selection.id}`}
+      style={{
+        height: selectionHeight,
+        top: selectionTop,
+      }}
+    >
+      <div className="truncate text-[14px] font-medium leading-5 tracking-[0.196px]">
+        {getScheduleTimeLabelFromMinutes(startMinutes)} -{" "}
+        {getScheduleTimeLabelFromMinutes(endMinutes)}
+      </div>
+    </div>
+  );
+}
+
 function ScheduleSelectionCell({
   affordanceSuspended,
+  calendarDraftSelection,
+  appointments,
+  draftCheckIns,
   hour,
   onAffordancePointerMove,
   onCreateDraft,
@@ -1897,6 +2398,9 @@ function ScheduleSelectionCell({
   veterinarian,
 }: {
   affordanceSuspended: boolean;
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
+  appointments: Appointment[];
+  draftCheckIns: ReceptionDraftCheckIn[];
   hour: number;
   onAffordancePointerMove: () => void;
   onCreateDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -1909,54 +2413,119 @@ function ScheduleSelectionCell({
     startMinutes: number;
     endMinutes: number;
   } | null>(null);
-  const [affordanceSuppressed, setAffordanceSuppressed] = useState(false);
-  const affordanceHidden = affordanceSuppressed || affordanceSuspended || Boolean(dragState);
+  useEffect(() => {
+    const clearDragState = () => setDragState(null);
+    const clearOtherCellDragState = (event: Event) => {
+      const nextTestId = (event as CustomEvent<{ testId?: string }>).detail
+        ?.testId;
+
+      if (nextTestId !== testId) clearDragState();
+    };
+
+    window.addEventListener(
+      receptionCalendarDragStartEvent,
+      clearOtherCellDragState,
+    );
+    window.addEventListener(receptionCalendarDragClearEvent, clearDragState);
+    window.addEventListener("blur", clearDragState);
+
+    return () => {
+      window.removeEventListener(
+        receptionCalendarDragStartEvent,
+        clearOtherCellDragState,
+      );
+      window.removeEventListener(
+        receptionCalendarDragClearEvent,
+        clearDragState,
+      );
+      window.removeEventListener("blur", clearDragState);
+    };
+  }, [testId]);
   const selectionStart = dragState
-    ? snapScheduleStartMinutes(Math.min(dragState.startMinutes, dragState.endMinutes))
+    ? snapScheduleStartMinutes(
+        Math.min(dragState.startMinutes, dragState.endMinutes),
+      )
     : undefined;
   const selectionEnd = dragState
     ? Math.max(
         (selectionStart ?? dragState.startMinutes) + scheduleSlotMinutes,
-        snapScheduleEndMinutes(Math.max(dragState.startMinutes, dragState.endMinutes))
+        snapScheduleEndMinutes(
+          Math.max(dragState.startMinutes, dragState.endMinutes),
+        ),
       )
     : undefined;
-  const selectionCellHeight = dragState?.bounds.height ?? dayScheduleHourRowHeight;
-  const selectionSlotRowHeight = selectionCellHeight / (60 / scheduleSlotMinutes);
+  const selectionCellHeight =
+    dragState?.bounds.height ?? dayScheduleHourRowHeight;
+  const selectionSlotRowHeight =
+    selectionCellHeight / (60 / scheduleSlotMinutes);
   const selectionTop =
-    selectionStart !== undefined ? ((selectionStart - hour * 60) / 60) * selectionCellHeight : 0;
+    selectionStart !== undefined
+      ? ((selectionStart - hour * 60) / 60) * selectionCellHeight
+      : 0;
   const selectionHeight =
     selectionStart !== undefined && selectionEnd !== undefined
-      ? Math.max(selectionSlotRowHeight, ((selectionEnd - selectionStart) / 60) * selectionCellHeight)
+      ? Math.max(
+          selectionSlotRowHeight,
+          ((selectionEnd - selectionStart) / 60) * selectionCellHeight,
+        )
       : selectionSlotRowHeight;
+  const selectionValidation =
+    dragState && selectionStart !== undefined && selectionEnd !== undefined
+      ? validateReceptionCalendarSelection({
+          appointments,
+          draftCheckIns,
+          endMinutes: selectionEnd,
+          startMinutes: selectionStart,
+          veterinarianId: veterinarian.id,
+        })
+      : undefined;
 
   const createDraftFromMinutes = (startMinutes: number, endMinutes: number) => {
-    const snappedStart = snapScheduleStartMinutes(startMinutes);
-    const snappedEnd = Math.max(
-      snappedStart + scheduleSlotMinutes,
-      snapScheduleEndMinutes(endMinutes)
-    );
+    const selection = validateReceptionCalendarSelection({
+      appointments,
+      draftCheckIns,
+      endMinutes,
+      startMinutes,
+      veterinarianId: veterinarian.id,
+    });
 
-    setAffordanceSuppressed(true);
+    if (!selection.valid) {
+      return;
+    }
+
     onCreateDraft({
-      durationMinutes: snappedEnd - snappedStart,
-      plannedStartAt: getReceptionIsoAtMinutes(snappedStart),
+      durationMinutes: selection.durationMinutes,
+      plannedStartAt: selection.plannedStartAt,
       primaryVeterinarianId: veterinarian.id,
     });
   };
 
   return (
     <div
-      className="relative h-full min-h-0 min-w-0 flex-1 touch-none rounded-lg border border-dashed border-[var(--emr-line-subtle)] bg-[var(--emr-surface-muted)]/70 outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)]"
+      className="relative h-full min-h-0 min-w-0 flex-1 touch-none bg-transparent outline-none"
       data-testid={testId}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
 
+        dispatchReceptionCalendarDragStart(testId);
         const bounds = event.currentTarget.getBoundingClientRect();
         const startMinutes = getScheduleSelectionFromPointer({
           baseHour: hour,
           bounds,
           clientY: event.clientY,
         });
+        const startSlotValidation = validateReceptionCalendarSelection({
+          appointments,
+          draftCheckIns,
+          endMinutes: startMinutes + scheduleSlotMinutes,
+          startMinutes,
+          veterinarianId: veterinarian.id,
+        });
+
+        if (!startSlotValidation.valid) {
+          dispatchReceptionCalendarDragClear();
+          return;
+        }
 
         try {
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -1983,8 +2552,10 @@ function ScheduleSelectionCell({
           }),
         });
       }}
-      onPointerLeave={() => setAffordanceSuppressed(false)}
-      onPointerCancel={() => setDragState(null)}
+      onPointerCancel={() => {
+        setDragState(null);
+        dispatchReceptionCalendarDragClear();
+      }}
       onPointerUp={(event) => {
         if (!dragState || dragState.pointerId !== event.pointerId) return;
 
@@ -1998,60 +2569,81 @@ function ScheduleSelectionCell({
           clientY: event.clientY,
         });
         const moved = Math.abs(endMinutes - dragState.startMinutes) >= 3;
-        const start = moved ? Math.min(dragState.startMinutes, endMinutes) : dragState.startMinutes;
-        const end = moved ? Math.max(dragState.startMinutes, endMinutes) : dragState.startMinutes;
+        const start = moved
+          ? Math.min(dragState.startMinutes, endMinutes)
+          : dragState.startMinutes;
+        const end = moved
+          ? Math.max(dragState.startMinutes, endMinutes)
+          : dragState.startMinutes;
 
         setDragState(null);
+        dispatchReceptionCalendarDragClear();
         createDraftFromMinutes(start, end);
       }}
     >
-      {dragState && selectionStart !== undefined && selectionEnd !== undefined ? (
+      {dragState &&
+      selectionStart !== undefined &&
+      selectionEnd !== undefined &&
+      selectionValidation?.valid !== false ? (
         <div
-          className="pointer-events-none absolute left-1 right-1 z-20 rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)]/90 px-2 py-1 shadow-[var(--clair-shadow-sm)]"
+          className="pointer-events-none absolute inset-x-0 z-20 rounded-[8px] border border-[#63b3ed] bg-[rgba(66,153,225,0.16)] px-[8px] py-[6px] font-['Pretendard'] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
           data-testid={`${testId}-selection-preview`}
           style={{
             height: selectionHeight,
             top: selectionTop,
           }}
         >
-          <div className="truncate emr-text-micro font-semibold text-[var(--emr-status-info-text)]">
-            {getScheduleTimeLabelFromMinutes(selectionStart)} - {getScheduleTimeLabelFromMinutes(selectionEnd)}
+          <div className="truncate text-[14px] font-medium leading-5 tracking-[0.196px]">
+            {getScheduleTimeLabelFromMinutes(selectionStart)} -{" "}
+            {getScheduleTimeLabelFromMinutes(selectionEnd)}
           </div>
         </div>
       ) : null}
-      <div className="grid h-full min-h-0 grid-rows-4">
-        {Array.from({ length: 60 / scheduleSlotMinutes }, (_, index) => {
+      {calendarDraftSelection &&
+      calendarDraftSelection.primaryVeterinarianId === veterinarian.id &&
+      getMinutesInDayFromDateTime(calendarDraftSelection.plannedStartAt) !==
+        undefined &&
+      Math.floor(
+        getMinutesInDayFromDateTime(calendarDraftSelection.plannedStartAt)! /
+          60,
+      ) === hour ? (
+        <ScheduleDraftSelectionCard selection={calendarDraftSelection} />
+      ) : null}
+      <CalendarQuarterHourLines />
+      <div className="relative z-10 grid h-full min-h-0 grid-rows-4">
+        {Array.from({ length: scheduleSlotCountPerHour }, (_, index) => {
           const slotMinutes = hour * 60 + index * scheduleSlotMinutes;
+          const slotValidation = validateReceptionCalendarSelection({
+            appointments,
+            draftCheckIns,
+            endMinutes: slotMinutes + scheduleSlotMinutes,
+            startMinutes: slotMinutes,
+            veterinarianId: veterinarian.id,
+          });
 
           return (
             <button
               key={slotMinutes}
               type="button"
               aria-label={`${getScheduleTimeLabelFromMinutes(slotMinutes)} ${veterinarian.name} 접수/예약 생성`}
-              className="group/slot flex min-h-0 items-center justify-center border-b border-dashed border-[var(--emr-line-subtle)] outline-none last:border-b-0 focus-visible:ring-3 focus-visible:ring-ring/50"
+              aria-disabled={!slotValidation.valid}
+              className={cn(
+                "group/slot flex min-h-0 items-center justify-center border border-transparent outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                slotValidation.valid
+                  ? "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)]"
+                  : "cursor-default",
+              )}
               data-testid={`${testId}-slot-${getScheduleTimeLabelFromMinutes(slotMinutes).replace(":", "")}`}
               tabIndex={dragState ? -1 : 0}
               onKeyDown={(event) => {
                 if (event.key !== "Enter" && event.key !== " ") return;
                 event.preventDefault();
-                createDraftFromMinutes(slotMinutes, slotMinutes + scheduleSlotMinutes);
+                createDraftFromMinutes(
+                  slotMinutes,
+                  slotMinutes + scheduleSlotMinutes,
+                );
               }}
-            >
-              <span
-                className={cn(
-                  "flex items-center gap-1 opacity-0 transition-opacity",
-                  !affordanceHidden && "group-hover/slot:opacity-100 group-focus/slot:opacity-100"
-                )}
-              >
-                <CdsActionsPlusIcon
-                  className="size-3.5 text-[var(--emr-status-info-text)]"
-                  aria-hidden="true"
-                />
-                <span className="whitespace-nowrap emr-text-micro font-semibold text-[var(--emr-status-info-text)]">
-                  접수/예약
-                </span>
-              </span>
-            </button>
+            />
           );
         })}
       </div>
@@ -2097,7 +2689,8 @@ function ReceptionVisitContextBanner({
             </h2>
           </div>
           <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
-            {guardianName ?? "보호자 미지정"} 보호자 · {patientName}({patientNo}) · {summary}
+            {guardianName ?? "보호자 미지정"} 보호자 · {patientName}({patientNo}
+            ) · {summary}
           </div>
         </div>
         <div className="rounded-md border border-[var(--emr-status-info-border)] bg-card px-2.5 py-1 emr-text-micro font-medium text-muted-foreground">
@@ -2109,22 +2702,24 @@ function ReceptionVisitContextBanner({
 }
 
 function DayScheduleBoard({
+  calendarDraftSelection,
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
   onEmptySlotAffordancePointerMove,
-  onCheckIn,
+  onClearCalendarTransientSelection,
   onCreateCalendarDraft,
   onSelectPatient,
   onSelectAppointment,
   selectedAppointmentId,
   selectedVeterinarians,
 }: {
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   onEmptySlotAffordancePointerMove: () => void;
-  onCheckIn: (appointment: Appointment) => void;
+  onClearCalendarTransientSelection: () => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
@@ -2134,13 +2729,18 @@ function DayScheduleBoard({
   const dayScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
   const currentTimeOffset = getDayCurrentTimeOffset();
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
-  const walkInDrafts = draftCheckIns.filter((draft) => draft.receptionType === "walk_in");
+  const walkInDrafts = draftCheckIns.filter(
+    (draft) => draft.receptionType === "walk_in",
+  );
   const unassignedWalkIns = walkInDrafts.filter(
-    (draft) => !draft.encounter.primaryVeterinarianId
+    (draft) => !draft.encounter.primaryVeterinarianId,
   );
 
   return (
-    <div className="flex min-h-[720px] flex-col bg-card" data-testid="reception-day-calendar">
+    <div
+      className="flex min-h-[720px] flex-col bg-card"
+      data-testid="reception-day-calendar"
+    >
       <div
         className="sticky top-0 z-30 grid border-b bg-card shadow-xs"
         style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
@@ -2148,18 +2748,23 @@ function DayScheduleBoard({
         <div className="border-r" />
         {selectedVeterinarians.map((veterinarian) => {
           const laneAppointments = appointments.filter(
-            (appointment) => appointment.assignedVeterinarianId === veterinarian.id
+            (appointment) =>
+              appointment.assignedVeterinarianId === veterinarian.id,
           );
 
           return (
             <div key={veterinarian.id} className="border-r p-2 last:border-r-0">
-              <VeterinarianLaneHeader toneIndex={getVeterinarianToneIndex(veterinarian)} veterinarian={veterinarian} />
+              <VeterinarianLaneHeader
+                toneIndex={getVeterinarianToneIndex(veterinarian)}
+                veterinarian={veterinarian}
+              />
               <div className="mt-1 flex flex-col gap-1">
                 {laneAppointments.slice(0, 2).map((appointment) => (
                   <button
                     key={`all-day-${veterinarian.id}-${appointment.id}`}
                     type="button"
                     className="truncate rounded border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-0.5 text-left emr-text-micro font-medium text-primary"
+                    onPointerDown={onClearCalendarTransientSelection}
                     onClick={() => onSelectAppointment(appointment)}
                   >
                     예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
@@ -2181,6 +2786,9 @@ function DayScheduleBoard({
               <ScheduleWalkInQueueCard
                 key={draft.encounter.id}
                 draft={draft}
+                onClearCalendarTransientSelection={
+                  onClearCalendarTransientSelection
+                }
                 onSelectPatient={onSelectPatient}
               />
             ))}
@@ -2202,7 +2810,7 @@ function DayScheduleBoard({
                 height: dayScheduleHourRowHeight,
               }}
             />
-          )
+          ),
         )}
         <div
           data-testid="day-time-axis"
@@ -2220,7 +2828,7 @@ function DayScheduleBoard({
                   "absolute left-0 right-0 flex justify-end pr-2 emr-text-micro leading-4 text-muted-foreground",
                   firstLabel && "translate-y-1",
                   lastLabel && "-translate-y-full",
-                  !firstLabel && !lastLabel && "-translate-y-1/2"
+                  !firstLabel && !lastLabel && "-translate-y-1/2",
                 )}
                 style={{
                   top: index * dayScheduleHourRowHeight,
@@ -2247,38 +2855,57 @@ function DayScheduleBoard({
                 className="grid border-b"
                 style={{
                   gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
-                  minHeight: dayScheduleHourRowHeight,
+                  height: dayScheduleHourRowHeight,
                 }}
               >
                 {selectedVeterinarians.map((veterinarian) => {
                   const hourAppointments = appointments.filter(
                     (appointment) =>
                       appointment.assignedVeterinarianId === veterinarian.id &&
-                      getAppointmentHour(appointment) === hour
+                      getAppointmentHour(appointment) === hour,
                   );
                   const hourWalkIns = walkInDrafts.filter(
                     (draft) =>
-                      draft.encounter.primaryVeterinarianId === veterinarian.id &&
-                      getDraftScheduleHour(draft) === hour
+                      draft.encounter.primaryVeterinarianId ===
+                        veterinarian.id && getDraftScheduleHour(draft) === hour,
+                  );
+                  const hasScheduleCards = Boolean(
+                    hourAppointments.length || hourWalkIns.length,
                   );
 
                   return (
-                    <div key={`${hour}-${veterinarian.id}`} className="flex min-w-0 gap-2 border-r p-2 last:border-r-0">
-                      {hourAppointments.length || hourWalkIns.length ? (
+                    <div
+                      key={`${hour}-${veterinarian.id}`}
+                      className={cn(
+                        "relative flex h-full min-h-0 min-w-0 gap-2 border-r last:border-r-0",
+                        hasScheduleCards
+                          ? "overflow-hidden pr-2"
+                          : "overflow-visible",
+                      )}
+                    >
+                      <CalendarQuarterHourLines />
+                      {hasScheduleCards ? (
                         <>
                           {hourAppointments.map((appointment) => (
-                          <ScheduleAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            selected={appointment.id === selectedAppointmentId}
-                            onSelect={() => onSelectAppointment(appointment)}
-                            onCheckIn={() => onCheckIn(appointment)}
-                          />
+                            <ScheduleAppointmentCard
+                              key={appointment.id}
+                              appointment={appointment}
+                              onClearCalendarTransientSelection={
+                                onClearCalendarTransientSelection
+                              }
+                              selected={
+                                appointment.id === selectedAppointmentId
+                              }
+                              onSelect={() => onSelectAppointment(appointment)}
+                            />
                           ))}
                           {hourWalkIns.map((draft) => (
                             <ScheduleWalkInQueueCard
                               key={draft.encounter.id}
                               draft={draft}
+                              onClearCalendarTransientSelection={
+                                onClearCalendarTransientSelection
+                              }
                               onSelectPatient={onSelectPatient}
                             />
                           ))}
@@ -2286,8 +2913,13 @@ function DayScheduleBoard({
                       ) : (
                         <ScheduleSelectionCell
                           affordanceSuspended={emptySlotAffordanceSuspended}
+                          calendarDraftSelection={calendarDraftSelection}
+                          appointments={appointments}
+                          draftCheckIns={draftCheckIns}
                           hour={hour}
-                          onAffordancePointerMove={onEmptySlotAffordancePointerMove}
+                          onAffordancePointerMove={
+                            onEmptySlotAffordancePointerMove
+                          }
                           testId={`day-empty-slot-${hour}-${veterinarian.id}`}
                           veterinarian={veterinarian}
                           onCreateDraft={onCreateCalendarDraft}
@@ -2310,7 +2942,7 @@ function WeekScheduleBoard({
   appointments,
   draftCheckIns,
   onEmptySlotAffordancePointerMove,
-  onCheckIn,
+  onClearCalendarTransientSelection,
   onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
@@ -2320,7 +2952,7 @@ function WeekScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   onEmptySlotAffordancePointerMove: () => void;
-  onCheckIn: (appointment: Appointment) => void;
+  onClearCalendarTransientSelection: () => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
@@ -2330,7 +2962,9 @@ function WeekScheduleBoard({
   const activeDayIndex = weekDays.findIndex((day) => day.active);
   const dayColumnWidth = "calc((100% - 56px) / 7)";
   const weekScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
-  const walkInDrafts = draftCheckIns.filter((draft) => draft.receptionType === "walk_in");
+  const walkInDrafts = draftCheckIns.filter(
+    (draft) => draft.receptionType === "walk_in",
+  );
 
   return (
     <div
@@ -2347,14 +2981,16 @@ function WeekScheduleBoard({
             key={`${day.label}-${day.day}-header`}
             className={cn(
               "flex h-16 flex-col items-center justify-center border-r last:border-r-0",
-              day.active && "bg-[var(--emr-status-info-bg)]/60"
+              day.active && "bg-[var(--emr-status-info-bg)]/60",
             )}
           >
-            <span className="emr-text-micro text-muted-foreground">{day.label}</span>
+            <span className="emr-text-micro text-muted-foreground">
+              {day.label}
+            </span>
             <span
               className={cn(
                 "mt-1 flex size-7 items-center justify-center rounded-full emr-text-body font-semibold",
-                day.active && "bg-primary text-primary-foreground"
+                day.active && "bg-primary text-primary-foreground",
               )}
             >
               {day.day}
@@ -2388,7 +3024,7 @@ function WeekScheduleBoard({
             className="grid border-b last:border-b-0"
             style={{
               gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))",
-              minHeight: dayScheduleHourRowHeight,
+              height: dayScheduleHourRowHeight,
             }}
           >
             <div className="relative border-r">
@@ -2397,42 +3033,56 @@ function WeekScheduleBoard({
               </span>
             </div>
             {weekDays.map((day) => {
-              const dayAppointments = day.active ? appointments : appointments.slice(0, 1);
+              const dayAppointments = day.active
+                ? appointments
+                : appointments.slice(0, 1);
               const hourAppointments = dayAppointments.filter(
-                (appointment) => getAppointmentHour(appointment) === hour
+                (appointment) => getAppointmentHour(appointment) === hour,
               );
               const hourWalkIns = day.active
                 ? walkInDrafts.filter(
-                    (draft) => getDraftScheduleHour(draft) === hour
+                    (draft) => getDraftScheduleHour(draft) === hour,
                   )
                 : [];
+              const hasScheduleCards = Boolean(
+                hourAppointments.length || hourWalkIns.length,
+              );
 
               return (
                 <div
                   key={`week-${day.day}-${hour}`}
                   className={cn(
-                    "flex min-w-0 gap-2 border-r p-2 last:border-r-0",
+                    "relative flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r last:border-r-0",
+                    hasScheduleCards && "pr-2",
                     day.active && "bg-[var(--emr-status-info-bg)]/40",
-                    !isBusinessHourRow(hour) && "bg-muted/70"
+                    !isBusinessHourRow(hour) && "bg-muted/70",
                   )}
                 >
+                  <CalendarQuarterHourLines />
                   {hourAppointments.map((appointment) => (
                     <ScheduleAppointmentCard
                       key={`${day.day}-${hour}-${appointment.id}`}
                       appointment={appointment}
-                      selected={Boolean(day.active && appointment.id === selectedAppointmentId)}
+                      onClearCalendarTransientSelection={
+                        onClearCalendarTransientSelection
+                      }
+                      selected={Boolean(
+                        day.active && appointment.id === selectedAppointmentId,
+                      )}
                       onSelect={() => onSelectAppointment(appointment)}
-                      onCheckIn={() => onCheckIn(appointment)}
                     />
                   ))}
                   {hourWalkIns.map((draft) => (
                     <ScheduleWalkInQueueCard
                       key={`${day.day}-${hour}-${draft.encounter.id}`}
                       draft={draft}
+                      onClearCalendarTransientSelection={
+                        onClearCalendarTransientSelection
+                      }
                       onSelectPatient={onSelectPatient}
                     />
                   ))}
-                  {hourAppointments.length || hourWalkIns.length ? null : (
+                  {hasScheduleCards ? null : (
                     <EmptyReceptionSlotButton
                       affordanceSuspended={emptySlotAffordanceSuspended}
                       ariaLabel={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
@@ -2458,7 +3108,10 @@ function WeekScheduleBoard({
           {weekDays.map((day) => (
             <div
               key={`week-bottom-${day.day}`}
-              className={cn("border-r last:border-r-0", day.active && "bg-[var(--emr-status-info-bg)]/40")}
+              className={cn(
+                "border-r last:border-r-0",
+                day.active && "bg-[var(--emr-status-info-bg)]/40",
+              )}
             />
           ))}
         </div>
@@ -2467,7 +3120,11 @@ function WeekScheduleBoard({
   );
 }
 
-function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) {
+function MonthScheduleBoard({
+  appointmentCount,
+}: {
+  appointmentCount: number;
+}) {
   return (
     <div
       className="grid h-full min-h-[720px] grid-cols-7 grid-rows-5 bg-card"
@@ -2478,7 +3135,7 @@ function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) 
           key={day}
           className={cn(
             "min-h-0 border-b border-r p-3 last:border-r-0",
-            day === 1 && "bg-[var(--emr-status-info-bg)]/50"
+            day === 1 && "bg-[var(--emr-status-info-bg)]/50",
           )}
         >
           <div className="emr-text-dense font-semibold">{day}</div>
@@ -2495,11 +3152,13 @@ function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) 
 }
 
 function ReceptionScheduleBoard({
+  calendarDraftSelection,
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  onClearCalendarDraft,
+  onClearCalendarTransientSelection,
   onEmptySlotAffordancePointerMove,
-  onCheckIn,
   onCreateCalendarDraft,
   onCreateWalkIn,
   onSelectPatient,
@@ -2508,11 +3167,13 @@ function ReceptionScheduleBoard({
   selectedVeterinarians,
   view,
 }: {
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  onClearCalendarDraft: () => void;
+  onClearCalendarTransientSelection: () => void;
   onEmptySlotAffordancePointerMove: () => void;
-  onCheckIn: (appointment: Appointment) => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
@@ -2526,20 +3187,28 @@ function ReceptionScheduleBoard({
       <section
         className="min-h-0 min-w-0 overflow-hidden bg-card"
         data-testid="reception-calendar-frame"
+        onPointerDown={() => {
+          if (calendarDraftSelection) onClearCalendarDraft();
+        }}
       >
         <ScrollArea className="h-full">
           {view === "day" ? (
             <DayScheduleBoard
+              calendarDraftSelection={calendarDraftSelection}
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
-              onEmptySlotAffordancePointerMove={onEmptySlotAffordancePointerMove}
+              onEmptySlotAffordancePointerMove={
+                onEmptySlotAffordancePointerMove
+              }
+              onClearCalendarTransientSelection={
+                onClearCalendarTransientSelection
+              }
               onCreateCalendarDraft={onCreateCalendarDraft}
               selectedAppointmentId={selectedAppointmentId}
               selectedVeterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
-              onCheckIn={onCheckIn}
             />
           ) : null}
           {view === "week" ? (
@@ -2547,12 +3216,16 @@ function ReceptionScheduleBoard({
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
-              onEmptySlotAffordancePointerMove={onEmptySlotAffordancePointerMove}
+              onEmptySlotAffordancePointerMove={
+                onEmptySlotAffordancePointerMove
+              }
+              onClearCalendarTransientSelection={
+                onClearCalendarTransientSelection
+              }
               selectedAppointmentId={selectedAppointmentId}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
               onCreateWalkIn={onCreateWalkIn}
-              onCheckIn={onCheckIn}
             />
           ) : null}
           {view === "month" ? (
@@ -2568,92 +3241,135 @@ export function ReceptionContent() {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
-  const [calendarView, setCalendarView] = useState<ReceptionCalendarView>("day");
-  const [emptySlotAffordanceSuspended, setEmptySlotAffordanceSuspended] = useState(false);
-  const [walkInInitialPatientId, setWalkInInitialPatientId] = useState<string | undefined>();
+  const [calendarView, setCalendarView] =
+    useState<ReceptionCalendarView>("day");
+  const [emptySlotAffordanceSuspended, setEmptySlotAffordanceSuspended] =
+    useState(false);
+  const [walkInInitialPatientId, setWalkInInitialPatientId] = useState<
+    string | undefined
+  >();
   const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
-    allVeterinarians.map((veterinarian) => veterinarian.id)
+    allVeterinarians.map((veterinarian) => veterinarian.id),
   );
-  const selectedAppointmentId = useReceptionStore((state) => state.selectedAppointmentId);
-  const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
-  const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
-  const calendarReadError = useReceptionStore((state) => state.calendarReadError);
-  const calendarReadStatus = useReceptionStore((state) => state.calendarReadStatus);
-  const messageDeliveries = useReceptionStore((state) => state.messageDeliveries);
-  const applyAppointmentCheckIn = useReceptionStore((state) => state.applyAppointmentCheckIn);
+  const selectedAppointmentId = useReceptionStore(
+    (state) => state.selectedAppointmentId,
+  );
+  const selectedEncounterId = useReceptionStore(
+    (state) => state.selectedEncounterId,
+  );
+  const selectedPatientId = useReceptionStore(
+    (state) => state.selectedPatientId,
+  );
+  const calendarDraftSelection = useReceptionStore(
+    (state) => state.calendarDraftSelection,
+  );
+  const calendarReadError = useReceptionStore(
+    (state) => state.calendarReadError,
+  );
+  const calendarReadStatus = useReceptionStore(
+    (state) => state.calendarReadStatus,
+  );
+  const messageDeliveries = useReceptionStore(
+    (state) => state.messageDeliveries,
+  );
   const applyPersistedReceptionCalendar = useReceptionStore(
-    (state) => state.applyPersistedReceptionCalendar
+    (state) => state.applyPersistedReceptionCalendar,
   );
   const applyPersistedReceptionQueue = useReceptionStore(
-    (state) => state.applyPersistedReceptionQueue
+    (state) => state.applyPersistedReceptionQueue,
   );
-  const applyWalkInCheckIn = useReceptionStore((state) => state.applyWalkInCheckIn);
+  const applyWalkInCheckIn = useReceptionStore(
+    (state) => state.applyWalkInCheckIn,
+  );
   const applyPatientGuardianLookupItem = usePatientProfileStore(
-    (state) => state.applyPatientGuardianLookupItem
+    (state) => state.applyPatientGuardianLookupItem,
   );
-  const selectAppointment = useReceptionStore((state) => state.selectAppointment);
+  const selectAppointment = useReceptionStore(
+    (state) => state.selectAppointment,
+  );
   const selectEncounter = useReceptionStore((state) => state.selectEncounter);
   const selectPatient = useReceptionStore((state) => state.selectPatient);
   const setCalendarDraftSelection = useReceptionStore(
-    (state) => state.setCalendarDraftSelection
+    (state) => state.setCalendarDraftSelection,
   );
   const setReceptionCalendarReadStatus = useReceptionStore(
-    (state) => state.setReceptionCalendarReadStatus
+    (state) => state.setReceptionCalendarReadStatus,
   );
   const setReceptionQueueReadStatus = useReceptionStore(
-    (state) => state.setReceptionQueueReadStatus
+    (state) => state.setReceptionQueueReadStatus,
   );
   const readRetryNonce = useReceptionStore((state) => state.readRetryNonce);
-  const requestReceptionReadRetry = useReceptionStore((state) => state.requestReceptionReadRetry);
+  const requestReceptionReadRetry = useReceptionStore(
+    (state) => state.requestReceptionReadRetry,
+  );
   const persistedCalendarAppointments = useReceptionStore(
-    (state) => state.persistedCalendarAppointments
+    (state) => state.persistedCalendarAppointments,
   );
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
-  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const authSession = useMockAuthStore((state) => state.session);
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryPatientId = searchParams.get("patientId") ?? scenario?.patientId;
-  const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
+  const queryEncounterId =
+    searchParams.get("encounterId") ?? scenario?.encounterId;
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : params.workspaceId?.[0] ?? "clair-demo";
+      : (params.workspaceId?.[0] ?? "clair-demo");
   const appointments = useMemo(
     () => getTodayAppointments(draftCheckIns, persistedCalendarAppointments),
-    [draftCheckIns, persistedCalendarAppointments]
+    [draftCheckIns, persistedCalendarAppointments],
   );
   const patientSummaries = useMemo(
-    () => getReceptionPatientSummaries(draftCheckIns, { guardians, patientGuardians, patients }),
-    [draftCheckIns, guardians, patientGuardians, patients]
+    () =>
+      getReceptionPatientSummaries(draftCheckIns, {
+        guardians,
+        patientGuardians,
+        patients,
+      }),
+    [draftCheckIns, guardians, patientGuardians, patients],
   );
   const selectedVeterinarians = useMemo(
     () =>
       allVeterinarians.filter((veterinarian) =>
-        selectedVeterinarianIds.includes(veterinarian.id)
+        selectedVeterinarianIds.includes(veterinarian.id),
       ),
-    [selectedVeterinarianIds]
+    [selectedVeterinarianIds],
   );
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
         (appointment) =>
           appointment.assignedVeterinarianId &&
-          selectedVeterinarianIds.includes(appointment.assignedVeterinarianId)
+          selectedVeterinarianIds.includes(appointment.assignedVeterinarianId),
       ),
-    [appointments, selectedVeterinarianIds]
+    [appointments, selectedVeterinarianIds],
   );
   const selectedBundle = getMockPatientBundle(selectedPatientId);
-  const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
+  const selectedPatient = patients.find(
+    (patient) => patient.id === selectedPatientId,
+  );
   const activeAppointmentId =
-    activeDrawer?.type === "reception-appointment" ? activeDrawer.id : selectedAppointmentId ?? scenario?.appointmentId;
+    activeDrawer?.type === "reception-appointment"
+      ? activeDrawer.id
+      : (selectedAppointmentId ?? scenario?.appointmentId);
   const selectedAppointment =
-    appointments.find((appointment) => appointment.id === activeAppointmentId) ??
-    appointments.find((appointment) => appointment.patientId === selectedPatientId);
-  const selectedEncounter = findScenarioEncounter(selectedBundle?.encounters, queryEncounterId);
+    appointments.find(
+      (appointment) => appointment.id === activeAppointmentId,
+    ) ??
+    appointments.find(
+      (appointment) => appointment.patientId === selectedPatientId,
+    );
+  const selectedEncounter = findScenarioEncounter(
+    selectedBundle?.encounters,
+    queryEncounterId,
+  );
   const selectedVisitReason = getReceptionVisitReason({
     appointment: selectedAppointment,
     encounter: selectedEncounter,
@@ -2663,33 +3379,27 @@ export function ReceptionContent() {
   const toggleVeterinarian = (veterinarianId: string) => {
     setSelectedVeterinarianIds((current) => {
       if (current.includes(veterinarianId)) {
-        return current.length > 1 ? current.filter((id) => id !== veterinarianId) : current;
+        return current.length > 1
+          ? current.filter((id) => id !== veterinarianId)
+          : current;
       }
 
       return [...current, veterinarianId];
     });
   };
+  function clearCalendarTransientSelection() {
+    dispatchReceptionCalendarDragClear();
+    setCalendarDraftSelection(undefined);
+  }
   const handleSelectAppointment = (appointment: Appointment) => {
+    clearCalendarTransientSelection();
     selectAppointment(appointment.id);
     setActiveDrawer({ type: "reception-appointment", id: appointment.id });
   };
   const handleSelectPatientFromSchedule = (patientId: string) => {
+    clearCalendarTransientSelection();
     selectPatient(patientId);
     setActiveDrawer({ type: "reception-patient", id: patientId });
-  };
-  const handleCheckInAppointment = async (appointment: Appointment) => {
-    const result = await submitAppointmentCheckIn({
-      actorRole: authSession?.role,
-      appointmentId: appointment.id,
-      workspaceId,
-    });
-
-    if (!result.ok) {
-      toast.error(getAppointmentCheckInRouteErrorMessage(result));
-      return;
-    }
-
-    applyAppointmentCheckIn({ appointment, checkIn: result.checkIn });
   };
   const openWalkInDialog = () => {
     setActiveDrawer(null);
@@ -2699,8 +3409,12 @@ export function ReceptionContent() {
   };
   const openCalendarDraftDrawer = (draft: ReceptionCalendarDraftInput) => {
     const id = `calendar-draft-${draft.plannedStartAt}-${draft.primaryVeterinarianId ?? "unassigned"}`;
-    const draftPatientId = selectedAppointment?.patientId ?? selectedEncounter?.patientId ?? selectedPatientId;
+    const draftPatientId =
+      selectedAppointment?.patientId ??
+      selectedEncounter?.patientId ??
+      selectedPatientId;
 
+    dispatchReceptionCalendarDragClear();
     setWalkInDialogOpen(false);
     setWalkInInitialPatientId(undefined);
     selectPatient(draftPatientId);
@@ -2711,12 +3425,27 @@ export function ReceptionContent() {
       subtitle: `${getShortTime(draft.plannedStartAt)} · ${draft.durationMinutes}분`,
     });
   };
+  const clearCalendarDraft = () => {
+    setCalendarDraftSelection(undefined);
+  };
+
+  useEffect(() => {
+    if (
+      calendarDraftSelection &&
+      activeDrawer?.type !== "reception-draft-task"
+    ) {
+      setCalendarDraftSelection(undefined);
+    }
+  }, [activeDrawer?.type, calendarDraftSelection, setCalendarDraftSelection]);
 
   useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
       selectPatient(queryPatientId);
     }
-    if (scenario?.appointmentId && scenario.appointmentId !== selectedAppointmentId) {
+    if (
+      scenario?.appointmentId &&
+      scenario.appointmentId !== selectedAppointmentId
+    ) {
       selectAppointment(scenario.appointmentId);
     }
     if (queryEncounterId && queryEncounterId !== selectedEncounterId) {
@@ -2747,7 +3476,10 @@ export function ReceptionContent() {
       if (cancelled) return;
 
       if (!result.ok) {
-        setReceptionCalendarReadStatus("error", getReceptionReadFailureMessage(result));
+        setReceptionCalendarReadStatus(
+          "error",
+          getReceptionReadFailureMessage(result),
+        );
         return;
       }
 
@@ -2779,7 +3511,10 @@ export function ReceptionContent() {
       if (cancelled) return;
 
       if (!result.ok) {
-        setReceptionQueueReadStatus("error", getReceptionReadFailureMessage(result));
+        setReceptionQueueReadStatus(
+          "error",
+          getReceptionReadFailureMessage(result),
+        );
         return;
       }
 
@@ -2872,7 +3607,9 @@ export function ReceptionContent() {
         />
       ) : null}
       {calendarReadStatus === "loading" ? (
-        <ReceptionPanelStateMessage>저장된 예약을 불러오는 중</ReceptionPanelStateMessage>
+        <ReceptionPanelStateMessage>
+          저장된 예약을 불러오는 중
+        </ReceptionPanelStateMessage>
       ) : null}
       {calendarReadStatus === "error" ? (
         <EmrInlineAlert
@@ -2880,20 +3617,30 @@ export function ReceptionContent() {
           severity="warning"
           title="서버 캘린더를 불러오지 못했어"
           action={
-            <Button size="sm" variant="outline" onClick={requestReceptionReadRetry}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={requestReceptionReadRetry}
+            >
               캘린더 다시 시도
             </Button>
           }
           testId="reception-calendar-read-alert"
         >
-          {calendarReadError ?? "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼."}
+          {calendarReadError ??
+            "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼."}
         </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard
+        calendarDraftSelection={calendarDraftSelection}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
         appointments={visibleAppointments}
         draftCheckIns={draftCheckIns}
-        onEmptySlotAffordancePointerMove={() => setEmptySlotAffordanceSuspended(false)}
+        onClearCalendarDraft={clearCalendarDraft}
+        onClearCalendarTransientSelection={clearCalendarTransientSelection}
+        onEmptySlotAffordancePointerMove={() =>
+          setEmptySlotAffordanceSuspended(false)
+        }
         selectedAppointmentId={selectedAppointmentId}
         selectedVeterinarians={selectedVeterinarians}
         view={calendarView}
@@ -2901,7 +3648,6 @@ export function ReceptionContent() {
         onSelectPatient={handleSelectPatientFromSchedule}
         onCreateCalendarDraft={openCalendarDraftDrawer}
         onCreateWalkIn={openWalkInDialog}
-        onCheckIn={handleCheckInAppointment}
       />
     </div>
   );
@@ -2939,7 +3685,7 @@ function WalkInReceptionDialog({
   onCreate: (
     input: WalkInReceptionInput,
     walkIn: ReceptionWalkInEncounterRecord,
-    selectedSummary: ReceptionPatientSummary
+    selectedSummary: ReceptionPatientSummary,
   ) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -2947,48 +3693,69 @@ function WalkInReceptionDialog({
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
-  const [receptionDepartment, setReceptionDepartment] = useState(defaultWalkInDepartment);
-  const [receptionDuration, setReceptionDuration] = useState(defaultWalkInDuration);
+  const [receptionDepartment, setReceptionDepartment] = useState(
+    defaultWalkInDepartment,
+  );
+  const [receptionDuration, setReceptionDuration] = useState(
+    defaultWalkInDuration,
+  );
   const [receptionMemo, setReceptionMemo] = useState("");
-  const [receptionPatientId, setReceptionPatientId] = useState(initialPatientId ?? "");
+  const [receptionPatientId, setReceptionPatientId] = useState(
+    initialPatientId ?? "",
+  );
   const [receptionVeterinarianId, setReceptionVeterinarianId] = useState(
-    unassignedVeterinarianValue
+    unassignedVeterinarianValue,
   );
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const [lookupQuery, setLookupQuery] = useState("");
-  const [lookupResults, setLookupResults] = useState<ReceptionPatientGuardianLookupItem[]>([]);
-  const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">("idle");
+  const [lookupResults, setLookupResults] = useState<
+    ReceptionPatientGuardianLookupItem[]
+  >([]);
+  const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">(
+    "idle",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [customPurposeTags, setCustomPurposeTags] = useState<string[]>([]);
   const [isAddingPurposeTag, setIsAddingPurposeTag] = useState(false);
   const [newPurposeTag, setNewPurposeTag] = useState("");
-  const [receptionPurposeTags, setReceptionPurposeTags] = useState<string[]>([]);
+  const [receptionPurposeTags, setReceptionPurposeTags] = useState<string[]>(
+    [],
+  );
   const [receptionVisitPurpose, setReceptionVisitPurpose] = useState("");
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
   const lookupActive = lookupQuery.trim().length > 0;
   const lookupPatientSummaries = useMemo(
     () => lookupResults.map(mapLookupItemToReceptionPatientSummary),
-    [lookupResults]
+    [lookupResults],
   );
-  const selectablePatientSummaries = lookupActive ? lookupPatientSummaries : patientSummaries;
+  const selectablePatientSummaries = lookupActive
+    ? lookupPatientSummaries
+    : patientSummaries;
   const patientSummaryOptions = useMemo(() => {
     const summaries = [...lookupPatientSummaries, ...patientSummaries];
     const uniqueSummaries = new Map<string, ReceptionPatientSummary>();
 
-    summaries.forEach((summary) => uniqueSummaries.set(summary.patient.id, summary));
+    summaries.forEach((summary) =>
+      uniqueSummaries.set(summary.patient.id, summary),
+    );
 
     return Array.from(uniqueSummaries.values());
   }, [lookupPatientSummaries, patientSummaries]);
   const selectedSummary = patientSummaryOptions.find(
-    (summary) => summary.patient.id === receptionPatientId
+    (summary) => summary.patient.id === receptionPatientId,
   );
   const patient = selectedSummary?.patient;
   const guardian = selectedSummary?.primaryGuardian;
-  const visitPurpose = [receptionPurposeTags.join(", "), receptionVisitPurpose.trim()]
+  const visitPurpose = [
+    receptionPurposeTags.join(", "),
+    receptionVisitPurpose.trim(),
+  ]
     .filter(Boolean)
     .join(" · ");
   const canCreate = Boolean(patient && visitPurpose);
-  const patientOptionText = selectedSummary ? getReceptionPatientOptionLabel(selectedSummary) : "";
+  const patientOptionText = selectedSummary
+    ? getReceptionPatientOptionLabel(selectedSummary)
+    : "";
   const patientWeightKg = getRecentPatientWeightKg(patient);
   const purposeChips = [...receptionPurposeChips, ...customPurposeTags];
   const patientSearchPlaceholder = "동물명 또는 보호자명으로 검색";
@@ -3032,9 +3799,10 @@ function WalkInReceptionDialog({
             cache: "no-store",
             headers,
             signal: controller.signal,
-          }
+          },
         );
-        const result = (await response.json()) as ReceptionPatientGuardianLookupResponse;
+        const result =
+          (await response.json()) as ReceptionPatientGuardianLookupResponse;
 
         if (cancelled) return;
 
@@ -3047,7 +3815,10 @@ function WalkInReceptionDialog({
         setLookupResults(result.patients);
         setLookupState("idle");
       } catch (error) {
-        if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) {
+        if (
+          !cancelled &&
+          !(error instanceof DOMException && error.name === "AbortError")
+        ) {
           setLookupResults([]);
           setLookupState("error");
         }
@@ -3067,7 +3838,7 @@ function WalkInReceptionDialog({
     setReceptionPurposeTags((current) =>
       current.includes(purpose)
         ? current.filter((item) => item !== purpose)
-        : [...current, purpose]
+        : [...current, purpose],
     );
   };
   const addPurposeTag = () => {
@@ -3083,12 +3854,14 @@ function WalkInReceptionDialog({
 
     if (!existingPurpose) {
       setCustomPurposeTags((current) =>
-        current.includes(purpose) ? current : [...current, purpose]
+        current.includes(purpose) ? current : [...current, purpose],
       );
     }
 
     setReceptionPurposeTags((current) =>
-      current.includes(existingPurpose ?? purpose) ? current : [...current, existingPurpose ?? purpose]
+      current.includes(existingPurpose ?? purpose)
+        ? current
+        : [...current, existingPurpose ?? purpose],
     );
     setIsAddingPurposeTag(false);
     setNewPurposeTag("");
@@ -3149,7 +3922,10 @@ function WalkInReceptionDialog({
                 새 진료 접수 생성 양식입니다.
               </DialogDescription>
             </div>
-            <RegistrationDialogCloseButton ariaLabel="진료 접수 닫기" onClick={close} />
+            <RegistrationDialogCloseButton
+              ariaLabel="진료 접수 닫기"
+              onClick={close}
+            />
           </div>
         </DialogHeader>
 
@@ -3170,36 +3946,39 @@ function WalkInReceptionDialog({
                       }
                     }}
                   >
-                      <CdsActionsSearchIcon
-                        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
-                        aria-hidden="true"
-                      />
-                      <Input
-                        aria-label="환자 검색"
-                        autoComplete="off"
-                        className="h-10 bg-card pl-9 pr-9"
-                        placeholder={patientSearchPlaceholder}
-                        value={lookupQuery}
-                        onFocus={() => setPatientLookupOpen(true)}
-                        onValueChange={(value) => {
-                          setLookupQuery(value);
+                    <CdsActionsSearchIcon
+                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      aria-label="환자 검색"
+                      autoComplete="off"
+                      className="h-10 bg-card pl-9 pr-9"
+                      placeholder={patientSearchPlaceholder}
+                      value={lookupQuery}
+                      onFocus={() => setPatientLookupOpen(true)}
+                      onValueChange={(value) => {
+                        setLookupQuery(value);
+                        setPatientLookupOpen(true);
+                      }}
+                    />
+                    {lookupQuery ? (
+                      <button
+                        type="button"
+                        className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                        aria-label="검색어 초기화"
+                        onClick={() => {
+                          setLookupQuery("");
+                          setReceptionPatientId("");
                           setPatientLookupOpen(true);
                         }}
-                      />
-                      {lookupQuery ? (
-                        <button
-                          type="button"
-                          className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                          aria-label="검색어 초기화"
-                          onClick={() => {
-                            setLookupQuery("");
-                            setReceptionPatientId("");
-                            setPatientLookupOpen(true);
-                          }}
-                        >
-                          <CircleCloseFillIcon className="size-4" aria-hidden="true" />
-                        </button>
-                      ) : null}
+                      >
+                        <CircleCloseFillIcon
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : null}
                     {patientLookupOpen ? (
                       <div
                         role="listbox"
@@ -3224,8 +4003,10 @@ function WalkInReceptionDialog({
                           </div>
                         ) : null}
                         {selectablePatientSummaries.map((summary) => {
-                          const selected = summary.patient.id === receptionPatientId;
-                          const optionLabel = getReceptionPatientOptionLabel(summary);
+                          const selected =
+                            summary.patient.id === receptionPatientId;
+                          const optionLabel =
+                            getReceptionPatientOptionLabel(summary);
 
                           return (
                             <button
@@ -3241,7 +4022,8 @@ function WalkInReceptionDialog({
                                 {optionLabel}
                               </span>
                               <span className="truncate emr-text-metadata text-muted-foreground">
-                                {summary.primaryGuardian?.mobilePhone ?? "보호자 연락처 미등록"}
+                                {summary.primaryGuardian?.mobilePhone ??
+                                  "보호자 연락처 미등록"}
                               </span>
                             </button>
                           );
@@ -3276,7 +4058,9 @@ function WalkInReceptionDialog({
                   className="min-h-[104px] resize-none bg-card"
                   placeholder="방문 목적을 자세히 입력해주세요"
                   value={receptionVisitPurpose}
-                  onChange={(event) => setReceptionVisitPurpose(event.target.value)}
+                  onChange={(event) =>
+                    setReceptionVisitPurpose(event.target.value)
+                  }
                 />
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {purposeChips.map((purpose) => {
@@ -3292,7 +4076,7 @@ function WalkInReceptionDialog({
                           "h-7 rounded-full px-2.5 emr-text-metadata font-semibold",
                           selected
                             ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                            : ""
+                            : "",
                         )}
                         aria-pressed={selected}
                         onClick={() => togglePurposeTag(purpose)}
@@ -3344,123 +4128,130 @@ function WalkInReceptionDialog({
                   required
                   helper="다른 진료과로의 접수는 먼저 진료과를 변경한 후 가능합니다."
                 >
-                <Select
-                  value={receptionDepartment}
-                  onValueChange={(value) => {
-                    if (value) setReceptionDepartment(value);
-                  }}
-                >
-                  <SelectTrigger
-                    aria-label="진료과"
-                    size="xl"
-                    className="w-full bg-card"
+                  <Select
+                    value={receptionDepartment}
+                    onValueChange={(value) => {
+                      if (value) setReceptionDepartment(value);
+                    }}
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="영상의학과 · 방사선종양학과">
-                        영상의학과 · 방사선종양학과
-                      </SelectItem>
-                      <SelectItem value="내과">내과</SelectItem>
-                      <SelectItem value="외과">외과</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </RegistrationFormField>
+                    <SelectTrigger
+                      aria-label="진료과"
+                      size="xl"
+                      className="w-full bg-card"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="영상의학과 · 방사선종양학과">
+                          영상의학과 · 방사선종양학과
+                        </SelectItem>
+                        <SelectItem value="내과">내과</SelectItem>
+                        <SelectItem value="외과">외과</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </RegistrationFormField>
 
                 <RegistrationFormField
                   label="담당의"
                   helper="담당의 지정 후 시간을 설정할 수 있습니다."
                 >
-                <Select
-                  value={receptionVeterinarianId}
-                  onValueChange={(value) => {
-                    if (value) setReceptionVeterinarianId(value);
-                  }}
-                >
-                  <SelectTrigger
-                    aria-label="담당의"
-                    size="xl"
-                    className="w-full bg-card"
+                  <Select
+                    value={receptionVeterinarianId}
+                    onValueChange={(value) => {
+                      if (value) setReceptionVeterinarianId(value);
+                    }}
                   >
-                    <CdsActionsSearchIcon
-                      className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-left">
-                      {getReceptionVeterinarianSelectLabel(receptionVeterinarianId)}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value={unassignedVeterinarianValue}>수의사 미지정</SelectItem>
-                      {allVeterinarians.map((veterinarian) => (
-                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
-                          {veterinarian.name}
+                    <SelectTrigger
+                      aria-label="담당의"
+                      size="xl"
+                      className="w-full bg-card"
+                    >
+                      <CdsActionsSearchIcon
+                        className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {getReceptionVeterinarianSelectLabel(
+                          receptionVeterinarianId,
+                        )}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value={unassignedVeterinarianValue}>
+                          수의사 미지정
                         </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </RegistrationFormField>
+                        {allVeterinarians.map((veterinarian) => (
+                          <SelectItem
+                            key={veterinarian.id}
+                            value={veterinarian.id}
+                          >
+                            {veterinarian.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </RegistrationFormField>
               </div>
               <div className="grid grid-cols-3 gap-x-7 gap-y-5">
                 <RegistrationFormField label="접수일">
-                <div className="relative">
-                  <CdsFilesCalendarIcon
-                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-secondary)]"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    aria-label="접수일"
-                    className="h-10 bg-card pl-9"
-                    readOnly
-                    value="26.05.01"
-                  />
-                </div>
-              </RegistrationFormField>
+                  <div className="relative">
+                    <CdsFilesCalendarIcon
+                      className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-secondary)]"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      aria-label="접수일"
+                      className="h-10 bg-card pl-9"
+                      readOnly
+                      value="26.05.01"
+                    />
+                  </div>
+                </RegistrationFormField>
 
                 <RegistrationFormField label="진료시간">
-                <div className="relative">
-                  <CdsFilesClockIcon
-                    className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    aria-label="진료시간"
-                    className="h-10 bg-card pl-9 text-muted-foreground disabled:bg-muted disabled:opacity-100"
-                    disabled
-                    value="진료시간"
-                  />
-                </div>
-              </RegistrationFormField>
+                  <div className="relative">
+                    <CdsFilesClockIcon
+                      className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      aria-label="진료시간"
+                      className="h-10 bg-card pl-9 text-muted-foreground disabled:bg-muted disabled:opacity-100"
+                      disabled
+                      value="진료시간"
+                    />
+                  </div>
+                </RegistrationFormField>
 
                 <RegistrationFormField label="예상시간" required>
-                <Select
-                  value={receptionDuration}
-                  onValueChange={(value) => {
-                    if (value) setReceptionDuration(value);
-                  }}
-                >
-                  <SelectTrigger
-                    aria-label="예상시간"
-                    size="xl"
-                    className="w-full bg-card"
+                  <Select
+                    value={receptionDuration}
+                    onValueChange={(value) => {
+                      if (value) setReceptionDuration(value);
+                    }}
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {receptionDurationOptions.map((duration) => (
-                        <SelectItem key={duration} value={duration}>
-                          {duration}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </RegistrationFormField>
+                    <SelectTrigger
+                      aria-label="예상시간"
+                      size="xl"
+                      className="w-full bg-card"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {receptionDurationOptions.map((duration) => (
+                          <SelectItem key={duration} value={duration}>
+                            {duration}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </RegistrationFormField>
               </div>
               <RegistrationFormField label="접수 메모">
                 <Textarea
@@ -3480,7 +4271,9 @@ function WalkInReceptionDialog({
             <Checkbox
               aria-label="카카오톡 발송"
               checked={sendKakaoMessage}
-              onCheckedChange={(checked) => setSendKakaoMessage(Boolean(checked))}
+              onCheckedChange={(checked) =>
+                setSendKakaoMessage(Boolean(checked))
+              }
             />
             카카오톡 발송
           </label>
@@ -3511,19 +4304,27 @@ function WalkInReceptionDialog({
 function getReceptionDrawerPatientNo(
   activeDrawer: { type: string; id: string },
   draftCheckIns: ReceptionDraftCheckIn[],
-  appointments: Appointment[]
+  appointments: Appointment[],
 ) {
   if (activeDrawer.type === "reception-appointment") {
-    const appointment = appointments.find((item) => item.id === activeDrawer.id);
+    const appointment = appointments.find(
+      (item) => item.id === activeDrawer.id,
+    );
 
-    return appointment ? getMockPatientBundle(appointment.patientId)?.patient.patientNo : undefined;
+    return appointment
+      ? getMockPatientBundle(appointment.patientId)?.patient.patientNo
+      : undefined;
   }
 
   const encounter =
-    draftCheckIns.map((draft) => draft.encounter).find((item) => item.id === activeDrawer.id) ??
+    draftCheckIns
+      .map((draft) => draft.encounter)
+      .find((item) => item.id === activeDrawer.id) ??
     mockEncounters.find((item) => item.id === activeDrawer.id);
 
-  return encounter ? getMockPatientBundle(encounter.patientId)?.patient.patientNo : undefined;
+  return encounter
+    ? getMockPatientBundle(encounter.patientId)?.patient.patientNo
+    : undefined;
 }
 
 function ReceptionDraftTaskDrawer({
@@ -3531,42 +4332,80 @@ function ReceptionDraftTaskDrawer({
 }: {
   selection: ReceptionCalendarDraftSelection;
 }) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
-  const setCalendarDraftSelection = useReceptionStore(
-    (state) => state.setCalendarDraftSelection
+  const applyWalkInCheckIn = useReceptionStore(
+    (state) => state.applyWalkInCheckIn,
   );
-  const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const setCalendarDraftSelection = useReceptionStore(
+    (state) => state.setCalendarDraftSelection,
+  );
+  const selectedPatientId = useReceptionStore(
+    (state) => state.selectedPatientId,
+  );
+  const authSession = useMockAuthStore((state) => state.session);
   const [department, setDepartment] = useState(defaultWalkInDepartment);
   const [duration, setDuration] = useState(`${selection.durationMinutes}분`);
   const [memo, setMemo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [veterinarianId, setVeterinarianId] = useState(
-    selection.primaryVeterinarianId ?? unassignedVeterinarianValue
+    selection.primaryVeterinarianId ?? unassignedVeterinarianValue,
   );
   const [visitPurpose, setVisitPurpose] = useState("현장 접수");
   const bundle = getMockPatientBundle(selectedPatientId);
   const patient = bundle?.patient;
   const guardian = bundle?.primaryGuardian;
   const startTime = getShortTime(selection.plannedStartAt);
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : (params.workspaceId?.[0] ?? "clair-demo");
   const close = () => {
+    if (submitting) return;
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
-  const create = () => {
-    if (!patient) return;
+  const create = async () => {
+    if (!patient || submitting) return;
 
-    createWalkInCheckIn({
+    const durationMinutes = getDurationMinutesFromLabel(duration);
+    const input: ReceptionWalkInEncounterInput = {
       department,
-      durationMinutes: getDurationMinutesFromLabel(duration),
+      durationMinutes,
       guardianId: guardian?.id,
-      guardianMobilePhone: guardian?.mobilePhone,
       memo,
       patientId: patient.id,
+      primaryVeterinarianId:
+        veterinarianId === unassignedVeterinarianValue
+          ? undefined
+          : veterinarianId,
+      visitPurpose,
+    };
+
+    setSubmitting(true);
+    const result = await submitWalkInEncounter({
+      actorRole: authSession?.role,
+      input,
+      workspaceId,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(getWalkInRouteErrorMessage(result));
+      return;
+    }
+
+    applyWalkInCheckIn({
+      ...input,
+      guardianMobilePhone: guardian?.mobilePhone,
       patientName: patient.name,
       plannedStartAt: selection.plannedStartAt,
-      primaryVeterinarianId:
-        veterinarianId === unassignedVeterinarianValue ? undefined : veterinarianId,
-      visitPurpose,
+      walkIn: result.walkIn,
+    });
+    saveChartLiveEncounterHandoff({
+      encounter: result.walkIn.encounter,
+      patient,
+      primaryGuardian: guardian,
     });
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
@@ -3581,24 +4420,32 @@ function ReceptionDraftTaskDrawer({
   }
 
   return (
-    <div className="flex h-[calc(100%-48px)] flex-col" data-testid="reception-draft-task-drawer">
+    <div
+      className="flex h-[calc(100%-48px)] flex-col"
+      data-testid="reception-draft-task-drawer"
+    >
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
           <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="emr-text-body font-semibold">접수 task 생성</div>
+                <div className="emr-text-body font-semibold">
+                  접수 task 생성
+                </div>
                 <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
-                  {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · {startTime} 시작
+                  {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} ·{" "}
+                  {startTime} 시작
                 </div>
               </div>
-              <CalendarTaskBadge label="접수 예정" tone="appointment" />
             </div>
           </section>
 
           <section className="grid grid-cols-2 gap-3">
             <ReceptionFormField label="진료과" required>
-              <Select value={department} onValueChange={(value) => value && setDepartment(value)}>
+              <Select
+                value={department}
+                onValueChange={(value) => value && setDepartment(value)}
+              >
                 <SelectTrigger aria-label="진료과" className="w-full bg-card">
                   <SelectValue />
                 </SelectTrigger>
@@ -3625,7 +4472,9 @@ function ReceptionDraftTaskDrawer({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value={unassignedVeterinarianValue}>수의사 미지정</SelectItem>
+                    <SelectItem value={unassignedVeterinarianValue}>
+                      수의사 미지정
+                    </SelectItem>
                     {allVeterinarians.map((veterinarian) => (
                       <SelectItem key={veterinarian.id} value={veterinarian.id}>
                         {veterinarian.name}
@@ -3657,13 +4506,18 @@ function ReceptionDraftTaskDrawer({
               aria-label="방문 목적"
               value={visitPurpose}
               className="h-9 bg-card"
-              onValueChange={setVisitPurpose}
+              onChange={(event) => setVisitPurpose(event.target.value)}
             />
           </ReceptionFormField>
 
           <section className="grid grid-cols-3 gap-3">
             <ReceptionFormField label="접수일">
-              <Input aria-label="접수일" value="26.05.01" readOnly className="h-9 bg-card" />
+              <Input
+                aria-label="접수일"
+                value="26.05.01"
+                readOnly
+                className="h-9 bg-card"
+              />
             </ReceptionFormField>
             <ReceptionFormField label="진료시작시간">
               <Input
@@ -3674,7 +4528,10 @@ function ReceptionDraftTaskDrawer({
               />
             </ReceptionFormField>
             <ReceptionFormField label="소요시간" required>
-              <Select value={duration} onValueChange={(value) => value && setDuration(value)}>
+              <Select
+                value={duration}
+                onValueChange={(value) => value && setDuration(value)}
+              >
                 <SelectTrigger aria-label="소요시간" className="w-full bg-card">
                   <SelectValue />
                 </SelectTrigger>
@@ -3703,13 +4560,12 @@ function ReceptionDraftTaskDrawer({
         </div>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 justify-between gap-2 border-t bg-card p-4">
-        <Button
-          variant="outline"
-          onClick={close}
-        >
+        <Button variant="outline" onClick={close} disabled={submitting}>
           취소
         </Button>
-        <Button onClick={create}>생성</Button>
+        <Button onClick={create} disabled={submitting}>
+          {submitting ? "저장 중" : "생성"}
+        </Button>
       </div>
     </div>
   );
@@ -3721,17 +4577,30 @@ export function ReceptionDrawer() {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
-  const calendarDraftSelection = useReceptionStore((state) => state.calendarDraftSelection);
-  const applyAppointmentCheckIn = useReceptionStore((state) => state.applyAppointmentCheckIn);
-  const createWalkInCheckIn = useReceptionStore((state) => state.createWalkInCheckIn);
-  const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
-  const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const calendarDraftSelection = useReceptionStore(
+    (state) => state.calendarDraftSelection,
+  );
+  const applyAppointmentCheckIn = useReceptionStore(
+    (state) => state.applyAppointmentCheckIn,
+  );
+  const createWalkInCheckIn = useReceptionStore(
+    (state) => state.createWalkInCheckIn,
+  );
+  const selectedEncounterId = useReceptionStore(
+    (state) => state.selectedEncounterId,
+  );
+  const selectedPatientId = useReceptionStore(
+    (state) => state.selectedPatientId,
+  );
   const authSession = useMockAuthStore((state) => state.session);
-  const appointments = useMemo(() => getTodayAppointments(draftCheckIns), [draftCheckIns]);
+  const appointments = useMemo(
+    () => getTodayAppointments(draftCheckIns),
+    [draftCheckIns],
+  );
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : params.workspaceId?.[0] ?? "clair-demo";
+      : (params.workspaceId?.[0] ?? "clair-demo");
   useEffect(() => {
     if (activeDrawer?.type === "reception-form") {
       setActiveDrawer(null);
@@ -3739,9 +4608,17 @@ export function ReceptionDrawer() {
     }
 
     if (!activeDrawer || activeDrawer.subtitle) return;
-    if (activeDrawer.type !== "reception-encounter" && activeDrawer.type !== "reception-appointment") return;
+    if (
+      activeDrawer.type !== "reception-encounter" &&
+      activeDrawer.type !== "reception-appointment"
+    )
+      return;
 
-    const subtitle = getReceptionDrawerPatientNo(activeDrawer, draftCheckIns, appointments);
+    const subtitle = getReceptionDrawerPatientNo(
+      activeDrawer,
+      draftCheckIns,
+      appointments,
+    );
 
     if (subtitle) {
       setActiveDrawer({ ...activeDrawer, subtitle });
@@ -3770,29 +4647,39 @@ export function ReceptionDrawer() {
       : undefined;
   const selectedDrawerEncounter =
     activeDrawer?.type === "reception-encounter"
-      ? [...draftCheckIns.map((draft) => draft.encounter), ...mockEncounters].find(
-          (encounter) => encounter.id === activeDrawer.id
-        )
+      ? [
+          ...draftCheckIns.map((draft) => draft.encounter),
+          ...mockEncounters,
+        ].find((encounter) => encounter.id === activeDrawer.id)
       : undefined;
   const patientId =
     selectedAppointment?.patientId ??
     selectedDrawerEncounter?.patientId ??
-    (activeDrawer?.type === "reception-patient" ? activeDrawer.id : selectedPatientId);
-  const bundle = getMockPatientBundle(patientId) ?? getMockPatientBundle(selectedPatientId);
+    (activeDrawer?.type === "reception-patient"
+      ? activeDrawer.id
+      : selectedPatientId);
+  const bundle =
+    getMockPatientBundle(patientId) ?? getMockPatientBundle(selectedPatientId);
   const patient = bundle?.patient;
   const guardian = bundle?.primaryGuardian;
   const recentEncounters = bundle
     ? [...bundle.encounters].sort((a, b) =>
-        (b.checkedInAt ?? b.createdAt).localeCompare(a.checkedInAt ?? a.createdAt)
+        (b.checkedInAt ?? b.createdAt).localeCompare(
+          a.checkedInAt ?? a.createdAt,
+        ),
       )
     : [];
-  const selectedEncounter =
-    selectedAppointment
-      ? recentEncounters.find((encounter) => encounter.appointmentId === selectedAppointment.id)
-      : selectedDrawerEncounter
-        ? recentEncounters.find((encounter) => encounter.id === selectedDrawerEncounter.id) ??
-          selectedDrawerEncounter
-      : recentEncounters.find((encounter) => encounter.id === selectedEncounterId) ?? recentEncounters[0];
+  const selectedEncounter = selectedAppointment
+    ? recentEncounters.find(
+        (encounter) => encounter.appointmentId === selectedAppointment.id,
+      )
+    : selectedDrawerEncounter
+      ? (recentEncounters.find(
+          (encounter) => encounter.id === selectedDrawerEncounter.id,
+        ) ?? selectedDrawerEncounter)
+      : (recentEncounters.find(
+          (encounter) => encounter.id === selectedEncounterId,
+        ) ?? recentEncounters[0]);
   const visitReason = getReceptionVisitReason({
     appointment: selectedAppointment,
     encounter: selectedEncounter,
@@ -3808,11 +4695,11 @@ export function ReceptionDrawer() {
     defaultVeterinarian?.name ??
     "담당의 미지정";
   const receptionDate = getShortDate(
-    selectedEncounter?.checkedInAt ?? selectedAppointment?.scheduledStartAt
+    selectedEncounter?.checkedInAt ?? selectedAppointment?.scheduledStartAt,
   );
   const handleAppointmentCheckIn = async (
     appointment: Appointment,
-    checkIn: ReceptionAppointmentCheckInRecord
+    checkIn: ReceptionAppointmentCheckInRecord,
   ) => {
     applyAppointmentCheckIn({ appointment, checkIn });
     setActiveDrawer(null);
@@ -3837,7 +4724,8 @@ export function ReceptionDrawer() {
                   {selectedAppointment ? "예약 상세" : "접수 상세"}
                 </div>
                 <div className="mt-1 emr-text-metadata text-muted-foreground">
-                  {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · {visitSummary}
+                  {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} ·{" "}
+                  {visitSummary}
                 </div>
                 <div className="mt-2 emr-text-dense font-medium text-foreground">
                   오늘 내원: {visitReason}
@@ -3845,7 +4733,10 @@ export function ReceptionDrawer() {
               </div>
               {selectedAppointment ? (
                 <ReceptionStatusBadge
-                  label={getStatusLabel("appointment", selectedAppointment.status)}
+                  label={getStatusLabel(
+                    "appointment",
+                    selectedAppointment.status,
+                  )}
                   tone={getAppointmentTone(selectedAppointment.status)}
                 />
               ) : null}
@@ -3854,10 +4745,21 @@ export function ReceptionDrawer() {
 
           <section className="grid grid-cols-2 gap-3">
             <ReceptionFormField label="진료과" required>
-              <Input value={selectedEncounter?.visitPurpose ?? "영상의학과 · 방사선종양학과"} readOnly className="h-9 bg-card" />
+              <Input
+                value={
+                  selectedEncounter?.visitPurpose ??
+                  "영상의학과 · 방사선종양학과"
+                }
+                readOnly
+                className="h-9 bg-card"
+              />
             </ReceptionFormField>
             <ReceptionFormField label="담당의">
-              <Input value={veterinarianName} readOnly className="h-9 bg-card" />
+              <Input
+                value={veterinarianName}
+                readOnly
+                className="h-9 bg-card"
+              />
             </ReceptionFormField>
           </section>
 
@@ -3870,7 +4772,11 @@ export function ReceptionDrawer() {
               />
             </ReceptionFormField>
             <ReceptionFormField label="동물 체중">
-              <Input value="0.00 kg" readOnly className="h-9 bg-card text-right" />
+              <Input
+                value="0.00 kg"
+                readOnly
+                className="h-9 bg-card text-right"
+              />
             </ReceptionFormField>
             <ReceptionFormField label="접수구분">
               <div className="flex h-9 items-center rounded-lg border border-input px-2.5 emr-text-dense">
@@ -3880,11 +4786,7 @@ export function ReceptionDrawer() {
           </section>
 
           <ReceptionFormField label="방문 목적" required>
-            <Input
-              value={visitReason}
-              readOnly
-              className="h-9 bg-card"
-            />
+            <Input value={visitReason} readOnly className="h-9 bg-card" />
           </ReceptionFormField>
 
           <section className="grid grid-cols-3 gap-3">
@@ -3901,13 +4803,18 @@ export function ReceptionDrawer() {
                       : "진료시간"
                 }
                 disabled={!selectedAppointment && !selectedEncounter?.startedAt}
-                readOnly={Boolean(selectedAppointment || selectedEncounter?.startedAt)}
+                readOnly={Boolean(
+                  selectedAppointment || selectedEncounter?.startedAt,
+                )}
                 className="h-9 bg-card disabled:bg-input/50"
               />
             </ReceptionFormField>
             <ReceptionFormField label="소요시간" required>
               <Input
-                value={selectedAppointment ? getAppointmentDurationLabel(selectedAppointment) : "30분"}
+                value={getReceptionDrawerDurationLabel({
+                  appointment: selectedAppointment,
+                  encounter: selectedEncounter,
+                })}
                 readOnly
                 className="h-9 bg-card"
               />
@@ -3938,11 +4845,13 @@ export function ReceptionDrawer() {
                     primaryGuardian: guardian,
                   });
                   setActiveDrawer(null);
-                  router.push(buildChartRoute({
-                    encounterId: selectedEncounter.id,
-                    patientId: patient.id,
-                    workspaceId,
-                  }));
+                  router.push(
+                    buildChartRoute({
+                      encounterId: selectedEncounter.id,
+                      patientId: patient.id,
+                      workspaceId,
+                    }),
+                  );
                 }}
               >
                 차트보기
@@ -3963,13 +4872,29 @@ export function ReceptionDrawer() {
                   key={encounter.id}
                   className="grid grid-cols-[86px_86px_84px_minmax(120px,1fr)_72px_72px_64px] border-t px-3 py-2 emr-text-micro"
                 >
-                  <span>{getShortDate(encounter.checkedInAt ?? encounter.createdAt)}</span>
-                  <span>{encounter.completedAt ? getShortDate(encounter.completedAt) : "-"}</span>
+                  <span>
+                    {getShortDate(encounter.checkedInAt ?? encounter.createdAt)}
+                  </span>
+                  <span>
+                    {encounter.completedAt
+                      ? getShortDate(encounter.completedAt)
+                      : "-"}
+                  </span>
                   <span className="truncate">호흡기계</span>
-                  <span className="truncate">{encounter.chiefComplaint ?? encounter.visitPurpose ?? "내원"}</span>
-                  <span>{encounter.status === "completed" ? "치료완료" : "진행중"}</span>
-                  <span>{encounter.status === "completed" ? "확정진단" : "가진단"}</span>
-                  <span className="truncate">{defaultVeterinarian?.name ?? "수의사"}</span>
+                  <span className="truncate">
+                    {encounter.chiefComplaint ??
+                      encounter.visitPurpose ??
+                      "내원"}
+                  </span>
+                  <span>
+                    {encounter.status === "completed" ? "치료완료" : "진행중"}
+                  </span>
+                  <span>
+                    {encounter.status === "completed" ? "확정진단" : "가진단"}
+                  </span>
+                  <span className="truncate">
+                    {defaultVeterinarian?.name ?? "수의사"}
+                  </span>
                 </div>
               ))}
             </div>
@@ -3993,7 +4918,10 @@ export function ReceptionDrawer() {
                   return;
                 }
 
-                void handleAppointmentCheckIn(selectedAppointment, result.checkIn);
+                void handleAppointmentCheckIn(
+                  selectedAppointment,
+                  result.checkIn,
+                );
               });
               return;
             }
@@ -4006,7 +4934,9 @@ export function ReceptionDrawer() {
             });
             setActiveDrawer(null);
           }}
-          disabled={Boolean(selectedAppointment && selectedAppointment.status !== "confirmed")}
+          disabled={Boolean(
+            selectedAppointment && selectedAppointment.status !== "confirmed",
+          )}
         >
           {selectedAppointment ? "접수 처리" : "생성"}
         </Button>

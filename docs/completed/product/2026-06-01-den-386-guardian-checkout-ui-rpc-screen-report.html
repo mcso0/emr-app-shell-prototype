@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-386 guardian checkout UI RPC screen report</title>
+    <style>
+      body {
+        background: #f6f8fb;
+        color: #17202c;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.65;
+        margin: 0;
+        padding: 32px;
+      }
+      main {
+        background: #fff;
+        border: 1px solid #d7dee8;
+        border-radius: 12px;
+        margin: 0 auto;
+        max-width: 980px;
+        padding: 32px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      code {
+        background: #eef2f7;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      .ok {
+        color: #137333;
+        font-weight: 700;
+      }
+      .warn {
+        color: #9a5b00;
+        font-weight: 700;
+      }
+      .muted {
+        color: #5d6b7c;
+      }
+      img {
+        border: 1px solid #d7dee8;
+        border-radius: 8px;
+        display: block;
+        margin-top: 12px;
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="muted">2026-06-01 · CLAiR EMR Billing Data Model & RPC Hardening · DEN-386</p>
+      <h1>Guardian checkout UI-to-RPC 연결 결과</h1>
+      <p>
+        수납 화면이 새 <code>guardian-checkout</code> API/RPC 경로를 실제로 호출하도록 연결했다.
+        기존 mock/store 화면은 유지하되, 보호자 ledger 조회와 checkout 합산 금액은 API가 성공하면
+        server-backed 결과를 우선 사용한다.
+      </p>
+
+      <h2>결론</h2>
+      <ul>
+        <li><span class="ok">통과</span>: 로컬 실제 수납 화면에서 <code>guardian-checkout</code> GET과 POST가 200으로 호출됐다.</li>
+        <li><span class="ok">통과</span>: 수납대기 121,500원 + 미납 58,000원을 합산하고 완료 79,000원 + 취소 33,000원은 제외해 최종 결제금액 179,500원을 유지했다.</li>
+        <li><span class="ok">통과</span>: 완료/취소 상태 변경 CTA와 우측 수납 완료/미납 CTA는 새 audited transition route를 먼저 시도하고, 실패 시 기존 mock/payment-status fallback을 보존한다.</li>
+        <li><span class="warn">제한</span>: fixed staging 웹 화면은 여전히 Vercel Deployment Protection 접근이 필요하다. 이번 작업은 production deploy, real data import, remote DB 변경 없이 로컬 화면과 API 경로를 검증했다.</li>
+      </ul>
+
+      <h2>변경 범위</h2>
+      <ul>
+        <li><code>src/features/billing/module.tsx</code>: guardian ledger GET, checkout prepare POST, status transition PATCH helper와 화면 연결을 추가했다.</li>
+        <li><code>tests/billing-guardian-checkout-hardening-server.spec.ts</code>: 실제 billing screen이 <code>guardian-checkout</code> route를 호출하고 합산 제외 금액을 유지하는 Playwright regression을 추가했다.</li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li><code>npx eslint src/features/billing/module.tsx tests/billing-guardian-checkout-hardening-server.spec.ts</code> 통과.</li>
+        <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+        <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/billing-guardian-checkout-hardening-server.spec.ts --reporter=line</code> 통과: 8개.</li>
+      </ul>
+
+      <h2>화면 증거</h2>
+      <p class="muted">
+        로컬 실제 화면에서 미납, 완료, 취소 이력을 선택한 뒤 checkout 합산 제외 안내와 179,500원 최종 결제금액을 확인했다.
+      </p>
+      <img src="./evidence/2026-06-01-den-386-guardian-checkout-ui-rpc-screen.png" alt="Guardian checkout UI using RPC-backed totals" />
+
+      <h2>남은 게이트</h2>
+      <p>
+        fixed staging 화면까지 닫으려면 보호된 Vercel deployment에 접근 가능한 preview/share URL 또는 인증 세션이 필요하다.
+        그 전까지는 fixed staging DB/RPC replay 통과와 local actual screen UI-to-RPC 검증 통과를 분리해서 기록한다.
+      </p>
+      <ul>
+        <li><span class="warn">2026-06-01 추가 시도</span>: 승욱이 fixed staging Vercel protected deployment preview/share access 생성을 승인한 뒤 다시 실행했지만, Vercel connector의 share URL 생성은 <code>403 Forbidden</code>으로 실패했다.</li>
+        <li>Playwright 직접 접근도 HTTP <code>401</code> 이후 Vercel login으로 redirect됐고, CLAiR 앱 로그인 화면에는 도달하지 못했다. 따라서 fixed staging screen replay는 여전히 Vercel 계정/토큰 권한 또는 수동 share URL이 필요하다.</li>
+      </ul>
+      <img src="./evidence/2026-06-01-den-386-fixed-staging-vercel-protection-blocked.png" alt="Fixed staging blocked by Vercel login" />
+
+      <h2>Fixed staging browser session retry</h2>
+      <ul>
+        <li><span class="ok">접근 성공</span>: 승욱이 열어둔 Vercel dashboard 로그인 세션을 사용하는 in-app browser에서는 fixed staging alias가 Vercel login을 통과했고 CLAiR 앱 로그인 화면에 도달했다.</li>
+        <li><span class="ok">화면 UX 확인</span>: fixed staging 수납 화면에서 수납대기, 미납, 완료, 취소 이력 4건을 선택했고 최종 결제금액 <code>179,500원</code>, 완료/취소 2건 합산 제외 안내를 확인했다.</li>
+        <li><span class="warn">UI-to-RPC 미검증</span>: 같은 fixed staging deployment에서 <code>/api/workspaces/clair-demo/billing/guardian-checkout</code>를 직접 열면 <code>404</code>가 반환된다. 따라서 이 fixed staging deployment에는 아직 DEN-386의 <code>guardian-checkout</code> route/UI 연결 코드가 배포되지 않은 상태로 판단한다.</li>
+        <li>다음 fixed staging UI-to-RPC 검증에는 production이 아닌 staging/preview 배포 또는 fixed staging alias가 DEN-386 코드가 포함된 deployment를 가리키도록 하는 별도 승인이 필요하다.</li>
+      </ul>
+      <img src="./evidence/2026-06-01-den-386-fixed-staging-screen-accessible-selected.png" alt="Fixed staging billing screen showing selected checkout exclusion total" />
+    </main>
+  </body>
+</html>

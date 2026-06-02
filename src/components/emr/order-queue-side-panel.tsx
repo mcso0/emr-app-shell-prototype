@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClockIcon } from "@/components/icons";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -15,19 +14,16 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
-import {
-  EmrSidePanelCard,
-  EmrSidePanelCardAction,
-  EmrSidePanelIdentityLine,
-  EmrSidePanelMetaBadge,
-  EmrSidePanelStatusBadge,
-  EmrSidePanelTypeBadge,
-} from "@/components/emr/side-panel-card";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import {
   getEmrSidePanelStatusIconState,
   getEmrSidePanelStatusTitle,
 } from "@/components/emr/side-panel-status-title";
+import {
+  EmrTaskQueueCard,
+  getTaskQueueEventKindFromStatus,
+  type EmrTaskQueueCardItem,
+} from "@/components/emr/task-queue-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type {
   OrderQueueItem,
@@ -48,6 +44,7 @@ type EmrOrderQueueSidePanelProps = {
   filterAriaLabel?: string;
   filterItems?: OrderQueueFilterItem[];
   getFilterValue?: (item: OrderQueueItem) => string;
+  getTaskCardItem?: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   listLabel?: string;
   onCollapse?: () => void;
   onSelectItem?: (itemId: string) => void;
@@ -70,6 +67,23 @@ const createFallbackStatus = (statusId: string, index: number): OrderQueueStatus
   sortOrder: 1000 + index,
 });
 
+function getDefaultTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
+  return {
+    actionAriaLabel: `${item.patientName} ${item.orderName} 더보기`,
+    actionTestId: `order-queue-item-action-${item.id}`,
+    assigneeName: item.assigneeName,
+    eventActorName: item.requesterName,
+    eventKind: getTaskQueueEventKindFromStatus(item.statusId),
+    eventTime: item.time,
+    guardianName: item.guardianName,
+    patientName: item.patientName,
+    receptionType: item.receptionType,
+    secondLineBadgeLabel: item.orderType,
+    secondLineText: item.orderName,
+    testId: `order-queue-item-${item.id}`,
+  };
+}
+
 function getResolvedStatuses(
   statuses: OrderQueueStatusDefinition[],
   items: OrderQueueItem[]
@@ -89,6 +103,7 @@ export function EmrOrderQueueSidePanel({
   filterAriaLabel = "오더 유형 필터",
   filterItems = orderQueueFilterItems,
   getFilterValue = (item) => item.orderTypeCategory,
+  getTaskCardItem = getDefaultTaskCardItem,
   items,
   listLabel = "전체 오더",
   onCollapse,
@@ -168,6 +183,7 @@ export function EmrOrderQueueSidePanel({
             <OrderQueueGroup
               key={status.id}
               collapsed={collapsed}
+              getTaskCardItem={getTaskCardItem}
               items={groupItems}
               onSelectItem={onSelectItem}
               onToggle={() => toggleStatus(status.id)}
@@ -188,8 +204,10 @@ function OrderQueueGroup({
   onToggle,
   selectedItemId,
   status,
+  getTaskCardItem,
 }: {
   collapsed: boolean;
+  getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   items: OrderQueueItem[];
   onSelectItem?: (itemId: string) => void;
   onToggle: () => void;
@@ -218,9 +236,9 @@ function OrderQueueGroup({
       {items.map((item) => (
         <OrderQueueCard
           key={item.id}
-          item={item}
           onSelect={() => onSelectItem?.(item.id)}
           selected={selectedItemId === item.id}
+          taskCardItem={getTaskCardItem(item)}
         />
       ))}
     </EmrSidePanelCollapsibleGroup>
@@ -228,53 +246,19 @@ function OrderQueueGroup({
 }
 
 function OrderQueueCard({
-  item,
   onSelect,
   selected,
+  taskCardItem,
 }: {
-  item: OrderQueueItem;
   onSelect: () => void;
   selected: boolean;
+  taskCardItem: EmrTaskQueueCardItem;
 }) {
-  const assigneeMetaValue = item.assigneeName ?? item.requesterName;
-  const requesterDuplicated = item.assigneeName === item.requesterName;
-
   return (
-    <EmrSidePanelCard
-      selectionVariant="modulePanel"
+    <EmrTaskQueueCard
+      item={taskCardItem}
       selected={selected}
-      testId={`order-queue-item-${item.id}`}
       onSelect={onSelect}
-    >
-      <EmrSidePanelIdentityLine
-        patientName={item.patientName}
-        guardianName={item.guardianName}
-        typeBadge={<EmrSidePanelTypeBadge label={item.receptionType} />}
-        action={
-          <EmrSidePanelCardAction
-            ariaLabel={`${item.patientName} ${item.orderName} 더보기`}
-            testId={`order-queue-item-action-${item.id}`}
-          />
-        }
-      />
-      <div className="emr-text-metadata flex h-6 min-w-0 items-baseline gap-[var(--clair-spacing-4)] font-medium text-[var(--emr-sidepanel-task-card-label-text)]">
-        <span className="shrink-0 rounded-[var(--clair-radius-atomic-6)] bg-transparent px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)]">{item.orderType}</span>
-        <span className="min-w-0 flex-1 truncate">{item.orderName}</span>
-      </div>
-      <div className="flex h-6 min-w-0 items-center gap-[var(--clair-spacing-6)] overflow-hidden">
-        <EmrSidePanelStatusBadge
-          icon={<ClockIcon aria-hidden="true" />}
-          maxWidthClassName="max-w-[144px]"
-        >
-          {`${item.time} ${requesterDuplicated ? assigneeMetaValue : item.requesterName} 요청`}
-        </EmrSidePanelStatusBadge>
-        <EmrSidePanelMetaBadge
-          icon={<ClockIcon aria-hidden="true" />}
-          label="담당"
-          maxWidthClassName="max-w-[84px]"
-          value={item.assigneeName ?? "미지정"}
-        />
-      </div>
-    </EmrSidePanelCard>
+    />
   );
 }

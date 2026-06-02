@@ -9,6 +9,7 @@ export type BillingInvoiceStatusTransitionTarget = "waiting" | "unpaid" | "paid"
 
 type BillingStore = {
   combinedInvoiceIds: EmrId[];
+  invoiceAssignees: Record<EmrId, string | undefined>;
   filter: BillingFilter;
   invoiceLines: InvoiceLine[];
   invoices: Invoice[];
@@ -16,6 +17,7 @@ type BillingStore = {
   payments: Payment[];
   selectedInvoiceId: EmrId;
   selectedInvoiceIds: EmrId[];
+  assignInvoice: (invoiceId: EmrId, assigneeName: string) => void;
   applyInvoiceSnapshot: (invoice: Invoice, invoiceLines: InvoiceLine[]) => void;
   applyPaymentStatusSnapshot: (invoice: Invoice, payments: Payment[]) => void;
   issueSelectedInvoice: () => void;
@@ -26,6 +28,7 @@ type BillingStore = {
   setPaymentMethod: (paymentMethod: PaymentMethod) => void;
   setCombinedInvoices: () => void;
   clearCombinedInvoices: () => void;
+  clearInvoiceAssignee: (invoiceId: EmrId) => void;
   transitionInvoiceStatus: (invoiceId: EmrId, target: BillingInvoiceStatusTransitionTarget) => void;
   toggleInvoiceSelection: (invoiceId: EmrId) => void;
   updateInvoiceLineQuantity: (invoiceLineId: EmrId, quantity: number) => void;
@@ -47,6 +50,7 @@ const recalculateInvoice = (invoice: Invoice, invoiceLines: InvoiceLine[]) => {
 
 export const useBillingStore = create<BillingStore>()((set, get) => ({
   combinedInvoiceIds: [],
+  invoiceAssignees: {},
   filter: "waiting",
   invoiceLines: mockInvoiceLines.map((line) => ({ ...line })),
   invoices: mockInvoices.map((invoice) => ({ ...invoice })),
@@ -54,6 +58,13 @@ export const useBillingStore = create<BillingStore>()((set, get) => ({
   payments: mockPayments.map((payment) => ({ ...payment })),
   selectedInvoiceId: "invoice-coco-260501",
   selectedInvoiceIds: ["invoice-coco-260501"],
+  assignInvoice: (invoiceId, assigneeName) =>
+    set((state) => ({
+      invoiceAssignees: {
+        ...state.invoiceAssignees,
+        [invoiceId]: assigneeName,
+      },
+    })),
   applyInvoiceSnapshot: (invoice, invoiceLines) =>
     set((state) => ({
       invoiceLines: [
@@ -148,6 +159,13 @@ export const useBillingStore = create<BillingStore>()((set, get) => ({
     set({ combinedInvoiceIds: selectedInvoiceIds });
   },
   clearCombinedInvoices: () => set({ combinedInvoiceIds: [] }),
+  clearInvoiceAssignee: (invoiceId) =>
+    set((state) => {
+      const invoiceAssignees = { ...state.invoiceAssignees };
+      delete invoiceAssignees[invoiceId];
+
+      return { invoiceAssignees };
+    }),
   transitionInvoiceStatus: (invoiceId, target) =>
     set((state) => {
       const invoice = state.invoices.find((item) => item.id === invoiceId);

@@ -12,9 +12,12 @@ test("dispensing treatment workspace reads fulfillment queue and sends status mu
   await expect(page.getByRole("heading", { name: /조제 지시서|처치 지시서/ })).toBeVisible();
   await fulfillmentQueueRead;
   await page.waitForLoadState("networkidle");
-  await page
-    .getByTestId("order-queue-item-live-fulfillment-fulfill-order-coco-fluid")
-    .click();
+  const fulfillmentQueueItem = page.getByTestId(
+    "order-queue-item-live-fulfillment-fulfill-order-coco-fluid",
+  );
+  await expect(fulfillmentQueueItem).toContainText(/이수지 (요청|재요청)/);
+  await expect(fulfillmentQueueItem).not.toContainText("담당 수의사 요청");
+  await fulfillmentQueueItem.click();
 
   const instructionStatus = page.getByTestId("instruction-status-label");
   const claimButton = page.getByRole("button", { name: "담당하기" }).first();

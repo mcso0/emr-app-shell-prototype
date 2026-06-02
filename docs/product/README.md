@@ -8,6 +8,8 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Service operating map: `docs/product/service/clair-emr-saas-operating-map.md`
 - Product MVP scope: `docs/product/roadmap/product-mvp-scope.md`
 - PRD: `docs/product/prd/clair-emr-saas-prd.md`
+- Global notification center v0: `docs/product/features/notifications/global-notification-center-v0-contract.md`
+- Global notification event policy: `docs/product/features/notifications/global-notification-center-v0-event-policy.md`
 - Outpatient workflow state model: `docs/product/domain/outpatient-workflow-state-model.md`
 - EMR domain entity map: `docs/product/domain/emr-domain-entity-map.md`
 - Workspace auth and permissions: `docs/product/domain/workspace-auth-permissions.md`
@@ -34,6 +36,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - DB-related product planning belongs in `docs/product/domain/` when it describes user-facing concepts, relationships, or data requirements.
 - Actual schema, ERD, migrations, RLS, indexes, and persistence contracts belong in `docs/engineering/data-model/`.
 - The legacy all-in-one MVP feature spec at `docs/product/features/legacy-mvp-feature-spec.md` is retained for reference; prefer current source docs above for new planning.
+- Global staff in-app notification behavior belongs under `docs/product/features/notifications/`; external guardian messaging and provider delivery remain separate scopes.
 - Use synthetic examples only. Do not introduce real patient, guardian, hospital, payment, or identity data.
 
 ## Adding Product Docs

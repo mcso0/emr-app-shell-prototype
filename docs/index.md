@@ -29,6 +29,8 @@ Use detailed history, completed reports, and archived plans only when the active
 | Product target and status | [MVP Current Status](engineering/current-status.md) |
 | Product operating map | [SaaS Operating Map](product/service/clair-emr-saas-operating-map.md) |
 | Product MVP scope | [Product MVP Scope](product/roadmap/product-mvp-scope.md) |
+| Global notification center v0 | [Global Notification Center v0 Contract](product/features/notifications/global-notification-center-v0-contract.md) |
+| Global notification event policy | [Global Notification Center v0 Event Policy](product/features/notifications/global-notification-center-v0-event-policy.md) |
 | Outpatient workflow states | [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md) |
 | Domain entity map | [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md) |
 | Role/permission source | [Role Permission Source Map](product/domain/role-permission-source-map.md) |

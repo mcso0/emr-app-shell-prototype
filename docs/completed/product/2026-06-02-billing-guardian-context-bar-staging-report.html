@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>수납 보호자 정보바 구현 및 스테이징 배포 보고</title>
+    <style>
+      body {
+        margin: 0;
+        background: #fafafa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 8px;
+        font-size: 17px;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        border-radius: 4px;
+        background: #f1f5f9;
+        padding: 2px 5px;
+      }
+      .summary {
+        color: #475569;
+      }
+      .pass {
+        color: #166534;
+        font-weight: 700;
+      }
+      .warn {
+        color: #92400e;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>수납 보호자 정보바 구현 및 스테이징 배포 보고</h1>
+      <p class="summary">
+        수납 화면 상단 보호자 정보바를 보호자 중심 응대 정보로 재정리하고,
+        수납 요약 버튼을 페이지 타이틀 우측으로 이동했다. Figma 지정 보호자
+        아이콘을 SVG asset으로 추가했고, 환자 그룹 앞에는 기존 동물 아이콘을
+        배치했다.
+      </p>
+
+      <h2>요청 내용</h2>
+      <ul>
+        <li>수납 정보바에서 수납대기/미납/보호자 메모 정보를 유지한다.</li>
+        <li>정보바 오른쪽의 divider, 수납 번호 표시, 수납대기 뱃지, 수납 요약 버튼을 제거한다.</li>
+        <li>수납 요약 버튼은 페이지 타이틀 오른쪽에 둔다.</li>
+        <li>Figma 보호자 아이콘을 SVG로 프로젝트에 추가해 사용한다.</li>
+        <li>환자 앞에는 동물 아이콘을 추가한다.</li>
+        <li>우측 사이드 패널 헤더 높이를 48px로 맞춘다.</li>
+        <li>보호자 정보바와 우측 사이드 패널 헤더의 하단 border 위치를 1px 오차 없이 맞춘다.</li>
+        <li>수납 요약 토글 버튼의 선택 상태는 파란 accent가 아니라 opacity 계열 토큰으로 표현한다.</li>
+        <li>진료, 임상, 영상, 조제/처치, 수납 화면의 이력 아이콘 버튼 선택 상태도 같은 opacity 계열 토큰으로 통일한다.</li>
+        <li>스테이징 preview 배포까지 완료한다.</li>
+      </ul>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li><code>BillingGuardianContextBar</code>에 보호자 아이콘과 환자 동물 아이콘을 추가했다.</li>
+        <li>정보바의 마지막 액션 영역을 제거해 오른쪽 divider와 invoice 표시가 보이지 않게 했다.</li>
+        <li>보호자 메모 칩은 실제 guardian memo를 우선 표시하고, 메모가 없을 때만 미납 주의/메모 없음으로 fallback한다.</li>
+        <li><code>BillingTitleCard</code>의 우측 actions에 수납 요약 패널 토글 버튼을 배치했다.</li>
+        <li>수납 우측 사이드 패널 헤더를 <code>h-12</code>, 즉 48px 높이로 조정했다.</li>
+        <li>보호자 정보바도 border를 포함한 <code>h-12</code> 박스로 바꿔 우측 패널 헤더와 같은 top/bottom 좌표를 갖게 했다.</li>
+        <li>수납 요약 토글 선택 상태의 border/background를 <code>black-alpha-16</code>/<code>black-alpha-4</code> 토큰으로 변경했다.</li>
+        <li><code>EmrInstructionHistoryToggle</code>과 <code>EmrPatientContextBar</code>의 selected 상태도 같은 opacity 계열 토큰으로 변경해 모듈 공통 이력/패널 토글 버튼에 적용했다.</li>
+        <li>HTML 시안과 캡처 증거도 최신 구조로 갱신했다.</li>
+      </ul>
+
+      <h2>수정 파일</h2>
+      <ul>
+        <li><code>src/features/billing/module.tsx</code></li>
+        <li><code>src/components/emr/instruction-header-stack.tsx</code></li>
+        <li><code>src/components/emr/patient-context-bar.tsx</code></li>
+        <li><code>src/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg</code></li>
+        <li><code>tests/billing.spec.ts</code></li>
+        <li><code>output/billing-guardian-context-bar-proposal.html</code></li>
+        <li><code>output/billing-guardian-context-bar-proposal.png</code></li>
+        <li><code>output/billing-guardian-context-bar-implemented.png</code></li>
+        <li><code>output/billing-context-right-panel-alignment.png</code></li>
+        <li><code>output/billing-summary-toggle-opacity-selected.png</code></li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li class="pass">통과: <code>npx tsc --noEmit</code></li>
+        <li class="pass">통과: 보호자 정보바 전용 Playwright assertion</li>
+        <li class="pass">통과: 우측 사이드 패널 헤더 높이 48px Playwright assertion</li>
+        <li class="pass">통과: 보호자 정보바와 우측 패널 헤더 top/bottom/height 일치 Playwright 측정</li>
+        <li class="pass">통과: 수납 요약 토글 선택 상태 computed style이 opacity 계열 토큰으로 적용됨</li>
+        <li class="pass">통과: 진료/임상/영상/조제·처치/수납 이력 아이콘 버튼 selected computed style이 opacity 계열 토큰으로 적용됨</li>
+        <li class="pass">통과: <code>npm run lint</code> (기존 경고 4건 유지)</li>
+        <li class="pass">통과: <code>npm run build</code></li>
+        <li class="warn">참고: 기존 <code>tests/billing.spec.ts</code> focused run은 queue action opacity 기대값 차이로 앞단에서 실패했다. 보호자 정보바 검증은 별도 Playwright assertion으로 통과했다.</li>
+      </ul>
+
+      <h2>스테이징 배포</h2>
+      <ul>
+        <li class="pass">배포 완료: <code>https://emr-app-shell-prototype-mrwabku0t-mcso0s-projects.vercel.app</code></li>
+        <li>Deployment ID: <code>dpl_Ai1YGB2wBC3vLbZ7zszk89evdJ3V</code></li>
+        <li>Vercel inspect 기준 상태: <code>Ready</code></li>
+        <li class="warn">주의: preview URL은 Vercel Authentication 보호로 일반 curl/MCP fetch에서는 401/403이 반환된다.</li>
+      </ul>
+    </main>
+  </body>
+</html>

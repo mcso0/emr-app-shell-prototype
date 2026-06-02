@@ -61,6 +61,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       ? SHELL_LAYOUT.drawer.largeWidth
       : SHELL_LAYOUT.drawer.defaultWidth;
   const shouldShowShellDrawerHeader = activeDrawer?.type !== "hospital-order";
+  const drawerMotionKey = activeDrawer
+    ? activeDrawer.type === "reception-draft-task"
+      ? activeDrawer.type
+      : `${activeDrawer.type}-${activeDrawer.id}`
+    : undefined;
   const effectiveContentAsideWidth = Math.max(
     contentAsideWidth,
     SHELL_LAYOUT.contentAside.minWidth
@@ -124,12 +129,13 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
         <AnimatePresence>
           {activeDrawer && (CommonProfileDrawer || ModuleDrawer) ? (
             <motion.aside
-              key={`${activeDrawer.type}-${activeDrawer.id}`}
+              key={drawerMotionKey}
               initial={{ x: 480, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 480, opacity: 0 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="absolute bottom-0 right-0 top-0 border-l border-[var(--emr-line-default)] bg-card shadow-2xl"
+              data-testid="workspace-drawer"
               style={{
                 width: `min(100%, ${drawerWidth}px)`,
                 zIndex: SHELL_LAYOUT.drawer.zIndex,

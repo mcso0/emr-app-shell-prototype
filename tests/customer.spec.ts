@@ -8,12 +8,14 @@ test("customer workspace renders animal master list and opens the common patient
   const customerSidePanel = page.getByTestId("customer-side-panel");
   await expect(customerSidePanel).not.toContainText("Customer");
   await customerSidePanel.getByRole("button", { name: "보호자/동물 관리" }).click();
-  await expect(customerSidePanel.getByRole("button", { name: "동물", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("customer-side-panel-patient")).toHaveCount(0);
   await customerSidePanel.getByRole("button", { name: "보호자/동물 관리" }).click();
-  await expect(customerSidePanel.getByRole("button", { name: "동물", exact: true })).toBeVisible();
-  await customerSidePanel.getByRole("button", { name: "스케줄 관리" }).click();
-  await expect(customerSidePanel.getByRole("button", { name: "예약 일정" })).toBeVisible();
-  await customerSidePanel.getByRole("button", { name: "스케줄 관리" }).click();
+  await expect(page.getByTestId("customer-side-panel-patient")).toBeVisible();
+  await expect(page.getByTestId("customer-side-panel-patient")).toContainText("5");
+  await expect(page.getByTestId("customer-side-panel-guardian")).toContainText("5");
+  const scheduleFollowUp = customerSidePanel.getByRole("button", { name: /스케줄 관리/ });
+  await expect(scheduleFollowUp).toBeDisabled();
+  await expect(scheduleFollowUp).toContainText("후속");
   await expect(customerSidePanel.getByRole("button", { name: "예약 일정" })).toHaveCount(0);
   await expect(page.getByTestId("customer-page-header").getByRole("heading", { name: "동물" })).toBeVisible();
   await expect(page.getByTestId("customer-page-header")).not.toContainText("스케줄 관리");
@@ -57,7 +59,7 @@ test("customer workspace renders animal master list and opens the common patient
 test("customer side panel switches to guardians and search filters rows", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
-  await page.getByRole("button", { name: "보호자", exact: true }).click();
+  await page.getByTestId("customer-side-panel-guardian").click();
   await expect(page.getByTestId("customer-page-header").getByRole("heading", { name: "보호자" })).toBeVisible();
   await expect(page.getByTestId("customer-guardian-table")).toBeVisible();
   await expect(page.getByTestId("customer-guardian-row-guardian-kang-seoyun")).toContainText("강서윤");

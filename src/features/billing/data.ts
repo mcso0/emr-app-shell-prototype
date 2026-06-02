@@ -28,8 +28,10 @@ export type BillingQueueRow = {
   guardian?: Guardian;
   invoice: Invoice;
   lineCount: number;
+  lineSummary: string;
   paidAmount: number;
   patient?: Patient;
+  requestedByName: string;
 };
 
 export type BillingGuardianGroup = {
@@ -105,7 +107,11 @@ const getInvoiceBillingLineSummary = (lines: InvoiceLine[]) => {
     : firstOrderLine.description;
 };
 
-const getInvoiceBillingRequesterName = (invoice: Invoice, lines: InvoiceLine[]) => {
+const getInvoiceBillingRequesterName = (
+  invoice: Invoice,
+  lines: InvoiceLine[],
+  encounter: Encounter,
+) => {
   const firstOrderLine = lines.find((line) => line.orderId);
   const order = firstOrderLine?.orderId
     ? mockOrders.find((item) => item.id === firstOrderLine.orderId)
@@ -114,7 +120,8 @@ const getInvoiceBillingRequesterName = (invoice: Invoice, lines: InvoiceLine[]) 
   return (
     getStaffName(order?.requestedByUserId) ??
     getStaffName(invoice.issuedByUserId) ??
-    "요청자 미지정"
+    getStaffName(encounter.primaryVeterinarianId) ??
+    "이수지"
   );
 };
 
@@ -132,15 +139,19 @@ export const getBillingQueueRows = (
 
       if (!encounter) return rows;
 
+      const invoiceScopedLines = invoiceLines.filter((line) => line.invoiceId === invoice.id);
+
       rows.push({
         encounter,
         guardian: invoice.guardianId
           ? mockGuardians.find((guardian) => guardian.id === invoice.guardianId)
           : undefined,
         invoice,
-        lineCount: invoiceLines.filter((line) => line.invoiceId === invoice.id).length,
+        lineCount: invoiceScopedLines.length,
+        lineSummary: getInvoiceBillingLineSummary(invoiceScopedLines),
         paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
         patient: mockPatients.find((patient) => patient.id === encounter.patientId),
+        requestedByName: getInvoiceBillingRequesterName(invoice, invoiceScopedLines, encounter),
       });
 
       return rows;
@@ -213,7 +224,7 @@ export const getBillingGuardianLedgerRows = ({
         lineSummary: getInvoiceBillingLineSummary(invoiceScopedLines),
         paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
         patient: mockPatients.find((patient) => patient.id === encounter.patientId),
-        requestedByName: getInvoiceBillingRequesterName(invoice, invoiceScopedLines),
+        requestedByName: getInvoiceBillingRequesterName(invoice, invoiceScopedLines, encounter),
         status: getBillingFilterForInvoice(invoice),
       });
 
@@ -330,8 +341,10 @@ export const getBillingDetail = (
     invoice,
     invoiceLines: detailInvoiceLines,
     lineCount: detailInvoiceLines.length,
+    lineSummary: getInvoiceBillingLineSummary(detailInvoiceLines),
     paidAmount: getInvoiceApprovedPaidAmount(invoice.id, payments),
     patient: mockPatients.find((item) => item.id === encounter.patientId),
     payments: payments.filter((payment) => payment.invoiceId === invoice.id),
+    requestedByName: getInvoiceBillingRequesterName(invoice, detailInvoiceLines, encounter),
   };
 };

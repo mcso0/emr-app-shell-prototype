@@ -126,6 +126,50 @@ test("global command palette searches and opens patient context", async ({ page 
   await expect(page.getByText("환자 정보")).toBeVisible();
 });
 
+test("global notification bell opens right drawer with badge policy count", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  const notificationButton = page.getByRole("button", { name: /알림 센터 열기, 중요 알림 4개/ });
+  await expect(notificationButton).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByTestId("global-notification-badge")).toHaveText("4");
+
+  await notificationButton.click();
+
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toContainText("중요 알림 4개 · 안 읽음 5개");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("중요 4");
+  await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("두부 처방 조제가 완료되었습니다");
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception\?modulePanel=open/);
+
+  await drawer.getByRole("button", { name: "중요 4" }).click();
+  await expect(drawer.getByTestId("global-notification-drawer-list")).not.toContainText(
+    "두부 처방 조제가 완료되었습니다"
+  );
+
+  await drawer.getByRole("button", { name: "알림 닫기" }).click();
+  await expect(drawer).toBeHidden();
+  await expect(notificationButton).toHaveAttribute("aria-expanded", "false");
+});
+
+test("global notification drawer fits narrow viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 4개/ }).click();
+
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "알림 닫기" })).toBeVisible();
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toBeVisible();
+  await expect(drawer.getByText("콩이 CBC 재확인이 필요합니다")).toBeVisible();
+
+  const drawerBox = await drawer.boundingBox();
+  expectRect(drawerBox);
+  expect(Math.round(drawerBox.x)).toBeGreaterThanOrEqual(0);
+  expect(Math.round(drawerBox.width)).toBeLessThanOrEqual(390);
+});
+
 test("app shell renders workspace switcher in the navigation column when module panel is open", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
@@ -667,7 +711,7 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(selectedQueueCard).toHaveCSS("border-radius", "10px");
   await expect(selectedQueueCard).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-sidepanel-task-card-selected-border)"));
   await expect(selectedQueueCard.getByText("예약")).toHaveCSS("height", "20px");
-  await expect(selectedQueueCard).toContainText("10:30 이수지 요청");
+  await expect(selectedQueueCard).toContainText("10:30 이수지 재요청");
   await expect(selectedQueueCard).toContainText("김미래");
   await expect(page.getByTestId("order-queue-item-action-dispensing-queue-0")).toHaveCSS("width", "24px");
   const unassignedQueueCard = page.getByTestId("order-queue-item-dispensing-queue-2");
@@ -730,12 +774,10 @@ test("right panel can be collapsed on a module that owns it", async ({ page }) =
   await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
   await expect(page).toHaveURL(/right=open/);
   await expect(page.getByRole("button", { name: "환자 정보 패널 접기" })).toBeVisible();
-  await page.getByRole("button", { name: "환자 정보 접기" }).click();
+  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "환자 정보 패널 접기" }).click();
   await expect(page).toHaveURL(/right=closed/);
-  await expect(page.getByRole("button", { name: "환자 정보 열기" })).toBeVisible();
-  await page.getByRole("button", { name: "환자 정보 열기" }).click();
-  await expect(page).toHaveURL(/right=open/);
-  await expect(page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
 });
 
 test("dispensing does not render the patient side panel or trigger", async ({ page }) => {

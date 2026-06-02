@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
+import guardianPersonIcon from "@/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -17,11 +19,6 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
-import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import {
-  EmrSidePanelCard,
-  emrSidePanelCardHoverActionButtonClassName,
-} from "@/components/emr/side-panel-card";
 import {
   EmrDateNavigator,
   EmrListHeader,
@@ -32,6 +29,10 @@ import {
 } from "@/components/emr/subpanel";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
+import {
+  EmrTaskQueueCard,
+  type EmrTaskQueueEventKind,
+} from "@/components/emr/task-queue-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -57,6 +58,10 @@ import { resolveBillingAmountInclusion } from "@/features/billing/billing-data-c
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import {
+  createPersonalProfileSession,
+  getDefaultSessionPersonalProfile,
+} from "@/features/auth/personal-profile-session";
+import {
   useBillingStore,
   type BillingFilter,
   type BillingInvoiceStatusTransitionTarget,
@@ -76,6 +81,7 @@ import type {
   Payment,
   PaymentMethod,
 } from "@/types/emr-domain";
+import animalDogIcon from "../../../icons/Illustration/animal-dog.svg";
 
 const billingQueueGroups: Array<{
   colorToken: string;
@@ -126,6 +132,8 @@ const formatShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
 const formatShortDate = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 10).replaceAll("-", ".") : "-";
+const getAssetSrc = (asset: string | { src?: string }) =>
+  typeof asset === "string" ? asset : asset.src ?? "";
 const getBillingPaymentMethodLabel = (method: PaymentMethod) =>
   paymentMethodItems.find((item) => item.value === method)?.label ?? method;
 const billingCandidateInvoiceLineIdPrefix = "invoice-line-billcand-";
@@ -189,6 +197,50 @@ type BillingPaymentStatusRouteResponse =
       status: number;
     };
 
+type GuardianCheckoutLedgerRouteResponse =
+  | {
+      ok: true;
+      enforcedBy: "guardian-billing-ledger";
+      rows: GuardianCheckoutLedgerRowSnapshot[];
+      status: number;
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+      status: number;
+    };
+
+type GuardianCheckoutPrepareRouteResponse =
+  | {
+      ok: true;
+      enforcedBy: "guardian-checkout-session";
+      checkoutSession: GuardianCheckoutSessionSnapshot;
+      invoiceSnapshots: GuardianCheckoutInvoiceSnapshot[];
+      status: number;
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+      status: number;
+    };
+
+type GuardianCheckoutTransitionRouteResponse =
+  | {
+      ok: true;
+      enforcedBy: "billing-invoice-status-transition";
+      invoice: BillingPersistedInvoiceSnapshot;
+      payments: Payment[];
+      status: number;
+    }
+  | {
+      ok: false;
+      denialReason?: string;
+      error?: string;
+      status: number;
+    };
+
 type BillingPersistedInvoiceSnapshot = {
   createdAt: string;
   discountAmount: number;
@@ -207,6 +259,32 @@ type BillingPersistedInvoiceSnapshot = {
   totalAmount: number;
   unpaidReason?: string;
   workspaceId: string;
+};
+
+type GuardianCheckoutLedgerRowSnapshot = {
+  activityAt: string;
+  amountInclusion: "payable" | "excluded";
+  balanceAmount: number;
+  invoiceId: string;
+  payableAmount: number;
+  status: "waiting" | "unpaid" | "paid" | "voided" | "refunded";
+  totalAmount: number;
+};
+
+type GuardianCheckoutInvoiceSnapshot = {
+  amountInclusion: "payable" | "excluded";
+  balanceAmount: number;
+  invoiceId: string;
+  payableAmount: number;
+};
+
+type GuardianCheckoutSessionSnapshot = {
+  excludedAmount: number;
+  excludedCount: number;
+  id: string;
+  payableAmount: number;
+  selectedInvoiceIds: string[];
+  status: "prepared";
 };
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
@@ -268,6 +346,14 @@ const getBillingFlowLabel = (lines: InvoiceLine[]) => {
 
 function getDemoActorHeader(session: AuthSession | null) {
   return getDemoActorHeaders(session);
+}
+
+function getBillingAssignmentActorName(session: AuthSession | null) {
+  if (!session) return "정하린";
+
+  return getDefaultSessionPersonalProfile(
+    createPersonalProfileSession(session),
+  ).displayName;
 }
 
 async function loadBillingInvoiceCandidates({
@@ -446,6 +532,134 @@ async function saveBillingPaymentStatus({
   }
 }
 
+async function loadGuardianCheckoutLedger({
+  actorHeaders,
+  guardianId,
+  includeCoGuardianInvoices,
+  statusFilter = "all",
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  guardianId: string;
+  includeCoGuardianInvoices: boolean;
+  statusFilter?: "all" | "waiting" | "unpaid" | "paid" | "voided" | "refunded";
+  workspaceId: string;
+}): Promise<GuardianCheckoutLedgerRouteResponse> {
+  try {
+    const params = new URLSearchParams({
+      guardianId,
+      includeCoGuardianInvoices: includeCoGuardianInvoices ? "true" : "false",
+      statusFilter,
+    });
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/guardian-checkout?${params.toString()}`,
+      {
+        cache: "no-store",
+        headers: actorHeaders,
+      },
+    );
+    const body = (await response.json()) as GuardianCheckoutLedgerRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function prepareGuardianCheckout({
+  actorHeaders,
+  invoiceIds,
+  paymentMemo,
+  paymentMethod,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  invoiceIds: string[];
+  paymentMemo?: string;
+  paymentMethod: PaymentMethod;
+  workspaceId: string;
+}): Promise<GuardianCheckoutPrepareRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/guardian-checkout`,
+      {
+        body: JSON.stringify({
+          invoiceIds,
+          paymentMemo,
+          paymentMethod,
+        }),
+        cache: "no-store",
+        headers: {
+          "content-type": "application/json",
+          ...actorHeaders,
+        },
+        method: "POST",
+      },
+    );
+    const body = (await response.json()) as GuardianCheckoutPrepareRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function transitionGuardianCheckoutInvoiceStatus({
+  actorHeaders,
+  invoiceId,
+  paymentMethod,
+  reason,
+  target,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  invoiceId: string;
+  paymentMethod: PaymentMethod;
+  reason: string;
+  target: BillingInvoiceStatusTransitionTarget;
+  workspaceId: string;
+}): Promise<GuardianCheckoutTransitionRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/guardian-checkout`,
+      {
+        body: JSON.stringify({
+          invoiceId,
+          paymentMethod,
+          reason,
+          target,
+        }),
+        cache: "no-store",
+        headers: {
+          "content-type": "application/json",
+          ...actorHeaders,
+        },
+        method: "PATCH",
+      },
+    );
+    const body = (await response.json()) as GuardianCheckoutTransitionRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
 const mergeInvoiceCandidateLines = (
   invoiceLines: InvoiceLine[],
   candidates: BillingInvoiceCandidateSnapshot[],
@@ -537,9 +751,11 @@ function createLiveCandidateBillingDetail({
     invoice,
     invoiceLines,
     lineCount: invoiceLines.length,
+    lineSummary: getBillingFlowLabel(invoiceLines),
     paidAmount: 0,
     patient: handoff.patient,
     payments: [],
+    requestedByName: "이수지",
   };
 }
 
@@ -779,24 +995,6 @@ function getBillingCheckoutGroupStatusLabel(invoice: Invoice) {
   return getBillingFilterLabel(filter);
 }
 
-function getBillingQueueStateLabel(row: BillingQueueRow) {
-  const filter = getBillingFilterForInvoice(row.invoice);
-
-  if (filter === "closed") return "완료";
-  if (filter === "unpaid") return "미납";
-
-  return "수납대기";
-}
-
-function getBillingQueueAmountLabel(row: BillingQueueRow) {
-  const balance = Math.max(0, row.invoice.totalAmount - row.paidAmount);
-  const stateLabel = getBillingQueueStateLabel(row);
-
-  if (stateLabel === "완료" || balance === 0) return "정산 완료";
-
-  return `${stateLabel} ${formatAmount(balance)}`;
-}
-
 function getBillingFilterLabel(filter: BillingFilter) {
   if (filter === "closed") return "완료";
   if (filter === "unpaid") return "미납";
@@ -888,81 +1086,51 @@ function groupBillingLedgerRowsByDate(rows: BillingGuardianLedgerRow[]) {
   );
 }
 
+function getBillingReceptionTypeLabel(row: BillingQueueRow) {
+  return row.encounter.appointmentId ? "예약" : "외래";
+}
+
+function getBillingQueueEventKind(row: BillingQueueRow): EmrTaskQueueEventKind {
+  return row.invoice.status === "voided" ? "cancel" : "request";
+}
+
 function QueueItem({
+  assigneeName,
   onSelect,
   row,
   selected,
 }: {
+  assigneeName?: string;
   onSelect: () => void;
   row: BillingQueueRow;
   selected: boolean;
 }) {
-  const stateLabel = getBillingQueueStateLabel(row);
-  const amountLabel = getBillingQueueAmountLabel(row);
   const guardianName = row.guardian?.name ?? "보호자 미지정";
   const patientName = row.patient?.name ?? "환자 미상";
 
   return (
-    <EmrSidePanelCard
+    <EmrTaskQueueCard
+      item={{
+        actionAriaLabel: `${guardianName} ${row.invoice.invoiceNo} 수납 작업`,
+        actionTestId: `billing-queue-action-${row.invoice.id}`,
+        assigneeName,
+        eventActorName: row.requestedByName,
+        eventKind: getBillingQueueEventKind(row),
+        eventTime: formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt).slice(9),
+        guardianName,
+        patientName,
+        receptionType: getBillingReceptionTypeLabel(row),
+        secondLineText: `오더 ${row.lineCount}건 · ${formatAmount(row.invoice.totalAmount)}`,
+        testId: `billing-queue-item-${row.invoice.id}`,
+      }}
       selected={selected}
-      selectionVariant="modulePanel"
-      testId={`billing-queue-item-${row.invoice.id}`}
       onSelect={onSelect}
-    >
-      <div className="flex min-h-6 items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="truncate emr-text-dense font-semibold leading-5 text-[var(--emr-text-primary)]">
-              {guardianName}
-            </span>
-            <Badge
-              variant={stateLabel === "미납" ? "destructive" : "secondary"}
-              className="h-5 shrink-0 px-1.5 emr-text-micro"
-            >
-              {stateLabel}
-            </Badge>
-          </div>
-          <div className="truncate emr-text-metadata font-medium text-[var(--emr-text-secondary)]">
-            {row.invoice.invoiceNo} · {row.encounter.encounterNo}
-          </div>
-        </div>
-        <EmrRowActionMenu
-          ariaLabel={`${guardianName} ${row.invoice.invoiceNo} 수납 작업`}
-          contentClassName="w-52"
-          items={[
-            {
-              key: "open",
-              label: "수납 상세 보기",
-              description: "현재 청구서 열기",
-              onSelect,
-            },
-          ]}
-          testId={`billing-queue-action-${row.invoice.id}`}
-          triggerClassName={emrSidePanelCardHoverActionButtonClassName}
-        />
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <Badge variant="outline" className="h-5 max-w-full px-1.5 emr-text-micro">
-          {patientName}
-        </Badge>
-        <Badge variant="outline" className="h-5 px-1.5 emr-text-micro">
-          오더 {row.lineCount}건
-        </Badge>
-      </div>
-      <div className="mt-1 min-w-0 truncate emr-text-metadata font-semibold leading-4 text-[var(--emr-text-primary)]">
-        {amountLabel}
-      </div>
-      <div className="mt-2 flex min-h-5 items-center justify-between gap-2 border-t border-[var(--emr-line-hairline)] pt-1.5 emr-text-micro text-muted-foreground">
-        <span>
-          {formatShortDateTime(row.invoice.issuedAt ?? row.invoice.createdAt)}
-        </span>
-        <span>{formatAmount(row.invoice.totalAmount)}</span>
-      </div>
-    </EmrSidePanelCard>
+    />
   );
 }
 
 export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
+  const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const invoices = useBillingStore((state) => state.invoices);
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const payments = useBillingStore((state) => state.payments);
@@ -1031,6 +1199,7 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
             key={group.value}
             collapsed={collapsedGroupIds.has(group.value)}
             colorToken={group.colorToken}
+            invoiceAssignees={invoiceAssignees}
             label={group.label}
             rows={group.rows}
             selectedInvoiceId={selectedInvoiceId}
@@ -1046,6 +1215,7 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
 function BillingQueueGroup({
   collapsed,
   colorToken,
+  invoiceAssignees,
   label,
   rows,
   selectedInvoiceId,
@@ -1054,6 +1224,7 @@ function BillingQueueGroup({
 }: {
   collapsed: boolean;
   colorToken: string;
+  invoiceAssignees: Record<string, string | undefined>;
   label: string;
   rows: BillingQueueRow[];
   selectedInvoiceId: string;
@@ -1074,6 +1245,7 @@ function BillingQueueGroup({
       {rows.map((row) => (
         <QueueItem
           key={row.invoice.id}
+          assigneeName={invoiceAssignees[row.invoice.id]}
           row={row}
           selected={row.invoice.id === selectedInvoiceId}
           onSelect={() => onSelectInvoice(row.invoice.id)}
@@ -1208,123 +1380,104 @@ function BillingGuardianContextDivider() {
 
 function BillingGuardianContextBar({
   detail,
-  hasRightPanel,
-  onToggleRightPanel,
-  rightPanelOpen,
 }: {
   detail: BillingDetail;
-  hasRightPanel: boolean;
-  onToggleRightPanel: () => void;
-  rightPanelOpen: boolean;
 }) {
   const summary = getGuardianBillingHeaderSummary(detail);
   const guardianName = detail.guardian?.name ?? "보호자 미지정";
   const patientNames = summary.patientNames.length
     ? summary.patientNames.join(", ")
     : "환자 미상";
-  const cautionLabel =
-    summary.unpaid.count > 0
-      ? "미납 주의"
-      : detail.guardian?.memo
-        ? "수납메모 있음"
-        : "수납메모 없음";
+  const guardianMemoLabel =
+    detail.guardian?.memo?.trim() ||
+    (summary.unpaid.count > 0 ? "미납 주의" : "메모 없음");
 
   return (
-    <div className="border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)]">
-      <div className="flex h-12 items-center gap-3 px-4">
-        <div className="relative min-w-0 flex-1">
-          <div
-            className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="보호자 수납 컨텍스트 정보"
-          >
-            <div className="flex shrink-0 items-center gap-1.5">
-              <BillingGuardianContextBadge label="보호자" value={guardianName} />
-              <BillingGuardianContextBadge label="관계" value="주 보호자" />
-              <BillingGuardianContextBadge
-                label="연락처"
-                value={getMaskedGuardianContact(detail)}
-              />
-            </div>
-            <BillingGuardianContextDivider />
-            <div className="flex shrink-0 items-center gap-1.5">
-              <BillingGuardianContextBadge label="환자" value={patientNames} />
-              <BillingGuardianContextBadge
-                label="최근 수납"
-                value={
-                  summary.recentPaymentAt
-                    ? formatShortDateTime(summary.recentPaymentAt)
-                    : "기록 없음"
-                }
-              />
-            </div>
-            <BillingGuardianContextDivider />
-            <div className="flex shrink-0 items-center gap-1.5">
-              <BillingGuardianContextBadge
-                label="수납대기"
-                value={`${summary.waiting.count}건 · ${formatAmount(summary.waiting.amount)}`}
-              />
-              <BillingGuardianContextBadge
-                label="미납"
-                value={`${summary.unpaid.count}건 · ${formatAmount(summary.unpaid.amount)}`}
-                tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
-              />
-              <BillingGuardianContextBadge
-                label="결제 주의"
-                value={cautionLabel}
-                tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
-              />
-            </div>
+    <div className="flex h-12 items-center gap-3 border-b border-[var(--emr-line-default)] bg-[var(--emr-surface-workspace)] px-4">
+      <div className="relative min-w-0 flex-1">
+        <div
+          className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="보호자 수납 컨텍스트 정보"
+        >
+          <div className="flex shrink-0 items-center gap-1.5">
+            <BillingGuardianContextIcon
+              src={getAssetSrc(guardianPersonIcon)}
+              alt=""
+            />
+            <BillingGuardianContextBadge label="보호자" value={guardianName} />
+            <BillingGuardianContextBadge label="관계" value="주 보호자" />
+            <BillingGuardianContextBadge
+              label="연락처"
+              value={getMaskedGuardianContact(detail)}
+            />
           </div>
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-transparent to-[var(--emr-surface-workspace)]"
-            aria-hidden="true"
-          />
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
           <BillingGuardianContextDivider />
-          <Badge
-            variant="secondary"
-            className="emr-text-dense-label h-[22px] max-w-[148px] shrink-0 truncate rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 font-medium text-[var(--emr-text-secondary)]"
-          >
-            {detail.invoice.invoiceNo}
-          </Badge>
-          <EmrStatusBadge
-            className="h-[22px] rounded-[var(--clair-radius-atomic-6)]"
-            label={getBillingHeaderStatusLabel(detail.invoice.status)}
-            marker="none"
-          />
-          <Button
-            size="xs"
-            variant={rightPanelOpen ? "secondary" : "outline"}
-            className="emr-text-status h-6 rounded-[var(--clair-radius-atomic-4)] bg-card px-2"
-            disabled={!hasRightPanel}
-            aria-pressed={rightPanelOpen}
-            onClick={onToggleRightPanel}
-          >
-            수납 요약
-          </Button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <BillingGuardianContextIcon src={getAssetSrc(animalDogIcon)} alt="" />
+            <BillingGuardianContextBadge label="환자" value={patientNames} />
+            <BillingGuardianContextBadge
+              label="최근 수납"
+              value={
+                summary.recentPaymentAt
+                  ? formatShortDateTime(summary.recentPaymentAt)
+                  : "기록 없음"
+              }
+            />
+          </div>
+          <BillingGuardianContextDivider />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <BillingGuardianContextBadge
+              label="수납대기"
+              value={`${summary.waiting.count}건 · ${formatAmount(summary.waiting.amount)}`}
+            />
+            <BillingGuardianContextBadge
+              label="미납"
+              value={`${summary.unpaid.count}건 · ${formatAmount(summary.unpaid.amount)}`}
+              tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
+            />
+            <BillingGuardianContextBadge
+              label="보호자 메모"
+              value={guardianMemoLabel}
+              tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
+            />
+          </div>
         </div>
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-transparent to-[var(--emr-surface-workspace)]"
+          aria-hidden="true"
+        />
       </div>
     </div>
   );
 }
 
-export function BillingHeader({ hasRightPanel }: ShellComponentProps) {
+function BillingGuardianContextIcon({
+  alt,
+  src,
+}: {
+  alt: string;
+  src: string;
+}) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={20}
+      height={20}
+      unoptimized
+      aria-hidden={alt ? undefined : true}
+      className="size-5 shrink-0 object-contain"
+      draggable={false}
+    />
+  );
+}
+
+export function BillingHeader() {
   const { detail } = useBillingWorkspaceData();
-  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
   if (!detail) return null;
 
-  return (
-    <BillingGuardianContextBar
-      detail={detail}
-      hasRightPanel={Boolean(hasRightPanel)}
-      rightPanelOpen={rightPanelOpen}
-      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-    />
-  );
+  return <BillingGuardianContextBar detail={detail} />;
 }
 
 function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {
@@ -1435,8 +1588,31 @@ function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {
   );
 }
 
-function BillingTitleCard({ detail }: { detail: BillingDetail }) {
-  const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
+function BillingTitleCard({
+  detail,
+  hasRightPanel,
+}: {
+  detail: BillingDetail;
+  hasRightPanel: boolean;
+}) {
+  const { session: authSession } = useAuthClient();
+  const {
+    contentAsideOpen,
+    rightPanelOpen,
+    setContentAsideOpen,
+    setRightPanelOpen,
+  } = useLayoutStore();
+  const assignmentActorName = useMemo(
+    () => getBillingAssignmentActorName(authSession),
+    [authSession],
+  );
+  const assignInvoice = useBillingStore((state) => state.assignInvoice);
+  const clearInvoiceAssignee = useBillingStore(
+    (state) => state.clearInvoiceAssignee,
+  );
+  const assigneeName = useBillingStore(
+    (state) => state.invoiceAssignees[detail.invoice.id],
+  );
 
   return (
     <EmrInstructionHeaderStack
@@ -1461,10 +1637,46 @@ function BillingTitleCard({ detail }: { detail: BillingDetail }) {
             </Badge>
           }
           actions={
-            <EmrStatusBadge
-              label={getInvoiceStatusLabel(detail.invoice.status)}
-              marker="none"
-            />
+            <div className="flex items-center gap-2">
+              {assigneeName ? (
+                <Badge
+                  variant="secondary"
+                  className="h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-8)] emr-text-status"
+                >
+                  담당 {assigneeName}
+                </Badge>
+              ) : null}
+              <Button
+                type="button"
+                size="xs"
+                variant={assigneeName ? "outline" : "default"}
+                className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-10)] shadow-[var(--clair-shadow-xs)]"
+                onClick={() => {
+                  if (assigneeName) {
+                    clearInvoiceAssignee(detail.invoice.id);
+                    return;
+                  }
+
+                  assignInvoice(detail.invoice.id, assignmentActorName);
+                }}
+              >
+                {assigneeName ? "담당 취소" : "담당하기"}
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-10)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
+                disabled={!hasRightPanel}
+                aria-label={rightPanelOpen ? "수납 요약 패널 접기" : "수납 요약 패널 열기"}
+                aria-expanded={rightPanelOpen}
+                aria-pressed={rightPanelOpen}
+                data-state={rightPanelOpen ? "on" : "off"}
+                onClick={() => setRightPanelOpen(!rightPanelOpen)}
+              >
+                수납 요약
+              </Button>
+            </div>
           }
         />
       }
@@ -1474,12 +1686,16 @@ function BillingTitleCard({ detail }: { detail: BillingDetail }) {
 }
 
 function SelectedCheckoutWorkspace({
+  checkoutSession,
   groups,
+  invoiceAssignees,
   persistenceState,
   onTransitionStatus,
   onUpdateQuantity,
 }: {
+  checkoutSession?: GuardianCheckoutSessionSnapshot;
   groups: BillingCheckoutGroup[];
+  invoiceAssignees: Record<string, string | undefined>;
   onTransitionStatus: (
     invoiceId: string,
     target: BillingInvoiceStatusTransitionTarget,
@@ -1493,6 +1709,10 @@ function SelectedCheckoutWorkspace({
   const excludedGroupCount = groups.filter((group) =>
     isCheckoutSummaryExcludedInvoice(group.invoice),
   ).length;
+  const displayedCheckoutTotalAmount =
+    checkoutSession?.payableAmount ?? checkoutTotalAmount;
+  const displayedExcludedGroupCount =
+    checkoutSession?.excludedCount ?? excludedGroupCount;
   const lineCount = groups.reduce((total, group) => total + group.lines.length, 0);
 
   return (
@@ -1507,11 +1727,11 @@ function SelectedCheckoutWorkspace({
         <div className="flex items-center gap-2">
           <Badge variant="secondary">
             {groups.length}건 · {lineCount}항목 · 수납 합산{" "}
-            {formatAmount(checkoutTotalAmount)}
+            {formatAmount(displayedCheckoutTotalAmount)}
           </Badge>
-          {excludedGroupCount ? (
+          {displayedExcludedGroupCount ? (
             <Badge variant="outline">
-              합산 제외 {excludedGroupCount}건
+              합산 제외 {displayedExcludedGroupCount}건
             </Badge>
           ) : null}
           <Badge
@@ -1535,6 +1755,7 @@ function SelectedCheckoutWorkspace({
         {groups.length ? (
           groups.map((group) => {
             const isSummaryExcluded = isCheckoutSummaryExcludedInvoice(group.invoice);
+            const hasBillingAssignee = Boolean(invoiceAssignees[group.invoice.id]);
             const transitionTargets = getBillingCheckoutTransitionTargets(
               group.invoice,
             );
@@ -1576,6 +1797,7 @@ function SelectedCheckoutWorkspace({
                             size="xs"
                             variant="outline"
                             className="bg-card"
+                            disabled={!hasBillingAssignee}
                             onClick={() =>
                               onTransitionStatus(group.invoice.id, target)
                             }
@@ -1783,6 +2005,11 @@ function GuardianBillingLedgerRow({
 
 export function BillingContentAside() {
   const { detail } = useBillingWorkspaceData();
+  const { session: authSession } = useAuthClient();
+  const actorHeaders = useMemo(
+    () => getDemoActorHeader(authSession),
+    [authSession],
+  );
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const invoices = useBillingStore((state) => state.invoices);
   const payments = useBillingStore((state) => state.payments);
@@ -1802,8 +2029,35 @@ export function BillingContentAside() {
   const [includeCoGuardianInvoices, setIncludeCoGuardianInvoices] =
     useState(false);
   const guardianId = detail?.guardian?.id;
+  const workspaceId = detail?.invoice.workspaceId;
   const hasCoGuardianContext = hasGuardianCoGuardianContext(guardianId);
-  const ledgerRows = useMemo(
+  const [serverLedgerRows, setServerLedgerRows] =
+    useState<GuardianCheckoutLedgerRowSnapshot[]>();
+  useEffect(() => {
+    if (!guardianId || !workspaceId) return;
+
+    const resolvedGuardianId = guardianId;
+    const resolvedWorkspaceId = workspaceId;
+    let cancelled = false;
+    async function loadServerLedgerRows() {
+      const result = await loadGuardianCheckoutLedger({
+        actorHeaders,
+        guardianId: resolvedGuardianId,
+        includeCoGuardianInvoices,
+        workspaceId: resolvedWorkspaceId,
+      });
+
+      if (cancelled) return;
+      setServerLedgerRows(result.ok ? result.rows : undefined);
+    }
+
+    void loadServerLedgerRows();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorHeaders, guardianId, includeCoGuardianInvoices, workspaceId]);
+  const localLedgerRows = useMemo(
     () =>
       getBillingGuardianLedgerRows({
         guardianId,
@@ -1814,6 +2068,25 @@ export function BillingContentAside() {
       }),
     [guardianId, includeCoGuardianInvoices, invoiceLines, invoices, payments],
   );
+  const ledgerRows = useMemo(() => {
+    if (!serverLedgerRows?.length) return localLedgerRows;
+
+    const serverOrder = new Map(
+      serverLedgerRows.map((row, index) => [row.invoiceId, index]),
+    );
+    const serverInvoiceIds = new Set(serverLedgerRows.map((row) => row.invoiceId));
+    const compatibleRows = localLedgerRows.filter((row) =>
+      serverInvoiceIds.has(row.invoice.id),
+    );
+
+    if (!compatibleRows.length) return localLedgerRows;
+
+    return compatibleRows.sort(
+      (a, b) =>
+        (serverOrder.get(a.invoice.id) ?? Number.MAX_SAFE_INTEGER) -
+        (serverOrder.get(b.invoice.id) ?? Number.MAX_SAFE_INTEGER),
+    );
+  }, [localLedgerRows, serverLedgerRows]);
   const visibleRows = useMemo(
     () =>
       ledgerRows.filter(
@@ -1956,7 +2229,7 @@ function BillingScopeNotice({ children }: { children: ReactNode }) {
   );
 }
 
-export function BillingContent() {
+export function BillingContent({ hasRightPanel }: ShellComponentProps) {
   const {
     detail,
     invoiceLines,
@@ -1974,6 +2247,10 @@ export function BillingContent() {
   const applyInvoiceSnapshot = useBillingStore(
     (state) => state.applyInvoiceSnapshot,
   );
+  const applyPaymentStatusSnapshot = useBillingStore(
+    (state) => state.applyPaymentStatusSnapshot,
+  );
+  const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );
@@ -1988,6 +2265,8 @@ export function BillingContent() {
   const [linePersistenceState, setLinePersistenceState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const [checkoutSession, setCheckoutSession] =
+    useState<GuardianCheckoutSessionSnapshot>();
   const checkoutGroups = useMemo(() => {
     const detailInvoiceIsOutsideStore = detail
       ? !invoices.some((invoice) => invoice.id === detail.invoice.id)
@@ -2048,6 +2327,30 @@ export function BillingContent() {
         : (detail?.invoiceLines ?? []),
     [checkoutGroups, detail?.invoiceLines],
   );
+  const checkoutWorkspaceId = checkoutGroups[0]?.invoice.workspaceId ?? detail?.invoice.workspaceId;
+  useEffect(() => {
+    if (!checkoutWorkspaceId || selectedInvoiceIds.length === 0) return;
+
+    const resolvedWorkspaceId = checkoutWorkspaceId;
+    let cancelled = false;
+    async function prepareSelectedCheckout() {
+      const result = await prepareGuardianCheckout({
+        actorHeaders,
+        invoiceIds: selectedInvoiceIds,
+        paymentMethod: "card",
+        workspaceId: resolvedWorkspaceId,
+      });
+
+      if (cancelled) return;
+      setCheckoutSession(result.ok ? result.checkoutSession : undefined);
+    }
+
+    void prepareSelectedCheckout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actorHeaders, checkoutWorkspaceId, selectedInvoiceIds]);
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
 
@@ -2100,15 +2403,47 @@ export function BillingContent() {
     setLinePersistenceState("saved");
   }
 
+  async function handleTransitionInvoiceStatus(
+    invoiceId: string,
+    target: BillingInvoiceStatusTransitionTarget,
+  ) {
+    const targetInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+    if (!targetInvoice || !invoiceAssignees[invoiceId]) return;
+
+    setLinePersistenceState("saving");
+    const result = await transitionGuardianCheckoutInvoiceStatus({
+      actorHeaders,
+      invoiceId,
+      paymentMethod: "card",
+      reason: `수납 화면에서 ${getBillingCheckoutTransitionLabel(target)} 상태로 변경`,
+      target,
+      workspaceId: targetInvoice.workspaceId,
+    });
+
+    if (!result.ok) {
+      transitionInvoiceStatus(invoiceId, target);
+      setLinePersistenceState("error");
+      return;
+    }
+
+    applyPaymentStatusSnapshot(result.invoice, result.payments);
+    setLinePersistenceState("saved");
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-4 p-4">
-          <BillingTitleCard detail={detail} />
+          <BillingTitleCard
+            detail={detail}
+            hasRightPanel={Boolean(hasRightPanel)}
+          />
           <SelectedCheckoutWorkspace
+            checkoutSession={checkoutSession}
             groups={checkoutGroups}
+            invoiceAssignees={invoiceAssignees}
             persistenceState={linePersistenceState}
-            onTransitionStatus={transitionInvoiceStatus}
+            onTransitionStatus={handleTransitionInvoiceStatus}
             onUpdateQuantity={handleUpdateInvoiceLineQuantity}
           />
         </div>
@@ -2216,6 +2551,7 @@ export function BillingRightPanel() {
   const applyPaymentStatusSnapshot = useBillingStore(
     (state) => state.applyPaymentStatusSnapshot,
   );
+  const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
   const invoices = useBillingStore((state) => state.invoices);
   const paymentMethod = useBillingStore((state) => state.paymentMethod);
@@ -2237,6 +2573,43 @@ export function BillingRightPanel() {
   const [unpaidReason, setUnpaidReason] = useState("");
   const [paymentMemo, setPaymentMemo] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [checkoutSession, setCheckoutSession] =
+    useState<GuardianCheckoutSessionSnapshot>();
+  const checkoutWorkspaceId =
+    selectedInvoiceIds
+      .map((invoiceId) => invoices.find((invoice) => invoice.id === invoiceId)?.workspaceId)
+      .find((workspaceId): workspaceId is string => Boolean(workspaceId)) ??
+    detail?.invoice.workspaceId;
+  useEffect(() => {
+    if (!checkoutWorkspaceId || selectedInvoiceIds.length === 0) return;
+
+    const resolvedWorkspaceId = checkoutWorkspaceId;
+    let cancelled = false;
+    async function prepareSelectedCheckout() {
+      const result = await prepareGuardianCheckout({
+        actorHeaders,
+        invoiceIds: selectedInvoiceIds,
+        paymentMemo,
+        paymentMethod,
+        workspaceId: resolvedWorkspaceId,
+      });
+
+      if (cancelled) return;
+      setCheckoutSession(result.ok ? result.checkoutSession : undefined);
+    }
+
+    void prepareSelectedCheckout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    actorHeaders,
+    checkoutWorkspaceId,
+    paymentMemo,
+    paymentMethod,
+    selectedInvoiceIds,
+  ]);
 
   if (!detail) return null;
 
@@ -2282,6 +2655,10 @@ export function BillingRightPanel() {
     (total, group) => total + getBillingCheckoutGroupBalance(group),
     0,
   );
+  const dataBackedSummaryBalance =
+    checkoutSession?.payableAmount ?? summaryBalance;
+  const dataBackedExcludedSummaryGroupCount =
+    checkoutSession?.excludedCount ?? excludedSummaryGroupCount;
   const actionDetail =
     payableSummaryGroups.length === 1
       ? getBillingDetail(
@@ -2292,6 +2669,10 @@ export function BillingRightPanel() {
         )
       : null;
   const actionBalance = actionDetail ? getBillingBalance(actionDetail) : 0;
+  const actionInvoiceId = actionDetail?.invoice.id;
+  const actionAssigneeName = actionInvoiceId
+    ? invoiceAssignees[actionInvoiceId]
+    : undefined;
   const statusLabel =
     payableSummaryGroups.length === 0
       ? "합산 제외"
@@ -2303,9 +2684,9 @@ export function BillingRightPanel() {
       ? summaryGroups[0].invoice.invoiceNo
       : `${summaryGroups.length}건 선택`;
   const financialActionDisabled =
-    !actionDetail || payableSummaryGroups.length !== 1;
+    !actionDetail || payableSummaryGroups.length !== 1 || !actionAssigneeName;
   const handleIssueInvoice = async () => {
-    if (!actionDetail) return false;
+    if (!actionDetail || !actionAssigneeName) return false;
     setConfirmationState("saving");
     const result = await saveBillingInvoiceLines({
       actorHeaders,
@@ -2353,19 +2734,29 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkUnpaid = async () => {
-    if (!actionDetail) return false;
+    if (!actionDetail || !actionAssigneeName) return false;
     const normalizedUnpaidReason = unpaidReason.trim();
     if (!normalizedUnpaidReason) return false;
 
     setPaymentState("saving");
-    const result = await saveBillingPaymentStatus({
-      action: "mark_unpaid",
+    const transitionResult = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
       invoiceId: actionDetail.invoice.id,
       paymentMethod,
-      unpaidReason: normalizedUnpaidReason,
+      reason: normalizedUnpaidReason,
+      target: "unpaid",
       workspaceId: actionDetail.invoice.workspaceId,
     });
+    const result = transitionResult.ok
+      ? transitionResult
+      : await saveBillingPaymentStatus({
+          action: "mark_unpaid",
+          actorHeaders,
+          invoiceId: actionDetail.invoice.id,
+          paymentMethod,
+          unpaidReason: normalizedUnpaidReason,
+          workspaceId: actionDetail.invoice.workspaceId,
+        });
 
     if (!result.ok) {
       setPaymentFailureContext("mark_unpaid");
@@ -2380,15 +2771,25 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkPaid = async () => {
-    if (!actionDetail) return false;
+    if (!actionDetail || !actionAssigneeName) return false;
     setPaymentState("saving");
-    const result = await saveBillingPaymentStatus({
-      action: "complete_payment",
+    const transitionResult = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
       invoiceId: actionDetail.invoice.id,
       paymentMethod,
+      reason: "보호자 수납 완료",
+      target: "paid",
       workspaceId: actionDetail.invoice.workspaceId,
     });
+    const result = transitionResult.ok
+      ? transitionResult
+      : await saveBillingPaymentStatus({
+          action: "complete_payment",
+          actorHeaders,
+          invoiceId: actionDetail.invoice.id,
+          paymentMethod,
+          workspaceId: actionDetail.invoice.workspaceId,
+        });
 
     if (!result.ok) {
       setPaymentFailureContext("mark_paid");
@@ -2416,9 +2817,11 @@ export function BillingRightPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex h-[50px] shrink-0 items-center justify-between border-b px-4">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
         <h2 className="emr-text-body font-semibold">수납 요약</h2>
-        <EmrStatusBadge label={statusLabel} marker="none" />
+        <div className="flex items-center gap-2">
+          <EmrStatusBadge label={statusLabel} marker="none" />
+        </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="px-4 py-3">
@@ -2426,11 +2829,11 @@ export function BillingRightPanel() {
             {summaryInvoiceLabel}
           </div>
           <div className="mt-1 text-[18px] font-semibold">
-            {formatAmount(summaryBalance)}
+            {formatAmount(dataBackedSummaryBalance)}
           </div>
           <div className="mt-1 emr-text-metadata text-muted-foreground">
-            {excludedSummaryGroupCount
-              ? `완료/취소 ${excludedSummaryGroupCount}건은 현재 수납 합산에서 제외됩니다.`
+            {dataBackedExcludedSummaryGroupCount
+              ? `완료/취소 ${dataBackedExcludedSummaryGroupCount}건은 현재 수납 합산에서 제외됩니다.`
               : actionDetail
                 ? getInvoiceStatusDescription(actionDetail.invoice.status, actionBalance)
                 : "여러 수납 가능 건은 checkout session 확정 후 처리합니다."}
@@ -2439,7 +2842,7 @@ export function BillingRightPanel() {
           <div className="mt-4">
             <SummaryLine
               label="최종 결제금액"
-              value={formatAmount(summaryBalance)}
+              value={formatAmount(dataBackedSummaryBalance)}
               emphasis
             />
             <SummaryLine
@@ -2453,8 +2856,8 @@ export function BillingRightPanel() {
             />
             <SummaryLine
               label="미납액"
-              value={formatAmount(summaryBalance)}
-              emphasis={summaryBalance > 0}
+              value={formatAmount(dataBackedSummaryBalance)}
+              emphasis={dataBackedSummaryBalance > 0}
             />
             <SummaryLine
               label="할인"
@@ -2479,7 +2882,7 @@ export function BillingRightPanel() {
               }
             />
           </div>
-          {excludedSummaryGroupCount ? (
+          {dataBackedExcludedSummaryGroupCount ? (
             <EmrInlineAlert
               severity="warning"
               title="수납 합산에서 제외된 이력이 있어"
@@ -2487,6 +2890,16 @@ export function BillingRightPanel() {
             >
               완료/취소 건은 중앙 작업대에서 세부 내역과 상태 변경만 확인하고,
               오른쪽 결제 금액에는 더하지 않습니다.
+            </EmrInlineAlert>
+          ) : null}
+          {actionDetail && !actionAssigneeName ? (
+            <EmrInlineAlert
+              severity="info"
+              title="담당하기 후 수납 액션 가능"
+              className="mt-3 emr-text-metadata"
+            >
+              수납 진행, 수납 완료, 미납 처리는 담당자를 지정한 뒤 실행할 수
+              있습니다.
             </EmrInlineAlert>
           ) : null}
 

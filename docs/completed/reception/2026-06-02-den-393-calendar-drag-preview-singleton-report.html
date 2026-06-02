@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-393 캘린더 Drag Preview 단일화 보고서</title>
+    <style>
+      body {
+        margin: 40px;
+        color: #1f2937;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      h1,
+      h2 {
+        color: #111827;
+      }
+      code {
+        border-radius: 4px;
+        background: #f3f4f6;
+        padding: 2px 5px;
+      }
+      .summary {
+        border-left: 4px solid #4ea7fc;
+        background: #f5fbff;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-393 캘린더 Drag Preview 단일화 보고서</h1>
+    <p class="summary">
+      접수 캘린더에서 여러 시간대에 drag preview가 동시에 남는 문제를 수정했다.
+      새 drag가 시작되면 이전 cell의 임시 preview를 즉시 정리하고, pointerup,
+      pointercancel, drawer open, window blur 시점에도 preview를 제거한다.
+    </p>
+
+    <h2>요청 배경</h2>
+    <p>
+      캘린더에서 여러 파란색/빨간색 임시 블록이 동시에 남아, 사용자가 실제로 몇 개의
+      접수 task를 만든 것처럼 오해할 수 있었다. 원인은 확정 draft 상태는 하나지만
+      각 <code>ScheduleSelectionCell</code>이 별도 local drag state를 가지는 구조였다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>calendar drag 시작/정리용 browser event를 추가했다.</li>
+      <li>새 pointerdown 시 다른 cell의 local drag preview를 정리한다.</li>
+      <li>pointerup, pointercancel, drawer open, window blur에서 preview가 남지 않게 했다.</li>
+      <li>Playwright에 active selection preview가 최대 1개인지 검증하는 회귀 테스트를 추가했다.</li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>docs/work/reception/RECEPTION-PR-006-calendar-selection-guardrails.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run lint -- src/features/reception/module.tsx tests/reception.spec.ts</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/reception.spec.ts --grep "15-minute calendar click|one active calendar selection preview|clears the draft schedule card|invalid calendar draft selections|dragged calendar range|reverse dragged calendar range"</code> 통과, 6 tests</li>
+    </ul>
+
+    <h2>남은 제한</h2>
+    <p>
+      이번 작업은 drag creation preview의 누적 문제를 다룬다. 이미 생성된 확정 카드의
+      drag-resize, drag-move 편집 기능은 별도 범위다.
+    </p>
+  </body>
+</html>

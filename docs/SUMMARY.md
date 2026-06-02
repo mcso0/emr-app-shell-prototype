@@ -31,6 +31,8 @@
 - [SaaS Operating Map](product/service/clair-emr-saas-operating-map.md)
 - [Product MVP Scope](product/roadmap/product-mvp-scope.md)
 - [Product PRD](product/prd/clair-emr-saas-prd.md)
+- [Global Notification Center v0](product/features/notifications/global-notification-center-v0-contract.md)
+- [Global Notification Event Policy](product/features/notifications/global-notification-center-v0-event-policy.md)
 - [Legacy MVP Feature Spec](product/features/legacy-mvp-feature-spec.md)
 - [Product User Flow](product/user-flows/emr-saas-userflow.md)
 - [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md)

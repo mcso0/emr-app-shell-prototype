@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>병원관리 기준 하위 목록 사이드패널 공통화 리포트</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8fafc;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        box-sizing: border-box;
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 28px 64px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f3f4f6;
+      }
+      .meta {
+        margin-top: 10px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>병원관리 기준 하위 목록 사이드패널 공통화</h1>
+      <p class="meta">2026-06-02 · DESIGN-SYSTEM-PR-042</p>
+
+      <section>
+        <h2>요청과 결과</h2>
+        <p>
+          병원관리와 고객관리 사이드 패널을 업무 큐가 아닌 하위 목록 탐색 패널로 통일했다. 병원관리 UI를 기준으로 고객관리의 하위 목록, 카운트, 후속 메뉴 표현을 맞췄고 두 화면이 같은 공유 컴포넌트를 사용하도록 정리했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>주요 변경</h2>
+        <ul>
+          <li><code>EmrModuleListSidePanel</code> 공유 컴포넌트를 추가했다.</li>
+          <li>고객관리의 동물/보호자/삭제 목록에 카운트 배지를 붙였다.</li>
+          <li>고객관리의 스케줄/발송/서류/CS/진료의뢰 영역은 top-level disabled <code>후속</code> 메뉴로 정리했다.</li>
+          <li>병원관리의 Order 관리 그룹, leaf 선택, 카운트, Order 세트 후속 배지를 공유 컴포넌트로 옮겼다.</li>
+          <li>새 패키지 없이 기존 <code>obra-icons-react</code> 래퍼를 확장해 반복되던 파일 아이콘을 의미별 아이콘으로 교체했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <ul>
+          <li>DB, Supabase, RLS, 서버 권한, live persistence는 건드리지 않았다.</li>
+          <li>고객관리의 스케줄/발송/서류/CS/진료의뢰 실제 기능은 구현하지 않았다.</li>
+          <li>업무 큐형 사이드패널은 이번 공통화 대상이 아니다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 상태</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npm run lint -- --ignore-pattern '.worktrees/**'</code> 통과. 기존 경고 4개는 남아 있다.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li>브라우저 QA에서 고객관리 후속 메뉴/카운트와 병원관리 Order 관리 패널을 확인했다.</li>
+          <li><code>tests/customer.spec.ts tests/hospital-admin.spec.ts tests/app-shell.spec.ts</code> focused Playwright 50개가 통과했다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
