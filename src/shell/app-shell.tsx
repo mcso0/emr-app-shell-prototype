@@ -3,6 +3,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
+import {
+  mockGlobalNotifications,
+  resolveNotificationBadgeCount,
+} from "@/features/notifications/mock-notifications";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
@@ -73,7 +78,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const pendingTabRouteRef = useRef<string | null>(null);
   const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
+  const notificationBadgeCount = useMemo(
+    () => resolveNotificationBadgeCount(mockGlobalNotifications),
+    []
+  );
   const {
     activeTabId,
     activateTab,
@@ -302,16 +312,25 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             activeTabId={activeTabId}
             canGoBack={Boolean(activeTab && activeTab.historyIndex > 0)}
             canGoForward={Boolean(activeTab && activeTab.historyIndex < activeTab.history.length - 1)}
+            notificationBadgeCount={notificationBadgeCount}
+            notificationDrawerOpen={notificationDrawerOpen}
             tabs={tabs}
             onActivateTab={handleActivateTab}
             onBack={handleTabBack}
             onCloseTab={handleCloseTab}
             onForward={handleTabForward}
             onNewTab={handleNewTab}
+            onOpenNotifications={() => setNotificationDrawerOpen(true)}
           />
         }
         workspaceId={workspaceId}
         onNavigateModule={handleNavigateModule}
+      />
+      <GlobalNotificationDrawer
+        badgeCount={notificationBadgeCount}
+        notifications={mockGlobalNotifications}
+        open={notificationDrawerOpen}
+        onOpenChange={setNotificationDrawerOpen}
       />
     </div>
   );

@@ -42,12 +42,15 @@ type WorkspaceTabsBarProps = {
   activeTabId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
+  notificationBadgeCount: number;
+  notificationDrawerOpen: boolean;
   tabs: WorkspaceTab[];
   onActivateTab: (tabId: string) => void;
   onBack: () => void;
   onCloseTab: (tabId: string) => void;
   onForward: () => void;
   onNewTab: () => void;
+  onOpenNotifications: () => void;
 };
 
 function getDisplayTitle(tab: WorkspaceTab) {
@@ -244,12 +247,15 @@ export function WorkspaceTabsBar({
   activeTabId,
   canGoBack,
   canGoForward,
+  notificationBadgeCount,
+  notificationDrawerOpen,
   tabs,
   onActivateTab,
   onBack,
   onCloseTab,
   onForward,
   onNewTab,
+  onOpenNotifications,
 }: WorkspaceTabsBarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -359,8 +365,28 @@ export function WorkspaceTabsBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-[var(--emr-topbar-action-gap)]">
-        <Button variant="ghost" size="icon" className={topIconButtonClassName} aria-label="알림">
-          <BellIcon className="size-4" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(topIconButtonClassName, "relative")}
+          aria-label={
+            notificationBadgeCount > 0
+              ? `알림 센터 열기, 중요 알림 ${notificationBadgeCount}개`
+              : "알림 센터 열기"
+          }
+          aria-controls="global-notification-drawer"
+          aria-expanded={notificationDrawerOpen}
+          onClick={onOpenNotifications}
+        >
+          <BellIcon className="size-4" aria-hidden="true" />
+          {notificationBadgeCount > 0 ? (
+            <span
+              data-testid="global-notification-badge"
+              className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--emr-status-danger-text)] px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-[var(--emr-surface-app)]"
+            >
+              {notificationBadgeCount > 99 ? "99+" : notificationBadgeCount}
+            </span>
+          ) : null}
         </Button>
         <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말">
           <HelpIcon className="size-4" />

@@ -1,0 +1,2650 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Global Notification Center Planning Brief</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7fafc;
+        --app: #f3f6fa;
+        --surface: #ffffff;
+        --surface-muted: #f1f5f9;
+        --surface-selected: #eef4fb;
+        --line: #d9e1ea;
+        --line-strong: #cbd5e1;
+        --text: #111827;
+        --muted: #64748b;
+        --quiet: #94a3b8;
+        --command: #18181b;
+        --info: #2563eb;
+        --info-soft: #eff6ff;
+        --ok: #047857;
+        --ok-soft: #ecfdf5;
+        --warn: #b45309;
+        --warn-soft: #fff7ed;
+        --danger: #b91c1c;
+        --danger-soft: #fef2f2;
+        --radius: 8px;
+        --shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Pretendard, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 28px 72px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.28;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      h2 {
+        margin-top: 36px;
+        font-size: 21px;
+      }
+
+      h3 {
+        margin-top: 22px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      a {
+        color: var(--info);
+      }
+
+      code {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: #f8fafc;
+        padding: 1px 5px;
+        font-size: 0.92em;
+      }
+
+      ul,
+      ol {
+        padding-left: 22px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 14px 0 22px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        background: var(--surface-muted);
+        color: #334155;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .meta {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .summary {
+        border-left: 4px solid var(--command);
+        margin-top: 18px;
+        padding-left: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .tri-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fafc;
+        padding: 2px 9px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.info {
+        border-color: #bfdbfe;
+        background: var(--info-soft);
+        color: #1d4ed8;
+      }
+
+      .badge.warn {
+        border-color: #fed7aa;
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .badge.danger {
+        border-color: #fecaca;
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .badge.ok {
+        border-color: #bbf7d0;
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .mock-shell {
+        display: grid;
+        min-height: 520px;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: var(--app);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      }
+
+      .mock-shell.variant-a {
+        grid-template-columns: 58px minmax(0, 1fr) 376px;
+        grid-template-rows: 52px 1fr;
+      }
+
+      .mock-shell.variant-b,
+      .mock-shell.variant-c {
+        grid-template-columns: 58px minmax(0, 1fr);
+        grid-template-rows: 52px 1fr;
+      }
+
+      .mock-top {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        padding: 0 12px;
+      }
+
+      .mock-logo,
+      .mock-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        color: var(--command);
+        font-weight: 800;
+      }
+
+      .mock-command {
+        flex: 1;
+        max-width: 420px;
+        height: 32px;
+        margin: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #f8fafc;
+        color: var(--muted);
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .mock-rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        border-right: 1px solid var(--line);
+        background: var(--surface);
+        padding: 10px 0;
+      }
+
+      .rail-dot {
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius);
+        background: #f8fafc;
+        border: 1px solid transparent;
+      }
+
+      .rail-dot.active {
+        border-color: #cbd5e1;
+        background: #e9eef5;
+      }
+
+      .mock-main {
+        padding: 18px;
+      }
+
+      .mock-page-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .title-stack strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      .title-stack span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .placeholder-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 14px;
+      }
+
+      .mock-side {
+        grid-column: 3;
+        grid-row: 2;
+        border-left: 1px solid var(--line-strong);
+        background: var(--surface);
+        padding: 14px;
+      }
+
+      .side-header,
+      .center-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .side-header h3,
+      .center-header h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .segmented {
+        display: flex;
+        gap: 4px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #f8fafc;
+        padding: 3px;
+      }
+
+      .segmented span {
+        border-radius: 6px;
+        padding: 4px 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .segmented .selected {
+        background: #fff;
+        color: var(--command);
+        box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08);
+      }
+
+      .notif-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .day-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .day-label::before {
+        content: "";
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: #fff;
+      }
+
+      .mock-notif-feed {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+      }
+
+      .mock-notif-row {
+        position: relative;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+        padding: 11px 12px 10px 28px;
+      }
+
+      .mock-notif-row:last-child {
+        border-bottom: 0;
+      }
+
+      .mock-notif-row.selected,
+      .mock-notif-row:hover {
+        background: #fbfdff;
+      }
+
+      .mock-notif-row::before {
+        position: absolute;
+        top: 18px;
+        left: 12px;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #94a3b8;
+        content: "";
+      }
+
+      .mock-notif-row.urgent::before {
+        background: #111827;
+      }
+
+      .mock-notif-row.reference::before {
+        background: #cbd5e1;
+      }
+
+      .mock-notif-top {
+        display: flex;
+        min-width: 0;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .mock-notif-title {
+        display: flex;
+        min-width: 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .mock-notif-title strong {
+        color: var(--command);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .mock-notif-time {
+        flex-shrink: 0;
+        color: var(--quiet);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .mock-notif-row p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .mock-notif-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 7px;
+      }
+
+      .mock-notif-meta span {
+        color: var(--quiet);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .mock-notif-meta span + span::before {
+        margin-right: 8px;
+        color: #cbd5e1;
+        content: "/";
+      }
+
+      .mock-notif-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 9px;
+      }
+
+      .mock-notif-actions span {
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        padding: 3px 8px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .mock-notif-actions span:first-child {
+        border-color: #cbd5e1;
+        background: #fff;
+        color: var(--command);
+      }
+
+      .event-ui-grid {
+        display: flex;
+        overflow: hidden;
+        flex-direction: column;
+        gap: 0;
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .event-ui-card {
+        position: relative;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        transition:
+          background-color 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .event-ui-card:last-child {
+        border-bottom: 0;
+      }
+
+      .event-ui-card:hover {
+        background: #fbfdff;
+      }
+
+      .event-ui-card::before {
+        position: absolute;
+        top: 18px;
+        left: 13px;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #9aa4b2;
+        content: "";
+      }
+
+      .event-ui-card.priority-high::before,
+      .event-ui-card.priority-urgent::before {
+        background: #e5484d;
+      }
+
+      .event-ui-card.priority-warning::before {
+        background: #d97706;
+      }
+
+      .event-ui-card.drawer-only::before {
+        background: #cbd5e1;
+      }
+
+      .event-ui-inner {
+        padding: 13px 14px 10px 30px;
+      }
+
+      .event-ui-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .event-ui-kicker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+
+      .event-ui-kicker span {
+        color: var(--quiet);
+        font-weight: 500;
+      }
+
+      .event-ui-card h4 {
+        margin: 3px 0 0;
+        color: var(--command);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .event-ui-card p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .event-ui-card .badge {
+        min-height: 20px;
+        border-color: #e2e8f0;
+        background: #fff;
+        padding: 1px 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .event-ui-card .badge.info {
+        border-color: #dbeafe;
+        background: #f8fbff;
+        color: #2563eb;
+      }
+
+      .event-ui-card .badge.warn {
+        border-color: #fed7aa;
+        background: #fffaf3;
+        color: #b45309;
+      }
+
+      .event-ui-card .badge.danger {
+        border-color: #fecaca;
+        background: #fff8f8;
+        color: #b91c1c;
+      }
+
+      .event-ui-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 7px;
+      }
+
+      .event-ui-meta span {
+        display: inline-flex;
+        min-height: 18px;
+        align-items: center;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        padding: 0;
+        color: var(--quiet);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .event-ui-meta span + span::before {
+        margin-right: 8px;
+        color: #cbd5e1;
+        content: "/";
+      }
+
+      .event-ui-action {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border-top: 0;
+        background: transparent;
+        padding: 0 14px 12px 30px;
+      }
+
+      .event-ui-action strong {
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .event-ui-action span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .alert-showcase {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+        gap: 16px;
+        margin-top: 14px;
+      }
+
+      .alert-canvas {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background:
+          linear-gradient(90deg, rgba(203, 213, 225, 0.24) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(203, 213, 225, 0.24) 1px, transparent 1px),
+          #f8fafc;
+        background-size: 32px 32px;
+        padding: 18px;
+      }
+
+      .alert-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .alert-toast,
+      .alert-inline {
+        display: flex;
+        min-width: 0;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      .alert-toast {
+        align-items: flex-start;
+        color: var(--text);
+        padding: 11px 12px;
+      }
+
+      .alert-inline {
+        padding: 12px 13px;
+        box-shadow: var(--shadow);
+      }
+
+      .alert-toast.success,
+      .alert-inline.success {
+        border-color: var(--line);
+        background: #fff;
+        color: var(--text);
+      }
+
+      .alert-toast.info,
+      .alert-inline.info {
+        border-color: var(--line);
+        background: #fff;
+        color: var(--text);
+      }
+
+      .alert-toast.warning,
+      .alert-inline.warning {
+        border-color: var(--line);
+        background: #fff;
+        color: var(--text);
+      }
+
+      .alert-toast.error,
+      .alert-inline.error {
+        border-color: var(--line);
+        background: #fff;
+        color: var(--text);
+      }
+
+      .alert-icon {
+        display: inline-flex;
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: #fff;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1;
+      }
+
+      .alert-icon.urgent {
+        border-color: #111827;
+        background: #111827;
+        color: #fff;
+      }
+
+      .alert-icon.action {
+        border-color: #94a3b8;
+        background: #fff;
+        color: #334155;
+      }
+
+      .alert-icon.update,
+      .alert-icon.info {
+        border-color: #d8dee8;
+        background: #fff;
+        color: #334155;
+      }
+
+      .alert-body {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .alert-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .alert-title-main {
+        display: flex;
+        min-width: 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .alert-work-badge {
+        display: inline-flex;
+        min-height: 20px;
+        align-items: center;
+        border: 1px solid #d8dee8;
+        border-radius: 6px;
+        background: #f8fafc;
+        padding: 1px 7px;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.3;
+      }
+
+      .alert-title-row strong {
+        display: block;
+        min-width: 0;
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .alert-body p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .alert-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .alert-actions span {
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: transparent;
+        padding: 3px 8px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .alert-actions span:first-child {
+        border-color: #cbd5e1;
+        background: #fff;
+        color: var(--command);
+      }
+
+      .alert-close {
+        color: var(--quiet);
+        font-size: 14px;
+        font-weight: 900;
+        opacity: 0.62;
+      }
+
+      .alert-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .alert-time {
+        flex-shrink: 0;
+        color: var(--quiet);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .alert-spec-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .alert-spec-row {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+      }
+
+      .alert-spec-row strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .alert-spec-row span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .full-center {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr) 310px;
+        gap: 12px;
+      }
+
+      .filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .filter-list span {
+        display: flex;
+        justify-content: space-between;
+        border-radius: 7px;
+        padding: 8px 9px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .filter-list .selected {
+        background: #e9eef5;
+      }
+
+      .detail-box {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        padding: 14px;
+      }
+
+      .detail-box h4 {
+        margin: 0 0 6px;
+        font-size: 15px;
+      }
+
+      .event-map {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .event-step {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #fff;
+        padding: 10px;
+        min-height: 92px;
+      }
+
+      .event-step strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .event-step span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 940px) {
+        main {
+          padding: 28px 16px 52px;
+        }
+
+        .grid,
+        .tri-grid,
+        .event-ui-grid,
+        .alert-showcase,
+        .full-center,
+        .event-map {
+          grid-template-columns: 1fr;
+        }
+
+        .mock-shell.variant-a,
+        .mock-shell.variant-b,
+        .mock-shell.variant-c {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto;
+        }
+
+        .mock-rail,
+        .mock-side {
+          display: none;
+        }
+
+        .mock-top,
+        .mock-main {
+          grid-column: 1;
+          grid-row: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <p class="meta">2026-06-02 · Product/Design planning · Global notification center</p>
+        <h1>CLAiR 전역 알림 센터 PRD 브리핑</h1>
+        <div class="summary">
+          <p>
+            알림 센터는 홈의 <code>내 업무</code>를 대체하지 않는다. 앱 전역에서 사용자가 알아야 할 사건을 모아 보여주고,
+            처리 가능한 항목은 원본 업무 화면으로 깊게 연결하는 별도 채널이다.
+          </p>
+          <p>
+            v0 권장 방향은 <strong>상단/네비 알림 버튼에서 열리는 오른쪽 drawer형 알림 센터</strong>다. 업무 중 맥락을 잃지 않고
+            최신 알림을 훑고, 읽음/보관/원본 이동만 빠르게 처리하는 구조가 CLAiR의 조밀한 운영 화면과 가장 잘 맞는다.
+          </p>
+        </div>
+        <div class="badge-row" aria-label="핵심 상태">
+          <span class="badge info">권장 시안 A: drawer</span>
+          <span class="badge warn">구현 전 질문 필요</span>
+          <span class="badge">Mock/local-first 우선</span>
+          <span class="badge">Live push/provider 제외</span>
+        </div>
+      </section>
+
+      <h2>1. 목적과 사용자 가치</h2>
+      <div class="grid">
+        <section class="panel">
+          <h3>문제</h3>
+          <ul>
+            <li>진료, 검사, 조제, 수납, 접수 흐름이 분리되어 있어 사용자가 중요한 변화를 놓칠 수 있다.</li>
+            <li>모든 신호를 홈에 올리면 홈이 업무 큐와 공지함이 섞인 화면이 된다.</li>
+            <li>단순 toast만 있으면 나중에 다시 볼 수 없고, 중요한 업무 추적성이 떨어진다.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3>목표</h3>
+          <ul>
+            <li>사용자별, 역할별로 관련 있는 알림을 시간순으로 모아 보여준다.</li>
+            <li>알림이 실제 액션을 요구하면 원본 업무 화면으로 이동시킨다.</li>
+            <li>읽음, 보관, 재확인, 필터를 통해 알림 과부하를 줄인다.</li>
+          </ul>
+        </section>
+      </div>
+
+      <h2>2. 내부 기준</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>기준</th>
+            <th>현재 문서 근거</th>
+            <th>알림 센터 적용</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>홈과 알림 분리</td>
+            <td><code>docs/product/features/home/home-command-entry-planning.md</code>는 전역 notification을 앱 오른쪽 상단 알림 카드/drawer로 정의한다.</td>
+            <td>알림 센터는 전역 채널이다. 홈 <code>내 업무</code>에는 실제 담당 action만 올라간다.</td>
+          </tr>
+          <tr>
+            <td>밝고 조밀한 운영 UI</td>
+            <td><code>docs/design/system/DESIGN.md</code>는 조용하고 정확한 운영 워크스페이스, semantic status, 8px 안팎 radius를 기준으로 둔다.</td>
+            <td>대형 마케팅식 패널 대신 리스트, 필터, 원본 이동 액션 중심으로 설계한다.</td>
+          </tr>
+          <tr>
+            <td>Mock/live 경계</td>
+            <td><code>docs/engineering/current-status.md</code>는 live push, remote Supabase, provider 연동을 승인 게이트로 둔다.</td>
+            <td>v0 구현은 synthetic notification fixtures와 local-first read state까지만 안전하다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>3. 외부 서비스 조사 요약</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>서비스</th>
+            <th>관찰한 패턴</th>
+            <th>CLAiR에 가져올 점</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Microsoft Teams Activity Feed</td>
+            <td>알림은 activity feed에서 triage하고, 관련 앱/탭으로 deep link한다. 중복 알림과 무관한 알림을 피하라고 권고한다. 보관 기간도 사용자에게 알려야 한다.</td>
+            <td>알림 title/preview/action target을 명확히 하고, 같은 사건의 중복 알림은 chain/update로 묶는다.</td>
+          </tr>
+          <tr>
+            <td>Linear</td>
+            <td>모든 알림은 Linear Inbox에 보이고, desktop/mobile/Slack/email은 채널별 보조 수단이다. email digest는 읽지 않은 inbox notification에 따라 지연 발송된다.</td>
+            <td>CLAiR도 in-app inbox를 기준 채널로 두고, 외부 채널은 후속 provider 범위로 분리한다.</td>
+          </tr>
+          <tr>
+            <td>Notion Inbox</td>
+            <td>워크스페이스 업데이트를 Inbox에 모으고, unread/read/archive 필터와 page/comment thread 단위 묶음을 제공한다.</td>
+            <td>환자, encounter, order, device result 같은 원본 entity 단위 그룹핑을 제공한다.</td>
+          </tr>
+          <tr>
+            <td>GitHub Notifications</td>
+            <td>Inbox에서 read/unread, saved, done, unsubscribe, custom filter로 triage한다.</td>
+            <td>v0는 읽음/보관/전체 읽음, v1은 저장/숨김/구독 해제 성격의 preference로 확장한다.</td>
+          </tr>
+          <tr>
+            <td>ClickUp</td>
+            <td>Inbox, email, browser/desktop, mobile 채널별로 Default/Focused/Mentions only/Custom 설정을 둔다.</td>
+            <td>역할별 기본 필터와 개인별 알림 preference를 분리한다.</td>
+          </tr>
+          <tr>
+            <td>Slack</td>
+            <td>DM, thread reply, mention, keyword 중심으로 badge와 banner를 나누고, 비활성 상태에서 email/mobile로 보낸다.</td>
+            <td>CLAiR에서는 담당자 지정, 오더 재요청, 긴급 전달, overdue 같은 강한 signal에 badge 숫자를 제한한다.</td>
+          </tr>
+          <tr>
+            <td>Asana Inbox</td>
+            <td>Inbox에서 unread, mention, assigned task, sender 등으로 필터링하고, inbox 안에서 reply/archive/follow-up을 처리한다.</td>
+            <td>알림에서 바로 원본 화면으로 이동하되, 실제 임상/수납 final action은 원본 workflow에서 수행한다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>4. 알림 분류</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>분류</th>
+            <th>예시</th>
+            <th>기본 대상</th>
+            <th>v0 처리</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Action required</td>
+            <td>긴급 전달, 재요청/재확인 요청, 담당 오더 확인 요청</td>
+            <td>담당자 또는 역할 큐</td>
+            <td>v0 구현 대상. 대표 event만 mock/local-first로 시작한다.</td>
+          </tr>
+          <tr>
+            <td>Workflow signal</td>
+            <td>대기 30분 초과, 검사/영상/조제/처치 완료, 장비 결과 전달, 입원 처치 지연</td>
+            <td>역할별 관련 사용자</td>
+            <td>v0 구현 대상. 대기 지연, 오더 완료 안내, 장비 결과 전달처럼 이미 화면 흐름이 있는 event부터 시작한다.</td>
+          </tr>
+          <tr>
+            <td>Mention / handoff</td>
+            <td>수의사가 테크니션에게 오더 재확인 요청, 영상 담당자가 재촬영 요청</td>
+            <td>요청받은 사용자 또는 역할 큐</td>
+            <td>v0에서는 오더 재요청/재확인 같은 제한된 handoff만 다룬다. 자유 멘션/댓글형 알림은 v1 이후.</td>
+          </tr>
+          <tr>
+            <td>Awareness only</td>
+            <td>공지, 설정 변경, 반복 상태 업데이트</td>
+            <td>관련 역할 또는 전체</td>
+            <td>v0에서는 drawer-only fixture로 분류만 잡는다. 공지 작성/발행/관리 기능은 v1 이후.</td>
+          </tr>
+          <tr>
+            <td>System/security</td>
+            <td>권한 변경, 로그인/워크스페이스 이상 상태</td>
+            <td>관리자, 해당 사용자</td>
+            <td>v0 알림 매트릭스에서는 제외한다. 보안 알림 시스템은 v1 이후 별도 PRD로 둔다.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note">
+        이 표는 전체 알림 taxonomy다. v0 구현은 <strong>Action required</strong>와 <strong>Workflow signal</strong> 중심이며,
+        <strong>Mention / handoff</strong>는 재요청/재확인처럼 오더에 연결된 handoff만 포함한다.
+        댓글형 멘션, 공지 발행 시스템, 보안 알림 정책 엔진은 v0 이후 별도 PRD/작업으로 둔다.
+      </p>
+
+      <h2>4-1. Badge Count Policy</h2>
+      <div class="panel">
+        <p>
+          <code>high-signal</code>, <code>high severity unread</code> 같은 표현은 구현 기준으로 쓰지 않는다. v0에서는 알림을
+          <code>requires_action</code>, <code>priority</code>, <code>badge_count</code> 세 값으로 판정한다.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>구분</th>
+              <th>정의</th>
+              <th>badge 숫자 포함</th>
+              <th>예시</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Badge-count notification</td>
+              <td>안 읽음이고, 현재 사용자 또는 현재 역할이 당일 업무 흐름에서 조치하지 않으면 지연/누락이 생기는 알림.</td>
+              <td>포함</td>
+              <td>담당 오더 긴급 전달, 재요청/재확인 요청, 결과 확인 요청, 보호자 대기 안내 필요</td>
+            </tr>
+            <tr>
+              <td>Drawer-only notification</td>
+              <td>사용자가 알아야 하지만 즉시 action owner가 아니거나, 참고/상태 변화 성격이 큰 알림.</td>
+              <td>제외</td>
+              <td>조제 완료 참고, 일반 공지, 병원 설정 변경, 다른 역할 큐의 낮은 우선순위 상태 변화</td>
+            </tr>
+            <tr>
+              <td>Muted/system notification</td>
+              <td>기록은 남기지만 기본 drawer 상단과 badge에 올리지 않는 낮은 우선순위 시스템 신호.</td>
+              <td>제외</td>
+              <td>백그라운드 sync 성공, 반복 상태 업데이트, 읽은 알림의 후속 중복 업데이트</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          v0 badge 계산식은 <code>unread && badge_count === true</code>이다. <code>badge_count</code>는 아래 event rule table에서만 결정한다.
+          화면 구현자가 임의로 severity label이나 카드 색상만 보고 badge 포함 여부를 추론하지 않는다.
+        </p>
+        <p class="note">
+          severity color와 badge 포함 여부는 분리한다. 예를 들어 대기 안내는 clinical danger가 아니어도 데스크에게는 badge-count 대상이고,
+          병원 공지는 unread여도 기본 badge 숫자에는 들어가지 않는다.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>v0 event</th>
+              <th>수신자</th>
+              <th>requires_action</th>
+              <th>priority</th>
+              <th>badge_count</th>
+              <th>판정 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>오더 긴급 전달</td>
+              <td>오더 담당 수의사 또는 현재 책임자</td>
+              <td>true</td>
+              <td><code>high</code></td>
+              <td>true</td>
+              <td>오더 수행자나 담당자가 명시적으로 긴급 전달/빠른 확인 필요를 선택한 경우. 자동 abnormal 수치만으로는 생성하지 않는다.</td>
+            </tr>
+            <tr>
+              <td>오더 재요청/재확인 요청</td>
+              <td>요청받은 사용자 또는 역할 큐</td>
+              <td>true</td>
+              <td><code>high</code></td>
+              <td>true</td>
+              <td>수의사, 검사/영상/조제/입원 담당자가 특정 사용자/역할에게 재요청, 재확인, 보완 입력을 요청한 경우.</td>
+            </tr>
+            <tr>
+              <td>담당 오더 완료 안내</td>
+              <td>오더 담당자, 담당 수의사</td>
+              <td>true</td>
+              <td><code>normal_action</code></td>
+              <td>true</td>
+              <td>내가 담당자 또는 담당 수의사로 지정된 오더가 완료됐고, 아직 내가 확인하지 않은 경우.</td>
+            </tr>
+            <tr>
+              <td>검사/임상 결과 완료</td>
+              <td>담당 수의사</td>
+              <td>true</td>
+              <td><code>normal_action</code></td>
+              <td>true</td>
+              <td>검사 queue item이 완료됐고 담당 수의사 확인이 아직 없는 경우.</td>
+            </tr>
+            <tr>
+              <td>검사 장비 결과 전달</td>
+              <td>담당 수의사, 검사 담당자</td>
+              <td>true</td>
+              <td><code>normal_action</code></td>
+              <td>true</td>
+              <td>EMR 연동 장비가 검사 결과를 보내왔고 담당자가 원본 결과와 연결된 오더를 확인해야 하는 경우.</td>
+            </tr>
+            <tr>
+              <td>영상 결과/판독 완료</td>
+              <td>담당 수의사, 영상 담당자</td>
+              <td>true</td>
+              <td><code>normal_action</code></td>
+              <td>true</td>
+              <td>영상 촬영 또는 판독 완료 후 담당 수의사 확인이 필요한 경우.</td>
+            </tr>
+            <tr>
+              <td>대기 30분 초과</td>
+              <td>데스크</td>
+              <td>true</td>
+              <td><code>normal_action</code></td>
+              <td>true</td>
+              <td>보호자 안내 또는 접수 상태 조정이 필요한 desk action으로 전환되는 경우.</td>
+            </tr>
+            <tr>
+              <td>조제/처치 완료</td>
+              <td>담당 수의사, 조제/처치 담당자, 수납 role</td>
+              <td>false 기본</td>
+              <td><code>info</code></td>
+              <td>false 기본</td>
+              <td>상태 공유 성격이면 drawer-only. 담당자 확인/재요청이 필요한 경우에만 별도 badge event로 승격한다.</td>
+            </tr>
+            <tr>
+              <td>수납 대기 전환</td>
+              <td>수납 role, 데스크 role</td>
+              <td>false 기본</td>
+              <td><code>info</code></td>
+              <td>false</td>
+              <td>오더가 수납 후보로 넘어간 상태 공유 알림. 금액 검증/차단 알림은 이 매트릭스에서 제외한다.</td>
+            </tr>
+            <tr>
+              <td>입원 처치/투약 지연</td>
+              <td>입원 담당자, 담당 수의사</td>
+              <td>true</td>
+              <td><code>high</code></td>
+              <td>true</td>
+              <td>예정 시간이 지난 입원 처치/투약 오더가 있고 담당자가 지정되어 있는 경우.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>4-2. Event별 Notification UI 시안</h2>
+      <p>
+        아래 시안은 Linear inbox처럼 <strong>행 단위 알림 리스트</strong>로 본다. 개발자용 값인
+        <code>priority</code>, <code>badge_count</code>, <code>source_type</code>은 화면에 노출하지 않고, 작은 상태점,
+        시간, 자연어 metadata, 원본 이동 action만 보여준다.
+      </p>
+      <div class="event-ui-grid" aria-label="event별 notification card UI 시안">
+        <article class="event-ui-card priority-normal">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">임상병리검사 <span>담당 수의사 확인 대기</span></div>
+                <h4>콩이 CBC 결과 확인 필요</h4>
+                <p>결과 입력이 완료됐어. 확인 후 진료 기록 또는 보호자 설명에 반영해줘.</p>
+              </div>
+              <span class="badge info">2분</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>콩이</span>
+              <span>CBC</span>
+              <span>김하늘 보호자</span>
+              <span>중요 알림</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>검사 결과 열기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card priority-high">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">긴급 전달 <span>검사 담당자 표시</span></div>
+                <h4>나비 전해질 검사 긴급 확인</h4>
+                <p>검사 담당자가 빠른 확인 필요로 표시했어. 원본 결과와 담당자 메모를 확인해줘.</p>
+              </div>
+              <span class="badge danger">방금</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>나비</span>
+              <span>전해질 검사</span>
+              <span>담당 수의사</span>
+              <span>중요 알림</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>결과 확인하기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card priority-high">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">재확인 요청 <span>이수지 수의사</span></div>
+                <h4>보리 CBC 검체 재확인 요청</h4>
+                <p>장비 flag와 검체 상태를 다시 확인해달라는 요청이 들어왔어.</p>
+              </div>
+              <span class="badge danger">3분</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>보리</span>
+              <span>CBC</span>
+              <span>요청받은 테크니션</span>
+              <span>중요 알림</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>검사 화면 열기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card priority-warning">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">대기 지연 <span>데스크 action</span></div>
+                <h4>초코 보호자 대기 안내 필요</h4>
+                <p>접수 후 30분이 지났어. 예상 대기 시간을 안내하거나 접수 상태를 조정해줘.</p>
+              </div>
+              <span class="badge warn">9분</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>초코</span>
+              <span>접수 대기열</span>
+              <span>데스크</span>
+              <span>중요 알림</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>접수 대기열 열기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card priority-high">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">영상 판독 완료 <span>담당 수의사 확인 대기</span></div>
+                <h4>루비 흉부 X-ray 판독 확인 필요</h4>
+                <p>영상 판독 소견이 완료됐어. 확인 후 진료 기록 또는 보호자 설명에 반영해줘.</p>
+              </div>
+              <span class="badge danger">11분</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>루비</span>
+              <span>흉부 X-ray</span>
+              <span>담당 수의사</span>
+              <span>중요 알림</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>영상 결과 열기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card priority-high">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">입원 처치 지연 <span>담당자 action</span></div>
+                <h4>미소 항생제 투약 시간이 지났습니다</h4>
+                <p>입원 오더의 예정 투약 시간이 지났어. 담당자가 투약 상태를 확인해야 해.</p>
+              </div>
+              <span class="badge danger">24분</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>미소</span>
+              <span>입원 투약</span>
+              <span>입원 담당자</span>
+              <span>중요 알림</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>입원 처치표 열기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card drawer-only">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">조제 완료 <span>참고 알림</span></div>
+                <h4>콩이 처방 조제 완료</h4>
+                <p>조제/처치 상태가 완료로 변경되어 수납 후보에 반영됐어.</p>
+              </div>
+              <span class="badge">18분</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>콩이</span>
+              <span>조제/처치</span>
+              <span>담당 수의사/수납</span>
+              <span>참고</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>조제 내역 열기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+
+        <article class="event-ui-card drawer-only">
+          <div class="event-ui-inner">
+            <div class="event-ui-top">
+              <div>
+                <div class="event-ui-kicker">운영 공지 <span>참고 알림</span></div>
+                <h4>야간 근무표가 수정되었습니다</h4>
+                <p>오늘 18:00 이후 데스크와 테크니션 근무 배치가 변경됐어.</p>
+              </div>
+              <span class="badge">1시간</span>
+            </div>
+            <div class="event-ui-meta">
+              <span>전체 스태프</span>
+              <span>병원 공지</span>
+              <span>참고</span>
+            </div>
+          </div>
+          <div class="event-ui-action">
+            <strong>공지 보기</strong>
+            <span>읽음 · 보관</span>
+          </div>
+        </article>
+      </div>
+      <p class="note">
+        drawer 목록에서는 badge-count card와 drawer-only card를 모두 볼 수 있다. 단, 상단 알림 아이콘의 숫자는
+        <code>badge_count: true</code>인 unread card만 센다.
+      </p>
+
+      <h2>4-3. Event별 Alert/Toast UI 시안</h2>
+      <p>
+        이 섹션은 drawer가 아니라 <strong>이벤트 발생 직후 화면에 뜨는 alert</strong> 기준이다. 원칙은 두 가지다.
+        짧은 상태 전달은 <code>toast alert</code>로 띄우고, 사용자가 현재 화면에서 반드시 처리해야 하는 차단/위험 상태는
+        <code>EmrInlineAlert</code>처럼 해당 workflow 안에 남긴다. Toast는 색으로 severity를 표현하지 않는다.
+        왼쪽 원형 아이콘은 알림 상태를, 타이틀 옆 badge는 업무 타입을, 하단 오른쪽은 상대 시간을 표시한다.
+      </p>
+      <div class="alert-showcase">
+        <section class="alert-canvas" aria-label="CLAiR alert toast variants">
+          <div class="alert-stack">
+            <article class="alert-toast success">
+              <span class="alert-icon action">i</span>
+              <div class="alert-body">
+                <div class="alert-title-row">
+                  <div class="alert-title-main">
+                    <span class="alert-work-badge">검사</span>
+                    <strong>콩이 CBC 결과가 도착했습니다</strong>
+                  </div>
+                  <span class="alert-close">×</span>
+                </div>
+                <p>담당 수의사 확인 대기 · 김하늘 보호자 · 결과 화면에서 세부 수치를 확인할 수 있습니다.</p>
+                <div class="alert-footer">
+                  <div class="alert-actions"><span>검사 결과 열기</span><span>나중에 보기</span></div>
+                  <span class="alert-time">2분 전</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="alert-toast warning">
+              <span class="alert-icon urgent">!</span>
+              <div class="alert-body">
+                <div class="alert-title-row">
+                  <div class="alert-title-main">
+                    <span class="alert-work-badge">검사</span>
+                    <strong>나비 전해질 검사를 빠르게 확인해 주세요</strong>
+                  </div>
+                  <span class="alert-close">×</span>
+                </div>
+                <p>검사 담당자가 긴급 전달로 표시했습니다. 원본 결과와 담당자 메모를 먼저 확인하세요.</p>
+                <div class="alert-footer">
+                  <div class="alert-actions"><span>결과 확인</span><span>읽음 처리</span></div>
+                  <span class="alert-time">방금</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="alert-toast warning">
+              <span class="alert-icon action">i</span>
+              <div class="alert-body">
+                <div class="alert-title-row">
+                  <div class="alert-title-main">
+                    <span class="alert-work-badge">접수</span>
+                    <strong>초코 보호자에게 대기 시간을 안내해 주세요</strong>
+                  </div>
+                  <span class="alert-close">×</span>
+                </div>
+                <p>접수 후 30분이 지났습니다. 데스크에서 예상 대기 시간을 안내하거나 접수 상태를 조정해야 합니다.</p>
+                <div class="alert-footer">
+                  <div class="alert-actions"><span>대기열 열기</span><span>보관</span></div>
+                  <span class="alert-time">9분 전</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="alert-toast info">
+              <span class="alert-icon update">✓</span>
+              <div class="alert-body">
+                <div class="alert-title-row">
+                  <div class="alert-title-main">
+                    <span class="alert-work-badge">조제</span>
+                    <strong>콩이 처방 조제가 완료되었습니다</strong>
+                  </div>
+                  <span class="alert-close">×</span>
+                </div>
+                <p>조제/처치 상태가 완료로 변경되어 수납 후보에 반영되었습니다.</p>
+                <div class="alert-footer">
+                  <div class="alert-actions"><span>조제 내역 열기</span></div>
+                  <span class="alert-time">18분 전</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="alert-spec-list" aria-label="alert rule summary">
+          <div class="alert-spec-row">
+            <strong>Toast alert: 짧게 알려주고 사라지는 알림</strong>
+            <span>검사 결과 도착, 장비 결과 전달, 영상 판독 완료, 조제 완료처럼 사용자가 바로 원본 화면으로 갈 수 있지만 현재 입력을 막지는 않는 event에 쓴다. 색상 배경은 쓰지 않는다.</span>
+          </div>
+          <div class="alert-spec-row">
+            <strong>Inline alert: 현재 workflow 안에 남는 알림</strong>
+            <span>장비 결과 매칭 실패, 오더 저장 실패, 권한 차단, live read 실패처럼 사용자가 그 화면에서 문제를 이해하고 복구해야 하는 event에 쓴다.</span>
+          </div>
+          <div class="alert-spec-row">
+            <strong>Drawer-only: 화면을 방해하지 않는 알림</strong>
+            <span>일반 공지, 반복 상태 변화, 사용자가 action owner가 아닌 참고 신호는 화면 alert를 띄우지 않고 알림 센터에만 쌓는다.</span>
+          </div>
+          <div class="alert-spec-row">
+            <strong>Action rule</strong>
+            <span>alert의 primary action은 항상 원본 업무 화면 이동이다. 임상 판단, 수납 확정, 처방 변경 같은 final action은 alert에서 바로 실행하지 않는다.</span>
+          </div>
+          <div class="alert-spec-row">
+            <strong>Stacking rule</strong>
+            <span>toast는 동시에 최대 3개만 노출한다. 4번째 이후는 queue에 대기시키고, 일반 toast가 닫히면 순서대로 노출한다.</span>
+          </div>
+        </section>
+      </div>
+
+      <h3>Toast Stacking 정책</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>정책</th>
+            <th>v0 결정</th>
+            <th>동작</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>최대 노출</td>
+            <td>한 화면에 최대 3개</td>
+            <td>동시에 3개를 넘으면 새 toast는 내부 queue에 대기한다.</td>
+          </tr>
+          <tr>
+            <td>정렬</td>
+            <td>최신 toast가 위</td>
+            <td>새로운 긴급/확인 toast가 들어오면 stack 상단에 배치한다.</td>
+          </tr>
+          <tr>
+            <td>자동 닫힘</td>
+            <td>일반 toast는 자동 dismiss, 긴급 toast는 더 오래 유지</td>
+            <td>정확한 시간은 구현 시 sonner 설정과 맞추되, dismiss 후 queue의 다음 toast를 표시한다.</td>
+          </tr>
+          <tr>
+            <td>중복 toast</td>
+            <td>동일 <code>dedupe_key</code>는 기존 toast를 update/bump</td>
+            <td>같은 환자+오더 지연 알림이 반복되면 새 toast를 추가하지 않고 시간/문구만 갱신한다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Toast 상태 정의와 아이콘 후보</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>상태</th>
+            <th>왼쪽 아이콘</th>
+            <th>Obra 후보</th>
+            <th>의미</th>
+            <th>사용 조건</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>긴급</td>
+            <td><code>!</code></td>
+            <td><code>IconCircleExclamationFill</code> 또는 <code>IconCircleWarningFill</code></td>
+            <td>지금 확인하지 않으면 업무 지연이나 안전한 후속 처리 누락이 생길 수 있는 알림.</td>
+            <td>담당자가 명시적으로 긴급 전달, 재확인/재요청, 입원 처치 지연 같은 action을 만든 경우.</td>
+          </tr>
+          <tr>
+            <td>확인</td>
+            <td><code>i</code></td>
+            <td><code>IconCircleInfoFill</code></td>
+            <td>위험 신호는 아니지만 담당자가 확인하고 다음 화면에서 판단해야 하는 알림.</td>
+            <td>검사 결과 도착, 장비 결과 전달, 영상 판독 완료, 대기 안내 필요처럼 원본 업무 진입이 필요한 경우.</td>
+          </tr>
+          <tr>
+            <td>상태 변경</td>
+            <td><code>✓</code></td>
+            <td><code>IconCircleCheckFill</code></td>
+            <td>업무 상태가 완료, 반영, 갱신되었음을 알려주는 알림.</td>
+            <td>조제 완료, 검사 상태 반영, 수납 후보 반영처럼 참고성 업데이트인 경우.</td>
+          </tr>
+          <tr>
+            <td>참고</td>
+            <td><code>i</code></td>
+            <td><code>IconCircleInfoFill</code> 또는 <code>IconCircleQuestionFill</code></td>
+            <td>지금 action이 필요하지 않은 안내 또는 공지성 알림.</td>
+            <td>운영 공지, 설정 변경 안내, 반복 상태 업데이트처럼 drawer-only가 기본인 경우.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Toast UX Writing 규칙</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>규칙</th>
+            <th>예시</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>업무 타입 badge</td>
+            <td>기능 영역을 1-2단어로 표기한다. 환자명, 상태, 우선순위는 넣지 않는다.</td>
+            <td><code>접수</code>, <code>진료</code>, <code>검사</code>, <code>영상</code>, <code>조제</code>, <code>입원</code></td>
+          </tr>
+          <tr>
+            <td>Title</td>
+            <td><code>{대상} + {사건} + {필요한 사용자 행동}</code> 순서로 쓴다. 사용자가 해야 할 일이 있으면 정중한 명령형을 쓴다.</td>
+            <td><code>나비 전해질 검사를 빠르게 확인해 주세요</code></td>
+          </tr>
+          <tr>
+            <td>Detail</td>
+            <td>원인, 관련 대상, 확인 위치를 한 줄로 설명한다. 임상 판단을 대신하지 않는다.</td>
+            <td><code>검사 담당자가 긴급 전달로 표시했습니다. 원본 결과와 담당자 메모를 먼저 확인하세요.</code></td>
+          </tr>
+          <tr>
+            <td>Actions</td>
+            <td>첫 번째 action은 원본 화면 이동이며 outline 스타일이다. 두 번째 action은 읽음, 보관, 나중에 보기 같은 ghost action이다.</td>
+            <td><code>검사 결과 열기</code> / <code>나중에 보기</code></td>
+          </tr>
+          <tr>
+            <td>Time</td>
+            <td>3번째 줄 오른쪽에 상대 시간을 표시한다. <code>방금</code>, <code>2분 전</code>, <code>1시간 전</code> 형식을 쓴다.</td>
+            <td><code>9분 전</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Alert 케이스별 문구/동작 표</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>event</th>
+            <th>alert surface</th>
+            <th>상태 tile</th>
+            <th>업무 타입</th>
+            <th>title</th>
+            <th>detail</th>
+            <th>actions / time</th>
+            <th>노출 규칙</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>오더 긴급 전달</td>
+            <td>Toast + notification badge</td>
+            <td>긴급 <code>!</code></td>
+            <td><code>검사/영상/입원</code></td>
+            <td><code>{환자명} {오더명}을 빠르게 확인해 주세요</code></td>
+            <td>{요청자}가 긴급 전달로 표시했습니다. 원본 오더와 메모를 먼저 확인하세요.</td>
+            <td><code>오더 열기</code> / <code>읽음 처리</code> · <code>방금</code></td>
+            <td>오더 담당 수의사 또는 현재 책임자에게 즉시 toast. 자동 abnormal 수치만으로는 띄우지 않는다.</td>
+          </tr>
+          <tr>
+            <td>오더 재요청/재확인 요청</td>
+            <td>Toast</td>
+            <td>긴급 <code>!</code></td>
+            <td><code>검사</code></td>
+            <td><code>{환자명} {오더명} 재확인을 진행해 주세요</code></td>
+            <td>{요청자}가 {재확인 사유} 확인을 요청했습니다.</td>
+            <td><code>오더 화면 열기</code> / <code>보관</code> · <code>3분 전</code></td>
+            <td>요청받은 사용자 또는 역할 큐 담당자에게만 toast.</td>
+          </tr>
+          <tr>
+            <td>담당 오더 완료 안내</td>
+            <td>Toast</td>
+            <td>확인 <code>i</code></td>
+            <td><code>오더</code></td>
+            <td><code>{환자명} {오더명}이 완료되었습니다</code></td>
+            <td>담당자 확인 대기 · 완료 결과를 확인하고 다음 업무에 반영하세요.</td>
+            <td><code>오더 열기</code> / <code>나중에 보기</code> · <code>2분 전</code></td>
+            <td>현재 사용자나 active role이 담당자일 때만 toast. 아니면 drawer-only.</td>
+          </tr>
+          <tr>
+            <td>대기 30분 초과</td>
+            <td>Toast</td>
+            <td>확인 <code>i</code></td>
+            <td><code>접수</code></td>
+            <td><code>{환자명} 보호자에게 대기 시간을 안내해 주세요</code></td>
+            <td>접수 후 30분이 지났습니다. 예상 대기 시간을 안내하거나 접수 상태를 조정해야 합니다.</td>
+            <td><code>대기열 열기</code> / <code>보관</code> · <code>9분 전</code></td>
+            <td>데스크 active role에게만 toast. 수의사/관리자는 기본 drawer-only 또는 flow summary.</td>
+          </tr>
+          <tr>
+            <td>검사 장비 결과 전달</td>
+            <td>Toast</td>
+            <td>확인 <code>i</code></td>
+            <td><code>검사</code></td>
+            <td><code>{환자명} {장비명} 결과가 도착했습니다</code></td>
+            <td>연동 장비에서 검사 결과를 보냈습니다. 담당자가 원본 결과와 연결된 오더를 확인해야 합니다.</td>
+            <td><code>장비 결과 열기</code> / <code>나중에 보기</code> · <code>방금</code></td>
+            <td>결과가 order/encounter에 매칭되면 담당 수의사에게 toast. 매칭 실패는 검사 담당자 drawer + inline 검토 대상으로 둔다.</td>
+          </tr>
+          <tr>
+            <td>영상 결과/판독 완료</td>
+            <td>Toast</td>
+            <td>확인 <code>i</code></td>
+            <td><code>영상</code></td>
+            <td><code>{환자명} {영상명} 판독이 완료되었습니다</code></td>
+            <td>담당 수의사 확인 대기 · 영상과 판독 소견을 확인하세요.</td>
+            <td><code>영상 결과 열기</code> / <code>나중에 보기</code> · <code>6분 전</code></td>
+            <td>담당 수의사 active role이면 toast. 단순 촬영 완료만 있으면 drawer-only 가능.</td>
+          </tr>
+          <tr>
+            <td>입원 처치/투약 지연</td>
+            <td>Toast + notification badge</td>
+            <td>긴급 <code>!</code></td>
+            <td><code>입원</code></td>
+            <td><code>{환자명} {처치명} 예정 시간이 지났습니다</code></td>
+            <td>입원 오더의 예정 시간이 지났습니다. 담당자가 수행 상태를 확인해야 합니다.</td>
+            <td><code>입원 처치표 열기</code> / <code>보관</code> · <code>24분 전</code></td>
+            <td>담당자가 지정되어 있고 예정 시간이 초과된 경우 toast. 단순 완료 이력은 drawer-only.</td>
+          </tr>
+          <tr>
+            <td>조제/처치 완료</td>
+            <td>Toast 또는 drawer-only</td>
+            <td>상태 변경 <code>✓</code></td>
+            <td><code>조제</code></td>
+            <td><code>{환자명} 처방 조제가 완료되었습니다</code></td>
+            <td>조제/처치 상태가 완료로 변경되어 수납 후보에 반영되었습니다.</td>
+            <td><code>조제 내역 열기</code> · <code>18분 전</code></td>
+            <td>현재 환자/encounter를 보고 있는 사용자에게만 toast. 그 외는 drawer-only.</td>
+          </tr>
+          <tr>
+            <td>수납 대기 전환</td>
+            <td>Drawer-only 기본</td>
+            <td>상태 변경 <code>✓</code></td>
+            <td><code>수납</code></td>
+            <td><code>{환자명} 수납 준비가 완료되었습니다</code></td>
+            <td>완료된 오더가 수납 후보에 반영되었습니다. 보호자 안내를 준비할 수 있습니다.</td>
+            <td><code>수납 후보 열기</code> · <code>방금</code></td>
+            <td>수납 담당자가 같은 encounter를 보고 있을 때만 toast. 그 외는 drawer-only.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid">
+        <section class="panel">
+          <h3>Toast alert 기본 형태</h3>
+          <article class="alert-toast warning">
+            <span class="alert-icon urgent">!</span>
+            <div class="alert-body">
+              <div class="alert-title-row">
+                <div class="alert-title-main">
+                  <span class="alert-work-badge">입원</span>
+                  <strong>미소 항생제 투약 시간이 지났습니다</strong>
+                </div>
+                <span class="alert-close">×</span>
+              </div>
+              <p>입원 오더의 예정 투약 시간이 지났습니다. 담당자가 수행 상태를 확인해야 합니다.</p>
+              <div class="alert-footer">
+                <div class="alert-actions"><span>입원 처치표 열기</span><span>나중에 보기</span></div>
+                <span class="alert-time">24분 전</span>
+              </div>
+            </div>
+          </article>
+          <p class="note">짧은 transient feedback. 사용자가 다른 화면에 있어도 원본 업무로 이동할 수 있게 한다.</p>
+        </section>
+        <section class="panel">
+          <h3>Inline alert 기본 형태</h3>
+          <article class="alert-inline error">
+            <span class="alert-icon urgent">!</span>
+            <div class="alert-body">
+              <div class="alert-title-row">
+                <div class="alert-title-main">
+                  <span class="alert-work-badge">검사</span>
+                  <strong>결과를 오더에 연결할 수 없습니다</strong>
+                </div>
+              </div>
+              <p>연동 장비에서 결과를 보냈지만 환자/오더 매칭이 불확실합니다. 검사 담당자가 연결 대상을 확인해야 합니다.</p>
+              <div class="alert-actions"><span>장비 결과 검토</span><span>오더 목록 보기</span></div>
+            </div>
+          </article>
+          <p class="note">매칭 실패처럼 원본 업무 화면에서 복구해야 하는 상태는 사라지는 toast로 끝내지 않고, 해당 workflow 안에 남긴다.</p>
+        </section>
+      </div>
+
+      <h2>5. v0 기능 스펙</h2>
+      <div class="grid">
+        <section class="panel">
+          <h3>포함</h3>
+          <ul>
+            <li>알림 버튼 badge: 전체 unread가 아니라 <code>Badge-count notification</code> 수.</li>
+            <li>전역 알림 drawer/page: 전체, 안 읽음, 내 업무, 오더 유형 필터.</li>
+            <li>시간순 그룹: 오늘, 어제, 이번 주, 이전.</li>
+            <li>알림 row: 상태점, 업무 타입 badge, UX title, detail, source metadata, 상대 시간, read state, 원본 이동 action.</li>
+            <li>원본 이동: 접수, 차트/오더, 검사, 영상, 조제/처치, 수납, 입원 deep link.</li>
+            <li>읽음/안 읽음, 전체 읽음, 보관.</li>
+            <li>현재 탭 원본 이동과 dirty state confirmation dialog.</li>
+            <li>동일 환자+동일 오더 미확인 알림의 dedupe/update-bump 처리.</li>
+            <li>Toast 최대 노출 개수와 queue/auto-dismiss 관리 정책.</li>
+            <li>Mock/local-first seed data와 <code>localStorage</code> 기반 read/archive state.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3>제외</h3>
+          <ul>
+            <li>실제 push notification, service worker, background sync.</li>
+            <li>카카오 알림톡, SMS, email provider 전송.</li>
+            <li>remote Supabase migration/RLS/live validation.</li>
+            <li>역할 큐 read/archive 상태의 클라이언트 간 실시간 동기화.</li>
+            <li>알림 안에서 임상/수납 final action 직접 수행.</li>
+            <li>실제 고객/환자 데이터 기반 발송.</li>
+            <li>모바일 native notification 정책.</li>
+          </ul>
+        </section>
+      </div>
+
+      <h2>6. 데이터와 시스템 구조 제안</h2>
+      <p>
+        아래 구조는 PRD/설계 제안이다. 실제 DB migration, RLS, live Supabase 적용은 현재 프로젝트 guardrail상 별도 승인 후 진행해야 한다.
+      </p>
+      <div class="event-map" aria-label="알림 이벤트 흐름">
+        <div class="event-step">
+          <strong>1. Domain event</strong>
+          <span>order urgent, order recheck requested, order completed, device result received</span>
+        </div>
+        <div class="event-step">
+          <strong>2. Rule resolver</strong>
+          <span>event_type, status, recipient, badge_count, toast_policy, dedupe key 계산</span>
+        </div>
+        <div class="event-step">
+          <strong>3. Notification</strong>
+          <span>workspace scoped immutable event record</span>
+        </div>
+        <div class="event-step">
+          <strong>4. Delivery/read state</strong>
+          <span>recipient별 read, archived, channel state</span>
+        </div>
+        <div class="event-step">
+          <strong>5. UI surfaces</strong>
+          <span>badge, drawer, full center, source deep link</span>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>테이블/객체</th>
+            <th>핵심 필드</th>
+            <th>설계 의도</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>notification_events</code></td>
+            <td><code>id</code>, <code>workspace_id</code>, <code>event_type</code>, <code>severity</code>, <code>title</code>, <code>body</code>, <code>actor_user_id</code>, <code>source_type</code>, <code>source_id</code>, <code>deep_link</code>, <code>dedupe_key</code>, <code>created_at</code>, <code>updated_at</code>, <code>occurrence_count</code></td>
+            <td>알림 원본 사건. audit log와 다르게 사용자 알림 표시를 위한 product event다.</td>
+          </tr>
+          <tr>
+            <td><code>notification_recipients</code></td>
+            <td><code>notification_id</code>, <code>recipient_user_id</code>, <code>recipient_role</code>, <code>read_at</code>, <code>archived_at</code>, <code>saved_at</code>, <code>delivered_in_app_at</code></td>
+            <td>같은 사건을 여러 사용자에게 보내되, 읽음/보관 상태는 recipient별로 분리한다.</td>
+          </tr>
+          <tr>
+            <td><code>notification_preferences</code></td>
+            <td><code>user_id</code>, <code>workspace_id</code>, <code>channel</code>, <code>event_type</code>, <code>mode</code>, <code>quiet_hours</code></td>
+            <td>현재 개인 프로필의 알림 opt-in placeholder를 확장하는 별도 preference. 권한 source가 아니다.</td>
+          </tr>
+          <tr>
+            <td><code>notification_rules</code></td>
+            <td><code>workspace_id</code>, <code>event_type</code>, <code>recipient_policy</code>, <code>default_severity</code>, <code>dedupe_window</code>, <code>retention_days</code></td>
+            <td>병원별 운영 정책. v0는 코드 상수/mock으로 시작하고, v1에서 관리 화면으로 이동한다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>v0 Local State / Dedupe 계약</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>v0 결정</th>
+            <th>이유/제약</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>저장소</td>
+            <td><code>localStorage</code>를 기본으로 사용한다.</td>
+            <td>새로고침 후에도 read/archive state가 유지되어 QA와 사용성 테스트 혼선을 줄인다.</td>
+          </tr>
+          <tr>
+            <td>역할 큐 동기화</td>
+            <td>v0에서는 브라우저/사용자 간 역할 큐 read/archive 동기화를 지원하지 않는다.</td>
+            <td>A 데스크가 읽어도 B 데스크의 브라우저 badge는 그대로 남을 수 있다. 이는 mock/local-first 프로토타입의 의도된 제약이다.</td>
+          </tr>
+          <tr>
+            <td>dedupe key</td>
+            <td><code>workspace_id + patient_id + encounter_id + order_id + event_type + recipient_scope</code>를 기본 단위로 본다.</td>
+            <td>동일 환자+동일 오더의 미확인 알림이 반복 생성되어 목록을 밀어내는 문제를 막는다.</td>
+          </tr>
+          <tr>
+            <td>중복 신호 UI</td>
+            <td>미확인 상태의 동일 <code>dedupe_key</code> 알림은 새 row를 append하지 않고 기존 row를 update/bump한다.</td>
+            <td><code>updated_at</code>을 최신 시간으로 갱신해 상단으로 올리고, 필요하면 <code>occurrence_count</code>로 반복 신호를 표시한다.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>7. UI/UX 원칙</h2>
+      <div class="tri-grid">
+        <section class="panel">
+          <h3>조용한 badge</h3>
+          <p>숫자는 “모든 알림”이 아니라 안 읽은 중요 알림 또는 사용자 조치 필요 항목 중심으로 제한한다.</p>
+        </section>
+        <section class="panel">
+          <h3>원본 우선</h3>
+          <p>알림은 context와 진입을 제공한다. 진료 완료, 결제 확정, 처방 변경 같은 final action은 원본 화면에서 한다. 원본 이동은 현재 탭 이동으로 통일하고, 저장되지 않은 변경사항이 있으면 이동 전 confirmation dialog를 띄운다.</p>
+        </section>
+        <section class="panel">
+          <h3>그룹과 필터</h3>
+          <p>시간순 timeline이 기본이고, 업무 종류/역할/읽음 상태 필터로 과부하를 줄인다.</p>
+        </section>
+      </div>
+
+      <h2>8. 시안 A: 오른쪽 Drawer형 알림 센터 (권장)</h2>
+      <p>
+        현재 앱 shell의 상단/네비 알림 버튼과 가장 자연스럽게 연결된다. 사용자는 현재 업무 화면을 유지한 채 알림을 훑고,
+        필요한 항목만 원본 화면으로 이동한다.
+      </p>
+      <section class="mock-shell variant-a" aria-label="시안 A 오른쪽 drawer">
+        <div class="mock-top">
+          <span class="mock-logo">C</span>
+          <span class="mock-command">검색 또는 명령어 입력</span>
+          <span>
+            <span class="mock-icon">⌕</span>
+            <span class="mock-icon">●</span>
+          </span>
+        </div>
+        <div class="mock-rail">
+          <span class="rail-dot active"></span>
+          <span class="rail-dot"></span>
+          <span class="rail-dot"></span>
+          <span class="rail-dot"></span>
+          <span class="rail-dot active"></span>
+          <span class="rail-dot"></span>
+        </div>
+        <div class="mock-main">
+          <div class="mock-page-title">
+            <span class="title-stack">
+              <strong>진료/차트</strong>
+              <span>콩이 · 김하늘 보호자 · 외래 진료 진행 중</span>
+            </span>
+            <span class="badge">현재 화면 유지</span>
+          </div>
+          <div class="placeholder-card">
+            <strong>업무 화면</strong>
+            <p class="note">알림 drawer가 열려도 원래 업무 context가 닫히지 않는다.</p>
+          </div>
+        </div>
+        <aside class="mock-side">
+          <div class="side-header">
+            <h3>알림</h3>
+            <span class="badge info">안 읽음 4</span>
+          </div>
+          <div class="segmented">
+            <span class="selected">전체</span>
+            <span>내 업무</span>
+            <span>안 읽음</span>
+          </div>
+          <div class="notif-list" style="margin-top: 12px">
+            <span class="day-label">오늘</span>
+            <div class="mock-notif-feed">
+              <article class="mock-notif-row selected">
+                <div class="mock-notif-top">
+                  <div class="mock-notif-title">
+                    <span class="alert-work-badge">검사</span>
+                    <strong>콩이 CBC 결과가 도착했습니다</strong>
+                  </div>
+                  <span class="mock-notif-time">2분 전</span>
+                </div>
+                <p>담당 수의사 확인 대기 · 김하늘 보호자 · 결과 화면에서 세부 수치를 확인할 수 있습니다.</p>
+                <div class="mock-notif-meta"><span>중요 알림</span><span>담당 수의사</span><span>검사 결과</span></div>
+                <div class="mock-notif-actions"><span>검사 결과 열기</span><span>읽음 처리</span></div>
+              </article>
+              <article class="mock-notif-row">
+                <div class="mock-notif-top">
+                  <div class="mock-notif-title">
+                    <span class="alert-work-badge">접수</span>
+                    <strong>나비 보호자에게 대기 시간을 안내해 주세요</strong>
+                  </div>
+                  <span class="mock-notif-time">8분 전</span>
+                </div>
+                <p>접수 후 30분이 지났습니다. 예상 대기 시간을 안내하거나 접수 상태를 조정해야 합니다.</p>
+                <div class="mock-notif-meta"><span>중요 알림</span><span>데스크</span><span>접수 대기열</span></div>
+              </article>
+              <article class="mock-notif-row">
+                <div class="mock-notif-top">
+                  <div class="mock-notif-title">
+                    <span class="alert-work-badge">입원</span>
+                    <strong>미소 항생제 투약 시간이 지났습니다</strong>
+                  </div>
+                  <span class="mock-notif-time">24분 전</span>
+                </div>
+                <p>입원 오더의 예정 투약 시간이 지났습니다. 담당자가 수행 상태를 확인해야 합니다.</p>
+                <div class="mock-notif-meta"><span>중요 알림</span><span>입원 담당자</span><span>입원 투약</span></div>
+              </article>
+            </div>
+          </div>
+        </aside>
+      </section>
+      <p class="note">장점: 업무 맥락 보존, 구현 범위 작음, 기존 top menu/nav rail placeholder와 잘 맞음. 단점: 긴 검색/대량 triage에는 좁다.</p>
+
+      <h2>9. 시안 B: 전체 알림 센터 Page</h2>
+      <p>
+        알림량이 많고 보관/검색/필터가 중요해질 때 적합하다. v0에서는 drawer에서 “전체 보기”로 진입하는 후속 화면으로 두는 편이 좋다.
+      </p>
+      <section class="mock-shell variant-b" aria-label="시안 B 전체 페이지">
+        <div class="mock-top">
+          <span class="mock-logo">C</span>
+          <span class="mock-command">알림 검색: 환자명, 보호자, 오더, 장비 결과</span>
+          <span class="mock-icon">●</span>
+        </div>
+        <div class="mock-rail">
+          <span class="rail-dot"></span>
+          <span class="rail-dot active"></span>
+          <span class="rail-dot"></span>
+          <span class="rail-dot"></span>
+        </div>
+        <div class="mock-main">
+          <div class="center-header">
+            <span class="title-stack">
+              <strong>알림 센터</strong>
+              <span>내 업무와 참고 알림을 원본 화면별로 정리합니다.</span>
+            </span>
+            <span class="badge">전체 읽음</span>
+          </div>
+          <div class="full-center">
+            <aside class="placeholder-card">
+              <div class="filter-list">
+                <span class="selected">전체 <b>18</b></span>
+                <span>내 업무 <b>5</b></span>
+                <span>재요청 <b>2</b></span>
+                <span>검사/영상 <b>4</b></span>
+                <span>조제/처치 <b>3</b></span>
+                <span>입원 <b>2</b></span>
+              </div>
+            </aside>
+            <section class="notif-list">
+              <span class="day-label">오늘</span>
+              <div class="mock-notif-feed">
+                <article class="mock-notif-row">
+                  <div class="mock-notif-top">
+                    <div class="mock-notif-title">
+                      <span class="alert-work-badge">영상</span>
+                      <strong>보리 영상 판독 결과가 도착했습니다</strong>
+                    </div>
+                    <span class="mock-notif-time">6분 전</span>
+                  </div>
+                  <p>담당 수의사 확인 대기 · 원본 이미지와 판독 소견을 확인할 수 있습니다.</p>
+                  <div class="mock-notif-meta"><span>중요 알림</span><span>담당 수의사</span><span>영상검사</span></div>
+                  <div class="mock-notif-actions"><span>영상 결과 열기</span><span>읽음 처리</span></div>
+                </article>
+                <article class="mock-notif-row urgent selected">
+                  <div class="mock-notif-top">
+                    <div class="mock-notif-title">
+                      <span class="alert-work-badge">입원</span>
+                      <strong>미소 항생제 투약 시간이 지났습니다</strong>
+                    </div>
+                    <span class="mock-notif-time">24분 전</span>
+                  </div>
+                  <p>입원 오더의 예정 투약 시간이 지났습니다. 담당자가 수행 상태를 확인해야 합니다.</p>
+                  <div class="mock-notif-meta"><span>긴급</span><span>입원 담당자</span><span>입원 투약</span></div>
+                  <div class="mock-notif-actions"><span>입원 처치표 열기</span><span>보관</span></div>
+                </article>
+                <article class="mock-notif-row reference">
+                  <div class="mock-notif-top">
+                    <div class="mock-notif-title">
+                      <span class="alert-work-badge">공지</span>
+                      <strong>야간 근무표가 수정되었습니다</strong>
+                    </div>
+                    <span class="mock-notif-time">1시간 전</span>
+                  </div>
+                  <p>오늘 18:00 이후 데스크와 테크니션 근무 배치가 변경되었습니다.</p>
+                  <div class="mock-notif-meta"><span>참고</span><span>전체 스태프</span><span>병원 공지</span></div>
+                  <div class="mock-notif-actions"><span>공지 보기</span><span>보관</span></div>
+                </article>
+              </div>
+            </section>
+            <aside class="detail-box">
+              <h4>선택 알림 상세</h4>
+              <p class="note">미소 · 입원 투약 · 입원 담당자</p>
+              <p>예정 시간이 지난 입원 오더입니다. 알림에서는 수행 완료를 처리하지 않고 원본 입원 처치표로 이동합니다.</p>
+              <div class="mock-notif-actions"><span>입원 처치표 열기</span><span>보관</span><span>안 읽음</span></div>
+            </aside>
+          </div>
+        </div>
+      </section>
+      <p class="note">장점: 검색/필터/대량 처리에 강함. 단점: 현재 업무 화면을 벗어나므로 첫 구현으로는 무겁다.</p>
+
+      <h2>10. 시안 C: 업무 중심 Split Inbox</h2>
+      <p>
+        알림을 “해야 할 일”과 강하게 연결하는 형태다. 병원 업무 큐 성격이 커져서 Home My Work와 충돌할 수 있으므로, 운영 정책이 확정된 뒤 도입해야 한다.
+      </p>
+      <section class="mock-shell variant-c" aria-label="시안 C 업무 중심 split inbox">
+        <div class="mock-top">
+          <span class="mock-logo">C</span>
+          <span class="mock-command">업무 알림 필터</span>
+          <span class="mock-icon">●</span>
+        </div>
+        <div class="mock-rail">
+          <span class="rail-dot"></span>
+          <span class="rail-dot"></span>
+          <span class="rail-dot active"></span>
+          <span class="rail-dot"></span>
+        </div>
+        <div class="mock-main">
+          <div class="center-header">
+            <span class="title-stack">
+              <strong>지금 처리할 알림</strong>
+              <span>사용자에게 action이 있는 알림만 기본으로 보여준다.</span>
+            </span>
+            <span class="badge warn">주의: Home과 중복 가능</span>
+          </div>
+          <div class="full-center" style="grid-template-columns: minmax(0, 1fr) 330px">
+            <section class="notif-list">
+              <span class="day-label">긴급/주의</span>
+              <div class="mock-notif-feed">
+                <article class="mock-notif-row urgent selected">
+                  <div class="mock-notif-top">
+                    <div class="mock-notif-title">
+                      <span class="alert-work-badge">검사</span>
+                      <strong>보리 CBC 재확인을 진행해 주세요</strong>
+                    </div>
+                    <span class="mock-notif-time">3분 전</span>
+                  </div>
+                  <p>이수지 수의사가 검체 상태와 장비 결과 재확인을 요청했습니다.</p>
+                  <div class="mock-notif-meta"><span>긴급</span><span>요청받은 테크니션</span><span>오더/검사</span></div>
+                  <div class="mock-notif-actions"><span>검사 화면 열기</span><span>보관</span></div>
+                </article>
+                <article class="mock-notif-row">
+                  <div class="mock-notif-top">
+                    <div class="mock-notif-title">
+                      <span class="alert-work-badge">접수</span>
+                      <strong>초코 보호자에게 대기 시간을 안내해 주세요</strong>
+                    </div>
+                    <span class="mock-notif-time">9분 전</span>
+                  </div>
+                  <p>접수 후 30분이 지났습니다. 예상 대기 시간을 안내하거나 접수 상태를 조정해야 합니다.</p>
+                  <div class="mock-notif-meta"><span>중요 알림</span><span>데스크</span><span>접수 대기열</span></div>
+                  <div class="mock-notif-actions"><span>대기열 열기</span><span>보관</span></div>
+                </article>
+              </div>
+              <span class="day-label">참고</span>
+              <div class="mock-notif-feed">
+                <article class="mock-notif-row reference">
+                  <div class="mock-notif-top">
+                    <div class="mock-notif-title">
+                      <span class="alert-work-badge">조제</span>
+                      <strong>콩이 처방 조제가 완료되었습니다</strong>
+                    </div>
+                    <span class="mock-notif-time">18분 전</span>
+                  </div>
+                  <p>조제/처치 상태가 완료로 변경되어 수납 후보에 반영되었습니다.</p>
+                  <div class="mock-notif-meta"><span>참고</span><span>담당 수의사/수납</span><span>조제/처치</span></div>
+                </article>
+              </div>
+            </section>
+            <aside class="detail-box">
+              <h4>권장 다음 행동</h4>
+              <p>검체 상태와 장비 결과를 확인하고, 필요 시 재검 요청을 원본 검사 화면에서 기록하세요.</p>
+              <div class="mock-notif-meta"><span>긴급</span><span>검사</span><span>담당자 지정</span></div>
+              <div class="mock-notif-actions"><span>검사 화면 열기</span><span>보관</span></div>
+            </aside>
+          </div>
+        </div>
+      </section>
+      <p class="note">장점: action clarity가 좋음. 단점: 홈 업무 큐와 책임이 겹칠 수 있어 v0 기본안으로는 부적합하다.</p>
+
+      <h2>11. 권장 결정</h2>
+      <div class="panel">
+        <ol>
+          <li><strong>v0는 시안 A drawer를 기본으로 한다.</strong> 알림 버튼을 누르면 오른쪽 drawer가 열리고, 현재 업무 context는 유지한다.</li>
+          <li><strong>drawer 안에서 모든 final action을 처리하지 않는다.</strong> 원본 화면 이동, 읽음, 보관, 전체 읽음만 기본으로 둔다.</li>
+          <li><strong>원본 이동은 현재 탭 이동으로 통일한다.</strong> 저장되지 않은 변경사항이 있으면 이동 전에 confirmation dialog를 띄운다.</li>
+          <li><strong>badge 숫자는 제한한다.</strong> unread 전체가 아니라 “내가 놓치면 업무 지연이 생기는 알림”을 우선한다.</li>
+          <li><strong>v0 저장소는 localStorage로 확정한다.</strong> 역할 큐 read/archive는 클라이언트 간 동기화되지 않는 프로토타입 제약으로 명시한다.</li>
+          <li><strong>시안 B는 v1 전체 보기로 남긴다.</strong> 검색, 대량 처리, 보관함, preference가 필요해질 때 확장한다.</li>
+          <li><strong>시안 C는 Home My Work와의 경계가 정해진 뒤 도입한다.</strong> 업무 큐 역할을 하려면 홈 정책과 함께 다시 결정한다.</li>
+        </ol>
+      </div>
+
+      <h2>12. 승욱에게 확인할 질문</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>질문</th>
+            <th>결정이 필요한 이유</th>
+            <th>루멘 추천 기본값</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>알림 badge 숫자는 전체 안 읽음으로 할까, 내 action 필요 항목으로 할까?</td>
+            <td>전체 안 읽음은 금방 noisy해질 수 있고, action 중심은 업무성은 높지만 일부 참고 알림이 숨는다.</td>
+            <td>전체 unread가 아니라 <code>Badge-count notification</code>만 숫자 badge. 기준은 <code>unread && requires_action && recipient_is_current_user_or_active_role</code>.</td>
+          </tr>
+          <tr>
+            <td>알림 센터에서 “완료/처리” 버튼까지 허용할까?</td>
+            <td>알림 안에서 업무를 끝내면 원본 workflow audit/context가 약해질 수 있다.</td>
+            <td>v0는 원본 이동만. 읽음/보관은 허용.</td>
+          </tr>
+          <tr>
+            <td>알림에서 원본 화면으로 이동할 때 현재 탭을 이동할까, 새 탭을 열까?</td>
+            <td>차트/오더 작성 중 이동하면 저장되지 않은 변경사항이 사라질 수 있다. 반대로 새 탭은 업무 context가 분산된다.</td>
+            <td>승욱 결정: 현재 탭 이동으로 통일. 단, dirty state가 있으면 “작업 중인 내용이 저장되지 않을 수 있습니다. 이동하시겠습니까?” confirmation dialog를 먼저 띄운다.</td>
+          </tr>
+          <tr>
+            <td>보관된 알림은 얼마 동안 보여줄까?</td>
+            <td>법적 audit과 product notification retention은 다르다.</td>
+            <td>notification UI 보관함 30일, audit/event 기록은 별도 정책.</td>
+          </tr>
+          <tr>
+            <td>역할별 기본 수신 범위를 어떻게 둘까?</td>
+            <td>데스크, 수의사, 테크니션, 관리자마다 같은 사건의 의미가 다르다.</td>
+            <td>담당자 직접 알림 우선. 역할 큐 알림은 <code>Badge-count notification</code> 조건을 만족할 때만 badge에 포함하고, 나머지는 drawer-only로 둔다.</td>
+          </tr>
+          <tr>
+            <td>담당자가 없는 역할 큐 알림을 badge에 포함할까?</td>
+            <td>역할 큐까지 badge에 넣으면 누락은 줄지만 책임자가 모호한 알림이 많아질 수 있다.</td>
+            <td>v0는 담당자 직접 알림을 badge 우선. 역할 큐는 긴급/지연처럼 action owner가 명확할 때만 badge에 포함.</td>
+          </tr>
+          <tr>
+            <td>카카오 알림톡/문자 발송 이력과 staff in-app 알림을 한 화면에 섞을까?</td>
+            <td>외부 보호자 메시지와 내부 업무 알림은 대상과 책임이 다르다.</td>
+            <td>분리. 이 문서는 staff in-app 알림만 다룬다.</td>
+          </tr>
+          <tr>
+            <td>최초 구현은 어느 화면에서 실제 deep link를 연결할까?</td>
+            <td>모든 모듈을 한 번에 연결하면 PR 범위가 커진다.</td>
+            <td>검사/임상 결과 완료, 오더 재요청/긴급 전달, 대기 지연 3개 사건으로 시작.</td>
+          </tr>
+          <tr>
+            <td>알림 설정 화면을 v0에 포함할까?</td>
+            <td>설정까지 넣으면 사용자 통제는 좋아지지만 범위가 커진다.</td>
+            <td>v0는 read-only 기본 정책, v1에서 preference 설정.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>13. v0 Event Matrix 초안</h2>
+      <p>
+        아래 표는 구현 전 리뷰용 기본안이다. v0는 <strong>mock/local-first staff in-app notification</strong>만 다루고,
+        live push, provider 발송, remote Supabase/RLS 적용, 공지 발행 시스템, 자유 멘션 시스템은 포함하지 않는다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>event</th>
+            <th>생성 조건</th>
+            <th>수신자</th>
+            <th>badge</th>
+            <th>toast</th>
+            <th>row title / detail</th>
+            <th>deep link / fallback</th>
+            <th>v0 저장</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>오더 긴급 전달</td>
+            <td>오더 담당자 또는 수행자가 <code>긴급 전달</code>을 명시적으로 선택한 경우. 자동 abnormal 수치만으로는 생성하지 않는다.</td>
+            <td>오더 담당 수의사 또는 현재 책임자. 담당자가 없으면 해당 역할 큐에는 drawer-only로 둔다.</td>
+            <td>true</td>
+            <td>즉시 toast.</td>
+            <td><code>{환자명} {오더명}을 빠르게 확인해 주세요</code><br />{요청자}가 긴급 전달로 표시했습니다. 원본 오더와 메모를 먼저 확인하세요.</td>
+            <td>해당 오더 상세. source가 없으면 알림 상세 fallback + source missing 안내.</td>
+            <td>seed fixture + local read/archive state.</td>
+          </tr>
+          <tr>
+            <td>오더 재요청/재확인 요청</td>
+            <td>수의사, 검사/영상/조제/입원 담당자가 특정 사용자/역할에 재요청, 재확인, 보완 입력을 요청한 경우.</td>
+            <td>요청받은 사용자. 사용자 미지정이면 요청받은 역할 큐.</td>
+            <td>true</td>
+            <td>수신자가 직접 지정되었거나 active role이 일치하면 toast.</td>
+            <td><code>{환자명} {오더명} 재확인을 진행해 주세요</code><br />{요청자}가 {재확인 사유} 확인을 요청했습니다.</td>
+            <td>해당 오더 화면. 관련 order가 없으면 알림 상세 fallback.</td>
+            <td>v0에서는 fixture로만 제공. 자유 댓글/멘션 엔진은 v1 이후.</td>
+          </tr>
+          <tr>
+            <td>담당 오더 완료 안내</td>
+            <td>내가 담당자 또는 담당 수의사로 지정된 오더가 완료 상태가 되고, 아직 내가 확인하지 않은 경우.</td>
+            <td>오더 담당자, 담당 수의사.</td>
+            <td>true</td>
+            <td>현재 사용자나 active role이 담당자이면 toast. 이미 같은 order 화면을 보고 있으면 inline/status update 우선.</td>
+            <td><code>{환자명} {오더명}이 완료되었습니다</code><br />담당자 확인 대기 · 완료 결과를 확인하고 다음 업무에 반영하세요.</td>
+            <td>해당 오더 상세 또는 encounter timeline.</td>
+            <td>seed fixture + local read/archive state.</td>
+          </tr>
+          <tr>
+            <td>검사/임상 결과 완료</td>
+            <td>검사 queue item이 완료 상태가 되고 담당 수의사 확인이 아직 없는 경우.</td>
+            <td>담당 수의사. 담당자 미지정이면 수의사 역할 큐.</td>
+            <td>true</td>
+            <td>담당 수의사가 현재 로그인/active role이면 toast.</td>
+            <td><code>{환자명} {검사명} 결과가 도착했습니다</code><br />담당 수의사 확인 대기 · 결과 화면에서 세부 수치를 확인할 수 있습니다.</td>
+            <td>검사 결과 화면. source가 없으면 알림 상세 fallback.</td>
+            <td>seed fixture + local read/archive state.</td>
+          </tr>
+          <tr>
+            <td>검사 장비 결과 전달</td>
+            <td>연동 검사 장비가 검사 진행 후 완료 결과를 EMR로 전송했고 order/encounter에 매칭 가능한 경우.</td>
+            <td>담당 수의사, 검사 담당자. 매칭 실패는 검사 담당자에게 drawer + inline 검토.</td>
+            <td>true</td>
+            <td>매칭 성공 + 담당자 존재 시 toast. 매칭 실패는 workflow inline alert 우선.</td>
+            <td><code>{환자명} {장비명} 결과가 도착했습니다</code><br />연동 장비에서 결과를 보냈습니다. 원본 결과와 연결된 오더를 확인하세요.</td>
+            <td>장비 결과 상세 또는 검사 결과 화면. order 매칭 실패 시 결과 검토 화면 fallback.</td>
+            <td>seed fixture + local read/archive state. 실제 장비 연동은 v1 이후.</td>
+          </tr>
+          <tr>
+            <td>영상 결과/판독 완료</td>
+            <td>영상 queue item 촬영 완료 또는 판독 소견 완료 후 담당 수의사 확인이 아직 없는 경우.</td>
+            <td>담당 수의사, 영상 담당자.</td>
+            <td>true</td>
+            <td>담당 수의사 active role이면 toast. 단순 촬영 완료만 있고 판독 대기면 담당자별 drawer-only 가능.</td>
+            <td><code>{환자명} {영상명} 판독이 완료되었습니다</code><br />담당 수의사 확인 대기 · 영상과 판독 소견을 확인하세요.</td>
+            <td>영상 결과/판독 화면. source가 없으면 알림 상세 fallback.</td>
+            <td>seed fixture + local read/archive state.</td>
+          </tr>
+          <tr>
+            <td>대기 30분 초과</td>
+            <td>접수 완료 후 대기 상태가 30분 이상 지속되고 보호자 안내 기록이 없는 경우.</td>
+            <td>데스크 role. 담당 수의사/관리자는 기본 drawer-only 또는 flow summary.</td>
+            <td>true for desk</td>
+            <td>데스크 active role이면 toast. 다른 role은 toast 없음.</td>
+            <td><code>{환자명} 보호자에게 대기 시간을 안내해 주세요</code><br />접수 후 30분이 지났습니다. 예상 대기 시간을 안내하거나 접수 상태를 조정해야 합니다.</td>
+            <td>접수 대기열. encounter가 닫혔으면 알림 상세에서 종료 상태 표시.</td>
+            <td>seed fixture + local read/archive state.</td>
+          </tr>
+          <tr>
+            <td>조제/처치 완료</td>
+            <td>조제/처치 queue item이 완료되고 담당 수의사 또는 수납 대기 흐름에 반영된 경우.</td>
+            <td>담당 수의사, 조제/처치 담당자, 수납 role.</td>
+            <td>false 기본</td>
+            <td>현재 같은 환자/encounter를 보고 있는 사용자에게만 toast. 담당자 확인이 필요한 경우에만 badge event로 승격.</td>
+            <td><code>{환자명} {오더명}이 완료되었습니다</code><br />조제/처치 상태가 완료로 변경되어 다음 업무에 반영되었습니다.</td>
+            <td>조제/처치 내역 또는 encounter timeline. source가 없으면 drawer 상세 fallback.</td>
+            <td>fixture + local read/archive. 후속 action event가 있으면 별도 생성.</td>
+          </tr>
+          <tr>
+            <td>수납 대기 전환</td>
+            <td>진료/검사/영상/조제/처치 오더가 모두 수납 후보로 넘어가고 보호자 결제 안내가 가능한 상태가 된 경우.</td>
+            <td>수납 role, 데스크 role.</td>
+            <td>false 기본</td>
+            <td>수납 담당자가 현재 같은 encounter를 보고 있을 때만 toast. 그 외 drawer-only.</td>
+            <td><code>{환자명} 수납 준비가 완료되었습니다</code><br />완료된 오더가 수납 후보에 반영되었습니다. 보호자 안내를 준비할 수 있습니다.</td>
+            <td>수납 후보 화면. invoice 금액 검증/차단 알림은 이 매트릭스에서 제외.</td>
+            <td>fixture + local read/archive.</td>
+          </tr>
+          <tr>
+            <td>입원 처치/투약 지연</td>
+            <td>입원 처치, 투약, 바이탈 체크 오더의 예정 시간이 지나고 완료/보류 기록이 없는 경우.</td>
+            <td>입원 담당자, 담당 수의사.</td>
+            <td>true</td>
+            <td>담당자 active role이면 toast. 병동 summary에는 drawer-only로 누적.</td>
+            <td><code>{환자명} {처치명} 예정 시간이 지났습니다</code><br />입원 오더의 예정 시간이 지났습니다. 담당자가 수행 상태를 확인해야 합니다.</td>
+            <td>입원 처치표 또는 입원 chart. source가 없으면 알림 상세 fallback.</td>
+            <td>seed fixture + local read/archive state.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>기능별 업무 오더 이벤트 후보</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>기능</th>
+            <th>후보 이벤트</th>
+            <th>수신자</th>
+            <th>v0 판단</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>접수</td>
+            <td>대기 지연, 담당 수의사 배정/변경, 진료실 호출 지연, 보호자 안내 요청</td>
+            <td>데스크, 담당 수의사</td>
+            <td>대기 지연만 v0. 배정/호출은 v1에서 queue flow와 함께 설계.</td>
+          </tr>
+          <tr>
+            <td>진료</td>
+            <td>오더 생성/변경, 오더 취소, 담당자 지정, 결과 확인 대기, 차트 완료 전 미확인 오더</td>
+            <td>담당 수의사, 오더 수행 role</td>
+            <td>담당 오더 완료 안내와 결과 확인 대기를 v0에 포함.</td>
+          </tr>
+          <tr>
+            <td>임상</td>
+            <td>검체 채취 필요, 검체 재확인, 장비 결과 전달, 결과 입력 완료, 긴급 전달</td>
+            <td>검사 담당자, 담당 수의사</td>
+            <td>장비 결과 전달, 결과 완료, 긴급 전달, 재확인을 v0 핵심으로 둔다.</td>
+          </tr>
+          <tr>
+            <td>영상</td>
+            <td>촬영 준비 완료, 촬영 완료, 판독 완료, 재촬영 요청, 외부 영상 결과 도착</td>
+            <td>영상 담당자, 담당 수의사</td>
+            <td>판독 완료와 재촬영 요청을 우선 후보로 둔다.</td>
+          </tr>
+          <tr>
+            <td>조제/처치</td>
+            <td>조제 요청 수신, 재요청, 조제 완료, 처치 완료, 수행 보류/불가</td>
+            <td>조제/처치 담당자, 담당 수의사</td>
+            <td>완료 안내는 drawer 기본, 재요청/불가는 badge 후보.</td>
+          </tr>
+          <tr>
+            <td>수납</td>
+            <td>수납 대기 전환, 미완료 오더 존재 안내, 보호자 설명 준비</td>
+            <td>수납 role, 데스크</td>
+            <td>수납 금액 재확인/무결성 차단은 제외. 수납 대기 전환만 drawer 후보.</td>
+          </tr>
+          <tr>
+            <td>입원</td>
+            <td>입원 처치/투약 예정, 지연, 완료, 담당자 변경, 회진 전 확인 필요, 퇴원 준비 오더 완료</td>
+            <td>입원 담당자, 담당 수의사</td>
+            <td>처치/투약 지연을 badge 후보로 둔다. 완료는 drawer 기본.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>v0 공통 정책</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>정책</th>
+            <th>기본안</th>
+            <th>리뷰 포인트</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>read</td>
+            <td>사용자가 알림 row를 열거나 <code>읽음 처리</code>를 누르면 read. read는 처리 완료가 아니다. 읽은 알림은 badge count에서 제외하고, 현재 리스트에는 유지하되 텍스트/상태점을 dimmed 처리한다.</td>
+            <td>읽음 스타일은 opacity 50-60% 범위에서 디자인 QA로 확정.</td>
+          </tr>
+          <tr>
+            <td>archive</td>
+            <td><code>보관</code>을 누르면 현재 리스트에서 즉시 사라지고, 보관함/보관 필터에서만 다시 볼 수 있다. 업무 완료 의미가 아니다.</td>
+            <td>toast secondary action은 <code>나중에 보기</code>, drawer row action은 <code>보관</code>으로 구분.</td>
+          </tr>
+          <tr>
+            <td>toast lifetime</td>
+            <td>일반 toast는 자동 dismiss. 긴급 toast는 사용자가 원본 이동/닫기 전까지 더 오래 유지한다. 동시에 최대 3개만 노출하고, 나머지는 queue에서 대기한다.</td>
+            <td>정확한 유지 시간은 구현 시 sonner 설정과 맞춰 확정.</td>
+          </tr>
+          <tr>
+            <td>badge count</td>
+            <td><code>unread && badge_count === true</code>. drawer-only/reference 알림은 숫자에 포함하지 않는다.</td>
+            <td>조제 완료를 badge에서 계속 제외할지.</td>
+          </tr>
+          <tr>
+            <td>storage</td>
+            <td>v0는 synthetic fixtures + <code>localStorage</code> read/archive state. live Supabase/RLS는 별도 승인 전까지 제외.</td>
+            <td>새로고침 후에도 상태가 유지되지만, 다른 브라우저/사용자와 동기화되지는 않는다.</td>
+          </tr>
+          <tr>
+            <td>role queue local limit</td>
+            <td>역할 큐 알림도 v0에서는 현재 브라우저의 <code>localStorage</code> 상태만 반영한다.</td>
+            <td>A 데스크가 읽거나 보관해도 B 데스크의 브라우저에는 안 읽은 badge가 남을 수 있다. QA/리서치에서 의도된 제약으로 안내한다.</td>
+          </tr>
+          <tr>
+            <td>source navigation</td>
+            <td>알림의 primary action은 현재 탭에서 원본 업무 화면으로 이동한다. 이동 전 현재 화면에 dirty state가 있으면 confirmation dialog를 띄운다.</td>
+            <td>확인 문구: <code>작업 중인 내용이 저장되지 않을 수 있습니다. 이동하시겠습니까?</code></td>
+          </tr>
+          <tr>
+            <td>dedupe/update</td>
+            <td>동일 환자+동일 오더+동일 event의 미확인 알림은 새 row를 append하지 않고 기존 row를 update/bump한다.</td>
+            <td>반복 신호는 <code>updated_at</code>, 상대 시간, 필요 시 <code>occurrence_count</code>만 갱신한다.</td>
+          </tr>
+          <tr>
+            <td>permission fallback</td>
+            <td>권한이 없거나 source entity가 없으면 원본 이동 대신 알림 상세 fallback과 이유를 보여준다.</td>
+            <td>권한 fallback에서 관리자 문의 CTA를 넣을지.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>14. 구현 로드맵 초안</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>단계</th>
+            <th>범위</th>
+            <th>완료 기준</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PR 1: Shell drawer prototype</td>
+            <td>알림 버튼 click, drawer UI, mock notification fixtures, read/archive <code>localStorage</code> state.</td>
+            <td>top menu/nav rail에서 열림, 필터/읽음/보관 동작, 역할 큐 local-state 제약 안내, 기존 화면 유지.</td>
+          </tr>
+          <tr>
+            <td>PR 2: Source deep link contract</td>
+            <td>검사, 접수, 수납, 입원 등 source type별 deep link와 card metadata, dirty-state guard 계약.</td>
+            <td>각 알림이 현재 탭에서 원본 화면으로 이동하고, dirty state가 있으면 confirmation dialog를 표시하며, 없는 대상은 안전한 fallback을 표시.</td>
+          </tr>
+          <tr>
+            <td>PR 3: Notification generation rules</td>
+            <td>mock/local-first domain event에서 notification 생성 규칙, dedupe/update-bump, toast stacking 연결.</td>
+            <td>검사/임상 결과 완료, 오더 긴급 전달, 오더 재요청, 대기 지연 같은 대표 사건이 자동 생성되고 중복 알림이 기존 row/toast로 갱신됨.</td>
+          </tr>
+          <tr>
+            <td>PR 4: Full center / settings proposal</td>
+            <td>전체 보기, 검색, 보관함, preference 화면의 후속 설계.</td>
+            <td>사용량과 승욱 결정에 따라 implementation scope 확정.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>15. 리스크와 주의점</h2>
+      <ul>
+        <li>알림은 audit log가 아니다. 사용자 알림 삭제/보관과 보안/임상 audit 보존을 분리해야 한다.</li>
+        <li>client-only role filtering은 보안 경계가 아니다. live 단계에서는 server/API/RLS recipient filtering이 필요하다.</li>
+        <li>v0의 역할 큐 read/archive는 <code>localStorage</code> 기반이라 사용자 간 동기화되지 않는다. 사용성 테스트에서는 이 제약을 사전에 안내해야 한다.</li>
+        <li>원본 이동 전 dirty-state guard가 빠지면 차트/오더 작성 중 데이터 유실 위험이 생긴다. deep link 구현의 필수 완료 기준으로 둔다.</li>
+        <li>dedupe/update-bump가 없으면 동일 오더 지연/장비 결과 알림이 반복 row로 누적되어 drawer noise가 커진다.</li>
+        <li>실제 push/provider를 먼저 붙이면 운영 정책이 불명확한 상태에서 noise가 커질 수 있다.</li>
+        <li>Home My Work와 알림 센터가 같은 “해야 할 일”을 서로 다르게 표시하면 신뢰가 떨어진다.</li>
+      </ul>
+
+      <h2>16. 참고 자료</h2>
+      <ul>
+        <li><a href="https://learn.microsoft.com/en-us/graph/teams-activity-feed-notifications-best-practices">Microsoft Teams activity feed notification best practices</a></li>
+        <li><a href="https://linear.app/docs/notifications">Linear Notifications</a></li>
+        <li><a href="https://www.notion.com/en-gb/help/updates-and-notifications?nxtPslug=updates-and-notifications">Notion Inbox & notifications</a></li>
+        <li><a href="https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/managing-notifications-from-your-inbox">GitHub managing notifications from your inbox</a></li>
+        <li><a href="https://help.clickup.com/hc/en-us/articles/6325918957335-Notification-settings">ClickUp notification settings</a></li>
+        <li><a href="https://slack.com/intl/en-gb/help/articles/360025446073-Guide-to-Slack-notifications">Slack notification guide</a></li>
+        <li><a href="https://asana.com/features/project-management/inbox">Asana Inbox feature guide</a></li>
+        <li><code>docs/product/features/home/home-command-entry-planning.md</code></li>
+        <li><code>docs/product/features/home/home-v1-ui-spec.md</code></li>
+        <li><code>docs/design/system/DESIGN.md</code></li>
+        <li><code>docs/engineering/current-status.md</code></li>
+      </ul>
+    </main>
+  </body>
+</html>

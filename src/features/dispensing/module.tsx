@@ -31,6 +31,10 @@ import {
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
+import {
+  getTaskQueueEventKindFromStatus,
+  type EmrTaskQueueCardItem,
+} from "@/components/emr/task-queue-card";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -61,6 +65,7 @@ import {
   technicianUsers,
   type OrderTableGroup,
 } from "@/features/dispensing/data";
+import { mockStaffUsers } from "@/mocks/emr-domain";
 import type { Order, OrderQueueItem, ShellComponentProps, TechnicianUser } from "@/types/emr";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 
@@ -81,6 +86,7 @@ type FulfillmentWorkItem = {
   id: string;
   orderId: string;
   queueType: FulfillmentQueueType;
+  requestedByUserId?: string;
   sourceSnapshot?: {
     guardianName?: string;
     instruction?: string;
@@ -260,7 +266,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
     orderType: isTreatment ? "처치" : "조제",
     orderTypeCategory: workItem.queueType,
     orderName: workItem.sourceSnapshot?.orderDisplayName ?? "Live order",
-    requesterName: workItem.sourceSnapshot?.requestingVetName ?? "담당 수의사",
+    requesterName: getFulfillmentRequesterName(workItem),
     assigneeName: getFulfillmentAssigneeName(workItem),
     startedAt: workItem.status === "in_progress" || workItem.status === "completed" ? time : undefined,
     statusId: mapFulfillmentToQueueStatusId(workItem.status, "waiting"),
@@ -285,6 +291,14 @@ function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
   return undefined;
 }
 
+function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
+  return (
+    workItem.sourceSnapshot?.requestingVetName ??
+    mockStaffUsers.find((user) => user.id === workItem.requestedByUserId)?.name ??
+    "요청자 미지정"
+  );
+}
+
 function mapFulfillmentToQueueStatusId(status: FulfillmentWorkItemStatus, fallback: string) {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
@@ -292,6 +306,30 @@ function mapFulfillmentToQueueStatusId(status: FulfillmentWorkItemStatus, fallba
   if (status === "in_progress" || status === "accepted") return "inProgress";
   if (status === "requested") return "waiting";
   return fallback;
+}
+
+function getDispensingTaskCardTypeLabel(item: OrderQueueItem) {
+  if (item.orderTypeCategory === "treatment") return "처치";
+  if (item.orderTypeCategory === "dispensing") return "조제";
+
+  return "기타";
+}
+
+function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
+  return {
+    actionAriaLabel: `${item.patientName} ${item.orderName} 더보기`,
+    actionTestId: `order-queue-item-action-${item.id}`,
+    assigneeName: item.assigneeName,
+    eventActorName: item.requesterName,
+    eventKind: getTaskQueueEventKindFromStatus(item.statusId),
+    eventTime: item.time,
+    guardianName: item.guardianName,
+    patientName: item.patientName,
+    receptionType: item.receptionType,
+    secondLineBadgeLabel: getDispensingTaskCardTypeLabel(item),
+    secondLineText: item.orderName,
+    testId: `order-queue-item-${item.id}`,
+  };
 }
 
 export function DispensingSidePanel() {
@@ -309,6 +347,7 @@ export function DispensingSidePanel() {
 
   return (
     <EmrOrderQueueSidePanel
+      getTaskCardItem={getDispensingTaskCardItem}
       items={items}
       statuses={statuses}
       title="조제/처치"

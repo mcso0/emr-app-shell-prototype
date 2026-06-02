@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR 수납 보호자 정보바 HTML 시안</title>
+    <style>
+      :root {
+        --page: #f6f8fb;
+        --surface: #ffffff;
+        --surface-soft: #f8fafc;
+        --surface-chip: #f2f6fb;
+        --surface-chip-strong: #e8f2ff;
+        --line: #d9e2ef;
+        --line-soft: #e8edf4;
+        --text: #172033;
+        --text-soft: #536174;
+        --text-muted: #7a8797;
+        --brand: #1088ff;
+        --brand-dark: #0a62be;
+        --warning-bg: #fff7e6;
+        --warning-line: #f2c36b;
+        --warning-text: #8a4d00;
+        --success-bg: #edf9f2;
+        --success-text: #17643a;
+        --radius-panel: 12px;
+        --radius-chip: 6px;
+        --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.08);
+        --font:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+          "Noto Sans KR", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--text);
+        font-family: var(--font);
+        line-height: 1.45;
+      }
+
+      main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 32px 24px 56px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 15px;
+        line-height: 1.3;
+      }
+
+      .intro {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 22px;
+      }
+
+      .intro p {
+        max-width: 900px;
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      .workspace-shell {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        box-shadow: 0 16px 45px rgba(15, 23, 42, 0.08);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 52px;
+        border-bottom: 1px solid var(--line-soft);
+        padding: 0 14px;
+        background: #fbfcfe;
+      }
+
+      .tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        padding: 0 12px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .mock-workspace {
+        display: grid;
+        grid-template-columns: 68px minmax(0, 1fr);
+        min-height: 520px;
+      }
+
+      .rail {
+        border-right: 1px solid var(--line);
+        background: #111827;
+        padding: 14px 12px;
+      }
+
+      .rail-dot {
+        width: 34px;
+        height: 34px;
+        margin: 0 auto 14px;
+        border-radius: 9px;
+        background: #1f2937;
+      }
+
+      .rail-dot.is-active {
+        background: #2f3b52;
+        box-shadow: inset 3px 0 0 var(--brand);
+      }
+
+      .workspace-body {
+        min-width: 0;
+        background: #fbfcfe;
+      }
+
+      .variant {
+        margin-top: 18px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-panel);
+        background: var(--surface);
+        box-shadow: var(--shadow-xs);
+      }
+
+      .variant-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--line-soft);
+        padding: 12px 14px;
+        background: var(--surface-soft);
+      }
+
+      .variant-title strong {
+        font-size: 13px;
+      }
+
+      .variant-title span {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .guardian-context-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 48px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        padding: 7px 16px;
+      }
+
+      .guardian-context-scroll {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        gap: 12px;
+        overflow: hidden;
+      }
+
+      .guardian-context-scroll::after {
+        position: absolute;
+        inset: 0 0 0 auto;
+        width: 24px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0), #ffffff);
+        content: "";
+        pointer-events: none;
+      }
+
+      .context-group {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .context-icon {
+        display: block;
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+
+      .context-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 24px;
+        max-width: 220px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-chip);
+        background: var(--surface-chip);
+        padding: 0 8px;
+        color: var(--text-soft);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .context-chip--primary,
+      .context-chip--amount {
+        background: var(--surface-chip-strong);
+      }
+
+      .context-chip--warning {
+        border-color: var(--warning-line);
+        background: var(--warning-bg);
+        color: var(--warning-text);
+      }
+
+      .context-chip--success {
+        background: var(--success-bg);
+        color: var(--success-text);
+      }
+
+      .context-label {
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+
+      .context-value {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--text);
+        font-weight: 700;
+        text-overflow: ellipsis;
+      }
+
+      .context-chip--warning .context-label,
+      .context-chip--warning .context-value {
+        color: var(--warning-text);
+      }
+
+      .context-divider {
+        flex: 0 0 auto;
+        width: 1px;
+        height: 18px;
+        background: var(--line);
+      }
+
+      .invoice-badge,
+      .summary-button {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        border-radius: var(--radius-chip);
+        padding: 0 9px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .invoice-badge {
+        background: #f3f5f8;
+        color: var(--text-soft);
+      }
+
+      .summary-button {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+        cursor: default;
+      }
+
+      .content-preview {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+      }
+
+      .page-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 44px;
+      }
+
+      .page-title-main {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .page-title-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: var(--surface);
+        box-shadow: var(--shadow-xs);
+      }
+
+      .page-title-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .page-title-text {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .page-title-actions {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+      }
+
+      .summary-button--title {
+        height: 30px;
+        padding: 0 12px;
+        color: var(--brand-dark);
+      }
+
+      .info-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 12px 14px;
+      }
+
+      .info-cell {
+        min-width: 0;
+        border-right: 1px solid var(--line-soft);
+        padding: 0 12px;
+      }
+
+      .info-cell:last-child {
+        border-right: 0;
+      }
+
+      .info-label {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .info-value {
+        margin-top: 4px;
+        overflow: hidden;
+        font-size: 14px;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .table-preview {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+
+      .table-preview-header,
+      .table-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 14px;
+      }
+
+      .table-preview-header {
+        background: var(--surface-soft);
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .table-row {
+        border-top: 1px solid var(--line-soft);
+        font-size: 13px;
+      }
+
+      .amount {
+        text-align: right;
+        font-weight: 800;
+      }
+
+      .spec {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .spec-box {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 14px;
+      }
+
+      .spec-box h2 {
+        margin: 0 0 8px;
+      }
+
+      .spec-box ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      .spec-box li + li {
+        margin-top: 5px;
+      }
+
+      @media (max-width: 920px) {
+        main {
+          padding: 20px 12px 40px;
+        }
+
+        .mock-workspace {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .rail {
+          padding: 10px 6px;
+        }
+
+        .guardian-context-bar {
+          align-items: stretch;
+          flex-direction: column;
+          gap: 8px;
+          padding: 8px 10px;
+        }
+
+        .guardian-context-scroll {
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+
+        .info-strip,
+        .spec {
+          grid-template-columns: 1fr;
+        }
+
+        .info-cell {
+          border-right: 0;
+          border-bottom: 1px solid var(--line-soft);
+          padding: 8px 0;
+        }
+
+        .info-cell:last-child {
+          border-bottom: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="intro">
+        <h1>수납 보호자 정보바 HTML 시안</h1>
+        <p>
+          진료/차트 환자정보바의 48px 컨텍스트 칩 구조를 참고하되, 수납에서는
+          보호자 식별, 연결 환자, 수납대기 금액, 미납 정보, 보호자 메모가
+          먼저 보이도록 재구성한 안입니다. 지정된 Figma 아이콘은 프로젝트 SVG
+          asset으로 추가하고, 환자 그룹 앞에는 기존 동물 아이콘을 배치했습니다.
+        </p>
+      </section>
+
+      <section class="workspace-shell" aria-label="수납 화면 시안">
+        <div class="topbar">
+          <div class="tab">수납</div>
+          <div class="topbar-actions">알림 · 도움말 · 설정 · AD</div>
+        </div>
+
+        <div class="mock-workspace">
+          <nav class="rail" aria-label="좌측 네비게이션 예시">
+            <div class="rail-dot"></div>
+            <div class="rail-dot"></div>
+            <div class="rail-dot"></div>
+            <div class="rail-dot is-active"></div>
+            <div class="rail-dot"></div>
+            <div class="rail-dot"></div>
+          </nav>
+
+          <div class="workspace-body">
+            <article class="variant">
+              <div class="variant-title">
+                <strong>권장안 - 현재 선택 건</strong>
+                <span>보호자 식별 + 환자 + 수납 금액 상태를 한 줄로 유지</span>
+              </div>
+
+              <header
+                class="guardian-context-bar"
+                aria-label="보호자 수납 컨텍스트 정보"
+              >
+                <div class="guardian-context-scroll">
+                  <section class="context-group context-group--guardian">
+                    <img
+                      class="context-icon"
+                      src="../src/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+
+                    <span class="context-chip context-chip--primary">
+                      <span class="context-label">보호자</span>
+                      <strong class="context-value">이지은</strong>
+                    </span>
+
+                    <span class="context-chip">
+                      <span class="context-label">관계</span>
+                      <span class="context-value">주 보호자</span>
+                    </span>
+
+                    <span class="context-chip">
+                      <span class="context-label">연락처</span>
+                      <span class="context-value">010-****-1188</span>
+                    </span>
+                  </section>
+
+                  <span class="context-divider" aria-hidden="true"></span>
+
+                  <section class="context-group context-group--patient">
+                    <img
+                      class="context-icon"
+                      src="../icons/Illustration/animal-dog.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span class="context-chip">
+                      <span class="context-label">환자</span>
+                      <strong class="context-value">코코</strong>
+                    </span>
+
+                    <span class="context-chip">
+                      <span class="context-label">최근 수납</span>
+                      <span class="context-value">26.04.14 12:10</span>
+                    </span>
+                  </section>
+
+                  <span class="context-divider" aria-hidden="true"></span>
+
+                  <section class="context-group context-group--billing">
+                    <span class="context-chip context-chip--amount">
+                      <span class="context-label">수납대기</span>
+                      <strong class="context-value">2건 · 236,700원</strong>
+                    </span>
+
+                    <span class="context-chip">
+                      <span class="context-label">미납</span>
+                      <span class="context-value">0건 · 0원</span>
+                    </span>
+
+                    <span class="context-chip">
+                      <span class="context-label">보호자 메모</span>
+                      <span class="context-value">문자보다 알림톡 선호</span>
+                    </span>
+                  </section>
+                </div>
+
+              </header>
+
+              <div class="content-preview">
+                <div class="page-title-row">
+                  <div class="page-title-main">
+                    <span class="page-title-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M21 12a9 9 0 1 1-3-6.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                        <path d="M18 2v4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </span>
+                    <strong class="page-title-text">수납</strong>
+                    <span class="invoice-badge">INV-260501-0001</span>
+                  </div>
+                  <div class="page-title-actions">
+                    <button type="button" class="summary-button summary-button--title">수납 요약</button>
+                  </div>
+                </div>
+
+                <section class="info-strip" aria-label="선택 청구서 요약 예시">
+                  <div class="info-cell">
+                    <div class="info-label">청구서</div>
+                    <div class="info-value">INV-260501-0001</div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">보호자 / 환자</div>
+                    <div class="info-value">이지은 · 코코</div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">수납 상태</div>
+                    <div class="info-value">수납대기 · 26.05.01 10:40</div>
+                  </div>
+                  <div class="info-cell">
+                    <div class="info-label">결제 상태</div>
+                    <div class="info-value">보호자 안내 전</div>
+                  </div>
+                </section>
+
+                <section class="table-preview" aria-label="수납 항목 예시">
+                  <div class="table-preview-header">
+                    <div>항목</div>
+                    <div>출처</div>
+                    <div>수량</div>
+                    <div class="amount">청구금액</div>
+                  </div>
+                  <div class="table-row">
+                    <div>일반 진료</div>
+                    <div>수납 추가</div>
+                    <div>1</div>
+                    <div class="amount">22,000원</div>
+                  </div>
+                  <div class="table-row">
+                    <div>CBC 검사</div>
+                    <div>차트 청구</div>
+                    <div>1</div>
+                    <div class="amount">35,000원</div>
+                  </div>
+                </section>
+              </div>
+            </article>
+
+            <article class="variant">
+              <div class="variant-title">
+                <strong>긴 데이터 / 다환자 대응</strong>
+                <span>환자명이 길거나 여러 마리면 칩 내부 truncate, 상세는 페이지 타이틀의 수납 요약에서 확인</span>
+              </div>
+
+              <header
+                class="guardian-context-bar"
+                aria-label="다환자 보호자 수납 컨텍스트 정보"
+              >
+                <div class="guardian-context-scroll">
+                  <section class="context-group context-group--guardian">
+                    <img
+                      class="context-icon"
+                      src="../src/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span class="context-chip context-chip--primary">
+                      <span class="context-label">보호자</span>
+                      <strong class="context-value">이지은</strong>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">관계</span>
+                      <span class="context-value">주 보호자</span>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">연락처</span>
+                      <span class="context-value">010-****-1188</span>
+                    </span>
+                  </section>
+
+                  <span class="context-divider" aria-hidden="true"></span>
+
+                  <section class="context-group context-group--patient">
+                    <img
+                      class="context-icon"
+                      src="../icons/Illustration/animal-dog.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span class="context-chip" title="코코, 루이">
+                      <span class="context-label">환자</span>
+                      <strong class="context-value">코코 외 1</strong>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">최근 수납</span>
+                      <span class="context-value">기록 없음</span>
+                    </span>
+                  </section>
+
+                  <span class="context-divider" aria-hidden="true"></span>
+
+                  <section class="context-group context-group--billing">
+                    <span class="context-chip context-chip--amount">
+                      <span class="context-label">수납대기</span>
+                      <strong class="context-value">4건 · 421,300원</strong>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">미납</span>
+                      <span class="context-value">0건 · 0원</span>
+                    </span>
+                    <span class="context-chip context-chip--success">
+                      <span class="context-label">보호자 메모</span>
+                      <span class="context-value">결제 전 확인</span>
+                    </span>
+                  </section>
+                </div>
+
+              </header>
+            </article>
+
+            <article class="variant">
+              <div class="variant-title">
+                <strong>미납 주의 상태</strong>
+                <span>미납과 보호자 메모가 있으면 해당 칩만 warning tone으로 강조</span>
+              </div>
+
+              <header
+                class="guardian-context-bar"
+                aria-label="미납 주의 보호자 수납 컨텍스트 정보"
+              >
+                <div class="guardian-context-scroll">
+                  <section class="context-group context-group--guardian">
+                    <img
+                      class="context-icon"
+                      src="../src/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span class="context-chip context-chip--primary">
+                      <span class="context-label">보호자</span>
+                      <strong class="context-value">이지은</strong>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">관계</span>
+                      <span class="context-value">주 보호자</span>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">연락처</span>
+                      <span class="context-value">010-****-1188</span>
+                    </span>
+                  </section>
+
+                  <span class="context-divider" aria-hidden="true"></span>
+
+                  <section class="context-group context-group--patient">
+                    <img
+                      class="context-icon"
+                      src="../icons/Illustration/animal-dog.svg"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span class="context-chip">
+                      <span class="context-label">환자</span>
+                      <strong class="context-value">코코</strong>
+                    </span>
+                    <span class="context-chip">
+                      <span class="context-label">최근 수납</span>
+                      <span class="context-value">26.04.14 12:10</span>
+                    </span>
+                  </section>
+
+                  <span class="context-divider" aria-hidden="true"></span>
+
+                  <section class="context-group context-group--billing">
+                    <span class="context-chip context-chip--amount">
+                      <span class="context-label">수납대기</span>
+                      <strong class="context-value">2건 · 236,700원</strong>
+                    </span>
+                    <span class="context-chip context-chip--warning">
+                      <span class="context-label">미납</span>
+                      <strong class="context-value">1건 · 88,000원</strong>
+                    </span>
+                    <span class="context-chip context-chip--warning">
+                      <span class="context-label">보호자 메모</span>
+                      <span class="context-value">외상 요청 잦음</span>
+                    </span>
+                  </section>
+                </div>
+
+              </header>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="spec" aria-label="데이터 구성 제안">
+        <div class="spec-box">
+          <h2>1. 보호자 그룹</h2>
+          <ul>
+            <li>Figma 24x24 보호자 아이콘을 보호자 그룹 앞에 둔다.</li>
+            <li>보호자명, 관계, 마스킹 연락처를 같은 그룹으로 묶는다.</li>
+            <li>이 그룹은 수납 직원이 보호자 응대 전에 먼저 확인하는 영역이다.</li>
+          </ul>
+        </div>
+
+        <div class="spec-box">
+          <h2>2. 환자/이력 그룹</h2>
+          <ul>
+            <li>환자 그룹 앞에는 기존 동물 아이콘을 두고, 복수면 "코코 외 1"처럼 줄인다.</li>
+            <li>최근 수납은 보호자 단위 payment history의 마지막 수납시각이다.</li>
+            <li>품종, 나이, 성별, 바이탈은 수납바의 1차 정보에서 제외한다.</li>
+          </ul>
+        </div>
+
+        <div class="spec-box">
+          <h2>3. 금액 상태 그룹</h2>
+          <ul>
+            <li>수납대기 건수와 금액을 가장 강한 칩으로 둔다.</li>
+            <li>미납이 1건 이상이면 warning tone으로 즉시 보이게 한다.</li>
+            <li>정보바 오른쪽의 divider와 invoice 식별은 제거하고, 수납 요약은 페이지 타이틀 오른쪽 버튼으로 둔다.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

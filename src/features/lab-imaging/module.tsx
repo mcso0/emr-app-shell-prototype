@@ -16,7 +16,6 @@ import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   ChevronDownIcon,
-  ClockIcon,
   DownloadIcon,
   PrinterIcon,
 } from "@/components/icons";
@@ -46,13 +45,11 @@ import {
   EmrSidePanelCollapsibleGroup,
 } from "@/components/emr/side-panel-collapsible-group";
 import {
-  EmrSidePanelCard,
-  EmrSidePanelCardAction,
-  EmrSidePanelIdentityLine,
-  EmrSidePanelMetaBadge,
-  EmrSidePanelStatusBadge,
-  EmrSidePanelTypeBadge,
-} from "@/components/emr/side-panel-card";
+  EmrTaskQueueCard,
+  getTaskQueueEventKindFromStatus,
+  joinTaskQueueSummary,
+  type EmrTaskQueueCardItem,
+} from "@/components/emr/task-queue-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,8 +115,120 @@ const formatFileSize = (bytes?: number) => {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
 };
 
-const getVisitContext = (encounter: Encounter) => encounter.chiefComplaint ?? encounter.visitPurpose;
 const getReceptionTypeLabel = (encounter: Encounter) => encounter.appointmentId ? "예약" : "외래";
+
+const getTaskQueueClockTime = (dateTime?: string) => formatShortDateTime(dateTime).slice(9).trim() || "-";
+const getOrderRequesterName = (order?: EmrOrder) => getStaffName(order?.requestedByUserId) ?? "이수지";
+const getOrderEventTime = (order?: EmrOrder, fallbackDateTime?: string) =>
+  getTaskQueueClockTime(order?.requestedAt ?? fallbackDateTime);
+
+function getLabTaskQueueCardItem({
+  actionTestId,
+  item,
+  testId,
+}: {
+  actionTestId: string;
+  item: LabWorkItem;
+  testId: string;
+}): EmrTaskQueueCardItem {
+  const orderLabel = item.order?.displayName ?? item.result.resultName;
+
+  return {
+    actionAriaLabel: `${item.patient.name} ${orderLabel} 더보기`,
+    actionTestId,
+    assigneeName: item.technicianName,
+    eventActorName: getOrderRequesterName(item.order),
+    eventKind: getTaskQueueEventKindFromStatus(item.order?.status),
+    eventTime: getOrderEventTime(item.order, item.result.receivedAt ?? item.result.collectedAt),
+    guardianName: item.primaryGuardian?.name ?? "보호자 미지정",
+    patientName: item.patient.name,
+    receptionType: getReceptionTypeLabel(item.encounter),
+    secondLineBadgeLabel: item.result.resultName,
+    secondLineText: orderLabel,
+    testId,
+  };
+}
+
+function getLabGroupTaskQueueCardItem(group: LabChartGroup): EmrTaskQueueCardItem {
+  const latestItem = group.items[0];
+  const categorySummary = joinTaskQueueSummary(
+    group.items.map((item) => item.result.resultName),
+    "검사"
+  );
+  const orderSummary = joinTaskQueueSummary(
+    group.items.map((item) => item.order?.displayName ?? item.result.resultName),
+    "검사 오더"
+  );
+
+  return {
+    actionAriaLabel: `${group.patient.name} 임상병리검사 차트 더보기`,
+    actionTestId: `lab-chart-item-action-${group.encounter.id}`,
+    assigneeName: latestItem?.technicianName,
+    eventActorName: getOrderRequesterName(latestItem?.order),
+    eventKind: getTaskQueueEventKindFromStatus(latestItem?.order?.status),
+    eventTime: getOrderEventTime(latestItem?.order, latestItem?.result.receivedAt ?? latestItem?.result.collectedAt),
+    guardianName: group.primaryGuardianName ?? "보호자 미지정",
+    patientName: group.patient.name,
+    receptionType: getReceptionTypeLabel(group.encounter),
+    secondLineBadgeLabel: categorySummary,
+    secondLineText: orderSummary,
+    testId: `lab-chart-card-${group.encounter.id}`,
+  };
+}
+
+function getImagingTaskQueueCardItem({
+  actionTestId,
+  item,
+  testId,
+}: {
+  actionTestId: string;
+  item: ImagingWorkItem;
+  testId: string;
+}): EmrTaskQueueCardItem {
+  const orderLabel = item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`;
+
+  return {
+    actionAriaLabel: `${item.patient.name} ${orderLabel} 더보기`,
+    actionTestId,
+    assigneeName: item.radiologistName,
+    eventActorName: getOrderRequesterName(item.order),
+    eventKind: getTaskQueueEventKindFromStatus(item.order?.status),
+    eventTime: getOrderEventTime(item.order, item.study.capturedAt ?? item.study.requestedAt),
+    guardianName: item.primaryGuardian?.name ?? "보호자 미지정",
+    patientName: item.patient.name,
+    receptionType: getReceptionTypeLabel(item.encounter),
+    secondLineBadgeLabel: item.study.modality,
+    secondLineText: orderLabel,
+    testId,
+  };
+}
+
+function getImagingGroupTaskQueueCardItem(group: ImagingChartGroup): EmrTaskQueueCardItem {
+  const latestItem = group.items[0];
+  const categorySummary = joinTaskQueueSummary(
+    group.items.map((item) => item.study.modality),
+    "영상"
+  );
+  const orderSummary = joinTaskQueueSummary(
+    group.items.map((item) => item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`),
+    "영상 오더"
+  );
+
+  return {
+    actionAriaLabel: `${group.patient.name} 영상검사 차트 더보기`,
+    actionTestId: `imaging-chart-item-action-${group.encounter.id}`,
+    assigneeName: latestItem?.radiologistName,
+    eventActorName: getOrderRequesterName(latestItem?.order),
+    eventKind: getTaskQueueEventKindFromStatus(latestItem?.order?.status),
+    eventTime: getOrderEventTime(latestItem?.order, latestItem?.study.capturedAt ?? latestItem?.study.requestedAt),
+    guardianName: group.primaryGuardianName ?? "보호자 미지정",
+    patientName: group.patient.name,
+    receptionType: getReceptionTypeLabel(group.encounter),
+    secondLineBadgeLabel: categorySummary,
+    secondLineText: orderSummary,
+    testId: `imaging-chart-card-${group.encounter.id}`,
+  };
+}
 
 const getActionableLabRows = (result: LabResult) =>
   result.rows.filter((row) => row.judgment !== "normal" && row.judgment !== "not_judged");
@@ -885,40 +994,17 @@ function LabQueueItem({
   onSelect: () => void;
   selected: boolean;
 }) {
-  const statusLabel = getStatusLabel("labResult", item.result.status);
-  const receptionTypeLabel = getReceptionTypeLabel(item.encounter);
-
   return (
     <div data-testid={`lab-queue-item-${item.result.id}`}>
-      <EmrSidePanelCard
-        selectionVariant="modulePanel"
+      <EmrTaskQueueCard
+        item={getLabTaskQueueCardItem({
+          actionTestId: `lab-queue-item-action-${item.result.id}`,
+          item,
+          testId: `lab-queue-card-${item.result.id}`,
+        })}
         selected={selected}
         onSelect={onSelect}
-        testId={`lab-queue-card-${item.result.id}`}
-      >
-        <EmrSidePanelIdentityLine
-          patientName={item.patient.name}
-          guardianName={item.primaryGuardian?.name ?? "보호자 미지정"}
-          typeBadge={<EmrSidePanelTypeBadge label={receptionTypeLabel} />}
-          action={
-            <EmrSidePanelCardAction
-              ariaLabel={`${item.patient.name} ${item.result.resultName} 더보기`}
-              testId={`lab-queue-item-action-${item.result.id}`}
-            />
-          }
-        />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
-          <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? item.result.resultName}</span>
-        </div>
-        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
-        <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
-          <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
-          {item.technicianName ? <EmrSidePanelMetaBadge label="담당" value={item.technicianName} /> : null}
-          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
-            {formatShortDateTime(item.result.receivedAt ?? item.result.collectedAt).slice(9)} {statusLabel}
-          </EmrSidePanelStatusBadge>
-        </div>
-      </EmrSidePanelCard>
+      />
     </div>
   );
 }
@@ -966,60 +1052,13 @@ function LabChartQueueItem({
   onSelect: () => void;
   selected: boolean;
 }) {
-  const latestItem = group.items[0];
-  const orderNames = group.items
-    .map((item) => item.order?.displayName ?? item.result.resultName)
-    .join(", ");
-  const abnormalCount = group.items.reduce(
-    (total, item) => total + getActionableLabRows(item.result).length,
-    0
-  );
-  const statusSummary = Array.from(
-    new Set(group.items.map((item) => getStatusLabel("labResult", item.result.status)))
-  ).join("/");
-
   return (
     <div data-testid={`lab-chart-group-${group.encounter.id}`}>
-      <EmrSidePanelCard
-        selectionVariant="modulePanel"
+      <EmrTaskQueueCard
+        item={getLabGroupTaskQueueCardItem(group)}
         selected={selected}
         onSelect={onSelect}
-        testId={`lab-chart-card-${group.encounter.id}`}
-      >
-        <EmrSidePanelIdentityLine
-          patientName={group.patient.name}
-          guardianName={group.primaryGuardianName ?? "보호자 미지정"}
-          typeBadge={<EmrSidePanelTypeBadge label={`${group.items.length}건`} />}
-          action={
-            <EmrSidePanelCardAction
-              ariaLabel={`${group.patient.name} 임상병리검사 차트 더보기`}
-              testId={`lab-chart-item-action-${group.encounter.id}`}
-            />
-          }
-        />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
-          <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
-          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
-          <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
-        </div>
-        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
-        <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate emr-text-dense-label font-medium text-[var(--emr-text-secondary)]">
-            {orderNames}
-          </span>
-          {abnormalCount > 0 ? (
-            <span className="shrink-0 emr-text-metadata font-medium text-destructive">
-              비정상 {abnormalCount}
-            </span>
-          ) : null}
-        </div>
-        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 emr-text-metadata font-medium text-muted-foreground">
-          <span className="shrink-0 truncate">{statusSummary}</span>
-          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
-            {formatShortDateTime(latestItem?.result.receivedAt ?? latestItem?.result.collectedAt).slice(9)}
-          </EmrSidePanelStatusBadge>
-        </div>
-      </EmrSidePanelCard>
+      />
     </div>
   );
 }
@@ -1033,42 +1072,17 @@ function ImagingQueueItem({
   onSelect: () => void;
   selected: boolean;
 }) {
-  const statusLabel = getStatusLabel("imagingStudy", item.study.status);
-  const receptionTypeLabel = getReceptionTypeLabel(item.encounter);
-
   return (
     <div data-testid={`imaging-queue-item-${item.study.id}`}>
-      <EmrSidePanelCard
-        selectionVariant="modulePanel"
+      <EmrTaskQueueCard
+        item={getImagingTaskQueueCardItem({
+          actionTestId: `imaging-queue-item-action-${item.study.id}`,
+          item,
+          testId: `imaging-queue-card-${item.study.id}`,
+        })}
         selected={selected}
         onSelect={onSelect}
-        testId={`imaging-queue-card-${item.study.id}`}
-      >
-        <EmrSidePanelIdentityLine
-          patientName={item.patient.name}
-          guardianName={item.primaryGuardian?.name ?? "보호자 미지정"}
-          typeBadge={<EmrSidePanelTypeBadge label={receptionTypeLabel} />}
-          action={
-            <EmrSidePanelCardAction
-              ariaLabel={`${item.patient.name} ${item.order?.displayName ?? item.study.modality} 더보기`}
-              testId={`imaging-queue-item-action-${item.study.id}`}
-            />
-          }
-        />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
-          <span className="min-w-0 flex-1 truncate">{item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`}</span>
-          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
-          <span className="shrink-0">{item.study.modality}</span>
-        </div>
-        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
-        <div className="flex min-h-5 min-w-0 flex-wrap items-center gap-1">
-          <EmrSidePanelMetaBadge label="요청" value={getStaffName(item.order?.requestedByUserId) ?? "이수지"} />
-          <EmrSidePanelMetaBadge label="담당" value={item.radiologistName ?? "미지정"} />
-          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
-            {formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt).slice(9)} {statusLabel}
-          </EmrSidePanelStatusBadge>
-        </div>
-      </EmrSidePanelCard>
+      />
     </div>
   );
 }
@@ -1154,54 +1168,13 @@ function ImagingChartQueueItem({
   onSelect: () => void;
   selected: boolean;
 }) {
-  const latestItem = group.items[0];
-  const orderNames = group.items
-    .map((item) => item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`)
-    .join(", ");
-  const statusSummary = Array.from(
-    new Set(group.items.map((item) => getStatusLabel("imagingStudy", item.study.status)))
-  ).join("/");
-
   return (
     <div data-testid={`imaging-chart-group-${group.encounter.id}`}>
-      <EmrSidePanelCard
-        selectionVariant="modulePanel"
+      <EmrTaskQueueCard
+        item={getImagingGroupTaskQueueCardItem(group)}
         selected={selected}
         onSelect={onSelect}
-        testId={`imaging-chart-card-${group.encounter.id}`}
-      >
-        <EmrSidePanelIdentityLine
-          patientName={group.patient.name}
-          guardianName={group.primaryGuardianName ?? "보호자 미지정"}
-          typeBadge={<EmrSidePanelTypeBadge label={`${group.items.length}건`} />}
-          action={
-            <EmrSidePanelCardAction
-              ariaLabel={`${group.patient.name} 영상검사 차트 더보기`}
-              testId={`imaging-chart-item-action-${group.encounter.id}`}
-            />
-          }
-        />
-        <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
-          <span className="shrink-0 truncate">{group.encounter.encounterNo}</span>
-          <span className="shrink-0 text-[var(--emr-text-tertiary)]">·</span>
-          <span className="min-w-0 flex-1 truncate">{getVisitContext(group.encounter) ?? "내원 사유 미입력"}</span>
-        </div>
-        <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
-        <div className="flex min-h-5 min-w-0 items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate emr-text-dense-label font-medium text-[var(--emr-text-secondary)]">
-            {orderNames}
-          </span>
-          <span className="shrink-0 emr-text-metadata font-medium text-muted-foreground">
-            {statusSummary}
-          </span>
-        </div>
-        <div className="mt-1 flex min-h-5 min-w-0 flex-wrap items-center gap-1 emr-text-metadata font-medium text-muted-foreground">
-          <span className="shrink-0 truncate">{latestItem?.study.modality ?? "영상"}</span>
-          <EmrSidePanelStatusBadge icon={<ClockIcon className="size-3.5" aria-hidden="true" />}>
-            {formatShortDateTime(latestItem?.study.capturedAt ?? latestItem?.study.requestedAt).slice(9)}
-          </EmrSidePanelStatusBadge>
-        </div>
-      </EmrSidePanelCard>
+      />
     </div>
   );
 }

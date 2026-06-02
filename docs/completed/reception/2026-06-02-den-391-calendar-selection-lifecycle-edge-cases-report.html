@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-391 접수 캘린더 Selection Lifecycle Edge Cases 보고서</title>
+    <style>
+      body {
+        margin: 40px;
+        color: #1f2937;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      h1,
+      h2 {
+        color: #111827;
+      }
+      code {
+        border-radius: 4px;
+        background: #f3f4f6;
+        padding: 2px 5px;
+      }
+      .summary {
+        border-left: 4px solid #4ea7fc;
+        background: #f5fbff;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-391 접수 캘린더 Selection Lifecycle Edge Cases 보고서</h1>
+    <p class="summary">
+      역방향 드래그, draft 재선택, 최대 duration 초과 같은 edge case를
+      Playwright 테스트로 고정했다. draft card는 한 번에 하나만 유지되고,
+      새 선택이나 다른 일정 선택 시 기존 draft가 정리되는 흐름을 확인했다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>drawer open 상태에서 새 15분 slot을 선택하면 기존 draft card가 교체되는 테스트 추가</li>
+      <li>240분 초과 drag range가 invalid preview를 보이고 drawer를 만들지 않는 테스트 추가</li>
+      <li>역방향 drag가 <code>14:00-15:30</code>처럼 정상 range로 normalize되는 테스트 추가</li>
+      <li>기존 cancel/create/another appointment cleanup 회귀를 유지</li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>tests/reception.spec.ts</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run lint -- src/features/reception/module.tsx tests/reception.spec.ts</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/reception.spec.ts --grep "15-minute calendar click|clears the draft schedule card|invalid calendar draft selections|dragged calendar range|reverse dragged calendar range"</code> 통과, 5 tests</li>
+      <li><code>npx tsc --noEmit</code>는 DEN-392 최종 QA 재실행에서 통과했다.</li>
+    </ul>
+
+    <h2>현재 정책</h2>
+    <ul>
+      <li>시작 lane 기준으로 veterinarian을 고정한다.</li>
+      <li>day view 안의 같은 날짜 selection만 생성 대상으로 본다.</li>
+      <li>최소 duration은 15분, 최대 duration은 240분이다.</li>
+      <li>draft card는 정확히 하나만 유지한다.</li>
+    </ul>
+  </body>
+</html>

@@ -8,6 +8,7 @@ related_docs:
   - "docs/product/features/home/home-command-entry-planning.md"
   - "docs/product/features/home/home-work-generation-rules-v0.md"
   - "docs/product/features/home/home-v1-epic-plan.md"
+  - "docs/product/features/notifications/global-notification-center-v0-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-001-role-command-home-foundation.md"
 last_updated: "2026-05-09"
@@ -282,6 +283,8 @@ Guidelines:
 ## Notification Boundary
 
 Global notification is outside Home v1 UI scope.
+
+Current notification implementation contract: `docs/product/features/notifications/global-notification-center-v0-contract.md`.
 
 Home may show work items that originate from actionable notifications, but:
 

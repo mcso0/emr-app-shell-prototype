@@ -25,7 +25,6 @@ import {
 import {
   CdsNavigationChevronsLeftIcon,
   CdsNavigationChevronsRightIcon,
-  CdsNavigationSidebarIcon,
 } from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
@@ -62,6 +61,10 @@ import {
   EmrTableCellText,
   EmrTableHeaderCell,
 } from "@/components/emr/table-primitives";
+import {
+  getTaskQueueEventKindFromStatus,
+  type EmrTaskQueueCardItem,
+} from "@/components/emr/task-queue-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -333,6 +336,26 @@ const orderStatusLabel: Record<EmrOrderStatus, string> = {
   re_requested: "재요청",
   requested: "요청",
 };
+
+function getChartTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
+  const receptionEventLabel = item.receptionType === "예약" ? "예약" : "접수";
+
+  return {
+    actionAriaLabel: `${item.patientName} ${item.orderName} 더보기`,
+    actionTestId: `order-queue-item-action-${item.id}`,
+    assigneeName: item.assigneeName,
+    eventActorName: item.requesterName,
+    eventKind: getTaskQueueEventKindFromStatus(item.statusId),
+    eventText: `${item.time} ${receptionEventLabel}`,
+    eventTime: item.time,
+    guardianName: item.guardianName,
+    patientName: item.patientName,
+    receptionType: item.receptionType,
+    secondLineBadgeLabel: "방문목적",
+    secondLineText: item.orderType || item.orderName,
+    testId: `order-queue-item-${item.id}`,
+  };
+}
 
 const chartOrderTabs: Array<{ value: OrderFilter; label: string }> = [
   { value: "all", label: "전체오더" },
@@ -787,13 +810,14 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   ]);
 
   return (
-    <EmrOrderQueueSidePanel
+      <EmrOrderQueueSidePanel
       dateLabel="26.05.05 (화)"
       filterAriaLabel="진료 대기 유형 필터"
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
         item.receptionType === "예약" ? "appointment" : "walk-in"
       }
+      getTaskCardItem={getChartTaskCardItem}
       items={items}
       listLabel="진료 대기열"
       selectedItemId={selectedEncounterId}
@@ -808,7 +832,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   );
 }
 
-export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
+export function ChartHeader() {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -819,7 +843,6 @@ export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
     allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
-  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
@@ -850,15 +873,7 @@ export function ChartHeader({ hasRightPanel }: ShellComponentProps) {
         { label: "보호자메모", locked: true },
         { label: "수납메모", disabled: true },
       ]}
-      rightPanelToggleLabel="환자 정보"
-      rightPanelToggleIcon={
-        <CdsNavigationSidebarIcon className="-scale-x-100" aria-hidden="true" />
-      }
-      rightPanelToggleTooltipLabel={`환자 정보 ${rightPanelOpen ? "접기" : "보기"}`}
       trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
-      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      rightPanelDisabled={!hasRightPanel}
-      rightPanelOpen={rightPanelOpen}
     />
   );
 }

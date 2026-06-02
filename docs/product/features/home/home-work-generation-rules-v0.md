@@ -242,6 +242,8 @@ Principle:
 
 모든 notification이 홈 업무가 되지는 않는다.
 
+Current notification implementation contract: `docs/product/features/notifications/global-notification-center-v0-contract.md`.
+
 | 분류 | 홈 내 업무 | Notification |
 |---|---|---|
 | 나에게 요청된 action | 표시 | 표시 가능 |

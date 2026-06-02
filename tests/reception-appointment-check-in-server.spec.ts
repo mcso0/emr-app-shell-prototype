@@ -141,7 +141,7 @@ test("supabase appointment check-in gateway keeps workspace scope in the RPC wri
             patientId: "patient-nabi",
             guardianId: "guardian-oh-sea",
             assignedVeterinarianId: "user-vet-doyun",
-            scheduledStartAt: "2026-05-01T10:40:00.000Z",
+            scheduledStartAt: "2026-05-01T10:45:00.000Z",
             scheduledEndAt: "2026-05-01T11:00:00.000Z",
             visitPurpose: "피부 재진",
             status: "checked_in",

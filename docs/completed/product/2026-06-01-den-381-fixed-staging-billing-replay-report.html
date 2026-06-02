@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-381 fixed staging billing replay report</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #17202a;
+        background: #f7f8fa;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid #d8dee8;
+        border-radius: 8px;
+        padding: 32px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 19px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      ul {
+        margin: 8px 0 0 20px;
+        padding: 0;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.94em;
+        background: #f1f4f8;
+        border: 1px solid #d8dee8;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 14px;
+      }
+      th,
+      td {
+        border: 1px solid #d8dee8;
+        padding: 9px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f1f4f8;
+      }
+      .ok {
+        color: #0f7a3b;
+        font-weight: 700;
+      }
+      .warn {
+        color: #9a5b00;
+        font-weight: 700;
+      }
+      .muted {
+        color: #5d6b7c;
+      }
+      img {
+        border: 1px solid #d7dee8;
+        border-radius: 8px;
+        display: block;
+        margin-top: 12px;
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="muted">2026-06-01 · CLAiR EMR Billing Data Model & RPC Hardening · DEN-381</p>
+      <h1>Fixed staging billing DB/RPC replay 결과</h1>
+      <p>
+        승욱 승인 범위 안에서 <code>clair-emr-staging / qmerxgzrwaaahpkhjqlc</code>에
+        수납 hardening migration을 적용하고 synthetic billing replay를 실행했다.
+        production, production DB, real data import, payment provider 연동은 실행하지 않았다.
+      </p>
+
+      <h2>결론</h2>
+      <ul>
+        <li><span class="ok">통과</span>: guardian ledger 조회, checkout session 생성, invoice 상태 전환, audit payload readback이 fixed staging에서 통과했다.</li>
+        <li><span class="ok">통과</span>: 완료/취소 건은 ledger에는 남고 checkout payable 합계에서는 제외되는 규칙이 staging RPC 결과로 확인됐다.</li>
+        <li><span class="warn">주의</span>: CLI <code>db push --dry-run</code>은 기존 remote migration history와 local filename 일부 불일치 때문에 사용할 수 없었다. 승인된 단일 migration은 Supabase connector migration API로 적용했다.</li>
+      </ul>
+
+      <h2>적용한 migration</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Remote version</th>
+            <th>Name</th>
+            <th>역할</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>20260601111822</code></td>
+            <td><code>billing_guardian_checkout_hardening</code></td>
+            <td>billing_requested_at, checkout session, allocation/adjustment/audit tables, guardian ledger/checkout/status transition RPC 추가</td>
+          </tr>
+          <tr>
+            <td><code>20260601112430</code></td>
+            <td><code>den_381_billing_checkout_uuid_guardian_repair</code></td>
+            <td>Postgres 17에서 실패한 <code>min(uuid)</code> 사용을 <code>min(uuid::text)::uuid</code>로 수정</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Replay evidence</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>Run code</th>
+            <td><code>DEN381-20260601112618268</code></td>
+          </tr>
+          <tr>
+            <th>Workspace / actor</th>
+            <td><code>clair-demo</code> / <code>00000000-0000-4000-8000-000000000010</code></td>
+          </tr>
+          <tr>
+            <th>Synthetic seed</th>
+            <td>guardian 1, patient 1, encounter 1, invoices 4, invoice lines 4, approved payment 1</td>
+          </tr>
+          <tr>
+            <th>Initial ledger</th>
+            <td>4 rows: waiting, unpaid, paid, voided</td>
+          </tr>
+          <tr>
+            <th>Checkout prepare</th>
+            <td><code>prepared</code>, payable <code>200000</code>, excluded <code>70000</code>, excluded count <code>2</code></td>
+          </tr>
+          <tr>
+            <th>Status transition</th>
+            <td>waiting invoice -> paid, payment_state -> paid, audit previous <code>waiting</code>, audit target <code>paid</code></td>
+          </tr>
+          <tr>
+            <th>Final ledger</th>
+            <td>4 rows: paid 2, unpaid 1, voided 1. Final payable <code>80000</code>, excluded balance <code>70000</code></td>
+          </tr>
+          <tr>
+            <th>Result</th>
+            <td><span class="ok"><code>passed: true</code></span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>발견 및 조치</h2>
+      <ul>
+        <li>Replay 중 <code>clair_prepare_billing_checkout_session</code>에서 <code>min(uuid)</code>가 Postgres 17에 없어 실패하는 문제를 발견했다.</li>
+        <li>local migration 원본을 <code>min(i.guardian_id::text)::uuid</code>로 수정했다.</li>
+        <li>이미 staging에 적용된 RPC에는 follow-up repair migration <code>20260601112352_den_381_billing_checkout_uuid_guardian_repair.sql</code>을 추가 적용했다.</li>
+      </ul>
+
+      <h2>Advisors</h2>
+      <ul>
+        <li>Security advisor는 기존 staging 전반의 <code>RLS Enabled No Policy</code>, <code>SECURITY DEFINER</code> RPC 경고, 일부 function search_path 경고를 계속 보고했다.</li>
+        <li>이번 새 billing tables도 RLS는 켜져 있지만 table-level direct access policy는 아직 없다. 현재 replay는 승인된 RPC 경로로만 검증했다.</li>
+        <li>Performance advisor는 새 billing FK 일부의 covering index 경고와 막 생성된 index의 unused 경고를 보고했다. unused index는 신규 생성 직후라 즉시 제거 대상은 아니다.</li>
+      </ul>
+
+      <h2>Local verification</h2>
+      <ul>
+        <li><code>npx eslint tests/billing-guardian-checkout-hardening-server.spec.ts</code> 통과.</li>
+        <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+        <li><code>npm run docs:check</code> 통과.</li>
+        <li><code>npm run security:secrets</code> 통과.</li>
+        <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/billing-guardian-checkout-hardening-server.spec.ts --reporter=line</code> 통과: 7개.</li>
+      </ul>
+
+      <h2>Actual screen verification</h2>
+      <ul>
+        <li><span class="warn">Fixed staging screen blocked</span>: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code>는 Vercel Deployment Protection 때문에 앱 로그인 화면으로 진입하지 못하고 Vercel login으로 redirect됐다. Vercel share URL 생성도 403으로 실패했다.</li>
+        <li><span class="ok">Local actual screen checked</span>: 로컬 앱 <code>http://127.0.0.1:3109/w/clair-demo/billing?modulePanel=open&amp;aside=open&amp;right=open</code>에서 수납 화면, 보호자 수납이력, checkout 합산 패널을 Playwright로 조작했다.</li>
+        <li><span class="ok">UI rule observed</span>: 현재 수납대기 121,500원, 미납 58,000원, 완료 79,000원, 취소 33,000원을 함께 선택했을 때 화면의 최종 결제금액은 179,500원으로 표시됐다. 완료/취소 2건은 "현재 수납 합산에서 제외" 안내와 함께 합계에서 빠졌다.</li>
+        <li><span class="warn">UI wiring gap</span>: 화면 네트워크 로그는 <code>invoice-candidates</code>, <code>invoice-lines</code>, <code>payment-status</code>만 호출했다. 새 <code>guardian-checkout</code> DB/RPC route는 아직 화면에서 호출되지 않는다. 따라서 이번 화면 검증은 현재 mock/store-backed UI 규칙 검증이고, fixed staging DB/RPC 데이터가 화면까지 연결됐다는 검증은 아니다.</li>
+      </ul>
+      <p class="muted">Evidence screenshot: local actual billing screen after selecting unpaid, paid, and voided history rows.</p>
+      <img src="./evidence/2026-06-01-den-381-local-screen-02-history-selected.png" alt="Local billing screen showing selected unpaid, paid, and voided history rows with excluded amount warning" />
+
+      <h2>남은 판단</h2>
+      <p>
+        DEN-381의 목표였던 fixed staging synthetic replay는 통과했다.
+        다만 실제 fixed staging 화면까지 닫으려면 Vercel 보호를 통과할 수 있는 승인된 preview access가 필요하고,
+        화면이 새 <code>guardian-checkout</code> route를 호출하도록 연결하는 follow-up이 필요하다.
+        table direct RLS policy 설계와 FK covering index 정리는 별도 RLS/performance hardening 이슈로 분리하는 편이 안전하다.
+      </p>
+    </main>
+  </body>
+</html>

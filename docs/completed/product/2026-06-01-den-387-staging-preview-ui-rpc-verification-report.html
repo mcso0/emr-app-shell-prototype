@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-387 staging preview UI RPC verification report</title>
+    <style>
+      body {
+        background: #f6f8fb;
+        color: #17202c;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.65;
+        margin: 0;
+        padding: 32px;
+      }
+      main {
+        background: #fff;
+        border: 1px solid #d7dee8;
+        border-radius: 12px;
+        margin: 0 auto;
+        max-width: 980px;
+        padding: 32px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      code {
+        background: #eef2f7;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      .ok {
+        color: #137333;
+        font-weight: 700;
+      }
+      .warn {
+        color: #9a5b00;
+        font-weight: 700;
+      }
+      .muted {
+        color: #5d6b7c;
+      }
+      img {
+        border: 1px solid #d7dee8;
+        border-radius: 8px;
+        display: block;
+        margin-top: 12px;
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="muted">2026-06-01 · CLAiR EMR Billing Data Model &amp; RPC Hardening · DEN-387</p>
+      <h1>Guardian checkout preview UI-to-RPC 검증 결과</h1>
+      <p>
+        DEN-386의 guardian checkout UI-to-RPC 변경분만 clean temp workspace에 반영해
+        production이 아닌 Vercel preview로 배포하고, 보호자 수납 화면과 API readback을 검증했다.
+        production deploy, production DB 작업, real data import, RLS replay는 실행하지 않았다.
+      </p>
+
+      <h2>결론</h2>
+      <ul>
+        <li><span class="ok">통과</span>: preview deployment가 생성됐고 앱 화면에 로그인해 수납 화면까지 진입했다.</li>
+        <li><span class="ok">통과</span>: <code>guardian-checkout</code> API는 preview에서 404가 아니며, 로그인 세션에서는 <code>200</code>과 <code>guardian-billing-ledger</code> 결과를 반환했다.</li>
+        <li><span class="ok">통과</span>: 화면에서 현재 수납대기, 미납, 완료, 취소 이력 4건을 선택했을 때 결제대상 합계는 <code>179,500원</code>으로 유지됐고 완료/취소 2건은 합산 제외로 표시됐다.</li>
+        <li><span class="warn">주의</span>: preview는 Vercel Deployment Protection 뒤에 있다. 비로그인 CLI 접근은 Vercel 인증 <code>401</code>이고, Vercel CLI 인증 요청으로는 앱 인증 전 <code>unauthenticated</code>가 정상 반환됐다.</li>
+      </ul>
+
+      <h2>Preview 정보</h2>
+      <ul>
+        <li>Preview URL: <code>https://emr-app-shell-prototype-ns6r66ip4-mcso0s-projects.vercel.app</code></li>
+        <li>검증 계정: synthetic staging 계정 <code>front-desk2@clair.local</code></li>
+        <li>검증 화면: <code>/w/clair-demo/billing?modulePanel=open&amp;aside=history&amp;right=open</code></li>
+      </ul>
+
+      <h2>API readback</h2>
+      <ul>
+        <li><span class="ok">응답</span>: <code>ok: true</code>, <code>status: 200</code>, <code>enforcedBy: guardian-billing-ledger</code>.</li>
+        <li><span class="ok">행 수</span>: 보호자 이지은 ledger <code>8</code>건.</li>
+        <li><span class="ok">합산 규칙</span>: <code>INV-260501-0001</code>은 payable <code>121,500</code>, <code>INV-260429-0042</code>는 payable <code>58,000</code>.</li>
+        <li><span class="ok">제외 규칙</span>: <code>INV-260414-0027</code> 완료와 <code>INV-260328-0011</code> 취소는 <code>amountInclusion: excluded</code>.</li>
+      </ul>
+      <img src="./evidence/2026-06-01-den-387-preview-api-readback.png" alt="Preview guardian checkout API readback" />
+
+      <h2>화면 검증</h2>
+      <ul>
+        <li>수납이력에서 <code>INV-260501-0001</code>, <code>INV-260429-0042</code>, <code>INV-260414-0027</code>, <code>INV-260328-0011</code>을 선택했다.</li>
+        <li>화면은 <code>선택 4건</code>, <code>4건 · 10항목 · 수납 합산 179,500원</code>, <code>합산 제외 2건</code>을 표시했다.</li>
+        <li>완료/취소 이력은 상세 확인용으로 남고 현재 결제 금액에는 들어가지 않는다는 안내가 표시됐다.</li>
+      </ul>
+      <img src="./evidence/2026-06-01-den-387-preview-ui-rpc-screen.png" alt="Preview billing screen with guardian checkout API-backed exclusion totals" />
+
+      <h2>로컬 검증</h2>
+      <ul>
+        <li><code>npx eslint src/features/billing/module.tsx tests/billing-guardian-checkout-hardening-server.spec.ts</code> 통과.</li>
+        <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+        <li><code>npm run docs:check</code> temp workspace 기준 통과.</li>
+        <li>Vercel preview build 통과: <code>Ready in 2m</code>.</li>
+      </ul>
+
+      <h2>다음 판단</h2>
+      <p>
+        DEN-387은 Human Review로 넘길 수 있다. fixed staging alias 자체를 새 preview로 전환하거나
+        production으로 승격하는 작업은 이번 범위 밖이며, 승욱의 별도 승인 없이는 진행하지 않았다.
+      </p>
+    </main>
+  </body>
+</html>

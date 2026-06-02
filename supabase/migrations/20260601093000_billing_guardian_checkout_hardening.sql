@@ -322,7 +322,7 @@ begin
     raise exception 'adjustment_reason_required';
   end if;
 
-  select count(*), min(i.guardian_id)
+  select count(*), min(i.guardian_id::text)::uuid
   into v_matched_count, v_primary_guardian_id
   from public.invoices i
   where i.workspace_id = p_workspace_id

@@ -95,6 +95,8 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
     "order-queue-item-encounter-coco-260501",
   );
   await expect(selectedQueueCard).toHaveAttribute("data-selected", "true");
+  await expect(selectedQueueCard).toContainText("09:50 예약");
+  await expect(selectedQueueCard).not.toContainText("이수지 요청");
   const selectedQueueCardColors = await selectedQueueCard.evaluate(
     (element) => {
       const selectedBorderProbe = document.createElement("span");
@@ -846,7 +848,7 @@ test("chart history selection returns to a previous encounter for the patient", 
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 
-test("chart patient panels collapse and reopen from the context bar", async ({
+test("chart hides the patient info context-bar toggle while keeping panel collapse available", async ({
   page,
 }) => {
   await page.goto(
@@ -879,23 +881,14 @@ test("chart patient panels collapse and reopen from the context bar", async ({
   await expect(
     page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보"),
   ).toBeHidden();
-  const patientInfoToggleClosed = page.getByRole("button", {
-    name: "환자 정보 열기",
-  });
-  await expect(patientInfoToggleClosed).toHaveAttribute(
-    "aria-pressed",
-    "false",
+  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
+  await expect(page.getByText("환자 정보 보기")).toHaveCount(0);
+
+  await page.goto(
+    "/w/clair-demo/treatment?modulePanel=open&aside=history&right=open",
   );
-  await expect(patientInfoToggleClosed).toHaveAttribute("data-state", "off");
-  await page.getByRole("button", { name: "환자 정보 열기" }).hover();
-  await expect(page.getByText("환자 정보 보기")).toBeVisible();
-  await page.getByRole("button", { name: "환자 정보 열기" }).click();
   await expect(page).toHaveURL(/right=open/);
-  const patientInfoToggleOpen = page.getByRole("button", {
-    name: "환자 정보 접기",
-  });
-  await expect(patientInfoToggleOpen).toHaveAttribute("aria-pressed", "true");
-  await expect(patientInfoToggleOpen).toHaveAttribute("data-state", "on");
+  await expect(page.getByRole("button", { name: /환자 정보 (열기|접기)/ })).toHaveCount(0);
   await expect(
     page.getByText("진료 참고 · 개인/민감 정보 · 부가 정보"),
   ).toHaveCount(0);

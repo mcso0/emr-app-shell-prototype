@@ -18,6 +18,7 @@ import {
   mockGuardians,
   mockInvoiceLines,
   mockInvoices,
+  mockOrders,
   mockPatientGuardians,
   mockPatients,
   mockPayments,
@@ -560,7 +561,7 @@ function buildGuardianLedgerRows({
         patientId: patient?.id,
         patientName: patient?.name,
         payableAmount: snapshot.payableAmount,
-        requestedByName: resolveRequesterName(invoice, lines),
+        requestedByName: resolveRequesterName(invoice, lines, encounter),
         status: snapshot.status,
         totalAmount: invoice.totalAmount,
       };
@@ -575,12 +576,21 @@ function summarizeLines(lines: InvoiceLine[]) {
   return lines.length > 1 ? `${lines[0].description} 외 ${lines.length - 1}건` : lines[0].description;
 }
 
-function resolveRequesterName(invoice: Invoice, lines: InvoiceLine[]) {
+function getStaffName(userId?: string | null) {
+  return userId ? mockStaffUsers.find((staff) => staff.id === userId)?.name : undefined;
+}
+
+function resolveRequesterName(invoice: Invoice, lines: InvoiceLine[], encounter: Encounter) {
   const firstOrderLine = lines.find((line) => line.orderId);
+  const order = firstOrderLine?.orderId
+    ? mockOrders.find((item) => item.id === firstOrderLine.orderId)
+    : undefined;
+
   return (
-    mockStaffUsers.find((staff) => staff.id === invoice.issuedByUserId)?.name ??
-    (firstOrderLine?.orderId ? "차트 청구" : undefined) ??
-    "요청자 미지정"
+    getStaffName(order?.requestedByUserId) ??
+    getStaffName(invoice.issuedByUserId) ??
+    getStaffName(encounter.primaryVeterinarianId) ??
+    "이수지"
   );
 }
 

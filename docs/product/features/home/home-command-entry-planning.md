@@ -5,6 +5,8 @@ area: product
 doc_type: feature-planning
 related_work:
   - "docs/work/home/HOME-PR-001-role-command-home-foundation.md"
+related_docs:
+  - "docs/product/features/notifications/global-notification-center-v0-contract.md"
 supersedes: []
 superseded_by: []
 last_updated: "2026-05-09"
@@ -122,6 +124,8 @@ Role-based request examples:
 ### Notification Boundary
 
 전역 notification 기능은 별도로 필요하다. 이 기능은 홈 화면 안에서 구현되는 것이 아니라, 앱 오른쪽 상단의 알림 카드/알림 센터로 제공되는 전역 채널이다.
+
+Current notification implementation contract: `docs/product/features/notifications/global-notification-center-v0-contract.md`.
 
 홈과 notification의 책임은 다르다.
 

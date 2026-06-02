@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-392 접수 캘린더 Selection Guardrails 최종 보고서</title>
+    <style>
+      body {
+        margin: 40px;
+        color: #1f2937;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      h1,
+      h2 {
+        color: #111827;
+      }
+      code {
+        border-radius: 4px;
+        background: #f3f4f6;
+        padding: 2px 5px;
+      }
+      .summary {
+        border-left: 4px solid #4ea7fc;
+        background: #f5fbff;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-392 접수 캘린더 Selection Guardrails 최종 보고서</h1>
+    <p class="summary">
+      접수 캘린더에서 15분 클릭/드래그로 task를 만들 때, 생성 가능한 시간만
+      drawer와 draft card로 이어지도록 guardrail을 추가했다. 불가 시간, 영업시간 밖,
+      기존 일정 겹침, 너무 긴 drag range는 생성되지 않고 invalid feedback을 보인다.
+    </p>
+
+    <h2>완료된 작업</h2>
+    <ul>
+      <li>Project 19와 마일스톤 4개, Linear 이슈 DEN-388부터 DEN-392까지 생성</li>
+      <li>selection guardrail contract와 edge-case matrix 작성</li>
+      <li>15분 단위 validation/normalization foundation 구현</li>
+      <li>영업시간 밖, 점심시간, 기존 일정 겹침, 240분 초과 selection 차단</li>
+      <li>invalid slot에 <code>aria-disabled=true</code>와 danger visual feedback 적용</li>
+      <li>invalid drag preview에 reason message 표시</li>
+      <li>drawer open 중 새 selection이 기존 draft card를 교체하는 lifecycle 검증</li>
+      <li>역방향 drag normalization 검증</li>
+    </ul>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>docs/work/reception/RECEPTION-PR-006-calendar-selection-guardrails.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+      <li><code>docs/completed/reception/2026-06-02-den-388-calendar-selection-guardrail-contract-report.html</code></li>
+      <li><code>docs/completed/reception/2026-06-02-den-389-calendar-selection-validation-foundation-report.html</code></li>
+      <li><code>docs/completed/reception/2026-06-02-den-390-invalid-selection-feedback-report.html</code></li>
+      <li><code>docs/completed/reception/2026-06-02-den-391-calendar-selection-lifecycle-edge-cases-report.html</code></li>
+      <li><code>docs/completed/reception/2026-06-02-den-392-calendar-selection-guardrails-closeout-report.html</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run lint -- src/features/reception/module.tsx tests/reception.spec.ts</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/reception.spec.ts --grep "15-minute calendar click|clears the draft schedule card|invalid calendar draft selections|dragged calendar range|reverse dragged calendar range"</code> 통과, 5 tests</li>
+    </ul>
+
+    <h2>검증된 시나리오</h2>
+    <ul>
+      <li>valid 15분 click 생성</li>
+      <li>drawer 취소와 다른 일정 선택 시 draft card 제거</li>
+      <li>영업시간 밖 19:00 slot 차단</li>
+      <li>점심시간 12:15 slot 차단</li>
+      <li>기존 예약과 겹치는 drag range 차단</li>
+      <li>240분 초과 drag range 차단</li>
+      <li>valid multi-hour drag 생성</li>
+      <li>역방향 drag range normalization</li>
+    </ul>
+
+    <h2>제외 및 제한</h2>
+    <p>
+      이번 작업은 session-only reception calendar UX guardrail이다. live Supabase/API
+      validation, DB migration, RLS, production deployment, 병원별 근무표 CRUD,
+      예약 card drag-resize/move 편집은 범위 밖이다.
+    </p>
+  </body>
+</html>

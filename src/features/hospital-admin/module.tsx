@@ -5,17 +5,15 @@ import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
   CdsActionsCopyIcon,
-  CdsActionsSettingsIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import {
-  CdsFilesCalendarIcon,
-  CdsFilesFileTextIcon,
-  CdsFilesGridIcon,
-  CdsFilesLayersIcon,
-} from "@/components/cds-icons/files-and-layout";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import {
+  EmrModuleListSidePanel,
+  EmrModuleListSidePanelBadge,
+  type EmrModuleListSidePanelItem,
+  type EmrModuleListSidePanelSectionChild,
+} from "@/components/emr/module-list-side-panel";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
@@ -28,10 +26,6 @@ import {
   getEmrTableFilterBuilderActiveCount,
   type EmrTableFilterBuilderField,
 } from "@/components/emr/table-filter-builder-model";
-import {
-  EmrTextSideNavButton,
-  EmrTextSideNavSection,
-} from "@/components/emr/text-side-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -75,7 +69,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { SearchIcon, SlidersIcon } from "@/components/icons";
+import {
+  ActivityIcon,
+  BuildingIcon,
+  CalendarIcon,
+  ClipboardListIcon,
+  DatabaseIcon,
+  DocumentCheckIcon,
+  DocumentIcon,
+  FolderIcon,
+  GridIcon,
+  LayersIcon,
+  PrinterIcon,
+  SearchIcon,
+  SettingsIcon,
+  ShieldIcon,
+  SlidersIcon,
+  UsersIcon,
+} from "@/components/icons";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import {
@@ -260,17 +271,17 @@ type OrderMenuGroup = {
 };
 
 const hospitalAdminMenuItems = [
-  { label: "병원기본설정", icon: CdsActionsSettingsIcon },
-  { label: "병원구성원 관리", icon: CdsFilesFileTextIcon },
-  { label: "감사 로그", icon: CdsFilesFileTextIcon },
-  { label: "근무표", icon: CdsFilesCalendarIcon },
-  { label: "역할별 업무 관리", icon: CdsFilesGridIcon },
-  { label: "공간/시간 관리", icon: CdsFilesGridIcon },
-  { label: "진료과 분리운영", icon: CdsFilesLayersIcon },
-  { label: "바이탈 관리", icon: CdsFilesFileTextIcon },
-  { label: "차트 템플릿", icon: CdsFilesFileTextIcon },
-  { label: "장비 관리", icon: CdsFilesGridIcon },
-  { label: "마약류 관리", icon: CdsFilesFileTextIcon },
+  { label: "병원기본설정", icon: SettingsIcon },
+  { label: "병원구성원 관리", icon: UsersIcon },
+  { label: "감사 로그", icon: DocumentCheckIcon },
+  { label: "근무표", icon: CalendarIcon },
+  { label: "역할별 업무 관리", icon: GridIcon },
+  { label: "공간/시간 관리", icon: BuildingIcon },
+  { label: "진료과 분리운영", icon: LayersIcon },
+  { label: "바이탈 관리", icon: ActivityIcon },
+  { label: "차트 템플릿", icon: ClipboardListIcon },
+  { label: "장비 관리", icon: DatabaseIcon },
+  { label: "마약류 관리", icon: ShieldIcon },
 ];
 
 const orderMenuGroups: OrderMenuGroup[] = [
@@ -730,112 +741,106 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       return next;
     });
   };
+  const orderSectionChildren: EmrModuleListSidePanelSectionChild[] = orderMenuGroups.flatMap((group) => [
+    {
+      type: "groupLabel" as const,
+      id: `${group.id}-label`,
+      label: group.label,
+    },
+    ...group.children.map((item) => {
+      const active =
+        item.categoryId === selectedCategoryId &&
+        item.subcategoryId === selectedSubcategoryId;
+
+      return {
+        type: "leaf" as const,
+        id: `${group.id}-${item.label}`,
+        active,
+        count: item.subcategoryId ? (
+          <EmrModuleListSidePanelBadge>
+            {getSubcategoryCount(orders, item.subcategoryId)}
+          </EmrModuleListSidePanelBadge>
+        ) : undefined,
+        disabled: item.disabled,
+        label: item.label,
+        onClick: () => {
+          if (!item.categoryId || !item.subcategoryId) return;
+
+          setActiveSection("orders");
+          setSelectedCategoryId(item.categoryId);
+          setSelectedSubcategoryId(item.subcategoryId);
+        },
+      };
+    }),
+  ]);
+  const sidePanelItems: EmrModuleListSidePanelItem[] = [
+    ...hospitalAdminMenuItems.map((item) => {
+      const Icon = item.icon;
+      const isMembers = item.label === "병원구성원 관리";
+      const isAudit = item.label === "감사 로그";
+
+      return {
+        type: "button" as const,
+        id: item.label,
+        active: (isMembers && activeSection === "members") || (isAudit && activeSection === "audit"),
+        disabled: !isMembers && !isAudit,
+        icon: <Icon className="size-4 shrink-0" />,
+        label: item.label,
+        onClick: isMembers
+          ? () => setActiveSection("members")
+          : isAudit
+            ? () => setActiveSection("audit")
+            : undefined,
+      };
+    }),
+    {
+      type: "section",
+      id: "orders",
+      label: "Order 관리",
+      icon: <DocumentIcon className="size-4 shrink-0" />,
+      testId: "hospital-admin-menu-order-management",
+      children: orderSectionChildren,
+    },
+    {
+      type: "button",
+      id: "order-set",
+      count: <EmrModuleListSidePanelBadge variant="outline">후속</EmrModuleListSidePanelBadge>,
+      disabled: true,
+      icon: <FolderIcon className="size-4 shrink-0" />,
+      label: "Order 세트",
+      testId: orderSetPlaceholderId,
+    },
+    {
+      type: "button",
+      id: "printer-settings",
+      disabled: true,
+      icon: <PrinterIcon className="size-4 shrink-0" />,
+      label: "프린터 설정",
+    },
+    {
+      type: "button",
+      id: "data-lab",
+      disabled: true,
+      icon: <SlidersIcon className="size-4 shrink-0" />,
+      label: "데이터랩",
+    },
+  ];
 
   return (
-    <aside className="group/emr-subpanel flex h-full min-h-0 w-full min-w-[280px] max-w-[280px] flex-col bg-[var(--emr-surface-sidepanel)]">
-      <EmrSubpanelTitle
-        title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
-        collapseLabel="병원관리 사이드 패널 접기"
-        onCollapse={() => setModulePanelOpen(false)}
-      />
-      <ScrollArea className="min-h-0 flex-1 px-3 pb-4">
-        <div className="grid gap-1 pt-1">
-          {hospitalAdminMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isMembers = item.label === "병원구성원 관리";
-            const isAudit = item.label === "감사 로그";
+    <EmrModuleListSidePanel
+      title={moduleLabel}
+      collapseLabel="병원관리 사이드 패널 접기"
+      items={sidePanelItems}
+      onCollapse={() => setModulePanelOpen(false)}
+      onToggleSection={(sectionId) => {
+        if (sectionId === "orders") {
+          setActiveSection("orders");
+        }
 
-            return (
-              <EmrTextSideNavButton
-                key={item.label}
-                active={(isMembers && activeSection === "members") || (isAudit && activeSection === "audit")}
-                disabled={!isMembers && !isAudit}
-                icon={<Icon className="size-4 shrink-0" />}
-                onClick={
-                  isMembers
-                    ? () => setActiveSection("members")
-                    : isAudit
-                      ? () => setActiveSection("audit")
-                      : undefined
-                }
-              >
-                {item.label}
-              </EmrTextSideNavButton>
-            );
-          })}
-          <EmrTextSideNavSection
-            title="Order 관리"
-            icon={<CdsFilesFileTextIcon className="size-4 shrink-0" />}
-            open={openSections.has("orders")}
-            testId="hospital-admin-menu-order-management"
-            onToggle={() => {
-              setActiveSection("orders");
-              toggleSection("orders");
-            }}
-          >
-            <div className="ml-4 border-l py-1 pl-3">
-              {orderMenuGroups.map((group) => (
-                <div key={group.id} className="py-1">
-                  <div className="flex h-8 items-center rounded-md px-2 emr-text-body font-semibold text-[var(--emr-text-primary)]">
-                    {group.label}
-                  </div>
-                  <div className="grid gap-1">
-                    {group.children.map((item) => {
-                      const active =
-                        item.categoryId === selectedCategoryId &&
-                        item.subcategoryId === selectedSubcategoryId;
-
-                      return (
-                        <EmrTextSideNavButton
-                          key={`${group.id}-${item.label}`}
-                          active={active}
-                          className="pl-4"
-                          count={
-                            item.subcategoryId ? (
-                              <Badge variant="secondary" className="h-5 min-w-5 rounded-md px-1 emr-text-micro">
-                                {getSubcategoryCount(orders, item.subcategoryId)}
-                              </Badge>
-                            ) : undefined
-                          }
-                          disabled={item.disabled}
-                          onClick={() => {
-                            if (!item.categoryId || !item.subcategoryId) return;
-
-                            setActiveSection("orders");
-                            setSelectedCategoryId(item.categoryId);
-                            setSelectedSubcategoryId(item.subcategoryId);
-                          }}
-                        >
-                          {item.label}
-                        </EmrTextSideNavButton>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </EmrTextSideNavSection>
-          <EmrTextSideNavButton
-            disabled
-            count={
-              <Badge variant="outline" className="h-5 rounded-md px-1.5 emr-text-micro">
-                후속
-              </Badge>
-            }
-            icon={<CdsFilesFileTextIcon className="size-4 shrink-0" />}
-            testId={orderSetPlaceholderId}
-          >
-            Order 세트
-          </EmrTextSideNavButton>
-          <EmrTextSideNavButton disabled icon={<CdsActionsSettingsIcon className="size-4 shrink-0" />}>
-            프린터 설정
-          </EmrTextSideNavButton>
-          <EmrTextSideNavButton disabled icon={<CdsFilesGridIcon className="size-4 shrink-0" />}>
-            데이터랩
-          </EmrTextSideNavButton>
-        </div>
-      </ScrollArea>
-    </aside>
+        toggleSection(sectionId);
+      }}
+      openSectionIds={openSections}
+    />
   );
 }
 

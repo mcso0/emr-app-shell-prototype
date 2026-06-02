@@ -5,20 +5,14 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import {
-  CdsFilesCalendarIcon,
-  CdsFilesDocumentAltFillIcon,
-  CdsFilesFileTextIcon,
-} from "@/components/cds-icons/files-and-layout";
-import {
-  CdsPeopleUserIcon,
-  CdsPeopleUsersIcon,
-  CdsPeopleUserXIcon,
-} from "@/components/cds-icons/people-and-places";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import {
+  EmrModuleListSidePanel,
+  EmrModuleListSidePanelBadge,
+  type EmrModuleListSidePanelItem,
+} from "@/components/emr/module-list-side-panel";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrSubpanelTitle } from "@/components/emr/subpanel";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
@@ -30,10 +24,18 @@ import {
 } from "@/components/emr/table-filter-builder-model";
 import { EmrTableCellText, EmrTableHeaderCell } from "@/components/emr/table-primitives";
 import {
-  EmrTextSideNavButton,
-  EmrTextSideNavSection,
-} from "@/components/emr/text-side-panel";
-import { ChevronDownIcon, CircleCloseFillIcon, MenuIcon } from "@/components/icons";
+  CalendarCheckIcon,
+  ChevronDownIcon,
+  CircleCloseFillIcon,
+  ContactBookIcon,
+  DocumentIcon,
+  MenuIcon,
+  MessagesIcon,
+  SendIcon,
+  UserCrossIcon,
+  UserIcon,
+  UsersIcon,
+} from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -80,19 +82,18 @@ import type {
 import type { ShellComponentProps } from "@/types/emr";
 
 const customerSideItems = [
-  { value: "patient" as const, label: "동물", icon: CdsPeopleUserIcon },
-  { value: "guardian" as const, label: "보호자", icon: CdsPeopleUsersIcon },
-  { value: "deleted" as const, label: "삭제된 보호자/동물", icon: CdsPeopleUserXIcon },
+  { value: "patient" as const, label: "동물", icon: UserIcon },
+  { value: "guardian" as const, label: "보호자", icon: UsersIcon },
+  { value: "deleted" as const, label: "삭제된 보호자/동물", icon: UserCrossIcon },
 ];
 
 const placeholderSideItems = [
-  { label: "스케줄 관리", icon: CdsFilesCalendarIcon, children: ["예약 일정", "방문 일정", "취소 일정"] },
-  { label: "발송 관리", icon: CdsFilesFileTextIcon, children: ["발송 목록", "템플릿", "예약 발송"] },
-  { label: "서류 관리", icon: CdsFilesDocumentAltFillIcon, children: ["동의서", "증명서", "업로드"] },
-  { label: "CS내역", icon: CdsPeopleUsersIcon, children: ["전체 CS", "미처리", "완료"] },
-  { label: "진료의뢰수신", icon: CdsFilesFileTextIcon, children: ["수신 목록", "처리중", "완료"] },
+  { label: "스케줄 관리", icon: CalendarCheckIcon },
+  { label: "발송 관리", icon: SendIcon },
+  { label: "서류 관리", icon: DocumentIcon },
+  { label: "CS내역", icon: MessagesIcon },
+  { label: "진료의뢰수신", icon: ContactBookIcon },
 ];
-const customerSidePanelWidthClassName = "min-w-[280px] max-w-[280px]";
 const customerTableWidthClassNames = {
   guardian: "min-w-[1120px]",
   patient: "min-w-[1320px]",
@@ -720,8 +721,24 @@ function CustomerDataTable<TRow extends { id: string }>({
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const listMode = useCustomerStore((state) => state.listMode);
   const setListMode = useCustomerStore((state) => state.setListMode);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
+  const patients = usePatientProfileStore((state) => state.patients);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["master"]));
+  const patientCount = useMemo(
+    () => getCustomerPatientRows({ guardians, patientGuardians, patients }).length,
+    [guardians, patientGuardians, patients]
+  );
+  const guardianCount = useMemo(
+    () => getCustomerGuardianRows({ guardians, patientGuardians, patients }).length,
+    [guardians, patientGuardians, patients]
+  );
+  const customerCounts: Record<CustomerListMode, number> = {
+    deleted: 0,
+    guardian: guardianCount,
+    patient: patientCount,
+  };
   const toggleSection = (sectionId: string) => {
     setOpenSections((current) => {
       const next = new Set(current);
@@ -735,73 +752,50 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
       return next;
     });
   };
+  const sidePanelItems: EmrModuleListSidePanelItem[] = [
+    {
+      type: "section",
+      id: "master",
+      label: "보호자/동물 관리",
+      icon: <ContactBookIcon className="size-4 shrink-0" />,
+      children: customerSideItems.map((item) => {
+        const Icon = item.icon;
+
+        return {
+          type: "leaf" as const,
+          id: item.value,
+          active: listMode === item.value,
+          count: <EmrModuleListSidePanelBadge>{customerCounts[item.value]}</EmrModuleListSidePanelBadge>,
+          icon: <Icon className="size-4 shrink-0" />,
+          label: item.label,
+          onClick: () => setListMode(item.value),
+          testId: `customer-side-panel-${item.value}`,
+        };
+      }),
+    },
+    ...placeholderSideItems.map((item) => {
+      const Icon = item.icon;
+
+      return {
+        type: "button" as const,
+        id: item.label,
+        count: <EmrModuleListSidePanelBadge variant="outline">후속</EmrModuleListSidePanelBadge>,
+        disabled: true,
+        icon: <Icon className="size-4 shrink-0" />,
+        label: item.label,
+      };
+    }),
+  ];
 
   return (
-    <aside
-      className={cn(
-        "group/emr-subpanel flex h-full min-h-0 w-full flex-col bg-[var(--emr-surface-sidepanel)]",
-        customerSidePanelWidthClassName
-      )}
-      data-testid="customer-side-panel"
-    >
-      <EmrSubpanelTitle
-        title={<span data-testid="module-side-panel-title">{moduleLabel}</span>}
-        onCollapse={() => setModulePanelOpen(false)}
-      />
-      <ScrollArea className="min-h-0 flex-1 px-3 pb-4">
-        <div className="grid gap-1 pt-1">
-          <EmrTextSideNavSection
-            title="보호자/동물 관리"
-            icon={<CdsPeopleUsersIcon className="size-4 shrink-0" />}
-            open={openSections.has("master")}
-            onToggle={() => toggleSection("master")}
-          >
-          <div className="ml-4 border-l py-1 pl-3">
-            {customerSideItems.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <EmrTextSideNavButton
-                  key={item.value}
-                  active={listMode === item.value}
-                  icon={<Icon className="size-4 shrink-0" />}
-                  onClick={() => setListMode(item.value)}
-                >
-                  {item.label}
-                </EmrTextSideNavButton>
-              );
-            })}
-          </div>
-          </EmrTextSideNavSection>
-          {placeholderSideItems.map((item) => {
-            const Icon = item.icon;
-            const sectionId = item.label;
-            const open = openSections.has(sectionId);
-
-            return (
-              <EmrTextSideNavSection
-                key={item.label}
-                title={item.label}
-                icon={<Icon className="size-4 shrink-0" />}
-                open={open}
-                onToggle={() => toggleSection(sectionId)}
-              >
-                <div className="ml-4 border-l py-1 pl-3">
-                  {item.children.map((child) => (
-                    <EmrTextSideNavButton
-                      key={`${item.label}-${child}`}
-                      disabled
-                    >
-                      {child}
-                    </EmrTextSideNavButton>
-                  ))}
-                </div>
-              </EmrTextSideNavSection>
-            );
-          })}
-        </div>
-      </ScrollArea>
-    </aside>
+    <EmrModuleListSidePanel
+      title={moduleLabel}
+      items={sidePanelItems}
+      onCollapse={() => setModulePanelOpen(false)}
+      onToggleSection={toggleSection}
+      openSectionIds={openSections}
+      testId="customer-side-panel"
+    />
   );
 }
 
@@ -862,7 +856,7 @@ function CustomerToolbar({
         className="h-auto flex-wrap gap-y-3"
         actionsClassName="ml-auto flex-wrap justify-end"
         icon={
-          <CdsPeopleUsersIcon
+          <UsersIcon
             className="size-5 shrink-0 text-[var(--emr-text-tertiary)]"
             aria-hidden="true"
           />
