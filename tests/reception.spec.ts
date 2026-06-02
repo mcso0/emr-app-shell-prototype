@@ -208,6 +208,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   await expect(kongAppointment.getByTestId("appointment-accent-appointment-kong-260501")).toHaveClass(/emr-status-info-text/);
   await expect(kongAppointment).toContainText("콩이");
   await expect(kongAppointment).toContainText("구토 및 복부");
+  await expect(kongAppointment).toHaveCSS("box-shadow", "none");
 
   const timeAxisAlignment = await calendar.evaluate((calendarElement) => {
     const timeAxis = calendarElement.querySelector('[data-testid="day-time-axis"]');
@@ -1540,6 +1541,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:15");
   await expect(draftCard).toContainText("15분");
+  await expect(draftCard).toHaveCSS("box-shadow", "none");
 });
 
 test("reception creates a draft task from a dragged calendar range", async ({ page }) => {

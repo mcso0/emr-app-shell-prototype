@@ -1285,7 +1285,7 @@ function ScheduleAppointmentCard({
   return (
     <div
       className={cn(
-        "relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border p-2 shadow-[var(--clair-shadow-sm)] transition-colors",
+        "relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border p-2 transition-colors",
         noShow
           ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]"
           : checkedIn
@@ -1383,7 +1383,7 @@ function ScheduleWalkInQueueCard({
 
   return (
     <div
-      className="relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 shadow-[var(--clair-shadow-sm)]"
+      className="relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2"
       data-testid={`walkin-card-${draft.encounter.id}`}
     >
       <span
