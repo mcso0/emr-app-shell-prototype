@@ -211,41 +211,59 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   const timeAxisAlignment = await calendar.evaluate((calendarElement) => {
     const timeAxis = calendarElement.querySelector('[data-testid="day-time-axis"]');
-    const hourRow = calendarElement.querySelector('[data-testid="day-hour-row-9"]');
+    const alignedHours = [9, 10, 11, 12];
     const firstTimeLabel = Array.from(timeAxis?.querySelectorAll("div") ?? []).find(
       (element) => element.textContent?.trim() === "08:00"
     );
-    const timeLabel = Array.from(timeAxis?.querySelectorAll("div") ?? []).find(
-      (element) => element.textContent?.trim() === "09:00"
-    );
 
-    if (!timeAxis || !hourRow || !firstTimeLabel || !timeLabel) return null;
+    if (!timeAxis || !firstTimeLabel) return null;
 
     const firstTextRange = document.createRange();
     firstTextRange.selectNodeContents(firstTimeLabel);
     const firstTextBox = firstTextRange.getBoundingClientRect();
     firstTextRange.detach();
-    const textRange = document.createRange();
-    textRange.selectNodeContents(timeLabel);
-    const textBox = textRange.getBoundingClientRect();
-    textRange.detach();
 
     const timeAxisBox = timeAxis.getBoundingClientRect();
-    const hourRowBox = hourRow.getBoundingClientRect();
+    const alignments = alignedHours.map((hour) => {
+      const hourRow = calendarElement.querySelector(`[data-testid="day-hour-row-${hour}"]`);
+      const timeLabel = Array.from(timeAxis.querySelectorAll("div")).find(
+        (element) => element.textContent?.trim() === `${String(hour).padStart(2, "0")}:00`
+      );
+
+      if (!hourRow || !timeLabel) return null;
+
+      const textRange = document.createRange();
+      textRange.selectNodeContents(timeLabel);
+      const textBox = textRange.getBoundingClientRect();
+      textRange.detach();
+
+      const hourRowBox = hourRow.getBoundingClientRect();
+
+      return {
+        hour,
+        gapToAxisRight: timeAxisBox.right - textBox.right,
+        rowHeight: hourRowBox.height,
+        textCenterOffsetFromRowLine: Math.abs((textBox.top + textBox.bottom) / 2 - hourRowBox.top),
+      };
+    });
+
+    if (alignments.some((alignment) => alignment === null)) return null;
 
     return {
       firstLabelInsetFromAxisTop: firstTextBox.top - timeAxisBox.top,
-      gapToAxisRight: timeAxisBox.right - textBox.right,
-      textCenterOffsetFromRowLine: Math.abs((textBox.top + textBox.bottom) / 2 - hourRowBox.top),
+      alignments,
     };
   });
 
   if (!timeAxisAlignment) throw new Error("Expected day calendar time axis alignment data");
 
   expect(timeAxisAlignment.firstLabelInsetFromAxisTop).toBeGreaterThanOrEqual(0);
-  expect(timeAxisAlignment.gapToAxisRight).toBeGreaterThanOrEqual(6);
-  expect(timeAxisAlignment.gapToAxisRight).toBeLessThanOrEqual(10);
-  expect(timeAxisAlignment.textCenterOffsetFromRowLine).toBeLessThanOrEqual(1);
+  for (const alignment of timeAxisAlignment.alignments) {
+    expect(alignment?.gapToAxisRight).toBeGreaterThanOrEqual(6);
+    expect(alignment?.gapToAxisRight).toBeLessThanOrEqual(10);
+    expect(alignment?.rowHeight).toBe(112);
+    expect(alignment?.textCenterOffsetFromRowLine).toBeLessThanOrEqual(1);
+  }
 
   const nabiAppointment = page.getByTestId("appointment-card-appointment-nabi-260501");
   await expect(nabiAppointment.getByTestId("appointment-purpose-appointment-nabi-260501")).toContainText("피부");
@@ -1513,10 +1531,12 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:15");
   await expect(draftDrawer.getByLabel("소요시간")).toContainText("15분");
 
-  await draftDrawer.getByLabel("방문 목적").fill("15분 슬롯 테스트");
   await draftDrawer.getByRole("button", { name: "생성" }).click();
 
-  const draftCard = page.locator('[data-testid^="walkin-card-"]').filter({ hasText: "15분 슬롯 테스트" });
+  const draftCard = page
+    .locator('[data-testid^="walkin-card-"]')
+    .filter({ hasText: "나비" })
+    .filter({ hasText: "14:15" });
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:15");
   await expect(draftCard).toContainText("15분");

@@ -1285,7 +1285,7 @@ function ScheduleAppointmentCard({
   return (
     <div
       className={cn(
-        "relative min-w-0 flex-1 overflow-hidden rounded-lg border p-2 shadow-[var(--clair-shadow-sm)] transition-colors",
+        "relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border p-2 shadow-[var(--clair-shadow-sm)] transition-colors",
         noShow
           ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]"
           : checkedIn
@@ -1339,19 +1339,19 @@ function ScheduleAppointmentCard({
         ) : null}
       </button>
       {!compact ? (
-        <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="truncate emr-text-micro text-muted-foreground">
-          {getAppointmentVeterinarianName(appointment)}
-        </span>
-        <Button
-          size="sm"
-          className="h-7 px-2 emr-text-metadata"
-          variant={canCheckIn ? "default" : "outline"}
-          disabled={!canCheckIn}
-          onClick={onCheckIn}
-        >
-          접수 처리
-        </Button>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className="truncate emr-text-micro text-muted-foreground">
+            {getAppointmentVeterinarianName(appointment)}
+          </span>
+          <Button
+            size="sm"
+            className="h-6 px-2 emr-text-metadata"
+            variant={canCheckIn ? "default" : "outline"}
+            disabled={!canCheckIn}
+            onClick={onCheckIn}
+          >
+            접수 처리
+          </Button>
         </div>
       ) : null}
     </div>
@@ -1383,7 +1383,7 @@ function ScheduleWalkInQueueCard({
 
   return (
     <div
-      className="relative min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 shadow-[var(--clair-shadow-sm)]"
+      className="relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2 shadow-[var(--clair-shadow-sm)]"
       data-testid={`walkin-card-${draft.encounter.id}`}
     >
       <span
@@ -1422,7 +1422,7 @@ function ScheduleWalkInQueueCard({
           {draft.memo ? ` · ${draft.memo}` : ""}
         </div>
       </button>
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="mt-1 flex items-center justify-between gap-2">
         <span className="truncate emr-text-micro text-muted-foreground">
           {veterinarianName ?? "담당의 미지정"}
         </span>
@@ -1925,7 +1925,7 @@ function ScheduleSelectionCell({
 
   return (
     <div
-      className="relative h-full min-h-0 min-w-0 flex-1 touch-none rounded-lg border border-transparent bg-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)]"
+      className="relative h-full min-h-0 min-w-0 flex-1 touch-none rounded-lg border border-transparent bg-transparent outline-none"
       data-testid={testId}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
@@ -2006,7 +2006,7 @@ function ScheduleSelectionCell({
               key={slotMinutes}
               type="button"
               aria-label={`${getScheduleTimeLabelFromMinutes(slotMinutes)} ${veterinarian.name} 접수/예약 생성`}
-              className="group/slot flex min-h-0 items-center justify-center outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="group/slot mx-1 flex min-h-0 items-center justify-center rounded-md border border-transparent outline-none transition-colors hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)] focus-visible:ring-3 focus-visible:ring-ring/50"
               data-testid={`${testId}-slot-${getScheduleTimeLabelFromMinutes(slotMinutes).replace(":", "")}`}
               tabIndex={dragState ? -1 : 0}
               onKeyDown={(event) => {
@@ -2210,7 +2210,7 @@ function DayScheduleBoard({
                 className="grid border-b"
                 style={{
                   gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
-                  minHeight: dayScheduleHourRowHeight,
+                  height: dayScheduleHourRowHeight,
                 }}
               >
                 {selectedVeterinarians.map((veterinarian) => {
@@ -2226,17 +2226,17 @@ function DayScheduleBoard({
                   );
 
                   return (
-                    <div key={`${hour}-${veterinarian.id}`} className="flex min-w-0 gap-2 border-r p-2 last:border-r-0">
+                    <div key={`${hour}-${veterinarian.id}`} className="flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r p-2 last:border-r-0">
                       {hourAppointments.length || hourWalkIns.length ? (
                         <>
                           {hourAppointments.map((appointment) => (
-                          <ScheduleAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            selected={appointment.id === selectedAppointmentId}
-                            onSelect={() => onSelectAppointment(appointment)}
-                            onCheckIn={() => onCheckIn(appointment)}
-                          />
+                            <ScheduleAppointmentCard
+                              key={appointment.id}
+                              appointment={appointment}
+                              selected={appointment.id === selectedAppointmentId}
+                              onSelect={() => onSelectAppointment(appointment)}
+                              onCheckIn={() => onCheckIn(appointment)}
+                            />
                           ))}
                           {hourWalkIns.map((draft) => (
                             <ScheduleWalkInQueueCard
@@ -2351,7 +2351,7 @@ function WeekScheduleBoard({
             className="grid border-b last:border-b-0"
             style={{
               gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))",
-              minHeight: dayScheduleHourRowHeight,
+              height: dayScheduleHourRowHeight,
             }}
           >
             <div className="relative border-r">
@@ -2374,7 +2374,7 @@ function WeekScheduleBoard({
                 <div
                   key={`week-${day.day}-${hour}`}
                   className={cn(
-                    "flex min-w-0 gap-2 border-r p-2 last:border-r-0",
+                    "flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r p-2 last:border-r-0",
                     day.active && "bg-[var(--emr-status-info-bg)]/40",
                     !isBusinessHourRow(hour) && "bg-muted/70"
                   )}
