@@ -209,6 +209,28 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   await expect(kongAppointment).toContainText("콩이");
   await expect(kongAppointment).toContainText("구토 및 복부");
   await expect(kongAppointment).toHaveCSS("box-shadow", "none");
+  const kongCardInsets = await kongAppointment.evaluate((card) => {
+    const parent = card.parentElement;
+    if (!parent) return null;
+
+    const cardBox = card.getBoundingClientRect();
+    const parentBox = parent.getBoundingClientRect();
+
+    return {
+      bottom: Math.round((parentBox.bottom - cardBox.bottom) * 100) / 100,
+      left: Math.round((cardBox.left - parentBox.left) * 100) / 100,
+      right: Math.round((parentBox.right - cardBox.right) * 100) / 100,
+      top: Math.round((cardBox.top - parentBox.top) * 100) / 100,
+    };
+  });
+
+  if (!kongCardInsets) throw new Error("Expected schedule card inset data");
+
+  expect(Math.abs(kongCardInsets.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(kongCardInsets.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(kongCardInsets.bottom)).toBeLessThanOrEqual(1);
+  expect(kongCardInsets.right).toBeGreaterThanOrEqual(7);
+  expect(kongCardInsets.right).toBeLessThanOrEqual(9);
 
   const timeAxisAlignment = await calendar.evaluate((calendarElement) => {
     const timeAxis = calendarElement.querySelector('[data-testid="day-time-axis"]');
@@ -1542,6 +1564,28 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   await expect(draftCard).toContainText("14:15");
   await expect(draftCard).toContainText("15분");
   await expect(draftCard).toHaveCSS("box-shadow", "none");
+  const draftCardInsets = await draftCard.evaluate((card) => {
+    const parent = card.parentElement;
+    if (!parent) return null;
+
+    const cardBox = card.getBoundingClientRect();
+    const parentBox = parent.getBoundingClientRect();
+
+    return {
+      bottom: Math.round((parentBox.bottom - cardBox.bottom) * 100) / 100,
+      left: Math.round((cardBox.left - parentBox.left) * 100) / 100,
+      right: Math.round((parentBox.right - cardBox.right) * 100) / 100,
+      top: Math.round((cardBox.top - parentBox.top) * 100) / 100,
+    };
+  });
+
+  if (!draftCardInsets) throw new Error("Expected generated schedule card inset data");
+
+  expect(Math.abs(draftCardInsets.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(draftCardInsets.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(draftCardInsets.bottom)).toBeLessThanOrEqual(1);
+  expect(draftCardInsets.right).toBeGreaterThanOrEqual(7);
+  expect(draftCardInsets.right).toBeLessThanOrEqual(9);
 });
 
 test("reception creates a draft task from a dragged calendar range", async ({ page }) => {

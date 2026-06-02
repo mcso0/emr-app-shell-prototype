@@ -2224,10 +2224,17 @@ function DayScheduleBoard({
                       draft.encounter.primaryVeterinarianId === veterinarian.id &&
                       getDraftScheduleHour(draft) === hour
                   );
+                  const hasScheduleCards = Boolean(hourAppointments.length || hourWalkIns.length);
 
                   return (
-                    <div key={`${hour}-${veterinarian.id}`} className="flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r p-2 last:border-r-0">
-                      {hourAppointments.length || hourWalkIns.length ? (
+                    <div
+                      key={`${hour}-${veterinarian.id}`}
+                      className={cn(
+                        "flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r last:border-r-0",
+                        hasScheduleCards ? "pr-2" : "p-2"
+                      )}
+                    >
+                      {hasScheduleCards ? (
                         <>
                           {hourAppointments.map((appointment) => (
                             <ScheduleAppointmentCard
@@ -2369,12 +2376,14 @@ function WeekScheduleBoard({
                     (draft) => getDraftScheduleHour(draft) === hour
                   )
                 : [];
+              const hasScheduleCards = Boolean(hourAppointments.length || hourWalkIns.length);
 
               return (
                 <div
                   key={`week-${day.day}-${hour}`}
                   className={cn(
-                    "flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r p-2 last:border-r-0",
+                    "flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r last:border-r-0",
+                    hasScheduleCards ? "pr-2" : "p-2",
                     day.active && "bg-[var(--emr-status-info-bg)]/40",
                     !isBusinessHourRow(hour) && "bg-muted/70"
                   )}
@@ -2395,7 +2404,7 @@ function WeekScheduleBoard({
                       onSelectPatient={onSelectPatient}
                     />
                   ))}
-                  {hourAppointments.length || hourWalkIns.length ? null : (
+                  {hasScheduleCards ? null : (
                     <EmptyReceptionSlotButton
                       affordanceSuspended={emptySlotAffordanceSuspended}
                       ariaLabel={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
