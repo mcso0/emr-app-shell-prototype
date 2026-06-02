@@ -1470,11 +1470,13 @@ function getReceptionSideListItems(
 function ScheduleAppointmentCard({
   appointment,
   onCheckIn,
+  onClearCalendarTransientSelection,
   onSelect,
   selected,
 }: {
   appointment: Appointment;
   onCheckIn: () => void;
+  onClearCalendarTransientSelection: () => void;
   onSelect: () => void;
   selected: boolean;
 }) {
@@ -1501,6 +1503,7 @@ function ScheduleAppointmentCard({
         appointment.status !== "confirmed" && !checkedIn && "opacity-60"
       )}
       data-testid={`appointment-card-${appointment.id}`}
+      onPointerDown={onClearCalendarTransientSelection}
     >
       <span
         data-testid={`appointment-accent-${appointment.id}`}
@@ -1566,9 +1569,11 @@ function ScheduleAppointmentCard({
 
 function ScheduleWalkInQueueCard({
   draft,
+  onClearCalendarTransientSelection,
   onSelectPatient,
 }: {
   draft: ReceptionDraftCheckIn;
+  onClearCalendarTransientSelection: () => void;
   onSelectPatient: (patientId: string) => void;
 }) {
   const patients = usePatientProfileStore((state) => state.patients);
@@ -1591,6 +1596,7 @@ function ScheduleWalkInQueueCard({
     <div
       className="relative h-full min-h-0 max-h-full min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] p-2"
       data-testid={`walkin-card-${draft.encounter.id}`}
+      onPointerDown={onClearCalendarTransientSelection}
     >
       <span
         data-testid={`walkin-accent-${draft.encounter.id}`}
@@ -2397,6 +2403,7 @@ function DayScheduleBoard({
   draftCheckIns,
   onEmptySlotAffordancePointerMove,
   onCheckIn,
+  onClearCalendarTransientSelection,
   onCreateCalendarDraft,
   onSelectPatient,
   onSelectAppointment,
@@ -2409,6 +2416,7 @@ function DayScheduleBoard({
   draftCheckIns: ReceptionDraftCheckIn[];
   onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
+  onClearCalendarTransientSelection: () => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
@@ -2444,6 +2452,7 @@ function DayScheduleBoard({
                     key={`all-day-${veterinarian.id}-${appointment.id}`}
                     type="button"
                     className="truncate rounded border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-0.5 text-left emr-text-micro font-medium text-primary"
+                    onPointerDown={onClearCalendarTransientSelection}
                     onClick={() => onSelectAppointment(appointment)}
                   >
                     예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
@@ -2465,6 +2474,7 @@ function DayScheduleBoard({
               <ScheduleWalkInQueueCard
                 key={draft.encounter.id}
                 draft={draft}
+                onClearCalendarTransientSelection={onClearCalendarTransientSelection}
                 onSelectPatient={onSelectPatient}
               />
             ))}
@@ -2561,6 +2571,7 @@ function DayScheduleBoard({
                             <ScheduleAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
+                              onClearCalendarTransientSelection={onClearCalendarTransientSelection}
                               selected={appointment.id === selectedAppointmentId}
                               onSelect={() => onSelectAppointment(appointment)}
                               onCheckIn={() => onCheckIn(appointment)}
@@ -2570,6 +2581,7 @@ function DayScheduleBoard({
                             <ScheduleWalkInQueueCard
                               key={draft.encounter.id}
                               draft={draft}
+                              onClearCalendarTransientSelection={onClearCalendarTransientSelection}
                               onSelectPatient={onSelectPatient}
                             />
                           ))}
@@ -2605,6 +2617,7 @@ function WeekScheduleBoard({
   draftCheckIns,
   onEmptySlotAffordancePointerMove,
   onCheckIn,
+  onClearCalendarTransientSelection,
   onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
@@ -2615,6 +2628,7 @@ function WeekScheduleBoard({
   draftCheckIns: ReceptionDraftCheckIn[];
   onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
+  onClearCalendarTransientSelection: () => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
@@ -2716,6 +2730,7 @@ function WeekScheduleBoard({
                     <ScheduleAppointmentCard
                       key={`${day.day}-${hour}-${appointment.id}`}
                       appointment={appointment}
+                      onClearCalendarTransientSelection={onClearCalendarTransientSelection}
                       selected={Boolean(day.active && appointment.id === selectedAppointmentId)}
                       onSelect={() => onSelectAppointment(appointment)}
                       onCheckIn={() => onCheckIn(appointment)}
@@ -2725,6 +2740,7 @@ function WeekScheduleBoard({
                     <ScheduleWalkInQueueCard
                       key={`${day.day}-${hour}-${draft.encounter.id}`}
                       draft={draft}
+                      onClearCalendarTransientSelection={onClearCalendarTransientSelection}
                       onSelectPatient={onSelectPatient}
                     />
                   ))}
@@ -2796,6 +2812,7 @@ function ReceptionScheduleBoard({
   appointments,
   draftCheckIns,
   onClearCalendarDraft,
+  onClearCalendarTransientSelection,
   onEmptySlotAffordancePointerMove,
   onCheckIn,
   onCreateCalendarDraft,
@@ -2811,6 +2828,7 @@ function ReceptionScheduleBoard({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   onClearCalendarDraft: () => void;
+  onClearCalendarTransientSelection: () => void;
   onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -2838,6 +2856,7 @@ function ReceptionScheduleBoard({
               appointments={appointments}
               draftCheckIns={draftCheckIns}
               onEmptySlotAffordancePointerMove={onEmptySlotAffordancePointerMove}
+              onClearCalendarTransientSelection={onClearCalendarTransientSelection}
               onCreateCalendarDraft={onCreateCalendarDraft}
               selectedAppointmentId={selectedAppointmentId}
               selectedVeterinarians={selectedVeterinarians}
@@ -2852,6 +2871,7 @@ function ReceptionScheduleBoard({
               appointments={appointments}
               draftCheckIns={draftCheckIns}
               onEmptySlotAffordancePointerMove={onEmptySlotAffordancePointerMove}
+              onClearCalendarTransientSelection={onClearCalendarTransientSelection}
               selectedAppointmentId={selectedAppointmentId}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
@@ -2974,13 +2994,17 @@ export function ReceptionContent() {
       return [...current, veterinarianId];
     });
   };
-  const handleSelectAppointment = (appointment: Appointment) => {
+  function clearCalendarTransientSelection() {
+    dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
+  }
+  const handleSelectAppointment = (appointment: Appointment) => {
+    clearCalendarTransientSelection();
     selectAppointment(appointment.id);
     setActiveDrawer({ type: "reception-appointment", id: appointment.id });
   };
   const handleSelectPatientFromSchedule = (patientId: string) => {
-    setCalendarDraftSelection(undefined);
+    clearCalendarTransientSelection();
     selectPatient(patientId);
     setActiveDrawer({ type: "reception-patient", id: patientId });
   };
@@ -3212,6 +3236,7 @@ export function ReceptionContent() {
         appointments={visibleAppointments}
         draftCheckIns={draftCheckIns}
         onClearCalendarDraft={clearCalendarDraft}
+        onClearCalendarTransientSelection={clearCalendarTransientSelection}
         onEmptySlotAffordancePointerMove={() => setEmptySlotAffordanceSuspended(false)}
         selectedAppointmentId={selectedAppointmentId}
         selectedVeterinarians={selectedVeterinarians}

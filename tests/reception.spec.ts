@@ -1842,6 +1842,60 @@ test("reception clears the draft schedule card on cancel or another selection", 
   await expect(replacementDraftCard).toHaveCount(0);
 });
 
+test("reception clears an active drag preview immediately when selecting an existing schedule", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const dragSlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
+  await dragSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await dragSlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + rect.height,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      })
+    );
+  });
+  await expect(page.getByTestId("day-empty-slot-14-user-vet-suji-selection-preview")).toBeVisible();
+
+  const appointmentCard = page.getByTestId("appointment-card-appointment-nabi-260501");
+  await appointmentCard.dispatchEvent("pointerdown", {
+    bubbles: true,
+    button: 0,
+    buttons: 1,
+    pointerId: 2,
+    pointerType: "mouse",
+  });
+  await expect(page.locator('[data-testid$="-selection-preview"]')).toHaveCount(0);
+
+  await appointmentCard.click();
+  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+});
+
 test("reception blocks invalid calendar draft selections", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open");
   await expect(page.getByText("영업시간 09:00-19:00")).toBeVisible();
