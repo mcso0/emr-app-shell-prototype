@@ -1553,8 +1553,13 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   await expect(draftDrawer.getByLabel("담당의")).toContainText("이수지");
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:15");
   await expect(draftDrawer.getByLabel("소요시간")).toContainText("15분");
+  const calendarDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:15"]');
+  await expect(calendarDraftCard).toBeVisible();
+  await expect(calendarDraftCard).toContainText("14:15 - 14:30");
+  await expect(calendarDraftCard).toContainText("15분");
 
   await draftDrawer.getByRole("button", { name: "생성" }).click();
+  await expect(calendarDraftCard).toHaveCount(0);
 
   const draftCard = page
     .locator('[data-testid^="walkin-card-"]')
@@ -1586,6 +1591,33 @@ test("reception creates a draft task from a 15-minute calendar click", async ({ 
   expect(Math.abs(draftCardInsets.bottom)).toBeLessThanOrEqual(1);
   expect(draftCardInsets.right).toBeGreaterThanOrEqual(7);
   expect(draftCardInsets.right).toBeLessThanOrEqual(9);
+});
+
+test("reception clears the draft schedule card on cancel or another selection", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501"
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const quarterSlot = page.getByTestId("day-empty-slot-14-user-vet-suji-slot-1415");
+  const calendarDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:15"]');
+
+  await quarterSlot.click();
+  let draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+  await expect(calendarDraftCard).toBeVisible();
+
+  await draftDrawer.getByRole("button", { name: "취소" }).click();
+  await expect(calendarDraftCard).toHaveCount(0);
+  await expect(page).not.toHaveURL(/drawer=reception-draft-task/);
+
+  await quarterSlot.click();
+  draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+  await expect(calendarDraftCard).toBeVisible();
+
+  await page.getByTestId("appointment-card-appointment-kong-260501").click();
+  await expect(calendarDraftCard).toHaveCount(0);
 });
 
 test("reception creates a draft task from a dragged calendar range", async ({ page }) => {
@@ -1673,8 +1705,13 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
   await expect(draftDrawer).toBeVisible();
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
   await expect(draftDrawer.getByLabel("소요시간")).toContainText("150분");
+  const calendarDraftCard = page.locator('[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:00"]');
+  await expect(calendarDraftCard).toBeVisible();
+  await expect(calendarDraftCard).toContainText("14:00 - 16:30");
+  await expect(calendarDraftCard).toContainText("150분");
 
   await draftDrawer.getByRole("button", { name: "생성" }).click();
+  await expect(calendarDraftCard).toHaveCount(0);
 
   const draftCard = page
     .locator('[data-testid^="walkin-card-"]')

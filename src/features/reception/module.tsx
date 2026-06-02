@@ -1870,8 +1870,46 @@ type ReceptionCalendarDraftInput = {
   primaryVeterinarianId?: string;
 };
 
+function ScheduleDraftSelectionCard({
+  selection,
+}: {
+  selection: ReceptionCalendarDraftSelection;
+}) {
+  const startMinutes = getMinutesInDayFromDateTime(selection.plannedStartAt);
+
+  if (startMinutes === undefined) return null;
+
+  const endMinutes = startMinutes + selection.durationMinutes;
+  const startHour = Math.floor(startMinutes / 60);
+  const selectionTop =
+    ((startMinutes - startHour * 60) / 60) * dayScheduleHourRowHeight;
+  const selectionHeight = Math.max(
+    dayScheduleHourRowHeight / (60 / scheduleSlotMinutes),
+    (selection.durationMinutes / 60) * dayScheduleHourRowHeight
+  );
+
+  return (
+    <div
+      className="pointer-events-none absolute left-1 right-1 z-20 rounded-lg border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-1"
+      data-testid={`calendar-draft-card-${selection.id}`}
+      style={{
+        height: selectionHeight,
+        top: selectionTop,
+      }}
+    >
+      <div className="truncate emr-text-micro font-semibold text-[var(--emr-status-info-text)]">
+        {getScheduleTimeLabelFromMinutes(startMinutes)} - {getScheduleTimeLabelFromMinutes(endMinutes)}
+      </div>
+      <div className="mt-1 truncate emr-text-micro text-[var(--emr-status-info-text)]">
+        접수 예정 · {selection.durationMinutes}분
+      </div>
+    </div>
+  );
+}
+
 function ScheduleSelectionCell({
   affordanceSuspended,
+  calendarDraftSelection,
   hour,
   onAffordancePointerMove,
   onCreateDraft,
@@ -1879,6 +1917,7 @@ function ScheduleSelectionCell({
   veterinarian,
 }: {
   affordanceSuspended: boolean;
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
   hour: number;
   onAffordancePointerMove: () => void;
   onCreateDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -1997,6 +2036,12 @@ function ScheduleSelectionCell({
           </div>
         </div>
       ) : null}
+      {calendarDraftSelection &&
+      calendarDraftSelection.primaryVeterinarianId === veterinarian.id &&
+      getMinutesInDayFromDateTime(calendarDraftSelection.plannedStartAt) !== undefined &&
+      Math.floor(getMinutesInDayFromDateTime(calendarDraftSelection.plannedStartAt)! / 60) === hour ? (
+        <ScheduleDraftSelectionCard selection={calendarDraftSelection} />
+      ) : null}
       <div className="grid h-full min-h-0 grid-rows-4">
         {Array.from({ length: 60 / scheduleSlotMinutes }, (_, index) => {
           const slotMinutes = hour * 60 + index * scheduleSlotMinutes;
@@ -2072,6 +2117,7 @@ function ReceptionVisitContextBanner({
 }
 
 function DayScheduleBoard({
+  calendarDraftSelection,
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
@@ -2083,6 +2129,7 @@ function DayScheduleBoard({
   selectedAppointmentId,
   selectedVeterinarians,
 }: {
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
@@ -2256,6 +2303,7 @@ function DayScheduleBoard({
                       ) : (
                         <ScheduleSelectionCell
                           affordanceSuspended={emptySlotAffordanceSuspended}
+                          calendarDraftSelection={calendarDraftSelection}
                           hour={hour}
                           onAffordancePointerMove={onEmptySlotAffordancePointerMove}
                           testId={`day-empty-slot-${hour}-${veterinarian.id}`}
@@ -2467,9 +2515,11 @@ function MonthScheduleBoard({ appointmentCount }: { appointmentCount: number }) 
 }
 
 function ReceptionScheduleBoard({
+  calendarDraftSelection,
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  onClearCalendarDraft,
   onEmptySlotAffordancePointerMove,
   onCheckIn,
   onCreateCalendarDraft,
@@ -2480,9 +2530,11 @@ function ReceptionScheduleBoard({
   selectedVeterinarians,
   view,
 }: {
+  calendarDraftSelection?: ReceptionCalendarDraftSelection;
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  onClearCalendarDraft: () => void;
   onEmptySlotAffordancePointerMove: () => void;
   onCheckIn: (appointment: Appointment) => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -2498,10 +2550,14 @@ function ReceptionScheduleBoard({
       <section
         className="min-h-0 min-w-0 overflow-hidden bg-card"
         data-testid="reception-calendar-frame"
+        onPointerDown={() => {
+          if (calendarDraftSelection) onClearCalendarDraft();
+        }}
       >
         <ScrollArea className="h-full">
           {view === "day" ? (
             <DayScheduleBoard
+              calendarDraftSelection={calendarDraftSelection}
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
@@ -2550,6 +2606,7 @@ export function ReceptionContent() {
   const selectedAppointmentId = useReceptionStore((state) => state.selectedAppointmentId);
   const selectedEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const calendarDraftSelection = useReceptionStore((state) => state.calendarDraftSelection);
   const calendarReadError = useReceptionStore((state) => state.calendarReadError);
   const calendarReadStatus = useReceptionStore((state) => state.calendarReadStatus);
   const messageDeliveries = useReceptionStore((state) => state.messageDeliveries);
@@ -2642,10 +2699,12 @@ export function ReceptionContent() {
     });
   };
   const handleSelectAppointment = (appointment: Appointment) => {
+    setCalendarDraftSelection(undefined);
     selectAppointment(appointment.id);
     setActiveDrawer({ type: "reception-appointment", id: appointment.id });
   };
   const handleSelectPatientFromSchedule = (patientId: string) => {
+    setCalendarDraftSelection(undefined);
     selectPatient(patientId);
     setActiveDrawer({ type: "reception-patient", id: patientId });
   };
@@ -2683,6 +2742,15 @@ export function ReceptionContent() {
       subtitle: `${getShortTime(draft.plannedStartAt)} · ${draft.durationMinutes}분`,
     });
   };
+  const clearCalendarDraft = () => {
+    setCalendarDraftSelection(undefined);
+  };
+
+  useEffect(() => {
+    if (calendarDraftSelection && activeDrawer?.type !== "reception-draft-task") {
+      setCalendarDraftSelection(undefined);
+    }
+  }, [activeDrawer?.type, calendarDraftSelection, setCalendarDraftSelection]);
 
   useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
@@ -2862,9 +2930,11 @@ export function ReceptionContent() {
         </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard
+        calendarDraftSelection={calendarDraftSelection}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
         appointments={visibleAppointments}
         draftCheckIns={draftCheckIns}
+        onClearCalendarDraft={clearCalendarDraft}
         onEmptySlotAffordancePointerMove={() => setEmptySlotAffordanceSuspended(false)}
         selectedAppointmentId={selectedAppointmentId}
         selectedVeterinarians={selectedVeterinarians}
