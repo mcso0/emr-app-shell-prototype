@@ -2230,7 +2230,7 @@ function DayScheduleBoard({
                     <div
                       key={`${hour}-${veterinarian.id}`}
                       className={cn(
-                        "flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r last:border-r-0",
+                        "flex h-full min-h-0 min-w-0 gap-2 border-r last:border-r-0",
                         hasScheduleCards ? "pr-2" : "p-2"
                       )}
                     >
@@ -2382,7 +2382,7 @@ function WeekScheduleBoard({
                 <div
                   key={`week-${day.day}-${hour}`}
                   className={cn(
-                    "flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r last:border-r-0",
+                    "flex h-full min-h-0 min-w-0 gap-2 border-r last:border-r-0",
                     hasScheduleCards ? "pr-2" : "p-2",
                     day.active && "bg-[var(--emr-status-info-bg)]/40",
                     !isBusinessHourRow(hour) && "bg-muted/70"

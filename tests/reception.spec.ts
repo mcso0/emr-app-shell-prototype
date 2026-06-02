@@ -1622,13 +1622,37 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
         button: 0,
         buttons: 1,
         clientX: rect.left + 16,
-        clientY: rect.bottom - 2,
+        clientY: rect.top + rect.height * 2.5,
         isPrimary: true,
         pointerId: 1,
         pointerType: "mouse",
       })
     );
   });
+  const selectionPreviewMetrics = await page
+    .getByTestId("day-empty-slot-14-user-vet-suji-selection-preview")
+    .evaluate((preview) => {
+      const parent = preview.parentElement?.parentElement;
+      const previewBox = preview.getBoundingClientRect();
+      if (!parent) return null;
+
+      const parentBox = parent.getBoundingClientRect();
+
+      return {
+        overflow: getComputedStyle(parent).overflow,
+        overflowBeyondParentBottom: Math.round((previewBox.bottom - parentBox.bottom) * 100) / 100,
+        previewHeight: Math.round(previewBox.height * 100) / 100,
+        text: preview.textContent?.trim(),
+      };
+    });
+
+  if (!selectionPreviewMetrics) throw new Error("Expected multi-hour drag preview metrics");
+
+  expect(selectionPreviewMetrics.text).toContain("14:00 - 16:30");
+  expect(selectionPreviewMetrics.overflow).toBe("visible");
+  expect(selectionPreviewMetrics.previewHeight).toBeGreaterThan(200);
+  expect(selectionPreviewMetrics.overflowBeyondParentBottom).toBeGreaterThan(120);
+
   await emptySlot.evaluate((slot) => {
     const rect = slot.getBoundingClientRect();
     slot.dispatchEvent(
@@ -1637,7 +1661,7 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
         button: 0,
         buttons: 0,
         clientX: rect.left + 16,
-        clientY: rect.bottom - 2,
+        clientY: rect.top + rect.height * 2.5,
         isPrimary: true,
         pointerId: 1,
         pointerType: "mouse",
@@ -1648,7 +1672,7 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
   const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
   await expect(draftDrawer).toBeVisible();
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
-  await expect(draftDrawer.getByLabel("소요시간")).toContainText("60분");
+  await expect(draftDrawer.getByLabel("소요시간")).toContainText("150분");
 
   await draftDrawer.getByRole("button", { name: "생성" }).click();
 
@@ -1658,7 +1682,7 @@ test("reception creates a draft task from a dragged calendar range", async ({ pa
     .filter({ hasText: "14:00" });
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:00");
-  await expect(draftCard).toContainText("60분");
+  await expect(draftCard).toContainText("150분");
 });
 
 test("reception walk-in keeps selected veterinarian and form details", async ({ page }) => {
