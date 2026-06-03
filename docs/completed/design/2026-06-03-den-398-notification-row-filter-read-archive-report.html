@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-398 전역 알림 row/filter/read/archive 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        max-width: 900px;
+        margin-top: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-398 전역 알림 row/filter/read/archive 완료 보고서</h1>
+      <p>
+        전역 알림 drawer 안에서 알림을 행 단위로 triage할 수 있도록 read/archive/restore/all-read 상태와
+        기본 필터를 구현했다. badge는 여전히 전체 unread가 아니라
+        <code>unread &amp;&amp; !archived &amp;&amp; badge_count === true</code> 기준만 반영한다.
+      </p>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li>알림 row에 안 읽음, 읽음, 보관됨 상태 표시를 추가했다.</li>
+          <li>읽음 처리, 보관, 보관 해제, 전체 읽음 액션을 세션 상태로 구현했다.</li>
+          <li><code>전체</code>, <code>안 읽음</code>, <code>중요</code>, <code>보관</code> 필터를 활성화했다.</li>
+          <li>보관 알림은 기본 목록에서 빠지고 보관 필터에서 확인할 수 있게 했다.</li>
+          <li>현재 representative fixture에 v0 contract 필수 필드를 추가해 후속 DEN-400/401/402가 이어받기 쉽게 했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <p>
+          <code>localStorage</code> persistence와 역할 큐 local-first disclaimer는 DEN-399가 맡는다.
+          source deep-link, fallback detail, dirty-state confirmation은 DEN-404/DEN-405 범위다.
+          live push, service worker, provider 발송, Kakao/SMS/email, remote Supabase migration/RLS/live validation,
+          알림 안 final action 직접 수행은 구현하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/app-shell.spec.ts -g "global notification"</code> 통과.</li>
+          <li>인앱 브라우저는 로컬 URL을 <code>ERR_BLOCKED_BY_CLIENT</code>로 차단해 Playwright Chromium smoke screenshot으로 대체했다.</li>
+        </ul>
+        <img src="./2026-06-03-den-398-notification-row-state-browser.png" alt="DEN-398 notification drawer read archive state screenshot" />
+      </section>
+
+      <section>
+        <h2>리뷰 반영</h2>
+        <p>
+          서브에이전트 리뷰에서 fixture contract mismatch와 unread filter 부재가 지적되어 이번 범위에서 반영했다.
+          localStorage persistence, source navigation, role queue disclaimer는 각각 후속 Linear 이슈로 남겼다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

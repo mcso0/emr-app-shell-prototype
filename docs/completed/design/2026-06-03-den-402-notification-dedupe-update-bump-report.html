@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-402 전역 알림 dedupe/update-bump 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-402 전역 알림 dedupe/update-bump 완료 보고서</h1>
+      <p>
+        동일 환자, 동일 오더, 동일 event의 반복 미확인 알림이 drawer row를 계속 늘리지 않도록
+        공통 dedupe/update-bump helper를 구현했다. 이 helper는 row와 toast가 같은 dedupe 정책을 공유할 수 있는 기반이다.
+      </p>
+
+      <section>
+        <h2>규칙</h2>
+        <ul>
+          <li><code>patientId + orderId + eventKey</code>로 dedupe key를 만든다. order가 없는 이벤트는 patient와 event key로 만든다.</li>
+          <li>같은 dedupe key의 기존 row가 unread이고 archived가 아니면 append하지 않고 update/bump한다.</li>
+          <li>update/bump는 기존 row ID와 read/archive state를 유지하고, 최신 preview/detail/time metadata와 bump count를 반영한다.</li>
+          <li>다른 환자, 오더, event key는 별도 row로 append한다.</li>
+          <li>기존 row가 read 또는 archived이면 과거 상태를 되살리지 않고 새 반복 알림을 append한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li><code>createNotificationDedupeKey</code> helper를 추가했다.</li>
+          <li><code>upsertNotificationByDedupeKey</code> helper를 추가했다.</li>
+          <li>dedupe key 생성, unread bump, 다른 event append, read/archive 이후 append focused tests를 추가했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 12 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <p>
+          live event stream ingestion, provider/device real integration, remote Supabase migration/RLS/live validation,
+          audit log dedupe 정책 변경은 구현하지 않았다. Toast stack UI는 DEN-403 범위다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

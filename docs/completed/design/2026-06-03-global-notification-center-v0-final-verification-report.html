@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR 전역 알림 센터 v0 최종 검증 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18202f;
+        --muted: #647084;
+        --line: #dce3ee;
+        --panel: #f7f9fc;
+        --ok: #0f766e;
+        --warn: #9a3412;
+        --info: #1d4ed8;
+      }
+
+      body {
+        margin: 0;
+        background: #fff;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.62;
+      }
+
+      main {
+        width: min(980px, calc(100vw - 48px));
+        margin: 0 auto;
+        padding: 52px 0 72px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 34px;
+      }
+
+      h2 {
+        margin: 42px 0 14px;
+        padding-top: 18px;
+        border-top: 1px solid var(--line);
+        font-size: 22px;
+      }
+
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 17px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      a {
+        color: var(--info);
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 28px 0;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px 16px;
+        background: var(--panel);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 24px;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 9px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .ok {
+        background: #dcfce7;
+        color: var(--ok);
+      }
+
+      .warn {
+        background: #ffedd5;
+        color: var(--warn);
+      }
+
+      .info {
+        background: #dbeafe;
+        color: var(--info);
+      }
+
+      ul {
+        margin: 8px 0 0;
+        padding-left: 22px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      code {
+        border-radius: 5px;
+        background: #edf2f7;
+        padding: 2px 5px;
+        font-size: 0.94em;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--panel);
+      }
+
+      .note {
+        border-left: 4px solid var(--info);
+        margin: 18px 0;
+        padding: 12px 14px;
+        background: #f8fbff;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          width: min(100vw - 28px, 980px);
+          padding-top: 32px;
+        }
+
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">2026-06-03 · Project 20 · DEN · CLAiR EMR</p>
+      <h1>CLAiR 전역 알림 센터 v0 최종 검증 보고서</h1>
+      <p>
+        전역 알림 센터 v0는 오른쪽 drawer, badge 정책, localStorage read/archive, source
+        navigation, fallback detail, toast/dedupe 규칙까지 구현 검증을 마쳤다. Linear 이슈는
+        대표자 검토 정책에 맞춰 Done으로 추가 이동하지 않았고, 구현 완료 항목은 Human Review에
+        남겨 두었다.
+      </p>
+
+      <section class="summary" aria-label="프로젝트 요약">
+        <div class="metric"><strong>15</strong><span>총 Linear 이슈</span></div>
+        <div class="metric"><strong>3</strong><span>Done</span></div>
+        <div class="metric"><strong>12</strong><span>Human Review</span></div>
+        <div class="metric"><strong>0</strong><span>Backlog/In Progress</span></div>
+      </section>
+
+      <h2>Linear 상태</h2>
+      <p>
+        대상 프로젝트:
+        <a href="https://linear.app/deny-93/project/20-clair-emr-global-notification-center-v0-55ac58d91b31/overview">20 CLAiR EMR Global Notification Center v0</a>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>범위</th>
+            <th>상태</th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>DEN-395, DEN-396, DEN-397</td>
+            <td><span class="status ok">Done</span></td>
+            <td>초기 contract, event policy, drawer shell 기초 이슈.</td>
+          </tr>
+          <tr>
+            <td>DEN-398 - DEN-409</td>
+            <td><span class="status info">Human Review</span></td>
+            <td>구현과 검증은 완료했지만, 기존 지침에 따라 대표자 검토 전 Done 이동은 하지 않음.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>핵심 결과</h2>
+      <ul>
+        <li>상단 badge는 전체 unread가 아니라 <code>unread && badge_count === true</code> 기준으로 표시된다.</li>
+        <li>drawer header는 <code>중요 알림 7개 · 안 읽음 9개</code>로 badge-count와 unread를 분리해서 보여준다.</li>
+        <li>role queue read/archive는 현재 브라우저 localStorage 상태로 유지되며, 다른 사용자/브라우저와 동기화되지 않는다는 안내가 표시된다.</li>
+        <li>알림 primary action은 현재 탭에서 원본 업무 화면으로 이동한다.</li>
+        <li>source entity가 없는 장비 결과는 drawer 안에서 fallback detail과 사유를 표시한다.</li>
+        <li>읽음 처리된 badge-count 알림은 즉시 badge에서 제외된다. 검증 중 7 → 6 → 5로 감소했다.</li>
+      </ul>
+
+      <h2>수동 UI 검증</h2>
+      <h3>in-app Browser</h3>
+      <p>
+        Browser 플러그인으로 <code>localhost</code>, <code>127.0.0.1</code>,
+        <code>[::1]</code> loopback URL을 열었지만 모두 <code>ERR_BLOCKED_BY_CLIENT</code>로 차단되었다.
+        이 차단은 앱 코드 동작 실패가 아니라 해당 브라우저 surface의 로컬 HTTP 접근 차단으로 기록했다.
+      </p>
+
+      <h3>Playwright CLI</h3>
+      <p>
+        같은 로컬 앱을 Playwright CLI wrapper로 열어 실제 UI 흐름을 검증했다. 시각 screenshot 저장은
+        drawer 안정성 판정 대기에서 timeout이 발생해 사용하지 않았고, 대신 snapshot artifact를 산출물로
+        남겼다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>검증 항목</th>
+            <th>결과</th>
+            <th>증거 파일</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>앱 진입 및 badge</td>
+            <td><span class="status ok">Pass</span> 로그인 후 알림 badge 7 확인</td>
+            <td><a href="../../../output/playwright/notification-v0-final-app-snapshot.txt">notification-v0-final-app-snapshot.txt</a></td>
+          </tr>
+          <tr>
+            <td>drawer header/filter/disclaimer</td>
+            <td><span class="status ok">Pass</span> 중요 7, unread 9, local-only 안내 확인</td>
+            <td><a href="../../../output/playwright/notification-v0-final-drawer-snapshot.txt">notification-v0-final-drawer-snapshot.txt</a></td>
+          </tr>
+          <tr>
+            <td>source navigation</td>
+            <td><span class="status ok">Pass</span> 현재 탭이 lab 결과지로 이동</td>
+            <td><a href="../../../output/playwright/notification-v0-final-source-navigation-snapshot.txt">notification-v0-final-source-navigation-snapshot.txt</a></td>
+          </tr>
+          <tr>
+            <td>fallback detail</td>
+            <td><span class="status ok">Pass</span> source entity 없음 사유와 detail 표시</td>
+            <td><a href="../../../output/playwright/notification-v0-final-fallback-snapshot.txt">notification-v0-final-fallback-snapshot.txt</a></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>자동 검증</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>명령</th>
+            <th>결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-surfaces.spec.ts tests/notification-toast.spec.ts tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code></td>
+            <td><span class="status ok">Pass</span> 29 passed</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>콘솔 관찰</h2>
+      <p>
+        Playwright CLI 콘솔에는 reception calendar/queue API의 <code>401</code>, <code>403</code>가
+        기록되었다. 이는 현재 화면이 mock/local-first demo data fallback을 표시하는 기존 경계와 일치하며,
+        이번 알림 센터 v0 범위의 live Supabase, RLS, provider 발송, production 배포 범위로 확장하지 않았다.
+      </p>
+
+      <h2>제외 및 남은 검토</h2>
+      <ul>
+        <li>live push, service worker, provider 발송, Kakao/SMS/email 알림은 v0 제외 범위로 유지했다.</li>
+        <li>remote Supabase migration, RLS, live validation은 이번 프로젝트 범위로 확장하지 않았다.</li>
+        <li>역할 큐 read/archive의 클라이언트 간 실시간 동기화는 의도적으로 제외했다.</li>
+        <li>Human Review 상태의 12개 이슈는 대표자 검토 후 필요 시 Done으로 이동하면 된다.</li>
+      </ul>
+
+      <div class="note">
+        최종 판정: 구현과 검증 기준은 충족했다. 운영상 남은 단계는 Human Review 승인이다.
+      </div>
+    </main>
+  </body>
+</html>

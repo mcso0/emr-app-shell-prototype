@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-278 최종 감사: 초대 링크 비밀번호 온보딩</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-278 최종 감사: 초대 링크 비밀번호 온보딩</h1>
+      <p>
+        AUTH-PR-043 초대 링크 비밀번호 온보딩은 현재 구현 완료 후 Human
+        Review 단계로 보는 것이 맞다. 새 Linear 프로젝트나 새 이슈는 만들지
+        않고 기존 DEN-278 안에서 상태를 정리했다.
+      </p>
+
+      <h2>현재 판정</h2>
+      <ul>
+        <li>
+          pending 신규 초대는 초대 링크 컨텍스트에서 바로 비밀번호 설정 화면을
+          보여주며, 유효성 통과 전까지 <code>워크스페이스로 이동</code> CTA가
+          비활성화된다.
+        </li>
+        <li>
+          pending 기존 계정 초대는 초대 이메일을 고정한 로그인 화면을 보여주며,
+          비밀번호 입력 전까지 <code>로그인</code> CTA가 비활성화된다.
+        </li>
+        <li>
+          expired/canceled 초대는 <code>관리자에게 재요청</code> 경로와
+          success/failure feedback을 제공한다.
+        </li>
+        <li>
+          accepted 초대는 중복 membership 생성을 유도하지 않고 workspace entry만
+          제공한다.
+        </li>
+        <li>
+          missing/invalid 초대는 account creation이나 membership mutation 없이
+          blocked state로 처리된다.
+        </li>
+        <li>
+          production invite UI에는 prototype-only state tab, raw invite token,
+          OTP 원문, password 값, secret 패턴이 노출되지 않는다.
+        </li>
+      </ul>
+
+      <h2>정리한 것</h2>
+      <ul>
+        <li>
+          <code>docs/work/index.md</code>의 AUTH-PR-043 상태를 stale
+          <code>active</code>에서 실제 상태와 맞는 <code>human_review</code>로
+          맞췄다.
+        </li>
+        <li>
+          <code>docs/work/auth/AUTH-PR-043-invite-link-password-onboarding-implementation.md</code>
+          에 2026-06-03 최종 감사와 최신 검증 결과를 추가했다.
+        </li>
+        <li>DEN-278 전용 visual QA 증거 스크린샷 6개를 추가했다.</li>
+      </ul>
+
+      <h2>Visual QA Evidence</h2>
+      <ul>
+        <li>
+          Pending new desktop:
+          <code>2026-06-03-den-278-visual-01-pending-new-desktop.png</code>
+        </li>
+        <li>
+          Pending existing desktop:
+          <code>2026-06-03-den-278-visual-02-pending-existing-desktop.png</code>
+        </li>
+        <li>
+          Expired desktop:
+          <code>2026-06-03-den-278-visual-03-expired-desktop.png</code>
+        </li>
+        <li>
+          Accepted desktop:
+          <code>2026-06-03-den-278-visual-04-accepted-desktop.png</code>
+        </li>
+        <li>
+          Missing desktop:
+          <code>2026-06-03-den-278-visual-05-missing-desktop.png</code>
+        </li>
+        <li>
+          Pending new mobile:
+          <code>2026-06-03-den-278-visual-06-pending-new-mobile.png</code>
+        </li>
+      </ul>
+
+      <h2>Fresh Verification</h2>
+      <ul>
+        <li>
+          <code
+            >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test
+            tests/invite-acceptance.spec.ts --reporter=line</code
+          >
+          - 7 passed. 첫 전체 실행에서 dev-server chunk 지연으로 한 테스트가
+          timeout 되었고, 단일 재실행 및 전체 재실행에서 통과했다.
+        </li>
+        <li>
+          <code
+            >PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test
+            tests/invite-onboarding-regression-handoff.spec.ts
+            tests/invite-otp-handoff.spec.ts --reporter=line</code
+          >
+          - 6 passed.
+        </li>
+        <li><code>npx tsc --noEmit</code> - passed.</li>
+        <li><code>npm run lint</code> - passed with 4 existing warnings.</li>
+        <li><code>npm run docs:check</code> - passed.</li>
+        <li><code>npm run security:secrets</code> - passed.</li>
+        <li><code>git diff --check</code> - passed.</li>
+        <li><code>npm run build</code> - passed.</li>
+      </ul>
+
+      <h2>Remaining Limits</h2>
+      <ul>
+        <li>
+          live Supabase staging/live validation, DB/RLS/migration, real email
+          delivery, production deploy는 이번 범위에서 실행하지 않았다.
+        </li>
+        <li>
+          mock/local invite acceptance는 MVP prototype fallback이며, 완전한
+          보안 경계 주장은 Supabase/server/API/DB/RLS 후속 범위에서만 가능하다.
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

@@ -197,6 +197,12 @@ function getModeDescription(mode: HomeOperationMode) {
   return "접수부터 수납까지 전체 업무 흐름을 봅니다.";
 }
 
+function getCompactUserName(userName: string) {
+  return userName
+    .replace(/\s+(수의사|테크니션|수납 담당|담당|매니저|병원 관리자|관리자)님?$/, "")
+    .replace(/님$/, "");
+}
+
 export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
   const [view, setView] = useState<HomeWorkspaceView>("home");
   const [activeOperationMode, setActiveOperationMode] = useState<HomeOperationMode>("flow");
@@ -554,6 +560,7 @@ function HomeDashboard({
   const urgentTasks = data.hospitalTasks.filter((task) => task.priority === "urgent" || task.priority === "high");
   const overdueTasks = data.hospitalTasks.filter((task) => task.status === "overdue");
   const waitingTasks = data.hospitalTasks.filter((task) => task.kanbanColumn === "waiting" || task.kanbanColumn === "chart");
+  const roleQueueCount = data.hospitalTasks.filter((task) => task.assignment === "roleQueue").length;
   const bottleneck = [...data.flowSummary].sort((first, second) => second.count - first.count)[0];
   const activeRoleHypothesis =
     data.roleNextActions.find((item) => item.role === activeRole) ?? data.roleNextActions[0];
@@ -562,14 +569,29 @@ function HomeDashboard({
     .slice(0, 9);
 
   return (
-    <div data-testid="home-dashboard" className="min-h-0 overflow-y-auto pb-2">
-      <div className="grid min-h-full content-start gap-4">
+    <div
+      data-testid="home-dashboard"
+      className="min-h-0 overflow-y-auto rounded-[var(--clair-radius-md)] bg-[linear-gradient(180deg,var(--emr-surface-muted)_0%,var(--emr-surface-workspace)_44%,var(--emr-surface-workspace)_100%)] pb-4"
+    >
+      <div className="grid min-h-full content-start gap-4 p-3">
+        <HomeShiftOverview
+          data={data}
+          hospitalSignal={{
+            bottleneckLabel: bottleneck?.label ?? "대기열",
+            overdueCount: overdueTasks.length,
+            roleQueueCount,
+            urgentCount: urgentTasks.length,
+            waitingCount: waitingTasks.length,
+          }}
+          onOpenHospitalView={onOpenHospitalView}
+        />
+
         <RoleNextActionCommandCenter
           activeRole={activeRole}
           hospitalSignal={{
             bottleneckLabel: bottleneck?.label ?? "대기열",
             overdueCount: overdueTasks.length,
-            roleQueueCount: data.hospitalTasks.filter((task) => task.assignment === "roleQueue").length,
+            roleQueueCount,
             urgentCount: urgentTasks.length,
             waitingCount: waitingTasks.length,
           }}
@@ -578,33 +600,7 @@ function HomeDashboard({
           onRoleChange={setActiveRole}
         />
 
-        <Card className="rounded-[var(--clair-radius-md)]" data-testid="home-dashboard-flow">
-          <CardHeader className="items-start">
-            <div>
-              <CardTitle>운영 병목 보드</CardTitle>
-              <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
-                단계별 SLA, 지연, 미배정 큐를 기준으로 다음 조정 지점을 표시합니다.
-              </p>
-            </div>
-            <CardAction className="flex items-center gap-2">
-              {["오늘", "최근 7일", "최근 30일"].map((label, index) => (
-                <button
-                  key={label}
-                  type="button"
-                  className={cn(
-                    "h-7 rounded-[var(--clair-radius-atomic-8)] border border-border px-3 text-[12px] font-semibold leading-4 transition-colors hover:bg-muted",
-                    index === 0 ? "bg-foreground text-background hover:bg-foreground" : "bg-card text-foreground"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <DashboardBottleneckBoard flowSummary={data.flowSummary} bottleneckId={bottleneck?.id} />
-          </CardContent>
-        </Card>
+        <DashboardBottleneckBoard flowSummary={data.flowSummary} bottleneckId={bottleneck?.id} />
 
         <DashboardOutlineTable
           tasks={outlineTasks}
@@ -613,6 +609,89 @@ function HomeDashboard({
           onOpenHospitalView={onOpenHospitalView}
         />
       </div>
+    </div>
+  );
+}
+
+function HomeShiftOverview({
+  data,
+  hospitalSignal,
+  onOpenHospitalView,
+}: {
+  data: HomeDashboardData;
+  hospitalSignal: {
+    bottleneckLabel: string;
+    overdueCount: number;
+    roleQueueCount: number;
+    urgentCount: number;
+    waitingCount: number;
+  };
+  onOpenHospitalView: () => void;
+}) {
+  return (
+    <section className="grid gap-3 rounded-[var(--clair-radius-lg)] border border-[var(--emr-line-hairline)] bg-card p-4 shadow-[var(--clair-shadow-sm)]">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 max-lg:grid-cols-1">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2.5 py-1 text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]">
+              {data.hospitalName}
+            </span>
+            <span className="rounded-full border border-[var(--emr-line-hairline)] bg-card px-2.5 py-1 text-[12px] font-semibold leading-4 text-foreground">
+              {getCompactUserName(data.userName)} · {data.roleLabel}
+            </span>
+            <span className="text-[12px] font-medium leading-4 text-muted-foreground">
+              {data.todayLabel} · {data.updatedAt.slice(11, 16)} 갱신
+            </span>
+          </div>
+          <h2 className="mt-3 text-[26px] font-bold leading-8 text-foreground max-sm:text-[22px]">
+            오늘의 워크 커맨드
+          </h2>
+          <p className="mt-2 max-w-[720px] text-[13px] leading-5 text-muted-foreground">
+            환자 흐름, 긴급 신호, 미배정 큐를 하나로 묶어 지금 열어야 할 업무부터 보여줍니다.
+          </p>
+        </div>
+        <Button size="sm" onClick={onOpenHospitalView}>
+          업무 현황 열기
+          <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 max-lg:grid-cols-2 max-sm:grid-cols-1">
+        <ShiftMetricCard label="내 업무" value={`${data.tasks.length}건`} caption={data.roleLabel} tone="info" />
+        <ShiftMetricCard label="긴급/주의" value={`${hospitalSignal.urgentCount}건`} caption="먼저 확인" tone="danger" />
+        <ShiftMetricCard label="대기/진료" value={`${hospitalSignal.waitingCount}건`} caption="환자 흐름" tone="neutral" />
+        <ShiftMetricCard label="미배정 큐" value={`${hospitalSignal.roleQueueCount}건`} caption={hospitalSignal.bottleneckLabel} tone="warning" />
+      </div>
+    </section>
+  );
+}
+
+function ShiftMetricCard({
+  caption,
+  label,
+  tone,
+  value,
+}: {
+  caption: string;
+  label: string;
+  tone: "danger" | "info" | "neutral" | "warning";
+  value: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid min-h-[86px] content-between rounded-[var(--clair-radius-md)] border bg-[var(--emr-surface-panel)] p-3 shadow-[var(--clair-shadow-xs)]",
+        tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
+        tone === "info" && "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)]",
+        tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]",
+        tone === "neutral" && "border-[var(--emr-line-hairline)]"
+      )}
+    >
+      <span className="text-[12px] font-semibold leading-4 text-muted-foreground">{label}</span>
+      <span className="flex items-end justify-between gap-2">
+        <strong className="text-[24px] font-bold leading-7 text-foreground">{value}</strong>
+        <span className="truncate text-[12px] font-medium leading-4 text-muted-foreground">{caption}</span>
+      </span>
     </div>
   );
 }
@@ -639,12 +718,14 @@ function RoleNextActionCommandCenter({
   return (
     <section
       aria-labelledby="home-role-next-action-title"
-      className="grid gap-4 rounded-[var(--clair-radius-md)] border border-border bg-card p-4"
+      className="relative isolate grid gap-4 overflow-hidden rounded-[var(--clair-radius-lg)] border border-[var(--emr-line-hairline)] bg-[linear-gradient(135deg,var(--emr-surface-panel)_0%,var(--emr-surface-panel)_58%,var(--emr-status-info-bg)_100%)] p-4 shadow-[var(--clair-shadow-md)]"
       data-testid="home-role-next-action"
     >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,var(--emr-status-info-text),var(--emr-status-success-text),var(--emr-status-warning-text))]" />
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 max-lg:grid-cols-1">
         <div className="min-w-0">
-          <h2 id="home-role-next-action-title" className="text-[18px] font-bold leading-7 text-foreground">
+          <p className="text-[12px] font-semibold leading-4 text-[var(--emr-status-info-text)]">Next best actions</p>
+          <h2 id="home-role-next-action-title" className="mt-1 text-[20px] font-bold leading-7 text-foreground">
             다음 행동
           </h2>
           <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
@@ -659,10 +740,10 @@ function RoleNextActionCommandCenter({
               role="tab"
               aria-selected={activeRole === item.role}
               className={cn(
-                "h-8 rounded-full border px-3 text-[12px] font-semibold leading-4 transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "h-8 rounded-full border px-3 text-[12px] font-semibold leading-4 shadow-[var(--clair-shadow-xs)] transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 activeRole === item.role
                   ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  : "border-[var(--emr-line-hairline)] bg-card text-muted-foreground hover:bg-[var(--emr-state-hover)]"
               )}
               onClick={() => onRoleChange(item.role)}
             >
@@ -679,7 +760,7 @@ function RoleNextActionCommandCenter({
           ))}
         </div>
 
-        <aside className="grid content-between gap-4 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card p-4">
+        <aside className="grid content-between gap-4 rounded-[var(--clair-radius-md)] border border-[var(--emr-line-hairline)] bg-card/85 p-4 shadow-[var(--clair-shadow-xs)]">
           <div>
             <p className="text-[12px] font-semibold leading-4 text-muted-foreground">역할 가설</p>
             <p className="mt-2 text-[14px] font-semibold leading-6 text-foreground">
@@ -687,11 +768,11 @@ function RoleNextActionCommandCenter({
             </p>
           </div>
           <div className="grid gap-2 text-[12px] leading-4">
-            <div className="rounded-[var(--clair-radius-atomic-8)] bg-muted/60 px-3 py-2">
+            <div className="rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] px-3 py-2">
               <span className="font-semibold text-foreground">신호 </span>
               <span className="text-muted-foreground">{selectedHypothesis.primarySignal}</span>
             </div>
-            <div className="rounded-[var(--clair-radius-atomic-8)] bg-muted/60 px-3 py-2">
+            <div className="rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] px-3 py-2">
               <span className="font-semibold text-foreground">측정 </span>
               <span className="text-muted-foreground">{selectedHypothesis.successMetric}</span>
             </div>
@@ -711,24 +792,30 @@ function RoleNextActionCommandCenter({
 
 function NextActionCard({ action, rank }: { action: HomeNextAction; rank: number }) {
   const router = useRouter();
+  const primary = rank === 1;
 
   return (
     <article
       className={cn(
-        "grid min-h-[188px] content-between gap-4 rounded-[var(--clair-radius-atomic-8)] border bg-card p-4 shadow-sm",
-        getNextActionToneClass(action.tone)
+        "relative grid min-h-[208px] content-between gap-4 overflow-hidden rounded-[var(--clair-radius-md)] border bg-card p-4 shadow-[var(--clair-shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--clair-shadow-md)]",
+        getNextActionToneClass(action.tone),
+        primary && "shadow-[var(--clair-shadow-md)]"
       )}
     >
+      <span className={cn("absolute inset-y-0 left-0 w-1", getNextActionAccentClass(action.tone))} aria-hidden="true" />
       <div className="grid gap-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-[12px] font-bold leading-4 text-background">
+              <span className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold leading-4 shadow-[var(--clair-shadow-xs)]",
+                primary ? "bg-foreground text-background" : "bg-[var(--emr-surface-muted)] text-foreground"
+              )}>
                 {rank}
               </span>
               <span className="truncate text-[12px] font-semibold leading-4 text-muted-foreground">{action.sourceLabel}</span>
             </div>
-            <h3 className="mt-2 text-[16px] font-bold leading-6 text-foreground">
+            <h3 className="mt-3 text-[17px] font-bold leading-6 text-foreground">
               {action.title}
             </h3>
           </div>
@@ -753,7 +840,12 @@ function NextActionCard({ action, rank }: { action: HomeNextAction; rank: number
           ))}
         </div>
       </div>
-      <Button size="sm" className="w-fit" onClick={() => router.push(action.actionHref)}>
+      <Button
+        size="sm"
+        variant={primary ? "default" : "outline"}
+        className="w-fit"
+        onClick={() => router.push(action.actionHref)}
+      >
         {action.actionLabel}
         <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
       </Button>
@@ -773,7 +865,7 @@ function SignalPill({
   return (
     <div
       className={cn(
-        "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-3 py-2",
+        "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-line-hairline)] bg-card/90 px-3 py-2 shadow-[var(--clair-shadow-xs)]",
         tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
         tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
       )}
@@ -785,11 +877,19 @@ function SignalPill({
 }
 
 function getNextActionToneClass(tone: HomeNextAction["tone"]) {
-  if (tone === "danger") return "border-[var(--emr-status-danger-border)]";
-  if (tone === "warning") return "border-[var(--emr-status-warning-border)]";
-  if (tone === "attention") return "border-[var(--emr-status-warning-border)]";
+  if (tone === "danger") return "border-[var(--emr-status-danger-border)] bg-[linear-gradient(180deg,var(--emr-status-danger-bg),var(--emr-surface-panel))]";
+  if (tone === "warning") return "border-[var(--emr-status-warning-border)] bg-[linear-gradient(180deg,var(--emr-status-warning-bg),var(--emr-surface-panel))]";
+  if (tone === "attention") return "border-[var(--emr-status-info-border)] bg-[linear-gradient(180deg,var(--emr-status-info-bg),var(--emr-surface-panel))]";
 
-  return "border-border";
+  return "border-[var(--emr-line-hairline)]";
+}
+
+function getNextActionAccentClass(tone: HomeNextAction["tone"]) {
+  if (tone === "danger") return "bg-[var(--emr-status-danger-text)]";
+  if (tone === "warning") return "bg-[var(--emr-status-warning-text)]";
+  if (tone === "attention") return "bg-[var(--emr-status-info-text)]";
+
+  return "bg-[var(--emr-status-neutral-text)]";
 }
 
 function DashboardBottleneckBoard({
@@ -801,16 +901,48 @@ function DashboardBottleneckBoard({
 }) {
   const router = useRouter();
   const maxCount = Math.max(...flowSummary.map((item) => item.count), 1);
+  const bottleneck = flowSummary.find((item) => item.id === bottleneckId) ?? flowSummary[0];
 
   return (
-    <div className="grid gap-5">
-      <div className="grid grid-cols-6 gap-3 max-xl:grid-cols-3 max-md:grid-cols-2">
+    <section
+      className="grid gap-4 rounded-[var(--clair-radius-lg)] border border-[var(--emr-line-hairline)] bg-card p-4 shadow-[var(--clair-shadow-sm)]"
+      data-testid="home-dashboard-flow"
+    >
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="text-[16px] font-bold leading-6 text-foreground">운영 병목 보드</h2>
+            <span className="rounded-full border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[var(--emr-status-warning-text)]">
+              현재 병목 {bottleneck?.label ?? "대기열"}
+            </span>
+          </div>
+          <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
+            홈에서는 병목을 압축해서 보여주고, 상세 조정은 업무 현황으로 이동합니다.
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {["오늘", "7일", "30일"].map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              className={cn(
+                "h-7 rounded-full border px-3 text-[12px] font-semibold leading-4 transition-colors hover:bg-[var(--emr-state-hover)]",
+                index === 0 ? "border-foreground bg-foreground text-background hover:bg-foreground" : "border-[var(--emr-line-hairline)] bg-card text-muted-foreground"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-6 gap-2 max-xl:grid-cols-3 max-md:grid-cols-2">
         {flowSummary.map((item) => (
           <button
             key={item.id}
             type="button"
             className={cn(
-              "grid min-h-[150px] content-between rounded-[var(--clair-radius-atomic-8)] border border-border bg-background px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "grid min-h-[104px] content-between rounded-[var(--clair-radius-md)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-3 text-left shadow-[var(--clair-shadow-xs)] transition-[background-color,border-color,box-shadow] hover:bg-[var(--emr-state-hover)] hover:shadow-[var(--clair-shadow-sm)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               item.id === bottleneckId && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
             )}
             onClick={() => router.push(item.href)}
@@ -821,38 +953,29 @@ function DashboardBottleneckBoard({
                 {item.count}건
               </span>
             </span>
-            <span className="grid gap-2 text-[12px] leading-4 text-muted-foreground">
+            <span className="grid gap-1.5 text-[12px] leading-4 text-muted-foreground">
               <span className="truncate">{item.slaLabel ?? item.detail ?? "SLA 확인"}</span>
-              <span className="grid grid-cols-2 gap-1.5">
-                <span className="rounded-[var(--clair-radius-atomic-8)] bg-card/80 px-2 py-1">
-                  지연 <b className="text-foreground">{item.overdueCount ?? 0}</b>
-                </span>
-                <span className="rounded-[var(--clair-radius-atomic-8)] bg-card/80 px-2 py-1">
-                  미배정 <b className="text-foreground">{item.unassignedCount ?? 0}</b>
-                </span>
-              </span>
-            </span>
-            <span className="grid gap-1.5">
               <span className="h-1.5 rounded-full bg-[var(--emr-surface-muted)]">
                 <span
                   className="block h-full rounded-full bg-[var(--emr-text-primary)]"
                   style={{ width: `${Math.max(16, (item.count / maxCount) * 100)}%` }}
                 />
               </span>
-              <span className="truncate text-[12px] font-semibold leading-4 text-foreground">
-                {item.nextActionLabel ?? "업무 열기"}
+              <span className="flex min-w-0 items-center justify-between gap-2">
+                <span>지연 <b className="text-foreground">{item.overdueCount ?? 0}</b></span>
+                <span>미배정 <b className="text-foreground">{item.unassignedCount ?? 0}</b></span>
               </span>
             </span>
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] bg-muted/50 px-3 py-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] px-3 py-2">
         <InfoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
         <span className="truncate text-[12px] leading-4 text-muted-foreground">
           현재 병목은 {flowSummary.find((item) => item.id === bottleneckId)?.label ?? "대기열"} 단계입니다.
         </span>
       </div>
-    </div>
+    </section>
   );
 }
 

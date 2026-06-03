@@ -97,6 +97,10 @@ test("dispensing shell supports panels and drawer", async ({ page }) => {
 
   await page.getByTestId("order-queue-item-dispensing-queue-1").click();
   await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
+  const treatmentHistoryCloseButton = page.getByRole("button", { name: "처치 이력 패널 접기" });
+  if (await treatmentHistoryCloseButton.count()) {
+    await treatmentHistoryCloseButton.click();
+  }
   await page.getByRole("button", { name: "처치 이력 패널 열기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "처치 이력" })).toBeVisible();
 });
@@ -129,20 +133,26 @@ test("global command palette searches and opens patient context", async ({ page 
 test("global notification bell opens right drawer with badge policy count", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
-  const notificationButton = page.getByRole("button", { name: /알림 센터 열기, 중요 알림 4개/ });
+  const notificationButton = page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ });
   await expect(notificationButton).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByTestId("global-notification-badge")).toHaveText("4");
+  await expect(page.getByTestId("global-notification-badge")).toHaveText("7");
 
   await notificationButton.click();
 
   const drawer = page.getByRole("dialog", { name: "알림" });
   await expect(drawer).toBeVisible();
-  await expect(drawer).toContainText("중요 알림 4개 · 안 읽음 5개");
-  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("중요 4");
+  await expect(drawer).toContainText("중요 알림 7개 · 안 읽음 9개");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("안 읽음 9");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("중요 7");
   await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("두부 처방 조제가 완료되었습니다");
+  await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("보리 CBC 검체 재확인을 진행해 주세요");
+  await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("루루 수액 처치가 완료되었습니다");
+  await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("토리 FUJI DRI-CHEM 결과가 도착했습니다");
+  await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("감자 수납 준비가 완료되었습니다");
+  await expect(drawer.locator('[data-testid^="global-notification-row-"]')).toHaveCount(9);
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception\?modulePanel=open/);
 
-  await drawer.getByRole("button", { name: "중요 4" }).click();
+  await drawer.getByRole("button", { name: "중요 7" }).click();
   await expect(drawer.getByTestId("global-notification-drawer-list")).not.toContainText(
     "두부 처방 조제가 완료되었습니다"
   );
@@ -152,11 +162,193 @@ test("global notification bell opens right drawer with badge policy count", asyn
   await expect(notificationButton).toHaveAttribute("aria-expanded", "false");
 });
 
+test("global notification drawer supports read, archive, and restore triage states", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  const urgentRow = drawer.getByTestId("global-notification-row-notif-order-urgent-handoff-kong-cbc");
+
+  await expect(urgentRow).toHaveAttribute("data-notification-state", "unread");
+  await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 읽음 처리" }).click();
+
+  await expect(urgentRow).toHaveAttribute("data-notification-state", "read");
+  await expect(urgentRow).toContainText("읽음");
+  await expect(drawer).toContainText("중요 알림 6개 · 안 읽음 8개");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("안 읽음 8");
+
+  await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 보관" }).click();
+  await expect(drawer.getByTestId("global-notification-drawer-list")).not.toContainText(
+    "콩이 CBC 재확인이 필요합니다"
+  );
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("보관 2");
+
+  await drawer.getByRole("button", { name: "보관 2" }).click();
+  await expect(urgentRow).toHaveAttribute("data-notification-archived", "true");
+  await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 보관 해제" }).click();
+
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("보관 1");
+  await drawer.getByRole("button", { name: "전체 9" }).click();
+  await expect(urgentRow).toHaveAttribute("data-notification-archived", "false");
+  await expect(urgentRow).toHaveAttribute("data-notification-state", "read");
+
+  await drawer.getByRole("button", { name: "알림 닫기" }).click();
+  await expect(page.getByRole("button", { name: /알림 센터 열기, 중요 알림 6개/ })).toBeVisible();
+  await expect(page.getByTestId("global-notification-badge")).toHaveText("6");
+});
+
+test("global notification drawer all-read action clears badge-count notifications without archiving rows", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const drawer = page.getByRole("dialog", { name: "알림" });
+
+  await drawer.getByRole("button", { name: "전체 읽음" }).click();
+
+  await expect(drawer).toContainText("중요 알림 0개 · 안 읽음 0개");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("전체 9");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("안 읽음 0");
+  await expect(drawer.getByRole("group", { name: "알림 필터" })).toContainText("중요 7");
+  await expect(drawer.getByTestId("global-notification-drawer-list")).toContainText("두부 처방 조제가 완료되었습니다");
+  await expect(drawer.getByRole("button", { name: "전체 읽음" })).toBeDisabled();
+
+  await drawer.getByRole("button", { name: "알림 닫기" }).click();
+  await expect(page.getByTestId("global-notification-badge")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "알림 센터 열기" })).toBeVisible();
+});
+
+test("global notification drawer persists local read and archive state with contract keys", async ({ page }) => {
+  const readStateKey = "clair.notifications.v0.read";
+  const archiveStateKey = "clair.notifications.v0.archive";
+  const urgentNotificationId = "notif-order-urgent-handoff-kong-cbc";
+  const initiallyArchivedNotificationId = "notif-imaging-completed-choco";
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.evaluate(
+    ({ readKey, archiveKey }) => {
+      window.localStorage.setItem(readKey, JSON.stringify(["missing-notification"]));
+      window.localStorage.setItem(archiveKey, "not-json");
+    },
+    { readKey: readStateKey, archiveKey: archiveStateKey }
+  );
+  await page.reload();
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  const urgentRow = drawer.getByTestId(`global-notification-row-${urgentNotificationId}`);
+
+  await expect(drawer.getByTestId("global-notification-local-state-disclaimer")).toHaveText(
+    "v0 역할 큐 알림의 읽음/보관 상태는 현재 브라우저에만 저장됩니다. 다른 사용자나 다른 브라우저와 동기화되지 않습니다."
+  );
+
+  await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 읽음 처리" }).click();
+  await urgentRow.getByRole("button", { name: "콩이 CBC 재확인이 필요합니다 보관" }).click();
+
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        ({ readKey, archiveKey }) => ({
+          readIds: JSON.parse(window.localStorage.getItem(readKey) ?? "[]"),
+          archivedIds: JSON.parse(window.localStorage.getItem(archiveKey) ?? "[]"),
+        }),
+        { readKey: readStateKey, archiveKey: archiveStateKey }
+      )
+    )
+    .toEqual({
+      readIds: [urgentNotificationId],
+      archivedIds: [initiallyArchivedNotificationId, urgentNotificationId],
+    });
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: /알림 센터 열기, 중요 알림 6개/ })).toBeVisible();
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 6개/ }).click();
+
+  await drawer.getByRole("button", { name: "보관 2" }).click();
+  await expect(urgentRow).toHaveAttribute("data-notification-state", "read");
+  await expect(urgentRow).toHaveAttribute("data-notification-archived", "true");
+});
+
+test("global notification source action navigates the current tab to the source workflow", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  const labResultRow = drawer.getByTestId("global-notification-row-notif-lab-result-kong");
+
+  await labResultRow.getByRole("button", { name: "검사 결과 열기" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab\?modulePanel=open&labResultId=lab-result-kong-cbc/);
+  await expect(drawer).toBeHidden();
+});
+
+test("global notification source action confirms before leaving dirty work", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          typeof (window as Window & { __clairSetNotificationNavigationDirty?: (dirty: boolean) => void })
+            .__clairSetNotificationNavigationDirty,
+      ),
+    )
+    .toBe("function");
+  await page.evaluate(() =>
+    (window as Window & { __clairSetNotificationNavigationDirty?: (dirty: boolean) => void })
+      .__clairSetNotificationNavigationDirty?.(true),
+  );
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  const labResultRow = drawer.getByTestId("global-notification-row-notif-lab-result-kong");
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toBe("작업 중인 내용이 저장되지 않을 수 있습니다. 이동하시겠습니까?");
+    await dialog.dismiss();
+  });
+  await labResultRow.getByRole("button", { name: "검사 결과 열기" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception\?modulePanel=open/);
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toContainText("중요 알림 7개 · 안 읽음 9개");
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toBe("작업 중인 내용이 저장되지 않을 수 있습니다. 이동하시겠습니까?");
+    await dialog.accept();
+  });
+  await labResultRow.getByRole("button", { name: "검사 결과 열기" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/lab\?modulePanel=open&labResultId=lab-result-kong-cbc/);
+  await expect(drawer).toBeHidden();
+});
+
+test("global notification source action shows fallback detail when source is missing", async ({ page }) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const drawer = page.getByRole("dialog", { name: "알림" });
+  const deviceResultRow = drawer.getByTestId("global-notification-row-notif-device-result-tori-fuji");
+
+  await deviceResultRow.getByRole("button", { name: "장비 결과 열기" }).click();
+
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception\?modulePanel=open/);
+  await expect(drawer.getByTestId("global-notification-fallback-detail")).toBeVisible();
+  await expect(drawer.getByTestId("global-notification-fallback-detail")).toContainText(
+    "원본 업무 화면을 열 수 없습니다"
+  );
+  await expect(drawer.getByTestId("global-notification-fallback-detail")).toContainText(
+    "연결된 source entity가 현재 mock fixture에 없습니다"
+  );
+  await expect(drawer.getByTestId("global-notification-fallback-detail")).toContainText(
+    "토리 FUJI DRI-CHEM 결과가 도착했습니다"
+  );
+  await expect(drawer).toContainText("중요 알림 6개 · 안 읽음 8개");
+});
+
 test("global notification drawer fits narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
-  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 4개/ }).click();
+  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
 
   const drawer = page.getByRole("dialog", { name: "알림" });
   await expect(drawer).toBeVisible();

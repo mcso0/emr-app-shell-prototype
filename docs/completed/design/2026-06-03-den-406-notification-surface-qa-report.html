@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-406 전역 알림 surface QA 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-406 전역 알림 surface QA 완료 보고서</h1>
+      <p>
+        v0 이벤트가 drawer, toast, inline alert surface에서 어떤 조건으로 보이는지 테스트 가능한 정책으로 정리했다.
+        모든 알림은 drawer에 남고, transient surface는 <code>toast_policy</code>, 수신자, 현재 source context에 따라 제한된다.
+      </p>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li><code>resolveNotificationSurfaceVisibility</code>로 drawer/toast/inline alert eligibility를 고정했다.</li>
+          <li><code>drawer_only</code>와 <code>inline_first</code> 이벤트가 toast로 튀지 않도록 검증했다.</li>
+          <li><code>role_active</code> toast는 current recipient ownership과 unread/unarchived 상태를 기준으로 제한했다.</li>
+          <li><code>source_context_only</code> toast는 같은 source workflow 근처에서만 보이도록 검증했다.</li>
+          <li><code>NotificationInlineAlert</code>를 추가해 inline-first 복구 알림을 <code>EmrInlineAlert</code> 표면으로 표현할 수 있게 했다.</li>
+          <li>source action copy가 final clinical/billing/reception action을 직접 수행하지 않는다는 테스트를 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>QA 메모</h2>
+        <ul>
+          <li>Drawer: 모든 v0 fixture가 reviewable surface로 남는다.</li>
+          <li>Toast: 최대 3개 stack/queue/dedupe와 variant 테스트를 기존 suite에 유지했다.</li>
+          <li>Inline alert: 장비 결과 매칭 실패 같은 <code>inline_first</code> 이벤트는 toast보다 source workflow recovery surface를 우선한다.</li>
+          <li>스크린샷: <code>docs/completed/design/2026-06-03-den-406-notification-surface-qa-drawer.png</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-surfaces.spec.ts tests/notification-toast.spec.ts tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 26 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <p>
+          Live event stream과 toast emission wiring, chart/reception/billing/inpatient module-level inline alert 통합,
+          notification preference/page, external provider/channel, remote Supabase migration/RLS/live validation은 구현하지 않았다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

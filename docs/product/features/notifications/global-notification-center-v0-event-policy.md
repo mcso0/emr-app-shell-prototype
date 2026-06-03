@@ -9,8 +9,12 @@ related_docs:
   - "docs/completed/design/2026-06-02-global-notification-center-planning-report.html"
 related_work:
   - "docs/work/notifications/NOTIFICATION-PR-002-event-matrix-ux-badge-toast-policy.md"
+  - "docs/work/notifications/NOTIFICATION-PR-006-v0-event-matrix-fixtures.md"
+  - "docs/work/notifications/NOTIFICATION-PR-009-toast-stack-status-variants.md"
+  - "docs/work/notifications/NOTIFICATION-PR-012-event-ui-surface-qa.md"
+  - "docs/work/notifications/NOTIFICATION-PR-013-focused-state-regression-tests.md"
   - "https://linear.app/deny-93/issue/DEN-396/00-02-finalize-event-matrix-ux-writing-rules-and-badgetoast-policy"
-last_updated: "2026-06-02"
+last_updated: "2026-06-03"
 ---
 
 # Global Notification Center v0 Event Policy
@@ -53,6 +57,16 @@ Rules:
 - The shell badge counts only unread rows with `badge_count === true`.
 - Toasts do not replace drawer persistence.
 - Inline alerts should remain inside the source workflow until the user understands or resolves the source problem.
+
+Implementation QA status as of 2026-06-03:
+
+- Every v0 event key has a synthetic fixture.
+- Drawer visibility is required for every fixture.
+- `drawer_only` events are suppressed from toast.
+- `inline_first` matching-failure events prefer inline alert/fallback recovery over toast.
+- `role_active` toasts are gated by current recipient ownership.
+- `source_context_only` toasts are gated by current source workflow proximity.
+- Source action labels are tested to remain navigation/detail actions, not final workflow completion actions.
 
 ## Badge Policy
 

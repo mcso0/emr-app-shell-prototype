@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-407 전역 알림 focused tests 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-407 전역 알림 focused tests 완료 보고서</h1>
+      <p>
+        badge, read/archive, dedupe, localStorage 정책 회귀를 빠르게 잡을 focused test를 보강했다.
+        v0의 local-first 제약과 badge-count 기준을 유지하면서 live/remote 범위로 확장하지 않았다.
+      </p>
+
+      <section>
+        <h2>추가 테스트</h2>
+        <ul>
+          <li>read, archived, reference-only unread row가 shell badge에 포함되지 않는지 확인했다.</li>
+          <li>localStorage 값이 없으면 fixture 기본 read/archive 상태로 fallback되는지 확인했다.</li>
+          <li>unknown persisted id는 무시하고 malformed archive JSON은 안전하게 fallback되는지 확인했다.</li>
+          <li>read/archive state가 contract key에 기록되고 fixture에 적용되는지 확인했다.</li>
+          <li>local state 적용이 원본 fixture를 mutate하지 않는지 확인했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-fixtures.spec.ts -g "notification"</code> 통과: 11 passed.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-surfaces.spec.ts tests/notification-toast.spec.ts tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 29 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 범위</h2>
+        <p>
+          Live push, service worker, provider delivery, remote Supabase migration/RLS/live validation,
+          notification preference, full app regression은 DEN-407 범위에서 제외했다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
