@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-401 전역 알림 badge/recipient rule 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-401 전역 알림 badge/recipient rule 완료 보고서</h1>
+      <p>
+        shell badge가 전체 unread 수로 커지지 않도록 recipient ownership과 v0 badge 정책을 함께 적용하는 resolver를 구현했다.
+        이 규칙은 mock/local-first UX 규칙이며 server-side permission enforcement가 아니다.
+      </p>
+
+      <section>
+        <h2>조건</h2>
+        <ul>
+          <li>badge count는 recipient가 현재 사용자, active role, 또는 local role queue action owner로 매칭될 때만 가능하다.</li>
+          <li>매칭된 알림도 <code>unread && !archived && badge_count === true</code>를 만족해야 shell badge에 포함된다.</li>
+          <li><code>badge_count: false</code> reference row는 unread여도 badge에 포함되지 않는다.</li>
+          <li>role queue ownership 설명에는 현재 브라우저 local-first 제약을 남겼다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li><code>NotificationRecipientContext</code>, <code>resolveNotificationRecipientRule</code>, <code>shouldCountNotificationBadge</code>를 추가했다.</li>
+          <li>direct user fixture를 하나 두어 active role과 직접 recipient를 테스트에서 구분할 수 있게 했다.</li>
+          <li>기존 shell badge는 새 resolver 결과를 계속 사용한다.</li>
+          <li>fixture tests에 direct user, active role, role queue, reference row, archived/read row case를 추가했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3000 npx playwright test tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 9 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <p>
+          server-side permission enforcement, remote Supabase migration/RLS/live validation, 사용자 간 role queue read/archive 동기화,
+          provider 발송, 외부 채널은 구현하지 않았다. Dedupe/update-bump와 toast stack은 후속 이슈 범위다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

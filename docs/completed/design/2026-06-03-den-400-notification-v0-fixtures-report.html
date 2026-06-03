@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-400 전역 알림 v0 fixture 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+
+      img {
+        display: block;
+        width: min(100%, 420px);
+        margin-top: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-400 전역 알림 v0 fixture 완료 보고서</h1>
+      <p>
+        전역 알림 v0 이벤트 매트릭스의 10개 event key가 모두 mock fixture로 표현되도록 확장했다.
+        데이터는 synthetic demo data이며, live provider/device delivery나 Supabase persistence로 확장하지 않았다.
+      </p>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li><code>order_recheck_requested</code>, <code>assigned_order_completed</code>, <code>device_result_received</code>, <code>billing_waiting_ready</code> fixture를 추가했다.</li>
+          <li>모든 fixture에 recipient, source, badge/toast/action, priority, dedupe key, local state key를 유지했다.</li>
+          <li><code>device_result_received</code>에 <code>fallback_detail</code> + <code>missing_source</code> case를 포함했다.</li>
+          <li>영상 결과 완료 fixture를 승인 정책에 맞게 action/badge 대상 이벤트로 정렬했다.</li>
+          <li>조제/처치 완료와 수납 대기 전환은 unread여도 shell badge에 포함하지 않는 reference row로 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <p>
+          live event ingestion, provider/device real integration, remote Supabase migration/RLS/live validation,
+          Kakao/SMS/email, 공지 발행 시스템, 자유 멘션 시스템은 포함하지 않았다. source navigation, toast stack,
+          dedupe/update-bump resolver는 후속 DEN-401~403 범위다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3000 npx playwright test tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 7 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li>Playwright Chromium으로 drawer screenshot smoke를 수행했다.</li>
+        </ul>
+        <img src="./2026-06-03-den-400-notification-v0-fixtures-browser.png" alt="DEN-400 expanded v0 notification fixtures screenshot" />
+      </section>
+
+      <section>
+        <h2>리뷰 반영</h2>
+        <p>
+          서브에이전트 리뷰에서 누락 event key, imaging 정책 불일치, fallback fixture 부재, count test 재조정 필요가 지적되어 모두 반영했다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -20,17 +20,25 @@ import {
   type GlobalNotification,
 } from "@/features/notifications/mock-notifications";
 
-type NotificationFilter = "all" | "requires_action" | "archived";
+type NotificationFilter = "all" | "unread" | "requires_action" | "archived";
 
 type GlobalNotificationDrawerProps = {
   badgeCount: number;
+  fallbackDetailNotificationId: string | null;
   notifications: GlobalNotification[];
   open: boolean;
+  onArchiveNotification: (notificationId: string) => void;
+  onCloseFallbackDetail: () => void;
+  onMarkAllRead: () => void;
+  onMarkNotificationRead: (notificationId: string) => void;
   onOpenChange: (open: boolean) => void;
+  onOpenNotificationSource: (notification: GlobalNotification) => void;
+  onRestoreNotification: (notificationId: string) => void;
 };
 
 const filterLabels: Record<NotificationFilter, string> = {
   all: "전체",
+  unread: "안 읽음",
   requires_action: "중요",
   archived: "보관",
 };
@@ -40,9 +48,13 @@ function getFilteredNotifications(notifications: GlobalNotification[], filter: N
     return notifications.filter((notification) => notification.archived);
   }
 
+  if (filter === "unread") {
+    return notifications.filter((notification) => !notification.archived && notification.unread);
+  }
+
   if (filter === "requires_action") {
     return notifications.filter(
-      (notification) => !notification.archived && notification.unread && notification.requires_action
+      (notification) => !notification.archived && notification.requires_action
     );
   }
 
@@ -50,29 +62,49 @@ function getFilteredNotifications(notifications: GlobalNotification[], filter: N
 }
 
 function getFilterItems(notifications: GlobalNotification[]): Array<SegmentedControlItem<NotificationFilter>> {
-  return (["all", "requires_action", "archived"] as NotificationFilter[]).map((filter) => ({
+  return (["all", "unread", "requires_action", "archived"] as NotificationFilter[]).map((filter) => ({
     value: filter,
     label: filterLabels[filter],
     count: getFilteredNotifications(notifications, filter).length,
   }));
 }
 
-function NotificationRow({ notification }: { notification: GlobalNotification }) {
+function NotificationRow({
+  notification,
+  onArchive,
+  onMarkRead,
+  onOpenSource,
+  onRestore,
+}: {
+  notification: GlobalNotification;
+  onArchive: (notificationId: string) => void;
+  onMarkRead: (notificationId: string) => void;
+  onOpenSource: (notification: GlobalNotification) => void;
+  onRestore: (notificationId: string) => void;
+}) {
+  const stateLabel = notification.archived ? "보관됨" : notification.unread ? "안 읽음" : "읽음";
+
   return (
     <article
       data-testid={`global-notification-row-${notification.id}`}
+      data-notification-state={notification.unread ? "unread" : "read"}
+      data-notification-archived={notification.archived ? "true" : "false"}
       className={cn(
         "grid grid-cols-[18px_minmax(0,1fr)] gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3",
-        notification.unread ? "bg-[var(--emr-surface-app)]" : "bg-transparent opacity-75"
+        notification.unread
+          ? "bg-[var(--emr-surface-app)]"
+          : "bg-transparent text-[var(--emr-text-secondary)]"
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
-          "mt-1.5 size-2 rounded-full",
-          notification.requires_action
+          "mt-1.5 size-2 rounded-full border",
+          notification.unread && notification.requires_action
             ? "bg-[var(--emr-status-danger-text)]"
-            : "bg-[var(--emr-status-neutral-text)]"
+            : notification.unread
+              ? "bg-[var(--emr-status-neutral-text)]"
+              : "border-[var(--emr-line-strong)] bg-transparent"
         )}
       />
       <div className="min-w-0 space-y-2">
@@ -87,6 +119,9 @@ function NotificationRow({ notification }: { notification: GlobalNotification })
               </Badge>
               <span className="emr-text-metadata text-[var(--emr-text-tertiary)]">
                 {notification.requires_action ? "중요 알림" : "참고 알림"}
+              </span>
+              <span className="emr-text-metadata text-[var(--emr-text-tertiary)]">
+                {stateLabel}
               </span>
             </div>
             <h3 className="min-w-0 text-[13px] font-semibold leading-5 text-[var(--emr-text-primary)]">
@@ -109,27 +144,104 @@ function NotificationRow({ notification }: { notification: GlobalNotification })
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <Button size="xs" variant="outline" disabled>
+          <Button type="button" size="xs" variant="outline" onClick={() => onOpenSource(notification)}>
             <CdsNavigationExternalLinkIcon data-icon="inline-start" />
-            원본 열기
+            {notification.sourceActionLabel}
           </Button>
-          <Button size="xs" variant="ghost" disabled>
-            읽음
-          </Button>
-          <Button size="xs" variant="ghost" disabled>
-            보관
-          </Button>
+          {notification.unread ? (
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              aria-label={`${notification.title} 읽음 처리`}
+              onClick={() => onMarkRead(notification.id)}
+            >
+              읽음 처리
+            </Button>
+          ) : null}
+          {notification.archived ? (
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              aria-label={`${notification.title} 보관 해제`}
+              onClick={() => onRestore(notification.id)}
+            >
+              보관 해제
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              aria-label={`${notification.title} 보관`}
+              onClick={() => onArchive(notification.id)}
+            >
+              보관
+            </Button>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
+const fallbackReasonLabels: Record<NonNullable<GlobalNotification["source"]["fallback_reason"]>, string> = {
+  missing_source: "원본 업무 화면을 열 수 없습니다. 연결된 source entity가 현재 mock fixture에 없습니다.",
+  closed_encounter: "원본 encounter가 종료되어 바로 이동할 수 없습니다.",
+  permission_unavailable: "현재 mock 권한 범위에서 원본 업무 화면을 열 수 없습니다.",
+};
+
+function NotificationFallbackDetail({
+  notification,
+  onClose,
+}: {
+  notification: GlobalNotification;
+  onClose: () => void;
+}) {
+  const fallbackReason = notification.source.fallback_reason ?? notification.fallback_reason ?? "missing_source";
+
+  return (
+    <section
+      data-testid="global-notification-fallback-detail"
+      className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-raised)] px-4 py-3"
+    >
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-[12px] font-semibold leading-5 text-[var(--emr-text-primary)]">
+            원본 업무 화면을 열 수 없습니다
+          </p>
+          <p className="text-[12px] leading-5 text-[var(--emr-text-secondary)]">
+            {fallbackReasonLabels[fallbackReason]}
+          </p>
+        </div>
+        <Button type="button" size="xs" variant="ghost" onClick={onClose}>
+          닫기
+        </Button>
+      </div>
+      <div className="mt-2 space-y-1 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
+        <p>{notification.title}</p>
+        <p>{notification.detail}</p>
+        <p>
+          {notification.sourceLabel} · {notification.recipientLabel}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export function GlobalNotificationDrawer({
   badgeCount,
+  fallbackDetailNotificationId,
   notifications,
   open,
+  onArchiveNotification,
+  onCloseFallbackDetail,
+  onMarkAllRead,
+  onMarkNotificationRead,
   onOpenChange,
+  onOpenNotificationSource,
+  onRestoreNotification,
 }: GlobalNotificationDrawerProps) {
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const unreadCount = useMemo(() => resolveNotificationUnreadCount(notifications), [notifications]);
@@ -138,6 +250,9 @@ export function GlobalNotificationDrawer({
     () => getFilteredNotifications(notifications, filter),
     [filter, notifications]
   );
+  const fallbackDetailNotification = fallbackDetailNotificationId
+    ? notifications.find((notification) => notification.id === fallbackDetailNotificationId)
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -178,15 +293,40 @@ export function GlobalNotificationDrawer({
             itemClassName="h-6 min-h-6 px-2 text-[12px]"
             onValueChange={setFilter}
           />
-          <Button size="xs" variant="ghost" disabled>
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            disabled={unreadCount === 0}
+            onClick={onMarkAllRead}
+          >
             전체 읽음
           </Button>
         </div>
+        <p
+          data-testid="global-notification-local-state-disclaimer"
+          className="border-b border-[var(--emr-line-hairline)] px-4 py-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]"
+        >
+          v0 역할 큐 알림의 읽음/보관 상태는 현재 브라우저에만 저장됩니다. 다른 사용자나 다른 브라우저와 동기화되지 않습니다.
+        </p>
+        {fallbackDetailNotification ? (
+          <NotificationFallbackDetail
+            notification={fallbackDetailNotification}
+            onClose={onCloseFallbackDetail}
+          />
+        ) : null}
 
         <ScrollArea className="min-h-0 flex-1">
           <div data-testid="global-notification-drawer-list">
             {visibleNotifications.map((notification) => (
-              <NotificationRow key={notification.id} notification={notification} />
+              <NotificationRow
+                key={notification.id}
+                notification={notification}
+                onArchive={onArchiveNotification}
+                onMarkRead={onMarkNotificationRead}
+                onOpenSource={onOpenNotificationSource}
+                onRestore={onRestoreNotification}
+              />
             ))}
             {visibleNotifications.length === 0 ? (
               <p className="px-4 py-8 text-center text-[12px] leading-5 text-[var(--emr-text-tertiary)]">

@@ -1,0 +1,475 @@
+### Page
+- Page URL: http://localhost:3333/w/clair-demo/lab?modulePanel=open&labResultId=lab-result-kong-cbc&aside=history&right=closed
+- Page Title: CLAiR EMR
+- Console: 8 errors, 0 warnings
+### Snapshot
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2086]:
+    - generic [ref=e2087]:
+      - button "clair-demo 워크스페이스 선택" [ref=e2088]:
+        - generic [ref=e2089]:
+          - img
+        - generic [ref=e2090]: VIP 동물의료센터 청담점
+        - img
+      - generic [ref=e2091]:
+        - navigation "워크스페이스 주요 메뉴" [ref=e2092]:
+          - generic [ref=e2093]:
+            - link "홈" [ref=e2095] [cursor=pointer]:
+              - /url: /w/clair-demo/home?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2097]
+            - button "전역 통합 검색 열기" [ref=e2100]:
+              - img
+            - button "알림" [ref=e2102]:
+              - img [ref=e2104]
+            - link "접수/예약" [ref=e2109] [cursor=pointer]:
+              - /url: /w/clair-demo/reception?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2111]
+            - link "진료/차트" [ref=e2114] [cursor=pointer]:
+              - /url: /w/clair-demo/treatment?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2116]
+            - link "임상병리검사" [ref=e2119] [cursor=pointer]:
+              - /url: /w/clair-demo/lab?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2121]
+            - link "영상검사" [ref=e2124] [cursor=pointer]:
+              - /url: /w/clair-demo/imaging?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2126]
+            - link "조제/처치" [ref=e2129] [cursor=pointer]:
+              - /url: /w/clair-demo/dispensing?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2131]
+            - link "수납" [ref=e2134] [cursor=pointer]:
+              - /url: /w/clair-demo/billing?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2136]
+            - link "입원" [ref=e2139] [cursor=pointer]:
+              - /url: /w/clair-demo/inpatient?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2141]
+            - link "고객관리" [ref=e2146] [cursor=pointer]:
+              - /url: /w/clair-demo/customer?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2148]
+            - link "병원관리" [ref=e2151] [cursor=pointer]:
+              - /url: /w/clair-demo/orders?labResultId=lab-result-kong-cbc&modulePanel=open&aside=history&right=closed
+              - img [ref=e2153]
+          - button "고객센터" [ref=e2157]:
+            - img [ref=e2159]
+        - complementary [ref=e2161]:
+          - generic [ref=e2164]:
+            - generic [ref=e2165]:
+              - generic [ref=e2167]:
+                - generic [ref=e2168]: 임상병리검사
+                - button "사이드 패널 접기" [ref=e2170]:
+                  - img
+              - group "임상병리검사 목록 보기" [ref=e2172]:
+                - button "오더별" [pressed] [ref=e2173]
+                - button "차트별" [ref=e2174]
+            - generic [ref=e2175]:
+              - button "이전 날짜" [ref=e2176]:
+                - img
+              - button "26.05.01 (금) 날짜 선택" [ref=e2177]:
+                - img [ref=e2178]
+                - generic [ref=e2189]: 26.05.01 (금)
+                - generic [ref=e2190]: 오늘
+              - button "다음 날짜" [ref=e2191]:
+                - img
+            - generic [ref=e2192]:
+              - generic [ref=e2193]:
+                - generic [ref=e2194]: 검사 대기열
+                - generic [ref=e2195]: "2"
+              - generic [ref=e2196]:
+                - button "정렬" [ref=e2197]:
+                  - generic [ref=e2198]:
+                    - img
+                - button "필터" [ref=e2199]:
+                  - generic [ref=e2200]:
+                    - img
+            - generic [ref=e2203]:
+              - button "결과입력 접기" [expanded] [ref=e2204]:
+                - generic [ref=e2205]:
+                  - img [ref=e2206]
+                  - generic [ref=e2211]:
+                    - generic [ref=e2212]: 결과입력
+                    - generic [ref=e2213]: "2"
+                - img [ref=e2216]
+              - generic [ref=e2219]:
+                - button "예약 코코 · 이지은 코코 CBC 검사 더보기 CBC 검사 CBC 검사 10:35 이수지 요청 담당 송하윤" [ref=e2221]:
+                  - generic [ref=e2222]:
+                    - generic [ref=e2223]:
+                      - generic [ref=e2224]: 예약
+                      - generic [ref=e2225]:
+                        - generic [ref=e2226]: 코코
+                        - generic [ref=e2227]: ·
+                        - generic [ref=e2228]: 이지은
+                    - button "코코 CBC 검사 더보기" [ref=e2229]:
+                      - img
+                  - generic [ref=e2230]:
+                    - generic [ref=e2231]: CBC 검사
+                    - generic [ref=e2232]: CBC 검사
+                  - generic [ref=e2233]:
+                    - generic [ref=e2234]:
+                      - img [ref=e2236]
+                      - generic [ref=e2240]: 10:35 이수지 요청
+                    - generic "담당 송하윤" [ref=e2241]:
+                      - img [ref=e2243]
+                      - generic [ref=e2245]: 송하윤
+                - button "예약 콩이 · 김하늘 콩이 CBC 검사 더보기 CBC 검사 CBC 검사 10:12 이수지 요청 담당 송하윤" [pressed] [ref=e2247]:
+                  - generic [ref=e2248]:
+                    - generic [ref=e2249]:
+                      - generic [ref=e2250]: 예약
+                      - generic [ref=e2251]:
+                        - generic [ref=e2252]: 콩이
+                        - generic [ref=e2253]: ·
+                        - generic [ref=e2254]: 김하늘
+                    - button "콩이 CBC 검사 더보기" [ref=e2255]:
+                      - img
+                  - generic [ref=e2256]:
+                    - generic [ref=e2257]: CBC 검사
+                    - generic [ref=e2258]: CBC 검사
+                  - generic [ref=e2259]:
+                    - generic [ref=e2260]:
+                      - img [ref=e2262]
+                      - generic [ref=e2266]: 10:12 이수지 요청
+                    - generic "담당 송하윤" [ref=e2267]:
+                      - img [ref=e2269]
+                      - generic [ref=e2271]: 송하윤
+    - generic [ref=e2272]:
+      - generic [ref=e2273]:
+        - generic [ref=e2274]:
+          - button "탭 뒤로가기" [ref=e2275]:
+            - img
+          - button "탭 앞으로가기" [disabled]:
+            - img
+          - tablist "열린 업무 탭" [ref=e2277]:
+            - tab "검사" [selected] [ref=e2278]:
+              - generic [ref=e2279]:
+                - generic [ref=e2280]:
+                  - img
+                - generic [ref=e2281]: 검사
+            - button "새 업무 탭" [ref=e2282]:
+              - img
+        - generic [ref=e2283]:
+          - button "알림 센터 열기, 중요 알림 6개" [ref=e2284]:
+            - img
+            - generic [ref=e2285]: "6"
+          - button "도움말" [ref=e2286]:
+            - img
+          - button "설정" [ref=e2287]:
+            - img
+          - button "최유나 프로필 메뉴" [ref=e2288]:
+            - generic [ref=e2289]: YN
+            - img
+      - main [ref=e2293]:
+        - generic [ref=e2294]:
+          - generic [ref=e2296]:
+            - generic "환자 컨텍스트 정보" [ref=e2298]:
+              - generic [ref=e2299]:
+                - img [ref=e2300]
+                - generic [ref=e2301]:
+                  - generic [ref=e2302]:
+                    - generic [ref=e2303]: 환자
+                    - generic [ref=e2304]: 콩이
+                  - generic [ref=e2305]:
+                    - generic [ref=e2306]: 보호자
+                    - generic [ref=e2307]: 김하늘
+                  - generic [ref=e2308]:
+                    - generic [ref=e2309]: 품종
+                    - generic [ref=e2310]: 푸들
+                  - generic [ref=e2311]:
+                    - generic [ref=e2312]: 나이
+                    - generic [ref=e2313]: 4세
+                  - generic [ref=e2314]:
+                    - generic [ref=e2315]: 성별
+                    - generic [ref=e2316]: 중성화·수컷
+              - generic [ref=e2317]:
+                - img [ref=e2318]
+                - generic [ref=e2319]:
+                  - generic [ref=e2320]:
+                    - generic [ref=e2321]: 체중
+                    - generic [ref=e2322]: 5.96 kg
+                  - generic [ref=e2323]:
+                    - generic [ref=e2324]: 체온
+                    - generic [ref=e2325]: 39.3 °C
+                  - generic [ref=e2326]:
+                    - generic [ref=e2327]: 호흡
+                    - generic [ref=e2328]: 20 rpm
+                  - generic [ref=e2329]:
+                    - generic [ref=e2330]: 혈압
+                    - generic [ref=e2331]: 170 bpm
+                - button "바이탈 입력" [ref=e2332]:
+                  - generic [ref=e2333]:
+                    - img
+              - generic [ref=e2334]:
+                - img [ref=e2335]
+                - generic [ref=e2336]:
+                  - button "방문목적" [ref=e2337]
+                  - button "보호자메모" [ref=e2338]:
+                    - text: 보호자메모
+                    - img
+                  - button "환자메모" [ref=e2339]
+                  - button "수납메모" [disabled]
+              - generic [ref=e2341]:
+                - generic [ref=e2342]:
+                  - generic [ref=e2343]: 검사
+                  - generic [ref=e2344]: CBC 검사
+                - generic [ref=e2345]:
+                  - generic [ref=e2346]: 상태
+                  - generic [ref=e2347]: 입력
+            - generic [ref=e2348]:
+              - generic [ref=e2349]:
+                - button "환자 정보 처음으로 이동" [disabled]:
+                  - generic:
+                    - img
+                - button "환자 정보 끝으로 이동" [ref=e2350]:
+                  - generic [ref=e2351]:
+                    - img
+              - button "장비결과내역 열기" [ref=e2353]:
+                - text: 장비결과내역
+                - generic "새 장비결과 1건" [ref=e2354]: "1"
+          - generic [ref=e2355]:
+            - complementary [ref=e2356]:
+              - generic [ref=e2358]:
+                - generic [ref=e2359]:
+                  - generic [ref=e2360]:
+                    - button "임상병리검사 이력 목록 접기" [ref=e2361]:
+                      - generic [ref=e2362]:
+                        - img
+                    - generic [ref=e2363]: 임상병리검사 이력
+                    - generic [ref=e2364]: "6"
+                  - generic [ref=e2365]:
+                    - button "정렬" [ref=e2366]:
+                      - generic [ref=e2367]:
+                        - img
+                    - button "필터" [ref=e2368]:
+                      - generic [ref=e2369]:
+                        - img
+                - generic [ref=e2372]:
+                  - generic [ref=e2373]:
+                    - button "26.05.01 1" [expanded] [ref=e2374]:
+                      - generic [ref=e2375]:
+                        - img [ref=e2376]
+                        - generic [ref=e2387]: 26.05.01
+                        - generic [ref=e2388]: "1"
+                      - img [ref=e2390]
+                    - generic [ref=e2400]:
+                      - generic [ref=e2401]:
+                        - img [ref=e2402]
+                        - generic [ref=e2406]: 송하윤 · 26.05.01 10:28 수신
+                      - generic [ref=e2407]: "[CBC] CBC 검사"
+                  - generic [ref=e2408]:
+                    - button "26.04.11 2" [expanded] [ref=e2409]:
+                      - generic [ref=e2410]:
+                        - img [ref=e2411]
+                        - generic [ref=e2422]: 26.04.11
+                        - generic [ref=e2423]: "2"
+                      - img [ref=e2425]
+                    - generic [ref=e2432]:
+                      - generic [ref=e2435]:
+                        - generic [ref=e2436]:
+                          - img [ref=e2437]
+                          - generic [ref=e2441]: 담당자명 · 담당자명 · 10:30 요청
+                        - generic [ref=e2442]: "[CBC] CBC 검사 세트"
+                      - generic [ref=e2445]:
+                        - generic [ref=e2446]:
+                          - img [ref=e2447]
+                          - generic [ref=e2451]: ALT/BUN 결과 확인 · 10:42 완료
+                        - generic [ref=e2452]: "[CHEM] 혈청화학 검사"
+                  - generic [ref=e2453]:
+                    - button "26.03.12 2" [expanded] [ref=e2454]:
+                      - generic [ref=e2455]:
+                        - img [ref=e2456]
+                        - generic [ref=e2467]: 26.03.12
+                        - generic [ref=e2468]: "2"
+                      - img [ref=e2470]
+                    - generic [ref=e2477]:
+                      - generic [ref=e2480]:
+                        - generic [ref=e2481]:
+                          - img [ref=e2482]
+                          - generic [ref=e2486]: 이전 결과 추적 · 10:30 요청
+                        - generic [ref=e2487]: "[CBC] CBC 검사 세트"
+                      - generic [ref=e2490]:
+                        - generic [ref=e2491]:
+                          - img [ref=e2492]
+                          - generic [ref=e2496]: 보호자 요청 검사 · 11:15 완료
+                        - generic [ref=e2497]: 요검사
+                  - generic [ref=e2498]:
+                    - button "26.03.10 1" [expanded] [ref=e2499]:
+                      - generic [ref=e2500]:
+                        - img [ref=e2501]
+                        - generic [ref=e2512]: 26.03.10
+                        - generic [ref=e2513]: "1"
+                      - img [ref=e2515]
+                    - generic [ref=e2525]:
+                      - generic [ref=e2526]:
+                        - img [ref=e2527]
+                        - generic [ref=e2531]: 예방 검사 · 09:40 완료
+                      - generic [ref=e2532]: 심장사상충 키트
+            - generic [ref=e2534]:
+              - generic [ref=e2535]:
+                - generic [ref=e2537]:
+                  - generic [ref=e2538]:
+                    - generic [ref=e2539]:
+                      - button "임상병리검사 이력 패널 접기" [expanded] [pressed] [ref=e2540]:
+                        - img
+                      - heading "임상병리검사 결과지" [level=1] [ref=e2541]
+                    - generic [ref=e2542]: LAB-KONG-CBC
+                  - generic [ref=e2543]:
+                    - button "PDF 다운로드" [ref=e2544]:
+                      - img
+                      - text: PDF 다운로드
+                    - button "출력하기" [ref=e2545]:
+                      - img
+                      - text: 출력하기
+                    - button "담당하기" [ref=e2546]:
+                      - text: 담당하기
+                      - img
+                - generic [ref=e2548]:
+                  - generic [ref=e2549]:
+                    - generic [ref=e2550]: 요청 일시
+                    - generic [ref=e2552]:
+                      - generic [ref=e2553]: 26.05.01 10:20
+                      - generic [ref=e2554]: 입력
+                  - generic [ref=e2555]:
+                    - generic [ref=e2556]: 환자 정보
+                    - generic [ref=e2557]: 콩이(4세) · 푸들
+                  - generic [ref=e2558]:
+                    - generic [ref=e2559]: 요청 수의사
+                    - generic [ref=e2560]: 이수지
+                  - generic [ref=e2561]:
+                    - generic [ref=e2562]: 검사 담당
+                    - generic [ref=e2564]: 송하윤
+                  - generic [ref=e2565]:
+                    - generic [ref=e2566]: 수신 장비
+                    - generic [ref=e2567]: ProCyte Dx
+                - group "검사 결과 필터" [ref=e2569]:
+                  - button "전체 3" [pressed] [ref=e2570]:
+                    - generic [ref=e2571]:
+                      - generic [ref=e2572]: 전체
+                      - generic [ref=e2573]: "3"
+                  - button "CBC 3" [ref=e2575]:
+                    - generic [ref=e2576]:
+                      - generic [ref=e2577]: CBC
+                      - generic [ref=e2578]: "3"
+                  - button "혈청화학 0" [disabled] [ref=e2580]:
+                    - generic [ref=e2581]:
+                      - generic [ref=e2582]: 혈청화학
+                      - generic [ref=e2583]: "0"
+              - generic [ref=e2586]:
+                - generic [ref=e2588]:
+                  - generic [ref=e2589]:
+                    - generic [ref=e2590]:
+                      - button "CBC 검사 세트 접기" [expanded] [ref=e2591]:
+                        - generic [ref=e2593]:
+                          - img
+                      - generic [ref=e2594]:
+                        - generic [ref=e2595]: CBC 검사 세트
+                        - generic [ref=e2596]: "3"
+                        - generic [ref=e2597]: 비정상 1
+                    - generic [ref=e2598]:
+                      - group "테이블 보기 밀도" [ref=e2599]:
+                        - button "좁게 보기" [ref=e2600]
+                        - button "기본 보기" [pressed] [ref=e2605]
+                        - button "넓게 보기" [ref=e2610]
+                      - button "판정적용" [ref=e2615]
+                      - button "저장" [ref=e2616]
+                  - table [ref=e2620]:
+                    - rowgroup [ref=e2628]:
+                      - row "항목 결과값 단위 정상범위 판정 담당자" [ref=e2629]:
+                        - columnheader "항목" [ref=e2630]:
+                          - generic [ref=e2631]: 항목
+                        - columnheader "결과값" [ref=e2632]:
+                          - generic [ref=e2633]: 결과값
+                        - columnheader "단위" [ref=e2634]:
+                          - generic [ref=e2635]: 단위
+                        - columnheader "정상범위" [ref=e2636]:
+                          - generic [ref=e2637]: 정상범위
+                        - columnheader "판정" [ref=e2638]:
+                          - generic [ref=e2639]: 판정
+                        - columnheader "담당자" [ref=e2640]:
+                          - generic [ref=e2641]: 담당자
+                    - rowgroup [ref=e2642]:
+                      - row "WBC 21.4 K/uL WBC 정상범위 6.0-17.0 결과 21.4 초과 높음 송하윤" [ref=e2643]:
+                        - cell "WBC" [ref=e2644]:
+                          - generic [ref=e2645]: WBC
+                        - cell "21.4" [ref=e2646]:
+                          - textbox "WBC 결과값" [ref=e2648]: "21.4"
+                        - cell "K/uL" [ref=e2649]:
+                          - generic [ref=e2650]: K/uL
+                        - cell "WBC 정상범위 6.0-17.0 결과 21.4 초과" [ref=e2651]:
+                          - generic "WBC 정상범위 6.0-17.0 결과 21.4 초과" [ref=e2653]:
+                            - generic [ref=e2654]:
+                              - generic [ref=e2655]: "6"
+                              - generic [ref=e2656]: "17"
+                            - img "WBC 결과 위치 21.4" [ref=e2657]:
+                              - img [ref=e2658]
+                        - cell "높음" [ref=e2660]:
+                          - generic [ref=e2662]: 높음
+                        - cell "송하윤" [ref=e2663]:
+                          - generic [ref=e2665]: 송하윤
+                      - row "HCT 48 % HCT 정상범위 37-55 결과 48 정상 정상 송하윤" [ref=e2666]:
+                        - cell "HCT" [ref=e2667]:
+                          - generic [ref=e2668]: HCT
+                        - cell "48" [ref=e2669]:
+                          - textbox "HCT 결과값" [ref=e2671]: "48"
+                        - cell "%" [ref=e2672]:
+                          - generic [ref=e2673]: "%"
+                        - cell "HCT 정상범위 37-55 결과 48 정상" [ref=e2674]:
+                          - generic "HCT 정상범위 37-55 결과 48 정상" [ref=e2676]:
+                            - generic [ref=e2677]:
+                              - generic [ref=e2678]: "37"
+                              - generic [ref=e2679]: "55"
+                            - img "HCT 결과 위치 48" [ref=e2680]:
+                              - img [ref=e2681]
+                        - cell "정상" [ref=e2683]:
+                          - generic [ref=e2685]: 정상
+                        - cell "송하윤" [ref=e2686]:
+                          - generic [ref=e2688]: 송하윤
+                      - row "PLT 410 K/uL PLT 정상범위 200-500 결과 410 정상 정상 송하윤" [ref=e2689]:
+                        - cell "PLT" [ref=e2690]:
+                          - generic [ref=e2691]: PLT
+                        - cell "410" [ref=e2692]:
+                          - textbox "PLT 결과값" [ref=e2694]: "410"
+                        - cell "K/uL" [ref=e2695]:
+                          - generic [ref=e2696]: K/uL
+                        - cell "PLT 정상범위 200-500 결과 410 정상" [ref=e2697]:
+                          - generic "PLT 정상범위 200-500 결과 410 정상" [ref=e2699]:
+                            - generic [ref=e2700]:
+                              - generic [ref=e2701]: "200"
+                              - generic [ref=e2702]: "500"
+                            - img "PLT 결과 위치 410" [ref=e2703]:
+                              - img [ref=e2704]
+                        - cell "정상" [ref=e2706]:
+                          - generic [ref=e2708]: 정상
+                        - cell "송하윤" [ref=e2709]:
+                          - generic [ref=e2711]: 송하윤
+                - generic [ref=e2712]:
+                  - generic [ref=e2714]:
+                    - heading "검사결과 종합소견" [level=2] [ref=e2715]
+                    - generic [ref=e2716]: 담당자 코멘트
+                  - textbox "검사결과 종합소견" [ref=e2718]:
+                    - /placeholder: 검사자가 결과 해석, 재검 필요 여부, 보호자 안내 메모를 입력합니다.
+                    - text: WBC 항목이 참고치 밖입니다. 임상 증상과 함께 재평가가 필요합니다.
+                - generic [ref=e2719]:
+                  - generic [ref=e2720]:
+                    - generic [ref=e2721]:
+                      - heading "첨부자료" [level=2] [ref=e2722]
+                      - generic [ref=e2723]: "2"
+                    - button "첨부자료 추가" [ref=e2724]:
+                      - img
+                      - text: 추가
+                  - generic [ref=e2725]:
+                    - generic [ref=e2726]:
+                      - img [ref=e2728]
+                      - generic [ref=e2730]:
+                        - generic [ref=e2731]: kong-cbc-260501.pdf
+                        - generic [ref=e2732]: application/pdf · 172KB
+                    - generic [ref=e2733]:
+                      - img [ref=e2736]
+                      - generic [ref=e2738]:
+                        - generic [ref=e2739]: cbc-smear-preview.png
+                        - generic [ref=e2740]: image/png · 432KB
+        - complementary
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e51] [cursor=pointer]:
+    - img [ref=e52]
+  - alert [ref=e55]: CLAiR EMR
+```
+### Events
+- New console entries: .playwright-cli/console-2026-06-03T10-18-41-743Z.log#L21-L22

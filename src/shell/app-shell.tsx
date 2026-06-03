@@ -5,8 +5,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
+  applyNotificationLocalState,
+  getInitialNotificationLocalState,
   mockGlobalNotifications,
+  readNotificationLocalState,
   resolveNotificationBadgeCount,
+  type GlobalNotification,
+  type NotificationLocalState,
+  writeNotificationLocalState,
 } from "@/features/notifications/mock-notifications";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -25,6 +31,15 @@ type PendingUrlState = {
   modulePanelOpen?: boolean;
   rightPanelOpen?: boolean;
 };
+
+declare global {
+  interface Window {
+    __clairSetNotificationNavigationDirty?: (dirty: boolean) => void;
+  }
+}
+
+const notificationNavigationDirtyConfirmationMessage =
+  "작업 중인 내용이 저장되지 않을 수 있습니다. 이동하시겠습니까?";
 
 const crossModuleQueryKeys = [
   "scenario",
@@ -59,6 +74,15 @@ function getCrossModuleNavigationSearch(
   return nextParams.toString();
 }
 
+function getNotificationSourceModuleId(route: string) {
+  const pathname = route.split("?")[0];
+  const [, workspacePrefix, , moduleId] = pathname.split("/");
+
+  if (workspacePrefix !== "w") return null;
+
+  return moduleId || null;
+}
+
 export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -79,10 +103,19 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
+  const [notificationLocalState, setNotificationLocalState] = useState<NotificationLocalState>(() =>
+    getInitialNotificationLocalState(mockGlobalNotifications)
+  );
+  const [notificationLocalStateHydrated, setNotificationLocalStateHydrated] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
+  const notifications = useMemo(
+    () => applyNotificationLocalState(mockGlobalNotifications, notificationLocalState),
+    [notificationLocalState]
+  );
   const notificationBadgeCount = useMemo(
-    () => resolveNotificationBadgeCount(mockGlobalNotifications),
-    []
+    () => resolveNotificationBadgeCount(notifications),
+    [notifications]
   );
   const {
     activeTabId,
@@ -102,12 +135,25 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     contentAsideOpen,
     enterModule,
     modulePanelOpen,
+    notificationNavigationDirty,
     rightPanelOpen,
     setActiveDrawer,
     setContentAsideOpen,
     setModulePanelOpen,
     setRightPanelOpen,
   } = useLayoutStore();
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+
+    window.__clairSetNotificationNavigationDirty = (dirty: boolean) => {
+      useLayoutStore.getState().setNotificationNavigationDirty(dirty);
+    };
+
+    return () => {
+      delete window.__clairSetNotificationNavigationDirty;
+    };
+  }, []);
 
   useEffect(() => {
     if (tabsInitializedRef.current === workspaceId) return;
@@ -135,6 +181,23 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   useLayoutEffect(() => {
     enterModule();
   }, [enterModule, moduleDefinition.id]);
+
+  useEffect(() => {
+    const hydrateTimer = window.setTimeout(() => {
+      setNotificationLocalState(readNotificationLocalState(window.localStorage, mockGlobalNotifications));
+      setNotificationLocalStateHydrated(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(hydrateTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationLocalStateHydrated) return;
+
+    writeNotificationLocalState(window.localStorage, notificationLocalState);
+  }, [notificationLocalState, notificationLocalStateHydrated]);
 
   useLayoutEffect(() => {
     urlStateReadyRef.current = false;
@@ -286,6 +349,77 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     navigateToTabRoute(createTab({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id }));
   }
 
+  function handleMarkNotificationRead(notificationId: string) {
+    setNotificationLocalState((state) =>
+      state.readIds.includes(notificationId)
+        ? state
+        : { ...state, readIds: [...state.readIds, notificationId] }
+    );
+  }
+
+  function handleArchiveNotification(notificationId: string) {
+    setNotificationLocalState((state) => ({
+      readIds: state.readIds.includes(notificationId)
+        ? state.readIds
+        : [...state.readIds, notificationId],
+      archivedIds: state.archivedIds.includes(notificationId)
+        ? state.archivedIds
+        : [...state.archivedIds, notificationId],
+    }));
+  }
+
+  function handleRestoreNotification(notificationId: string) {
+    setNotificationLocalState((state) => ({
+      ...state,
+      archivedIds: state.archivedIds.filter((id) => id !== notificationId),
+    }));
+  }
+
+  function handleMarkAllNotificationsRead() {
+    setNotificationLocalState((state) => {
+      const readIds = new Set(state.readIds);
+
+      notifications.forEach((notification) => {
+        if (!notification.archived) {
+          readIds.add(notification.id);
+        }
+      });
+
+      return { ...state, readIds: Array.from(readIds) };
+    });
+  }
+
+  function handleCloseNotificationFallbackDetail() {
+    setNotificationFallbackDetailId(null);
+  }
+
+  function handleOpenNotificationSource(notification: GlobalNotification) {
+    if (!notification.source.route) {
+      handleMarkNotificationRead(notification.id);
+      setNotificationFallbackDetailId(notification.id);
+      setNotificationDrawerOpen(true);
+      return;
+    }
+
+    if (notificationNavigationDirty && !window.confirm(notificationNavigationDirtyConfirmationMessage)) {
+      return;
+    }
+
+    const nextModuleId = getNotificationSourceModuleId(notification.source.route);
+
+    if (!nextModuleId) {
+      handleMarkNotificationRead(notification.id);
+      setNotificationFallbackDetailId(notification.id);
+      setNotificationDrawerOpen(true);
+      return;
+    }
+
+    handleMarkNotificationRead(notification.id);
+    setNotificationFallbackDetailId(null);
+    setNotificationDrawerOpen(false);
+    handleNavigateModule(notification.source.route, nextModuleId);
+  }
+
   function handleNavigateModule(href: string, nextModuleId: string) {
     if (activeTab?.history[activeTab.historyIndex] === href) return;
 
@@ -328,9 +462,16 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       />
       <GlobalNotificationDrawer
         badgeCount={notificationBadgeCount}
-        notifications={mockGlobalNotifications}
+        fallbackDetailNotificationId={notificationFallbackDetailId}
+        notifications={notifications}
         open={notificationDrawerOpen}
+        onArchiveNotification={handleArchiveNotification}
+        onCloseFallbackDetail={handleCloseNotificationFallbackDetail}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+        onMarkNotificationRead={handleMarkNotificationRead}
+        onOpenNotificationSource={handleOpenNotificationSource}
         onOpenChange={setNotificationDrawerOpen}
+        onRestoreNotification={handleRestoreNotification}
       />
     </div>
   );

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-403 전역 알림 toast stack 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-403 전역 알림 toast stack 완료 보고서</h1>
+      <p>
+        전역 알림 v0의 in-app toast가 한 번에 세 개를 넘지 않도록 stack/queue rule과 status variant를 구현했다.
+        service worker, OS notification, 외부 채널, live provider delivery는 포함하지 않았다.
+      </p>
+
+      <section>
+        <h2>정책</h2>
+        <ul>
+          <li>전역 Sonner Toaster는 <code>visibleToasts={3}</code>로 제한된다.</li>
+          <li>notification 전용 stack helper는 visible 3개와 queued overflow를 분리한다.</li>
+          <li>visible toast dismiss 후 queued 첫 항목이 visible stack으로 승격된다.</li>
+          <li>visible 또는 queued 안에 같은 dedupe key가 있으면 새 toast를 append하지 않고 update/bump한다.</li>
+          <li>variant는 urgent, high, warning, info, success로 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li><code>notification-toast-rules.ts</code>에 stack/queue/dedupe/variant rule을 추가했다.</li>
+          <li><code>NotificationToastCard</code> 컴포넌트에 상태 아이콘, 업무 타입 badge, 상대 시간, source navigation action을 반영했다.</li>
+          <li>source action label이 final clinical/billing/reception action으로 흐르지 않도록 focused test를 추가했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-toast.spec.ts tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 17 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>리스크와 후속</h2>
+        <p>
+          이번 범위는 stack model과 reusable card를 제공한다. 실제 event emission, source navigation, dirty-state guard,
+          fallback detail은 후속 DEN-404/DEN-405에서 연결한다. Toast card width는 360px 이하로 제한해 desktop/mobile에서
+          주요 컨트롤을 과도하게 덮지 않도록 설계했다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

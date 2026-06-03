@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-409 전역 알림 Human Review readiness 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li,
+      td,
+      th {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-top: 1px solid #e5e7eb;
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-409 전역 알림 Human Review readiness 보고서</h1>
+      <p>
+        전역 알림 센터 v0는 대표자 Human Review로 넘길 준비가 됐다. 새로 진행한 DEN-398~DEN-409는 Done으로
+        이동하지 않고 Human Review 상태로 유지했다.
+      </p>
+
+      <section>
+        <h2>Readiness 결과</h2>
+        <table>
+          <tbody>
+            <tr>
+              <th>Blocking issue</th>
+              <td>없음</td>
+            </tr>
+            <tr>
+              <th>Linear 상태</th>
+              <td>DEN-398~DEN-408 Human Review, DEN-409 Human Review 예정. DEN-395~DEN-397은 이전 작업에서 이미 Done 상태였다.</td>
+            </tr>
+            <tr>
+              <th>범위 확인</th>
+              <td>Live push, provider delivery, Kakao/SMS/email, service worker, remote Supabase migration/RLS/live validation으로 확장하지 않았다.</td>
+            </tr>
+            <tr>
+              <th>스크린샷</th>
+              <td>
+                <code>docs/completed/design/2026-06-03-den-409-notification-human-review-desktop.png</code>,
+                <code>docs/completed/design/2026-06-03-den-409-notification-human-review-mobile.png</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>대표자 확인 항목</h2>
+        <ul>
+          <li>Shell badge가 전체 unread가 아니라 중요 badge-count 알림만 세는지 확인한다.</li>
+          <li>Drawer row에서 read/archive/restore/all-read가 업무 완료처럼 보이지 않는지 확인한다.</li>
+          <li>역할 큐 read/archive가 현재 브라우저 local state라는 안내가 충분히 명확한지 확인한다.</li>
+          <li>Source action이 현재 탭에서 원본 업무 화면으로 이동하고, missing source는 fallback detail을 보여주는지 확인한다.</li>
+          <li>Dirty state confirmation 문구가 실제 사용자에게 충분히 이해되는지 확인한다.</li>
+          <li>Toast/inline/drawer-only 정책이 과도한 알림 noise를 만들지 않는지 확인한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Known limitation</h2>
+        <ul>
+          <li>Toast stack/card/rules는 구현됐지만 live event stream에서 toast를 자동 발생시키는 wiring은 v0 범위 밖이다.</li>
+          <li><code>NotificationInlineAlert</code>는 inline-first 정책 표면으로 준비됐지만, 각 도메인 모듈의 live inline alert 자동 노출은 후속 통합 범위다.</li>
+          <li>Dirty guard는 shell-level flag를 사용한다. 실제 feature module들이 자신의 dirty state를 이 flag에 연결하는 작업은 후속 통합에서 다뤄야 한다.</li>
+          <li>역할 큐 read/archive는 브라우저 local state라 사용자/브라우저 간 동기화되지 않는다.</li>
+          <li>현재 워크트리에는 notification 작업 외 auth/home 관련 기존 변경도 섞여 있으므로, 코드 리뷰 때 notification 범위와 분리해 확인해야 한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-surfaces.spec.ts tests/notification-toast.spec.ts tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 29 passed.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

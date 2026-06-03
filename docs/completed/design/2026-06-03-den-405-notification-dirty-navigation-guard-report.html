@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-405 전역 알림 dirty navigation guard 완료 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        color: #111827;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-405 전역 알림 dirty navigation guard 완료 보고서</h1>
+      <p>
+        전역 알림 source action이 현재 탭을 이동하기 전에 unsaved work를 확인하도록 guard를 추가했다.
+        사용자가 취소하면 현재 업무 화면과 drawer 상태를 유지하고, 확인하면 기존 source navigation 흐름으로 이동한다.
+      </p>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li>notification navigation 전용 shell dirty flag를 layout store에 추가했다.</li>
+          <li>dirty 상태에서 route-backed source action을 누르면 지정 문구의 confirmation dialog를 표시한다.</li>
+          <li>취소 시 현재 route, drawer, unread/badge 상태를 보존한다.</li>
+          <li>확인 시 current-tab source route 이동과 drawer close를 실행한다.</li>
+          <li>source route가 없는 fallback detail은 dirty confirmation 없이 drawer 안에서 계속 표시한다.</li>
+          <li>Playwright에서 cancel/confirm 동작과 문구를 검증하는 테스트 브리지를 추가했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 경고 4개는 유지된다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://localhost:3333 npx playwright test tests/notification-toast.spec.ts tests/notification-fixtures.spec.ts tests/app-shell.spec.ts -g "notification"</code> 통과: 21 passed.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <p>
+          전체 feature dirty-state 시스템 재설계, autosave, draft recovery, new-tab navigation, remote Supabase
+          migration/RLS/live validation, provider delivery, external channel은 구현하지 않았다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -12,9 +12,20 @@ related_docs:
 related_work:
   - "docs/work/notifications/NOTIFICATION-PR-001-v0-contract-fixture-schema.md"
   - "docs/work/notifications/NOTIFICATION-PR-002-event-matrix-ux-badge-toast-policy.md"
+  - "docs/work/notifications/NOTIFICATION-PR-003-shell-drawer-foundation.md"
+  - "docs/work/notifications/NOTIFICATION-PR-004-row-filter-read-archive-states.md"
+  - "docs/work/notifications/NOTIFICATION-PR-005-localstorage-role-queue-disclaimer.md"
+  - "docs/work/notifications/NOTIFICATION-PR-006-v0-event-matrix-fixtures.md"
+  - "docs/work/notifications/NOTIFICATION-PR-007-badge-recipient-action-rules.md"
+  - "docs/work/notifications/NOTIFICATION-PR-008-dedupe-update-bump-rules.md"
+  - "docs/work/notifications/NOTIFICATION-PR-009-toast-stack-status-variants.md"
+  - "docs/work/notifications/NOTIFICATION-PR-010-source-navigation-fallback-detail.md"
+  - "docs/work/notifications/NOTIFICATION-PR-011-dirty-state-notification-navigation-guard.md"
+  - "docs/work/notifications/NOTIFICATION-PR-012-event-ui-surface-qa.md"
+  - "docs/work/notifications/NOTIFICATION-PR-013-focused-state-regression-tests.md"
   - "https://linear.app/deny-93/issue/DEN-395/00-01-align-notification-v0-implementation-contract-and-fixture-schema"
   - "https://linear.app/deny-93/issue/DEN-396/00-02-finalize-event-matrix-ux-writing-rules-and-badgetoast-policy"
-last_updated: "2026-06-02"
+last_updated: "2026-06-03"
 ---
 
 # Global Notification Center v0 Contract
@@ -37,6 +48,24 @@ v0 uses a right-side drawer opened from the app shell notification button. It le
 | Dedupe | Update/bump the existing unread row for the same patient + order + event |
 | Toast stack | Show at most 3 concurrent toasts; queue later toasts |
 | Role queue state | Local browser/user state only; no cross-client read/archive sync |
+
+## Implementation Status
+
+As of 2026-06-03, the v0 contract is implemented for the mock/local-first app shell boundary:
+
+| Area | Status |
+|---|---|
+| Shell drawer | Implemented with badge, right-side drawer, filters, read/archive, restore, and all-read controls |
+| Fixtures | Implemented for all 10 v0 event keys with required contract fields |
+| Badge rules | Implemented with recipient-aware `badge_count` resolver; unread reference rows do not count |
+| Local state | Implemented with `clair.notifications.v0.read` and `clair.notifications.v0.archive` localStorage keys |
+| Dedupe/update-bump | Implemented for repeated unread `dedupe_key` rows |
+| Toast policy | Implemented as stack/queue/dedupe/status variant rules and card component; live event emission remains out of v0 |
+| Source navigation | Implemented for current-tab source routes with fallback detail for missing source |
+| Dirty navigation | Implemented with the required confirmation copy before source route navigation |
+| Surface QA | Covered by focused tests for drawer, toast, inline-first, drawer-only, and source-context policies |
+
+The implementation remains synthetic and local-first. It does not include live push, service workers, provider delivery, Kakao/SMS/email, remote Supabase migration/RLS/live validation, or cross-client role queue read/archive sync.
 
 ## v0 Event Scope
 

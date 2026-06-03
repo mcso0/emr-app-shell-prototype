@@ -60,3 +60,24 @@ Implement the confirmed invite-link onboarding prototype as production-shaped ap
 - `npm run security:secrets` passed.
 - `git diff --check` passed.
 - `npm run build` passed.
+
+## Final Audit - 2026-06-03
+
+- Status sync: `docs/work/index.md` now matches `DEN-278` / this work item as `human_review`; no new Linear project or issue is needed.
+- Fresh verification:
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/invite-acceptance.spec.ts --reporter=line` (`7 passed`) after one transient dev-server chunk timeout was retried and passed.
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/invite-onboarding-regression-handoff.spec.ts tests/invite-otp-handoff.spec.ts --reporter=line` (`6 passed`).
+  - `npx tsc --noEmit` passed.
+  - `npm run lint` passed with 4 existing warnings and 0 errors.
+  - `npm run docs:check` passed.
+  - `npm run security:secrets` passed.
+  - `git diff --check` passed.
+  - `npm run build` passed.
+- Visual QA evidence:
+  - `docs/completed/auth/2026-06-03-den-278-visual-01-pending-new-desktop.png`
+  - `docs/completed/auth/2026-06-03-den-278-visual-02-pending-existing-desktop.png`
+  - `docs/completed/auth/2026-06-03-den-278-visual-03-expired-desktop.png`
+  - `docs/completed/auth/2026-06-03-den-278-visual-04-accepted-desktop.png`
+  - `docs/completed/auth/2026-06-03-den-278-visual-05-missing-desktop.png`
+  - `docs/completed/auth/2026-06-03-den-278-visual-06-pending-new-mobile.png`
+- Closeout: `docs/completed/auth/2026-06-03-den-278-final-audit-report.html`.
