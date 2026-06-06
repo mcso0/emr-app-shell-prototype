@@ -1,0 +1,264 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open
+  - button "고객센터":
+- complementary:
+  - complementary:
+    - generic: 고객관리
+    - button "사이드 패널 접기":
+    - button "보호자/동물 관리" [expanded]:
+      - generic: 보호자/동물 관리
+    - button "동물 5" [pressed]:
+      - generic: 동물
+      - generic: "5"
+    - button "보호자 5":
+      - generic: 보호자
+      - generic: "5"
+    - button "삭제된 보호자/동물 0":
+      - generic: 삭제된 보호자/동물
+      - generic: "0"
+    - button "스케줄 관리 후속" [disabled]:
+      - generic: 스케줄 관리
+      - generic: 후속
+    - button "발송 관리 후속" [disabled]:
+      - generic: 발송 관리
+      - generic: 후속
+    - button "서류 관리 후속" [disabled]:
+      - generic: 서류 관리
+      - generic: 후속
+    - button "CS내역 후속" [disabled]:
+      - generic: CS내역
+      - generic: 후속
+    - button "진료의뢰수신 후속" [disabled]:
+      - generic: 진료의뢰수신
+      - generic: 후속
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "고객관리" [selected]:
+    - generic: 고객관리
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - complementary
+  - heading "동물" [level=1]
+  - generic: "5"
+  - textbox "고객관리 검색":
+    - /placeholder: 동물명, 보호자명, 전화번호, 환자코드 검색
+  - button "환자/보호자 등록":
+    - text: 환자/보호자 등록
+  - generic: 동물 5
+  - heading "동물" [level=2]
+  - generic: "5"
+  - generic: 0 / 5 선택
+  - group "테이블 보기 밀도":
+    - button "좁게 보기"
+    - button "기본 보기" [pressed]
+    - button "넓게 보기"
+  - button "동물 필터 설정":
+    - text: Filter
+  - button "컬럼":
+    - text: 컬럼
+  - table "동물 고객관리 테이블":
+    - rowgroup:
+      - row "동물 선택 환자코드 정렬 없음. 클릭하면 환자코드 오름차순 정렬. 동물명 정렬 없음. 클릭하면 동물명 오름차순 정렬. 품종 성별 나이(생년월일) 정렬 없음. 클릭하면 나이(생년월일) 오름차순 정렬. 상태 보호자명 전화번호 수신 여부 등록일시 정렬 없음. 클릭하면 등록일시 오름차순 정렬. 동물 행 작업":
+        - columnheader "동물 선택":
+          - generic: 선택
+          - checkbox "동물 전체 선택"
+          - checkbox
+        - columnheader "환자코드 정렬 없음. 클릭하면 환자코드 오름차순 정렬.":
+          - generic: 환자코드
+          - button "정렬 없음. 클릭하면 환자코드 오름차순 정렬.":
+        - columnheader "동물명 정렬 없음. 클릭하면 동물명 오름차순 정렬.":
+          - generic: 동물명
+          - button "정렬 없음. 클릭하면 동물명 오름차순 정렬.":
+        - columnheader "품종":
+          - generic: 품종
+        - columnheader "성별":
+          - generic: 성별
+        - columnheader "나이(생년월일) 정렬 없음. 클릭하면 나이(생년월일) 오름차순 정렬.":
+          - generic: 나이(생년월일)
+          - button "정렬 없음. 클릭하면 나이(생년월일) 오름차순 정렬.":
+        - columnheader "상태":
+          - generic: 상태
+        - columnheader "보호자명":
+          - generic: 보호자명
+        - columnheader "전화번호":
+          - generic: 전화번호
+        - columnheader "수신 여부":
+          - generic: 수신 여부
+        - columnheader "등록일시 정렬 없음. 클릭하면 등록일시 오름차순 정렬.":
+          - generic: 등록일시
+          - button "정렬 없음. 클릭하면 등록일시 오름차순 정렬.":
+        - columnheader "동물 행 작업":
+          - generic: 행 작업
+    - rowgroup:
+      - row "코코 선택 P-260414-0008 코코 코리안숏헤어 중성화·암컷 8세 (18-05-20) 예약 오더진행 수납대기 이지은 010-3245-1188 동의 26.03.12 09:05 코코 행 작업":
+        - cell "코코 선택":
+          - checkbox "코코 선택"
+          - checkbox
+        - cell "P-260414-0008":
+          - generic "P-260414-0008"
+        - cell "코코":
+          - generic "코코"
+        - cell "코리안숏헤어":
+          - generic "코리안숏헤어"
+        - cell "중성화·암컷":
+          - generic "중성화·암컷"
+        - cell "8세 (18-05-20)":
+          - generic "8세 (18-05-20)"
+        - cell "예약 오더진행 수납대기":
+          - generic: 예약
+          - generic: 오더진행
+          - generic: 수납대기
+        - cell "이지은":
+          - generic "이지은"
+        - cell "010-3245-1188":
+          - generic "010-3245-1188"
+        - cell "동의":
+          - generic "동의"
+        - cell "26.03.12 09:05":
+          - generic "26.03.12 09:05"
+        - cell "코코 행 작업":
+          - button "코코 행 작업":
+      - row "나비 선택 P-260414-0009 나비 러시안블루 중성화·수컷 5세 (21-02-03) 예약 오세아 010-7812-4401 동의 26.03.20 11:25 나비 행 작업":
+        - cell "나비 선택":
+          - checkbox "나비 선택"
+          - checkbox
+        - cell "P-260414-0009":
+          - generic "P-260414-0009"
+        - cell "나비":
+          - generic "나비"
+        - cell "러시안블루":
+          - generic "러시안블루"
+        - cell "중성화·수컷":
+          - generic "중성화·수컷"
+        - cell "5세 (21-02-03)":
+          - generic "5세 (21-02-03)"
+        - cell "예약":
+          - generic: 예약
+        - cell "오세아":
+          - generic "오세아"
+        - cell "010-7812-4401":
+          - generic "010-7812-4401"
+        - cell "동의":
+          - generic "동의"
+        - cell "26.03.20 11:25":
+          - generic "26.03.20 11:25"
+        - cell "나비 행 작업":
+          - button "나비 행 작업":
+      - row "하루 선택 P-260501-0001 하루 말티즈 암컷 3세 (23-01-12) 예약 진료대기 강서윤 010-9012-3300 동의 26.04.01 13:40 하루 행 작업":
+        - cell "하루 선택":
+          - checkbox "하루 선택"
+          - checkbox
+        - cell "P-260501-0001":
+          - generic "P-260501-0001"
+        - cell "하루":
+          - generic "하루"
+        - cell "말티즈":
+          - generic "말티즈"
+        - cell "암컷":
+          - generic "암컷"
+        - cell "3세 (23-01-12)":
+          - generic "3세 (23-01-12)"
+        - cell "예약 진료대기":
+          - generic: 예약
+          - generic: 진료대기
+        - cell "강서윤":
+          - generic "강서윤"
+        - cell "010-9012-3300":
+          - generic "010-9012-3300"
+        - cell "동의":
+          - generic "동의"
+        - cell "26.04.01 13:40":
+          - generic "26.04.01 13:40"
+        - cell "하루 행 작업":
+          - button "하루 행 작업":
+      - row "두부 선택 P-260501-0002 두부 포메라니안 수컷 6세 추정 수납대기 강서윤, 정하린 010-4922-8821 동의 26.04.02 15:05 두부 행 작업":
+        - cell "두부 선택":
+          - checkbox "두부 선택"
+          - checkbox
+        - cell "P-260501-0002":
+          - generic "P-260501-0002"
+        - cell "두부":
+          - generic "두부"
+        - cell "포메라니안":
+          - generic "포메라니안"
+        - cell "수컷":
+          - generic "수컷"
+        - cell "6세 추정":
+          - generic "6세 추정"
+        - cell "수납대기":
+          - generic: 수납대기
+        - cell "강서윤, 정하린":
+          - generic "강서윤, 정하린"
+        - cell "010-4922-8821":
+          - generic "010-4922-8821"
+        - cell "동의":
+          - generic "동의"
+        - cell "26.04.02 15:05":
+          - generic "26.04.02 15:05"
+        - cell "두부 행 작업":
+          - button "두부 행 작업":
+      - row "콩이 선택 P-260501-0003 콩이 푸들 중성화·수컷 4세 (22-08-18) 예약 오더진행 수납대기 김하늘 010-6201-7742 동의 26.05.01 09:15 콩이 행 작업":
+        - cell "콩이 선택":
+          - checkbox "콩이 선택"
+          - checkbox
+        - cell "P-260501-0003":
+          - generic "P-260501-0003"
+        - cell "콩이":
+          - generic "콩이"
+        - cell "푸들":
+          - generic "푸들"
+        - cell "중성화·수컷":
+          - generic "중성화·수컷"
+        - cell "4세 (22-08-18)":
+          - generic "4세 (22-08-18)"
+        - cell "예약 오더진행 수납대기":
+          - generic: 예약
+          - generic: 오더진행
+          - generic: 수납대기
+        - cell "김하늘":
+          - generic "김하늘"
+        - cell "010-6201-7742":
+          - generic "010-6201-7742"
+        - cell "동의":
+          - generic "동의"
+        - cell "26.05.01 09:15":
+          - generic "26.05.01 09:15"
+        - cell "콩이 행 작업":
+          - button "콩이 행 작업":
+  - generic: 0 of 5 row(s) selected.
+  - generic: 1-5 / 5
+  - button "이전" [disabled]
+  - button "다음" [disabled]
+  - complementary
+- region "Notifications alt+T"
+- alert

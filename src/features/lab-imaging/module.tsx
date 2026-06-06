@@ -12,8 +12,14 @@ import {
   CdsFilesFileIcon,
   CdsFilesImageIcon,
 } from "@/components/cds-icons/files-and-layout";
-import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import {
+  CdsNavigationChevronsLeftIcon,
+  CdsNavigationChevronsRightIcon,
+} from "@/components/cds-icons/navigation";
+import {
+  CdsUtilitiesHistoryIcon,
+  CdsUtilitiesSortIcon,
+} from "@/components/cds-icons/utilities-and-misc";
 import {
   ChevronDownIcon,
   DownloadIcon,
@@ -390,6 +396,12 @@ type FulfillmentWorkItem = {
   workspaceId: string;
 };
 
+function getInitialImagingReadingStatus(status?: ImagingStudyStatus): ImagingReadingStatus {
+  if (status === "read" || status === "reviewed") return "completed";
+  if (status === "reading") return "reading";
+  return "requested";
+}
+
 const labResultTabItems = [
   { value: "all" as const, label: "전체" },
   { value: "cbc" as const, label: "CBC" },
@@ -596,6 +608,8 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType) {
   }, [cacheKey]);
 
   const updateStatus = useCallback(async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
+    let allTransitionsSucceeded = true;
+
     for (const status of statuses) {
       const response = await fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`, {
         method: "PATCH",
@@ -605,12 +619,43 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType) {
         },
         body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
       });
-      if (!response.ok) break;
+      if (!response.ok) {
+        allTransitionsSucceeded = false;
+        break;
+      }
     }
     await refresh();
+    return allTransitionsSucceeded;
   }, [refresh, workspaceId]);
 
   return { updateStatus, workItems };
+}
+
+function getFulfillmentTransitionPath(
+  current: FulfillmentWorkItemStatus,
+  target: "in_progress" | "completed" | "requested"
+): FulfillmentWorkItemStatus[] | null {
+  if (target === "in_progress") {
+    if (current === "requested") return ["accepted", "in_progress"];
+    if (current === "accepted") return ["in_progress"];
+    if (current === "returned") return ["requested", "accepted", "in_progress"];
+    if (current === "in_progress") return [];
+    return null;
+  }
+
+  if (target === "completed") {
+    if (current === "requested") return ["accepted", "in_progress", "completed"];
+    if (current === "accepted") return ["in_progress", "completed"];
+    if (current === "in_progress") return ["completed"];
+    if (current === "returned") return ["requested", "accepted", "in_progress", "completed"];
+    if (current === "completed") return [];
+    return null;
+  }
+
+  if (current === "requested") return [];
+  if (current === "accepted" || current === "in_progress") return ["returned", "requested"];
+  if (current === "returned") return ["requested"];
+  return null;
 }
 
 function getWorkItemsByOrderId(workItems: FulfillmentWorkItem[]) {
@@ -1748,10 +1793,8 @@ function useCurrentLabDetail() {
   return getLabDetailFromSearchParams(searchParams, selectedLabResultId, fulfillmentQueue.workItems);
 }
 
-export function LabHeader({ hasRightPanel }: ShellComponentProps) {
+export function LabHeader() {
   const { detail } = useCurrentLabDetail();
-  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
   if (!detail) return null;
 
@@ -1780,11 +1823,6 @@ export function LabHeader({ hasRightPanel }: ShellComponentProps) {
         { label: "검사", value: detail.result.resultName },
         { label: "상태", value: getStatusLabel("labResult", detail.result.status) },
       ]}
-      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      rightPanelBadgeCount={detail.equipmentReceipts.filter((receipt) => receipt.orderId === detail.order?.id).length}
-      rightPanelDisabled={!hasRightPanel}
-      rightPanelOpen={rightPanelOpen}
-      rightPanelToggleLabel="장비결과내역"
     />
   );
 }
@@ -1851,6 +1889,7 @@ export function LabContentAside() {
 
 export function LabRightPanel() {
   const { detail } = useCurrentLabDetail();
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const [expandedReceiptIds, setExpandedReceiptIds] = useState<Set<string> | null>(null);
   const [receiptToPaste, setReceiptToPaste] = useState<EquipmentReceipt | null>(null);
   const labWorkItems = useMemo(() => getLabWorkItems(), []);
@@ -1877,9 +1916,27 @@ export function LabRightPanel() {
   const defaultExpandedReceiptId = visibleReceipts[0]?.id;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="lab-receipt-panel">
+    <div
+      id="lab-receipt-panel"
+      className="group/lab-receipt-panel flex min-h-0 flex-1 flex-col"
+      data-testid="lab-receipt-panel"
+    >
       <div className="flex h-14 items-center px-4">
-        <h2 className="min-w-0 truncate text-sm font-semibold">검사결과 수신내역</h2>
+        <div className="relative flex min-w-0 max-w-full items-center">
+          <h2 className="min-w-0 truncate text-sm font-semibold">장비 검사 수신함</h2>
+          <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-7 shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="opacity-0 text-[var(--emr-text-tertiary)] transition-opacity hover:text-[var(--emr-text-tertiary)] group-hover/lab-receipt-panel:opacity-100 focus-visible:opacity-100"
+              aria-label="장비 검사 수신함 접기"
+              onClick={() => setRightPanelOpen(false)}
+            >
+              <CdsNavigationChevronsRightIcon className="size-4" />
+            </Button>
+          </span>
+        </div>
       </div>
       <EmrDateNavigator
         className="px-3"
@@ -1892,13 +1949,13 @@ export function LabRightPanel() {
         label="검사 결과"
         headerActions={
           <>
-            <EmrListHeaderIconButton ariaLabel="수신내역 정렬">
+            <EmrListHeaderIconButton ariaLabel="장비 검사 수신함 정렬">
               <CdsUtilitiesSortIcon className="size-4" />
             </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="수신내역 필터">
+            <EmrListHeaderIconButton ariaLabel="장비 검사 수신함 필터">
               <CdsActionsListFilterIcon className="size-4" />
             </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="수신내역 검색">
+            <EmrListHeaderIconButton ariaLabel="장비 검사 수신함 검색">
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
@@ -2099,12 +2156,14 @@ function LabReceiptCard({
   );
 }
 
-export function LabContent() {
+export function LabContent({ hasRightPanel }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
+  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const fulfillmentQueue = useFulfillmentQueue("lab");
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(
     searchParams,
@@ -2123,9 +2182,13 @@ export function LabContent() {
   };
   const [assignmentState, setAssignmentState] = useState(initialAssignment);
   const assignment = assignmentState.resultId === initialAssignment.resultId ? assignmentState : initialAssignment;
-  const startAssignment = () => {
+  const equipmentReceiptCount = detail?.equipmentReceipts.filter((receipt) => receipt.orderId === detail.order?.id).length ?? 0;
+  const startAssignment = async () => {
     if (fulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["accepted", "in_progress"]);
+      const transitionPath = getFulfillmentTransitionPath(fulfillmentWorkItem.status, "in_progress");
+      if (!transitionPath) return;
+      const updated = await fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, transitionPath);
+      if (!updated) return;
     }
     setAssignmentState({
       assigneeName: currentLabAssignee.name,
@@ -2133,9 +2196,12 @@ export function LabContent() {
       status: "in_progress",
     });
   };
-  const completeAssignment = () => {
+  const completeAssignment = async () => {
     if (fulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["completed"]);
+      const transitionPath = getFulfillmentTransitionPath(fulfillmentWorkItem.status, "completed");
+      if (!transitionPath) return;
+      const updated = await fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, transitionPath);
+      if (!updated) return;
     }
     setAssignmentState((current) => ({
       assigneeName:
@@ -2144,9 +2210,12 @@ export function LabContent() {
       status: "completed",
     }));
   };
-  const cancelAssignment = () => {
+  const cancelAssignment = async () => {
     if (fulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["returned", "requested"]);
+      const transitionPath = getFulfillmentTransitionPath(fulfillmentWorkItem.status, "requested");
+      if (!transitionPath) return;
+      const updated = await fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, transitionPath);
+      if (!updated) return;
     }
     setAssignmentState({
       assigneeName: "미지정",
@@ -2179,6 +2248,7 @@ export function LabContent() {
         titleBar={
           <EmrInstructionTitleBar
             title="임상병리검사 결과지"
+            className="h-auto min-h-9 flex-wrap gap-2"
             titleClassName="text-[16px] leading-6"
             icon={
               <EmrInstructionHistoryToggle
@@ -2203,6 +2273,29 @@ export function LabContent() {
                 <Button variant="outline" size="sm" className="bg-card">
                   <PrinterIcon data-icon="inline-start" />
                   출력하기
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="relative bg-card data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)]"
+                  aria-controls="lab-receipt-panel"
+                  aria-expanded={rightPanelOpen}
+                  aria-pressed={rightPanelOpen}
+                  data-state={rightPanelOpen ? "on" : "off"}
+                  disabled={!hasRightPanel}
+                  onClick={() => setRightPanelOpen(!rightPanelOpen)}
+                >
+                  <CdsUtilitiesHistoryIcon data-icon="inline-start" />
+                  장비 검사 수신함
+                  {equipmentReceiptCount ? (
+                    <span
+                      className="absolute -right-1.5 -top-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--emr-status-info-text)] px-1 text-[10px] font-semibold leading-none text-[var(--emr-text-inverse)]"
+                      aria-label={`새 장비결과 ${equipmentReceiptCount}건`}
+                    >
+                      {equipmentReceiptCount}
+                    </span>
+                  ) : null}
                 </Button>
                 <LabImagingStatusAction
                   activeLabel="검사중"
@@ -2572,14 +2665,17 @@ export function ImagingContent() {
   );
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
-    status: "requested" as ImagingReadingStatus,
+    status: getInitialImagingReadingStatus(detail?.study.status),
     studyId: detail?.study.id ?? "",
   };
   const [assignmentState, setAssignmentState] = useState(initialAssignment);
   const assignment = assignmentState.studyId === initialAssignment.studyId ? assignmentState : initialAssignment;
-  const startAssignment = () => {
+  const startAssignment = async () => {
     if (fulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["accepted", "in_progress"]);
+      const transitionPath = getFulfillmentTransitionPath(fulfillmentWorkItem.status, "in_progress");
+      if (!transitionPath) return;
+      const updated = await fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, transitionPath);
+      if (!updated) return;
     }
     setAssignmentState({
       assigneeName: currentLabAssignee.name,
@@ -2587,9 +2683,12 @@ export function ImagingContent() {
       studyId: initialAssignment.studyId,
     });
   };
-  const completeAssignment = () => {
+  const completeAssignment = async () => {
     if (fulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["completed"]);
+      const transitionPath = getFulfillmentTransitionPath(fulfillmentWorkItem.status, "completed");
+      if (!transitionPath) return;
+      const updated = await fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, transitionPath);
+      if (!updated) return;
     }
     setAssignmentState((current) => ({
       assigneeName:
@@ -2598,9 +2697,12 @@ export function ImagingContent() {
       studyId: initialAssignment.studyId,
     }));
   };
-  const cancelAssignment = () => {
+  const cancelAssignment = async () => {
     if (fulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, ["returned", "requested"]);
+      const transitionPath = getFulfillmentTransitionPath(fulfillmentWorkItem.status, "requested");
+      if (!transitionPath) return;
+      const updated = await fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, transitionPath);
+      if (!updated) return;
     }
     setAssignmentState({
       assigneeName: "미지정",

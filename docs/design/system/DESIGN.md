@@ -2,10 +2,12 @@
 version: "alpha"
 name: "CLAiR EMR"
 status: "active"
-updated: "2026-05-13"
+updated: "2026-06-06"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
+  - "docs/design/system/border-shadow-depth-contract.md"
+  - "docs/design/system/empty-info-state-contract.md"
   - "docs/engineering/current-status.md"
 ---
 
@@ -96,6 +98,17 @@ Most EMR surfaces should be compact:
 
 Cards should not be nested inside other decorative cards. Use panels for layout and cards only for repeated work items, dashboard metrics, or modal content.
 
+## Border And Elevation
+
+Use `docs/design/system/border-shadow-depth-contract.md` as the implementation contract for border line strength, radius roles, and shadow depth.
+
+- Borders carry most structural separation: use `--emr-line-hairline` for ordinary panel, row, and card outlines, and reserve `--emr-line-strong` for major shell or sticky boundaries.
+- In-flow panels, tables, info boxes, empty states, and read-only rows/cards are flat by default.
+- Enabled action surfaces use the lowest shadow depth to signal clickability when they open, move, add, create, delete, search, submit, or trigger a menu.
+- Stronger shadows are reserved for real depth: floating popovers/menus, drawers, dialogs, and command overlays.
+- Selected, focus, dirty, warning, danger, and disabled states should use state/status tokens rather than generic shadow.
+- Do not add raw shadow stacks or new elevation aliases unless a scoped implementation issue proves a repeated role.
+
 ## Layout
 
 CLAiR screens favor operational density:
@@ -130,6 +143,16 @@ Interaction should be predictable and low-friction:
 - destructive or workflow-final actions require confirmation
 - filters should keep context visible where possible
 - charts, orders, and billing actions remain session-only until explicitly connected to live persistence
+
+## Empty And Info States
+
+Use `docs/design/system/empty-info-state-contract.md` as the implementation contract for empty states, info boxes, and their boundary with loading, errors, permission/scope messages, and inline alerts.
+
+- Empty states explain the missing object, the likely reason, and the next useful action when one exists.
+- Info boxes explain guidance, prerequisites, caution, system boundaries, or unavailable actions without hiding failures.
+- Loading, empty, error, permission/scope, and info states must be visually and textually distinct.
+- Errors, degraded reads or writes, permission blockers, and recovery paths use `EmrInlineAlert` rather than passive info boxes.
+- Empty/info surfaces stay flat; enabled actions inside them use the lowest E1 shadow affordance from the border/shadow contract.
 
 ## Accessibility And QA
 

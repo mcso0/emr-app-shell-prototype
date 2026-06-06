@@ -1,0 +1,657 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open
+  - button "고객센터":
+- complementary:
+  - generic: 접수/예약
+  - button "사이드 패널 접기":
+  - group "접수 목록 유형":
+    - button "전체"
+    - button "대기" [pressed]
+    - button "예약"
+  - generic: 대기
+  - generic: "4"
+  - button "정렬":
+  - button "필터":
+  - button "검색":
+  - button "예약 콩이 · 김하늘 콩이 카드 작업 반복 구토와 식욕 저하 수의사 이수지 09:28 접수(112분 대기)":
+    - generic: 예약
+    - generic: 콩이
+    - generic: ·
+    - generic: 김하늘
+    - button "콩이 카드 작업":
+    - generic: 반복 구토와 식욕 저하
+    - generic "수의사 이수지":
+      - generic: 수의사
+      - generic: 이수지
+    - generic: 09:28 접수
+    - generic: (112분 대기)
+  - button "외래 두부 · 정하린 두부 카드 작업 수술 후 보행 확인 수의사 김도윤 09:42 접수(98분 대기)":
+    - generic: 외래
+    - generic: 두부
+    - generic: ·
+    - generic: 정하린
+    - button "두부 카드 작업":
+    - generic: 수술 후 보행 확인
+    - generic "수의사 김도윤":
+      - generic: 수의사
+      - generic: 김도윤
+    - generic: 09:42 접수
+    - generic: (98분 대기)
+  - button "예약 코코 · 이지은 코코 카드 작업 구토와 식욕저하 수의사 이수지 09:50 접수(90분 대기)":
+    - generic: 예약
+    - generic: 코코
+    - generic: ·
+    - generic: 이지은
+    - button "코코 카드 작업":
+    - generic: 구토와 식욕저하
+    - generic "수의사 이수지":
+      - generic: 수의사
+      - generic: 이수지
+    - generic: 09:50 접수
+    - generic: (90분 대기)
+  - button "예약 하루 · 강서윤 하루 카드 작업 예방접종 전 건강 확인 수의사 이수지 16:05 접수(0분 대기)":
+    - generic: 예약
+    - generic: 하루
+    - generic: ·
+    - generic: 강서윤
+    - button "하루 카드 작업":
+    - generic: 예방접종 전 건강 확인
+    - generic "수의사 이수지":
+      - generic: 수의사
+      - generic: 이수지
+    - generic: 16:05 접수
+    - generic: (0분 대기)
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "접수/예약" [selected]:
+    - generic: 접수/예약
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - complementary
+  - button "이전 날짜":
+  - button "다음 날짜":
+  - button "26.05.01 (금) 날짜 선택":
+    - generic: 26.05.01 (금)
+  - button "오늘 일자로 이동": 오늘
+  - generic: 영업시간 09:00-19:00
+  - button "이수지 +9":
+    - text: 이수지 +9
+  - group "접수 캘린더 보기":
+    - button "일" [pressed]
+    - button "주"
+    - button "월"
+  - button "환자/보호자 등록":
+    - text: 환자/보호자 등록
+  - button "진료 접수":
+    - text: 진료 접수
+  - button "더보기":
+  - generic: SJ
+  - generic: 이수지
+  - button "예약 코코 · 구토 및 식욕저하"
+  - button "예약 하루 · 예방접종"
+  - generic: DY
+  - generic: 김도윤
+  - button "예약 나비 · 피부 재진"
+  - generic: SY
+  - generic: 박서연
+  - generic: MJ
+  - generic: 정민재
+  - generic: HR
+  - generic: 최하린
+  - generic: JH
+  - generic: 오지훈
+  - generic: GY
+  - generic: 한가연
+  - generic: TO
+  - generic: 윤태오
+  - generic: ES
+  - generic: 문은서
+  - generic: JW
+  - generic: 서재원
+  - generic: 미지정
+  - button "오더진행 환자 미지정 · 예방접종 · 12":
+    - generic: 외래
+    - generic: 외래
+    - generic: 환자 미지정
+    - generic: ·
+    - generic: 예방접종 · 12
+    - generic: 13:13 · 30분 · 보호자 미지정 · 영상의학과 · 방사선종양학과
+  - button "오더진행 환자 미지정 · 123":
+    - generic: 외래
+    - generic: 외래
+    - generic: 환자 미지정
+    - generic: ·
+    - generic: "123"
+    - generic: 13:17 · 30분 · 보호자 미지정 · 영상의학과 · 방사선종양학과
+  - generic: 08:00
+  - generic: 09:00
+  - generic: 10:00
+  - generic: 11:00
+  - generic: 12:00
+  - generic: 13:00
+  - generic: 14:00
+  - generic: 15:00
+  - generic: 16:00
+  - generic: 17:00
+  - generic: 18:00
+  - generic: 19:00
+  - generic: 20:00
+  - button "08:00 이수지 접수/예약 생성" [disabled]
+  - button "08:15 이수지 접수/예약 생성" [disabled]
+  - button "08:30 이수지 접수/예약 생성" [disabled]
+  - button "08:45 이수지 접수/예약 생성" [disabled]
+  - button "08:00 김도윤 접수/예약 생성" [disabled]
+  - button "08:15 김도윤 접수/예약 생성" [disabled]
+  - button "08:30 김도윤 접수/예약 생성" [disabled]
+  - button "08:45 김도윤 접수/예약 생성" [disabled]
+  - button "08:00 박서연 접수/예약 생성" [disabled]
+  - button "08:15 박서연 접수/예약 생성" [disabled]
+  - button "08:30 박서연 접수/예약 생성" [disabled]
+  - button "08:45 박서연 접수/예약 생성" [disabled]
+  - button "08:00 정민재 접수/예약 생성" [disabled]
+  - button "08:15 정민재 접수/예약 생성" [disabled]
+  - button "08:30 정민재 접수/예약 생성" [disabled]
+  - button "08:45 정민재 접수/예약 생성" [disabled]
+  - button "08:00 최하린 접수/예약 생성" [disabled]
+  - button "08:15 최하린 접수/예약 생성" [disabled]
+  - button "08:30 최하린 접수/예약 생성" [disabled]
+  - button "08:45 최하린 접수/예약 생성" [disabled]
+  - button "08:00 오지훈 접수/예약 생성" [disabled]
+  - button "08:15 오지훈 접수/예약 생성" [disabled]
+  - button "08:30 오지훈 접수/예약 생성" [disabled]
+  - button "08:45 오지훈 접수/예약 생성" [disabled]
+  - button "08:00 한가연 접수/예약 생성" [disabled]
+  - button "08:15 한가연 접수/예약 생성" [disabled]
+  - button "08:30 한가연 접수/예약 생성" [disabled]
+  - button "08:45 한가연 접수/예약 생성" [disabled]
+  - button "08:00 윤태오 접수/예약 생성" [disabled]
+  - button "08:15 윤태오 접수/예약 생성" [disabled]
+  - button "08:30 윤태오 접수/예약 생성" [disabled]
+  - button "08:45 윤태오 접수/예약 생성" [disabled]
+  - button "08:00 문은서 접수/예약 생성" [disabled]
+  - button "08:15 문은서 접수/예약 생성" [disabled]
+  - button "08:30 문은서 접수/예약 생성" [disabled]
+  - button "08:45 문은서 접수/예약 생성" [disabled]
+  - button "08:00 서재원 접수/예약 생성" [disabled]
+  - button "08:15 서재원 접수/예약 생성" [disabled]
+  - button "08:30 서재원 접수/예약 생성" [disabled]
+  - button "08:45 서재원 접수/예약 생성" [disabled]
+  - button "접수완료 콩이 · 구토 및 복부 불편":
+    - generic: 예약
+    - generic: 콩이
+    - generic: ·
+    - generic: 구토 및 복부 불편
+  - button "09:00 김도윤 접수/예약 생성"
+  - button "09:15 김도윤 접수/예약 생성"
+  - button "09:30 김도윤 접수/예약 생성"
+  - button "09:45 김도윤 접수/예약 생성"
+  - button "09:00 박서연 접수/예약 생성"
+  - button "09:15 박서연 접수/예약 생성"
+  - button "09:30 박서연 접수/예약 생성"
+  - button "09:45 박서연 접수/예약 생성"
+  - button "09:00 정민재 접수/예약 생성"
+  - button "09:15 정민재 접수/예약 생성"
+  - button "09:30 정민재 접수/예약 생성"
+  - button "09:45 정민재 접수/예약 생성"
+  - button "09:00 최하린 접수/예약 생성"
+  - button "09:15 최하린 접수/예약 생성"
+  - button "09:30 최하린 접수/예약 생성"
+  - button "09:45 최하린 접수/예약 생성"
+  - button "09:00 오지훈 접수/예약 생성"
+  - button "09:15 오지훈 접수/예약 생성"
+  - button "09:30 오지훈 접수/예약 생성"
+  - button "09:45 오지훈 접수/예약 생성"
+  - button "09:00 한가연 접수/예약 생성"
+  - button "09:15 한가연 접수/예약 생성"
+  - button "09:30 한가연 접수/예약 생성"
+  - button "09:45 한가연 접수/예약 생성"
+  - button "09:00 윤태오 접수/예약 생성"
+  - button "09:15 윤태오 접수/예약 생성"
+  - button "09:30 윤태오 접수/예약 생성"
+  - button "09:45 윤태오 접수/예약 생성"
+  - button "09:00 문은서 접수/예약 생성"
+  - button "09:15 문은서 접수/예약 생성"
+  - button "09:30 문은서 접수/예약 생성"
+  - button "09:45 문은서 접수/예약 생성"
+  - button "09:00 서재원 접수/예약 생성"
+  - button "09:15 서재원 접수/예약 생성"
+  - button "09:30 서재원 접수/예약 생성"
+  - button "09:45 서재원 접수/예약 생성"
+  - button "접수완료 코코 · 구토 및 식욕저하":
+    - generic: 예약
+    - generic: 코코
+    - generic: ·
+    - generic: 구토 및 식욕저하
+  - button "예약확정 나비 · 피부 재진":
+    - generic: 예약
+    - generic: 외래
+    - generic: 나비
+    - generic: ·
+    - generic: 피부 재진
+    - generic: 10:45 · 15분 · 피부 재진
+  - button "10:00 박서연 접수/예약 생성"
+  - button "10:15 박서연 접수/예약 생성"
+  - button "10:30 박서연 접수/예약 생성"
+  - button "10:45 박서연 접수/예약 생성"
+  - button "10:00 정민재 접수/예약 생성"
+  - button "10:15 정민재 접수/예약 생성"
+  - button "10:30 정민재 접수/예약 생성"
+  - button "10:45 정민재 접수/예약 생성"
+  - button "10:00 최하린 접수/예약 생성"
+  - button "10:15 최하린 접수/예약 생성"
+  - button "10:30 최하린 접수/예약 생성"
+  - button "10:45 최하린 접수/예약 생성"
+  - button "10:00 오지훈 접수/예약 생성"
+  - button "10:15 오지훈 접수/예약 생성"
+  - button "10:30 오지훈 접수/예약 생성"
+  - button "10:45 오지훈 접수/예약 생성"
+  - button "10:00 한가연 접수/예약 생성"
+  - button "10:15 한가연 접수/예약 생성"
+  - button "10:30 한가연 접수/예약 생성"
+  - button "10:45 한가연 접수/예약 생성"
+  - button "10:00 윤태오 접수/예약 생성"
+  - button "10:15 윤태오 접수/예약 생성"
+  - button "10:30 윤태오 접수/예약 생성"
+  - button "10:45 윤태오 접수/예약 생성"
+  - button "10:00 문은서 접수/예약 생성"
+  - button "10:15 문은서 접수/예약 생성"
+  - button "10:30 문은서 접수/예약 생성"
+  - button "10:45 문은서 접수/예약 생성"
+  - button "10:00 서재원 접수/예약 생성"
+  - button "10:15 서재원 접수/예약 생성"
+  - button "10:30 서재원 접수/예약 생성"
+  - button "10:45 서재원 접수/예약 생성"
+  - button "노쇼 하루 · 예방접종":
+    - generic: 노쇼
+    - generic: 하루
+    - generic: ·
+    - generic: 예방접종
+  - button "11:00 김도윤 접수/예약 생성"
+  - button "11:15 김도윤 접수/예약 생성"
+  - button "11:30 김도윤 접수/예약 생성"
+  - button "11:45 김도윤 접수/예약 생성"
+  - button "11:00 박서연 접수/예약 생성"
+  - button "11:15 박서연 접수/예약 생성"
+  - button "11:30 박서연 접수/예약 생성"
+  - button "11:45 박서연 접수/예약 생성"
+  - button "11:00 정민재 접수/예약 생성"
+  - button "11:15 정민재 접수/예약 생성"
+  - button "11:30 정민재 접수/예약 생성"
+  - button "11:45 정민재 접수/예약 생성"
+  - button "11:00 최하린 접수/예약 생성"
+  - button "11:15 최하린 접수/예약 생성"
+  - button "11:30 최하린 접수/예약 생성"
+  - button "11:45 최하린 접수/예약 생성"
+  - button "11:00 오지훈 접수/예약 생성"
+  - button "11:15 오지훈 접수/예약 생성"
+  - button "11:30 오지훈 접수/예약 생성"
+  - button "11:45 오지훈 접수/예약 생성"
+  - button "11:00 한가연 접수/예약 생성"
+  - button "11:15 한가연 접수/예약 생성"
+  - button "11:30 한가연 접수/예약 생성"
+  - button "11:45 한가연 접수/예약 생성"
+  - button "11:00 윤태오 접수/예약 생성"
+  - button "11:15 윤태오 접수/예약 생성"
+  - button "11:30 윤태오 접수/예약 생성"
+  - button "11:45 윤태오 접수/예약 생성"
+  - button "11:00 문은서 접수/예약 생성"
+  - button "11:15 문은서 접수/예약 생성"
+  - button "11:30 문은서 접수/예약 생성"
+  - button "11:45 문은서 접수/예약 생성"
+  - button "11:00 서재원 접수/예약 생성"
+  - button "11:15 서재원 접수/예약 생성"
+  - button "11:30 서재원 접수/예약 생성"
+  - button "11:45 서재원 접수/예약 생성"
+  - button "12:00 이수지 접수/예약 생성"
+  - button "12:15 이수지 접수/예약 생성"
+  - button "12:30 이수지 접수/예약 생성"
+  - button "12:45 이수지 접수/예약 생성"
+  - button "12:00 김도윤 접수/예약 생성"
+  - button "12:15 김도윤 접수/예약 생성"
+  - button "12:30 김도윤 접수/예약 생성"
+  - button "12:45 김도윤 접수/예약 생성"
+  - button "12:00 박서연 접수/예약 생성"
+  - button "12:15 박서연 접수/예약 생성"
+  - button "12:30 박서연 접수/예약 생성"
+  - button "12:45 박서연 접수/예약 생성"
+  - button "12:00 정민재 접수/예약 생성"
+  - button "12:15 정민재 접수/예약 생성"
+  - button "12:30 정민재 접수/예약 생성"
+  - button "12:45 정민재 접수/예약 생성"
+  - button "12:00 최하린 접수/예약 생성"
+  - button "12:15 최하린 접수/예약 생성"
+  - button "12:30 최하린 접수/예약 생성"
+  - button "12:45 최하린 접수/예약 생성"
+  - button "12:00 오지훈 접수/예약 생성"
+  - button "12:15 오지훈 접수/예약 생성"
+  - button "12:30 오지훈 접수/예약 생성"
+  - button "12:45 오지훈 접수/예약 생성"
+  - button "12:00 한가연 접수/예약 생성"
+  - button "12:15 한가연 접수/예약 생성"
+  - button "12:30 한가연 접수/예약 생성"
+  - button "12:45 한가연 접수/예약 생성"
+  - button "12:00 윤태오 접수/예약 생성"
+  - button "12:15 윤태오 접수/예약 생성"
+  - button "12:30 윤태오 접수/예약 생성"
+  - button "12:45 윤태오 접수/예약 생성"
+  - button "12:00 문은서 접수/예약 생성"
+  - button "12:15 문은서 접수/예약 생성"
+  - button "12:30 문은서 접수/예약 생성"
+  - button "12:45 문은서 접수/예약 생성"
+  - button "12:00 서재원 접수/예약 생성"
+  - button "12:15 서재원 접수/예약 생성"
+  - button "12:30 서재원 접수/예약 생성"
+  - button "12:45 서재원 접수/예약 생성"
+  - button "13:00 이수지 접수/예약 생성"
+  - button "13:15 이수지 접수/예약 생성"
+  - button "13:30 이수지 접수/예약 생성"
+  - button "13:45 이수지 접수/예약 생성"
+  - button "13:00 김도윤 접수/예약 생성"
+  - button "13:15 김도윤 접수/예약 생성"
+  - button "13:30 김도윤 접수/예약 생성"
+  - button "13:45 김도윤 접수/예약 생성"
+  - button "13:00 박서연 접수/예약 생성"
+  - button "13:15 박서연 접수/예약 생성"
+  - button "13:30 박서연 접수/예약 생성"
+  - button "13:45 박서연 접수/예약 생성"
+  - button "13:00 정민재 접수/예약 생성"
+  - button "13:15 정민재 접수/예약 생성"
+  - button "13:30 정민재 접수/예약 생성"
+  - button "13:45 정민재 접수/예약 생성"
+  - button "13:00 최하린 접수/예약 생성"
+  - button "13:15 최하린 접수/예약 생성"
+  - button "13:30 최하린 접수/예약 생성"
+  - button "13:45 최하린 접수/예약 생성"
+  - button "13:00 오지훈 접수/예약 생성"
+  - button "13:15 오지훈 접수/예약 생성"
+  - button "13:30 오지훈 접수/예약 생성"
+  - button "13:45 오지훈 접수/예약 생성"
+  - button "13:00 한가연 접수/예약 생성"
+  - button "13:15 한가연 접수/예약 생성"
+  - button "13:30 한가연 접수/예약 생성"
+  - button "13:45 한가연 접수/예약 생성"
+  - button "13:00 윤태오 접수/예약 생성"
+  - button "13:15 윤태오 접수/예약 생성"
+  - button "13:30 윤태오 접수/예약 생성"
+  - button "13:45 윤태오 접수/예약 생성"
+  - button "13:00 문은서 접수/예약 생성"
+  - button "13:15 문은서 접수/예약 생성"
+  - button "13:30 문은서 접수/예약 생성"
+  - button "13:45 문은서 접수/예약 생성"
+  - button "13:00 서재원 접수/예약 생성"
+  - button "13:15 서재원 접수/예약 생성"
+  - button "13:30 서재원 접수/예약 생성"
+  - button "13:45 서재원 접수/예약 생성"
+  - button "14:00 이수지 접수/예약 생성"
+  - button "14:15 이수지 접수/예약 생성"
+  - button "14:30 이수지 접수/예약 생성"
+  - button "14:45 이수지 접수/예약 생성"
+  - button "14:00 김도윤 접수/예약 생성"
+  - button "14:15 김도윤 접수/예약 생성"
+  - button "14:30 김도윤 접수/예약 생성"
+  - button "14:45 김도윤 접수/예약 생성"
+  - button "14:00 박서연 접수/예약 생성"
+  - button "14:15 박서연 접수/예약 생성"
+  - button "14:30 박서연 접수/예약 생성"
+  - button "14:45 박서연 접수/예약 생성"
+  - button "14:00 정민재 접수/예약 생성"
+  - button "14:15 정민재 접수/예약 생성"
+  - button "14:30 정민재 접수/예약 생성"
+  - button "14:45 정민재 접수/예약 생성"
+  - button "14:00 최하린 접수/예약 생성"
+  - button "14:15 최하린 접수/예약 생성"
+  - button "14:30 최하린 접수/예약 생성"
+  - button "14:45 최하린 접수/예약 생성"
+  - button "14:00 오지훈 접수/예약 생성"
+  - button "14:15 오지훈 접수/예약 생성"
+  - button "14:30 오지훈 접수/예약 생성"
+  - button "14:45 오지훈 접수/예약 생성"
+  - button "14:00 한가연 접수/예약 생성"
+  - button "14:15 한가연 접수/예약 생성"
+  - button "14:30 한가연 접수/예약 생성"
+  - button "14:45 한가연 접수/예약 생성"
+  - button "14:00 윤태오 접수/예약 생성"
+  - button "14:15 윤태오 접수/예약 생성"
+  - button "14:30 윤태오 접수/예약 생성"
+  - button "14:45 윤태오 접수/예약 생성"
+  - button "14:00 문은서 접수/예약 생성"
+  - button "14:15 문은서 접수/예약 생성"
+  - button "14:30 문은서 접수/예약 생성"
+  - button "14:45 문은서 접수/예약 생성"
+  - button "14:00 서재원 접수/예약 생성"
+  - button "14:15 서재원 접수/예약 생성"
+  - button "14:30 서재원 접수/예약 생성"
+  - button "14:45 서재원 접수/예약 생성"
+  - button "15:00 이수지 접수/예약 생성"
+  - button "15:15 이수지 접수/예약 생성"
+  - button "15:30 이수지 접수/예약 생성"
+  - button "15:45 이수지 접수/예약 생성"
+  - button "15:00 김도윤 접수/예약 생성"
+  - button "15:15 김도윤 접수/예약 생성"
+  - button "15:30 김도윤 접수/예약 생성"
+  - button "15:45 김도윤 접수/예약 생성"
+  - button "15:00 박서연 접수/예약 생성"
+  - button "15:15 박서연 접수/예약 생성"
+  - button "15:30 박서연 접수/예약 생성"
+  - button "15:45 박서연 접수/예약 생성"
+  - button "15:00 정민재 접수/예약 생성"
+  - button "15:15 정민재 접수/예약 생성"
+  - button "15:30 정민재 접수/예약 생성"
+  - button "15:45 정민재 접수/예약 생성"
+  - button "15:00 최하린 접수/예약 생성"
+  - button "15:15 최하린 접수/예약 생성"
+  - button "15:30 최하린 접수/예약 생성"
+  - button "15:45 최하린 접수/예약 생성"
+  - button "15:00 오지훈 접수/예약 생성"
+  - button "15:15 오지훈 접수/예약 생성"
+  - button "15:30 오지훈 접수/예약 생성"
+  - button "15:45 오지훈 접수/예약 생성"
+  - button "15:00 한가연 접수/예약 생성"
+  - button "15:15 한가연 접수/예약 생성"
+  - button "15:30 한가연 접수/예약 생성"
+  - button "15:45 한가연 접수/예약 생성"
+  - button "15:00 윤태오 접수/예약 생성"
+  - button "15:15 윤태오 접수/예약 생성"
+  - button "15:30 윤태오 접수/예약 생성"
+  - button "15:45 윤태오 접수/예약 생성"
+  - button "15:00 문은서 접수/예약 생성"
+  - button "15:15 문은서 접수/예약 생성"
+  - button "15:30 문은서 접수/예약 생성"
+  - button "15:45 문은서 접수/예약 생성"
+  - button "15:00 서재원 접수/예약 생성"
+  - button "15:15 서재원 접수/예약 생성"
+  - button "15:30 서재원 접수/예약 생성"
+  - button "15:45 서재원 접수/예약 생성"
+  - button "16:00 이수지 접수/예약 생성"
+  - button "16:15 이수지 접수/예약 생성"
+  - button "16:30 이수지 접수/예약 생성"
+  - button "16:45 이수지 접수/예약 생성"
+  - button "16:00 김도윤 접수/예약 생성"
+  - button "16:15 김도윤 접수/예약 생성"
+  - button "16:30 김도윤 접수/예약 생성"
+  - button "16:45 김도윤 접수/예약 생성"
+  - button "16:00 박서연 접수/예약 생성"
+  - button "16:15 박서연 접수/예약 생성"
+  - button "16:30 박서연 접수/예약 생성"
+  - button "16:45 박서연 접수/예약 생성"
+  - button "16:00 정민재 접수/예약 생성"
+  - button "16:15 정민재 접수/예약 생성"
+  - button "16:30 정민재 접수/예약 생성"
+  - button "16:45 정민재 접수/예약 생성"
+  - button "16:00 최하린 접수/예약 생성"
+  - button "16:15 최하린 접수/예약 생성"
+  - button "16:30 최하린 접수/예약 생성"
+  - button "16:45 최하린 접수/예약 생성"
+  - button "16:00 오지훈 접수/예약 생성"
+  - button "16:15 오지훈 접수/예약 생성"
+  - button "16:30 오지훈 접수/예약 생성"
+  - button "16:45 오지훈 접수/예약 생성"
+  - button "16:00 한가연 접수/예약 생성"
+  - button "16:15 한가연 접수/예약 생성"
+  - button "16:30 한가연 접수/예약 생성"
+  - button "16:45 한가연 접수/예약 생성"
+  - button "16:00 윤태오 접수/예약 생성"
+  - button "16:15 윤태오 접수/예약 생성"
+  - button "16:30 윤태오 접수/예약 생성"
+  - button "16:45 윤태오 접수/예약 생성"
+  - button "16:00 문은서 접수/예약 생성"
+  - button "16:15 문은서 접수/예약 생성"
+  - button "16:30 문은서 접수/예약 생성"
+  - button "16:45 문은서 접수/예약 생성"
+  - button "16:00 서재원 접수/예약 생성"
+  - button "16:15 서재원 접수/예약 생성"
+  - button "16:30 서재원 접수/예약 생성"
+  - button "16:45 서재원 접수/예약 생성"
+  - button "17:00 이수지 접수/예약 생성"
+  - button "17:15 이수지 접수/예약 생성"
+  - button "17:30 이수지 접수/예약 생성"
+  - button "17:45 이수지 접수/예약 생성"
+  - button "17:00 김도윤 접수/예약 생성"
+  - button "17:15 김도윤 접수/예약 생성"
+  - button "17:30 김도윤 접수/예약 생성"
+  - button "17:45 김도윤 접수/예약 생성"
+  - button "17:00 박서연 접수/예약 생성"
+  - button "17:15 박서연 접수/예약 생성"
+  - button "17:30 박서연 접수/예약 생성"
+  - button "17:45 박서연 접수/예약 생성"
+  - button "17:00 정민재 접수/예약 생성"
+  - button "17:15 정민재 접수/예약 생성"
+  - button "17:30 정민재 접수/예약 생성"
+  - button "17:45 정민재 접수/예약 생성"
+  - button "17:00 최하린 접수/예약 생성"
+  - button "17:15 최하린 접수/예약 생성"
+  - button "17:30 최하린 접수/예약 생성"
+  - button "17:45 최하린 접수/예약 생성"
+  - button "17:00 오지훈 접수/예약 생성"
+  - button "17:15 오지훈 접수/예약 생성"
+  - button "17:30 오지훈 접수/예약 생성"
+  - button "17:45 오지훈 접수/예약 생성"
+  - button "17:00 한가연 접수/예약 생성"
+  - button "17:15 한가연 접수/예약 생성"
+  - button "17:30 한가연 접수/예약 생성"
+  - button "17:45 한가연 접수/예약 생성"
+  - button "17:00 윤태오 접수/예약 생성"
+  - button "17:15 윤태오 접수/예약 생성"
+  - button "17:30 윤태오 접수/예약 생성"
+  - button "17:45 윤태오 접수/예약 생성"
+  - button "17:00 문은서 접수/예약 생성"
+  - button "17:15 문은서 접수/예약 생성"
+  - button "17:30 문은서 접수/예약 생성"
+  - button "17:45 문은서 접수/예약 생성"
+  - button "17:00 서재원 접수/예약 생성"
+  - button "17:15 서재원 접수/예약 생성"
+  - button "17:30 서재원 접수/예약 생성"
+  - button "17:45 서재원 접수/예약 생성"
+  - button "18:00 이수지 접수/예약 생성"
+  - button "18:15 이수지 접수/예약 생성"
+  - button "18:30 이수지 접수/예약 생성"
+  - button "18:45 이수지 접수/예약 생성"
+  - button "18:00 김도윤 접수/예약 생성"
+  - button "18:15 김도윤 접수/예약 생성"
+  - button "18:30 김도윤 접수/예약 생성"
+  - button "18:45 김도윤 접수/예약 생성"
+  - button "18:00 박서연 접수/예약 생성"
+  - button "18:15 박서연 접수/예약 생성"
+  - button "18:30 박서연 접수/예약 생성"
+  - button "18:45 박서연 접수/예약 생성"
+  - button "18:00 정민재 접수/예약 생성"
+  - button "18:15 정민재 접수/예약 생성"
+  - button "18:30 정민재 접수/예약 생성"
+  - button "18:45 정민재 접수/예약 생성"
+  - button "18:00 최하린 접수/예약 생성"
+  - button "18:15 최하린 접수/예약 생성"
+  - button "18:30 최하린 접수/예약 생성"
+  - button "18:45 최하린 접수/예약 생성"
+  - button "18:00 오지훈 접수/예약 생성"
+  - button "18:15 오지훈 접수/예약 생성"
+  - button "18:30 오지훈 접수/예약 생성"
+  - button "18:45 오지훈 접수/예약 생성"
+  - button "18:00 한가연 접수/예약 생성"
+  - button "18:15 한가연 접수/예약 생성"
+  - button "18:30 한가연 접수/예약 생성"
+  - button "18:45 한가연 접수/예약 생성"
+  - button "18:00 윤태오 접수/예약 생성"
+  - button "18:15 윤태오 접수/예약 생성"
+  - button "18:30 윤태오 접수/예약 생성"
+  - button "18:45 윤태오 접수/예약 생성"
+  - button "18:00 문은서 접수/예약 생성"
+  - button "18:15 문은서 접수/예약 생성"
+  - button "18:30 문은서 접수/예약 생성"
+  - button "18:45 문은서 접수/예약 생성"
+  - button "18:00 서재원 접수/예약 생성"
+  - button "18:15 서재원 접수/예약 생성"
+  - button "18:30 서재원 접수/예약 생성"
+  - button "18:45 서재원 접수/예약 생성"
+  - button "19:00 이수지 접수/예약 생성" [disabled]
+  - button "19:15 이수지 접수/예약 생성" [disabled]
+  - button "19:30 이수지 접수/예약 생성" [disabled]
+  - button "19:45 이수지 접수/예약 생성" [disabled]
+  - button "19:00 김도윤 접수/예약 생성" [disabled]
+  - button "19:15 김도윤 접수/예약 생성" [disabled]
+  - button "19:30 김도윤 접수/예약 생성" [disabled]
+  - button "19:45 김도윤 접수/예약 생성" [disabled]
+  - button "19:00 박서연 접수/예약 생성" [disabled]
+  - button "19:15 박서연 접수/예약 생성" [disabled]
+  - button "19:30 박서연 접수/예약 생성" [disabled]
+  - button "19:45 박서연 접수/예약 생성" [disabled]
+  - button "19:00 정민재 접수/예약 생성" [disabled]
+  - button "19:15 정민재 접수/예약 생성" [disabled]
+  - button "19:30 정민재 접수/예약 생성" [disabled]
+  - button "19:45 정민재 접수/예약 생성" [disabled]
+  - button "19:00 최하린 접수/예약 생성" [disabled]
+  - button "19:15 최하린 접수/예약 생성" [disabled]
+  - button "19:30 최하린 접수/예약 생성" [disabled]
+  - button "19:45 최하린 접수/예약 생성" [disabled]
+  - button "19:00 오지훈 접수/예약 생성" [disabled]
+  - button "19:15 오지훈 접수/예약 생성" [disabled]
+  - button "19:30 오지훈 접수/예약 생성" [disabled]
+  - button "19:45 오지훈 접수/예약 생성" [disabled]
+  - button "19:00 한가연 접수/예약 생성" [disabled]
+  - button "19:15 한가연 접수/예약 생성" [disabled]
+  - button "19:30 한가연 접수/예약 생성" [disabled]
+  - button "19:45 한가연 접수/예약 생성" [disabled]
+  - button "19:00 윤태오 접수/예약 생성" [disabled]
+  - button "19:15 윤태오 접수/예약 생성" [disabled]
+  - button "19:30 윤태오 접수/예약 생성" [disabled]
+  - button "19:45 윤태오 접수/예약 생성" [disabled]
+  - button "19:00 문은서 접수/예약 생성" [disabled]
+  - button "19:15 문은서 접수/예약 생성" [disabled]
+  - button "19:30 문은서 접수/예약 생성" [disabled]
+  - button "19:45 문은서 접수/예약 생성" [disabled]
+  - button "19:00 서재원 접수/예약 생성" [disabled]
+  - button "19:15 서재원 접수/예약 생성" [disabled]
+  - button "19:30 서재원 접수/예약 생성" [disabled]
+  - button "19:45 서재원 접수/예약 생성" [disabled]
+  - complementary
+- region "Notifications alt+T"
+- alert

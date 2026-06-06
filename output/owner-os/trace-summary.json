@@ -1,0 +1,54 @@
+{
+  "trace_id": "owner-os-trace-20260605T103842Z",
+  "packet_id": "OWNER-OS-PACKET-20260605-1",
+  "issue_id": "DEN-424",
+  "request_summary": "Create Owner OS trace fixture",
+  "classification": {
+    "task_type": "answer",
+    "depth_level": "L0",
+    "autonomy_level": "answer_only"
+  },
+  "context": {
+    "sources_selected": [
+      "docs/agent-start-here.md",
+      "docs/engineering/current-status.md",
+      "docs/product/service/clair-owner-os-product-plan.md"
+    ],
+    "sources_skipped": [
+      "docs/archive/**",
+      "docs/completed/**"
+    ],
+    "max_context_sources": 3
+  },
+  "model": {
+    "parent_model_tier": "low_cost",
+    "escalate_to_5_5": false,
+    "escalation_reason": "none"
+  },
+  "subagents": {
+    "used": [],
+    "trigger": "none",
+    "cost_rationale": "Direct parent handling is cheaper.",
+    "summaries_used": []
+  },
+  "approval_gates": {
+    "status": "none",
+    "named_gates": [],
+    "approval_evidence": "none"
+  },
+  "tool_calls": [],
+  "verification": {
+    "commands": [
+      "npm run owner-os:eval",
+      "npm run docs:check"
+    ],
+    "passed": [],
+    "failed": []
+  },
+  "result": {
+    "status": "draft",
+    "summary": "Trace example generated from local Owner OS CLI.",
+    "handoff": "Use this shape for DEN-424 trace fixtures and DEN-428 regression."
+  },
+  "trace_contract": "docs/product/service/owner-os-trace-contract.md"
+}

@@ -8,6 +8,8 @@ Current files:
 
 - `DESIGN.md`: canonical CLAiR EMR design direction.
 - `light-operational-foundation.md`: first implemented foundation pass and Linear reference translation.
+- `border-shadow-depth-contract.md`: border line, radius, and shadow depth usage contract for common EMR surfaces.
+- `empty-info-state-contract.md`: empty state and info box contract for missing data, guidance, boundaries, and alert separation.
 - `ui-refactor-operating-model.md`: Linear UI/UX refactor initiative operating model and scope guardrails.
 - `ui-debt-inventory.md`: evidence-based UI hardcoding, duplicate pattern, and extraction candidate inventory.
 - `component-ownership-rules.md`: rules for shadcn/ui, EMR shared, feature-local, and inline UI ownership.

@@ -74,6 +74,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     rightPanelWidth,
     SHELL_LAYOUT.rightPanel.defaultWidth
   );
+  const rightPanelGap =
+    moduleDefinition.rightPanelGap && RightPanel && rightPanelOpen
+      ? SHELL_LAYOUT.shell.gap
+      : 0;
+  const rightPanelDetached = rightPanelGap > 0;
   const slotProps = {
     workspaceId,
     moduleId: moduleDefinition.id,
@@ -84,16 +89,28 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
 
   return (
     <main
-      className="emr-workspace-frame-responsive relative grid min-h-0 overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
+      className={cn(
+        "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] transition-[grid-template-columns] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
+        rightPanelDetached
+          ? "overflow-visible bg-transparent"
+          : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-workspace)] shadow-xs"
+      )}
       data-content-aside-open={ContentAside && contentAsideOpen ? "true" : "false"}
       data-right-panel-open={RightPanel && rightPanelOpen ? "true" : "false"}
       style={{
         "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
           RightPanel && rightPanelOpen ? `${effectiveRightPanelWidth}px` : "0px"
         }`,
+        "--clair-workspace-right-panel-gap": `${rightPanelGap}px`,
       } as CSSProperties}
     >
-      <section className="relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]">
+      <section
+        className={cn(
+          "relative flex min-h-0 min-w-0 flex-col bg-[var(--emr-surface-workspace)]",
+          rightPanelDetached &&
+            "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
+        )}
+      >
         {Header ? <Header {...slotProps} /> : null}
         <div
           className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
@@ -180,7 +197,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
       <aside
         className={cn(
           "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] transition-opacity duration-150 max-md:hidden",
-          RightPanel && rightPanelOpen && "border-l border-[var(--emr-line-default)]",
+          RightPanel &&
+            rightPanelOpen &&
+            (rightPanelDetached
+              ? "rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] shadow-xs"
+              : "border-l border-[var(--emr-line-default)]"),
           RightPanel && !rightPanelOpen && "pointer-events-none opacity-0"
         )}
       >

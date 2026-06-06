@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-420 Owner OS Implementation Scope Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f5f7f8;
+        color: #17202a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        box-sizing: border-box;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 46px 24px 72px;
+      }
+      article {
+        border: 1px solid #d9e0e7;
+        border-radius: 12px;
+        background: #fff;
+        padding: 32px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        line-height: 1.22;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 19px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      code {
+        border-radius: 5px;
+        background: #e9eef2;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+      .meta {
+        color: #667281;
+        font-size: 13px;
+      }
+      .callout {
+        border-left: 4px solid #157f78;
+        border-radius: 8px;
+        background: #f0f7f6;
+        padding: 15px 17px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-420 Owner OS Implementation Scope</h1>
+        <p class="meta">Completed for Human Review on 2026-06-05. Project: CLAiR Owner OS Implementation.</p>
+
+        <h2>Summary</h2>
+        <p>
+          CLAiR Owner OS implementation has a dedicated Linear project and a scoped first issue sequence.
+          The source product plan is now approved for the first implementation wave.
+        </p>
+
+        <h2>What Was Decided</h2>
+        <ul>
+          <li>Use a new Linear project, not an Initiative, for the first Owner OS implementation wave.</li>
+          <li>Keep Initiative creation deferred until multiple Owner OS projects exist.</li>
+          <li>Use ordered issue title prefixes because the current Linear tool does not expose milestone creation.</li>
+          <li>Start with <code>DEN-420</code> and keep later implementation issues in <code>Ready</code>.</li>
+        </ul>
+
+        <h2>Linear Created</h2>
+        <ul>
+          <li>Project: <code>CLAiR Owner OS Implementation</code></li>
+          <li>Active issue: <code>DEN-420</code> <code>00-01 Adopt Owner OS product plan and implementation scope</code></li>
+          <li>Ready issues: <code>DEN-421</code> through <code>DEN-429</code></li>
+        </ul>
+
+        <h2>Recommended Milestones</h2>
+        <p>The Linear tool available in this session can create projects and issues, but not milestones. These milestone names were recorded in the project and issue descriptions for manual Linear UI setup if needed:</p>
+        <ul>
+          <li><code>00 Scope &amp; Contract</code></li>
+          <li><code>01 Router &amp; Packet Foundation</code></li>
+          <li><code>02 Eval &amp; Trace</code></li>
+          <li><code>03 Local CLI</code></li>
+          <li><code>04 Dashboard &amp; Work Control</code></li>
+          <li><code>05 QA &amp; Closeout</code></li>
+        </ul>
+
+        <h2>Docs Changed</h2>
+        <ul>
+          <li><code>docs/product/service/clair-owner-os-product-plan.md</code>: status moved to approved and linked to <code>DEN-420</code>.</li>
+          <li><code>output/owner-os/clair-owner-os-product-plan-readable.html</code>: readable HTML status updated to the implementation project state.</li>
+          <li><code>docs/work/agent-orchestration/OWNER-OS-PR-001-implementation-scope-contract.md</code>: repo work item added.</li>
+          <li><code>docs/work/index.md</code>: work item listed.</li>
+          <li><code>docs/product/changelog.md</code>: product planning change recorded.</li>
+        </ul>
+
+        <h2>Out Of Scope</h2>
+        <ul>
+          <li>Remote Supabase, production deploy, real data, payment, email, or provider integration.</li>
+          <li>Automatic merge, automatic deploy, automatic <code>Done</code> transition, or default multi-agent dispatch.</li>
+          <li>Actual router skill, CLI, eval harness, trace implementation, or dashboard code in this first issue.</li>
+        </ul>
+
+        <h2>Verification</h2>
+        <ul>
+          <li><code>npm run docs:check</code> passed. Internal docs references look good.</li>
+        </ul>
+
+        <h2>Next Step</h2>
+        <div class="callout">
+          <p>
+            Start <code>DEN-421</code>: build the repo-local Owner OS router skill. It should produce intake briefs
+            or work packet drafts while stopping approval-gated work before execution.
+          </p>
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

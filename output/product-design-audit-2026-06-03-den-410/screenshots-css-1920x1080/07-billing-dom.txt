@@ -1,0 +1,384 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open&aside=closed&right=open
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open&aside=closed&right=open
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open&aside=closed&right=open
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open&aside=closed&right=open
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open&aside=closed&right=open
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open&aside=closed&right=open
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open&aside=closed&right=open
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open&aside=closed&right=open
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open&aside=closed&right=open
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open&aside=closed&right=open
+  - button "고객센터":
+- complementary:
+  - generic: 수납
+  - button "사이드 패널 접기":
+  - button "이전 날짜":
+  - button "26.05.01 (금) 날짜 선택":
+    - generic: 26.05.01 (금)
+    - generic: 오늘
+  - button "다음 날짜":
+  - generic: 전체
+  - generic: "4"
+  - button "정렬":
+  - button "필터":
+  - button "검색":
+  - button "수납대기 접기" [expanded]:
+    - generic: 수납대기
+    - generic: "3"
+  - button "예약 코코 · 이지은 이지은 INV-260501-0001 수납 작업 오더 5건 · 121,500원 10:40 이수지 요청 담당 미지정" [pressed]:
+    - generic: 예약
+    - generic: 코코
+    - generic: ·
+    - generic: 이지은
+    - button "이지은 INV-260501-0001 수납 작업":
+    - generic: 오더 5건 · 121,500원
+    - generic: 10:40 이수지 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "외래 두부 · 정하린 정하린 INV-260501-0002 수납 작업 오더 2건 · 28,000원 10:28 김도윤 요청 담당 미지정":
+    - generic: 외래
+    - generic: 두부
+    - generic: ·
+    - generic: 정하린
+    - button "정하린 INV-260501-0002 수납 작업":
+    - generic: 오더 2건 · 28,000원
+    - generic: 10:28 김도윤 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "예약 콩이 · 김하늘 김하늘 INV-260501-0003 수납 작업 오더 5건 · 156,500원 10:22 이수지 요청 담당 미지정":
+    - generic: 예약
+    - generic: 콩이
+    - generic: ·
+    - generic: 김하늘
+    - button "김하늘 INV-260501-0003 수납 작업":
+    - generic: 오더 5건 · 156,500원
+    - generic: 10:22 이수지 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "미납 접기" [expanded]:
+    - generic: 미납
+    - generic: "0"
+  - button "완료 접기" [expanded]:
+    - generic: 완료
+    - generic: "1"
+  - button "외래 나비 · 오세아 오세아 INV-260414-0007 수납 작업 오더 0건 · 36,500원 11:00 김도윤 요청 담당 미지정":
+    - generic: 외래
+    - generic: 나비
+    - generic: ·
+    - generic: 오세아
+    - button "오세아 INV-260414-0007 수납 작업":
+    - generic: 오더 0건 · 36,500원
+    - generic: 11:00 김도윤 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "수납" [selected]:
+    - generic: 수납
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - generic "보호자 수납 컨텍스트 정보":
+    - generic: 보호자
+    - generic: 이지은
+    - generic: 관계
+    - generic: 주 보호자
+    - generic: 연락처
+    - generic: 010-****-1188
+    - generic: 환자
+    - generic: 코코
+    - generic: 최근 수납
+    - generic: 26.04.14 12:10
+    - generic: 수납대기
+    - generic: 2건 · 236,700원
+    - generic: 미납
+    - generic: 2건 · 120,500원
+    - generic: 보호자 메모
+    - generic: 문자보다 알림톡 선호
+  - complementary:
+    - button "보호자 수납 이력 접기":
+    - generic: 수납이력
+    - generic: "8"
+    - button "정렬":
+    - button "검색":
+    - button "1주"
+    - button "2주"
+    - button "1달"
+    - button "3달" [pressed]
+    - button "6개월"
+    - button "직접"
+    - button "전체" [pressed]
+    - button "대기"
+    - button "미납"
+    - button "완료"
+    - button "취소"
+    - generic: 26.05.01
+    - generic: "1"
+    - checkbox "INV-260501-0001 수납 ledger 선택 코코 CBC 검사 외 4건 대기 이수지 121,500원" [checked]:
+    - checkbox [checked]
+    - generic: 코코
+    - generic: CBC 검사 외 4건
+    - generic: 대기
+    - generic: 이수지
+    - generic: 121,500원
+    - generic: 26.04.30
+    - generic: "1"
+    - checkbox "INV-260430-0098 수납 ledger 선택 코코 재진 상담 외 1건 대기 이수지 64,000원"
+    - checkbox
+    - generic: 코코
+    - generic: 재진 상담 외 1건
+    - generic: 대기
+    - generic: 이수지
+    - generic: 64,000원
+    - generic: 26.04.29
+    - generic: "1"
+    - checkbox "INV-260429-0042 수납 ledger 선택 코코 혈액화학 검사 미납 김도윤 58,000원"
+    - checkbox
+    - generic: 코코
+    - generic: 혈액화학 검사
+    - generic: 미납
+    - generic: 김도윤
+    - generic: 58,000원
+    - generic: 26.04.18
+    - generic: "1"
+    - checkbox "INV-260418-0031 수납 ledger 선택 코코 수액 처치 외 1건 미납 박서연 67,500원"
+    - checkbox
+    - generic: 코코
+    - generic: 수액 처치 외 1건
+    - generic: 미납
+    - generic: 박서연
+    - generic: 67,500원
+    - generic: 26.04.14
+    - generic: "1"
+    - checkbox "INV-260414-0027 수납 ledger 선택 코코 복부 초음파 재검 완료 이수지 79,000원"
+    - checkbox
+    - generic: 코코
+    - generic: 복부 초음파 재검
+    - generic: 완료
+    - generic: 이수지
+    - generic: 79,000원
+    - generic: 26.04.01
+    - generic: "1"
+    - checkbox "INV-260401-0018 수납 ledger 선택 코코 예방접종 외 1건 완료 정민재 47,000원"
+    - checkbox
+    - generic: 코코
+    - generic: 예방접종 외 1건
+    - generic: 완료
+    - generic: 정민재
+    - generic: 47,000원
+    - generic: 26.03.28
+    - generic: "1"
+    - checkbox "INV-260328-0011 수납 ledger 선택 코코 일반 진료 취소 김도윤 33,000원"
+    - checkbox
+    - generic: 코코
+    - generic: 일반 진료
+    - generic: 취소
+    - generic: 김도윤
+    - generic: 33,000원
+    - generic: 26.03.15
+    - generic: "1"
+    - checkbox "INV-260315-0006 수납 ledger 선택 코코 CBC 검사 외 1건 취소 박서연 54,000원"
+    - checkbox
+    - generic: 코코
+    - generic: CBC 검사 외 1건
+    - generic: 취소
+    - generic: 박서연
+    - generic: 54,000원
+    - generic: 선택 1건 · 중앙 checkout에 반영
+  - button "수납이력 패널 열기":
+  - heading "수납" [level=1]
+  - generic: INV-260501-0001
+  - button "담당하기"
+  - button "수납 요약 패널 접기" [expanded] [pressed]: 수납 요약
+  - generic: 청구서
+  - generic: INV-260501-0001
+  - generic: E-260501-0001
+  - generic: 보호자 / 환자
+  - generic: 이지은 · 코코
+  - generic: 진료 / 검사 / 영상 / 조제 / 처치 항목
+  - generic: 수납 상태
+  - generic: 수납대기
+  - generic: 26.05.01 10:40
+  - generic: 결제 상태
+  - generic: 수납대기
+  - generic: 보호자 안내 전
+  - heading "선택된 checkout 작업대" [level=2]
+  - generic: 보호자 ledger에서 선택한 수납 건을 환자, 진료, 청구서별로 확인합니다.
+  - generic: 1건 · 7항목 · 수납 합산 121,500원
+  - generic: 편집 가능
+  - generic: 실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과 수납 진행 snapshot만 저장합니다.
+  - generic: 코코
+  - generic: E-260501-0001
+  - generic: 대기
+  - generic: INV-260501-0001 · 이지은
+  - generic: 그룹 합계
+  - generic: 172,700원
+  - table "청구 항목 테이블":
+    - rowgroup:
+      - row "항목 출처 / 진행 단가 수량 청구금액":
+        - columnheader "항목"
+        - columnheader "출처 / 진행"
+        - columnheader "단가"
+        - columnheader "수량"
+        - columnheader "청구금액"
+    - rowgroup:
+      - row "일반 진료 진료 수납 추가 수납 추가 · 비임상 22,000원 1 22,000원":
+        - cell "일반 진료 진료":
+          - generic: 일반 진료
+          - generic: 진료
+        - cell "수납 추가 수납 추가 · 비임상":
+          - generic: 수납 추가
+          - generic: 수납 추가 · 비임상
+        - cell "22,000원"
+        - cell "1":
+          - spinbutton "일반 진료 수량": "1"
+        - cell "22,000원"
+      - row "CBC 검사 검사 차트 청구 진행중 · 업무진행 35,000원 1 35,000원":
+        - cell "CBC 검사 검사":
+          - generic: CBC 검사
+          - generic: 검사
+        - cell "차트 청구 진행중 · 업무진행":
+          - generic: 차트 청구
+          - generic: 진행중 · 업무진행
+        - cell "35,000원"
+        - cell "1":
+          - spinbutton "CBC 검사 수량": "1"
+        - cell "35,000원"
+      - row "피하 수액 처치 처치 차트 청구 재요청 · 업무진행 18,000원 1 18,000원":
+        - cell "피하 수액 처치 처치":
+          - generic: 피하 수액 처치
+          - generic: 처치
+        - cell "차트 청구 재요청 · 업무진행":
+          - generic: 차트 청구
+          - generic: 재요청 · 업무진행
+        - cell "18,000원"
+        - cell "1":
+          - spinbutton "피하 수액 처치 수량": "1"
+        - cell "18,000원"
+      - row "Maropitant 16mg T 조제 차트 청구 요청 · 업무진행 4,500원 1 4,500원":
+        - cell "Maropitant 16mg T 조제":
+          - generic: Maropitant 16mg T
+          - generic: 조제
+        - cell "차트 청구 요청 · 업무진행":
+          - generic: 차트 청구
+          - generic: 요청 · 업무진행
+        - cell "4,500원"
+        - cell "1":
+          - spinbutton "Maropitant 16mg T 수량": "1"
+        - cell "4,500원"
+      - row "흉부 방사선 영상 차트 청구 진행중 · 업무진행 42,000원 1 42,000원":
+        - cell "흉부 방사선 영상":
+          - generic: 흉부 방사선
+          - generic: 영상
+        - cell "차트 청구 진행중 · 업무진행":
+          - generic: 차트 청구
+          - generic: 진행중 · 업무진행
+        - cell "42,000원"
+        - cell "1":
+          - spinbutton "흉부 방사선 수량": "1"
+        - cell "42,000원"
+      - row "고정스테이징 처치 mprv3quc 청구 기타 수납 추가 수납 후보 수납 추가 · 비임상 18,200원 1 18,200원":
+        - cell "고정스테이징 처치 mprv3quc 청구 기타":
+          - generic: 고정스테이징 처치 mprv3quc 청구
+          - generic: 기타
+        - cell "수납 추가 수납 후보 수납 추가 · 비임상":
+          - generic: 수납 추가
+          - generic: 수납 후보
+          - generic: 수납 추가 · 비임상
+        - cell "18,200원"
+        - cell "1":
+          - generic: "1"
+        - cell "18,200원"
+      - row "DEN-304 상담 청구 mpouax4r 기타 수납 추가 수납 후보 수납 추가 · 비임상 33,000원 1 33,000원":
+        - cell "DEN-304 상담 청구 mpouax4r 기타":
+          - generic: DEN-304 상담 청구 mpouax4r
+          - generic: 기타
+        - cell "수납 추가 수납 후보 수납 추가 · 비임상":
+          - generic: 수납 추가
+          - generic: 수납 후보
+          - generic: 수납 추가 · 비임상
+        - cell "33,000원"
+        - cell "1":
+          - generic: "1"
+        - cell "33,000원"
+    - rowgroup:
+      - row "수납 추가 항목 사료, 일반 판매품 같은 비임상 항목 placeholder 그룹 합계 172,700원":
+        - cell "수납 추가 항목 사료, 일반 판매품 같은 비임상 항목 placeholder":
+          - button "수납 추가 항목"
+          - text: 사료, 일반 판매품 같은 비임상 항목 placeholder
+        - cell "그룹 합계"
+        - cell "172,700원"
+  - complementary:
+    - heading "수납 요약" [level=2]
+    - generic: 수납대기
+    - generic: INV-260501-0001
+    - generic: 121,500원
+    - generic: 진료, 검사, 영상, 조제, 처치 항목을 확인한 뒤 수납할 단계입니다.
+    - generic: 최종 결제금액
+    - generic: 121,500원
+    - generic: 청구액
+    - generic: 121,500원
+    - generic: 수납액
+    - generic: 0원
+    - generic: 미납액
+    - generic: 121,500원
+    - generic: 할인
+    - generic: 0원
+    - generic: 할증
+    - generic: 0원
+    - generic: 발행
+    - generic: "-"
+    - status:
+      - paragraph: 담당하기 후 수납 액션 가능
+      - generic: 수납 진행, 수납 완료, 미납 처리는 담당자를 지정한 뒤 실행할 수 있습니다.
+    - generic: 읽기 전용 수납 정보
+    - generic: 영수증 금액
+    - generic: 미연동
+    - generic: VAT 세부
+    - generic: 0원
+    - generic: 부분 결제 입력
+    - generic: 미지원
+    - generic: 결제 수단
+    - group "결제 수단 선택":
+      - button "카드" [pressed]
+      - button "현금"
+      - button "계좌이체"
+      - button "간편결제"
+    - generic: 카드 개월 수
+    - generic: 일시불
+    - generic: 간편결제
+    - generic: 미선택
+    - generic: 할인/할증 사유
+    - textbox "할인 또는 할증 사유":
+      - /placeholder: 할인/할증이 있을 때 사유를 입력
+    - generic: 수납 메모
+    - textbox "수납 메모":
+      - /placeholder: 수납 이력에 남길 메모
+    - generic: 보호자 안내 후 수납 완료 처리
+    - generic: 실제 PG, 현금영수증, 영수증 출력 연동 없이 데모 세션에서만 상태를 변경합니다.
+    - button "수납 진행" [disabled]
+    - button "수납 완료" [disabled]
+    - button "미납 처리" [disabled]
+- region "Notifications alt+T"
+- alert

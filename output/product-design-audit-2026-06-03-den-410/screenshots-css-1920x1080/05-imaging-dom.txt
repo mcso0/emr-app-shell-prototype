@@ -1,0 +1,220 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open&aside=history&right=open
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open&aside=history&right=open
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open&aside=history&right=open
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open&aside=history&right=open
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open&aside=history&right=open
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open&aside=history&right=open
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open&aside=history&right=open
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open&aside=history&right=open
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open&aside=history&right=open
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open&aside=history&right=open
+  - button "고객센터":
+- complementary:
+  - generic: 영상검사
+  - button "사이드 패널 접기":
+  - group "영상검사 목록 보기":
+    - button "오더별" [pressed]
+    - button "차트별"
+  - button "이전 날짜":
+  - button "26.06.02 (금) 날짜 선택":
+    - generic: 26.06.02 (금)
+    - generic: 오늘
+  - button "다음 날짜":
+  - generic: 영상 대기열
+  - generic: "2"
+  - button "정렬":
+  - button "필터":
+  - button "촬영대기 접기" [expanded]:
+    - generic: 촬영대기
+    - generic: "1"
+  - button "외래 Nabi Synthetic · DEN-194 Guardian 02 Nabi Synthetic DEN-341 영상 replay m531 더보기 영상 DEN-341 영상 replay m531 09:45 이수지 요청 담당 미지정":
+    - generic: 외래
+    - generic: Nabi Synthetic
+    - generic: ·
+    - generic: DEN-194 Guardian 02
+    - button "Nabi Synthetic DEN-341 영상 replay m531 더보기":
+    - generic: 영상
+    - generic: DEN-341 영상 replay m531
+    - generic: 09:45 이수지 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "판독중 접기" [expanded]:
+    - generic: 판독중
+    - generic: "1"
+  - button "외래 콩이 · 김하늘 콩이 DEN-341 영상 replay m531 더보기 영상 DEN-341 영상 replay m531 09:51 이수지 요청 담당 미지정" [pressed]:
+    - generic: 외래
+    - generic: 콩이
+    - generic: ·
+    - generic: 김하늘
+    - button "콩이 DEN-341 영상 replay m531 더보기":
+    - generic: 영상
+    - generic: DEN-341 영상 replay m531
+    - generic: 09:51 이수지 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "영상" [selected]:
+    - generic: 영상
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - generic "환자 컨텍스트 정보":
+    - generic: 환자
+    - generic: 콩이
+    - generic: 보호자
+    - generic: 김하늘
+    - generic: 품종
+    - generic: 푸들
+    - generic: 나이
+    - generic: 4세
+    - generic: 성별
+    - generic: 중성화·수컷
+    - generic: 체중
+    - generic: 5.96 kg
+    - generic: 체온
+    - generic: 39.3 °C
+    - generic: 호흡
+    - generic: 20 rpm
+    - generic: 혈압
+    - generic: 170 bpm
+    - button "바이탈 입력":
+    - button "방문목적"
+    - button "보호자메모":
+      - text: 보호자메모
+    - button "환자메모"
+    - button "수납메모" [disabled]
+    - generic: 영상
+    - generic: DEN-341 영상 replay m531
+    - generic: 상태
+    - generic: 판독중
+  - button "환자 정보 처음으로 이동" [disabled]:
+  - button "환자 정보 끝으로 이동":
+  - button "종합소견 접기" [expanded] [pressed]: 종합소견
+  - complementary:
+    - button "영상검사 이력 목록 접기":
+    - generic: 영상검사 이력
+    - generic: "1"
+    - button "정렬":
+    - button "필터":
+    - button "26.05.01 1" [expanded]:
+      - generic: 26.05.01
+      - generic: "1"
+    - button "복부 초음파 Ultrasound · 복부 이수지 · 26.05.01 10:34":
+      - generic: 복부 초음파
+      - generic: Ultrasound · 복부
+      - generic: 이수지 · 26.05.01 10:34
+  - button "영상검사 이력 패널 접기" [expanded] [pressed]:
+  - heading "영상검사 Order 상세" [level=1]
+  - generic: IMG-LIVE-D7FC426A-7E93-4F6B-84FC-2B59B5CF9004
+  - button "PACS"
+  - button "담당하기":
+    - text: 담당하기
+  - generic: 요청 일시
+  - generic: 26.05.31 09:51
+  - generic: 판독중
+  - generic: 검사
+  - generic: DEN-341 영상 replay m531
+  - generic: Modality
+  - generic: 영상
+  - generic: 촬영 부위
+  - generic: DEN-341 영상 replay m531
+  - generic: 요청 수의사
+  - generic: 이수지
+  - generic: 검사 담당
+  - generic: 미지정
+  - generic: 병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
+  - button "Order 상세정보 접기" [expanded]:
+  - generic: Order 상세정보
+  - generic: "1"
+  - generic: 같은 차트 기준
+  - group "테이블 보기 밀도":
+    - button "좁게 보기"
+    - button "기본 보기"
+    - button "넓게 보기" [pressed]
+  - button "PACS"
+  - table:
+    - rowgroup:
+      - row "검사분류 검사명 검사명(영문) 요청자 요청 일시 검사 담당자":
+        - columnheader "검사분류"
+        - columnheader "검사명"
+        - columnheader "검사명(영문)"
+        - columnheader "요청자"
+        - columnheader "요청 일시"
+        - columnheader "검사 담당자"
+    - rowgroup:
+      - row "US DEN-341 영상 replay m531 영상 DEN-341 영상 replay m531 이수지 26.05.31 09:51 미지정":
+        - cell "US":
+          - generic: US
+        - cell "DEN-341 영상 replay m531"
+        - cell "영상 DEN-341 영상 replay m531"
+        - cell "이수지":
+          - generic: 이수지
+        - cell "26.05.31 09:51":
+          - generic: 26.05.31 09:51
+        - cell "미지정":
+          - generic: 미지정
+  - heading "스터디 판독의견" [level=2]
+  - generic: B
+  - generic: I
+  - generic: T
+  - generic: link
+  - generic: list
+  - generic: Findings
+  - textbox "영상 판독 내용"
+  - generic: Imaging Dx
+  - textbox "Imaging Dx"
+  - generic: DDx
+  - textbox "DDx": 이물, 급성 위장관염, 식이성 구토
+  - generic: Impression
+  - textbox "영상 종합소견"
+  - generic: Recommendation
+  - textbox "Recommendation": CBC 결과와 임상 증상을 종합해 추적 관찰합니다.
+  - heading "첨부자료" [level=2]
+  - generic: "0"
+  - button "첨부자료 추가":
+    - text: 추가
+  - generic: 첨부자료 없음
+  - complementary:
+    - heading "종합소견" [level=2]
+    - generic: "0"
+    - heading "같은 차트 내 Order" [level=3]
+    - generic: "0"
+    - table:
+      - rowgroup
+    - generic: 보호자 공유용 종합 코멘트
+    - generic: B
+    - generic: I
+    - generic: T
+    - generic: link
+    - generic: list
+    - textbox "영상 종합 코멘트": "- 종합소견 text - 보호자에게 CBC 결과와 함께 안내"
+    - generic: 미디어
+    - generic: 미디어 첨부 없음
+    - generic: 첨부 파일
+    - generic: 첨부 파일 없음
+    - button "취소"
+    - button "저장"
+- region "Notifications alt+T"
+- alert

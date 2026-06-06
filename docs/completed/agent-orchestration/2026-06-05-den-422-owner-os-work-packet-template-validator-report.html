@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-422 Owner OS Work Packet Template And Validator</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f8;
+        --paper: #ffffff;
+        --ink: #17202a;
+        --muted: #657383;
+        --line: #d9e0e7;
+        --accent: #2f6f73;
+        --accent-soft: #e8f3f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 20px 72px;
+      }
+
+      article {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 36px;
+        box-shadow: 0 18px 40px rgba(16, 24, 40, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(30px, 5vw, 44px);
+        line-height: 1.1;
+      }
+
+      h2 {
+        margin: 34px 0 12px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0 0 14px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef2f5;
+        padding: 2px 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.94em;
+      }
+
+      .meta {
+        color: var(--muted);
+      }
+
+      .callout {
+        border-left: 4px solid var(--accent);
+        border-radius: 10px;
+        background: var(--accent-soft);
+        padding: 16px 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-422 Owner OS Work Packet Template And Validator</h1>
+        <p class="meta">Human Review handoff · 2026-06-05 · Project: CLAiR Owner OS Implementation</p>
+
+        <h2>요약</h2>
+        <p>
+          Owner OS가 넓은 요청을 바로 실행하지 않고, 실행 가능한 작업 패킷으로 고정할 수 있는 템플릿과
+          필수 필드 validator를 추가했다. 이제 작업 패킷에는 범위, 금지된 부작용, 승인 게이트, 검증,
+          eval, trace, parent model tier, 5.5 승격 판단, subagent 비용 근거가 빠지면 안 된다.
+        </p>
+
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li><code>docs/_meta/templates/owner-os-work-packet.md</code>: 재사용 가능한 Owner OS work packet 템플릿 추가.</li>
+          <li><code>docs/product/service/owner-os-work-packet-examples.md</code>: good/bad 예시 추가.</li>
+          <li><code>scripts/validate-owner-os-packets.mjs</code>: Markdown fenced block 기반 필수 필드 validator 추가.</li>
+          <li><code>package.json</code>: <code>npm run owner-os:packet:check</code> 명령 추가.</li>
+          <li><code>docs/work/agent-orchestration/OWNER-OS-PR-003-work-packet-template-validator.md</code>: DEN-422 repo work item 추가.</li>
+        </ul>
+
+        <h2>왜 중요한가</h2>
+        <div class="callout">
+          <p>
+            이 작업은 Owner OS의 실행 단위를 표준화한다. 앞으로 Codex가 어떤 모델 tier로 일할지,
+            언제 5.5로 승격할지, 서브에이전트를 왜 쓰는지, 어떤 검증과 trace를 남길지 패킷에서
+            먼저 확인할 수 있다.
+          </p>
+        </div>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run owner-os:packet:check</code>: 통과. 템플릿과 good example은 통과하고 bad example은 의도대로 거부된다.</li>
+          <li><code>npm run docs:check</code>: 통과. 885개 docs/agent markdown 내부 참조가 정상이다.</li>
+        </ul>
+
+        <h2>제외 범위와 리스크</h2>
+        <ul>
+          <li>OpenAI API 호출, 실제 multi-agent dispatch, Linear 자동 상태 변경은 구현하지 않았다.</li>
+          <li>validator는 YAML 전체 파서가 아니라 Owner OS packet 구조에 필요한 key path와 list item 존재를 검사하는 deterministic checker다.</li>
+          <li>다음 DEN-423 eval dataset과 DEN-424 trace contract는 이 패킷 필드를 재사용해야 한다.</li>
+        </ul>
+
+        <h2>다음 단계</h2>
+        <p>
+          다음 순서는 <code>DEN-423</code>에서 scenario eval dataset과 judge rubric을 만들고,
+          이 템플릿의 필드를 기준으로 라우팅 품질과 패킷 완성도를 평가하는 것이다.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

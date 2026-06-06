@@ -1,0 +1,327 @@
+- button "clair-demo 워크스페이스 선택":
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open
+  - button "고객센터":
+- complementary
+- button "탭 뒤로가기":
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "홈" [selected]:
+    - generic: 홈
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - complementary
+  - tablist "홈 보기":
+    - tab "대시보드 보기" [selected]: 홈
+    - tab "업무 현황"
+  - paragraph: 오늘 운영과 내 담당 업무를 한 화면에서 표시
+  - region "다음 행동":
+    - heading "다음 행동" [level=2]
+    - paragraph: 수의사 기준으로 먼저 처리할 업무와 판단 근거를 표시합니다.
+    - tablist "역할별 다음 행동 보기":
+      - tab "프론트 데스크"
+      - tab "수의사" [selected]
+      - tab "간호사"
+      - tab "수납 관리자"
+      - tab "병원 관리자"
+    - article:
+      - generic: "1"
+      - generic: 임상병리검사
+      - heading "콩이 CBC 결과를 차트에 반영" [level=3]
+      - generic: 결과 완료
+      - generic: 콩이
+      - generic: 김하늘
+      - text: 10:00
+      - generic: CBC 입력 완료
+      - generic: 구토 재진
+      - generic: 보호자 설명 대기
+      - button "검사 결과 열기":
+        - text: 검사 결과 열기
+    - article:
+      - generic: "2"
+      - generic: 차트
+      - heading "코코 SOAP와 오더 마무리" [level=3]
+      - generic: 진행
+      - generic: 코코
+      - generic: 이지은
+      - text: 12:00
+      - generic: SOAP 작성 중
+      - generic: 오더 확정 전
+      - generic: 수납 연결 전
+      - button "차트 열기":
+        - text: 차트 열기
+    - complementary:
+      - paragraph: 역할 가설
+      - paragraph: 진료자는 새 환자보다 결과 확인과 차트 완료 병목을 먼저 처리해야 재방문 설명과 후속 오더가 끊기지 않는다.
+      - generic: 신호 검사 결과 완료, 차트 미완료, 담당의 지정 대기
+      - generic: 측정 결과 확인 5분 이내 / 미완성 차트 당일 0건
+    - generic: 현재 병목
+    - generic: 접수/예약
+    - generic: 대기/진료
+    - generic: 5건
+    - generic: 긴급/주의
+    - generic: 5건
+    - generic: 미배정 큐
+    - generic: 10건
+  - generic: 운영 병목 보드
+  - paragraph: 단계별 SLA, 지연, 미배정 큐를 기준으로 다음 조정 지점을 표시합니다.
+  - button "오늘"
+  - button "최근 7일"
+  - button "최근 30일"
+  - button "접수/예약 24건 최장 대기 45분 지연 1 미배정 3 지연 대기 안내":
+    - generic: 접수/예약
+    - generic: 24건
+    - generic: 최장 대기 45분
+    - generic: 지연 1
+    - generic: 미배정 3
+    - generic: 지연 대기 안내
+  - button "진료 3건 진료 시작 2건 지연 1 미배정 0 다음 차트 열기":
+    - generic: 진료
+    - generic: 3건
+    - generic: 진료 시작 2건
+    - generic: 지연 1
+    - generic: 미배정 0
+    - generic: 다음 차트 열기
+  - button "임상병리검사 3건 결과 확인 2건 지연 0 미배정 1 결과 확인 배정":
+    - generic: 임상병리검사
+    - generic: 3건
+    - generic: 결과 확인 2건
+    - generic: 지연 0
+    - generic: 미배정 1
+    - generic: 결과 확인 배정
+  - button "영상검사 1건 판독 대기 1건 지연 0 미배정 1 판독 담당 지정":
+    - generic: 영상검사
+    - generic: 1건
+    - generic: 판독 대기 1건
+    - generic: 지연 0
+    - generic: 미배정 1
+    - generic: 판독 담당 지정
+  - button "조제/처치 2건 처치 지연 1건 지연 1 미배정 1 처치 큐 정리":
+    - generic: 조제/처치
+    - generic: 2건
+    - generic: 처치 지연 1건
+    - generic: 지연 1
+    - generic: 미배정 1
+    - generic: 처치 큐 정리
+  - button "수납 4건 미수 1건 지연 1 미배정 2 미수 안내":
+    - generic: 수납
+    - generic: 4건
+    - generic: 미수 1건
+    - generic: 지연 1
+    - generic: 미배정 2
+    - generic: 미수 안내
+  - generic: 현재 병목은 접수/예약 단계입니다.
+  - generic: 오늘 업무 아웃라인
+  - paragraph: 환자 흐름과 담당 업무를 표 형태로 스캔합니다.
+  - button "업무 현황":
+    - text: 업무 현황
+  - button "전체 업무9"
+  - button "대기 환자5"
+  - button "긴급 확인5"
+  - button "공용 큐3"
+  - table:
+    - rowgroup:
+      - row "전체 업무 선택 업무 구분 상태 환자/보호자 담당 기한 이동":
+        - columnheader "전체 업무 선택":
+          - checkbox "전체 업무 선택"
+          - checkbox
+        - columnheader "업무"
+        - columnheader "구분"
+        - columnheader "상태"
+        - columnheader "환자/보호자"
+        - columnheader "담당"
+        - columnheader "기한"
+        - columnheader "이동"
+    - rowgroup:
+      - row "콩이 CBC 결과 확인 선택 콩이 CBC 결과 확인 결과를 확인하고 차트 또는 보호자 설명에 반영하세요. 진료 배정 콩이 김하늘 이수지 10:00 검사 결과 열기":
+        - cell "콩이 CBC 결과 확인 선택":
+          - checkbox "콩이 CBC 결과 확인 선택"
+          - checkbox
+        - cell "콩이 CBC 결과 확인 결과를 확인하고 차트 또는 보호자 설명에 반영하세요.":
+          - paragraph: 콩이 CBC 결과 확인
+          - paragraph: 결과를 확인하고 차트 또는 보호자 설명에 반영하세요.
+        - cell "진료":
+          - generic: 진료
+        - cell "배정":
+          - generic: 배정
+        - cell "콩이 김하늘":
+          - paragraph: 콩이
+          - paragraph: 김하늘
+        - cell "이수지"
+        - cell "10:00"
+        - cell "검사 결과 열기":
+          - button "검사 결과 열기"
+      - row "토리 진료 대기 선택 토리 진료 대기 환자 맥락을 확인하고 진료를 시작하세요. 진료 배정 토리 이도윤 이수지 10:10 차트 열기":
+        - cell "토리 진료 대기 선택":
+          - checkbox "토리 진료 대기 선택"
+          - checkbox
+        - cell "토리 진료 대기 환자 맥락을 확인하고 진료를 시작하세요.":
+          - paragraph: 토리 진료 대기
+          - paragraph: 환자 맥락을 확인하고 진료를 시작하세요.
+        - cell "진료":
+          - generic: 진료
+        - cell "배정":
+          - generic: 배정
+        - cell "토리 이도윤":
+          - paragraph: 토리
+          - paragraph: 이도윤
+        - cell "이수지"
+        - cell "10:10"
+        - cell "차트 열기":
+          - button "차트 열기"
+      - row "코코 차트 작성 마무리 선택 코코 차트 작성 마무리 SOAP와 오더 상태를 확인하고 기록을 마무리하세요. 진료 진행 코코 이지은 이수지 12:00 차트 열기":
+        - cell "코코 차트 작성 마무리 선택":
+          - checkbox "코코 차트 작성 마무리 선택"
+          - checkbox
+        - cell "코코 차트 작성 마무리 SOAP와 오더 상태를 확인하고 기록을 마무리하세요.":
+          - paragraph: 코코 차트 작성 마무리
+          - paragraph: SOAP와 오더 상태를 확인하고 기록을 마무리하세요.
+        - cell "진료":
+          - generic: 진료
+        - cell "진행":
+          - generic: 진행
+        - cell "코코 이지은":
+          - paragraph: 코코
+          - paragraph: 이지은
+        - cell "이수지"
+        - cell "12:00"
+        - cell "차트 열기":
+          - button "차트 열기"
+      - row "망고 혈액검사 결과 확인 선택 망고 혈액검사 결과 확인 검사 화면에서 요청 내용을 확인하세요. 임상병리 요청 망고 윤채원 미지정 10:30 검사 큐 열기":
+        - cell "망고 혈액검사 결과 확인 선택":
+          - checkbox "망고 혈액검사 결과 확인 선택"
+          - checkbox
+        - cell "망고 혈액검사 결과 확인 검사 화면에서 요청 내용을 확인하세요.":
+          - paragraph: 망고 혈액검사 결과 확인
+          - paragraph: 검사 화면에서 요청 내용을 확인하세요.
+        - cell "임상병리":
+          - generic: 임상병리
+        - cell "요청":
+          - generic: 요청
+        - cell "망고 윤채원":
+          - paragraph: 망고
+          - paragraph: 윤채원
+        - cell "미지정"
+        - cell "10:30"
+        - cell "검사 큐 열기":
+          - button "검사 큐 열기"
+      - row "토리 진료 순서 확인 선택 토리 진료 순서 확인 진료 순서를 확인하거나 데스크에 안내 메시지를 남기세요. 진료 지연 토리 이도윤 송원장 09:50 진료 대기열 열기":
+        - cell "토리 진료 순서 확인 선택":
+          - checkbox "토리 진료 순서 확인 선택"
+          - checkbox
+        - cell "토리 진료 순서 확인 진료 순서를 확인하거나 데스크에 안내 메시지를 남기세요.":
+          - paragraph: 토리 진료 순서 확인
+          - paragraph: 진료 순서를 확인하거나 데스크에 안내 메시지를 남기세요.
+        - cell "진료":
+          - generic: 진료
+        - cell "지연":
+          - generic: 지연
+        - cell "토리 이도윤":
+          - paragraph: 토리
+          - paragraph: 이도윤
+        - cell "송원장"
+        - cell "09:50"
+        - cell "진료 대기열 열기":
+          - button "진료 대기열 열기"
+      - row "마루 퇴원 체크 확인 선택 마루 퇴원 체크 확인 입원장에서 퇴원 안내와 수납 연결 상태를 확인하세요. 처치 요청 마루 김은서 미지정 11:00 입원장 열기":
+        - cell "마루 퇴원 체크 확인 선택":
+          - checkbox "마루 퇴원 체크 확인 선택"
+          - checkbox
+        - cell "마루 퇴원 체크 확인 입원장에서 퇴원 안내와 수납 연결 상태를 확인하세요.":
+          - paragraph: 마루 퇴원 체크 확인
+          - paragraph: 입원장에서 퇴원 안내와 수납 연결 상태를 확인하세요.
+        - cell "처치":
+          - generic: 처치
+        - cell "요청":
+          - generic: 요청
+        - cell "마루 김은서":
+          - paragraph: 마루
+          - paragraph: 김은서
+        - cell "미지정"
+        - cell "11:00"
+        - cell "입원장 열기":
+          - button "입원장 열기"
+      - row "코코 수액 처치 확인 선택 코코 수액 처치 확인 요청 사유와 환자 상태를 확인하고 처치 화면으로 이동하세요. 처치 지연 코코 이지은 송하윤 09:35 처치 열기":
+        - cell "코코 수액 처치 확인 선택":
+          - checkbox "코코 수액 처치 확인 선택"
+          - checkbox
+        - cell "코코 수액 처치 확인 요청 사유와 환자 상태를 확인하고 처치 화면으로 이동하세요.":
+          - paragraph: 코코 수액 처치 확인
+          - paragraph: 요청 사유와 환자 상태를 확인하고 처치 화면으로 이동하세요.
+        - cell "처치":
+          - generic: 처치
+        - cell "지연":
+          - generic: 지연
+        - cell "코코 이지은":
+          - paragraph: 코코
+          - paragraph: 이지은
+        - cell "송하윤"
+        - cell "09:35"
+        - cell "처치 열기":
+          - button "처치 열기"
+      - row "망고 혈액 샘플 채취 선택 망고 혈액 샘플 채취 검사 화면에서 요청 내용을 확인하세요. 임상병리 요청 망고 윤채원 미지정 10:20 검사 큐 열기":
+        - cell "망고 혈액 샘플 채취 선택":
+          - checkbox "망고 혈액 샘플 채취 선택"
+          - checkbox
+        - cell "망고 혈액 샘플 채취 검사 화면에서 요청 내용을 확인하세요.":
+          - paragraph: 망고 혈액 샘플 채취
+          - paragraph: 검사 화면에서 요청 내용을 확인하세요.
+        - cell "임상병리":
+          - generic: 임상병리
+        - cell "요청":
+          - generic: 요청
+        - cell "망고 윤채원":
+          - paragraph: 망고
+          - paragraph: 윤채원
+        - cell "미지정"
+        - cell "10:20"
+        - cell "검사 큐 열기":
+          - button "검사 큐 열기"
+      - row "보리 입원 바이탈 체크 선택 보리 입원 바이탈 체크 입원장에서 바이탈 체크 항목과 환자 상태를 확인하세요. 처치 요청 보리 박서연 송하윤 10:10 입원장 열기":
+        - cell "보리 입원 바이탈 체크 선택":
+          - checkbox "보리 입원 바이탈 체크 선택"
+          - checkbox
+        - cell "보리 입원 바이탈 체크 입원장에서 바이탈 체크 항목과 환자 상태를 확인하세요.":
+          - paragraph: 보리 입원 바이탈 체크
+          - paragraph: 입원장에서 바이탈 체크 항목과 환자 상태를 확인하세요.
+        - cell "처치":
+          - generic: 처치
+        - cell "요청":
+          - generic: 요청
+        - cell "보리 박서연":
+          - paragraph: 보리
+          - paragraph: 박서연
+        - cell "송하윤"
+        - cell "10:10"
+        - cell "입원장 열기":
+          - button "입원장 열기"
+  - complementary
+- region "Notifications alt+T"
+- alert

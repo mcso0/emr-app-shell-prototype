@@ -1,0 +1,64 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open&aside=history&right=closed
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open&aside=history&right=closed
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open&aside=history&right=closed
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open&aside=history&right=closed
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open&aside=history&right=closed
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open&aside=history&right=closed
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open&aside=history&right=closed
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open&aside=history&right=closed
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open&aside=history&right=closed
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open&aside=history&right=closed
+  - button "고객센터":
+- complementary:
+  - generic: 임상병리검사
+  - button "사이드 패널 접기":
+  - group "임상병리검사 목록 보기":
+    - button "오더별" [pressed]
+    - button "차트별"
+  - button "이전 날짜":
+  - button "- 날짜 선택":
+    - generic: "-"
+    - generic: 오늘
+  - button "다음 날짜":
+  - generic: 검사 대기열
+  - generic: "0"
+  - button "정렬":
+  - button "필터":
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "검사" [selected]:
+    - generic: 검사
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - complementary:
+    - button "임상병리검사 이력 목록 접기":
+    - generic: 임상병리검사 이력
+    - generic: "0"
+    - button "정렬":
+    - button "필터":
+  - generic: 검사 대기열에서 항목을 선택해 주세요.
+  - complementary
+- region "Notifications alt+T"
+- alert

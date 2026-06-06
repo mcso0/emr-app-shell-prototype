@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-421 Owner OS Router Skill Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f5f7f8;
+        color: #17202a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        box-sizing: border-box;
+        max-width: 1020px;
+        margin: 0 auto;
+        padding: 46px 24px 72px;
+      }
+      article {
+        border: 1px solid #d9e0e7;
+        border-radius: 12px;
+        background: #fff;
+        padding: 32px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        line-height: 1.22;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 19px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d9e0e7;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #d9e0e7;
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #eef3f5;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      code {
+        border-radius: 5px;
+        background: #e9eef2;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+      .meta {
+        color: #667281;
+        font-size: 13px;
+      }
+      .callout {
+        border-left: 4px solid #157f78;
+        border-radius: 8px;
+        background: #f0f7f6;
+        padding: 15px 17px;
+      }
+      .warn {
+        border-left-color: #b54708;
+        background: #fff5eb;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-421 Owner OS Router Skill</h1>
+        <p class="meta">Completed for Human Review on 2026-06-05. Project: CLAiR Owner OS Implementation.</p>
+
+        <h2>Summary</h2>
+        <p>
+          Added the repo-local <code>clair-owner-os-router</code> skill. It routes broad Owner OS requests before
+          implementation by classifying task type, depth level, autonomy level, approval gates, source-doc needs,
+          output shape, parent model tier, 5.5 escalation posture, and subagent cost posture.
+        </p>
+
+        <h2>What Changed</h2>
+        <ul>
+          <li>Created <code>.agents/skills/clair-owner-os-router/SKILL.md</code>.</li>
+          <li>Created <code>.agents/skills/clair-owner-os-router/agents/openai.yaml</code>.</li>
+          <li>Added <code>OWNER-OS-PR-002</code> repo work item and listed it in <code>docs/work/index.md</code>.</li>
+          <li>Updated <code>docs/_meta/agent-rag-map.md</code> with Owner OS routing source-doc guidance.</li>
+          <li>Recorded the planning change in <code>docs/product/changelog.md</code>.</li>
+          <li>Connected <code>codex-agent-router</code> as an optional read-only subagent layer inside a tiered parent-model policy.</li>
+        </ul>
+
+        <h2>Routing Behavior</h2>
+        <ul>
+          <li>Classifies requests as <code>answer</code>, <code>planning</code>, <code>docs</code>, <code>code</code>, <code>review</code>, <code>qa</code>, <code>linear</code>, or <code>safety</code>.</li>
+          <li>Uses progressive depth levels <code>L0</code> through <code>L4</code>.</li>
+          <li>Separates autonomy levels from <code>answer_only</code> through <code>external_action_gated</code>.</li>
+          <li>Stops before approval-gated operations and routes safety reviews to <code>$emr-owner-safety-os</code>.</li>
+          <li>Routes Linear work through <code>$manual-linear-ops</code> and cost-justified custom subagent selection through <code>$codex-agent-router</code>.</li>
+          <li>Allows lower-cost parent models for simple low-risk work and escalates to 5.5 for ambiguity, safety, broad synthesis, failed verification, or approval-gated scope.</li>
+          <li>Subagent summaries are evidence, not final authority.</li>
+        </ul>
+
+        <h2>Scenario Dry Run</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Expected Router Behavior</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>이 요청을 작업 패킷으로 만들어줘</code></td>
+              <td>L2 packet draft</td>
+              <td>Pass: skill defines packet draft output.</td>
+            </tr>
+            <tr>
+              <td><code>이거 바로 구현해줘</code> with unclear scope</td>
+              <td>Ask for scope or draft packet before editing</td>
+              <td>Pass: skill blocks direct implementation when scope is unclear.</td>
+            </tr>
+            <tr>
+              <td><code>remote Supabase에서 확인해줘</code></td>
+              <td>Stop for explicit approval</td>
+              <td>Pass: approval gates list remote Supabase.</td>
+            </tr>
+            <tr>
+              <td><code>안전 점검 게이트 열어줘</code></td>
+              <td>Route to <code>$emr-owner-safety-os</code></td>
+              <td>Pass: safety handoff is explicit.</td>
+            </tr>
+            <tr>
+              <td><code>리니어 프로젝트랑 이슈로 쪼개줘</code></td>
+              <td>Route through <code>$manual-linear-ops</code></td>
+              <td>Pass: Linear handoff is explicit.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Verification</h2>
+        <ul>
+          <li><code>npm run docs:check</code> passed.</li>
+          <li>Manual skill structure validation passed: frontmatter exists, name is valid hyphen-case, description is present and within limits.</li>
+          <li>No <code>TODO</code> placeholders remain in the new skill or work item.</li>
+        </ul>
+
+        <h2>Caveat</h2>
+        <div class="callout warn">
+          <p>
+            The provided <code>quick_validate.py</code> script could not run in the available Python environments because
+            <code>PyYAML</code> is not installed. The equivalent basic checks were run with a local Node script instead.
+          </p>
+        </div>
+
+        <h2>Out Of Scope</h2>
+        <ul>
+          <li>CLI implementation.</li>
+          <li>Dashboard implementation.</li>
+          <li>OpenAI API integration.</li>
+          <li>Automatic Linear mutation or multi-agent dispatch.</li>
+          <li>Remote Supabase, production deploy, real data, payment, email, or provider integration.</li>
+        </ul>
+
+        <h2>Next Step</h2>
+        <div class="callout">
+          <p>
+            Start <code>DEN-422</code>: add the work packet template and required-field validator.
+          </p>
+        </div>
+      </article>
+    </main>
+  </body>
+</html>

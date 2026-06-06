@@ -1,0 +1,4 @@
+interface:
+  display_name: "CLAiR Owner OS Router"
+  short_description: "Route Owner OS requests into safe work packets"
+  default_prompt: "Use $clair-owner-os-router to classify this request and draft the safest next Owner OS action."
