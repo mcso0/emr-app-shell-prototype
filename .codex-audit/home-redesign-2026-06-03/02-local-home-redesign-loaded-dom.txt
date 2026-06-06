@@ -1,0 +1,51 @@
+- main:
+  - text: CLAiR EMR
+  - generic: KO
+  - heading "CLAiR EMR에 로그인" [level=1]
+  - paragraph: 병원 워크스페이스에 접속하려면 계정 정보를 입력하세요.
+  - status:
+    - paragraph: 로그인이 필요하거나 세션이 만료되었습니다.
+    - paragraph: 계정 확인 후 요청한 워크스페이스로 다시 이동합니다.
+  - generic: 이메일
+  - textbox "이메일":
+    - /placeholder: name@hospital.com
+  - paragraph: 등록된 이메일 또는 초대받은 이메일을 입력하세요.
+  - generic: 비밀번호
+  - textbox "비밀번호"
+  - button "로그인"
+  - generic: 초대 기반 가입
+  - generic: 관리자에게 문의
+  - complementary:
+    - paragraph: Development controls
+    - heading "MVP 테스트 옵션" [level=2]
+    - paragraph: 현재는 Supabase Auth 연결 전 mock session으로 진입합니다.
+    - group "역할 선택":
+      - generic: 역할 선택
+      - button "프론트 데스크 역할 선택" [pressed]:
+        - generic: 프론트 데스크
+        - generic: 접수, 예약, 보호자 응대 흐름을 확인합니다.
+      - button "수의사 역할 선택":
+        - generic: 수의사
+        - generic: 진료 차트, 오더, 검사 결과 맥락을 확인합니다.
+      - button "간호사 역할 선택":
+        - generic: 간호사
+        - generic: 검사, 처치, 조제 보조 업무 흐름을 확인합니다.
+      - button "수납 관리자 역할 선택":
+        - generic: 수납 관리자
+        - generic: 청구 묶음, 미납, 결제 흐름을 확인합니다.
+      - button "병원 관리자 역할 선택":
+        - generic: 병원 관리자
+        - generic: 운영자 관점의 권한 mock 기반을 확인합니다.
+    - group "로그인 유지":
+      - generic: 로그인 유지
+      - radio "이번 탭만 현재 브라우저 탭에서만 로그인 상태를 유지합니다." [checked]
+      - generic: 이번 탭만
+      - generic: 현재 브라우저 탭에서만 로그인 상태를 유지합니다.
+      - radio "브라우저에 유지 새로고침 뒤에도 역할 선택을 유지합니다."
+      - generic: 브라우저에 유지
+      - generic: 새로고침 뒤에도 역할 선택을 유지합니다.
+    - paragraph: 현재 로그인
+    - paragraph: 로그인 전
+- region "Notifications alt+T"
+- button "Open Next.js Dev Tools":
+- alert

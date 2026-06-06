@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-440 검사/오더 검색 DB 계약 경계 확인 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f8f9;
+        --card: #ffffff;
+        --ink: #17202a;
+        --muted: #5e6b78;
+        --line: #d8e0e6;
+        --accent: #176b87;
+        --warn: #8a5a00;
+        --danger: #9f2f2f;
+        --ok: #1f7a4d;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 40px 20px 72px;
+      }
+      header {
+        margin-bottom: 28px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 34px;
+        line-height: 1.18;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 28px 0 12px;
+        font-size: 21px;
+      }
+      h3 {
+        margin: 18px 0 8px;
+        font-size: 17px;
+      }
+      p { margin: 8px 0; }
+      .muted { color: var(--muted); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 20px 0 28px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .metric {
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 800;
+      }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .danger { color: var(--danger); }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      th, td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #eaf1f3;
+        color: #283746;
+        font-weight: 700;
+      }
+      tr:last-child td { border-bottom: 0; }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #edf2f4;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      ul { margin: 8px 0 0; padding-left: 20px; }
+      li { margin: 5px 0; }
+      .callout {
+        border-left: 4px solid var(--accent);
+        background: #edf6f8;
+        padding: 14px 16px;
+        border-radius: 0 8px 8px 0;
+      }
+      @media (max-width: 860px) {
+        .grid { grid-template-columns: 1fr; }
+        h1 { font-size: 28px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="muted">DEN-440 · Owner OS safety review · 2026-06-06</p>
+        <h1>검사/오더 검색 DB 계약 경계 확인 보고서</h1>
+        <p>
+          이 보고서는 검사/오더 검색이 현재 어디에서 데이터를 공급받는지, 어떤 DB 계약이 이미 존재하는지,
+          그리고 live Supabase 검증이나 migration/RLS 변경이 필요한 지점을 분리한다.
+        </p>
+      </header>
+
+      <section class="grid" aria-label="요약 지표">
+        <div class="card">
+          <div>Owner OS 판정</div>
+          <div class="metric danger">L4 Safety</div>
+          <p class="muted">DB, Supabase, RLS, server boundary 관련</p>
+        </div>
+        <div class="card">
+          <div>코드 변경</div>
+          <div class="metric ok">없음</div>
+          <p class="muted">조사와 보고서 작성만 수행</p>
+        </div>
+        <div class="card">
+          <div>Live 검증</div>
+          <div class="metric warn">승인 필요</div>
+          <p class="muted">remote Supabase replay는 미수행</p>
+        </div>
+        <div class="card">
+          <div>결론</div>
+          <div class="metric warn">부분 연결</div>
+          <p class="muted">chart search는 DB 계약 있음, 일부 live gateway는 미완성</p>
+        </div>
+      </section>
+
+      <section class="callout">
+        <strong>최종 결론:</strong>
+        차트의 신규 Order 검색은 Supabase session 기준으로
+        <code>clair_list_order_catalog_chart_search</code> RPC를 통해 active workspace catalog와 active order set을 읽는
+        DB 계약이 존재한다. 다만 remote Supabase에서 실제 replay 검증은 승인 전 미수행이며, set confirmation,
+        live order-set expansion, live lab delete-lock, lab result/device ingestion은 별도 후속 범위다.
+      </section>
+
+      <h2>현재 데이터 공급 경계</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>흐름</th>
+            <th>현재 공급원</th>
+            <th>판정</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>차트 <code>+ Order</code> 검색</td>
+            <td><code>/hospital-admin/order-catalog?mode=chart-search</code></td>
+            <td>demo header면 mock gateway, Supabase session이면 live RPC gateway</td>
+          </tr>
+          <tr>
+            <td>차트 order confirmation</td>
+            <td><code>createSupabaseOrderCatalogGateway</code> 또는 demo gateway</td>
+            <td>individual catalog selection은 서버에서 재조회한 snapshot 사용</td>
+          </tr>
+          <tr>
+            <td>Order set selection</td>
+            <td>chart search에는 표시 가능</td>
+            <td>confirmation 단계에서는 현재 <code>unsupported_order_type</code>로 거부</td>
+          </tr>
+          <tr>
+            <td>병원관리 catalog admin read/mutation</td>
+            <td><code>order_catalog_items</code> table gateway</td>
+            <td>Supabase session에서 read/create/update/pause gateway가 존재</td>
+          </tr>
+          <tr>
+            <td>Lab/imaging 업무 화면</td>
+            <td><code>src/features/lab-imaging/data.ts</code> mock domain data</td>
+            <td>결과/장비 수신 화면 자체는 아직 live lab result DB read가 아님</td>
+          </tr>
+          <tr>
+            <td>Fulfillment queue read</td>
+            <td><code>/fulfillment/work-items</code></td>
+            <td>Supabase session이면 live fulfillment gateway 사용 가능</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>관련 DB 계약</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>계약</th>
+            <th>역할</th>
+            <th>상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>order_catalog_items</code></td>
+            <td>workspace-owned 개별 order catalog rows</td>
+            <td>local-first migration 및 Supabase table gateway 존재</td>
+          </tr>
+          <tr>
+            <td><code>order_sets</code>, <code>order_set_items</code></td>
+            <td>order set master와 포함 order 구성</td>
+            <td>migration/RLS/read contract는 있으나 live expansion gateway는 미구현</td>
+          </tr>
+          <tr>
+            <td><code>lab_test_categories</code>, <code>lab_test_items</code></td>
+            <td>검사 결과 항목 metadata</td>
+            <td>migration/RLS/read contract는 있으나 live delete-lock gateway는 미구현</td>
+          </tr>
+          <tr>
+            <td><code>order_catalog_lab_test_item_links</code></td>
+            <td>order catalog row와 검사 항목/category linkage</td>
+            <td>migration contract 존재, live linkage read/write 검증은 미수행</td>
+          </tr>
+          <tr>
+            <td><code>clair_list_order_catalog_chart_search</code></td>
+            <td>차트 검색용 active individual/set row snapshot 반환</td>
+            <td>repo-local RPC migration과 gateway mapping 존재</td>
+          </tr>
+          <tr>
+            <td><code>lab_test_item_delete_locks</code></td>
+            <td>linked order 또는 saved result 사용 여부 기반 삭제 잠금</td>
+            <td>view contract는 있으나 route의 Supabase gateway 연결은 없음</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>확인한 소스</h2>
+      <ul>
+        <li><code>src/app/api/workspaces/[workspaceId]/hospital-admin/order-catalog/route.ts</code></li>
+        <li><code>src/features/hospital-admin/server-order-catalog-core.ts</code></li>
+        <li><code>src/features/chart/module.tsx</code></li>
+        <li><code>src/features/chart/server-order-action-persistence-core.ts</code></li>
+        <li><code>src/features/lab-imaging/data.ts</code></li>
+        <li><code>supabase/migrations/20260520152000_hospital_admin_order_catalog_persistence.sql</code></li>
+        <li><code>supabase/migrations/20260527090000_order_catalog_chart_search_rpc.sql</code></li>
+        <li><code>supabase/migrations/20260528093000_order_catalog_staging_mutation_rls.sql</code></li>
+        <li><code>tests/hospital-admin-order-catalog-server.spec.ts</code></li>
+        <li><code>tests/chart-order-action-persistence-server.spec.ts</code></li>
+      </ul>
+
+      <h2>승인 필요한 작업</h2>
+      <ul>
+        <li>remote/live Supabase project에서 <code>clair_list_order_catalog_chart_search</code> staging replay</li>
+        <li>order set confirmation을 제품 범위에 넣을 경우 DB-backed expansion gateway와 confirmation 정책 구현</li>
+        <li>lab test item delete-lock을 live admin UX에 연결할 경우 Supabase gateway/route 구현</li>
+        <li>lab result, equipment receipt, device/provider ingestion을 실제 DB read/write로 연결하는 migration/RLS/API 작업</li>
+        <li>RLS 또는 server/API enforcement 변경</li>
+      </ul>
+
+      <h2>후속 이슈 제안</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>제안 이슈</th>
+            <th>목표</th>
+            <th>승인 게이트</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>01-01 Replay chart order catalog search on staging Supabase</td>
+            <td>RPC, RLS, workspace member read, active-only filter가 실제 staging DB에서 통과하는지 확인</td>
+            <td>remote Supabase validation</td>
+          </tr>
+          <tr>
+            <td>01-02 Implement DB-backed order set expansion boundary</td>
+            <td>set search 결과를 confirmation 가능한 snapshot 확장 경계로 연결할지 결정 및 구현</td>
+            <td>migration/RLS/server enforcement 가능성</td>
+          </tr>
+          <tr>
+            <td>01-03 Implement live lab item delete-lock read boundary</td>
+            <td>lab item linkage와 saved result usage 기반 삭제 잠금 route를 Supabase gateway로 연결</td>
+            <td>remote Supabase/RLS validation</td>
+          </tr>
+          <tr>
+            <td>02-01 Define lab result/device ingestion persistence scope</td>
+            <td>현재 mock lab/imaging result 화면을 실제 DB 계약으로 전환할 범위 정의</td>
+            <td>provider/device/PACS scope approval</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Owner OS Trace</h2>
+      <ul>
+        <li>classification: <code>safety</code> / <code>L4</code></li>
+        <li>parent model policy: <code>5.5</code> for DB, Supabase, RLS, server-boundary risk</li>
+        <li>subagent policy: not used; direct source inspection was cheaper than a separate read-only summary</li>
+        <li>approval gate: remote Supabase, migration, RLS, server enforcement, real data</li>
+        <li>implementation: no product code changes</li>
+      </ul>
+    </main>
+  </body>
+</html>

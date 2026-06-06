@@ -1,0 +1,759 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open&aside=closed
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open&aside=closed
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open&aside=closed
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open&aside=closed
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open&aside=closed
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open&aside=closed
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open&aside=closed
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open&aside=closed
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open&aside=closed
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open&aside=closed
+  - button "고객센터":
+- complementary:
+  - generic: 조제/처치
+  - button "사이드 패널 접기":
+  - group "오더 유형 필터":
+    - button "전체" [pressed]
+    - button "조제"
+    - button "처치"
+  - button "이전 날짜":
+  - button "26.04.29 (수) 날짜 선택":
+    - generic: 26.04.29 (수)
+    - generic: 오늘
+  - button "다음 날짜":
+  - generic: 전체 오더
+  - generic: "6"
+  - button "정렬":
+  - button "필터":
+  - button "검색":
+  - button "대기중 접기" [expanded]:
+    - generic: 대기중
+    - generic: "4"
+  - button "외래 Kong Synthetic · DEN-194 Guardian 01 Kong Synthetic DEN-341 조제 replay m531 더보기 조제 DEN-341 조제 replay m531 09:51 요청자 미지정 요청 담당 미지정" [pressed]:
+    - generic: 외래
+    - generic: Kong Synthetic
+    - generic: ·
+    - generic: DEN-194 Guardian 01
+    - button "Kong Synthetic DEN-341 조제 replay m531 더보기":
+    - generic: 조제
+    - generic: DEN-341 조제 replay m531
+    - generic: 09:51 요청자 미지정 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "외래 Nabi Synthetic · DEN-194 Guardian 02 Nabi Synthetic DEN-341 조제 replay m531 더보기 조제 DEN-341 조제 replay m531 09:45 요청자 미지정 요청 담당 미지정":
+    - generic: 외래
+    - generic: Nabi Synthetic
+    - generic: ·
+    - generic: DEN-194 Guardian 02
+    - button "Nabi Synthetic DEN-341 조제 replay m531 더보기":
+    - generic: 조제
+    - generic: DEN-341 조제 replay m531
+    - generic: 09:45 요청자 미지정 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "외래 Kong Synthetic · DEN-194 Guardian 01 Kong Synthetic 고정스테이징 처치 mprv3quc 더보기 처치 고정스테이징 처치 mprv3quc 09:51 요청자 미지정 요청 담당 미지정":
+    - generic: 외래
+    - generic: Kong Synthetic
+    - generic: ·
+    - generic: DEN-194 Guardian 01
+    - button "Kong Synthetic 고정스테이징 처치 mprv3quc 더보기":
+    - generic: 처치
+    - generic: 고정스테이징 처치 mprv3quc
+    - generic: 09:51 요청자 미지정 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "외래 Nabi Synthetic · DEN-194 Guardian 02 Nabi Synthetic 고정스테이징 처치 mprv3quc 더보기 처치 고정스테이징 처치 mprv3quc 09:45 요청자 미지정 요청 담당 미지정":
+    - generic: 외래
+    - generic: Nabi Synthetic
+    - generic: ·
+    - generic: DEN-194 Guardian 02
+    - button "Nabi Synthetic 고정스테이징 처치 mprv3quc 더보기":
+    - generic: 처치
+    - generic: 고정스테이징 처치 mprv3quc
+    - generic: 09:45 요청자 미지정 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "완료 접기" [expanded]:
+    - generic: 완료
+    - generic: "2"
+  - button "외래 준하 · 이순재 준하 고정스테이징 처치 mprv3quc 더보기 처치 고정스테이징 처치 mprv3quc 13:42 요청자 미지정 요청 담당 미지정":
+    - generic: 외래
+    - generic: 준하
+    - generic: ·
+    - generic: 이순재
+    - button "준하 고정스테이징 처치 mprv3quc 더보기":
+    - generic: 처치
+    - generic: 고정스테이징 처치 mprv3quc
+    - generic: 13:42 요청자 미지정 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+  - button "외래 Choco Synthetic · DEN-194 Guardian 05 Choco Synthetic 고정스테이징 처치 mprv3quc 더보기 처치 고정스테이징 처치 mprv3quc 04:43 요청자 미지정 요청 담당 미지정":
+    - generic: 외래
+    - generic: Choco Synthetic
+    - generic: ·
+    - generic: DEN-194 Guardian 05
+    - button "Choco Synthetic 고정스테이징 처치 mprv3quc 더보기":
+    - generic: 처치
+    - generic: 고정스테이징 처치 mprv3quc
+    - generic: 04:43 요청자 미지정 요청
+    - generic "담당 미지정":
+      - generic: 미지정
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "조제/처치" [selected]:
+    - generic: 조제/처치
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - generic "환자 컨텍스트 정보":
+    - generic: 환자
+    - generic: 코코
+    - generic: 보호자
+    - generic: 이지은
+    - generic: 품종
+    - generic: 코리안숏헤어
+    - generic: 나이
+    - generic: 8세
+    - generic: 성별
+    - generic: 중성화·암컷
+    - generic: 체중
+    - generic: 5.96 kg
+    - generic: 체온
+    - generic: 39.3 °C
+    - generic: 호흡
+    - generic: 20 rmp rpm
+    - generic: 혈압
+    - generic: 170 bpm
+    - button "바이탈 입력":
+    - button "방문목적"
+    - button "보호자메모":
+      - text: 보호자메모
+    - button "환자메모"
+    - button "수납메모" [disabled]
+  - button "환자 정보 처음으로 이동" [disabled]:
+  - button "환자 정보 끝으로 이동" [disabled]:
+  - complementary:
+    - button "조제 이력 목록 접기":
+    - generic: 조제 이력
+    - generic: "5"
+    - button "정렬":
+    - button "필터":
+    - button "검색":
+    - button "26.04.11 2" [expanded]:
+      - generic: 26.04.11
+      - generic: "2"
+    - generic: 10:30 요청
+    - generic: "[CBC] CBC 검사 세트"
+    - generic: 담당 김지선
+    - generic: 10:30 요청
+    - generic: Atorvastatin 20(mg) T 9:00 AM
+    - generic: 경구/기타
+    - generic: Atorvastatin 20(mg) T 9:00 AM
+    - generic: 담당 김지선
+    - button "26.03.12 2" [expanded]:
+      - generic: 26.03.12
+      - generic: "2"
+    - generic: 10:30 요청
+    - generic: "[CBC] CBC 검사 세트"
+    - generic: 담당 김지선
+    - generic: 10:30 요청
+    - generic: Atorvastatin 20(mg) T 9:00 AM
+    - generic: 경구/기타
+    - generic: Atorvastatin 20(mg) T 9:00 AM
+    - generic: 담당 김지선
+    - button "26.03.10 1" [expanded]:
+      - generic: 26.03.10
+      - generic: "1"
+    - generic: 10:30 요청
+    - generic: 접종 및 기본 처치
+    - generic: 예방
+    - generic: 접종 및 기본 처치
+    - generic: 담당 김지선
+  - button "조제 이력 패널 열기":
+  - heading "조제 지시서" [level=1]
+  - generic: RX-260414-0006
+  - button "PDF 다운로드":
+    - text: PDF 다운로드
+  - button "출력하기":
+    - text: 출력하기
+  - button "담당하기":
+    - text: 담당하기
+  - generic: 요청 일시
+  - generic: 2026.04.14 10:30
+  - generic: 재요청
+  - generic: 환자 정보
+  - generic: 코코(8세) · 코리안숏헤어
+  - generic: 요청 수의사
+  - generic: 이수지
+  - generic: 조제 담당
+  - generic: 김미래
+  - generic: 조제 시작
+  - generic: 10:34
+  - group "오더 그룹 필터":
+    - button "전체 12" [pressed]:
+      - generic: 전체
+      - generic: "12"
+    - button "경구제 6":
+      - generic: 경구제
+      - generic: "6"
+    - button "기타 6":
+      - generic: 기타
+      - generic: "6"
+  - generic: 경구제 오더 그룹
+  - button "항생제 세트 A 접기" [expanded]:
+  - generic: 항생제 세트 A
+  - generic: "6"
+  - generic: 작업 완료 2/6
+  - button "수정이력조회":
+    - text: 수정이력조회
+  - button "필터 1"
+  - group "테이블 보기 밀도":
+    - button "좁게 보기" [pressed]
+    - button "기본 보기"
+    - button "넓게 보기"
+  - button "미지정":
+    - generic: 미지정
+  - button "담당하기":
+    - text: 담당하기
+  - table:
+    - rowgroup:
+      - row "전체 선택 오더명 name 컬럼 너비 조절 상태 status 컬럼 너비 조절 일수 days 컬럼 너비 조절 복용 doseTiming 컬럼 너비 조절 회분 servings 컬럼 너비 조절 용량 amount 컬럼 너비 조절 단위 unit 컬럼 너비 조절 수량 quantity 컬럼 너비 조절 제형 dosageForm 컬럼 너비 조절 보관 storage 컬럼 너비 조절 복약지도 medicationGuide 컬럼 너비 조절 담당 작업여부":
+        - columnheader "전체 선택":
+          - checkbox "전체 선택"
+          - checkbox
+        - columnheader "오더명 name 컬럼 너비 조절":
+          - generic: 오더명
+          - button "name 컬럼 너비 조절"
+        - columnheader "상태 status 컬럼 너비 조절":
+          - generic: 상태
+          - button "status 컬럼 너비 조절"
+        - columnheader "일수 days 컬럼 너비 조절":
+          - generic: 일수
+          - button "days 컬럼 너비 조절"
+        - columnheader "복용 doseTiming 컬럼 너비 조절":
+          - generic: 복용
+          - button "doseTiming 컬럼 너비 조절"
+        - columnheader "회분 servings 컬럼 너비 조절":
+          - generic: 회분
+          - button "servings 컬럼 너비 조절"
+        - columnheader "용량 amount 컬럼 너비 조절":
+          - generic: 용량
+          - button "amount 컬럼 너비 조절"
+        - columnheader "단위 unit 컬럼 너비 조절":
+          - generic: 단위
+          - button "unit 컬럼 너비 조절"
+        - columnheader "수량 quantity 컬럼 너비 조절":
+          - generic: 수량
+          - button "quantity 컬럼 너비 조절"
+        - columnheader "제형 dosageForm 컬럼 너비 조절":
+          - generic: 제형
+          - button "dosageForm 컬럼 너비 조절"
+        - columnheader "보관 storage 컬럼 너비 조절":
+          - generic: 보관
+          - button "storage 컬럼 너비 조절"
+        - columnheader "복약지도 medicationGuide 컬럼 너비 조절":
+          - generic: 복약지도
+          - button "medicationGuide 컬럼 너비 조절"
+        - columnheader "담당":
+          - generic: 담당
+        - columnheader "작업여부":
+          - generic: 작업여부
+    - rowgroup:
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 재요청 888 -> 888 bid -> sid 888 -> 888 8888.8 -> 8888.8 mmlg 88.8 -> 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "재요청":
+          - text: 재요청
+        - cell "888 -> 888":
+          - generic "888"
+          - generic: "->"
+          - generic "888"
+        - cell "bid -> sid":
+          - generic "bid"
+          - generic: "->"
+          - generic "sid"
+        - cell "888 -> 888":
+          - generic "888"
+          - generic: "->"
+          - generic "888"
+        - cell "8888.8 -> 8888.8":
+          - generic "8888.8"
+          - generic: "->"
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8 -> 88.8":
+          - generic "88.8"
+          - generic: "->"
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "용량이 0.4 T에서 0.5 T로 변경되었습니다 (+0.1 T)":
+        - cell "용량이 0.4 T에서 0.5 T로 변경되었습니다 (+0.1 T)":
+          - generic "용량이 0.4 T에서 0.5 T로 변경되었습니다 (+0.1 T)"
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 요청 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "요청":
+          - text: 요청
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 요청 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "요청":
+          - text: 요청
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 요청 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "요청":
+          - text: 요청
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 완료 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 김 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택" [disabled]
+          - checkbox [disabled]
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "완료":
+          - text: 완료
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell "김":
+          - generic "김미래": 김
+        - cell "완료":
+          - button "완료" [disabled]:
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 취소 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 김 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택" [disabled]
+          - checkbox [disabled]
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "취소":
+          - text: 취소
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell "김":
+          - generic "김미래": 김
+        - cell "완료":
+          - button "완료" [disabled]:
+            - text: 완료
+  - generic: 기타 오더 그룹
+  - button "항생제 세트 A 접기" [expanded]:
+  - generic: 항생제 세트 A
+  - generic: "6"
+  - generic: 작업 완료 2/6
+  - button "수정이력조회":
+    - text: 수정이력조회
+  - button "필터 1"
+  - group "테이블 보기 밀도":
+    - button "좁게 보기" [pressed]
+    - button "기본 보기"
+    - button "넓게 보기"
+  - button "미지정":
+    - generic: 미지정
+  - button "담당하기":
+    - text: 담당하기
+  - table:
+    - rowgroup:
+      - row "전체 선택 오더명 name 컬럼 너비 조절 상태 status 컬럼 너비 조절 일수 days 컬럼 너비 조절 복용 doseTiming 컬럼 너비 조절 회분 servings 컬럼 너비 조절 용량 amount 컬럼 너비 조절 단위 unit 컬럼 너비 조절 수량 quantity 컬럼 너비 조절 제형 dosageForm 컬럼 너비 조절 보관 storage 컬럼 너비 조절 복약지도 medicationGuide 컬럼 너비 조절 담당 작업여부":
+        - columnheader "전체 선택":
+          - checkbox "전체 선택"
+          - checkbox
+        - columnheader "오더명 name 컬럼 너비 조절":
+          - generic: 오더명
+          - button "name 컬럼 너비 조절"
+        - columnheader "상태 status 컬럼 너비 조절":
+          - generic: 상태
+          - button "status 컬럼 너비 조절"
+        - columnheader "일수 days 컬럼 너비 조절":
+          - generic: 일수
+          - button "days 컬럼 너비 조절"
+        - columnheader "복용 doseTiming 컬럼 너비 조절":
+          - generic: 복용
+          - button "doseTiming 컬럼 너비 조절"
+        - columnheader "회분 servings 컬럼 너비 조절":
+          - generic: 회분
+          - button "servings 컬럼 너비 조절"
+        - columnheader "용량 amount 컬럼 너비 조절":
+          - generic: 용량
+          - button "amount 컬럼 너비 조절"
+        - columnheader "단위 unit 컬럼 너비 조절":
+          - generic: 단위
+          - button "unit 컬럼 너비 조절"
+        - columnheader "수량 quantity 컬럼 너비 조절":
+          - generic: 수량
+          - button "quantity 컬럼 너비 조절"
+        - columnheader "제형 dosageForm 컬럼 너비 조절":
+          - generic: 제형
+          - button "dosageForm 컬럼 너비 조절"
+        - columnheader "보관 storage 컬럼 너비 조절":
+          - generic: 보관
+          - button "storage 컬럼 너비 조절"
+        - columnheader "복약지도 medicationGuide 컬럼 너비 조절":
+          - generic: 복약지도
+          - button "medicationGuide 컬럼 너비 조절"
+        - columnheader "담당":
+          - generic: 담당
+        - columnheader "작업여부":
+          - generic: 작업여부
+    - rowgroup:
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 재요청 888 -> 888 bid -> sid 888 -> 888 8888.8 -> 8888.8 mmlg 88.8 -> 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "재요청":
+          - text: 재요청
+        - cell "888 -> 888":
+          - generic "888"
+          - generic: "->"
+          - generic "888"
+        - cell "bid -> sid":
+          - generic "bid"
+          - generic: "->"
+          - generic "sid"
+        - cell "888 -> 888":
+          - generic "888"
+          - generic: "->"
+          - generic "888"
+        - cell "8888.8 -> 8888.8":
+          - generic "8888.8"
+          - generic: "->"
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8 -> 88.8":
+          - generic "88.8"
+          - generic: "->"
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "용량이 0.4 T에서 0.5 T로 변경되었습니다 (+0.1 T)":
+        - cell "용량이 0.4 T에서 0.5 T로 변경되었습니다 (+0.1 T)":
+          - generic "용량이 0.4 T에서 0.5 T로 변경되었습니다 (+0.1 T)"
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 요청 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "요청":
+          - text: 요청
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 요청 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "요청":
+          - text: 요청
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 요청 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택"
+          - checkbox
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "요청":
+          - text: 요청
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell:
+          - combobox "Amoxicillin 500(mg) C head 1mg 담당 변경":
+            - generic: 미지정
+          - textbox: unassigned-technician
+        - cell "완료":
+          - button "완료":
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 완료 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 김 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택" [disabled]
+          - checkbox [disabled]
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "완료":
+          - text: 완료
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell "김":
+          - generic "김미래": 김
+        - cell "완료":
+          - button "완료" [disabled]:
+            - text: 완료
+      - row "Amoxicillin 500(mg) C head 1mg 선택 Amoxicillin 500(mg) C head 1mg 취소 888 sid 88 8888.8 mmlg 88.8 T 실온보관 식전무관 김 완료":
+        - cell "Amoxicillin 500(mg) C head 1mg 선택":
+          - checkbox "Amoxicillin 500(mg) C head 1mg 선택" [disabled]
+          - checkbox [disabled]
+        - cell "Amoxicillin 500(mg) C head 1mg":
+          - generic "Amoxicillin 500(mg) C head 1mg"
+        - cell "취소":
+          - text: 취소
+        - cell "888":
+          - generic "888"
+        - cell "sid":
+          - generic "sid"
+        - cell "88":
+          - generic "88"
+        - cell "8888.8":
+          - generic "8888.8"
+        - cell "mmlg":
+          - generic "mmlg"
+        - cell "88.8":
+          - generic "88.8"
+        - cell "T":
+          - generic "T"
+        - cell "실온보관":
+          - generic "실온보관"
+        - cell "식전무관":
+          - generic "식전무관"
+        - cell "김":
+          - generic "김미래": 김
+        - cell "완료":
+          - button "완료" [disabled]:
+            - text: 완료
+  - complementary
+- region "Notifications alt+T"
+- alert

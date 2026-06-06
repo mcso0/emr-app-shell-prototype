@@ -2,6 +2,11 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-06-06
+
+- `added`: DEN-433 defines the shared border, radius, and shadow depth contract for common EMR surfaces and follow-up screen implementation issues.
+- `added`: DEN-434 defines the shared empty state and info box contract, including loading/error/permission separation and E1 action affordance inside passive state surfaces.
+
 ## 2026-05-31
 
 - `changed`: DEN-366 hardens the local-first billing state semantics behind the payment summary UX: `미납 처리` now needs a reason at the API/server boundary, while `issued` without a reason remains `수납진행`/waiting rather than overdue.

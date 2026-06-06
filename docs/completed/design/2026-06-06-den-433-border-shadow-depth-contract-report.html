@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-433 Border/Shadow Depth Contract Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8fafc;
+        color: #111827;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 40px 24px 56px;
+      }
+      section {
+        margin-top: 24px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+      }
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+        color: #374151;
+        font-weight: 700;
+      }
+      h1,
+      h2 {
+        margin: 0;
+        line-height: 1.3;
+      }
+      h1 {
+        font-size: 26px;
+      }
+      h2 {
+        font-size: 17px;
+      }
+      p {
+        margin: 10px 0 0;
+      }
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f3f4f6;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.94em;
+      }
+      .meta {
+        margin-top: 8px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .review-box {
+        border-color: #bfdbfe;
+        background: #eff6ff;
+      }
+      .review-box strong {
+        color: #1d4ed8;
+      }
+      .visual-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .sample {
+        min-height: 132px;
+        padding: 14px;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+      .sample h3 {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      .sample p {
+        color: #4b5563;
+        font-size: 13px;
+      }
+      .sample-flat {
+        border: 1px solid #e5e7eb;
+        box-shadow: none;
+      }
+      .sample-selected {
+        border: 1px solid #38bdf8;
+        background: #f0f9ff;
+        box-shadow: none;
+      }
+      .sample-action {
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+      }
+      .sample-floating {
+        border: 1px solid #e5e7eb;
+        box-shadow:
+          0 10px 15px -3px rgb(0 0 0 / 0.1),
+          0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+      .do-dont {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .do-dont > div {
+        padding: 14px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+      .decision {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 4px 8px;
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        color: #374151;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      @media (max-width: 760px) {
+        .visual-grid,
+        .do-dont {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-433 Border/Shadow Depth Contract Report</h1>
+      <p class="meta">2026-06-06 · 공통 UX/UI 기준 정리 및 화면 적용</p>
+
+      <section>
+        <h2>요약</h2>
+        <p>
+          CLAiR EMR의 border, radius, shadow depth 사용 기준을 공통 디자인시스템 contract로 정리했다.
+          후속 대기열, 환자정보바, SOAP, tab/table density, empty/info box 적용 이슈가 같은 기준을 참조할 수 있는 상태다.
+        </p>
+      </section>
+
+      <section class="review-box">
+        <h2>승욱이 지금 확인할 것</h2>
+        <p>
+          이 이슈는 화면 구현 결과물이 아니라 <strong>후속 UI 작업을 판단할 기준 승인</strong>이야.
+          지금 볼 것은 "이 기준으로 다음 화면들을 고쳐도 되는가"야.
+        </p>
+        <ul>
+          <li>정보만 담는 카드/패널/테이블은 shadow 없이 flat하게 두는 방향이 CLAiR 화면에 맞는지</li>
+          <li>클릭해서 열기/이동/추가/생성/삭제/조회/메뉴 실행이 가능한 요소에는 가장 낮은 E1 shadow를 주는 기준이 맞는지</li>
+          <li>더 강한 shadow는 popover, drawer, dialog 같은 떠 있는 UI에만 쓰는 제한이 괜찮은지</li>
+          <li>선택/경고/focus 상태를 shadow가 아니라 border, surface, status token으로 표현하는 기준이 납득되는지</li>
+        </ul>
+        <span class="decision">승인하면 다음 화면 이슈에서 이 기준을 적용</span>
+      </section>
+
+      <section>
+        <h2>주요 결정</h2>
+        <ul>
+          <li>정보만 담는 화면 안쪽 UI는 flat이 기본이고, 구조 구분은 surface와 1px border가 담당한다.</li>
+          <li>액션 가능한 요소는 가장 낮은 E1 shadow를 써서 클릭 가능성을 미리 알려준다.</li>
+          <li>중간 이상 shadow는 실제 depth가 있는 floating surface, drawer, dialog, command overlay에만 제한한다.</li>
+          <li>선택, focus, dirty, warning, danger, disabled 상태는 generic shadow가 아니라 state/status token으로 표현한다.</li>
+          <li>새 elevation token은 이번 이슈에서 만들지 않고, 반복 역할이 증명된 구현 이슈에서만 제안한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>기준 요약</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>구분</th>
+              <th>기준</th>
+              <th>후속 화면에서 확인할 것</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>일반 패널/카드</td>
+              <td>1px hairline border + flat surface</td>
+              <td>정보-only 카드가 여러 겹으로 떠 보이지 않고, 내용 위계가 border/간격/타이포로 읽히는지</td>
+            </tr>
+            <tr>
+              <td>액션 가능한 요소</td>
+              <td>E1 lowest shadow + hairline border</td>
+              <td>열기/이동/추가/생성/삭제/조회/메뉴 트리거가 눌러도 되는 요소로 미리 보이는지</td>
+            </tr>
+            <tr>
+              <td>선택 상태</td>
+              <td>selected surface + selected border</td>
+              <td>선택된 row/card가 hover와 구분되지만 과하게 튀지 않는지</td>
+            </tr>
+            <tr>
+              <td>상태 안내</td>
+              <td>info/warning/danger/success status border와 surface</td>
+              <td>경고나 오류가 단순 shadow가 아니라 의미 있는 색/문구/액션으로 보이는지</td>
+            </tr>
+            <tr>
+              <td>Floating UI</td>
+              <td>popover/dropdown/menu는 medium shadow 허용</td>
+              <td>떠 있는 메뉴가 아래 화면과 분리되어 보이고 닫힘/접근성 동작이 유지되는지</td>
+            </tr>
+            <tr>
+              <td>Overlay UI</td>
+              <td>drawer/dialog/command palette는 strong shadow 허용</td>
+              <td>사용자가 현재 작업 레이어가 바뀐 것을 즉시 이해하는지</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>시각 샘플</h2>
+        <p>
+          실제 화면 구현은 아직 아니지만, 후속 화면에서 지향해야 하는 depth 차이는 아래처럼 본다.
+        </p>
+        <div class="visual-grid">
+          <div class="sample sample-flat">
+            <h3>E0 Flat · 기본 화면 안쪽 UI</h3>
+            <p>정보-only 패널, 테이블, 정보박스는 shadow 없이 얇은 border로만 구분한다.</p>
+          </div>
+          <div class="sample sample-action">
+            <h3>E1 Action · 클릭 가능한 요소</h3>
+            <p>열기, 이동, 추가, 생성, 삭제, 조회, 메뉴 실행 요소는 가장 낮은 shadow로 클릭 가능성을 알린다.</p>
+          </div>
+          <div class="sample sample-selected">
+            <h3>Selected · 선택/활성 상태</h3>
+            <p>선택은 옆 띠 없이 selected surface와 전체 border로만 표현한다.</p>
+          </div>
+          <div class="sample sample-floating">
+            <h3>E2/E3 · 떠 있는 UI</h3>
+            <p>popover, menu, drawer, dialog처럼 실제로 위에 뜨는 UI만 shadow를 쓴다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>적용 예시와 금지 예시</h2>
+        <div class="do-dont">
+          <div>
+            <h3>좋은 방향</h3>
+            <ul>
+              <li>대기열 카드: flat + hairline border + selected surface/border</li>
+              <li>추가/생성/삭제/조회/더보기 버튼: E1 shadow + hairline border</li>
+              <li>카드 전체가 상세를 여는 경우: 카드 자체에 E1 shadow 적용</li>
+              <li>SOAP 섹션: 패널 border와 섹션 간격으로 구분</li>
+              <li>정보박스: status tone과 action hierarchy로 의미 전달</li>
+              <li>더보기 메뉴: popover shadow로 떠 있는 레이어 표현</li>
+            </ul>
+          </div>
+          <div>
+            <h3>피해야 할 방향</h3>
+            <ul>
+              <li>정보-only 카드까지 모두 shadow를 넣어서 화면 전체가 떠 보이는 것</li>
+              <li>read-only table row 전체에 shadow를 넣어서 모든 행이 버튼처럼 보이는 것</li>
+              <li>선택/경고/focus를 shadow 강도만으로 표현하는 것</li>
+              <li>선택/활성 row나 card 옆에 띠처럼 보이는 side rail을 넣는 것</li>
+              <li>패널 안에 또 장식 카드들을 중첩하는 것</li>
+              <li>feature 코드에 raw rgba shadow stack을 추가하는 것</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>docs/design/system/border-shadow-depth-contract.md</code></li>
+          <li><code>docs/design/system/DESIGN.md</code></li>
+          <li><code>docs/design/system/README.md</code></li>
+          <li><code>docs/design/changelog.md</code></li>
+          <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-044-border-shadow-depth-contract.md</code></li>
+          <li><code>docs/work/index.md</code></li>
+          <li><code>docs/completed/design/2026-06-06-den-433-border-shadow-depth-contract-report.html</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외 범위</h2>
+        <ul>
+          <li>앱 코드 변경, 화면 리팩토링, 새 token 구현은 하지 않았다.</li>
+          <li>generated token 파일인 <code>clair.css</code>, <code>shadcn.css</code>는 수정하지 않았다.</li>
+          <li>live Supabase, migration, RLS, server enforcement, production deploy, real data는 건드리지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <p id="verification-result">통과: <code>npm run docs:check</code></p>
+      </section>
+
+      <section>
+        <h2>다음 작업</h2>
+        <p>
+          다음 순서는 <code>DEN-434</code> Empty/Info box contract와 <code>DEN-435</code> Tab/Table Density contract다.
+          이후 <code>DEN-436</code>, <code>DEN-437</code>, <code>DEN-438</code> 화면 적용 이슈에서 이 contract를 기준으로 사용하면 된다.
+        </p>
+        <p>
+          그래서 화면상으로 "진짜 달라진 모습"은 다음 구현 이슈들에서 확인하게 된다.
+          특히 <code>DEN-436</code> 대기열과 <code>DEN-438</code> SOAP 섹션에서 이 기준이 눈에 가장 잘 보일 가능성이 높다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

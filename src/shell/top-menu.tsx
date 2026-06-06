@@ -27,7 +27,7 @@ const moduleActivityLabels: Record<string, string> = {
   billing: "수납",
   customer: "고객관리",
   dispensing: "조제",
-  home: "홈",
+  home: "원내 현황",
   imaging: "영상",
   inpatient: "입원",
   lab: "검사",

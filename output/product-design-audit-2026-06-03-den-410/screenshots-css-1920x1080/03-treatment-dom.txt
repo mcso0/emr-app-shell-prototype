@@ -1,0 +1,233 @@
+- button "clair-demo 워크스페이스 선택":
+  - generic: CLAiR Medium Animal Hospital
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open&aside=closed&right=closed
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open&aside=closed&right=closed
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open&aside=closed&right=closed
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open&aside=closed&right=closed
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open&aside=closed&right=closed
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open&aside=closed&right=closed
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open&aside=closed&right=closed
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open&aside=closed&right=closed
+  - button "고객센터":
+- complementary:
+  - generic: 진료/차트
+  - button "사이드 패널 접기":
+  - group "진료 대기 유형 필터":
+    - button "전체" [pressed]
+    - button "예약"
+    - button "외래"
+  - button "이전 날짜":
+  - button "26.05.05 (화) 날짜 선택":
+    - generic: 26.05.05 (화)
+    - generic: 오늘
+  - button "다음 날짜":
+  - generic: 진료 대기열
+  - generic: "0"
+  - button "정렬":
+  - button "필터":
+  - button "검색":
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "진료/차트" [selected]:
+    - generic: 진료/차트
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - generic "환자 컨텍스트 정보":
+    - generic: 차트번호
+    - generic: E-260530-7B8888
+    - generic: 환자
+    - generic: Nabi Synthetic · 보호자 DEN-194 Guardian 02
+    - generic: 품종
+    - generic: Korean shorthair
+    - generic: 나이
+    - generic: 6세
+    - generic: 성별
+    - generic: 중성화·암컷
+    - generic: 체중
+    - generic: 5.96 kg
+    - generic: 체온
+    - generic: 39.3℃ °C
+    - generic: 호흡
+    - generic: 20 rpm
+    - generic: 혈압
+    - generic: 170 bpm
+    - button "바이탈 입력":
+    - button "방문목적"
+    - button "보호자메모":
+      - text: 보호자메모
+    - button "수납메모" [disabled]
+    - generic: 담당 수의사
+    - generic: 담당 미정
+  - button "환자 정보 처음으로 이동" [disabled]:
+  - button "환자 정보 끝으로 이동":
+  - complementary:
+    - button "차트 이력 목록 접기":
+    - generic: 차트이력
+    - generic: "0"
+    - button "정렬":
+    - button "필터":
+    - button "검색":
+    - button "수술 차트"
+    - button "외래 차트 추가"
+  - button "차트 이력 패널 열기":
+  - heading "진료 차트" [level=1]
+  - generic: E-260530-7B8888
+  - button "차트 공유"
+  - button "차트 작성완료"
+  - generic: 접수 일시
+  - generic: 26-05-30 13:13
+  - generic: 환자 정보
+  - generic: Nabi Synthetic(6세) · 보호자 DEN-194 Guardian 02 · Korean shorthair
+  - generic: 담당 수의사
+  - generic: 담당 미정
+  - generic: 차트 상태
+  - generic: 오더 진행중
+  - generic: 차트 대기
+  - tablist "SOAP 분류":
+    - tab "기본 SOAP" [selected]:
+      - generic: 기본 SOAP
+  - button "SOAP 추가":
+    - text: SOAP 추가
+  - button "기본 SOAP 작업":
+  - generic "기본 SOAP 기록":
+    - paragraph:
+      - strong: 주관적
+    - paragraph: "보호자 진술:"
+    - paragraph:
+      - strong: 객관적
+    - paragraph: "신체검사 소견:"
+    - paragraph:
+      - strong: 평가
+    - paragraph: "평가:"
+    - paragraph:
+      - strong: 계획
+    - paragraph: "계획:"
+  - button "초기화":
+    - text: 초기화
+  - button "삭제" [disabled]:
+    - text: 삭제
+  - button "SOAP 저장":
+    - text: SOAP 저장
+  - generic: 자동저장 대기
+  - region "진단명 관리":
+    - heading "진단명" [level=2]
+    - generic: 저장 대기
+    - button "분류검색"
+    - button:
+      - textbox "진단명 검색":
+        - /placeholder: 한글, 영문, 약자, 연관검색어로 진단명 검색
+    - button "검색"
+    - generic: 계통분류
+    - generic: 진단명
+    - generic: 확진
+    - generic: 중점
+    - generic: 수의사
+    - generic: 진단 입력 전입니다.
+  - separator "진료 기록과 처방/오더 영역 높이 조절"
+  - tablist "처방/오더 분류":
+    - tab "전체오더 0" [selected]:
+      - generic: 전체오더
+      - generic: "0"
+    - tab "임상 0":
+      - generic: 임상
+      - generic: "0"
+    - tab "영상 0":
+      - generic: 영상
+      - generic: "0"
+    - tab "조제 0":
+      - generic: 조제
+      - generic: "0"
+    - tab "처치 0":
+      - generic: 처치
+      - generic: "0"
+    - tab "수납 0":
+      - generic: 수납
+      - generic: "0"
+  - group "테이블 보기 밀도":
+    - button "좁게 보기" [pressed]
+    - button "기본 보기"
+    - button "넓게 보기"
+  - button "오더 필터 설정":
+    - text: Filter
+  - button "Order 출력"
+  - button "+ Order"
+  - table "처방/오더 테이블":
+    - rowgroup:
+      - row "오더 전체 선택 그룹 정렬 없음. 클릭하면 그룹 오름차순 정렬. 분류 정렬 없음. 클릭하면 분류 오름차순 정렬. 상태 정렬 없음. 클릭하면 상태 오름차순 정렬. Order명 정렬 없음. 클릭하면 Order명 오름차순 정렬. 청구서명 정렬 없음. 클릭하면 청구서명 오름차순 정렬. 수량 정렬 없음. 클릭하면 수량 오름차순 정렬. 단가 정렬 없음. 클릭하면 단가 오름차순 정렬. 청구금액 정렬 없음. 클릭하면 청구금액 오름차순 정렬. 수의사 정렬 없음. 클릭하면 수의사 오름차순 정렬. 작업":
+        - columnheader "오더 전체 선택":
+          - checkbox "오더 전체 선택" [disabled]
+          - checkbox [disabled]
+        - columnheader "그룹 정렬 없음. 클릭하면 그룹 오름차순 정렬.":
+          - generic: 그룹
+          - button "정렬 없음. 클릭하면 그룹 오름차순 정렬.":
+        - columnheader "분류 정렬 없음. 클릭하면 분류 오름차순 정렬.":
+          - generic: 분류
+          - button "정렬 없음. 클릭하면 분류 오름차순 정렬.":
+        - columnheader "상태 정렬 없음. 클릭하면 상태 오름차순 정렬.":
+          - generic: 상태
+          - button "정렬 없음. 클릭하면 상태 오름차순 정렬.":
+        - columnheader "Order명 정렬 없음. 클릭하면 Order명 오름차순 정렬.":
+          - generic: Order명
+          - button "정렬 없음. 클릭하면 Order명 오름차순 정렬.":
+        - columnheader "청구서명 정렬 없음. 클릭하면 청구서명 오름차순 정렬.":
+          - generic: 청구서명
+          - button "정렬 없음. 클릭하면 청구서명 오름차순 정렬.":
+        - columnheader "수량 정렬 없음. 클릭하면 수량 오름차순 정렬.":
+          - generic: 수량
+          - button "정렬 없음. 클릭하면 수량 오름차순 정렬.":
+        - columnheader "단가 정렬 없음. 클릭하면 단가 오름차순 정렬.":
+          - generic: 단가
+          - button "정렬 없음. 클릭하면 단가 오름차순 정렬.":
+        - columnheader "청구금액 정렬 없음. 클릭하면 청구금액 오름차순 정렬.":
+          - generic: 청구금액
+          - button "정렬 없음. 클릭하면 청구금액 오름차순 정렬.":
+        - columnheader "수의사 정렬 없음. 클릭하면 수의사 오름차순 정렬.":
+          - generic: 수의사
+          - button "정렬 없음. 클릭하면 수의사 오름차순 정렬.":
+        - columnheader "작업":
+          - generic: 작업
+    - rowgroup:
+      - row "표시할 오더가 없습니다. 현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.":
+        - cell "표시할 오더가 없습니다. 현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.":
+          - generic: 표시할 오더가 없습니다.
+          - generic: 현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.
+      - row "+ Order 추가하기":
+        - cell
+        - cell "+ Order 추가하기":
+          - button "+ Order 추가하기"
+  - generic: 선택 오더 0건 · 확정 대상 0건 · 재확인 필요 0건
+  - generic: "선택 오더 합계: 0"
+  - generic: "Order 별 할인/할증 합계: 0"
+  - textbox: 0%
+  - generic: "청구 예상 총액: 0"
+  - button "변경 취소" [disabled]:
+    - text: 변경 취소
+  - button "Order 업데이트" [disabled]:
+    - text: Order 업데이트
+  - button "Order 청구" [disabled]
+  - button "Order 확정" [disabled]
+  - complementary
+- region "Notifications alt+T"
+- alert

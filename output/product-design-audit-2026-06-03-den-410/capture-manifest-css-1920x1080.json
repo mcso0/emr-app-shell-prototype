@@ -1,0 +1,170 @@
+{
+  "issue": "DEN-410",
+  "viewportCss": {
+    "width": 1920,
+    "height": 1080
+  },
+  "capturedAt": "2026-06-03T11:06:23.497Z",
+  "captured": [
+    {
+      "step": "01",
+      "key": "home",
+      "label": "홈",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/home?modulePanel=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/home?modulePanel=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/01-home-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/01-home-dom.txt",
+      "bytes": 119862
+    },
+    {
+      "step": "02",
+      "key": "reception",
+      "label": "접수/예약",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/reception?modulePanel=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/reception?modulePanel=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/02-reception-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/02-reception-dom.txt",
+      "bytes": 114709
+    },
+    {
+      "step": "03",
+      "key": "treatment",
+      "label": "진료/차트",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/03-treatment-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/03-treatment-dom.txt",
+      "bytes": 102787
+    },
+    {
+      "step": "04",
+      "key": "lab",
+      "label": "임상병리검사",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/lab?modulePanel=open&aside=history&right=closed",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/lab?modulePanel=open&aside=history&right=closed",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/04-lab-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/04-lab-dom.txt",
+      "bytes": 40115
+    },
+    {
+      "step": "05",
+      "key": "imaging",
+      "label": "영상검사",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/imaging?modulePanel=open&aside=history&right=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/imaging?modulePanel=open&aside=history&right=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/05-imaging-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/05-imaging-dom.txt",
+      "bytes": 114851
+    },
+    {
+      "step": "06",
+      "key": "dispensing",
+      "label": "조제/처치",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/dispensing?modulePanel=open&aside=closed",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/dispensing?modulePanel=open&aside=closed",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/06-dispensing-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/06-dispensing-dom.txt",
+      "bytes": 180481
+    },
+    {
+      "step": "07",
+      "key": "billing",
+      "label": "수납",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/billing?modulePanel=open&aside=closed&right=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/billing?modulePanel=open&aside=closed&right=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/07-billing-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/07-billing-dom.txt",
+      "bytes": 142664
+    },
+    {
+      "step": "08",
+      "key": "inpatient",
+      "label": "입원",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/inpatient?modulePanel=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/inpatient?modulePanel=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/08-inpatient-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/08-inpatient-dom.txt",
+      "bytes": 117358
+    },
+    {
+      "step": "09",
+      "key": "customer",
+      "label": "고객관리",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/customer?modulePanel=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/customer?modulePanel=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/09-customer-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/09-customer-dom.txt",
+      "bytes": 94429
+    },
+    {
+      "step": "10",
+      "key": "orders",
+      "label": "병원관리",
+      "url": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/orders?modulePanel=open",
+      "title": "CLAiR EMR",
+      "finalUrl": "https://emr-app-shell-prototype-iirqb0hlu-mcso0s-projects.vercel.app/w/clair-demo/orders?modulePanel=open",
+      "cssViewport": {
+        "devicePixelRatio": 0.800000011920929,
+        "innerHeight": 1080,
+        "innerWidth": 1920
+      },
+      "pngPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/10-orders-css-1920x1080.png",
+      "domPath": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/screenshots-css-1920x1080/10-orders-dom.txt",
+      "bytes": 141210
+    }
+  ]
+}

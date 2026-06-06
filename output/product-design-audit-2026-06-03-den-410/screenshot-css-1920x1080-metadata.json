@@ -1,0 +1,85 @@
+{
+  "meta": [
+    {
+      "file": "01-home-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "02-reception-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "03-treatment-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "04-lab-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "05-imaging-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "06-dispensing-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "07-billing-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "08-inpatient-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "09-customer-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    },
+    {
+      "file": "10-orders-css-1920x1080.png",
+      "bitmapWidth": 2400,
+      "bitmapHeight": 1350,
+      "cssWidth": 1920,
+      "cssHeight": 1080,
+      "cssOk": true
+    }
+  ],
+  "contact": "/Users/iseung-ug/Projects/emr-app-shell-prototype/output/product-design-audit-2026-06-03-den-410/den-410-css-1920x1080-contact-sheet.png"
+}

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-417~419 Home 업무 현황 UI 후속 정리</title>
+    <style>
+      body {
+        margin: 40px;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 960px;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 18px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 5px;
+        background: #eef1f5;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+      .meta {
+        color: #5f6b7a;
+        font-size: 13px;
+      }
+      .ok {
+        color: #0f7b3a;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>DEN-417~419 Home 업무 현황 UI 후속 정리</h1>
+        <p class="meta">작성일: 2026-06-05 · Linear: DEN-417, DEN-418, DEN-419</p>
+
+        <h2>요약</h2>
+        <p>
+          홈 <code>업무 현황</code>에서 task를 훑는 흐름을 막던 모달형 상세 드로어를 비모달
+          우측 패널로 바꿨다. task 카드는 기존 대기열에서 쓰는 공용 queue card UI를 재사용하고,
+          카드 내부 이동 CTA와 반복 세로 띠/보조 설명 텍스트를 제거했다.
+        </p>
+
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>Sheet</code> 기반 task detail을 제거하고 오른쪽 고정 <code>aside</code> 패널로 교체했다.</li>
+          <li>상세 패널이 열려 있어도 칸반보드와 다른 task를 계속 볼 수 있고 선택할 수 있다.</li>
+          <li>상세 패널 footer를 접수/예약 드로어처럼 full-width primary CTA와 2열 secondary CTA로 정리했다.</li>
+          <li>홈 칸반 task 카드를 공용 <code>EmrTaskQueueCard</code> 기반으로 바꿨다.</li>
+          <li>task 카드 내부의 <code>진료 대기열 열기</code>, <code>검사 큐 열기</code> 같은 ghost CTA를 제거했다.</li>
+          <li>선택 task 카드와 상태 그룹 제목의 왼쪽 세로 띠 UI를 홈 칸반에서 제거했다.</li>
+          <li><code>업무 현황</code> 제목 아래 설명과 각 칸반 컬럼 제목 아래 설명을 제거했다.</li>
+        </ul>
+
+        <h2>범위 밖</h2>
+        <ul>
+          <li>실제 담당 배정, 메모 저장, 완료 처리 같은 mutation 구현</li>
+          <li>live DB, Supabase, RLS, server enforcement</li>
+          <li>Home 외 대기열 화면의 동작 변경</li>
+          <li>production deploy</li>
+        </ul>
+
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> <span class="ok">passed</span> · 기존 scope 밖 warning 4개 유지</li>
+          <li><code>npx tsc --noEmit</code> <span class="ok">passed</span></li>
+          <li><code>npm run build</code> <span class="ok">passed</span></li>
+          <li><code>npx playwright test tests/home.spec.ts --reporter=line</code> <span class="ok">passed</span> · 16 tests</li>
+          <li><code>npx playwright test tests/sales-demo-flow.spec.ts --reporter=line</code> <span class="ok">passed</span> · 3 tests</li>
+          <li><code>npm run docs:check</code> <span class="ok">passed</span></li>
+          <li>Browser QA: task 내부 CTA 없음, 모달 dialog 없음, 보드 visible, 다른 task 선택 시 상세 패널 내용 교체 확인</li>
+        </ul>
+
+        <h2>Staging Preview</h2>
+        <ul>
+          <li>배포일: 2026-06-05</li>
+          <li>Preview URL: <code>https://emr-app-shell-prototype-f9adb8tw4-mcso0s-projects.vercel.app</code></li>
+          <li>Home review URL: <code>https://emr-app-shell-prototype-f9adb8tw4-mcso0s-projects.vercel.app/w/clair-demo/home?modulePanel=open</code></li>
+          <li>Deployment ID: <code>dpl_3MgcWHZnU5fRWMcgeoiD9gajYyDw</code></li>
+          <li>Vercel inspect 결과: target <code>preview</code>, status <code>Ready</code></li>
+          <li>비인증 smoke는 Vercel Deployment Protection <code>401</code>을 반환했다. 권한 있는 Preview 세션에서 확인해야 한다.</li>
+        </ul>
+
+        <h2>판단</h2>
+        <p>
+          DEN-417~419는 Human Review로 넘길 수 있는 상태다. 다음 확인 포인트는 1920x1080 병원
+          데스크탑 기준에서 우측 패널 폭과 칸반 컬럼 가시성이 실제 운영자가 보기에 충분한지다.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

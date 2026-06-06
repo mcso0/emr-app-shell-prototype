@@ -57,7 +57,7 @@ import {
   HospitalAdminDrawer,
   HospitalAdminSidePanel,
 } from "@/features/hospital-admin/module";
-import { HomeContent } from "@/features/home/module";
+import { HomeContent, HomeSidePanel } from "@/features/home/module";
 import {
   ReceptionContent,
   ReceptionDrawer,
@@ -67,8 +67,9 @@ import {
 export const modules: ModuleDefinition[] = [
   {
     id: "home",
-    label: "홈",
+    label: "원내 현황",
     icon: HomeIcon,
+    sidePanel: HomeSidePanel,
     content: HomeContent,
   },
   {
@@ -99,6 +100,7 @@ export const modules: ModuleDefinition[] = [
     contentAside: LabContentAside,
     content: LabContent,
     rightPanel: LabRightPanel,
+    rightPanelGap: true,
     defaultContentAsideOpen: true,
     defaultRightPanelOpen: false,
   },

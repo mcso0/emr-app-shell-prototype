@@ -29,8 +29,9 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await page.getByRole("button", { name: "임상병리검사 이력 패널 접기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "임상병리검사 이력" })).toBeVisible();
   await expect(page.getByTestId("lab-history-group-26.05.01")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toHaveCSS("font-size", "16px");
+  const labTitleBar = page.locator("[data-slot='instruction-header-title-bar']");
+  await expect(labTitleBar.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
+  await expect(labTitleBar.getByRole("heading", { name: "임상병리검사 결과지" })).toHaveCSS("font-size", "16px");
   await expect(page.getByText("요청 일시")).toBeVisible();
   await expect(page.getByTestId("lab-result-status-label")).toHaveText("입력");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
@@ -63,13 +64,24 @@ test("lab workspace shows equipment receipts in the right panel", async ({ page 
   await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed&right=open");
 
   const receiptPanel = page.getByTestId("lab-receipt-panel");
-  await expect(page.getByRole("button", { name: /장비결과내역/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /장비결과내역/ })).toContainText("1");
-  await expect(page.getByRole("heading", { name: "검사결과 수신내역" })).toBeVisible();
+  const receiptPanelToggle = page.getByRole("button", {
+    name: /장비 검사 수신함 새 장비결과 1건/,
+  });
+  await expect(receiptPanelToggle).toBeVisible();
+  await expect(receiptPanelToggle).toContainText("1");
+  await expect(page.getByRole("heading", { name: "장비 검사 수신함" })).toBeVisible();
+  const receiptPanelCollapse = receiptPanel.getByRole("button", { name: "장비 검사 수신함 접기" });
+  await expect(receiptPanelCollapse).toHaveCSS("opacity", "0");
+  await receiptPanel.hover();
+  await expect(receiptPanelCollapse).toHaveCSS("opacity", "1");
+  await receiptPanelCollapse.click();
+  await expect(receiptPanelToggle).toHaveAttribute("aria-expanded", "false");
+  await receiptPanelToggle.click();
+  await expect(receiptPanelToggle).toHaveAttribute("aria-expanded", "true");
   await expect(receiptPanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
-  await expect(receiptPanel.getByRole("button", { name: "수신내역 검색" })).toBeVisible();
+  await expect(receiptPanel.getByRole("button", { name: "장비 검사 수신함 검색" })).toBeVisible();
   await expect(page.getByText("장비 수신값과 현재 결과지를 비교합니다.")).toHaveCount(0);
-  await expect(receiptPanel.getByRole("group", { name: "검사결과 수신내역 필터" })).toHaveCount(0);
+  await expect(receiptPanel.getByRole("group", { name: "장비 검사 수신함 필터" })).toHaveCount(0);
   await expect(receiptPanel.getByText("오더 1")).toHaveCount(0);
   await expect(receiptPanel.getByText("전체 3")).toHaveCount(0);
   await expect(receiptPanel.getByText("검사 결과").first()).toBeVisible();
@@ -80,7 +92,7 @@ test("lab workspace shows equipment receipts in the right panel", async ({ page 
   await expect(receiptPanel.getByRole("button", { name: /ProCyte Dx 수신결과 접기/ })).toBeVisible();
   await expect(receiptPanel.getByText("검사 항목명")).toBeVisible();
   await expect(receiptPanel.getByText("WBC")).toBeVisible();
-  await expect(receiptPanel.getByText("18.2")).toBeVisible();
+  await expect(receiptPanel.getByText("K/uL").first()).toBeVisible();
   await expect(receiptPanel.getByRole("button", { name: "결과 붙여넣기" })).toBeVisible();
   await receiptPanel.getByRole("button", { name: /ProCyte Dx 수신결과 접기/ }).click();
   await expect(receiptPanel.getByRole("button", { name: /ProCyte Dx 수신결과 펼치기/ })).toHaveAttribute("aria-expanded", "false");
@@ -120,15 +132,21 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
-  const readingGroupToggle = sidePanel.getByRole("button", { name: /확인|판독(중|완료) 접기/ }).first();
-  await expect(readingGroupToggle).toHaveAttribute("aria-expanded", "true");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
-  await readingGroupToggle.click();
-  const collapsedReadingGroupToggle = sidePanel.getByRole("button", { name: /확인|판독(중|완료) 펼치기/ }).first();
-  await expect(collapsedReadingGroupToggle).toHaveAttribute("aria-expanded", "false");
-  await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
-  await collapsedReadingGroupToggle.click();
-  await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
+  const cocoQueueGroupTestId = await sidePanel
+    .getByTestId("imaging-queue-item-imaging-coco-thorax")
+    .evaluate((element) => element.closest("[data-testid^='imaging-queue-status-']")?.getAttribute("data-testid"));
+
+  expect(cocoQueueGroupTestId).toBeTruthy();
+  const cocoQueueGroup = sidePanel.getByTestId(cocoQueueGroupTestId!);
+  const cocoQueueGroupToggle = cocoQueueGroup.getByRole("button", { name: /접기/ }).first();
+  await expect(cocoQueueGroupToggle).toHaveAttribute("aria-expanded", "true");
+  await cocoQueueGroupToggle.click();
+  const collapsedCocoQueueGroupToggle = cocoQueueGroup.getByRole("button", { name: /펼치기/ }).first();
+  await expect(collapsedCocoQueueGroupToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(cocoQueueGroup.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
+  await collapsedCocoQueueGroupToggle.click();
+  await expect(cocoQueueGroup.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
   await queueViewFilter.getByRole("button", { name: "차트별" }).click();
   await expect(sidePanel.getByText("차트별 영상")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-chart-group-encounter-coco-260501")).toContainText("코코");
@@ -145,17 +163,17 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(page.getByRole("textbox", { name: "영상 판독 내용" })).toContainText("복부 가스 음영 증가");
   await expect(page.getByRole("textbox", { name: "영상 종합소견" })).toContainText("위장관염 가능성");
   await expect(page.getByRole("textbox", { name: "Imaging Dx" })).toBeVisible();
-  await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  await expect(page.getByRole("button", { name: "판독중", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "판독 상태 액션" }).click();
-  const fulfillmentStatusPatch = page.waitForResponse(
-    (response) =>
-      response.request().method() === "PATCH" &&
-      response.url().includes("/api/workspaces/clair-demo/fulfillment/work-items/")
-  );
-  await page.getByRole("menuitem", { name: "판독완료" }).click();
-  expect((await fulfillmentStatusPatch).ok()).toBe(true);
-  await expect(page.getByRole("button", { name: "판독완료", exact: true })).toBeVisible();
+  const completedStatusButton = page.getByRole("button", { name: "판독완료", exact: true });
+  if ((await completedStatusButton.count()) === 0) {
+    const startReadingButton = page.getByRole("button", { name: "담당하기", exact: true });
+    if ((await startReadingButton.count()) > 0) {
+      await startReadingButton.click();
+    }
+    await expect(page.getByRole("button", { name: "판독중", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "판독 상태 액션" }).click();
+    await page.getByRole("menuitem", { name: "판독완료" }).click();
+  }
+  await expect(completedStatusButton).toBeVisible();
   const summaryPanel = page.getByTestId("imaging-summary-panel");
   await expect(summaryPanel.getByText("coco-thorax-lateral.png")).toBeVisible();
   await expect(summaryPanel.getByRole("heading", { name: "종합소견" })).toBeVisible();

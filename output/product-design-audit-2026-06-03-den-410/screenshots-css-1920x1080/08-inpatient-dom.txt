@@ -1,0 +1,233 @@
+- button "clair-demo 워크스페이스 선택":
+- navigation "워크스페이스 주요 메뉴":
+  - link "홈":
+    - /url: /w/clair-demo/home?modulePanel=open
+  - button "전역 통합 검색 열기":
+  - button "알림":
+  - link "접수/예약":
+    - /url: /w/clair-demo/reception?modulePanel=open
+  - link "진료/차트":
+    - /url: /w/clair-demo/treatment?modulePanel=open
+  - link "임상병리검사":
+    - /url: /w/clair-demo/lab?modulePanel=open
+  - link "영상검사":
+    - /url: /w/clair-demo/imaging?modulePanel=open
+  - link "조제/처치":
+    - /url: /w/clair-demo/dispensing?modulePanel=open
+  - link "수납":
+    - /url: /w/clair-demo/billing?modulePanel=open
+  - link "입원":
+    - /url: /w/clair-demo/inpatient?modulePanel=open
+  - link "고객관리":
+    - /url: /w/clair-demo/customer?modulePanel=open
+  - link "병원관리":
+    - /url: /w/clair-demo/orders?modulePanel=open
+  - button "고객센터":
+- complementary
+- button "탭 뒤로가기" [disabled]:
+- button "탭 앞으로가기" [disabled]:
+- tablist "열린 업무 탭":
+  - tab "입원" [selected]:
+    - generic: 입원
+  - button "새 업무 탭":
+- button "알림 센터 열기, 중요 알림 4개":
+  - generic: "4"
+- button "도움말":
+- button "설정":
+- button "admin@clair.local 프로필 메뉴":
+  - generic: AD
+- main:
+  - complementary
+  - heading "입원 현황" [level=1]
+  - button "26.05.06 (수) 입원 기준일 선택":
+    - text: 26.05.06 (수)
+  - button "입실 추가":
+    - text: 입실 추가
+  - button "입원실 관리"
+  - generic: 입원중
+  - generic: 3마리
+  - generic: 현재 병동/ICU 재원
+  - generic: 주의 태그
+  - generic: 11개
+  - generic: 산소·금식·면회 등
+  - generic: 퇴실 준비
+  - generic: 2마리
+  - generic: 승인/안내 대기
+  - generic: 오늘 입실
+  - generic: 2마리
+  - generic: 금일 신규 입실
+  - group "입원실 그룹 필터":
+    - button "전체 5" [pressed]
+    - button "강아지 2"
+    - button "고양이 2"
+    - button "집중 치료실 1"
+  - group "테이블 보기 밀도":
+    - button "좁게 보기" [pressed]
+    - button "기본 보기"
+    - button "넓게 보기"
+  - textbox "입원 검색":
+    - /placeholder: 동물명, 보호자명, 입원실 검색
+  - heading "강아지 입원실" [level=2]
+  - generic: "2"
+  - generic: 입원실 · 주의사항 · 담당 · 퇴실 상태
+  - table:
+    - rowgroup:
+      - row "입원실 동물명 보호자 차트 유의사항 진단명 입실 메모 입실시점 기간 진료과 주치의 담당자 퇴실":
+        - columnheader "입원실"
+        - columnheader "동물명"
+        - columnheader "보호자"
+        - columnheader "차트"
+        - columnheader "유의사항"
+        - columnheader "진단명"
+        - columnheader "입실 메모"
+        - columnheader "입실시점"
+        - columnheader "기간"
+        - columnheader "진료과"
+        - columnheader "주치의"
+        - columnheader "담당자"
+        - columnheader "퇴실"
+    - rowgroup:
+      - row "203호 두부 포메라니안 정하린 차트 재활주의 보행관찰 슬개골 수술 후 회복 보행 영상 확인 후 퇴실 안내. 점프 제한 설명 필요. 26.05.04 14:10 3일차 정형외과 김도윤 송하윤 퇴실":
+        - cell "203호"
+        - cell "두부 포메라니안":
+          - generic: 두부
+          - generic: 포메라니안
+        - cell "정하린"
+        - cell "차트":
+          - button "차트"
+        - cell "재활주의 보행관찰":
+          - generic: 재활주의
+          - generic: 보행관찰
+        - cell "슬개골 수술 후 회복"
+        - cell "보행 영상 확인 후 퇴실 안내. 점프 제한 설명 필요."
+        - cell "26.05.04 14:10"
+        - cell "3일차"
+        - cell "정형외과"
+        - cell "김도윤"
+        - cell "송하윤"
+        - cell "퇴실":
+          - button "퇴실"
+      - row "204호 하루 말티즈 강서윤 차트 체온관찰 예방접종 후 경과 관찰 발열 없으면 오후 퇴실 가능. 26.05.06 11:10 1일차 예방의학 이수지 최하린 퇴실":
+        - cell "204호"
+        - cell "하루 말티즈":
+          - generic: 하루
+          - generic: 말티즈
+        - cell "강서윤"
+        - cell "차트":
+          - button "차트" [disabled]
+        - cell "체온관찰":
+          - generic: 체온관찰
+        - cell "예방접종 후 경과 관찰"
+        - cell "발열 없으면 오후 퇴실 가능."
+        - cell "26.05.06 11:10"
+        - cell "1일차"
+        - cell "예방의학"
+        - cell "이수지"
+        - cell "최하린"
+        - cell "퇴실":
+          - button "퇴실"
+  - heading "고양이 입원실" [level=2]
+  - generic: "2"
+  - generic: 입원실 · 주의사항 · 담당 · 퇴실 상태
+  - table:
+    - rowgroup:
+      - row "입원실 동물명 보호자 차트 유의사항 진단명 입실 메모 입실시점 기간 진료과 주치의 담당자 퇴실":
+        - columnheader "입원실"
+        - columnheader "동물명"
+        - columnheader "보호자"
+        - columnheader "차트"
+        - columnheader "유의사항"
+        - columnheader "진단명"
+        - columnheader "입실 메모"
+        - columnheader "입실시점"
+        - columnheader "기간"
+        - columnheader "진료과"
+        - columnheader "주치의"
+        - columnheader "담당자"
+        - columnheader "퇴실"
+    - rowgroup:
+      - row "201호 코코 코리안숏헤어 이지은 차트 산소 금식 면회금지 구토와 식욕저하 예민함. 채혈 시 보호자 동석 여부 확인. 26.05.05 10:30 2일차 내과 이수지 송하윤 대기":
+        - cell "201호"
+        - cell "코코 코리안숏헤어":
+          - generic: 코코
+          - generic: 코리안숏헤어
+        - cell "이지은"
+        - cell "차트":
+          - button "차트"
+        - cell "산소 금식 면회금지":
+          - generic: 산소
+          - generic: 금식
+          - generic: 면회금지
+        - cell "구토와 식욕저하"
+        - cell "예민함. 채혈 시 보호자 동석 여부 확인."
+        - cell "26.05.05 10:30"
+        - cell "2일차"
+        - cell "내과"
+        - cell "이수지"
+        - cell "송하윤"
+        - cell "대기":
+          - button "대기"
+      - row "202호 나비 러시안블루 오세아 차트 피부 투약확인 피부 알러지 재발 저녁 투약 후 피부 발적 변화 확인. 26.05.05 15:40 2일차 피부과 김도윤 정민재 대기":
+        - cell "202호"
+        - cell "나비 러시안블루":
+          - generic: 나비
+          - generic: 러시안블루
+        - cell "오세아"
+        - cell "차트":
+          - button "차트"
+        - cell "피부 투약확인":
+          - generic: 피부
+          - generic: 투약확인
+        - cell "피부 알러지 재발"
+        - cell "저녁 투약 후 피부 발적 변화 확인."
+        - cell "26.05.05 15:40"
+        - cell "2일차"
+        - cell "피부과"
+        - cell "김도윤"
+        - cell "정민재"
+        - cell "대기":
+          - button "대기"
+  - heading "집중 치료실" [level=2]
+  - generic: "1"
+  - generic: 입원실 · 주의사항 · 담당 · 퇴실 상태
+  - table:
+    - rowgroup:
+      - row "입원실 동물명 보호자 차트 유의사항 진단명 입실 메모 입실시점 기간 진료과 주치의 담당자 퇴실":
+        - columnheader "입원실"
+        - columnheader "동물명"
+        - columnheader "보호자"
+        - columnheader "차트"
+        - columnheader "유의사항"
+        - columnheader "진단명"
+        - columnheader "입실 메모"
+        - columnheader "입실시점"
+        - columnheader "기간"
+        - columnheader "진료과"
+        - columnheader "주치의"
+        - columnheader "담당자"
+        - columnheader "퇴실"
+    - rowgroup:
+      - row "ICU-01 콩이 푸들 김하늘 차트 수액 구토관찰 면회제한 급성 위장관염 의심 탈수 여부와 구토 횟수 재평가. 식욕 회복 전까지 소량 급여. 26.05.06 09:20 1일차 내과 이수지 송하윤 대기":
+        - cell "ICU-01"
+        - cell "콩이 푸들":
+          - generic: 콩이
+          - generic: 푸들
+        - cell "김하늘"
+        - cell "차트":
+          - button "차트"
+        - cell "수액 구토관찰 면회제한":
+          - generic: 수액
+          - generic: 구토관찰
+          - generic: 면회제한
+        - cell "급성 위장관염 의심"
+        - cell "탈수 여부와 구토 횟수 재평가. 식욕 회복 전까지 소량 급여."
+        - cell "26.05.06 09:20"
+        - cell "1일차"
+        - cell "내과"
+        - cell "이수지"
+        - cell "송하윤"
+        - cell "대기":
+          - button "대기"
+  - complementary
+- region "Notifications alt+T"
+- alert

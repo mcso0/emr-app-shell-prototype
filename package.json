@@ -9,6 +9,10 @@
     "start": "next start",
     "lint": "eslint",
     "docs:check": "node scripts/check-doc-links.mjs",
+    "owner-os": "node scripts/owner-os.mjs",
+    "owner-os:dashboard": "node scripts/owner-os.mjs dashboard",
+    "owner-os:eval": "node scripts/owner-os.mjs eval",
+    "owner-os:packet:check": "node scripts/validate-owner-os-packets.mjs",
     "security:secrets": "node scripts/scan-secrets.mjs"
   },
   "dependencies": {

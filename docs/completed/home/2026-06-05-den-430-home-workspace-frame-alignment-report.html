@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-430 홈 워크스페이스 프레임 정렬 결과 보고</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.62;
+      }
+      main {
+        width: min(920px, calc(100% - 48px));
+        margin: 40px auto;
+        background: #fff;
+        border: 1px solid #dfe3ea;
+        border-radius: 12px;
+        padding: 32px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        line-height: 1.3;
+      }
+      h2 {
+        margin: 28px 0 8px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        border-radius: 6px;
+        background: #f1f3f5;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+      }
+      .summary {
+        margin: 16px 0 0;
+        border-left: 4px solid #111318;
+        background: #f7f8fa;
+        padding: 12px 14px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-430 홈 워크스페이스 프레임 정렬 결과 보고</h1>
+      <p>작성일: 2026-06-05</p>
+
+      <div class="summary">
+        <p>
+          홈 화면의 좌측 다음 행동 패널과 업무 현황 영역이 접수/진료 화면처럼 하나의
+          워크스페이스 프레임 안에서 이어지도록 정리했다. 기존에는 홈 내부에서 한 번 더
+          패딩과 둥근 테두리 카드 프레임을 만들어, 쉘과 콘텐츠가 분리된 것처럼 보였다.
+        </p>
+      </div>
+
+      <h2>요청 사항</h2>
+      <p>
+        세부 카드가 아니라 페이지 레이아웃 관점에서, 홈 화면의 navigation rail, left side
+        panel, content section이 접수/진료 화면처럼 하나의 프레임으로 구성되도록 수정한다.
+      </p>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li><code>HomeContent</code>의 내부 <code>p-2</code> 래퍼를 제거했다.</li>
+        <li>홈 Kanban workspace 루트의 중첩 <code>border</code>, <code>radius</code>, <code>bg-card</code> 프레임을 제거했다.</li>
+        <li>로딩 스켈레톤도 동일한 좌측 패널/콘텐츠 프레임 구조를 따르도록 정리했다.</li>
+        <li>Home 회귀 테스트에 내부 workspace root가 별도 테두리/라운딩을 갖지 않고, 좌측 패널과 보드 상단이 정렬되는 검증을 추가했다.</li>
+      </ul>
+
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>src/features/home/module.tsx</code></li>
+        <li><code>src/features/home/components/home-kanban-workspace.tsx</code></li>
+        <li><code>tests/home.spec.ts</code></li>
+        <li><code>docs/work/home/HOME-PR-008-den-430-home-workspace-frame-alignment.md</code></li>
+        <li><code>docs/work/index.md</code></li>
+      </ul>
+
+      <h2>검증 결과</h2>
+      <ul>
+        <li><code>npm run lint</code>: 통과. 기존 auth/chart/hospital-admin 경고 4개는 유지.</li>
+        <li><code>npx tsc --noEmit</code>: 통과.</li>
+        <li><code>npm run build</code>: 통과.</li>
+        <li><code>npx playwright test tests/home.spec.ts --reporter=line</code>: 16개 통과.</li>
+        <li><code>npm run docs:check</code>: 통과.</li>
+        <li>Browser 확인: CSS 1920x1080에서 workspace 내부 border/radius 0, 좌측 패널과 보드 y/height 정렬, 상세 패널 비모달 유지 확인.</li>
+      </ul>
+
+      <h2>리스크와 제외 범위</h2>
+      <ul>
+        <li>홈 필터, 칸반 카드 내용, 상세 패널 내용 구조는 이번 범위에서 변경하지 않았다.</li>
+        <li>전역 <code>WorkspaceFrame</code> 동작은 변경하지 않았다.</li>
+        <li>스테이징/프리뷰는 Vercel Deployment Protection이 적용될 수 있다.</li>
+      </ul>
+
+      <h2>추천 다음 단계</h2>
+      <p>
+        스테이징 프리뷰에서 홈과 접수/진료 화면을 같은 1920x1080 기준으로 나란히 확인하고,
+        프레임 감각이 맞으면 DEN-430은 Human Review에서 수락하면 된다.
+      </p>
+    </main>
+  </body>
+</html>

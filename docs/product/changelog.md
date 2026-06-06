@@ -2,6 +2,16 @@
 
 Use this file for small product-planning changes that do not need a standalone decision record.
 
+## 2026-06-05
+
+- `added`: Added `docs/product/service/clair-owner-os-product-plan.md` as the draft product plan for the AI owner operating system that turns 승욱's requests into scoped work packets, safety-gated Codex execution, verification, review briefs, and token-efficient context routing.
+- `changed`: Revised the CLAiR Owner OS plan with explicit AI-work planning rules, no-gray-zone packet requirements, LLM-as-judge/eval expectations, trace evidence, guardrail behavior, and failure taxonomy based on OpenAI evaluation/agent guidance, NIST AI RMF, and OWASP Agentic Skills assessment guidance.
+- `changed`: Approved the CLAiR Owner OS plan as the source-of-truth for Linear project `CLAiR Owner OS Implementation`, starting with DEN-420.
+- `added`: Added the repo-local `clair-owner-os-router` skill for DEN-421 so broad Owner OS requests are classified by task type, depth level, autonomy, approval gates, source-doc needs, and output shape before implementation.
+- `changed`: Connected `codex-agent-router` to Owner OS as an optional read-only subagent layer within a tiered parent-model policy: low-risk L0/L1 work may use lower-cost parent models, while 5.5 is the escalation model for ambiguity, safety, broad synthesis, failed verification, and approval-gated scope.
+- `added`: Added DEN-422 Owner OS work packet template, good/bad examples, and deterministic required-field validator with `npm run owner-os:packet:check`.
+- `added`: Added DEN-423 through DEN-429 Owner OS eval scenarios, judge rubric, trace contract, local CLI, eval command, read-only dashboard prototype, QA regression outputs, and final HTML closeout.
+
 ## 2026-06-01
 
 - `changed`: DEN-369 lets billing users select completed/cancelled guardian ledger rows for detail review while excluding those rows from current checkout totals, with local-first status transition controls for completed/cancelled history.
