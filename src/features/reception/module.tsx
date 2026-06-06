@@ -2628,9 +2628,9 @@ function ScheduleSelectionCell({
               aria-label={`${getScheduleTimeLabelFromMinutes(slotMinutes)} ${veterinarian.name} 접수/예약 생성`}
               aria-disabled={!slotValidation.valid}
               className={cn(
-                "group/slot flex min-h-0 items-center justify-center border border-transparent outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                "group/slot flex min-h-0 items-center justify-center outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 slotValidation.valid
-                  ? "hover:border-[var(--emr-status-info-border)] hover:bg-[var(--emr-status-info-bg)] focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)]"
+                  ? "focus-visible:border-[var(--emr-status-info-border)] focus-visible:bg-[var(--emr-status-info-bg)]"
                   : "cursor-default",
               )}
               data-testid={`${testId}-slot-${getScheduleTimeLabelFromMinutes(slotMinutes).replace(":", "")}`}
