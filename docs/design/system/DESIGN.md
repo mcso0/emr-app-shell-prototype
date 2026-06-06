@@ -132,6 +132,14 @@ Shared primitives should carry the visual system:
 - `SegmentedControl`: compact filters and mode switching
 - `StatusBadge`: stable semantic state labels
 
+Tabs and density controls have a stricter UX contract:
+
+- workspace tabs are shell navigation, not filters
+- section tabs switch peer panels in one screen context
+- segmented controls and filter buttons narrow or mode-switch data without pretending to be navigation
+- table density is presentation-only and uses `compact`, `standard`, and `comfortable`
+- density dropdowns are conditional for constrained toolbars or grouped view options; icon segmented selectors remain the default for frequent table work
+
 New shared primitives should be added only when a repeated pattern is stable across screens.
 
 ## Interaction

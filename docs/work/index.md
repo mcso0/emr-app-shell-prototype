@@ -98,6 +98,8 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-043        | human_review | design-system        | P0       | Project 17 / DEN-410 | `docs/work/design-system/DESIGN-SYSTEM-PR-043-desktop-product-design-audit.md`                         |
 | DESIGN-SYSTEM-PR-044        | done         | design-system        | P1       | Project common UX/UI / DEN-433 | `docs/work/design-system/DESIGN-SYSTEM-PR-044-border-shadow-depth-contract.md`                |
 | DESIGN-SYSTEM-PR-045        | human_review | design-system        | P1       | Project common UX/UI / DEN-434 | `docs/work/design-system/DESIGN-SYSTEM-PR-045-empty-info-state-contract.md`                   |
+| DESIGN-SYSTEM-PR-046        | human_review | design-system        | P0       | DEN-435              | `docs/work/design-system/DESIGN-SYSTEM-PR-046-tab-table-density-contract.md`                           |
+| DESIGN-SYSTEM-PR-047        | human_review | design-system        | P0       | DEN-436              | `docs/work/design-system/DESIGN-SYSTEM-PR-047-queue-filter-sort-task-action-ux.md`                     |
 | HOME-PR-001                 | done         | home                 | P1       | PR 1                 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md`                                           |
 | HOME-PR-002                 | done         | home                 | P1       | PR 2                 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md`                                                     |
 | HOME-PR-003                 | done         | home                 | P1       | PR 3                 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md`                                                  |

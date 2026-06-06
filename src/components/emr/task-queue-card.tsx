@@ -9,11 +9,13 @@ import {
   EmrSidePanelStatusBadge,
   EmrSidePanelTypeBadge,
 } from "@/components/emr/side-panel-card";
+import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 
 export type EmrTaskQueueEventKind = "request" | "reRequest" | "cancel";
 
 export type EmrTaskQueueCardItem = {
   actionAriaLabel: string;
+  actionItems?: EmrRowActionMenuItem[];
   actionTestId?: string;
   assigneeName?: string;
   eventActorName: string;
@@ -70,6 +72,7 @@ export function EmrTaskQueueCard({
         action={
           <EmrSidePanelCardAction
             ariaLabel={item.actionAriaLabel}
+            items={item.actionItems}
             testId={item.actionTestId}
           />
         }

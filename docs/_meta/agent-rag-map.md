@@ -6,6 +6,16 @@ This document defines the smallest useful reading set for Codex work in this rep
 
 Read enough context to stay aligned, but do not reread the whole documentation tree. Prefer current source-of-truth documents, the active Linear issue, and the linked `docs/work/` item over historical reports.
 
+## Lightweight Knowledge Ops
+
+This repository does not maintain a separate LLM Wiki layer by default. Borrow LLM Wiki-style operations only as a lightweight practice over the existing docs:
+
+- Query: use this map to choose the smallest current source-doc set, then cite or link the canonical docs that support the answer.
+- Ingest: when durable knowledge changes, route it through `docs/_meta/intake-rules.md` and update the owning canonical doc instead of creating a duplicate generated summary.
+- Catalog: use `docs/index.md`, `docs/SUMMARY.md`, area READMEs, and `docs/work/index.md` as navigation surfaces; do not create a second global index unless 승욱 explicitly approves it.
+- Log: keep history near the owning area through work items, closeouts, changelogs, and current-status history; do not create a global LLM-maintained log by default.
+- Lint: when reviewing docs health, check for stale claims, broken source links, duplicate source-of-truth paths, and mock/live or security-completion overclaims.
+
 ## Default Startup Set
 
 For most tasks, read only:

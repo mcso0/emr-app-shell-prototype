@@ -1,0 +1,1374 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-435/436 시각 결정 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --app: #f3f6fa;
+        --panel: #ffffff;
+        --muted: #f7f9fc;
+        --selected: #eef4fb;
+        --line: #d9e2ec;
+        --line-strong: #b8c5d4;
+        --ink: #172033;
+        --body: #334155;
+        --subtle: #64748b;
+        --micro: #8291a4;
+        --accent: #2563eb;
+        --accent-soft: #e8f1ff;
+        --success: #047857;
+        --warn: #b45309;
+        --danger: #b91c1c;
+        --shadow-action: 0 1px 2px rgba(15, 23, 42, 0.14);
+        --shadow-float: 0 12px 32px rgba(15, 23, 42, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--app);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px 20px 56px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: 28px;
+        line-height: 1.22;
+      }
+
+      h2 {
+        margin-bottom: 10px;
+        font-size: 20px;
+        line-height: 1.3;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      p {
+        color: var(--body);
+      }
+
+      code {
+        border-radius: 4px;
+        background: #edf2f7;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 24px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--muted);
+        padding: 2px 9px;
+        color: var(--subtle);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .section {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 20px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .note {
+        border-left: 3px solid var(--accent);
+        background: var(--accent-soft);
+        padding: 12px 14px;
+        color: #1e3a8a;
+      }
+
+      .decision {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--muted);
+        padding: 14px;
+      }
+
+      .decision strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .decision-table {
+        display: grid;
+        gap: 12px;
+      }
+
+      .decision-card {
+        display: grid;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .decision-card.recommended {
+        border-color: #93c5fd;
+        background: #f8fbff;
+      }
+
+      .decision-card h3 {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+      }
+
+      .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .choice {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--muted);
+        padding: 10px;
+        color: var(--body);
+        font-size: 12px;
+      }
+
+      .choice.pick {
+        border-color: #86efac;
+        background: #f0fdf4;
+      }
+
+      .choice.avoid {
+        border-color: #fecaca;
+        background: #fff7f7;
+      }
+
+      .choice strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .final-line {
+        border-left: 3px solid var(--success);
+        background: #f0fdf4;
+        padding: 10px 12px;
+        color: #14532d;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .visual-decision {
+        display: grid;
+        gap: 14px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      .visual-decision:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .visual-options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .visual-option {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .visual-option.pick {
+        border-color: #86efac;
+        background: #f8fffb;
+      }
+
+      .visual-option.avoid {
+        border-color: #fecaca;
+        background: #fffafa;
+      }
+
+      .option-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 36px;
+        border-bottom: 1px solid var(--line);
+        background: var(--muted);
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .option-label span {
+        color: var(--subtle);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .mini-screen {
+        padding: 10px;
+      }
+
+      .mini-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 7px;
+      }
+
+      .mini-content {
+        display: grid;
+        gap: 7px;
+        margin-top: 8px;
+      }
+
+      .mini-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        padding: 7px 8px;
+        color: var(--body);
+        font-size: 11px;
+      }
+
+      .mini-row.selected {
+        border-color: #9bb7d6;
+        background: var(--selected);
+      }
+
+      .mini-panel {
+        min-height: 98px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 10px;
+      }
+
+      .mini-side-panel {
+        min-height: 128px;
+        border-left: 3px solid var(--accent);
+        background: #f8fbff;
+        padding: 10px;
+      }
+
+      .mini-menu {
+        width: 100%;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow-float);
+        padding: 7px;
+      }
+
+      .mini-menu-item {
+        border-radius: 6px;
+        padding: 6px;
+        font-size: 11px;
+      }
+
+      .option-copy {
+        margin: 8px 0 0;
+        color: var(--subtle);
+        font-size: 12px;
+      }
+
+      .mock {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .mock-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 44px;
+        border-bottom: 1px solid var(--line);
+        background: var(--muted);
+        padding: 9px 12px;
+      }
+
+      .mock-title {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        font-weight: 750;
+      }
+
+      .mock-title span {
+        color: var(--micro);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .button,
+      .icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow-action);
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .button {
+        gap: 6px;
+        padding: 0 10px;
+      }
+
+      .icon-button {
+        width: 32px;
+      }
+
+      .button.active,
+      .seg button.active,
+      .tab.active {
+        border-color: #9bb7d6;
+        background: var(--selected);
+        color: #17406f;
+      }
+
+      .button.primary {
+        border-color: #1d4ed8;
+        background: #2563eb;
+        color: white;
+      }
+
+      .seg,
+      .tabs {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #eef2f7;
+        padding: 3px;
+      }
+
+      .seg button,
+      .tab {
+        min-height: 28px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        padding: 0 9px;
+        color: var(--subtle);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .workspace-tabs {
+        display: flex;
+        gap: 6px;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        background: #f8fafc;
+      }
+
+      .workspace-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 0 10px;
+        color: var(--subtle);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .workspace-tab.active {
+        border-color: #9bb7d6;
+        background: var(--selected);
+        color: #17406f;
+      }
+
+      .queue-layout {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        min-height: 420px;
+      }
+
+      .queue-side {
+        border-right: 1px solid var(--line);
+        background: #fbfcfe;
+      }
+
+      .queue-list {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .queue-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 11px;
+      }
+
+      .queue-card.selected {
+        border-color: #9bb7d6;
+        background: var(--selected);
+      }
+
+      .card-top,
+      .row-between {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .pet {
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .meta {
+        color: var(--micro);
+        font-size: 11px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--muted);
+        padding: 0 7px;
+        color: var(--subtle);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .pill.info {
+        border-color: #bfdbfe;
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+
+      .pill.warn {
+        border-color: #fde68a;
+        background: #fffbeb;
+        color: #92400e;
+      }
+
+      .queue-main {
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .patient-bar {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--muted);
+        padding: 13px;
+      }
+
+      .tasks {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .task-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 12px;
+      }
+
+      .task-card.actionable {
+        box-shadow: var(--shadow-action);
+      }
+
+      .popover-wrap {
+        position: relative;
+      }
+
+      .popover {
+        position: absolute;
+        top: 40px;
+        right: 0;
+        z-index: 2;
+        width: 252px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow-float);
+        padding: 8px;
+      }
+
+      .menu-item {
+        display: grid;
+        gap: 1px;
+        border-radius: 6px;
+        padding: 8px;
+      }
+
+      .menu-item strong {
+        font-size: 12px;
+      }
+
+      .menu-item span {
+        color: var(--micro);
+        font-size: 11px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 9px 10px;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      th {
+        background: var(--muted);
+        color: var(--subtle);
+        font-weight: 800;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .compare {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .wrong {
+        border-color: #fecaca;
+      }
+
+      .wrong .mock-head {
+        background: #fff7f7;
+      }
+
+      .right {
+        border-color: #bfdbfe;
+      }
+
+      .right .mock-head {
+        background: #eff6ff;
+      }
+
+      .caption {
+        margin: 8px 0 0;
+        color: var(--subtle);
+        font-size: 12px;
+      }
+
+      .mobile-preview {
+        max-width: 390px;
+        border: 1px solid var(--line-strong);
+        border-radius: 18px;
+        background: var(--panel);
+        padding: 12px;
+      }
+
+      .mobile-screen {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+      }
+
+      .mobile-toolbar {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding: 10px;
+        border-bottom: 1px solid var(--line);
+        background: var(--muted);
+      }
+
+      ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      @media (max-width: 860px) {
+        .grid.two,
+        .grid.three,
+        .compare,
+        .choice-grid,
+        .visual-options,
+        .queue-layout,
+        .tasks {
+          grid-template-columns: 1fr;
+        }
+
+        .queue-side {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div class="badge-row">
+          <span class="badge">DEN-435 contract</span>
+          <span class="badge">DEN-436 decision preview</span>
+          <span class="badge">No app code</span>
+        </div>
+        <h1>Product Design 결정 보고서: 범위 숏컷 + 상세 필터</h1>
+        <p>
+          이 보고서는 DEN-435의 탭/밀도 기준과 DEN-436 대기열 필터·정렬·TASK 액션 방향을 Product Design 관점에서 다시 정리한 시각 시안이다.
+          캡쳐의 <code>전체 / 예약 / 외래</code>는 상세 필터가 아니라 자주 쓰는 범위 숏컷으로 보고, 아래 필터 아이콘과 역할을 분리한다.
+        </p>
+        <div class="note">
+          Product Design 추천: 상단은 빠른 범위 숏컷, 아래 아이콘은 상세 필터. 즉 <code>전체 / 예약 / 외래</code>는 유지하고,
+          <code>문진 완료</code>, <code>담당 미정</code>, <code>대기 15분 이상</code> 같은 조건만 필터 아이콘에서 설정한다.
+        </div>
+      </header>
+
+      <section class="section">
+        <h2>0. 확정해야 할 사안</h2>
+        <p>
+          아래 5개만 결정하면 DEN-436 대기열 화면 구현 방향이 바로 정해진다. 각 사안은 실제 화면에서 어떻게 보이는지 작은 시안으로 비교했다.
+          초록 테두리는 루멘 추천안, 붉은 테두리는 피하고 싶은 안이다.
+        </p>
+
+        <div class="visual-decision">
+          <article class="decision-card recommended">
+            <h3>
+              1. 상단 <code>전체 / 예약 / 외래</code>는 어떻게 정리할까?
+              <span class="badge">추천: 빠른 범위 숏컷 유지</span>
+            </h3>
+
+            <div class="visual-options">
+              <div class="visual-option avoid">
+                <div class="option-label">A. 전부 필터 안에 숨김 <span>피하기</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">Filter 3 ▾</button>
+                    <button class="button">정렬: 요청순</button>
+                  </div>
+                  <div class="mini-menu" style="margin-top: 8px">
+                    <div class="mini-menu-item">범위: 전체</div>
+                    <div class="mini-menu-item">예약/외래</div>
+                    <div class="mini-menu-item">문진 완료</div>
+                  </div>
+                  <div class="mini-content">
+                    <div class="mini-row selected">초코 · 예약</div>
+                    <div class="mini-row">나비 · 외래</div>
+                  </div>
+                  <p class="option-copy">자주 쓰는 <code>전체/예약/외래</code>까지 숨겨져서 매번 필터를 열어야 한다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option pick">
+                <div class="option-label">B. 범위 숏컷 + 상세 필터 <span>추천</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <div class="seg">
+                      <button class="active">전체</button>
+                      <button>예약</button>
+                      <button>외래</button>
+                    </div>
+                    <button class="button">Filter</button>
+                    <button class="button">정렬: 요청순</button>
+                  </div>
+                  <div class="mini-content">
+                    <div class="mini-row selected">초코 · 예약 <span class="pill info">범위: 전체</span></div>
+                    <div class="mini-row">나비 · 외래 <span>상세 필터 없음</span></div>
+                  </div>
+                  <p class="option-copy">상단은 빠른 범위 전환, 아래 필터는 상태/담당/긴급도 같은 상세 조건만 담당한다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option">
+                <div class="option-label">C. 숏컷을 상태까지 확장 <span>조건부</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <div class="seg">
+                      <button class="active">전체</button>
+                      <button>예약</button>
+                      <button>외래</button>
+                      <button>긴급</button>
+                    </div>
+                  </div>
+                  <div class="mini-content">
+                    <div class="mini-row selected">초코 · 예약 · 긴급 아님</div>
+                    <div class="mini-row">나비 · 외래 · 긴급</div>
+                  </div>
+                  <p class="option-copy">처음엔 편하지만 상태 조건이 늘면 숏컷 영역이 다시 필터바처럼 복잡해진다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="final-line">확정 문장: <code>전체 / 예약 / 외래</code>는 빠른 범위 숏컷으로 상단에 유지하고, 상세 조건은 아래 Filter 아이콘에서 설정한다.</div>
+          </article>
+        </div>
+
+        <div class="visual-decision">
+          <article class="decision-card recommended">
+            <h3>
+              2. Density 조절은 항상 보일까, dropdown에 넣을까?
+              <span class="badge">추천: 화면별 분기</span>
+            </h3>
+
+            <div class="visual-options">
+              <div class="visual-option">
+                <div class="option-label">A. 항상 노출 <span>빠름</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">Filter 2</button>
+                    <button class="button">정렬</button>
+                    <div class="seg">
+                      <button>좁게</button>
+                      <button class="active">기본</button>
+                      <button>넓게</button>
+                    </div>
+                  </div>
+                  <div class="mini-content">
+                    <div class="mini-row">장점: 한 번 클릭</div>
+                    <div class="mini-row">단점: toolbar가 꽉 참</div>
+                  </div>
+                  <p class="option-copy">테이블 전용 화면에는 좋지만, 대기열에서는 주요 action이 밀릴 수 있다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option">
+                <div class="option-label">B. 항상 dropdown <span>조용함</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">Filter 2</button>
+                    <button class="button">표시 옵션 · 기본 보기 ▾</button>
+                  </div>
+                  <div class="mini-menu" style="margin-top: 8px">
+                    <div class="mini-menu-item">✓ 기본 보기</div>
+                    <div class="mini-menu-item">좁게 보기</div>
+                    <div class="mini-menu-item">넓게 보기</div>
+                  </div>
+                  <p class="option-copy">조용하지만, 자주 바꾸는 테이블에서는 매번 한 번 더 열어야 한다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option pick">
+                <div class="option-label">C. 화면별 분기 <span>추천</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">대기열: 표시 옵션 ▾</button>
+                  </div>
+                  <div class="mini-toolbar" style="margin-top: 8px">
+                    <div class="seg">
+                      <button>좁게</button>
+                      <button class="active">기본</button>
+                      <button>넓게</button>
+                    </div>
+                    <span class="pill">테이블 전용 화면</span>
+                  </div>
+                  <p class="option-copy">대기열은 dropdown으로 조용하게, 고빈도 테이블은 segmented로 빠르게 둔다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="final-line">확정 문장: 대기열 density는 표시 옵션 dropdown 안에 넣고, 고빈도 테이블 화면에서는 segmented selector를 유지한다.</div>
+          </article>
+        </div>
+
+        <div class="visual-decision">
+          <article class="decision-card recommended">
+            <h3>
+              3. Sort를 별도 버튼으로 노출할까?
+              <span class="badge">추천: 노출</span>
+            </h3>
+
+            <div class="visual-options">
+              <div class="visual-option pick">
+                <div class="option-label">A. 별도 버튼 <span>추천</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">Filter 2</button>
+                    <button class="button">정렬: 요청순 ▾</button>
+                    <button class="button">표시 옵션 ▾</button>
+                  </div>
+                  <div class="mini-content">
+                    <div class="mini-row selected">09:20 초코</div>
+                    <div class="mini-row">09:35 나비</div>
+                  </div>
+                  <p class="option-copy">현재 어떤 순서로 보는지 toolbar에서 바로 읽힌다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option">
+                <div class="option-label">B. 표시 옵션 안 <span>조용함</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">Filter 2</button>
+                    <button class="button">표시 옵션 ▾</button>
+                  </div>
+                  <div class="mini-content">
+                    <div class="mini-row selected">초코</div>
+                    <div class="mini-row">나비</div>
+                  </div>
+                  <p class="option-copy">정렬 상태를 보려면 메뉴를 열어야 해서 대기열 판단이 느려진다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option avoid">
+                <div class="option-label">C. Filter 안 <span>피하기</span></div>
+                <div class="mini-screen">
+                  <div class="mini-toolbar">
+                    <button class="button active">Filter 3 ▾</button>
+                  </div>
+                  <div class="mini-menu" style="margin-top: 8px">
+                    <div class="mini-menu-item">상태: 문진 완료</div>
+                    <div class="mini-menu-item">담당: 내 담당</div>
+                    <div class="mini-menu-item">정렬: 요청순</div>
+                  </div>
+                  <p class="option-copy">조건과 순서가 한 버튼에 섞여서 나중에 설명하기 어렵다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="final-line">확정 문장: 정렬은 표시 옵션 안에 숨기지 않고, toolbar에 현재 정렬값이 보이는 버튼으로 둔다.</div>
+          </article>
+        </div>
+
+        <div class="visual-decision">
+          <article class="decision-card recommended">
+            <h3>
+              4. TASK 더보기 dropdown 액션은 어떻게 구성할까?
+              <span class="badge">확정: contextual dropdown</span>
+            </h3>
+
+            <div class="visual-options">
+              <div class="visual-option pick">
+                <div class="option-label">A. Contextual dropdown <span>확정</span></div>
+                <div class="mini-screen">
+                  <div class="mini-row selected">초코 · TASK <button class="icon-button">⋯</button></div>
+                  <div class="mini-menu" style="margin-top: 8px">
+                    <div class="mini-menu-item">진료 차트 열기</div>
+                    <div class="mini-menu-item">담당하기</div>
+                    <div class="mini-menu-item">환자 정보</div>
+                    <div class="mini-menu-item">보호자 정보</div>
+                  </div>
+                  <p class="option-copy">더보기는 항상 dropdown을 먼저 열고, 오더 속성/상태/화면 맥락에 맞는 액션만 보여준다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option avoid">
+                <div class="option-label">B. 모든 액션 패널 <span>피하기</span></div>
+                <div class="mini-screen">
+                  <div class="mini-row selected">초코 · TASK 선택됨</div>
+                  <div class="mini-side-panel" style="margin-top: 8px">
+                    <strong>더보기 상세</strong>
+                    <p class="caption">차트 열기, 담당하기, 환자 정보까지 모두 패널에서 처리</p>
+                    <button class="button primary">실행</button>
+                  </div>
+                  <p class="option-copy">빠른 이동/담당 액션까지 패널로 열리면 작은 업무가 무거워진다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option">
+                <div class="option-label">C. Dropdown + 후속 실행 <span>액션 결과</span></div>
+                <div class="mini-screen">
+                  <div class="mini-row selected">초코 · TASK <button class="icon-button">⋯</button></div>
+                  <div class="mini-menu" style="margin-top: 8px">
+                    <div class="mini-menu-item">차트 열기 → 화면 이동</div>
+                    <div class="mini-menu-item">담당하기 → 나로 지정 + 차트 열기</div>
+                    <div class="mini-menu-item">환자 정보 → drawer</div>
+                  </div>
+                  <p class="option-copy">C는 별도 첫 화면이 아니라 A의 실행 결과다. 항목별로 route/drawer/dialog를 실행한다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="final-line">확정 문장: TASK 카드의 더보기 아이콘은 항상 contextual dropdown을 먼저 열고, dropdown 항목은 오더/태스크 속성·상태·화면 맥락별 action matrix로 구성한다. 각 항목 실행 결과는 화면 이동, 담당자 지정, drawer, dialog 등으로 분기한다.</div>
+          </article>
+        </div>
+
+        <div class="visual-decision">
+          <article class="decision-card recommended">
+            <h3>
+              5. Action 가능한 카드에 shadow를 줄까?
+              <span class="badge">추천: action에만 E1</span>
+            </h3>
+
+            <div class="visual-options">
+              <div class="visual-option">
+                <div class="option-label">A. 모두 flat <span>조용함</span></div>
+                <div class="mini-screen">
+                  <div class="mini-content">
+                    <div class="task-card">문진 확인 <span class="meta">action 가능</span></div>
+                    <div class="task-card">예약 정보 <span class="meta">정보-only</span></div>
+                  </div>
+                  <p class="option-copy">차분하지만 무엇을 누를 수 있는지 덜 드러난다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option avoid">
+                <div class="option-label">B. 모두 shadow <span>피하기</span></div>
+                <div class="mini-screen">
+                  <div class="mini-content">
+                    <div class="task-card actionable">문진 확인 <span class="meta">action 가능</span></div>
+                    <div class="task-card actionable">예약 정보 <span class="meta">정보-only인데 떠 있음</span></div>
+                  </div>
+                  <p class="option-copy">정보-only 카드까지 떠 보여서 클릭 가능성과 depth 기준이 흐려진다.</p>
+                </div>
+              </div>
+
+              <div class="visual-option pick">
+                <div class="option-label">C. action만 shadow <span>추천</span></div>
+                <div class="mini-screen">
+                  <div class="mini-content">
+                    <div class="task-card actionable">문진 확인 <button class="icon-button">⋯</button></div>
+                    <div class="task-card">예약 정보 <span class="meta">정보-only flat</span></div>
+                  </div>
+                  <p class="option-copy">업무 행동이 가능한 card/button만 살짝 떠 보여 판단이 빠르다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="final-line">확정 문장: 정보-only 카드와 row는 E0 flat, action 가능한 카드/버튼/더보기 trigger만 E1 shadow를 쓴다.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>1. 범위 숏컷과 상세 필터를 구분하는 기준</h2>
+        <div class="grid three">
+          <div class="mock">
+            <div class="mock-head">
+              <div class="mock-title">Workspace tabs <span>route/history navigation</span></div>
+            </div>
+            <div class="workspace-tabs">
+              <div class="workspace-tab active">접수 대기열 ×</div>
+              <div class="workspace-tab">진료 차트 ×</div>
+              <div class="workspace-tab">수납 ×</div>
+            </div>
+            <div class="toolbar">
+              <span class="pill info">정답: 열린 업무 전환</span>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-head">
+              <div class="mock-title">Scope shortcuts <span>frequent queue range</span></div>
+            </div>
+            <div class="toolbar">
+              <div class="tabs">
+                <button class="tab active">전체</button>
+                <button class="tab">예약</button>
+                <button class="tab">외래</button>
+              </div>
+            </div>
+            <div class="toolbar">
+              <span class="pill info">정답: 자주 쓰는 큰 범위 숏컷</span>
+            </div>
+          </div>
+
+          <div class="mock">
+            <div class="mock-head">
+              <div class="mock-title">Detail filters <span>conditional narrowing</span></div>
+            </div>
+            <div class="toolbar">
+              <button class="button active">Filter 2</button>
+              <button class="button">정렬: 요청순</button>
+              <button class="button">초기화</button>
+            </div>
+            <div class="toolbar">
+              <span class="pill warn">탭으로 만들지 않기</span>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          결론: route/history는 workspace tab, <code>전체/예약/외래</code>는 빠른 범위 숏컷, 상태/담당/긴급도 같은 조건은 상세 filter다.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>2. Table density: segmented selector vs dropdown</h2>
+        <div class="compare">
+          <div class="mock right">
+            <div class="mock-head">
+              <div class="mock-title">기본 방향 <span>frequent table work</span></div>
+            </div>
+            <div class="toolbar">
+              <button class="button active">Filter 1</button>
+              <button class="button">정렬: 상태순</button>
+              <div class="seg" aria-label="density preview">
+                <button>좁게</button>
+                <button class="active">기본</button>
+                <button>넓게</button>
+              </div>
+              <button class="button primary">업무 시작</button>
+            </div>
+            <p class="caption">자주 조절하는 테이블은 한 번에 누르는 segmented selector가 빠르다.</p>
+          </div>
+
+          <div class="mock right">
+            <div class="mock-head">
+              <div class="mock-title">조건부 방향 <span>constrained toolbar or grouped view options</span></div>
+            </div>
+            <div class="toolbar">
+              <button class="button active">Filter 2</button>
+              <button class="button">정렬: 요청순</button>
+              <button class="button">표시 옵션 · 기본 보기 ▾</button>
+              <button class="button primary">업무 시작</button>
+            </div>
+            <p class="caption">좁은 toolbar, mobile, columns+density 묶음에서는 dropdown이 더 조용하다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>3. DEN-436 대기열 적용 시안</h2>
+        <div class="mock">
+          <div class="mock-head">
+            <div class="mock-title">Reception queue workspace <span>filter/sort/task action cleanup proposal</span></div>
+            <div class="popover-wrap">
+              <button class="icon-button" aria-label="업무 더보기">⋯</button>
+              <div class="popover">
+                <div class="menu-item">
+                  <strong>진료 차트 열기</strong>
+                  <span>선택 환자의 현재 encounter로 이동</span>
+                </div>
+                <div class="menu-item">
+                  <strong>접수 메모 추가</strong>
+                  <span>대기열 card에 남는 업무 메모</span>
+                </div>
+                <div class="menu-item">
+                  <strong>대기 상태 변경</strong>
+                  <span>도착, 문진대기, 진료대기 등</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="queue-layout">
+            <aside class="queue-side">
+              <div class="toolbar">
+                <div class="seg">
+                  <button class="active">전체</button>
+                  <button>예약</button>
+                  <button>외래</button>
+                </div>
+                <button class="button">Filter</button>
+                <button class="button">정렬: 요청순 ▾</button>
+                <button class="button">표시 옵션 ▾</button>
+              </div>
+              <div class="queue-list">
+                <article class="queue-card selected">
+                  <div class="card-top">
+                    <div>
+                      <div class="pet">초코 · 김하늘</div>
+                      <div class="meta">09:20 접수 · 재진 · 내과</div>
+                    </div>
+                    <button class="icon-button" aria-label="초코 업무 더보기">⋯</button>
+                  </div>
+                  <div class="pill-row">
+                    <span class="pill info">문진 완료</span>
+                    <span class="pill warn">대기 18분</span>
+                    <span class="pill">담당: 이수의</span>
+                  </div>
+                </article>
+
+                <article class="queue-card">
+                  <div class="card-top">
+                    <div>
+                      <div class="pet">나비 · 박지훈</div>
+                      <div class="meta">09:35 접수 · 초진 · 예방</div>
+                    </div>
+                    <button class="icon-button" aria-label="나비 업무 더보기">⋯</button>
+                  </div>
+                  <div class="pill-row">
+                    <span class="pill">문진 필요</span>
+                    <span class="pill">담당 미정</span>
+                  </div>
+                </article>
+              </div>
+            </aside>
+
+            <section class="queue-main">
+              <div class="patient-bar">
+                <div class="row-between">
+                  <div>
+                    <strong>초코 · 5Y · 말티즈</strong>
+                    <div class="meta">보호자 김하늘 · 010-0000-0000 · 최근 방문 2026-05-28</div>
+                  </div>
+                  <button class="button primary">진료 차트 열기</button>
+                </div>
+              </div>
+
+              <div class="tasks">
+                <div class="task-card actionable">
+                  <div class="row-between">
+                    <strong>문진 확인</strong>
+                    <button class="icon-button" aria-label="문진 확인 더보기">⋯</button>
+                  </div>
+                  <p class="caption">행동 가능한 card만 E1 shadow. 정보-only card는 flat.</p>
+                </div>
+                <div class="task-card">
+                  <strong>예약 정보</strong>
+                  <p class="caption">정보 패널은 shadow 없이 border와 muted surface로 구분.</p>
+                </div>
+                <div class="task-card actionable">
+                  <div class="row-between">
+                    <strong>수납 선결제 확인</strong>
+                    <button class="icon-button" aria-label="수납 선결제 더보기">⋯</button>
+                  </div>
+                  <p class="caption">더보기는 task 근처에 뜨고 화면 구분을 흐리지 않는다.</p>
+                </div>
+              </div>
+
+              <div class="table-wrap" style="margin-top: 12px">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>요청</th>
+                      <th>상태</th>
+                      <th>담당</th>
+                      <th>요청 시각</th>
+                      <th>액션</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>문진 내용 확인</td>
+                      <td><span class="pill info">완료</span></td>
+                      <td>이수의</td>
+                      <td>09:21</td>
+                      <td>⋯</td>
+                    </tr>
+                    <tr>
+                      <td>체중 재측정</td>
+                      <td><span class="pill warn">대기</span></td>
+                      <td>테크</td>
+                      <td>09:26</td>
+                      <td>⋯</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>4. 피해야 할 방향과 선택할 방향</h2>
+        <div class="compare">
+          <div class="mock wrong">
+            <div class="mock-head">
+              <div class="mock-title">피해야 할 방향 <span>shortcut expands into filter tabs</span></div>
+            </div>
+            <div class="toolbar">
+              <div class="tabs">
+                <button class="tab active">전체</button>
+                <button class="tab">예약</button>
+                <button class="tab">외래</button>
+                <button class="tab">긴급</button>
+                <button class="tab">내 담당</button>
+              </div>
+              <div class="tabs">
+                <button class="tab active">좁게</button>
+                <button class="tab">기본</button>
+                <button class="tab">넓게</button>
+              </div>
+            </div>
+            <p class="caption">빠른 범위 숏컷에 상태/담당/density까지 붙으면, 상단이 다시 복잡한 필터바가 된다.</p>
+          </div>
+
+          <div class="mock right">
+            <div class="mock-head">
+              <div class="mock-title">선택할 방향 <span>scope shortcut + detail filter</span></div>
+            </div>
+            <div class="toolbar">
+              <div class="seg">
+                <button class="active">전체</button>
+                <button>예약</button>
+                <button>외래</button>
+              </div>
+              <button class="button">Filter</button>
+              <button class="button">정렬: 요청순</button>
+              <button class="button">표시 옵션 · 기본 보기 ▾</button>
+              <button class="button primary">선택 업무 시작</button>
+            </div>
+            <p class="caption"><code>전체/예약/외래</code>는 빠른 범위, Filter는 상세 조건, Sort는 순서, 표시 옵션은 보기 설정으로 분리한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>5. 좁은 화면 시안</h2>
+        <div class="mobile-preview">
+          <div class="mobile-screen">
+            <div class="mock-head">
+              <div class="mock-title">대기열 <span>mobile/narrow</span></div>
+              <button class="icon-button" aria-label="대기열 설정">☰</button>
+            </div>
+            <div class="mobile-toolbar">
+              <button class="button active">범위: 전체 ▾</button>
+              <button class="button">Filter</button>
+              <button class="button">표시 옵션 ▾</button>
+            </div>
+            <div class="queue-list">
+              <article class="queue-card selected">
+                <div class="card-top">
+                  <div>
+                    <div class="pet">초코 · 김하늘</div>
+                    <div class="meta">09:20 접수 · 대기 18분</div>
+                  </div>
+                  <button class="icon-button" aria-label="초코 업무 더보기">⋯</button>
+                </div>
+                <div class="pill-row">
+                  <span class="pill info">문진 완료</span>
+                  <span class="pill">이수의</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          좁은 화면에서는 <code>전체/예약/외래</code>를 <code>범위: 전체</code> dropdown으로 접고, 상세 필터와 표시 옵션은 별도 버튼으로 유지한다.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>결정 요약</h2>
+        <div class="grid three">
+          <div class="decision">
+            <strong>Scope Shortcut</strong>
+            <code>전체/예약/외래</code>는 자주 쓰는 빠른 범위 숏컷으로 유지하고, 상세 조건과 구분한다.
+          </div>
+          <div class="decision">
+            <strong>Density</strong>
+            자주 쓰는 테이블은 icon segmented selector. 좁거나 복잡한 toolbar는 dropdown 허용.
+          </div>
+          <div class="decision">
+            <strong>Queue UX</strong>
+            상세 Filter, sort, view options는 toolbar에 역할별로 분리하고, TASK 더보기는 card/action 근처 floating menu로 정리.
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>검증과 범위</h2>
+        <ul>
+          <li>이 HTML은 결정용 보고서이며 앱 코드 구현은 없다.</li>
+          <li>DEN-436은 아직 <code>Todo</code> 상태이며, 이 보고서는 구현 전 시각 기준이다.</li>
+          <li>서버 정렬/필터 API, DB 조회 조건, live Supabase, migration, RLS, server enforcement, production deploy, real data 접근은 제외했다.</li>
+          <li>검증: <code>npm run docs:check</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

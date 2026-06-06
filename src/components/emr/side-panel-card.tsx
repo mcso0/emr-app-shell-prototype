@@ -4,6 +4,10 @@ import type { KeyboardEvent, ReactNode } from "react";
 import { CdsCommunicationMessageSquareIcon } from "@/components/cds-icons/communication-and-media";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsPeopleUserCheckIcon } from "@/components/cds-icons/people-and-places";
+import {
+  EmrRowActionMenu,
+  type EmrRowActionMenuItem,
+} from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,7 +24,7 @@ type EmrSidePanelCardProps = {
 const sidePanelBadgeIconClassName =
   "flex size-3 shrink-0 items-center justify-center text-[var(--emr-sidepanel-task-card-chip-icon)] [&_svg]:size-3 [&_svg]:text-[var(--emr-sidepanel-task-card-chip-icon)]";
 export const emrSidePanelCardHoverActionButtonClassName =
-  "size-[var(--emr-sidepanel-task-card-action-size)] shrink-0 rounded-[var(--emr-sidepanel-task-card-action-radius)] border border-[var(--emr-sidepanel-task-card-action-border)] bg-[var(--emr-sidepanel-task-card-action-bg)] p-0 text-[var(--emr-text-secondary)] opacity-0 shadow-[var(--clair-shadow-xs)] transition-opacity hover:bg-[var(--emr-sidepanel-task-card-action-bg)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-sidepanel-task-card-action-bg)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-[var(--emr-sidepanel-task-card-action-icon-size)]";
+  "size-[var(--emr-sidepanel-task-card-action-size)] shrink-0 rounded-[var(--emr-sidepanel-task-card-action-radius)] border border-[var(--emr-sidepanel-task-card-action-border)] bg-[var(--emr-sidepanel-task-card-action-bg)] p-0 text-[var(--emr-text-secondary)] opacity-0 shadow-[var(--clair-shadow-xs)] transition-opacity hover:!opacity-100 hover:bg-[var(--emr-sidepanel-task-card-action-bg)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-sidepanel-task-card-action-bg)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-[var(--emr-sidepanel-task-card-action-icon-size)]";
 export const emrSidePanelCardActionButtonClassName = cn(
   emrSidePanelCardHoverActionButtonClassName,
   "group-data-[selected=true]/emr-side-panel-card:!opacity-100"
@@ -102,11 +106,24 @@ export function EmrSidePanelIdentityLine({
 
 export function EmrSidePanelCardAction({
   ariaLabel,
+  items,
   testId,
 }: {
   ariaLabel: string;
+  items?: EmrRowActionMenuItem[];
   testId?: string;
 }) {
+  if (items?.length) {
+    return (
+      <EmrRowActionMenu
+        ariaLabel={ariaLabel}
+        items={items}
+        testId={testId}
+        triggerClassName={emrSidePanelCardActionButtonClassName}
+      />
+    );
+  }
+
   return (
     <Button
       type="button"

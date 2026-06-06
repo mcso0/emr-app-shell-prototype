@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-24"
+updated: "2026-06-06"
 linear_issue: "DEN-225"
 linear_project: "12 CLAiR EMR Table Density & Data Grid Ergonomics"
 source_docs:
@@ -97,6 +97,20 @@ Density selector UX:
 - Use a single-value toggle group or equivalent segmented control, not content tabs, because density changes presentation without changing the data set.
 - Prefer a persistent per-table selector only on high-frequency dense work surfaces. When a screen repeats multiple same-role tables, place one shared selector in the screen toolbar/filter row instead of repeating it in every section header.
 - Density icons should communicate row compactness by line spacing. Use lucide-style row/list icons where possible and make the selected state visually stronger than hover.
+
+### DEN-435 Tab/Table Density Control Decision
+
+DEN-435 adds the shared tab and density UX contract:
+
+- `docs/design/system/tab-table-density-contract.md`
+
+Decision:
+
+- Keep the existing icon-only segmented density selector as the default for high-frequency operational tables.
+- Do not globally replace density controls with a dropdown.
+- Use a density dropdown only when toolbar space is constrained, narrow/mobile layout would crowd primary actions, a screen-level selector controls multiple same-role tables, or density belongs inside a broader view-options menu.
+- Density remains presentation-only. It must not change source data, row identity, selected row identity, sort/filter criteria, billing totals, permission checks, DB/API behavior, or persistence boundaries.
+- If a dropdown is used later, it must expose the current density through accessible copy and active menu item state, and it must not imply saved views or persistent user preferences unless separately scoped.
 
 ### DEN-245 Benchmark-Based Placement Contract
 
