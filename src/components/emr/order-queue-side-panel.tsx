@@ -6,6 +6,7 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import {
   EmrDateNavigator,
   EmrListHeader,
@@ -25,6 +26,15 @@ import {
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {
   OrderQueueItem,
   OrderQueueStatusDefinition,
@@ -34,6 +44,11 @@ type OrderQueueFilterItem = {
   label: string;
   value: string;
 };
+
+type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
+type OrderQueueDisplayDensity = "default" | "compact";
+type OrderQueueSortKey = "request" | "assignee" | "wait";
+type OrderQueueActionContext = "chart" | "order";
 
 type EmrOrderQueueSidePanelProps = {
   items: OrderQueueItem[];
@@ -57,6 +72,17 @@ const orderQueueFilterItems = [
   { value: "dispensing" as const, label: "조제" },
   { value: "treatment" as const, label: "처치" },
 ];
+
+const orderQueueDisplayDensityLabels: Record<OrderQueueDisplayDensity, string> = {
+  compact: "촘촘",
+  default: "기본",
+};
+
+const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
+  assignee: "담당자순",
+  request: "요청순",
+  wait: "대기 긴 순",
+};
 
 const fallbackStatusColorToken = "--emr-status-neutral-text";
 
@@ -97,6 +123,36 @@ function getResolvedStatuses(
   return [...statuses, ...fallbackStatuses].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function getDetailFilterLabel(
+  filter: OrderQueueDetailFilter,
+  statuses: OrderQueueStatusDefinition[]
+) {
+  if (filter === "all") return "전체 조건";
+  if (filter === "unassigned") return "담당 미정";
+
+  const statusId = filter.replace("status:", "");
+  return statuses.find((status) => status.id === statusId)?.label ?? "상태";
+}
+
+function matchesDetailFilter(item: OrderQueueItem, filter: OrderQueueDetailFilter) {
+  if (filter === "all") return true;
+  if (filter === "unassigned") return !item.assigneeName;
+
+  return item.statusId === filter.replace("status:", "");
+}
+
+function compareOrderQueueItems(a: OrderQueueItem, b: OrderQueueItem, sortKey: OrderQueueSortKey) {
+  if (sortKey === "assignee") {
+    return (a.assigneeName ?? "zzzz").localeCompare(b.assigneeName ?? "zzzz", "ko");
+  }
+
+  if (sortKey === "wait") {
+    return (b.waitMinutes ?? 0) - (a.waitMinutes ?? 0);
+  }
+
+  return a.time.localeCompare(b.time, "ko");
+}
+
 export function EmrOrderQueueSidePanel({
   className,
   dateLabel = "26.04.29 (수)",
@@ -114,11 +170,18 @@ export function EmrOrderQueueSidePanel({
   todayLabel = "오늘",
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
+  const [detailFilter, setDetailFilter] = useState<OrderQueueDetailFilter>("all");
+  const [displayDensity, setDisplayDensity] = useState<OrderQueueDisplayDensity>("default");
   const [filter, setFilter] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<OrderQueueSortKey>("request");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
+  const actionContext: OrderQueueActionContext = listLabel.includes("진료") ? "chart" : "order";
   const visibleItems = useMemo(
-    () => (filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter)),
-    [filter, getFilterValue, items]
+    () =>
+      (filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter))
+        .filter((item) => matchesDetailFilter(item, detailFilter))
+        .sort((a, b) => compareOrderQueueItems(a, b, sortKey)),
+    [detailFilter, filter, getFilterValue, items, sortKey]
   );
   const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
   const groupedItems = resolvedStatuses
@@ -163,12 +226,16 @@ export function EmrOrderQueueSidePanel({
         count={visibleItems.length}
         headerActions={
           <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="필터">
-              <CdsActionsListFilterIcon className="size-4" />
-            </EmrListHeaderIconButton>
+            <OrderQueueSortMenu sortKey={sortKey} onSortKeyChange={setSortKey} />
+            <OrderQueueFilterMenu
+              filter={detailFilter}
+              statuses={resolvedStatuses}
+              onFilterChange={setDetailFilter}
+            />
+            <OrderQueueDisplayMenu
+              density={displayDensity}
+              onDensityChange={setDisplayDensity}
+            />
             <EmrListHeaderIconButton ariaLabel="검색">
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
@@ -184,6 +251,8 @@ export function EmrOrderQueueSidePanel({
               key={status.id}
               collapsed={collapsed}
               getTaskCardItem={getTaskCardItem}
+              actionContext={actionContext}
+              density={displayDensity}
               items={groupItems}
               onSelectItem={onSelectItem}
               onToggle={() => toggleStatus(status.id)}
@@ -197,17 +266,132 @@ export function EmrOrderQueueSidePanel({
   );
 }
 
+function OrderQueueSortMenu({
+  onSortKeyChange,
+  sortKey,
+}: {
+  onSortKeyChange: (value: OrderQueueSortKey) => void;
+  sortKey: OrderQueueSortKey;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 max-w-[92px] gap-1 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] px-2 text-[11px] font-medium text-[var(--emr-text-secondary)]"
+            aria-label={`현재 정렬: ${orderQueueSortLabels[sortKey]}`}
+          />
+        }
+      >
+        <CdsUtilitiesSortIcon aria-hidden="true" className="size-3.5 shrink-0" />
+        <span className="truncate">{orderQueueSortLabels[sortKey]}</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36">
+        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">정렬</div>
+        <DropdownMenuRadioGroup value={sortKey} onValueChange={(value) => onSortKeyChange(value as OrderQueueSortKey)}>
+          {(Object.keys(orderQueueSortLabels) as OrderQueueSortKey[]).map((key) => (
+            <DropdownMenuRadioItem key={key} value={key}>
+              {orderQueueSortLabels[key]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function OrderQueueFilterMenu({
+  filter,
+  onFilterChange,
+  statuses,
+}: {
+  filter: OrderQueueDetailFilter;
+  onFilterChange: (value: OrderQueueDetailFilter) => void;
+  statuses: OrderQueueStatusDefinition[];
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0"
+            aria-label={`필터: ${getDetailFilterLabel(filter, statuses)}`}
+          />
+        }
+      >
+        <CdsActionsListFilterIcon aria-hidden="true" className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">필터</div>
+        <DropdownMenuRadioGroup value={filter} onValueChange={(value) => onFilterChange(value as OrderQueueDetailFilter)}>
+          <DropdownMenuRadioItem value="all">전체 조건</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="unassigned">담당 미정</DropdownMenuRadioItem>
+          <DropdownMenuSeparator />
+          {statuses.map((status) => (
+            <DropdownMenuRadioItem key={status.id} value={`status:${status.id}`}>
+              {status.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function OrderQueueDisplayMenu({
+  density,
+  onDensityChange,
+}: {
+  density: OrderQueueDisplayDensity;
+  onDensityChange: (value: OrderQueueDisplayDensity) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0 text-[11px] font-semibold"
+            aria-label={`표시 옵션: ${orderQueueDisplayDensityLabels[density]}`}
+          />
+        }
+      >
+        {density === "compact" ? "S" : "M"}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">표시 옵션</div>
+        <DropdownMenuRadioGroup value={density} onValueChange={(value) => onDensityChange(value as OrderQueueDisplayDensity)}>
+          <DropdownMenuRadioItem value="default">기본 밀도</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="compact">촘촘한 밀도</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function OrderQueueGroup({
+  actionContext,
   collapsed,
+  density,
+  getTaskCardItem,
   items,
   onSelectItem,
   onToggle,
   selectedItemId,
   status,
-  getTaskCardItem,
 }: {
+  actionContext: OrderQueueActionContext;
   collapsed: boolean;
   getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
+  density: OrderQueueDisplayDensity;
   items: OrderQueueItem[];
   onSelectItem?: (itemId: string) => void;
   onToggle: () => void;
@@ -236,6 +420,9 @@ function OrderQueueGroup({
       {items.map((item) => (
         <OrderQueueCard
           key={item.id}
+          actionContext={actionContext}
+          density={density}
+          item={item}
           onSelect={() => onSelectItem?.(item.id)}
           selected={selectedItemId === item.id}
           taskCardItem={getTaskCardItem(item)}
@@ -246,19 +433,76 @@ function OrderQueueGroup({
 }
 
 function OrderQueueCard({
+  actionContext,
+  density,
+  item,
   onSelect,
   selected,
   taskCardItem,
 }: {
+  actionContext: OrderQueueActionContext;
+  density: OrderQueueDisplayDensity;
+  item: OrderQueueItem;
   onSelect: () => void;
   selected: boolean;
   taskCardItem: EmrTaskQueueCardItem;
 }) {
+  const actionItems = getOrderQueueActionItems(item, onSelect, actionContext);
+
   return (
     <EmrTaskQueueCard
-      item={taskCardItem}
+      className={density === "compact" ? "gap-[var(--clair-spacing-2)] p-[var(--clair-spacing-6)]" : undefined}
+      item={{
+        ...taskCardItem,
+        actionItems,
+      }}
       selected={selected}
       onSelect={onSelect}
     />
   );
+}
+
+function getOrderQueueActionItems(
+  item: OrderQueueItem,
+  onSelect: () => void,
+  context: OrderQueueActionContext
+): EmrRowActionMenuItem[] {
+  const primaryLabel = context === "chart"
+    ? "차트 열기"
+    : item.orderTypeCategory === "treatment"
+      ? "지시서 열기"
+      : "오더 열기";
+  const completed = item.statusId === "completed" || item.statusId === "canceled";
+
+  return [
+    {
+      key: "open",
+      label: primaryLabel,
+      description: `${item.orderName} 선택`,
+      onSelect,
+      testId: `order-queue-action-open-${item.id}`,
+    },
+    {
+      key: "assign",
+      label: item.assigneeName ? "담당자 보기" : "담당하기",
+      description: item.assigneeName ?? "현재 사용자 배정은 후속 액션 매트릭스에서 확정",
+      disabled: completed,
+      onSelect,
+      testId: `order-queue-action-assign-${item.id}`,
+    },
+    {
+      key: "patient",
+      label: "환자 정보",
+      description: `${item.patientName} 정보 drawer 연결 예정`,
+      disabled: true,
+      testId: `order-queue-action-patient-${item.id}`,
+    },
+    {
+      key: "guardian",
+      label: "보호자 정보",
+      description: `${item.guardianName} 정보 drawer 연결 예정`,
+      disabled: true,
+      testId: `order-queue-action-guardian-${item.id}`,
+    },
+  ];
 }

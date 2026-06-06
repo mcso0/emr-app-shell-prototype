@@ -17,6 +17,8 @@ This repository uses docs as the lightweight replacement for ClickUp or Notion. 
 
 Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, how GitBook-facing navigation should stay curated, and how to review completed work with the user.
 
+The repo borrows useful LLM Wiki practices without adding a separate wiki namespace by default. Use existing source-of-truth docs as the knowledge base, `docs/_meta/agent-rag-map.md` as the query router, `docs/_meta/intake-rules.md` as the ingest router, and local work items, closeouts, changelogs, and status history as distributed logs. Do not add generated summary layers that duplicate canonical product, design, engineering, work, or completed records unless 승욱 explicitly scopes that change.
+
 Canonical docs are organized by purpose:
 
 | Area | Purpose |

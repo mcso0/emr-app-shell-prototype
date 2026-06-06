@@ -6,6 +6,8 @@ Use this file for small design-planning changes that do not need a standalone de
 
 - `added`: DEN-433 defines the shared border, radius, and shadow depth contract for common EMR surfaces and follow-up screen implementation issues.
 - `added`: DEN-434 defines the shared empty state and info box contract, including loading/error/permission separation and E1 action affordance inside passive state surfaces.
+- `changed`: DEN-436 applies the accepted queue shortcut, local detail filter, visible sort, display-options density, and contextual TASK overflow menu direction to the shared side-panel queue.
+- `added`: DEN-435 defines the shared Tab UX/UI and Table Density contract, including when tabs are navigation versus section switches or filters, and when density should remain an icon segmented selector versus move into a dropdown.
 
 ## 2026-05-31
 

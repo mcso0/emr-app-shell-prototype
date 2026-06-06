@@ -19,6 +19,16 @@ Use concise English for durable agent-facing guidance, work plans, search notes,
 
 Treat requests such as "앞으로 이렇게 하자", "규칙으로 만들자", or "항상 유지해줘" as durable guidance changes. Route them to the smallest canonical source doc or operating rule that future chats will read.
 
+## Lightweight Knowledge Ops Intake
+
+When a user references LLM Wiki, persistent synthesis, accumulated agent memory, or similar knowledge-base patterns, apply the pattern through this repo's existing docs system unless 승욱 explicitly approves a separate namespace:
+
+- Keep `docs/` canonical; do not create `docs/wiki/`, a global `index.md`, or a global `log.md` just to mirror LLM Wiki patterns.
+- Convert useful synthesis into the smallest owning source doc only when it changes durable guidance, product truth, design rules, engineering contracts, or agent handoff.
+- For exploratory answers, keep the synthesis in chat unless 승욱 asks to record it or it meets the documentation-depth rules.
+- Treat generated summaries as routing aids, not authority. Product status, security, DB, RLS, Supabase, launch, and completion claims must be checked against canonical source docs.
+- Preserve lightweight operations: query with the agent RAG map, ingest through canonical docs, lint for stale or duplicate claims, and keep logs close to work items or owning areas.
+
 ## Routing Table
 
 | User instruction sounds like | Route to |

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-436 대기열 필터/정렬/TASK 액션 UX 적용 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --line: #d9e1ec;
+        --text: #172033;
+        --muted: #66758a;
+        --blue: #2563eb;
+        --green: #0f8a4b;
+        --soft-blue: #eef5ff;
+        --soft-green: #edfdf3;
+        --chip: #f1f4f8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 36px 28px 56px;
+      }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 30px; letter-spacing: 0; }
+      h2 { margin-top: 28px; font-size: 20px; }
+      h3 { font-size: 15px; }
+      p { color: var(--muted); }
+      .hero, .section, .decision {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      .hero { padding: 28px; }
+      .eyebrow {
+        margin-bottom: 8px;
+        color: var(--blue);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .section { margin-top: 18px; padding: 22px; }
+      .decision {
+        padding: 16px;
+        background: #fbfdff;
+      }
+      .decision strong { display: block; margin-bottom: 6px; }
+      .mock {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f9fbfd;
+        padding: 18px;
+      }
+      .queue {
+        width: 320px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        overflow: hidden;
+      }
+      .queue-title, .toolbar, .row, .menu-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .queue-title {
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        font-weight: 800;
+      }
+      .tabs, .chip, .icon, .sort {
+        border-radius: 7px;
+        background: var(--chip);
+      }
+      .tabs { display: flex; gap: 3px; padding: 4px; }
+      .tabs span { padding: 4px 9px; font-size: 12px; font-weight: 700; }
+      .tabs span:first-child { background: white; border-radius: 6px; }
+      .toolbar {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .toolbar .label { flex: 1; font-weight: 700; }
+      .sort { padding: 5px 8px; font-size: 12px; font-weight: 700; }
+      .icon { width: 28px; height: 28px; display: grid; place-items: center; font-weight: 800; }
+      .card {
+        margin: 12px 16px;
+        border: 1px solid #82b8ff;
+        border-radius: 8px;
+        padding: 10px;
+        background: white;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+      }
+      .row { justify-content: space-between; }
+      .chip { padding: 4px 8px; color: #475569; font-size: 12px; font-weight: 700; }
+      .menu {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 8px 18px rgb(15 23 42 / 12%);
+      }
+      .menu-line {
+        padding: 9px 11px;
+        border-bottom: 1px solid #edf1f7;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .menu-line:last-child { border-bottom: 0; color: var(--muted); }
+      ul { margin: 10px 0 0; padding-left: 20px; color: var(--muted); }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .ok { color: var(--green); font-weight: 800; }
+      @media (max-width: 840px) {
+        main { padding: 22px 16px 40px; }
+        .grid { grid-template-columns: 1fr; }
+        .queue { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">DEN-436 · Human Review</div>
+        <h1>대기열 필터/정렬/TASK 액션 UX 적용</h1>
+        <p>상단 shortcut은 그대로 두고, 상세 필터·정렬·표시 옵션·TASK 더보기를 실제로 판단 가능한 UI로 정리했어.</p>
+        <div class="grid">
+          <div class="decision"><strong>상단 shortcut</strong><p><code>전체/예약/외래</code> 또는 <code>전체/조제/처치</code>는 빠른 범위 전환으로 유지.</p></div>
+          <div class="decision"><strong>상세 제어</strong><p>정렬은 현재값을 노출하고, 필터와 밀도는 dropdown으로 분리.</p></div>
+          <div class="decision"><strong>TASK 더보기</strong><p>카드 근처 contextual dropdown을 먼저 열고, 전체 액션 매트릭스는 후속 정의.</p></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>적용된 화면 구조</h2>
+        <div class="mock">
+          <div class="queue">
+            <div class="queue-title">
+              <span>진료/차트</span>
+              <div class="tabs"><span>전체</span><span>예약</span><span>외래</span></div>
+            </div>
+            <div class="toolbar">
+              <span class="label">진료 대기열 3</span>
+              <span class="sort">요청순</span>
+              <span class="icon">F</span>
+              <span class="icon">M</span>
+              <span class="icon">⌕</span>
+            </div>
+            <div class="card">
+              <div class="row">
+                <span><span class="chip">외래</span> Nabi · 오세아</span>
+                <span class="icon">...</span>
+              </div>
+              <p style="margin-top:8px">13:13 담당 미정 요청 · 담당 미지정</p>
+              <div class="menu">
+                <div class="menu-line">차트 열기</div>
+                <div class="menu-line">담당하기</div>
+                <div class="menu-line">환자 정보 · drawer 연결 후속</div>
+                <div class="menu-line">보호자 정보 · drawer 연결 후속</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/components/emr/order-queue-side-panel.tsx</code>: local sort/filter/display state와 task action dropdown 적용.</li>
+          <li><code>src/components/emr/side-panel-card.tsx</code>: 카드 더보기 버튼이 shared row action menu를 사용할 수 있게 확장.</li>
+          <li><code>tests/app-shell.spec.ts</code>: queue shortcut, 상세 필터, 정렬, 표시 옵션, chart/order task dropdown 검증 추가.</li>
+          <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-047-queue-filter-sort-task-action-ux.md</code>: DEN-436 work item closeout.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>검증</h2>
+        <p class="ok">통과</p>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 lint warning 5건은 유지.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npx playwright test tests/app-shell.spec.ts --grep "module side panel order type segmented control|treatment module renders the chart queue|dispensing queue selection updates"</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>남은 결정</h2>
+        <p>이번 이슈에서는 TASK 더보기의 기본 형태를 확정했어. 다음에는 화면/오더 타입/상태/담당자 조건별 액션 매트릭스를 별도 이슈로 정의하면 돼.</p>
+      </section>
+    </main>
+  </body>
+</html>

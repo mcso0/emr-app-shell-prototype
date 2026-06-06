@@ -787,9 +787,32 @@ test("module side panel order type segmented control filters side orders", async
   await expect(treatmentCard).toContainText(/외래\s*나비\s*·\s*오세아/);
   await expect(treatmentCardAction).toHaveCSS("opacity", "0");
   await treatmentCard.hover();
-  await expect(treatmentCardAction).toHaveCSS("opacity", "1");
-  await treatmentCardAction.click();
+  await treatmentCardAction.click({ force: true });
+  await expect(page.getByRole("menu", { name: "나비 수액 처치 더보기" })).toContainText("지시서 열기");
+  await expect(page.getByRole("menu", { name: "나비 수액 처치 더보기" })).toContainText("환자 정보");
   await expect(treatmentCard).not.toHaveAttribute("data-selected", "true");
+  await page.mouse.click(8, 8);
+
+  await sidePanel.getByRole("button", { name: /현재 정렬: 요청순/ }).click();
+  await expect(page.getByRole("menu", { name: "현재 정렬: 요청순" })).toContainText("대기 긴 순");
+  await page.getByRole("menuitemradio", { name: "대기 긴 순" }).click();
+  await expect(sidePanel.getByRole("button", { name: /현재 정렬: 대기 긴 순/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await sidePanel.getByRole("button", { name: /필터: 전체 조건/ }).click();
+  await page.getByRole("menuitemradio", { name: "담당 미정" }).click();
+  await expect(sidePanel.getByText("소염제 세트")).toBeVisible();
+  await expect(sidePanel.getByText("항생제 세트 A")).toBeHidden();
+  await page.keyboard.press("Escape");
+
+  await sidePanel.getByRole("button", { name: /표시 옵션: 기본/ }).click();
+  await page.getByRole("menuitemradio", { name: "촘촘한 밀도" }).click();
+  await expect(sidePanel.getByRole("button", { name: /표시 옵션: 촘촘/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await sidePanel.getByRole("button", { name: /필터: 담당 미정/ }).click();
+  await page.getByRole("menuitemradio", { name: "전체 조건" }).click();
+  await page.keyboard.press("Escape");
 
   await treatmentFilter.click();
   await expect(treatmentFilter).toHaveAttribute("aria-pressed", "true");
@@ -954,6 +977,11 @@ test("treatment module renders the chart queue instead of the order queue placeh
   await expect(sidePanel.getByRole("button", { name: "진행중 접기" })).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "대기중 접기" })).toBeVisible();
   await expect(sidePanel.getByText("코코")).toBeVisible();
+  const chartQueueAction = sidePanel.locator("[data-testid^='order-queue-item-action-']").first();
+  await chartQueueAction.hover();
+  await chartQueueAction.click({ force: true });
+  await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("차트 열기");
+  await expect(page.getByRole("menu", { name: /더보기/ })).toContainText("보호자 정보");
   await expect(page.getByRole("button", { name: "차트 이력 패널 열기" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "기본 SOAP" })).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);

@@ -4,6 +4,8 @@ Use these rules after routing a chat instruction with `docs/_meta/intake-rules.m
 
 The goal is to keep durable knowledge discoverable without turning every small implementation detail into repo documentation.
 
+This also applies to LLM-generated synthesis. A helpful answer, comparison, or summary should become durable documentation only when it changes current guidance or materially improves future handoff. Otherwise, keep it in chat or the PR/issue record to avoid token-heavy duplicate docs.
+
 ## Language Contract
 
 Use concise English for durable agent-facing guidance, work plans, and handoff notes. Keep user-facing result reviews in Korean unless the user asks otherwise. Product names, screen labels, and Korean domain terms may stay in Korean when they are clearer than translation.

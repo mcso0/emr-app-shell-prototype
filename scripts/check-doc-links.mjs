@@ -37,7 +37,13 @@ const uncheckedExtensions = new Set([".gif", ".jpeg", ".jpg", ".pdf", ".png", ".
 
 function walk(directory) {
   for (const entry of readdirSync(directory)) {
-    if (entry === "node_modules" || entry === ".git" || entry === ".next") {
+    if (
+      entry === "node_modules" ||
+      entry === ".git" ||
+      entry === ".next" ||
+      entry === ".worktrees" ||
+      entry === ".codex-backups"
+    ) {
       continue;
     }
 

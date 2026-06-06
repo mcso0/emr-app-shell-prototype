@@ -20,5 +20,6 @@ Current files:
 - `dialog-shell-rules.md`: `EmrDialogShell` variants, action order, width, scroll, and migration rules for product dialogs.
 - `cta-risk-taxonomy.md`: CTA risk levels, confirmation, financial preflight, destructive, and unavailable-action rules.
 - `row-action-menu-rules.md`: `EmrRowActionMenu` trigger, item copy, unavailable feedback, and close behavior rules.
+- `tab-table-density-contract.md`: workspace tabs, section tabs, segmented/filter-like controls, and density dropdown conditions.
 - `table-density-and-grid-ergonomics.md`: table density, scroll width, header role, resize, and cell text policy.
 - `table-sort-filter-behavior.md`: real table sort/filter behavior contract for selected EMR data grids.
