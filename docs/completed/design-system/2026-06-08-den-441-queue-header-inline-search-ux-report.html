@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-441 Queue Header Inline Search UX 완료 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fb;
+        --panel: #ffffff;
+        --line: #d8dee8;
+        --line-strong: #b7c1d0;
+        --text: #172033;
+        --muted: #637089;
+        --accent: #2563eb;
+        --ok: #047857;
+        --warn: #b45309;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 28px 0 12px;
+        font-size: 17px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      .meta {
+        color: var(--muted);
+      }
+
+      .panel {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        height: 22px;
+        border-radius: 999px;
+        padding: 0 9px;
+        background: #ecfdf5;
+        color: var(--ok);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #f8fafc;
+        padding: 1px 6px;
+        color: #111827;
+      }
+
+      .flow {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .step {
+        border-left: 3px solid var(--accent);
+        background: #f8fbff;
+        padding: 9px 12px;
+      }
+
+      .warning {
+        border-color: #f2c98d;
+        background: #fffbeb;
+        color: var(--warn);
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 28px 16px 48px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="status">Human Review Ready</span>
+      <h1>DEN-441 Queue Header Inline Search UX 완료 보고서</h1>
+      <p class="meta">2026-06-08 · Project: 공통 UX/UI 기준 정리 및 화면 적용 · Work item: DESIGN-SYSTEM-PR-049</p>
+
+      <section class="panel">
+        <h2>변경 요약</h2>
+        <p>
+          대기열 헤더의 검색 아이콘을 실제 검색 모드 트리거로 연결했다. 클릭하면 기존 제목, 카운트, 정렬, 필터 액션이 인라인 검색 입력창과 닫기 버튼으로 전환되고, 입력값은 현재 탭과 필터 조건 안에서 보이는 task card만 필터링한다.
+        </p>
+        <ul>
+          <li>검색 입력창은 열리자마자 focus 된다.</li>
+          <li>검색 중에는 <code>검색 결과 N건</code>만 간결하게 표시한다.</li>
+          <li>0건일 때는 빈 상태와 <code>검색어 지우기</code> 복구 액션을 제공한다.</li>
+          <li>닫기 또는 focused empty input의 Escape는 검색어를 지우고 기존 헤더로 복귀한다.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>적용 화면</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>진료/차트</strong>
+            <p class="meta">공통 order queue side panel</p>
+            <p><code>코코</code> 검색 시 1건 확인</p>
+          </div>
+          <div class="card">
+            <strong>임상병리검사</strong>
+            <p class="meta">오더별/차트별 queue side panel</p>
+            <p><code>CBC</code> 검색 시 2건 확인</p>
+          </div>
+          <div class="card">
+            <strong>영상검사</strong>
+            <p class="meta">오더별/차트별 queue side panel</p>
+            <p><code>X-ray</code> 검색 시 1건 확인</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>인터랙션 흐름</h2>
+        <div class="flow">
+          <div class="step">1. 헤더 검색 아이콘 클릭</div>
+          <div class="step">2. 헤더가 inline search input + X 버튼으로 전환되고 input focus</div>
+          <div class="step">3. 입력값 기준으로 현재 scope 안의 카드만 필터링</div>
+          <div class="step">4. 결과가 있으면 compact count, 없으면 empty state + clear action</div>
+          <div class="step">5. X 또는 Escape로 검색 모드 종료, 기존 헤더 액션 복귀</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>수정 파일</h2>
+        <ul>
+          <li><code>src/components/emr/subpanel.tsx</code> - 공통 list header search mode 및 empty state 추가</li>
+          <li><code>src/components/emr/order-queue-side-panel.tsx</code> - 진료/오더 대기열 local filtering 연결</li>
+          <li><code>src/features/lab-imaging/module.tsx</code> - 검사/영상 대기열 local filtering 연결</li>
+          <li><code>docs/design/system/DESIGN.md</code> - queue header search 상호작용 기준 추가</li>
+          <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-049-queue-header-inline-search-ux.md</code> - 작업 기록 및 검증 결과 갱신</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과, 기존 warning 5건만 유지</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li>Playwright: 진료/검사/영상 검색 진입, focus, 필터링, 0건 상태, clear, Escape close 통과</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>배포</h2>
+        <ul>
+          <li>Preview: <code>https://emr-app-shell-prototype-e7sadsvn0-mcso0s-projects.vercel.app</code></li>
+          <li>Fixed staging: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+          <li>Deployment: <code>dpl_HyJK9UUJSF6zuxr4MKrNRmfTJxEB</code></li>
+          <li>내 headless 브라우저는 Vercel SSO 보호에 막혀 원격 화면 클릭 검증은 못 했고, Vercel CLI로 READY 상태와 alias mapping을 확인했다.</li>
+        </ul>
+      </section>
+
+      <section class="panel warning">
+        <h2>남은 범위</h2>
+        <p>
+          이번 작업은 session-only local UI 검색이다. 서버 검색, URL query persistence, fuzzy/초성 검색, real data 연동, live Supabase 변경은 포함하지 않았다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

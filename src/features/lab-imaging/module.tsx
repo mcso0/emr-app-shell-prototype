@@ -38,6 +38,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -977,7 +978,80 @@ function getLabHistoryGroups(detail: LabDetail): LabHistoryGroup[] {
   return [currentGroup, ...fallbackLabHistoryGroups];
 }
 
-function QueueActions() {
+const normalizeQueueSearchText = (value: string) => value.toLocaleLowerCase("ko").trim();
+
+function getQueueSearchTokens(query: string) {
+  return normalizeQueueSearchText(query).split(/\s+/).filter(Boolean);
+}
+
+function matchesQueueSearch(searchText: string, query: string) {
+  const tokens = getQueueSearchTokens(query);
+  if (!tokens.length) return true;
+
+  const normalizedSearchText = normalizeQueueSearchText(searchText);
+  return tokens.every((token) => normalizedSearchText.includes(token));
+}
+
+function getLabWorkItemSearchText(item: LabWorkItem) {
+  return [
+    item.patient.name,
+    item.primaryGuardian?.name,
+    getReceptionTypeLabel(item.encounter),
+    item.order?.displayName,
+    item.order?.status,
+    item.result.resultName,
+    item.result.status,
+    labStatusGroupLabel[item.result.status],
+    item.technicianName,
+    getOrderRequesterName(item.order),
+    getOrderEventTime(item.order, item.result.receivedAt ?? item.result.collectedAt),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getLabChartGroupSearchText(group: LabChartGroup) {
+  return [
+    group.patient.name,
+    group.primaryGuardianName,
+    getReceptionTypeLabel(group.encounter),
+    ...group.items.map(getLabWorkItemSearchText),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getImagingWorkItemSearchText(item: ImagingWorkItem) {
+  return [
+    item.patient.name,
+    item.primaryGuardian?.name,
+    getReceptionTypeLabel(item.encounter),
+    item.order?.displayName,
+    item.order?.status,
+    item.study.modality,
+    item.study.bodyPart,
+    item.study.status,
+    imagingStatusGroupLabel[item.study.status],
+    item.radiologistName,
+    getOrderRequesterName(item.order),
+    getOrderEventTime(item.order, item.study.capturedAt ?? item.study.requestedAt),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getImagingChartGroupSearchText(group: ImagingChartGroup) {
+  return [
+    group.patient.name,
+    group.primaryGuardianName,
+    getReceptionTypeLabel(group.encounter),
+    ...group.items.map(getImagingWorkItemSearchText),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function QueueActions({ onSearch }: { onSearch?: () => void }) {
   return (
     <>
       <EmrListHeaderIconButton ariaLabel="정렬">
@@ -985,6 +1059,9 @@ function QueueActions() {
       </EmrListHeaderIconButton>
       <EmrListHeaderIconButton ariaLabel="필터">
         <CdsActionsListFilterIcon className="size-4" />
+      </EmrListHeaderIconButton>
+      <EmrListHeaderIconButton ariaLabel="검색" onClick={onSearch}>
+        <CdsActionsSearchIcon className="size-4" />
       </EmrListHeaderIconButton>
     </>
   );
@@ -1230,6 +1307,8 @@ export function LabSidePanel() {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [queueView, setQueueView] = useState<LabQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<LabResult["status"]>>(() => new Set());
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("lab");
   const baseItems = useMemo(() => getLabWorkItems(), []);
   const items = useMemo(
@@ -1246,16 +1325,29 @@ export function LabSidePanel() {
   const latestLabDate = items[0]?.result.receivedAt ?? items[0]?.result.collectedAt;
   const dateLabel = latestLabDate ? `${latestLabDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getLabChartGroups(items), [items]);
+  const filteredItems = useMemo(
+    () => items.filter((item) => matchesQueueSearch(getLabWorkItemSearchText(item), searchQuery)),
+    [items, searchQuery]
+  );
+  const filteredChartGroups = useMemo(
+    () => chartGroups.filter((group) => matchesQueueSearch(getLabChartGroupSearchText(group), searchQuery)),
+    [chartGroups, searchQuery]
+  );
   const groups = useMemo(
     () =>
       labStatusOrder
         .map((status) => ({
           status,
-          items: items.filter((item) => item.result.status === status),
+          items: filteredItems.filter((item) => item.result.status === status),
         }))
         .filter((group) => group.items.length > 0),
-    [items]
+    [filteredItems]
   );
+  const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
+  const closeSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchActive(false);
+  }, []);
   const toggleStatus = (status: LabResult["status"]) => {
     setCollapsedStatusIds((current) => {
       const next = new Set(current);
@@ -1291,11 +1383,27 @@ export function LabSidePanel() {
       <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
       <EmrListHeader
         label={queueView === "order" ? "검사 대기열" : "차트별 검사"}
-        count={queueView === "order" ? items.length : chartGroups.length}
-        headerActions={<QueueActions />}
+        count={resultCount}
+        search={{
+          active: searchActive,
+          closeLabel: "검사 대기열 검색 닫기",
+          inputLabel: `${queueView === "order" ? "검사 대기열" : "차트별 검사"} 검색`,
+          onClose: closeSearch,
+          onQueryChange: setSearchQuery,
+          placeholder: "환자, 보호자, 검사, 담당자 검색",
+          query: searchQuery,
+          resultCount,
+        }}
+        headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
       <EmrSubpanelBody>
-        {queueView === "order"
+        {resultCount === 0 && searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel={queueView === "order" ? "검사 대기열 항목" : "차트별 검사"}
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
+        ) : queueView === "order"
           ? groups.map((group) => (
               <LabQueueGroup
                 key={group.status}
@@ -1307,7 +1415,7 @@ export function LabSidePanel() {
                 status={group.status}
               />
             ))
-          : chartGroups.map((group) => (
+          : filteredChartGroups.map((group) => (
               <LabChartQueueItem
                 key={group.encounter.id}
                 group={group}
@@ -1332,6 +1440,8 @@ export function ImagingSidePanel() {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [queueView, setQueueView] = useState<ImagingQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<ImagingStudyStatus>>(() => new Set());
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("imaging");
   const baseItems = useMemo(() => getImagingWorkItems(), []);
   const items = useMemo(
@@ -1348,16 +1458,29 @@ export function ImagingSidePanel() {
   const latestImagingDate = items[0]?.study.capturedAt ?? items[0]?.study.requestedAt;
   const dateLabel = latestImagingDate ? `${latestImagingDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getImagingChartGroups(items), [items]);
+  const filteredItems = useMemo(
+    () => items.filter((item) => matchesQueueSearch(getImagingWorkItemSearchText(item), searchQuery)),
+    [items, searchQuery]
+  );
+  const filteredChartGroups = useMemo(
+    () => chartGroups.filter((group) => matchesQueueSearch(getImagingChartGroupSearchText(group), searchQuery)),
+    [chartGroups, searchQuery]
+  );
   const groups = useMemo(
     () =>
       imagingStatusOrder
         .map((status) => ({
           status,
-          items: items.filter((item) => item.study.status === status),
+          items: filteredItems.filter((item) => item.study.status === status),
         }))
         .filter((group) => group.items.length > 0),
-    [items]
+    [filteredItems]
   );
+  const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
+  const closeSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchActive(false);
+  }, []);
   const toggleStatus = (status: ImagingStudyStatus) => {
     setCollapsedStatusIds((current) => {
       const next = new Set(current);
@@ -1392,11 +1515,27 @@ export function ImagingSidePanel() {
       <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
       <EmrListHeader
         label={queueView === "order" ? "영상 대기열" : "차트별 영상"}
-        count={queueView === "order" ? items.length : chartGroups.length}
-        headerActions={<QueueActions />}
+        count={resultCount}
+        search={{
+          active: searchActive,
+          closeLabel: "영상 대기열 검색 닫기",
+          inputLabel: `${queueView === "order" ? "영상 대기열" : "차트별 영상"} 검색`,
+          onClose: closeSearch,
+          onQueryChange: setSearchQuery,
+          placeholder: "환자, 보호자, 영상, 담당자 검색",
+          query: searchQuery,
+          resultCount,
+        }}
+        headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
       <EmrSubpanelBody>
-        {queueView === "order"
+        {resultCount === 0 && searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel={queueView === "order" ? "영상 대기열 항목" : "차트별 영상"}
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
+        ) : queueView === "order"
           ? groups.map((group) => (
               <ImagingQueueGroup
                 key={group.status}
@@ -1408,7 +1547,7 @@ export function ImagingSidePanel() {
                 status={group.status}
               />
             ))
-          : chartGroups.map((group) => (
+          : filteredChartGroups.map((group) => (
               <ImagingChartQueueItem
                 key={group.encounter.id}
                 group={group}
@@ -1814,10 +1953,35 @@ export function LabHeader() {
         { label: "혈압", value: "170 bpm" },
       ]}
       memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "환자메모" },
-        { label: "수납메모", disabled: true },
+        {
+          label: "방문목적",
+          summary:
+            detail.encounter.visitPurpose ??
+            detail.encounter.chiefComplaint ??
+            "방문 목적 기록 없음",
+        },
+        {
+          label: "보호자 메모",
+          locked: true,
+          summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
+          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+        },
+        {
+          label: "환자 메모",
+          summary:
+            [
+              detail.patient.allergyNote,
+              detail.patient.specialNote,
+              detail.patient.handlingCautionNote,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "환자 특이 메모 없음",
+        },
+        {
+          label: "수납 메모",
+          disabled: true,
+          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+        },
       ]}
       trailingItems={[
         { label: "검사", value: detail.result.resultName },
@@ -2401,10 +2565,35 @@ export function ImagingHeader({ hasRightPanel }: ShellComponentProps) {
         { label: "혈압", value: "170 bpm" },
       ]}
       memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "환자메모" },
-        { label: "수납메모", disabled: true },
+        {
+          label: "방문목적",
+          summary:
+            detail.encounter.visitPurpose ??
+            detail.encounter.chiefComplaint ??
+            "방문 목적 기록 없음",
+        },
+        {
+          label: "보호자 메모",
+          locked: true,
+          summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
+          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+        },
+        {
+          label: "환자 메모",
+          summary:
+            [
+              detail.patient.allergyNote,
+              detail.patient.specialNote,
+              detail.patient.handlingCautionNote,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "환자 특이 메모 없음",
+        },
+        {
+          label: "수납 메모",
+          disabled: true,
+          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+        },
       ]}
       trailingItems={[
         { label: "영상", value: detail.order?.displayName ?? `${detail.study.modality} ${detail.study.bodyPart}` },

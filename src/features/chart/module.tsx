@@ -869,9 +869,35 @@ export function ChartHeader() {
       ]}
       vitalItems={getChartVitals(bundle)}
       memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "수납메모", disabled: true },
+        {
+          label: "방문목적",
+          summary:
+            bundle.encounter.visitPurpose ??
+            bundle.encounter.chiefComplaint ??
+            "방문 목적 기록 없음",
+        },
+        {
+          label: "보호자 메모",
+          locked: true,
+          summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
+          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+        },
+        {
+          label: "환자 메모",
+          summary:
+            [
+              bundle.patient.allergyNote,
+              bundle.patient.specialNote,
+              bundle.patient.handlingCautionNote,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "환자 특이 메모 없음",
+        },
+        {
+          label: "수납 메모",
+          disabled: true,
+          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+        },
       ]}
       trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
     />
