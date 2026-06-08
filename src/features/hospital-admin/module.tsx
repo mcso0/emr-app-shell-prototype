@@ -1068,15 +1068,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       ? "세션 seed 기준"
                       : "Workspace catalog 대기"}
             </div>
-            <LineTabs
-              aria-label={`${selectedLeafLabel} 하위 타입`}
-              className="mt-3 max-w-full overflow-x-auto"
-              value="all"
-              items={orderTypeTabs}
-              itemClassName="emr-text-body"
-              onValueChange={() => undefined}
-              size="default"
-            />
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" disabled={selectedOrderIds.length !== 1} onClick={handleDuplicateFirstSelected}>
@@ -1087,96 +1078,107 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           </div>
         </div>
       </section>
-      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-2 border-b bg-card px-4 py-2">
-        <div className="flex h-8 min-w-0 flex-1 items-center rounded-lg border bg-card px-2.5 sm:min-w-[280px]">
-          <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          <Input
-            aria-label="오더 검색"
-            className="h-8 border-0 bg-transparent px-2 emr-text-dense shadow-none focus-visible:ring-0"
-            placeholder="오더명, 별칭, 청구서명 검색"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as HospitalOrderStatusFilter)}>
-          <SelectTrigger aria-label="사용여부 필터" size="sm" className="w-[116px] bg-card">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {statusFilterItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select value={billingFilter} onValueChange={(value) => setBillingFilter(value as HospitalOrderBillingFilter)}>
-          <SelectTrigger aria-label="청구 필터" size="sm" className="w-[128px] bg-card">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {billingFilterItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select value={workTypeFilter} onValueChange={(value) => setWorkTypeFilter(value as HospitalOrderWorkTypeFilter)}>
-          <SelectTrigger aria-label="업무유형 필터" size="sm" className="w-[128px] bg-card">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {workTypeFilterItems.map((item) => (
-                <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
-        <Popover open={orderFilterOpen} onOpenChange={setOrderFilterOpen}>
-          <PopoverTrigger
-            render={
-              <Button
-                type="button"
-                variant={activeOrderFilterCount > 0 ? "secondary" : "outline"}
-                size="sm"
-                className={cn(
-                  "bg-card",
-                  activeOrderFilterCount > 0 &&
-                    "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
-                )}
-                aria-label={
-                  activeOrderFilterCount > 0
-                    ? `오더 필터 ${activeOrderFilterCount}개 설정`
-                    : "오더 필터 설정"
-                }
-              />
-            }
-          >
-            <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
-            Filter{activeOrderFilterCount > 0 ? ` ${activeOrderFilterCount}` : ""}
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
-            initialFocus={false}
-          >
-            <EmrTableFilterBuilder
-              clearAllLabel="초기화"
-              description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 AND로 적용됩니다."
-              fields={orderFilterFields}
-              model={orderFilterModel}
-              title="Filters"
-              onClose={() => setOrderFilterOpen(false)}
-              onModelChange={setOrderFilterModel}
+      <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-5 py-2">
+        <LineTabs
+          aria-label={`${selectedLeafLabel} 하위 타입`}
+          className="max-w-full min-w-0 flex-1 overflow-x-auto"
+          value="all"
+          items={orderTypeTabs}
+          itemClassName="emr-text-body"
+          onValueChange={() => undefined}
+          size="default"
+        />
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <div className="flex h-8 w-[180px] min-w-0 items-center rounded-lg border bg-card px-2.5">
+            <SearchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+            <Input
+              aria-label="오더 검색"
+              className="h-8 border-0 bg-transparent px-2 emr-text-dense shadow-none focus-visible:ring-0"
+              placeholder="오더 검색"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
             />
-          </PopoverContent>
-        </Popover>
-        <Button size="icon-sm" variant="outline" aria-label="컬럼 표시 설정">
-          <SlidersIcon />
-        </Button>
+          </div>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as HospitalOrderStatusFilter)}>
+            <SelectTrigger aria-label="사용여부 필터" size="sm" className="w-[96px] bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {statusFilterItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select value={billingFilter} onValueChange={(value) => setBillingFilter(value as HospitalOrderBillingFilter)}>
+            <SelectTrigger aria-label="청구 필터" size="sm" className="w-[104px] bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {billingFilterItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select value={workTypeFilter} onValueChange={(value) => setWorkTypeFilter(value as HospitalOrderWorkTypeFilter)}>
+            <SelectTrigger aria-label="업무유형 필터" size="sm" className="w-[104px] bg-card">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {workTypeFilterItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <EmrTableDensitySelector value={tableDensity} onValueChange={setTableDensity} />
+          <Popover open={orderFilterOpen} onOpenChange={setOrderFilterOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={activeOrderFilterCount > 0 ? "secondary" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-8 bg-card px-2",
+                    activeOrderFilterCount > 0 &&
+                      "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
+                  )}
+                  aria-label={
+                    activeOrderFilterCount > 0
+                      ? `오더 필터 ${activeOrderFilterCount}개 설정`
+                      : "오더 필터 설정"
+                  }
+                />
+              }
+            >
+              <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
+              필터{activeOrderFilterCount > 0 ? ` ${activeOrderFilterCount}` : ""}
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-[min(720px,calc(100vw-32px))] gap-3 p-3"
+              initialFocus={false}
+            >
+              <EmrTableFilterBuilder
+                clearAllLabel="초기화"
+                description="오더 필터는 현재 검색/상태/청구/업무 조건 안에서 완성된 조건만 AND로 적용됩니다."
+                fields={orderFilterFields}
+                model={orderFilterModel}
+                title="Filters"
+                onClose={() => setOrderFilterOpen(false)}
+                onModelChange={setOrderFilterModel}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button size="icon-sm" variant="outline" aria-label="컬럼 표시 설정">
+            <SlidersIcon />
+          </Button>
+        </div>
       </section>
       <div className="min-h-0 flex-1 overflow-hidden">
         <ScrollArea className="h-full">

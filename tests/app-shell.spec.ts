@@ -903,6 +903,47 @@ test("orders module renders hospital admin order management instead of the place
   await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
 });
 
+test("customer table uses compact scope controls and checkbox bulk selection", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+
+  const header = page.getByTestId("customer-page-header");
+  const table = page.getByTestId("customer-patient-table");
+
+  await expect(header.getByRole("textbox", { name: "고객관리 검색" })).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "환자/보호자 등록" })).toBeVisible();
+  await expect(table).toBeVisible();
+  await expect(table).toHaveCSS("border-radius", "0px");
+  await expect(table.getByRole("textbox", { name: "고객관리 검색" })).toBeVisible();
+  await expect(table).toContainText("전체 동물");
+  await expect(table).not.toContainText("0 / 5 선택");
+
+  await page.getByRole("checkbox", { name: "코코 선택" }).click();
+  await expect(page.getByText("선택한 동물 1개")).toBeVisible();
+  await expect(page.getByText("환자 정보")).toHaveCount(0);
+
+  await page.getByTestId("customer-patient-row-patient-coco").click({ position: { x: 120, y: 20 } });
+  await expect(page.getByText("환자 정보")).toBeVisible();
+});
+
+test("hospital order table keeps tabs and compact controls in one hierarchy row", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open&aside=closed");
+
+  const tabGroup = page.getByRole("group", { name: "임상병리 검사 하위 타입" });
+  const activeTab = tabGroup.getByRole("button", { name: "전체" });
+  const search = page.getByRole("textbox", { name: "오더 검색" });
+  await expect(activeTab).toBeVisible();
+  await expect(activeTab).toHaveAttribute("aria-pressed", "true");
+  await expect(search).toBeVisible();
+  await expect(page.getByRole("button", { name: "오더 필터 설정" })).toBeVisible();
+  await expect(page.getByTestId("hospital-order-table")).toBeVisible();
+
+  const activeTabBox = await activeTab.boundingBox();
+  const searchBox = await search.boundingBox();
+  expectRect(activeTabBox);
+  expectRect(searchBox);
+  expect(Math.abs(Math.round(activeTabBox.y - searchBox.y))).toBeLessThanOrEqual(8);
+});
+
 test("dispensing queue selection updates existing patient and instruction context", async ({ page }) => {
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed");
 
