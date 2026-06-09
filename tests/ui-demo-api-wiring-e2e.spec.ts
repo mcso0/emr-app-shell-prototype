@@ -492,6 +492,287 @@ test("billing screen prefers API invoice, payment, and checkout snapshots over m
   );
 });
 
+test("billing screen exposes API read failure and recovers through retry", async ({
+  page,
+}) => {
+  let allowInvoiceLineSuccess = false;
+  const recoveredInvoice = {
+    id: "invoice-coco-260501",
+    workspaceId,
+    encounterId: "encounter-coco-260501",
+    guardianId: "guardian-lee-jieun",
+    invoiceNo: "API-INV-RETRY-260501",
+    status: "issued",
+    subtotalAmount: 54321,
+    discountAmount: 0,
+    taxAmount: 0,
+    totalAmount: 54321,
+    issuedAt: "2026-05-01T10:52:00+09:00",
+    paymentState: "none",
+    selectedPaymentMethod: "card",
+    createdAt: "2026-05-01T10:40:00+09:00",
+  };
+
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, candidates: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-lines?*", async (route) => {
+    if (!allowInvoiceLineSuccess) {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: false, status: 500, error: "forced_invoice_line_failure" },
+        status: 500,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-invoice-line-persistence",
+        invoice: recoveredInvoice,
+        lines: [
+          {
+            id: "invoice-line-api-coco-recovered",
+            invoiceId: recoveredInvoice.id,
+            serviceItemId: "svc-lab-cbc",
+            orderId: "order-coco-cbc",
+            description: "Recovered API billing line",
+            quantity: 1,
+            unitPrice: 54321,
+            lineTotal: 54321,
+          },
+        ],
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/payment-status?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-payment-status-persistence",
+        invoice: recoveredInvoice,
+        payments: [],
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, enforcedBy: "guardian-billing-ledger", rows: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "guardian-checkout-session",
+        checkoutSession: {
+          excludedAmount: 0,
+          excludedCount: 0,
+          id: "checkout-api-coco-retry",
+          payableAmount: 54321,
+          selectedInvoiceIds: [recoveredInvoice.id],
+          status: "prepared",
+        },
+        invoiceSnapshots: [],
+      },
+      status: 200,
+    });
+  });
+
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
+
+  await expect(page.getByTestId("billing-api-state")).toContainText(
+    "수납 API 응답을 불러오지 못했습니다.",
+  );
+  allowInvoiceLineSuccess = true;
+  await page.getByTestId("billing-api-state-retry-button").click();
+  await expect(page.getByTestId("billing-checkout-workspace")).toContainText(
+    "Recovered API billing line",
+  );
+  await expect(page.getByTestId("billing-checkout-total")).toContainText(
+    "54,321원",
+  );
+  await expect(page.getByTestId("billing-api-state")).toHaveCount(0);
+});
+
+test("billing screen separates permission denial from retryable API failure", async ({
+  page,
+}) => {
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, candidates: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-lines?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: false, status: 403, denialReason: "permission_missing" },
+      status: 403,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/payment-status?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: false, status: 403, denialReason: "permission_missing" },
+      status: 403,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, enforcedBy: "guardian-billing-ledger", rows: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: false, status: 403, denialReason: "permission_missing" },
+      status: 403,
+    });
+  });
+
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
+
+  await expect(page.getByTestId("billing-api-state")).toContainText(
+    "수납 API 권한이 없습니다.",
+  );
+  await expect(page.getByTestId("billing-api-state-retry-button")).toHaveCount(0);
+  await expect(page.getByTestId("billing-checkout-state")).toContainText(
+    "Checkout 권한이 없습니다.",
+  );
+});
+
+test("billing checkout session failure exposes a retry path", async ({ page }) => {
+  let allowCheckoutSuccess = false;
+  const invoice = {
+    id: "invoice-coco-260501",
+    workspaceId,
+    encounterId: "encounter-coco-260501",
+    guardianId: "guardian-lee-jieun",
+    invoiceNo: "API-INV-CHECKOUT-260501",
+    status: "issued",
+    subtotalAmount: 65432,
+    discountAmount: 0,
+    taxAmount: 0,
+    totalAmount: 65432,
+    issuedAt: "2026-05-01T10:58:00+09:00",
+    paymentState: "none",
+    selectedPaymentMethod: "card",
+    createdAt: "2026-05-01T10:40:00+09:00",
+  };
+
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, candidates: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-lines?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-invoice-line-persistence",
+        invoice,
+        lines: [
+          {
+            id: "invoice-line-api-coco-checkout-retry",
+            invoiceId: invoice.id,
+            serviceItemId: "svc-treatment-fluid",
+            orderId: "order-coco-fluid",
+            description: "Checkout retry billing line",
+            quantity: 1,
+            unitPrice: 65432,
+            lineTotal: 65432,
+          },
+        ],
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/payment-status?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-payment-status-persistence",
+        invoice,
+        payments: [],
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, enforcedBy: "guardian-billing-ledger", rows: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout", async (route) => {
+    if (!allowCheckoutSuccess) {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: false, status: 500, error: "forced_checkout_failure" },
+        status: 500,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "guardian-checkout-session",
+        checkoutSession: {
+          excludedAmount: 0,
+          excludedCount: 0,
+          id: "checkout-api-coco-recovered",
+          payableAmount: 65432,
+          selectedInvoiceIds: [invoice.id],
+          status: "prepared",
+        },
+        invoiceSnapshots: [],
+      },
+      status: 200,
+    });
+  });
+
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
+
+  await expect(page.getByTestId("billing-checkout-state")).toContainText(
+    "Checkout session을 준비하지 못했습니다.",
+  );
+  allowCheckoutSuccess = true;
+  await page.getByTestId("billing-checkout-retry-button").click();
+  await expect(page.getByTestId("billing-checkout-total")).toContainText(
+    "65,432원",
+  );
+  await expect(page.getByTestId("billing-checkout-state")).toHaveCount(0);
+});
+
 test("lab result UI exposes catalog retry and save retry states", async ({ page }) => {
   let catalogAttempts = 0;
   let saveAttempts = 0;
