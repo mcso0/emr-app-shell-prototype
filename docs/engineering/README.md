@@ -14,6 +14,8 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - Auth/security roadmap: `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
 - Auth/login package index: `docs/engineering/auth-security/auth-login/README.md`
 - Persistence and data security checklist: `docs/engineering/auth-security/persistence-data-security-checklist.md`
+- Demo data architecture: `docs/engineering/demo-data-architecture-2026-06-08.md`
+- Demo seed inventory/readback contract: `docs/engineering/data-model/demo-seed-inventory-readback-contract.md`
 - Product MVP QA scenarios: `docs/engineering/testing/product-mvp-qa-scenario-pack.md`
 - Release environment policy: `docs/engineering/operations/release-environment-policy.md`
 - Vercel Git integration execution plan: `docs/engineering/operations/vercel-git-integration-execution-plan.md`

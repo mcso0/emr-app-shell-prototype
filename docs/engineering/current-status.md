@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-23
+Updated: 2026-06-09
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -32,18 +32,20 @@ The app currently has usable prototype screens for:
 | Area | Current state |
 | --- | --- |
 | Home | Operational dashboard and work-status view with session-only mock data |
-| Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, and local-first encounter path foundations |
+| Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, local-first encounter path foundations, and first-pass API-backed queue/calendar/profile hydration through existing reception routes |
 | Customer management | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries |
-| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, and local-first persistence checkpoints |
-| Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route, while full live result/provider persistence remains outside current completion claims |
-| Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, while full live dispensing/treatment execution persistence remains outside current completion claims |
-| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, fulfillment completion candidate sync, and amount-integrity regression foundations |
+| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, local-first persistence checkpoints, and first-pass live queue API adoption in the chart side panel |
+| Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route. UI PR 2 adds lab result-sheet catalog read adoption for live lab work items and a local/dev result-entry server boundary, while durable lab result value persistence and provider integrations remain outside current completion claims |
+| Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, and UI PR 2 covers treatment/dispensing route-boundary status transitions. Full visible execution-screen refactor remains outside current completion claims |
+| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, guardian checkout, fulfillment completion candidate sync, and amount-integrity regression foundations. UI PR 2 covers checkout route consumption in visible billing UI while mock-backed store state still remains |
 | Inpatient | Session-only ward board and detail surface |
 | Hospital admin | Order catalog persistence foundation and membership/invitation management surfaces |
 | Audit | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface |
 | Auth/workspace | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, and local DB/RLS foundations |
 
 Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Remote Supabase staging replay remains gated by explicit approval.
+
+Demo DB PR 1 through PR 5 closed the current seed-family gaps for the `clair-demo` synthetic local/dev dataset. UI PR 1 starts the API-backed adoption phase by hydrating reception patient/guardian profiles from the reception lookup route, loading the chart queue through the chart live-queue route, and adding a focused synthetic E2E route-boundary test that covers reception, chart order confirmation, fulfillment work-item completion, result-review billing, checkout/payment status, and audit readback. UI PR 2 extends downstream adoption by connecting live lab fulfillment work items to the seeded lab result-sheet catalog, adding a local/dev lab result-entry server boundary, covering treatment/dispensing fulfillment transitions at the route boundary, and exercising billing checkout plus audit review in visible UI E2E. Mock fallback remains intentionally preserved for Sales Demo and unconfigured local sessions.
 
 The latest detailed change history before this split is in [MVP Current Status History](current-status-history.md).
 
@@ -58,7 +60,7 @@ Do not claim these as done without a scoped work item and verification evidence:
 - payment provider, receipt, refund, accounting, or settlement integrations
 - real email, KakaoTalk, PACS, device, Excel, or external provider integrations
 - legal/compliance certification
-- full lab/imaging/dispensing live persistence
+- full lab/imaging/dispensing durable live persistence and complete mock-store removal
 - final launch-readiness signoff
 
 ## Guardrails
@@ -77,6 +79,7 @@ Use the active work item for exact verification commands. Recent relevant verifi
 - `npm run docs:check` for docs path/reference changes
 - `npm run lint`, `npx tsc --noEmit`, and `npm run build` for implementation changes
 - focused Playwright specs for touched workflows
+- `tests/ui-demo-api-wiring-e2e.spec.ts` for current reception/chart/downstream API wiring and synthetic outpatient route-boundary proof
 - `tests/fulfillment-handoff-replay.spec.ts` for chart confirmation through downstream fulfillment, lifecycle, and billing readback
 - focused server/API regression specs for auth, workspace, billing, customer, audit, and persistence boundaries
 - secret scans and migration/static checks when auth, DB, RLS, or env handling changes

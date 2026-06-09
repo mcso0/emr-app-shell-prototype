@@ -517,6 +517,37 @@ async function loadReceptionCalendar({
   }
 }
 
+async function loadReceptionPatientGuardianProfiles({
+  actorId,
+  workspaceId,
+}: {
+  actorId?: string;
+  workspaceId: string;
+}): Promise<ReceptionPatientGuardianLookupResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?query=`,
+      {
+        cache: "no-store",
+        headers: actorId
+          ? { "x-clair-demo-session-user-id": actorId }
+          : undefined,
+      },
+    );
+    const body =
+      (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return body;
+      return { ok: false, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, error: "db_read_failed" };
+  }
+}
+
 function getWalkInRouteErrorMessage(
   result: Extract<ReceptionWalkInEncounterResponse, { ok: false }>,
 ) {
@@ -3285,6 +3316,9 @@ export function ReceptionContent() {
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
   );
+  const applyPatientGuardianLookupItems = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItems,
+  );
   const selectAppointment = useReceptionStore(
     (state) => state.selectAppointment,
   );
@@ -3461,6 +3495,31 @@ export function ReceptionContent() {
     selectedAppointmentId,
     selectedEncounterId,
     selectedPatientId,
+  ]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfiles() {
+      const result = await loadReceptionPatientGuardianProfiles({
+        actorId: authSession?.id,
+        workspaceId,
+      });
+
+      if (cancelled || !result.ok) return;
+
+      applyPatientGuardianLookupItems(result.patients);
+    }
+
+    void loadProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    applyPatientGuardianLookupItems,
+    authSession?.id,
+    readRetryNonce,
+    workspaceId,
   ]);
   useEffect(() => {
     let cancelled = false;
