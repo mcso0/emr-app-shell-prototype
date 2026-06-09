@@ -265,6 +265,25 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     paymentState: "paid",
     status: "paid",
   });
+  const paidReadback = await request.get(
+    `/api/workspaces/${workspaceId}/billing/payment-status?invoiceId=invoice-kong-260501`,
+    { headers: frontDeskHeaders },
+  );
+  expect(paidReadback.status()).toBe(200);
+  const paidReadbackBody = (await paidReadback.json()) as {
+    ok: true;
+    invoice: { paymentState: string; status: string };
+    payments: Array<{ paymentMethod: string; status: string }>;
+  };
+  expect(paidReadbackBody.invoice).toMatchObject({
+    paymentState: "paid",
+    status: "paid",
+  });
+  expect(paidReadbackBody.payments).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ paymentMethod: "card", status: "approved" }),
+    ]),
+  );
 
   const audit = await request.get(
     `/api/workspaces/${workspaceId}/audit/events?query=invoice-kong&limit=10`,
@@ -314,6 +333,161 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
       "lab-result-entry",
       "billing-checkout-post",
       "audit-events",
+    ]),
+  );
+});
+
+test("billing screen prefers API invoice, payment, and checkout snapshots over mock state", async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  const apiInvoice = {
+    id: "invoice-coco-260501",
+    workspaceId,
+    encounterId: "encounter-coco-260501",
+    guardianId: "guardian-lee-jieun",
+    invoiceNo: "API-INV-260501-9999",
+    status: "paid",
+    subtotalAmount: 43210,
+    discountAmount: 0,
+    taxAmount: 0,
+    totalAmount: 43210,
+    issuedAt: "2026-05-01T10:50:00+09:00",
+    paidAt: "2026-05-01T10:55:00+09:00",
+    paymentState: "paid",
+    selectedPaymentMethod: "card",
+    createdAt: "2026-05-01T10:40:00+09:00",
+  };
+  const apiInvoiceLines = [
+    {
+      id: "invoice-line-api-coco-cbc-readback",
+      invoiceId: apiInvoice.id,
+      serviceItemId: "svc-lab-cbc",
+      orderId: "order-coco-cbc",
+      description: "API CBC readback line",
+      quantity: 1,
+      unitPrice: 43210,
+      lineTotal: 43210,
+    },
+  ];
+  const apiPayments = [
+    {
+      id: "payment-api-coco-card-readback",
+      invoiceId: apiInvoice.id,
+      paymentMethod: "card",
+      amount: 43210,
+      status: "approved",
+      paidAt: "2026-05-01T10:55:00+09:00",
+      metadata: { source: "ui-api-test" },
+    },
+  ];
+
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, candidates: [] },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/invoice-lines?*", async (route) => {
+    calls.push("billing-invoice-lines-get");
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-invoice-line-persistence",
+        invoice: apiInvoice,
+        lines: apiInvoiceLines,
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/payment-status?*", async (route) => {
+    calls.push("billing-payment-status-get");
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-payment-status-persistence",
+        invoice: apiInvoice,
+        payments: apiPayments,
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout?*", async (route) => {
+    calls.push("billing-checkout-get");
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "guardian-billing-ledger",
+        rows: [
+          {
+            activityAt: "2026-05-01T10:55:00+09:00",
+            amountInclusion: "payable",
+            balanceAmount: 0,
+            invoiceId: apiInvoice.id,
+            payableAmount: 43210,
+            status: "paid",
+            totalAmount: 43210,
+          },
+        ],
+      },
+      status: 200,
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout", async (route) => {
+    calls.push("billing-checkout-post");
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "guardian-checkout-session",
+        checkoutSession: {
+          excludedAmount: 0,
+          excludedCount: 0,
+          id: "checkout-api-coco-readback",
+          payableAmount: 43210,
+          selectedInvoiceIds: [apiInvoice.id],
+          status: "prepared",
+        },
+        invoiceSnapshots: [
+          {
+            amountInclusion: "payable",
+            balanceAmount: 0,
+            invoiceId: apiInvoice.id,
+            payableAmount: 43210,
+          },
+        ],
+      },
+      status: 200,
+    });
+  });
+
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
+
+  await expect(page.getByTestId("billing-instruction-info")).toContainText(
+    "API-INV-260501-9999",
+  );
+  await expect(page.getByTestId("billing-instruction-info")).toContainText(
+    "수납완료",
+  );
+  await expect(page.getByTestId("billing-checkout-workspace")).toContainText(
+    "API CBC readback line",
+  );
+  await expect(page.getByTestId("billing-checkout-total")).toContainText(
+    "43,210원",
+  );
+  await expect.poll(() => calls).toEqual(
+    expect.arrayContaining([
+      "billing-invoice-lines-get",
+      "billing-payment-status-get",
+      "billing-checkout-post",
     ]),
   );
 });

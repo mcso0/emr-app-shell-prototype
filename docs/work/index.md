@@ -236,6 +236,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | UI-PR-002                   | human_review | demo-data            | P0       | UI PR 2              | `docs/work/demo-data/UI-PR-002-fulfillment-billing-ui-wiring-e2e.md`                                   |
 | DEN-452                     | human_review | demo-data            | P0       | Linear DEN-452       | `docs/work/demo-data/DEN-452-lab-result-persistence-db-rls-api.md`                                     |
 | DEN-453                     | human_review | demo-data            | P0       | Linear DEN-453       | `docs/work/demo-data/DEN-453-lab-result-ux-loading-error-retry-permission-states.md`                   |
+| DEN-454                     | human_review | demo-data            | P0       | Linear DEN-454       | `docs/work/demo-data/DEN-454-billing-api-primary-invoice-payment-checkout-state.md`                    |
 | CUSTOMER-LIVE-PR-001        | human_review | customer             | P0       | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md`                     |
 | CUSTOMER-LIVE-PR-002        | human_review | customer             | P0       | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md`                                |
 | CUSTOMER-LIVE-PR-003        | human_review | customer             | P0       | Project 06 / DEN-105 | `docs/work/customer/CUSTOMER-LIVE-PR-003-customer-schema-migration.md`                                 |

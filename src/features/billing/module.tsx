@@ -1570,7 +1570,10 @@ function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {
   ];
 
   return (
-    <div className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4">
+    <div
+      data-testid="billing-instruction-info"
+      className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4"
+    >
       {infoItems.map(({ label, value }) => (
         <div
           key={label}
@@ -1716,7 +1719,7 @@ function SelectedCheckoutWorkspace({
   const lineCount = groups.reduce((total, group) => total + group.lines.length, 0);
 
   return (
-    <section className="rounded-lg border bg-card">
+    <section className="rounded-lg border bg-card" data-testid="billing-checkout-workspace">
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <div>
           <h2 className="emr-text-body font-semibold">선택된 checkout 작업대</h2>
@@ -1725,7 +1728,7 @@ function SelectedCheckoutWorkspace({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">
+          <Badge variant="secondary" data-testid="billing-checkout-total">
             {groups.length}건 · {lineCount}항목 · 수납 합산{" "}
             {formatAmount(displayedCheckoutTotalAmount)}
           </Badge>
