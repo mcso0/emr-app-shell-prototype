@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-443-DEN-446 릴리즈/배포 운영 체계 정리 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #dde1e7;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.95em;
+      }
+
+      .meta {
+        color: #667085;
+      }
+
+      .status {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid #cfe7d7;
+        border-radius: 999px;
+        background: #edf8f0;
+        color: #177245;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-06-08 · Linear DEN-443, DEN-444, DEN-445, DEN-446</p>
+        <h1>릴리즈/배포 운영 체계 정리 보고서</h1>
+        <p>
+          여러 Codex 쓰레드가 동시에 작업해도 fixed staging이 덮이지 않도록
+          PR preview, main fixed staging, production promote의 경계를 문서와 스킬로
+          고정했다.
+        </p>
+      </header>
+
+      <section>
+        <h2><span class="status">완료</span>Linear 구조</h2>
+        <ul>
+          <li><code>CLAiR EMR Release & Deployment Operations</code> 프로젝트를 생성했다.</li>
+          <li><code>00 Policy & Current State</code>, <code>01 Agent Skills & Work Routing</code>, <code>02 Automation Plan</code>, <code>03 Production Promote & Closeout</code> 마일스톤을 만들었다.</li>
+          <li>DEN-443부터 DEN-446까지 4개 이슈를 생성해 순차 작업 단위로 정리했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2><span class="status">완료</span>문서와 스킬</h2>
+        <ul>
+          <li><code>docs/engineering/operations/release-environment-policy.md</code>를 추가했다.</li>
+          <li><code>.agents/skills/release-deployment-ops/SKILL.md</code>를 추가했다.</li>
+          <li><code>manual-linear-ops</code>와 manual Linear 운영 문서에 작업 묶음/릴리즈 handoff 규칙을 연결했다.</li>
+          <li>operations README, engineering README, agent RAG map, work index를 갱신했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>핵심 결정</h2>
+        <ul>
+          <li>개별 작업 브랜치와 PR은 preview까지만 사용한다.</li>
+          <li>fixed staging alias는 <code>main</code> 또는 승인된 통합 브랜치에서만 변경한다.</li>
+          <li>production deploy/promote는 승욱의 명시 승인 없이는 실행하지 않는다.</li>
+          <li>배포 전 최소 보안 게이트는 <code>.env*</code> 추적 금지, <code>NEXT_PUBLIC_*</code> secret 오용 금지, service role/API secret/DB password 노출 금지, <code>npm run security:secrets</code> 통과다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>Vercel/GitHub 자동화 설정은 변경하지 않았다.</li>
+          <li>fixed staging 재배포 또는 alias 변경은 하지 않았다.</li>
+          <li>production deploy/promote는 하지 않았다.</li>
+          <li>secret 생성, 저장, 회전, remote Supabase, real data, email, payment, provider integration 작업은 하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <p>다음 명령으로 검증한다.</p>
+        <ul>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+          <li><code>git diff --check</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

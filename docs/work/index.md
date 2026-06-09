@@ -14,8 +14,8 @@ DEN-255 review on 2026-05-24 confirmed the large status counts are intentional, 
 
 | Status         | Count | How to read it                                                                                                          |
 | -------------- | ----: | ----------------------------------------------------------------------------------------------------------------------- |
-| `done`         |    48 | Completed historical work items already closed in this repo board.                                                      |
-| `human_review` |   109 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
+| `done`         |    49 | Completed historical work items already closed in this repo board.                                                      |
+| `human_review` |   108 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
 
 Large `human_review` groups:
 
@@ -43,6 +43,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DOCS-PR-006                 | done         | docs-restructure     | P0       | PR 6                 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md`                                |
 | SYMPHONY-PR-001             | done         | agent-orchestration  | P1       | PR 1                 | `docs/work/agent-orchestration/SYMPHONY-PR-001-orchestration-foundation.md`                            |
 | SYMPHONY-PR-002             | done         | agent-orchestration  | P1       | PR 2                 | `docs/work/agent-orchestration/SYMPHONY-PR-002-linear-pilot-kit.md`                                    |
+| RELEASE-OPS-PR-001          | done         | agent-orchestration  | P0       | Project Release & Deployment Operations / DEN-443-DEN-451 | `docs/work/agent-orchestration/RELEASE-OPS-PR-001-release-deployment-policy-skill.md` |
 | OWNER-OS-PR-001             | done         | agent-orchestration  | P0       | Project CLAiR Owner OS Implementation / DEN-420 | `docs/work/agent-orchestration/OWNER-OS-PR-001-implementation-scope-contract.md`              |
 | OWNER-OS-PR-002             | done         | agent-orchestration  | P0       | Project CLAiR Owner OS Implementation / DEN-421 | `docs/work/agent-orchestration/OWNER-OS-PR-002-router-skill.md`                              |
 | OWNER-OS-PR-003             | done         | agent-orchestration  | P0       | Project CLAiR Owner OS Implementation / DEN-422 | `docs/work/agent-orchestration/OWNER-OS-PR-003-work-packet-template-validator.md`             |

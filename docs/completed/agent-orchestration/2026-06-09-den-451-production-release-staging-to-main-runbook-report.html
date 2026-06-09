@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-451 Production Release Runbook 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #64748b;
+        --line: #dbe3ef;
+        --soft: #eef4ff;
+        --accent: #2563eb;
+        --ok: #15803d;
+        --danger: #b91c1c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 20px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.05);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 22px;
+      }
+
+      h3 {
+        margin-top: 18px;
+        font-size: 17px;
+      }
+
+      p {
+        margin: 10px 0 0;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 0.94em;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #334155;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .meta {
+        margin-top: 12px;
+        color: var(--muted);
+      }
+
+      .summary {
+        margin-top: 24px;
+        border-color: #bfdbfe;
+        background: var(--soft);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: var(--ok);
+        font-weight: 700;
+      }
+
+      .danger {
+        color: var(--danger);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="badge">Human Review</p>
+        <h1>DEN-451 Production Release From Staging To Main</h1>
+        <p class="meta">2026-06-09 · CLAiR EMR Release & Deployment Operations</p>
+      </header>
+
+      <section class="summary">
+        <h2>요약</h2>
+        <p>
+          <code>staging</code> 검수 완료분을 <code>main</code> production으로 반영하기 전
+          필요한 승인 패킷, preflight, smoke, rollback, stop condition을 별도 runbook으로
+          고정했다.
+        </p>
+        <p>
+          이번 작업은 문서/스킬 정리만 수행했다. <span class="danger">production 배포,
+          <code>main</code> merge, Vercel alias 변경은 하지 않았다.</span>
+        </p>
+      </section>
+
+      <section>
+        <h2>핵심 결정</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>항목</th>
+              <th>결정</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>staging</code></td>
+              <td>fixed staging review candidate</td>
+            </tr>
+            <tr>
+              <td><code>main</code></td>
+              <td>Vercel Production branch</td>
+            </tr>
+            <tr>
+              <td>production release</td>
+              <td>승욱의 명시 승인 없이는 중단</td>
+            </tr>
+            <tr>
+              <td>rollback</td>
+              <td>release 승인 전에 이전 production deployment id 또는 revert 후보 기록</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>주요 산출물</h2>
+        <ul>
+          <li>
+            추가:
+            <code>docs/engineering/operations/production-release-staging-to-main-runbook.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>docs/engineering/operations/release-environment-policy.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>docs/engineering/operations/hobby-free-staging-branch-release-plan.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>docs/engineering/operations/github-vercel-release-automation-plan.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>.agents/skills/release-deployment-ops/SKILL.md</code>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>승인 패킷</h2>
+        <p>production release 전 Codex는 아래 항목을 제시하고 멈춰야 한다.</p>
+        <ul>
+          <li>Target: <code>production</code> / <code>main</code></li>
+          <li>Source: <code>staging</code> commit SHA</li>
+          <li>Compare target: 현재 <code>origin/main</code> SHA 또는 production deployment id</li>
+          <li>Included work: PR, Linear issue, closeout report</li>
+          <li>Fixed staging evidence: URL, deployment, smoke result</li>
+          <li>Verification: GitHub checks and local preflight</li>
+          <li>Secret/env safety: secret 값 미노출 확인</li>
+          <li>Production operation: 승인 후 실행할 정확한 작업</li>
+          <li>Smoke path: production 확인 경로</li>
+          <li>Rollback candidate: 이전 production deployment 또는 revert 후보</li>
+          <li>Stop condition: 취소/중단 기준</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 명령</h2>
+        <p>runbook에 고정한 최소 production preflight:</p>
+        <ul>
+          <li><code>npm run security:secrets</code></li>
+          <li><code>npm run docs:check</code></li>
+          <li><code>git diff --check</code></li>
+          <li><code>npm run lint</code></li>
+          <li><code>npx tsc --noEmit</code></li>
+          <li><code>npm run build</code></li>
+        </ul>
+        <p class="meta">
+          실제 production release 때는 포함된 변경 범위에 맞춰 focused Playwright/spec을 추가한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>남은 리스크</h2>
+        <ul>
+          <li>이 문서는 production release 절차이지, production release 실행 결과가 아니다.</li>
+          <li>production smoke path는 실제 포함 PR/이슈에 따라 release 시점에 구체화해야 한다.</li>
+          <li>remote Supabase, real data, provider, email, payment, RLS, migration이 섞이면 별도 승인이 필요하다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

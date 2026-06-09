@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>02-03 Vercel Git Integration PR Preview 검증 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #dde1e7;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.95em;
+      }
+
+      a {
+        color: #2457d6;
+      }
+
+      .meta {
+        color: #667085;
+      }
+
+      .status {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid #cfe7d7;
+        border-radius: 999px;
+        background: #edf8f0;
+        color: #177245;
+        font-weight: 700;
+      }
+
+      .warn {
+        border-color: #f4d0a1;
+        background: #fff8ed;
+        color: #8a4b0a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-06-09 · Release & Deployment Operations · 02-03</p>
+        <h1>Vercel Git Integration PR Preview 검증 보고서</h1>
+        <p>
+          승인된 범위 안에서 Vercel GitHub 연결을 완료하고, 테스트 PR을 통해
+          PR preview 자동 생성이 동작하는지 확인했다.
+        </p>
+      </header>
+
+      <section>
+        <h2><span class="status">완료</span>연결 결과</h2>
+        <ul>
+          <li>Vercel Project: <code>emr-app-shell-prototype</code></li>
+          <li>GitHub repo: <code>mcso0/emr-app-shell-prototype</code></li>
+          <li>Production branch: <code>main</code></li>
+          <li>Vercel Project API <code>link</code>: GitHub <code>mcso0/emr-app-shell-prototype</code> 연결 확인</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>PR Preview 검증</h2>
+        <ul>
+          <li>Test branch: <code>codex/vercel-pr-preview-smoke</code></li>
+          <li>Test PR: <a href="https://github.com/mcso0/emr-app-shell-prototype/pull/97">#97 chore: verify Vercel PR preview integration</a></li>
+          <li>Test commit: <code>220e3e96e5c23b1f26bcba8db93f902960aec3b0</code></li>
+          <li>Vercel deployment: <code>dpl_CW3j8N7SvAwrjASnvgkxjzLFt2Yx</code></li>
+          <li>Preview URL: <a href="https://emr-app-shell-prototype-git-codex-vercel-06809a-mcso0s-projects.vercel.app">emr-app-shell-prototype-git-codex-vercel-06809a-mcso0s-projects.vercel.app</a></li>
+          <li>Deployment target: <code>preview</code>; status: <code>Ready</code></li>
+          <li>GitHub PR checks: <code>secret-scan</code>, GitBook contexts, <code>Vercel</code>, and <code>Vercel Preview Comments</code> succeeded.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Alias 안전 확인</h2>
+        <ul>
+          <li>fixed staging alias는 변경하지 않았다.</li>
+          <li>production deploy/promote는 하지 않았다.</li>
+          <li>production aliases/domains는 변경하지 않았다.</li>
+          <li>새로 생긴 alias는 PR branch preview alias뿐이다.</li>
+        </ul>
+      </section>
+
+      <section class="warn">
+        <h2>남은 정리</h2>
+        <ul>
+          <li>Linear connector가 <code>401 reauthentication required</code> 상태라 02-03 Linear 이슈 생성/업데이트는 아직 못 했다.</li>
+          <li>테스트 PR #97은 검증 완료 상태로 열려 있다. 승욱 지시에 따라 닫거나 보존하면 된다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Main worktree preflight: <code>npm run security:secrets</code>, <code>git diff --check</code></li>
+          <li>Test worktree: <code>npm run docs:check</code>, <code>npm run security:secrets</code>, <code>git diff --check</code></li>
+          <li>Remote checks: GitHub PR checks and Vercel inspect confirmed Preview deployment Ready.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

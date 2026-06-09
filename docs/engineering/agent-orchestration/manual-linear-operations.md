@@ -14,6 +14,7 @@ Reasons:
 - The representative can give short natural-language direction, and Codex should shape it into PR-sized Linear work.
 - A live Symphony daemon adds runner setup, key management, duplicate pickup risk, and workflow maintenance that are not yet worth the overhead.
 - Multiple Codex sessions can still work together safely if Linear is treated as the control plane and each session owns exactly one issue and one branch.
+- For 승욱's solo multi-Codex workflow, one session may own a coherent Linear project or work bundle with multiple issues when the branch and PR strategy is explicit.
 
 ## Current Linear Shape
 
@@ -109,6 +110,19 @@ Additional Codex sessions may work in parallel only when each one has:
 - A clear status and handoff comment in Linear.
 
 They must not silently work on the same issue or same files.
+
+### Work Bundle Sessions
+
+승욱 may ask one Codex session to shape a Linear project, create several issues, and continue implementation in the same thread. This is allowed when the session states:
+
+- the project or work bundle name;
+- the included Linear issues;
+- whether the bundle uses one branch/PR or separate branches/PRs;
+- the deployment boundary for review.
+
+Work bundle sessions may share one branch/PR when the issues are tightly related and the representative has approved the grouping. They must not change fixed staging, production, or Vercel aliases as part of ordinary implementation work.
+
+Release/deployment requests must route to `release-deployment-ops` and `docs/engineering/operations/release-environment-policy.md`.
 
 ## Status Rules
 
@@ -278,6 +292,28 @@ Do not combine:
 - Security-sensitive implementation with unrelated UI polish.
 - DB/RLS work with frontend-only work.
 - Product scope decisions with implementation unless the issue explicitly includes both.
+
+## Release And Deployment Handoff Rules
+
+Individual issue or work-bundle sessions should normally stop at PR preview. They may create, push, and prepare a PR when asked, but they must not attach fixed staging aliases or promote production.
+
+Use `docs/engineering/operations/release-environment-policy.md` and the `$release-deployment-ops` skill when the representative asks for:
+
+- fixed staging deployment or alias changes;
+- Vercel alias inspection or correction;
+- PR preview/main staging automation;
+- production deploy or production promote;
+- env/secret deployment safety checks;
+- rollback or release closeout.
+
+Release handoff comments should include:
+
+- branch and commit SHA;
+- included Linear issues and PRs;
+- verification already run;
+- preview URL;
+- known blockers or residual risks;
+- whether fixed staging or production was intentionally not touched.
 
 ## Reporting Depth Rules
 
