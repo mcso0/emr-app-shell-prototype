@@ -5,6 +5,15 @@ const kongEncounterId = "encounter-kong-260501";
 const apiHeaders = { "x-clair-demo-session-user-id": "user-vet" };
 const frontDeskHeaders = { "x-clair-demo-session-user-id": "user-front-desk" };
 const technicianHeaders = { "x-clair-demo-session-user-id": "user-tech" };
+const uiApiWbcCatalogItem = {
+  categoryId: "den194-labcat-hematology",
+  categoryName: "Hematology",
+  id: "den194-labitem-cbc-wbc",
+  resultInputType: "number",
+  resultUnit: "10^3/uL",
+  sortOrder: 10,
+  testItemName: "WBC",
+};
 
 const uiApiPatient = {
   id: "patient-ui-api-kong",
@@ -307,6 +316,98 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
       "audit-events",
     ]),
   );
+});
+
+test("lab result UI exposes catalog retry and save retry states", async ({ page }) => {
+  let catalogAttempts = 0;
+  let saveAttempts = 0;
+  await mockLabFulfillmentApi(page);
+
+  await page.route("**/api/workspaces/clair-demo/lab-imaging/result-sheet-catalog?*", async (route) => {
+    catalogAttempts += 1;
+    if (catalogAttempts === 1) {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: false, status: 500, error: "forced_catalog_failure" },
+        status: 500,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        catalogItemId: "den194-catalog-cbc",
+        enforcedBy: "lab-result-sheet-catalog-read",
+        items: [uiApiWbcCatalogItem],
+      },
+      status: 200,
+    });
+  });
+
+  await page.route("**/api/workspaces/clair-demo/lab-imaging/result-entries", async (route) => {
+    saveAttempts += 1;
+    if (saveAttempts === 1) {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: false, status: 500, error: "forced_save_failure" },
+        status: 500,
+      });
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        savedResult: await route.request().postDataJSON(),
+        enforcedBy: "lab-result-entry-server-boundary",
+      },
+      status: 200,
+    });
+  });
+
+  await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed");
+  await page.getByTestId("lab-queue-item-live-lab-ui-api-lab-cbc").click();
+
+  await expect(page.getByTestId("lab-result-catalog-status")).toContainText(
+    "결과지 항목을 불러오지 못했습니다.",
+  );
+  await page.getByTestId("lab-result-catalog-retry-button").click();
+  await expect(
+    page.getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc"),
+  ).toBeVisible();
+
+  await page
+    .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
+    .fill("21.4");
+  await page.getByTestId("lab-result-save-button").click();
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장 실패");
+  await page.getByTestId("lab-result-save-retry-button").click();
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("서버 저장됨");
+});
+
+test("lab result UI separates catalog permission denial from empty data", async ({ page }) => {
+  await mockLabFulfillmentApi(page);
+
+  await page.route("**/api/workspaces/clair-demo/lab-imaging/result-sheet-catalog?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: { ok: false, status: 403, denialReason: "permission_missing" },
+      status: 403,
+    });
+  });
+
+  await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed");
+  await page.getByTestId("lab-queue-item-live-lab-ui-api-lab-cbc").click();
+
+  await expect(page.getByTestId("lab-result-catalog-status")).toContainText(
+    "결과지 항목을 볼 권한이 없습니다.",
+  );
+  await expect(page.getByTestId("lab-result-catalog-retry-button")).toHaveCount(0);
 });
 
 async function mockReceptionApi(page: Page, calls: string[]) {
@@ -654,6 +755,24 @@ async function mockDownstreamDemoApis(page: Page, calls: string[]) {
             workspaceId,
           },
         ],
+      },
+      status: 200,
+    });
+  });
+}
+
+async function mockLabFulfillmentApi(page: Page) {
+  await page.route("**/api/workspaces/clair-demo/fulfillment/work-items?*", async (route) => {
+    const url = new URL(route.request().url());
+    const queueType = url.searchParams.get("queueType");
+
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        workItems: getUiApiFulfillmentWorkItems(queueType),
+        enforcedBy: "fulfillment-work-item-read",
       },
       status: 200,
     });
