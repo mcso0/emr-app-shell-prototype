@@ -388,10 +388,25 @@ export function DispensingHeader({ moduleId }: ShellComponentProps) {
         { label: "혈압", value: selectedQueueItem?.patientBloodPressure ?? patient.bloodPressure },
       ]}
       memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "환자메모" },
-        { label: "수납메모", disabled: true },
+        {
+          label: "방문목적",
+          summary: selectedQueueItem?.receptionType ?? "방문 목적 기록 없음",
+        },
+        {
+          label: "보호자 메모",
+          locked: true,
+          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+        },
+        {
+          label: "환자 메모",
+          disabled: true,
+          unavailableReason: "환자 상세 메모는 현재 조제/처치 큐 스냅샷에서 제공하지 않습니다.",
+        },
+        {
+          label: "수납 메모",
+          disabled: true,
+          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+        },
       ]}
     />
   );

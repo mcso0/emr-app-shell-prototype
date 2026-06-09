@@ -21,7 +21,12 @@ import {
 } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { EmrIconButton } from "@/components/emr/icon-button";
-import { EmrPopoverFieldRow, EmrPopoverShell } from "@/components/emr/popover-shell";
+import {
+  EmrPopoverFieldRow,
+  EmrPopoverOption,
+  EmrPopoverOptionGroup,
+  EmrPopoverShell,
+} from "@/components/emr/popover-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +44,8 @@ type PatientContextMemoAction = {
   label: ReactNode;
   locked?: boolean;
   onClick?: () => void;
+  summary?: ReactNode;
+  unavailableReason?: ReactNode;
 };
 
 type PatientContextBarProps = {
@@ -166,6 +173,7 @@ export function EmrPatientContextBar({
     canScrollRight: false,
   }));
   const [vitalPopoverOpen, setVitalPopoverOpen] = useState(false);
+  const [memoPopoverOpen, setMemoPopoverOpen] = useState(false);
   const [savedVitalDraft, setSavedVitalDraft] =
     useState<VitalDraftState | null>(null);
   const [editingVitalDraft, setEditingVitalDraft] =
@@ -315,14 +323,20 @@ export function EmrPatientContextBar({
             {memoActions.length ? (
               <div className="flex shrink-0 items-center gap-[var(--emr-context-bar-item-gap)]">
                 <IllustrationIcon src={getAssetSrc(memoNoteLinesIcon)} alt="" />
-                <div className="flex items-center gap-[var(--emr-context-bar-item-gap)]">
-                  {memoActions.map((action, index) => (
-                    <PatientContextMemoButton
-                      key={`${String(action.label)}-${index}`}
-                      action={action}
-                    />
-                  ))}
-                </div>
+                <Popover open={memoPopoverOpen} onOpenChange={setMemoPopoverOpen}>
+                  <PopoverTrigger
+                    render={
+                      <PatientContextMemoButton
+                        actionCount={memoActions.length}
+                        open={memoPopoverOpen}
+                      />
+                    }
+                  />
+                  <PatientMemoPopover
+                    actions={memoActions}
+                    onClose={() => setMemoPopoverOpen(false)}
+                  />
+                </Popover>
               </div>
             ) : null}
 
@@ -528,24 +542,103 @@ function PatientContextDatumBadge({ label, value }: PatientContextDatum) {
   );
 }
 
-function PatientContextMemoButton({ action }: { action: PatientContextMemoAction }) {
+function PatientContextMemoButton({
+  actionCount,
+  className,
+  open,
+  ...props
+}: {
+  actionCount: number;
+  open: boolean;
+} & ComponentProps<typeof Button>) {
+  const label = `메모 ${open ? "닫기" : "열기"}`;
+
   return (
     <Button
       type="button"
       variant="outline"
       size="xs"
-      className="emr-text-metadata h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-value)] shadow-[var(--clair-shadow-xs)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-50"
-      disabled={action.disabled}
-      onClick={action.onClick}
+      className={cn(
+        "emr-text-metadata h-[var(--emr-context-bar-control-size)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-value)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--clair-color-atomic-black-alpha-4)] data-[state=on]:text-[var(--emr-text-primary)]",
+        className
+      )}
+      aria-label={label}
+      aria-expanded={open}
+      data-state={open ? "on" : "off"}
+      title="환자 맥락 메모 보기"
+      {...props}
     >
-      {action.label}
-      {action.locked ? (
-        <CdsAlertsLockIcon
-          className="ml-0.5 size-[var(--emr-context-bar-inline-icon-size)] text-[var(--emr-text-tertiary)]"
-          aria-hidden="true"
-        />
-      ) : null}
+      메모
+      <span className="ml-1 rounded-full bg-[var(--emr-context-bar-chip-bg)] px-1.5 text-[10px] font-semibold text-[var(--emr-text-secondary)]">
+        {actionCount}
+      </span>
     </Button>
+  );
+}
+
+function PatientMemoPopover({
+  actions,
+  onClose,
+}: {
+  actions: PatientContextMemoAction[];
+  onClose: () => void;
+}) {
+  return (
+    <EmrPopoverShell
+      align="start"
+      width="lg"
+      title="메모"
+      meta="환자 인포바"
+      description="방문, 보호자, 환자, 수납 메모를 환자 맥락에서 빠르게 확인합니다."
+      onClose={onClose}
+    >
+      <EmrPopoverOptionGroup selectionMode="none" closeOnSelect={false}>
+        {actions.map((action, index) => {
+          const disabled = action.disabled || action.locked || !action.onClick;
+          const description =
+            action.summary ??
+            action.unavailableReason ??
+            (action.locked
+              ? "권한 또는 업무 단계상 현재 화면에서 바로 열 수 없습니다."
+              : action.disabled
+                ? "현재 환자 맥락에서는 사용할 수 없는 메모입니다."
+                : !action.onClick
+                  ? "현재 화면에서는 빠른 조회 상태만 표시합니다."
+                  : undefined);
+          const meta = action.locked
+            ? "잠김"
+            : action.disabled
+              ? "비활성"
+              : action.onClick
+                ? "열기"
+                : "조회";
+
+          return (
+            <EmrPopoverOption
+              key={`${String(action.label)}-${index}`}
+              disabled={disabled}
+              title={
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <span className="truncate">{action.label}</span>
+                  {action.locked ? (
+                    <CdsAlertsLockIcon
+                      className="size-[var(--emr-context-bar-inline-icon-size)] text-[var(--emr-text-tertiary)]"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </span>
+              }
+              description={description}
+              meta={meta}
+              onSelect={() => {
+                action.onClick?.();
+                onClose();
+              }}
+            />
+          );
+        })}
+      </EmrPopoverOptionGroup>
+    </EmrPopoverShell>
   );
 }
 
