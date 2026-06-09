@@ -11,7 +11,7 @@ source_docs:
 
 # Demo Seed Inventory Readback Contract
 
-This document started as the Demo DB PR 1 contract for `workspace_id = 'clair-demo'` and was updated through Demo DB PR 5. UI PR 1 adds the first reception/chart API wiring and route-boundary E2E coverage without changing the seed. UI PR 2 extends downstream UI/API adoption for lab result-sheet catalog, local/dev result entry, fulfillment route transitions, billing checkout, and audit review without changing the seed. This document defines what the current synthetic `supabase/seed.sql` proves, how to read it back from a local/dev Supabase database, and which demo data families remain for later UI/API adoption work.
+This document started as the Demo DB PR 1 contract for `workspace_id = 'clair-demo'` and was updated through Demo DB PR 5. UI PR 1 adds the first reception/chart API wiring and route-boundary E2E coverage without changing the seed. UI PR 2 extends downstream UI/API adoption for lab result-sheet catalog, local/dev result entry, fulfillment route transitions, billing checkout, and audit review without changing the seed. DEN-452 adds durable local/dev/test lab result-entry persistence schema, RLS, RPC save/readback, and API route wiring without changing the seed. This document defines what the current synthetic `supabase/seed.sql` proves, how to read it back from a local/dev Supabase database, and which demo data families remain for later UI/API adoption work.
 
 ## Current Judgment
 
@@ -19,7 +19,7 @@ The project is not just a frontend prototype: it has a partial multi-tenant EMR 
 
 It is also not yet a fully API-backed demo DB product. The current seed proves the outpatient demo spine from login/workspace through reception, chart, orders, fulfillment queues, lab result-sheet catalog linkage, billing, payment allocation, checkout session, audit, and hospital-admin order catalog/order set search foundation for five synthetic scenarios. The remaining work is UI rewiring, API-backed read/write adoption, and end-to-end demo flow verification, not a missing seed-family gap.
 
-UI PR 1 starts that adoption work by making reception hydrate patient/guardian profile context from the reception lookup route, making the chart side panel load through the chart live-queue route, and adding a focused Playwright spec that exercises the synthetic outpatient route boundary from reception through chart order confirmation, fulfillment completion, billing checkout/payment status, and audit readback. UI PR 2 adds the next downstream slice: live lab work items can hydrate empty result rows from the seeded lab result-sheet catalog, result entry can cross a local/dev server boundary, treatment/dispensing fulfillment transitions are covered in the route-boundary test, and visible billing checkout plus audit review UI consumption are covered.
+UI PR 1 starts that adoption work by making reception hydrate patient/guardian profile context from the reception lookup route, making the chart side panel load through the chart live-queue route, and adding a focused Playwright spec that exercises the synthetic outpatient route boundary from reception through chart order confirmation, fulfillment completion, billing checkout/payment status, and audit readback. UI PR 2 adds the next downstream slice: live lab work items can hydrate empty result rows from the seeded lab result-sheet catalog, result entry can cross a local/dev server boundary, treatment/dispensing fulfillment transitions are covered in the route-boundary test, and visible billing checkout plus audit review UI consumption are covered. DEN-452 turns the lab result-entry boundary into durable local/dev/test DB persistence under workspace membership RLS and server permission checks.
 
 ## Scope
 
@@ -138,7 +138,7 @@ The readback SQL tracks `order_catalog_items`, `order_sets`, `order_set_items`, 
 
 ## UI Adoption Status
 
-The seed contract remains fully covered after Demo DB PR 5. UI PR 1 and UI PR 2 do not add seed rows or schema changes; they prove that selected reception/chart/downstream surfaces and outpatient mutation routes can be exercised through existing API/server boundaries.
+The seed contract remains fully covered after Demo DB PR 5. UI PR 1 and UI PR 2 do not add seed rows or schema changes; they prove that selected reception/chart/downstream surfaces and outpatient mutation routes can be exercised through existing API/server boundaries. DEN-452 adds schema/RLS/RPC/API persistence for entered lab result values without changing the seed rows.
 
 Covered by UI PR 1:
 
@@ -154,10 +154,17 @@ Covered by UI PR 2:
 - Treatment and dispensing fulfillment work-item transitions are included in the synthetic route-boundary test.
 - Billing checkout route consumption and hospital-admin audit review route consumption are included in visible UI E2E coverage.
 
+Covered by DEN-452:
+
+- Entered lab result values have local/dev/test durable DB tables for result headers and structured result rows.
+- Lab result row saves can link to seeded `lab_test_items` through `labTestItemId`.
+- The save/readback path uses workspace membership RLS and server permission checks before calling Supabase RPCs.
+- Focused static contract coverage and the synthetic route-boundary E2E cover result save/readback expectations.
+
 Remaining adoption work:
 
 - Prefer Supabase-backed local/dev login and session replay for the `clair-demo` dataset.
-- Design durable DB persistence for entered lab result values if result data should survive server restart and replay.
+- Replay DEN-452 against local Supabase when Docker is available and keep any DB replay defects in the active Linear issue/PR.
 - Rewire dispensing/treatment execution and remaining billing invoice/list/detail store state to avoid mock-first visible state.
 - Add a full browser E2E flow that drives visible UI controls end to end after those screens read/write the seeded DB consistently.
 

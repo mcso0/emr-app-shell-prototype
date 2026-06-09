@@ -491,6 +491,7 @@ export type LatestWorkShortcut = {
 
 export type LabResultRow = {
   id: EmrId;
+  labTestItemId?: EmrId;
   analyteName: string;
   value?: string;
   unit?: string;

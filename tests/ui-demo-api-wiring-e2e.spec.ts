@@ -156,6 +156,20 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     ok: true,
     enforcedBy: "lab-result-entry-server-boundary",
   });
+  const savedLabResultReadback = await request.get(
+    `/api/workspaces/${workspaceId}/lab-imaging/result-entries?resultId=live-lab-${labWorkItem.id}`,
+    { headers: technicianHeaders },
+  );
+  expect(savedLabResultReadback.status()).toBe(200);
+  const savedLabResultReadbackBody = (await savedLabResultReadback.json()) as {
+    ok: true;
+    savedResult: { rows: Array<{ analyteName: string; value?: string }> };
+  };
+  expect(savedLabResultReadbackBody.savedResult.rows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ analyteName: "WBC", value: "21.4" }),
+    ]),
+  );
 
   await advanceWorkItemToCompleted(request, labWorkItem.id, labWorkItem.status);
   const imagingWorkItem = await readWorkItem(

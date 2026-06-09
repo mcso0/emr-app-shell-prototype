@@ -712,6 +712,7 @@ function useLabResultSheetCatalogRows({
         loading: false,
         rows: items.map((item) => ({
           id: `${resultId}-${item.id}`,
+          labTestItemId: item.id,
           analyteName: item.testItemName,
           judgment: "not_judged",
           unit: item.resultUnit,
