@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-449 Staging Branch Fixed Staging URL 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #dde1e7;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.95em;
+      }
+
+      a {
+        color: #2457d6;
+      }
+
+      .meta {
+        color: #667085;
+      }
+
+      .status {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid #cfe7d7;
+        border-radius: 999px;
+        background: #edf8f0;
+        color: #177245;
+        font-weight: 700;
+      }
+
+      .warn {
+        border-color: #f4d0a1;
+        background: #fff8ed;
+        color: #8a4b0a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-06-09 · Linear DEN-449</p>
+        <h1>Staging Branch Fixed Staging URL 보고서</h1>
+        <p>
+          Hobby/free 릴리즈 모델에 맞춰 remote <code>staging</code> 브랜치를
+          만들고 fixed staging URL을 staging 기준 Preview deployment로 이동했다.
+        </p>
+      </header>
+
+      <section>
+        <h2><span class="status">완료</span>적용 결과</h2>
+        <ul>
+          <li>Source commit: <code>d543f91fa7adb027a294d7747540e6cf151fee44</code></li>
+          <li>Remote branch: <code>staging</code> 생성 완료</li>
+          <li>Vercel Preview deployment: <code>dpl_HiPcj1BwCzZPRDhMYQSdPcyfsg47</code></li>
+          <li>Deployment URL: <a href="https://emr-app-shell-prototype-ht6n0jz6k-mcso0s-projects.vercel.app">emr-app-shell-prototype-ht6n0jz6k-mcso0s-projects.vercel.app</a></li>
+          <li>fixed staging URL: <a href="https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app">emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</a></li>
+          <li>Deployment target: <code>preview</code>; status: <code>Ready</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li>Clean worktree at <code>origin/main</code> SHA <code>d543f91...</code></li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run lint</code> 통과, 기존 warning 5개</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run build</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Production Non-change</h2>
+        <ul>
+          <li>Production URL: <a href="https://emr-app-shell-prototype.vercel.app">emr-app-shell-prototype.vercel.app</a></li>
+          <li>Production deployment: <code>dpl_6mWWNZcuKyRhVFaUA4FdqxBayAFj</code></li>
+          <li>Production deployment URL remains <code>emr-app-shell-prototype-32da67as6-mcso0s-projects.vercel.app</code></li>
+          <li><code>main</code> branch was not changed.</li>
+          <li>Production deploy/promote was not run.</li>
+        </ul>
+      </section>
+
+      <section class="warn">
+        <h2>운영 메모</h2>
+        <ul>
+          <li>처음 <code>staging</code> branch push는 같은 SHA라서 Vercel Git Integration deployment를 자동 생성하지 않았다.</li>
+          <li>초기 연결은 clean <code>staging</code> worktree에서 명시적 Preview deployment 후 fixed staging alias를 이동하는 방식으로 처리했다.</li>
+          <li>다음 <code>staging</code> commit부터 자동 branch preview가 생성되는지 확인해야 한다. 생성되지 않으면 같은 명시적 Preview deploy + alias update 절차를 반복한다.</li>
+          <li><code>emr-app-shell-prototype-mcso0-mcso0s-projects.vercel.app</code> alias는 Vercel deploy 과정에서 새 Preview에 자동 연결되었다. Production primary aliases는 변경되지 않았다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

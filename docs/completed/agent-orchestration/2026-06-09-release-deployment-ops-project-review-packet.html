@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR Release & Deployment Operations 검수 패킷</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #64748b;
+        --line: #dbe3ef;
+        --soft: #eef4ff;
+        --accent: #2563eb;
+        --ok: #15803d;
+        --warn: #b45309;
+        --danger: #b91c1c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 20px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.05);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 920px;
+        font-size: 34px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 22px;
+      }
+
+      h3 {
+        margin-top: 18px;
+        font-size: 17px;
+      }
+
+      p {
+        margin: 10px 0 0;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 0.94em;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #334155;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .meta {
+        margin-top: 12px;
+        color: var(--muted);
+      }
+
+      .summary {
+        margin-top: 24px;
+        border-color: #bfdbfe;
+        background: var(--soft);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: var(--ok);
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 700;
+      }
+
+      .danger {
+        color: var(--danger);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="badge">Project Accepted / Done</p>
+        <h1>CLAiR EMR Release & Deployment Operations</h1>
+        <p class="meta">2026-06-09 · DEN-443 through DEN-451</p>
+      </header>
+
+      <section class="summary">
+        <h2>비개발자 요약</h2>
+        <p>
+          여러 Codex 창에서 동시에 작업하더라도 고정 스테이징이 덮어써지는 사고를 줄이기
+          위해, 배포 흐름을 <code>PR preview</code>, <code>staging fixed staging</code>,
+          <code>main production</code>으로 분리했다.
+        </p>
+        <p>
+          실제 production 배포는 하지 않았다. 현재 production은 그대로 두고, fixed staging만
+          <code>staging</code> 브랜치 운영 모델로 분리했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>최종 운영 모델</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>환경</th>
+              <th>소스</th>
+              <th>목적</th>
+              <th>승인 기준</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PR Preview</td>
+              <td>작업 브랜치 / PR</td>
+              <td>개별 작업 검수</td>
+              <td>개별 작업 thread가 공유 가능</td>
+            </tr>
+            <tr>
+              <td>Fixed staging</td>
+              <td><code>staging</code></td>
+              <td>승욱 내부 검수용 고정 주소</td>
+              <td>릴리즈 thread와 manual gate 필요</td>
+            </tr>
+            <tr>
+              <td>Production</td>
+              <td><code>main</code></td>
+              <td>사용자 노출 환경</td>
+              <td>승욱의 명시적 production 승인 필요</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>현재 주소와 배포 상태</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>항목</th>
+              <th>현재 값</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Fixed staging URL</td>
+              <td>
+                <a href="https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app">https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</a>
+              </td>
+            </tr>
+            <tr>
+              <td>Fixed staging deployment</td>
+              <td><code>dpl_HiPcj1BwCzZPRDhMYQSdPcyfsg47</code></td>
+            </tr>
+            <tr>
+              <td>Fixed staging source commit</td>
+              <td><code>d543f91fa7adb027a294d7747540e6cf151fee44</code></td>
+            </tr>
+            <tr>
+              <td>Production URL</td>
+              <td>
+                <a href="https://emr-app-shell-prototype.vercel.app">https://emr-app-shell-prototype.vercel.app</a>
+                <span class="meta">unchanged</span>
+              </td>
+            </tr>
+            <tr>
+              <td>Production deployment</td>
+              <td><code>dpl_6mWWNZcuKyRhVFaUA4FdqxBayAFj</code> unchanged</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>이슈별 상태</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Issue</th>
+              <th>결과</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>DEN-443</td>
+              <td>Release environment policy 작성</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-444</td>
+              <td><code>release-deployment-ops</code> skill 추가 및 manual Linear 연결</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-445</td>
+              <td>GitHub/Vercel 자동화 계획 및 현재 상태 점검</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-446</td>
+              <td>Production promote 승인, secret gate, rollback 기준 정의</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-447</td>
+              <td>Vercel Git Integration 및 PR preview 점검</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-448</td>
+              <td>Hobby/free 기준 <code>staging</code> branch 모델로 재정의</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-449</td>
+              <td><code>staging</code> branch 생성 및 fixed staging URL 연결</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-450</td>
+              <td>Manual merge gate runbook 작성</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>DEN-451</td>
+              <td><code>staging</code> to <code>main</code> production release runbook 작성</td>
+              <td>Done</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>주요 문서</h2>
+        <ul>
+          <li><code>docs/engineering/operations/release-environment-policy.md</code></li>
+          <li><code>docs/engineering/operations/hobby-free-staging-branch-release-plan.md</code></li>
+          <li><code>docs/engineering/operations/manual-merge-gate-runbook.md</code></li>
+          <li><code>docs/engineering/operations/production-release-staging-to-main-runbook.md</code></li>
+          <li><code>.agents/skills/release-deployment-ops/SKILL.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검수 포인트</h2>
+        <ul>
+          <li>앞으로 개별 작업 thread는 PR preview까지만 공유한다.</li>
+          <li>fixed staging은 <code>staging</code> 브랜치 기준으로만 반영한다.</li>
+          <li><code>main</code> merge는 production release로 취급한다.</li>
+          <li>private/free 환경에서는 GitHub required checks가 강제되지 않으므로 merge 전에 사람이 <code>CI</code>와 <code>Secret Scan</code>을 확인한다.</li>
+          <li>production release는 source SHA, 포함 PR/이슈, fixed staging evidence, smoke path, rollback 후보가 있어야 승인할 수 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run security:secrets</code> 통과</li>
+          <li><code>git diff --check</code> 통과</li>
+        </ul>
+        <p class="meta">
+          DEN-449 staging setup 당시 clean worktree에서 <code>lint</code>,
+          <code>tsc</code>, <code>build</code>도 통과했다. 기존 lint warning 5개와
+          <code>npm audit</code> moderate 4개는 남아 있다.
+        </p>
+      </section>
+
+      <section>
+        <h2>남은 리스크와 다음 단계</h2>
+        <ul>
+          <li class="warn">현재 GitHub private/free 제약 때문에 required checks는 자동 강제되지 않는다.</li>
+          <li>다음 <code>staging</code> commit에서 Vercel이 branch preview를 자동 생성하는지 확인해야 한다.</li>
+          <li>아직 production release는 실행하지 않았다.</li>
+          <li>승욱이 이 패킷을 승인하면 다음 단계는 release ops 변경사항을 PR로 정리하고 merge 경로를 결정하는 것이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-450 Manual Merge Gate Runbook 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fb;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #64748b;
+        --line: #dbe3ef;
+        --soft: #eef4ff;
+        --accent: #2563eb;
+        --danger: #b91c1c;
+        --ok: #15803d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 20px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.05);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        font-size: 22px;
+      }
+
+      h3 {
+        margin-top: 18px;
+        font-size: 17px;
+      }
+
+      p {
+        margin: 10px 0 0;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 0.94em;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 14px;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #334155;
+        font-weight: 700;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .meta {
+        margin-top: 12px;
+        color: var(--muted);
+      }
+
+      .summary {
+        margin-top: 24px;
+        border-color: #bfdbfe;
+        background: var(--soft);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: var(--ok);
+        font-weight: 700;
+      }
+
+      .warn {
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="badge">Human Review</p>
+        <h1>DEN-450 Manual Merge Gate Runbook</h1>
+        <p class="meta">2026-06-09 · CLAiR EMR Release & Deployment Operations</p>
+      </header>
+
+      <section class="summary">
+        <h2>요약</h2>
+        <p>
+          현재 GitHub private/free 환경에서는 <code>CI</code>와
+          <code>Secret Scan</code>을 자동으로 실행할 수 있지만, required check로 강제할
+          수 없다. 그래서 이번 작업은 사람이 merge 전에 무엇을 확인해야 하는지
+          runbook으로 고정했다.
+        </p>
+        <p>
+          원격 Vercel/GitHub 설정, fixed staging alias, production은 변경하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>적용한 운영 구조</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>흐름</th>
+              <th>의미</th>
+              <th>게이트</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>work branch / PR</code></td>
+              <td>개별 작업 또는 작업 묶음 검수</td>
+              <td>Vercel Preview, CI, Secret Scan, scope 확인</td>
+            </tr>
+            <tr>
+              <td><code>staging</code></td>
+              <td>고정 스테이징 리뷰 대상</td>
+              <td>included PR/issues, source SHA, fixed staging URL 확인</td>
+            </tr>
+            <tr>
+              <td><code>main</code></td>
+              <td>Vercel Production branch</td>
+              <td>승욱의 production 승인, smoke, rollback 후보 필수</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>주요 산출물</h2>
+        <ul>
+          <li>
+            추가:
+            <code>docs/engineering/operations/manual-merge-gate-runbook.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>docs/engineering/operations/release-environment-policy.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>docs/engineering/operations/hobby-free-staging-branch-release-plan.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>docs/engineering/operations/github-vercel-release-automation-plan.md</code>
+          </li>
+          <li>
+            업데이트:
+            <code>.agents/skills/release-deployment-ops/SKILL.md</code>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Runbook에 고정한 게이트</h2>
+        <h3>Gate 1: 작업 PR을 <code>staging</code>에 merge하기 전</h3>
+        <ul>
+          <li>PR target이 <code>staging</code> 또는 승인된 integration branch인지 확인한다.</li>
+          <li><code>CI</code>, <code>Secret Scan</code>, Vercel Preview Ready 상태를 확인한다.</li>
+          <li>fixed staging alias, production alias, production 설정, secret 변경이 없는지 확인한다.</li>
+        </ul>
+
+        <h3>Gate 2: <code>staging</code>을 fixed staging URL에 반영하기 전</h3>
+        <ul>
+          <li>source branch와 commit SHA를 기록한다.</li>
+          <li><code>npm run security:secrets</code>, <code>npm run docs:check</code>, <code>git diff --check</code> 결과를 기록한다.</li>
+          <li>fixed staging alias target과 production non-change를 확인한다.</li>
+        </ul>
+
+        <h3>Gate 3: <code>staging</code>에서 <code>main</code> production으로 가기 전</h3>
+        <ul>
+          <li>승욱의 명시적인 production 승인 없이는 중단한다.</li>
+          <li>source SHA, 포함 PR/이슈, env/secret source, smoke path, rollback 후보를 승인 packet에 포함한다.</li>
+          <li>remote Supabase, real data, provider, email, payment, RLS 작업이 섞이면 별도 승인을 요구한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+          <li><code>git diff --check</code></li>
+        </ul>
+        <p class="meta">이 보고서 생성 후 최종 검증을 실행한다.</p>
+      </section>
+
+      <section>
+        <h2>남은 리스크</h2>
+        <ul>
+          <li>
+            GitHub required checks는 현재 private/free 제약 때문에 자동 강제되지 않는다.
+            merge 전 사람이 직접 check 상태를 확인해야 한다.
+          </li>
+          <li>
+            fixed staging URL은 여전히 mutable alias다. source branch와 deployment id를
+            기록하지 않으면 어떤 변경이 반영됐는지 추적하기 어렵다.
+          </li>
+          <li>
+            production은 <code>main</code>과 연결되어 있으므로, <code>main</code> merge는
+            일반 통합이 아니라 production release로 취급해야 한다.
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>02-05 Fixed Staging Main-only 계획 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #dde1e7;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.95em;
+      }
+
+      .meta {
+        color: #667085;
+      }
+
+      .status {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid #cfe7d7;
+        border-radius: 999px;
+        background: #edf8f0;
+        color: #177245;
+        font-weight: 700;
+      }
+
+      .warn {
+        border-color: #f4d0a1;
+        background: #fff8ed;
+        color: #8a4b0a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-06-09 · Release & Deployment Operations · 02-05</p>
+        <h1>Fixed Staging Main-only 계획 보고서</h1>
+        <p>
+          fixed staging을 main 기준으로만 이동시키는 v1 절차를 정리했다. 실제
+          alias 이동은 하지 않았다.
+        </p>
+      </header>
+
+      <section>
+        <h2><span class="status">확인</span>읽기 전용 결과</h2>
+        <ul>
+          <li>Vercel Git Integration은 GitHub repo <code>mcso0/emr-app-shell-prototype</code>에 연결되어 있다.</li>
+          <li>Vercel production branch는 현재 <code>main</code>이다.</li>
+          <li>fixed staging alias는 여전히 <code>emr-app-shell-prototype-gbj5vwjhd...</code> deployment를 가리킨다.</li>
+          <li>production aliases는 여전히 <code>emr-app-shell-prototype-32da67as6...</code> deployment를 가리킨다.</li>
+          <li>PR #97 preview deployment는 Ready 상태이며, PR preview 자동화는 검증되어 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>결정</h2>
+        <ul>
+          <li>현재 상태에서 fixed staging을 Vercel production branch 자동화에 바로 묶지 않는다.</li>
+          <li>이유: Vercel production branch가 <code>main</code>이므로 production 정책과 충돌할 수 있다.</li>
+          <li>v1은 clean <code>origin/main</code> worktree에서 Preview deployment를 만들고, 명시 승인 후 fixed staging alias만 이동하는 방식이다.</li>
+        </ul>
+      </section>
+
+      <section class="warn">
+        <h2>아직 하지 않은 것</h2>
+        <ul>
+          <li>fixed staging alias를 이동하지 않았다.</li>
+          <li>production deploy/promote를 하지 않았다.</li>
+          <li>production aliases/domains를 변경하지 않았다.</li>
+          <li>Vercel production branch 설정을 변경하지 않았다.</li>
+          <li>GitHub Action으로 staging alias를 자동 이동시키지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 승인 문구</h2>
+        <p>실제 fixed staging 이동은 아래처럼 source commit을 명시한 뒤 진행한다.</p>
+        <p>
+          <code>
+            승인: fixed staging을 main commit &lt;SHA&gt; 기준으로 업데이트해줘.
+            포함 PR/이슈는 &lt;list&gt;이고, production은 건드리지 마.
+          </code>
+        </p>
+      </section>
+
+      <section>
+        <h2>산출물</h2>
+        <ul>
+          <li><code>docs/engineering/operations/fixed-staging-main-only-execution-plan.md</code></li>
+          <li><code>docs/engineering/operations/github-vercel-release-automation-plan.md</code> 02-05 업데이트</li>
+          <li><code>docs/work/agent-orchestration/RELEASE-OPS-PR-001-release-deployment-policy-skill.md</code> 작업 기록 업데이트</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+          <li><code>git diff --check</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
