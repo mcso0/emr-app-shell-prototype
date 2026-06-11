@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-459 Permission API Boundary Coverage Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-459 Permission API Boundary Coverage Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      Lab, billing, fulfillment API가 workspace, role, permission boundary를 지키는지
+      local/dev/test 범위에서 회귀 테스트로 보강하는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>tests/api-boundary-permission-regression.spec.ts</code>를 추가했다.</li>
+      <li>lab result entry read/save의 unauthenticated denial을 고정했다.</li>
+      <li>fulfillment queue read와 status mutation의 unauthenticated, cross-workspace, insufficient-role denial을 고정했다.</li>
+      <li>billing invoice-line read, payment-status mutation, guardian checkout의 denial path를 고정했다.</li>
+      <li>연결된 route가 <code>readServerSession</code>, server identity resolver, server read/write helper를 유지하는지 static assertion을 추가했다.</li>
+      <li>current status, work index, route permission inventory, DEN-459 work doc을 갱신했다.</li>
+    </ul>
+
+    <h2>현재 의미</h2>
+    <p>
+      이번 작업은 UI에서 버튼을 숨기는 수준이 아니라 API/server boundary에서 거부 경로가 유지되는지 확인한다.
+      다만 새 RLS policy, remote Supabase replay, production policy 변경은 포함하지 않았으므로
+      실제 pilot/live 전에는 별도 RLS와 remote validation gate가 남아 있다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/api-boundary-permission-regression.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npm run lint</code> 통과, 기존 warning만 남음</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>remote/prod Supabase는 사용하지 않았다.</li>
+      <li>DB schema, migration, seed, RLS는 변경하지 않았다.</li>
+      <li>UI rewiring이나 mock fallback 제거는 포함하지 않았다.</li>
+      <li>이 테스트는 local/dev/test route boundary 회귀이며, 전체 production security signoff가 아니다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 순번은 engineering docs sync다. DEN-452부터 DEN-459까지의 API wiring, persistence, replay, permission
+      boundary 상태를 한 번에 읽을 수 있게 runbook과 current status를 정리하는 것이 좋다.
+    </p>
+  </body>
+</html>

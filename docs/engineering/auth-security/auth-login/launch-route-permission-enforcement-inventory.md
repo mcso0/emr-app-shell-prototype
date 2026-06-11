@@ -55,6 +55,20 @@ Mock fallback is allowed only for local/demo regression:
 
 No new launch role policy or broad server rewrite is approved in DEN-164.
 
+## DEN-459 Supplemental Demo API Boundary Coverage
+
+DEN-459 extends the route-boundary regression posture from launch/admin routes into the connected demo workflow APIs. This is test coverage only: it does not add new role policy, migration push, remote Supabase replay, or production RLS enforcement.
+
+| Route | Method | Demo workflow operation | Server identity boundary | Permission or boundary under test | Regression evidence |
+| --- | --- | --- | --- | --- | --- |
+| `/api/workspaces/[workspaceId]/lab-imaging/result-entries` | `GET` | Lab result entry readback | `readServerSession()` plus mock-mode-only demo actor seam | unauthenticated denial; `lab:view` stays server-side | `tests/api-boundary-permission-regression.spec.ts` |
+| `/api/workspaces/[workspaceId]/lab-imaging/result-entries` | `POST` | Lab result save | `readServerSession()` plus mock-mode-only demo actor seam | unauthenticated denial; `lab:complete` stays server-side | `tests/api-boundary-permission-regression.spec.ts` |
+| `/api/workspaces/[workspaceId]/fulfillment/work-items` | `GET` | Department queue read | `readServerSession()` plus mock-mode-only demo actor seam | unauthenticated denial; cross-workspace denial | `tests/api-boundary-permission-regression.spec.ts` |
+| `/api/workspaces/[workspaceId]/fulfillment/work-items/[workItemId]` | `PATCH` | Fulfillment status mutation | `readServerSession()` plus mock-mode-only demo actor seam | insufficient-role denial; server mutation path remains `updateFulfillmentWorkItem` | `tests/api-boundary-permission-regression.spec.ts` |
+| `/api/workspaces/[workspaceId]/billing/invoice-lines` | `GET` | Billing invoice-line read | route-level server identity boundary | unauthenticated denial | `tests/api-boundary-permission-regression.spec.ts` |
+| `/api/workspaces/[workspaceId]/billing/payment-status` | `PATCH` | Payment status mutation | `readServerSession()` plus mock-mode-only demo actor seam | insufficient-role denial; server mutation path remains `saveBillingPaymentStatus` | `tests/api-boundary-permission-regression.spec.ts` |
+| `/api/workspaces/[workspaceId]/billing/guardian-checkout` | `POST` | Guardian checkout preparation | route-level server identity boundary | non-member/cross-boundary denial | `tests/api-boundary-permission-regression.spec.ts` |
+
 Remaining gaps before a real pilot/live rollout:
 
 | Gap | Why it remains | Suggested next issue |
