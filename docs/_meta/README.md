@@ -11,9 +11,9 @@ This folder defines how humans and agents operate `docs/` as the repo-native kno
 - Agent RAG map: `docs/_meta/agent-rag-map.md`
 - Owner Safety OS: `docs/_meta/owner-safety-os.md`
 - Non-developer Codex workflow: `docs/_meta/non-developer-codex-workflow.md`
-- GitBook structure rules: `docs/_meta/gitbook-structure-rules.md`
-- GitBook private operations checklist: `docs/_meta/gitbook-private-operations-checklist.md`
-- GitBook docs site creation plan: `docs/_meta/gitbook-docs-site-creation-plan.md`
+- Legacy GitBook structure rules: `docs/_meta/gitbook-structure-rules.md`
+- Legacy GitBook private operations checklist: `docs/_meta/gitbook-private-operations-checklist.md`
+- Legacy GitBook docs site creation plan: `docs/_meta/gitbook-docs-site-creation-plan.md`
 - Result review rules: `docs/_meta/result-review-rules.md`
 
 ## Operating Rule Docs
@@ -27,9 +27,9 @@ This folder defines how humans and agents operate `docs/` as the repo-native kno
 - `docs/_meta/non-developer-codex-workflow.md`: short Korean usage guide so 승욱 can invoke Safety OS without remembering skill names.
 - `docs/_meta/owner-safety-os-scenario-validation.md`: dry-run scenario expectations for validating Safety OS behavior.
 - `docs/_meta/coding-discipline.md`: concise implementation discipline for non-trivial coding work.
-- `docs/_meta/gitbook-structure-rules.md`: GitBook sidebar, area README, current-vs-history, and private-first reader-boundary rules.
-- `docs/_meta/gitbook-private-operations-checklist.md`: private/internal GitBook access, sharing, sensitive-area, and external-public conversion checklist.
-- `docs/_meta/gitbook-docs-site-creation-plan.md`: manual private-first GitBook docs site setup path, source-of-truth model, audience choices, and stop conditions.
+- `docs/_meta/gitbook-structure-rules.md`: inactive/deprecated GitBook sidebar history plus reader-boundary rules if GitBook is explicitly revived.
+- `docs/_meta/gitbook-private-operations-checklist.md`: inactive/deprecated GitBook access and sharing checklist retained for revival scenarios.
+- `docs/_meta/gitbook-docs-site-creation-plan.md`: inactive/deprecated manual GitBook setup path retained for history and revival scenarios.
 - `docs/_meta/result-review-rules.md`: required concise user review after work is completed.
 - `docs/_meta/templates/`: reusable document templates.
 
