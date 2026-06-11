@@ -16,6 +16,15 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Role and permission source map: `docs/product/domain/role-permission-source-map.md`
 - Decision log index: `docs/product/decisions/decision-log-index.md`
 
+## Reader Surface
+
+The repo `docs/product/` tree is the source of truth. The internal `/prd` app route is a read-only viewer over a curated subset of these Markdown files.
+
+- Edit Markdown in `docs/product/`, not in the viewer.
+- Do not copy product docs into `site/`, `public/`, a CMS, or generated duplicate document stores.
+- Keep auth/security, DB/RLS, launch, operations, and completed-report docs out of the default `/prd` registry unless a separate reader-boundary review approves the expansion.
+- GitBook is no longer the active product-doc reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
+
 ## Subareas
 
 - `service/`: service-wide product definition, boundaries, and behavior.
@@ -42,3 +51,5 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 ## Adding Product Docs
 
 Before adding a new product doc, check `docs/_meta/intake-rules.md` and `docs/_meta/taxonomy.md`. If the request is independently executable, create or update a PR-sized work item in `docs/work/` instead of adding broad planning notes.
+
+Use `docs/_meta/templates/epic.md` for new epics and `docs/_meta/templates/user-story.md` for new user stories.

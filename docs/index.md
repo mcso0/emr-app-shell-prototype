@@ -1,6 +1,6 @@
 # CLAiR EMR Docs Portal
 
-This page is the human-facing entry point for the CLAiR EMR documentation portal. The repository `docs/` folder remains the source of truth. GitBook is used as a private/internal readable portal, and Linear is used for PR-sized work tracking.
+This page is the human-facing entry point for the CLAiR EMR documentation portal. The repository `docs/` folder remains the source of truth. The internal `/prd` app route is the active read-only viewer for curated product planning docs, and Linear is used for PR-sized work tracking. GitBook is no longer the active reader path.
 
 ## Start Here
 
@@ -18,7 +18,8 @@ Use detailed history, completed reports, and archived plans only when the active
 | Surface | Role |
 | --- | --- |
 | Repo `docs/` | Source of truth for product, design, engineering, work, and completion records |
-| GitBook | Private/internal readable portal over repo docs; do not treat it as the editing source |
+| `/prd` app route | Internal read-only product-doc viewer backed by curated `docs/product/` Markdown |
+| GitBook | Inactive/deprecated reader path preserved for history; do not treat it as active navigation or editing source |
 | Linear | Work start point, status board, Human Review handoff, and PR-sized issue tracking |
 | Codex | Reads only startup docs plus task-specific source docs to avoid token waste |
 
@@ -41,8 +42,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | Decision log | [Decision Log Index](product/decisions/decision-log-index.md) |
 | Detailed status history | [MVP Current Status History](engineering/current-status-history.md) |
 | Docs operating rules | [Docs Home](README.md), [Docs Meta](_meta/README.md) |
-| GitBook private operations | [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md) |
-| GitBook site setup | [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md) |
+| Legacy GitBook operations | [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md), [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md) |
 | Codex reading rules | [Agent RAG Map](_meta/agent-rag-map.md) |
 | Owner Safety OS | [Owner Safety OS](_meta/owner-safety-os.md), [Non-Developer Codex Workflow](_meta/non-developer-codex-workflow.md) |
 | Product docs | [Product Docs](product/README.md) |
@@ -52,15 +52,14 @@ Use detailed history, completed reports, and archived plans only when the active
 | Completion records | [Completed Docs](completed/README.md) |
 | Historical records | [Archive](archive/README.md) |
 
-## GitBook Reading Rules
+## Reader Rules
 
 - Keep `docs/` as the canonical source. Edit repo files, not GitBook copies.
-- Use [SUMMARY](SUMMARY.md) as the GitBook sidebar map.
-- Keep current guidance visible in the sidebar.
+- Use `/prd` for read-only review of curated product docs.
+- Keep current guidance visible through this portal and area README files.
 - Keep `archive/`, `completed/`, and long history documents out of the main reading path unless they are needed for a specific task.
-- Treat GitBook as private/internal by default.
-- Use [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md) before changing navigation, widening access, sharing private links beyond the current review audience, or considering external-public publication.
-- Use [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md) before manually creating or configuring the GitBook docs site.
+- Treat GitBook as inactive/deprecated by default.
+- Use [GitBook Private Operations Checklist](_meta/gitbook-private-operations-checklist.md) and [GitBook Docs Site Creation Plan](_meta/gitbook-docs-site-creation-plan.md) only if 승욱 explicitly revives GitBook.
 - Do not publish sensitive auth, security, database, or launch-readiness details publicly without a separate review.
 
 ## Baseline Docs Status

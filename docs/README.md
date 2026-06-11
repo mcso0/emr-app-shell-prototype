@@ -4,18 +4,18 @@ This folder is the source of truth for product planning, implementation context,
 
 Start here:
 
-1. `docs/index.md` for the human-facing GitBook/docs portal.
+1. `docs/index.md` for the human-facing docs portal.
 2. `docs/agent-start-here.md` for Codex startup routing.
 3. `docs/work/index.md` for PR-sized work tracking.
 4. The linked work item and its source documents.
 
-For GitBook, use `docs/SUMMARY.md` as the sidebar map. The repository `docs/` folder remains the source of truth; GitBook is a readable portal, not the editing source.
+For product planning review, use the internal `/prd` app route as a read-only viewer over curated `docs/product/` Markdown. The repository `docs/` folder remains the source of truth. GitBook is no longer the active reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
 
 ## Operating Model
 
 This repository uses docs as the lightweight replacement for ClickUp or Notion. Work is planned, scoped, and handed off in repo so a new chat or sub-agent can continue without hidden context.
 
-Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, how GitBook-facing navigation should stay curated, and how to review completed work with the user.
+Agent operating rules live in `docs/_meta/`. Use them when deciding where a chat instruction should be recorded, how deeply it should be documented, how a document should move through its lifecycle, how reader-facing navigation should stay curated, and how to review completed work with the user.
 
 The repo borrows useful LLM Wiki practices without adding a separate wiki namespace by default. Use existing source-of-truth docs as the knowledge base, `docs/_meta/agent-rag-map.md` as the query router, `docs/_meta/intake-rules.md` as the ingest router, and local work items, closeouts, changelogs, and status history as distributed logs. Do not add generated summary layers that duplicate canonical product, design, engineering, work, or completed records unless 승욱 explicitly scopes that change.
 
@@ -33,6 +33,16 @@ Canonical docs are organized by purpose:
 | `archive/` | Historical plans and records that are no longer active guidance |
 
 `docs/implementation/` is now a compatibility area with moved stubs. Do not add new source-of-truth documents there.
+
+## Reader Surfaces
+
+| Surface | Current role |
+|---|---|
+| Repo `docs/` | Canonical source of truth and editing surface |
+| `/prd` app route | Internal read-only viewer for curated product Markdown |
+| `docs/index.md` | Human and agent routing portal |
+| `docs/SUMMARY.md` | Legacy GitBook sidebar compatibility file, not active navigation |
+| GitBook | Inactive/deprecated reader path unless explicitly revived |
 
 ## Work Lifecycle
 

@@ -2,6 +2,11 @@
 
 Use this file for small product-planning changes that do not need a standalone decision record.
 
+## 2026-06-11
+
+- `added`: Added PRD viewer operating guidance so `docs/product` remains canonical while `/prd` acts only as a read-only product-doc reader.
+- `added`: Added epic and user-story template guidance for future product planning without bulk-creating planning records.
+
 ## 2026-06-05
 
 - `added`: Added `docs/product/service/clair-owner-os-product-plan.md` as the draft product plan for the AI owner operating system that turns 승욱's requests into scoped work packets, safety-gated Codex execution, verification, review briefs, and token-efficient context routing.
