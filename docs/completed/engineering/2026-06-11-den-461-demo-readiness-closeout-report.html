@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-461 Demo Readiness Closeout Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 980px;
+        color: #172033;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #d8dee8;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f7f9fb;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-461 Demo Readiness Closeout Report</h1>
+
+    <h2>Executive Judgment</h2>
+    <p>
+      현재 CLAiR EMR은 단순한 프론트엔드 프로토타입이라고 보기에는 부족하지 않다.
+      synthetic <code>clair-demo</code> seed, Supabase local/dev schema/RPC/RLS 일부, Next.js API/server boundary,
+      route-level permission regression, visible E2E가 연결되어 있어 local-first EMR SaaS foundation 일부가 구축된 상태다.
+    </p>
+    <p>
+      다만 production-ready EMR SaaS라고 말할 수는 없다. remote Supabase staging/live validation, production deployment,
+      전체 화면 mock 제거, 실제 provider/payment/email/device integration, compliance/legal signoff, 전 테이블 RLS replay는 아직 완료되지 않았다.
+    </p>
+
+    <h2>What This Demo Proves</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>Current proof</th>
+          <th>Evidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Seeded demo hospital</td>
+          <td><code>clair-demo</code> has synthetic users, workspace, membership, patients, guardians, appointments, encounters, orders, fulfillment items, lab catalog, billing checkout, payments, and audit events.</td>
+          <td><code>docs/engineering/data-model/demo-seed-inventory-readback-contract.md</code>, <code>supabase/seed.sql</code></td>
+        </tr>
+        <tr>
+          <td>Lab result persistence</td>
+          <td>Entered lab result values have local/dev/test DB persistence, RLS/RPC contract, and API wiring for scoped result save/readback.</td>
+          <td>DEN-452, <code>tests/lab-result-entry-persistence-contract.spec.ts</code></td>
+        </tr>
+        <tr>
+          <td>Lab UX state</td>
+          <td>Catalog loading, empty, error, permission, save retry, and permission-denied states are visible in the lab result UI path.</td>
+          <td>DEN-453</td>
+        </tr>
+        <tr>
+          <td>Billing API path</td>
+          <td>The selected billing demo path reads invoice lines, payment status, and checkout session snapshots through API-first state with loading/error/permission states.</td>
+          <td>DEN-454, DEN-455</td>
+        </tr>
+        <tr>
+          <td>Fulfillment execution</td>
+          <td>Dispensing/treatment execution can show fulfillment work-item readback and status mutation state through the shared route boundary.</td>
+          <td>DEN-456, <code>tests/dispensing-fulfillment.spec.ts</code></td>
+        </tr>
+        <tr>
+          <td>Visible end-to-end demo</td>
+          <td>A visible day-in-clinic Playwright scenario walks reception, chart queue, lab result entry, dispensing fulfillment readback, billing checkout, and audit review surfaces.</td>
+          <td>DEN-457, <code>tests/ui-demo-api-wiring-e2e.spec.ts</code></td>
+        </tr>
+        <tr>
+          <td>Local replay safety</td>
+          <td>Local seed replay diagnostics separate Docker/Supabase/psql environment gaps from seed/readback regressions and refuse non-local DB URLs.</td>
+          <td>DEN-458, <code>npm run demo:seed:check</code></td>
+        </tr>
+        <tr>
+          <td>API permission boundary</td>
+          <td>Focused regression covers unauthenticated, insufficient-role, and cross-workspace denial paths for connected lab, fulfillment, and billing APIs.</td>
+          <td>DEN-459, <code>tests/api-boundary-permission-regression.spec.ts</code></td>
+        </tr>
+        <tr>
+          <td>Handoff docs</td>
+          <td>Current status, mock/live boundary, API boundary guide, seed contract, and demo runbook are synchronized for future sessions.</td>
+          <td>DEN-460, <code>docs/engineering/testing/api-backed-demo-runbook.md</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Boundary Statement</h2>
+    <p>
+      The acceptable claim is: CLAiR EMR has a local-first, synthetic, API-backed outpatient demo foundation for selected workflows.
+      The unacceptable claim is: CLAiR EMR is production-ready or fully live-backed across all clinical, billing, security, and compliance surfaces.
+    </p>
+
+    <h2>Remaining Gaps</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>Remaining gap</th>
+          <th>Why it matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Security / RLS</td>
+          <td>Final clinical/business domain RLS replay for every live table and remote staging validation are not complete.</td>
+          <td>API tests reduce regression risk, but production security requires DB-level and environment-level proof.</td>
+        </tr>
+        <tr>
+          <td>Auth/session</td>
+          <td>Mock fallback remains. Full Supabase login/session replay for the visible demo is not the default completion claim.</td>
+          <td>Portfolio demo can work locally, but pilot readiness needs real session behavior and denial proof.</td>
+        </tr>
+        <tr>
+          <td>Lab / imaging</td>
+          <td>Lab result values have a scoped persistence foundation, but provider/device integration, imaging result persistence breadth, and full clinical result lifecycle are incomplete.</td>
+          <td>Structured CBC/UA demo is enough for MVP proof, not for real diagnostic operations.</td>
+        </tr>
+        <tr>
+          <td>Fulfillment</td>
+          <td>Selected fulfillment queues are API-aware, but complete mock-store removal and durable live persistence across every downstream screen are not finished.</td>
+          <td>Operational queue demo is credible in selected paths; broad product reliability still needs module-by-module hardening.</td>
+        </tr>
+        <tr>
+          <td>Billing</td>
+          <td>Invoice/payment/checkout snapshots are API-primary for the selected path, but real payment provider, receipt, refund, settlement, accounting, and strict production finance workflows are absent.</td>
+          <td>Demo payment state is useful for workflow validation, not real financial processing.</td>
+        </tr>
+        <tr>
+          <td>Audit</td>
+          <td>Audit schema/helper/review surfaces exist in scoped paths, but compliance-grade external audit policy and retention review are not complete.</td>
+          <td>Admin review proof exists, but regulated audit readiness needs a separate security/compliance review.</td>
+        </tr>
+        <tr>
+          <td>Operations</td>
+          <td>Remote/prod deployment, monitoring, incident response, staging data policy, and external integrations remain approval-gated.</td>
+          <td>The demo is local-first; production operations are a different readiness level.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Recommended Next Priorities</h2>
+    <ol>
+      <li>Run a clean local Supabase replay on a machine with Docker, Supabase CLI, and <code>psql</code>; capture the readback result from <code>npm run demo:seed:check -- --readback</code>.</li>
+      <li>Create a Supabase-session demo replay issue so the visible flow can be exercised without relying primarily on mock fallback headers.</li>
+      <li>Continue module-by-module mock reduction for the highest-value visible paths, starting with the remaining lab/imaging/fulfillment/billing surfaces that still depend on local fixture state.</li>
+      <li>Schedule a security/RLS hardening track for local full-table replay first, then request explicit approval before any remote staging validation.</li>
+      <li>Keep real payment/provider/email/device integrations out of scope until the synthetic demo foundation is accepted and the next productization milestone is defined.</li>
+    </ol>
+
+    <h2>Verification Summary</h2>
+    <ul>
+      <li>DEN-457 recorded passing visible E2E coverage for the selected outpatient demo route.</li>
+      <li>DEN-458 recorded passing seed contract static coverage and safe local replay diagnostics, with local <code>psql</code> availability called out as an environment prerequisite for SQL readback.</li>
+      <li>DEN-459 recorded <code>npx playwright test tests/api-boundary-permission-regression.spec.ts --reporter=line</code> passing with 2 tests, plus <code>npx tsc --noEmit</code>, <code>npm run lint</code>, <code>npm run docs:check</code>, and <code>npm run security:secrets</code>.</li>
+      <li>DEN-460 recorded <code>npm run docs:check</code> and <code>npm run security:secrets</code> passing.</li>
+      <li>DEN-461 verified this closeout with <code>npm run docs:check</code> and <code>npm run security:secrets</code>.</li>
+    </ul>
+
+    <h2>Final Recommendation</h2>
+    <p>
+      For portfolio or product validation, present the project as a synthetic local-first EMR SaaS demo with real backend foundations in selected paths.
+      Avoid claiming production readiness. The strongest next milestone is a clean local Supabase replay plus Supabase-session visible E2E,
+      followed by security/RLS hardening and selective mock removal.
+    </p>
+  </body>
+</html>
