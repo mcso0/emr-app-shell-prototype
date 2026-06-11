@@ -729,13 +729,12 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const liveMode = authSession?.role === "supabase";
   const mockItems = useMemo(() => getChartQueueItems(), []);
   const liveItems = useMemo(
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
-  const items = liveMode ? liveItems : mockItems;
+  const items = liveQueueStatus === "ready" ? liveItems : mockItems;
   const explicitQueryEncounterId = useExplicitChartEncounterId();
 
   useEffect(() => {
@@ -743,7 +742,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   }, [hydrateAuthSession]);
 
   useEffect(() => {
-    if (!authHydrated || !liveMode) return;
+    if (!authHydrated) return;
 
     let cancelled = false;
     setLiveQueueState({ records: [], status: "loading" });
@@ -788,7 +787,6 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     actorHeaders,
     authHydrated,
     explicitQueryEncounterId,
-    liveMode,
     selectEncounter,
     selectedEncounterId,
     setLiveQueueState,
@@ -796,14 +794,13 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   ]);
 
   useEffect(() => {
-    if (!liveMode || liveQueueStatus !== "ready" || liveItems.length === 0) return;
+    if (liveQueueStatus !== "ready" || liveItems.length === 0) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
     if (explicitQueryEncounterId) return;
     selectEncounter(liveItems[0].id);
   }, [
     explicitQueryEncounterId,
     liveItems,
-    liveMode,
     liveQueueStatus,
     selectEncounter,
     selectedEncounterId,
@@ -838,7 +835,7 @@ export function ChartHeader() {
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
@@ -910,7 +907,7 @@ export function ChartContentAside() {
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
@@ -2623,7 +2620,7 @@ function ChartRightPanel() {
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =

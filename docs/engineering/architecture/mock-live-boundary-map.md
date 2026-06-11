@@ -7,7 +7,7 @@ related_work:
   - DEN-179
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-20
+last_updated: 2026-06-11
 ---
 
 # Mock And Live Boundary Map
@@ -36,9 +36,19 @@ CLAiR EMR can claim Product MVP workflow and local-first foundations in scoped a
 | Customer records | Local-first profile/relationship/archive boundaries in scoped paths | Real customer data handling readiness |
 | Reception/encounter | Local-first outpatient path foundations | Full production clinic workflow |
 | Chart/order/billing | Focused local-first persistence and regression in scoped paths | Full clinical/billing compliance readiness |
-| Lab/imaging/dispensing | UI/workspace surfaces and selected local/mock behavior | Full live provider/device persistence |
+| Lab/imaging/dispensing | UI/workspace surfaces, selected fulfillment route adoption, lab result-sheet catalog/result entry boundary, and dispensing/treatment fulfillment readback in scoped paths | Full live provider/device persistence |
 | Audit | Schema/helper/emission/review foundations in scoped paths | Compliance-grade external audit system |
 | Operations | Docs/checklists/readiness planning | Production operations or monitoring enabled |
+
+## Current Demo Completion Boundary
+
+The current `clair-demo` completion project is local-first. It may claim a synthetic API-backed outpatient demo foundation for the scoped flow from reception through chart, fulfillment, lab result entry, billing checkout, and audit review. It must still keep these claims narrow:
+
+- synthetic local/dev/test data only
+- scoped Next.js API/server boundaries, not full production service coverage
+- selected Supabase local/dev/test migrations, RLS, RPCs, and seed readback where the work item proves them
+- mock fallback preserved for Sales Demo and unconfigured local sessions
+- no remote Supabase, production deploy, real provider, real payment, or real patient data claim
 
 ## Approval-Gated Actions
 
@@ -69,4 +79,3 @@ If the boundary is remote or live, approval must name the environment, operation
 - [SaaS Operating Map](../../product/service/clair-emr-saas-operating-map.md)
 - [SaaS Launch Approval Gates](../auth-security/auth-login/saas-launch-approval-gates.md)
 - [Auth DB Env Secret Verification Gates](../auth-security/auth-login/auth-db-env-secret-verification-gates.md)
-

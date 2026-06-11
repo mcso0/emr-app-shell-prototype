@@ -14,6 +14,9 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - Auth/security roadmap: `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
 - Auth/login package index: `docs/engineering/auth-security/auth-login/README.md`
 - Persistence and data security checklist: `docs/engineering/auth-security/persistence-data-security-checklist.md`
+- Demo data architecture: `docs/engineering/demo-data-architecture-2026-06-08.md`
+- Demo seed inventory/readback contract: `docs/engineering/data-model/demo-seed-inventory-readback-contract.md`
+- API-backed demo runbook: `docs/engineering/testing/api-backed-demo-runbook.md`
 - Product MVP QA scenarios: `docs/engineering/testing/product-mvp-qa-scenario-pack.md`
 - Release environment policy: `docs/engineering/operations/release-environment-policy.md`
 - Vercel Git integration execution plan: `docs/engineering/operations/vercel-git-integration-execution-plan.md`
@@ -26,7 +29,7 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - `api-boundaries/`: route, repository, selector, and integration boundary contracts.
 - `data-model/`: actual schema, ERD, migration plans, RLS, indexes, and persistence contracts.
 - `auth-security/`: Supabase Auth, workspace membership, permissions, RLS, audit, and server enforcement plans.
-- `testing/`: validation strategy, QA scenarios, and regression context.
+- `testing/`: validation strategy, demo runbooks, QA scenarios, and regression context.
 - `operations/`: deployment, runtime configuration, staging, monitoring, and production-readiness guidance.
 - `agent-orchestration/`: Linear-driven Codex work routing and agent operations.
 - `decisions/`: engineering decisions and ADRs.

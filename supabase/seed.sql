@@ -540,6 +540,229 @@ set
   effective_from = excluded.effective_from,
   effective_to = excluded.effective_to;
 
+-- DEMO-DB-PR-002: order catalog and order set seed foundation.
+-- Synthetic local/dev demo rows only. These rows mirror DEN-194 service item
+-- prices so chart search and hospital-admin catalog reads can prove DB-backed
+-- catalog/set presence without UI rewiring.
+
+insert into public.order_catalog_items (
+  id,
+  workspace_id,
+  standard_order_id,
+  source_preset_version,
+  initial_imported_preset_version,
+  last_auto_merged_preset_version,
+  customization_state,
+  customized_fields,
+  preset_merge_status,
+  category_group,
+  category_label,
+  t_code,
+  t_code_label,
+  standard_order_name,
+  in_hospital_order_name,
+  billing_name,
+  aliases,
+  availability_status,
+  price_krw,
+  sales_unit,
+  target_species,
+  default_destination_module,
+  default_task_required,
+  billing_reflection_enabled,
+  care_guide,
+  care_guide_delivery_enabled,
+  internal_instruction,
+  internal_instruction_delivery_enabled,
+  tax_included,
+  rounding_rule,
+  pricing_rule,
+  medication_metadata,
+  vaccine_metadata
+)
+values
+  ('den194-catalog-cbc', 'clair-demo', 'den194-std-cbc', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'lab', 'DEN-194 lab', 'T04', 'Lab', 'DEN-194 CBC synthetic panel', 'DEN-194 CBC kong-vomit', 'DEN-194 CBC kong-vomit billing', array['cbc', 'kong-vomit', 'lab'], 'active', 35000, 'per_order', array['dog', 'cat', 'other'], 'lab', true, true, 'Synthetic care guide for CBC demo order.', true, 'Route to DEN-194 Lab Tech queue after confirmation.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000001","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000001"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-abdomen-ultrasound', 'clair-demo', 'den194-std-abdomen-ultrasound', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'imaging', 'DEN-194 imaging', 'T05', 'Imaging', 'DEN-194 Abdominal ultrasound synthetic', 'DEN-194 abdomen ultrasound kong-vomit', 'DEN-194 abdomen ultrasound billing', array['ultrasound', 'abdomen', 'kong-vomit'], 'active', 65000, 'per_order', array['dog', 'cat', 'other'], 'imaging', true, true, 'Synthetic care guide for abdomen ultrasound demo order.', true, 'Route to DEN-194 Imaging Tech queue after confirmation.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000002","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000002"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-fluid-therapy', 'clair-demo', 'den194-std-fluid-therapy', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'treatment', 'DEN-194 treatment', 'T03', 'Treatment', 'DEN-194 Fluid therapy synthetic', 'DEN-194 fluid therapy kong-vomit', 'DEN-194 fluid therapy billing', array['fluid', 'iv', 'kong-vomit'], 'active', 28000, 'per_order', array['dog', 'cat', 'other'], 'treatment', true, true, 'Synthetic care guide for fluid therapy demo order.', true, 'Route to DEN-194 Treatment Tech queue after confirmation.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000003","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000003"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-maropitant', 'clair-demo', 'den194-std-maropitant', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'medication', 'DEN-194 dispensing', 'T02', 'Dispensing', 'DEN-194 Maropitant dispensing synthetic', 'DEN-194 maropitant dispensing kong-vomit', 'DEN-194 maropitant dispensing billing', array['maropitant', 'dispensing', 'allergy medication'], 'active', 28500, 'per_order', array['dog', 'cat', 'other'], 'dispensing', true, true, 'Synthetic care guide for dispensing demo order.', false, 'Synthetic medication handoff note. No real prescription guidance.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000004","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000004","19429500-0000-4000-8000-000000000008"],"synthetic":true}'::jsonb, '{"form":"synthetic tablet","route":"demo","controlledSubstance":false}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-urinalysis', 'clair-demo', 'den194-std-urinalysis', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'lab', 'DEN-194 lab', 'T04', 'Lab', 'DEN-194 Urinalysis synthetic', 'DEN-194 urinalysis nabi-urinary', 'DEN-194 urinalysis billing', array['urinalysis', 'nabi-urinary', 'lab'], 'active', 30000, 'per_order', array['cat', 'dog'], 'lab', true, true, 'Synthetic care guide for urinalysis demo order.', true, 'Route to DEN-194 Lab Tech queue after confirmation.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000005","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000005"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-xray', 'clair-demo', 'den194-std-xray', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'imaging', 'DEN-194 imaging', 'T05', 'Imaging', 'DEN-194 X-ray synthetic', 'DEN-194 X-ray synthetic', 'DEN-194 X-ray billing', array['x-ray', 'radiograph', 'nabi-urinary', 'choco-rehab'], 'active', 55000, 'per_order', array['dog', 'cat'], 'imaging', true, true, 'Synthetic care guide for X-ray demo order.', true, 'Route to DEN-194 Imaging Tech queue after confirmation.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000006","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000006","19429500-0000-4000-8000-000000000010"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-ear-cleaning', 'clair-demo', 'den194-std-ear-cleaning', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'treatment', 'DEN-194 treatment', 'T03', 'Treatment', 'DEN-194 Ear cleaning synthetic', 'DEN-194 ear cleaning bori-allergy', 'DEN-194 ear cleaning billing', array['ear cleaning', 'bori-allergy', 'treatment'], 'active', 22000, 'per_order', array['dog', 'cat'], 'treatment', true, true, 'Synthetic care guide for ear cleaning demo order.', false, 'Synthetic treatment handoff note.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000007","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000007"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb),
+  ('den194-catalog-wellness-vaccine', 'clair-demo', 'den194-std-wellness-vaccine', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'treatment', 'DEN-194 wellness', 'T06', 'Wellness', 'DEN-194 Vaccine synthetic', 'DEN-194 wellness vaccine mango', 'DEN-194 wellness vaccine billing', array['vaccine', 'wellness', 'mango-wellness'], 'active', 45000, 'per_order', array['dog'], 'treatment', true, true, 'Synthetic wellness care guide. Not a clinical recommendation.', true, 'Synthetic preventive workflow handoff note.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000008","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000009"],"synthetic":true}'::jsonb, '{}'::jsonb, '{"vaccineTarget":"dog","vaccineClassification":"demo_wellness","doseSequenceEnabled":true,"doseSequenceLabel":"synthetic annual","doseSequenceNumber":1}'::jsonb),
+  ('den194-catalog-rehab-consult', 'clair-demo', 'den194-std-rehab-consult', 'demo-db-pr-002', 'demo-db-pr-002', 'demo-db-pr-002', 'unmodified', array[]::text[], 'current', 'treatment', 'DEN-194 rehab', 'T03', 'Treatment', 'DEN-194 Rehab consult synthetic', 'DEN-194 rehab plan choco', 'DEN-194 rehab plan billing', array['rehab', 'choco-rehab', 'treatment'], 'active', 60000, 'per_order', array['dog'], 'treatment', true, true, 'Synthetic rehab follow-up guide.', true, 'Synthetic pending rehab work handoff note.', true, true, 'as_is', '{"priceBasis":"fixed_order_price","linkedServiceItemId":"19429000-0000-4000-8000-000000000009","linkedSeedOrderIds":["19429500-0000-4000-8000-000000000011"],"synthetic":true}'::jsonb, '{}'::jsonb, '{}'::jsonb)
+on conflict (id) do update
+set
+  standard_order_id = excluded.standard_order_id,
+  source_preset_version = excluded.source_preset_version,
+  initial_imported_preset_version = excluded.initial_imported_preset_version,
+  last_auto_merged_preset_version = excluded.last_auto_merged_preset_version,
+  customization_state = excluded.customization_state,
+  customized_fields = excluded.customized_fields,
+  preset_merge_status = excluded.preset_merge_status,
+  category_group = excluded.category_group,
+  category_label = excluded.category_label,
+  t_code = excluded.t_code,
+  t_code_label = excluded.t_code_label,
+  standard_order_name = excluded.standard_order_name,
+  in_hospital_order_name = excluded.in_hospital_order_name,
+  billing_name = excluded.billing_name,
+  aliases = excluded.aliases,
+  availability_status = excluded.availability_status,
+  price_krw = excluded.price_krw,
+  sales_unit = excluded.sales_unit,
+  target_species = excluded.target_species,
+  default_destination_module = excluded.default_destination_module,
+  default_task_required = excluded.default_task_required,
+  billing_reflection_enabled = excluded.billing_reflection_enabled,
+  care_guide = excluded.care_guide,
+  care_guide_delivery_enabled = excluded.care_guide_delivery_enabled,
+  internal_instruction = excluded.internal_instruction,
+  internal_instruction_delivery_enabled = excluded.internal_instruction_delivery_enabled,
+  tax_included = excluded.tax_included,
+  rounding_rule = excluded.rounding_rule,
+  pricing_rule = excluded.pricing_rule,
+  medication_metadata = excluded.medication_metadata,
+  vaccine_metadata = excluded.vaccine_metadata,
+  updated_at = now();
+
+-- DEMO-DB-PR-004: lab result-sheet catalog seed foundation.
+-- Synthetic CBC and urinalysis result fields only; no clinical reference ranges or real result values.
+insert into public.lab_test_categories (
+  id,
+  workspace_id,
+  category_name,
+  sort_order
+)
+values
+  ('den194-labcat-hematology', 'clair-demo', 'Hematology', 10),
+  ('den194-labcat-urinalysis', 'clair-demo', 'Urinalysis', 20)
+on conflict (id) do update
+set
+  category_name = excluded.category_name,
+  sort_order = excluded.sort_order,
+  updated_at = now();
+
+insert into public.lab_test_items (
+  id,
+  workspace_id,
+  category_id,
+  test_item_name,
+  result_input_type,
+  result_unit,
+  sort_order,
+  availability_status,
+  saved_result_usage_count
+)
+values
+  ('den194-labitem-cbc-wbc', 'clair-demo', 'den194-labcat-hematology', 'WBC', 'number', '10^3/uL', 10, 'active', 0),
+  ('den194-labitem-cbc-rbc', 'clair-demo', 'den194-labcat-hematology', 'RBC', 'number', '10^6/uL', 20, 'active', 0),
+  ('den194-labitem-cbc-hct', 'clair-demo', 'den194-labcat-hematology', 'HCT', 'number', '%', 30, 'active', 0),
+  ('den194-labitem-cbc-plt', 'clair-demo', 'den194-labcat-hematology', 'Platelets', 'number', '10^3/uL', 40, 'active', 0),
+  ('den194-labitem-ua-protein', 'clair-demo', 'den194-labcat-urinalysis', 'Protein', 'grade', null, 10, 'active', 0),
+  ('den194-labitem-ua-ketones', 'clair-demo', 'den194-labcat-urinalysis', 'Ketones', 'positive_negative', null, 20, 'active', 0),
+  ('den194-labitem-ua-specific-gravity', 'clair-demo', 'den194-labcat-urinalysis', 'Specific gravity', 'number', null, 30, 'active', 0),
+  ('den194-labitem-ua-ph', 'clair-demo', 'den194-labcat-urinalysis', 'pH', 'number', null, 40, 'active', 0)
+on conflict (id) do update
+set
+  category_id = excluded.category_id,
+  test_item_name = excluded.test_item_name,
+  result_input_type = excluded.result_input_type,
+  result_unit = excluded.result_unit,
+  sort_order = excluded.sort_order,
+  availability_status = excluded.availability_status,
+  saved_result_usage_count = excluded.saved_result_usage_count,
+  updated_at = now();
+
+insert into public.order_catalog_lab_test_item_links (
+  id,
+  workspace_id,
+  order_catalog_item_id,
+  lab_test_item_id,
+  lab_test_category_id,
+  sort_order,
+  snapshot_metadata
+)
+values
+  ('den194-lablink-cbc-wbc', 'clair-demo', 'den194-catalog-cbc', 'den194-labitem-cbc-wbc', null, 10, '{"resultSheet":"cbc","scenarioCodes":["kong-vomit"],"synthetic":true}'::jsonb),
+  ('den194-lablink-cbc-rbc', 'clair-demo', 'den194-catalog-cbc', 'den194-labitem-cbc-rbc', null, 20, '{"resultSheet":"cbc","scenarioCodes":["kong-vomit"],"synthetic":true}'::jsonb),
+  ('den194-lablink-cbc-hct', 'clair-demo', 'den194-catalog-cbc', 'den194-labitem-cbc-hct', null, 30, '{"resultSheet":"cbc","scenarioCodes":["kong-vomit"],"synthetic":true}'::jsonb),
+  ('den194-lablink-cbc-plt', 'clair-demo', 'den194-catalog-cbc', 'den194-labitem-cbc-plt', null, 40, '{"resultSheet":"cbc","scenarioCodes":["kong-vomit"],"synthetic":true}'::jsonb),
+  ('den194-lablink-ua-protein', 'clair-demo', 'den194-catalog-urinalysis', 'den194-labitem-ua-protein', null, 10, '{"resultSheet":"urinalysis","scenarioCodes":["nabi-urinary"],"synthetic":true}'::jsonb),
+  ('den194-lablink-ua-ketones', 'clair-demo', 'den194-catalog-urinalysis', 'den194-labitem-ua-ketones', null, 20, '{"resultSheet":"urinalysis","scenarioCodes":["nabi-urinary"],"synthetic":true}'::jsonb),
+  ('den194-lablink-ua-specific-gravity', 'clair-demo', 'den194-catalog-urinalysis', 'den194-labitem-ua-specific-gravity', null, 30, '{"resultSheet":"urinalysis","scenarioCodes":["nabi-urinary"],"synthetic":true}'::jsonb),
+  ('den194-lablink-ua-ph', 'clair-demo', 'den194-catalog-urinalysis', 'den194-labitem-ua-ph', null, 40, '{"resultSheet":"urinalysis","scenarioCodes":["nabi-urinary"],"synthetic":true}'::jsonb)
+on conflict (id) do update
+set
+  order_catalog_item_id = excluded.order_catalog_item_id,
+  lab_test_item_id = excluded.lab_test_item_id,
+  lab_test_category_id = excluded.lab_test_category_id,
+  sort_order = excluded.sort_order,
+  snapshot_metadata = excluded.snapshot_metadata;
+
+insert into public.order_sets (
+  id,
+  workspace_id,
+  source_set_version,
+  set_category,
+  set_name,
+  billing_name,
+  availability_status,
+  amount_basis,
+  set_price_krw,
+  sales_unit,
+  billing_reflection_enabled,
+  target_species,
+  care_guide,
+  internal_instruction
+)
+values
+  ('den194-set-kong-vomit-compact', 'clair-demo', 'demo-db-pr-002', 'DEN-194 outpatient compact set', 'DEN-194 Kong vomiting compact set', 'DEN-194 Kong vomiting compact set billing', 'active', 'included_order_sum', 0, 'per_each', true, array['dog', 'cat', 'other'], 'Synthetic compact set for Kong vomiting outpatient demo.', 'Expands CBC, ultrasound, fluid therapy, and dispensing catalog rows.'),
+  ('den194-set-mango-wellness-compact', 'clair-demo', 'demo-db-pr-002', 'DEN-194 wellness compact set', 'DEN-194 Mango wellness compact set', 'DEN-194 Mango wellness compact set billing', 'active', 'included_order_sum', 0, 'per_each', true, array['dog'], 'Synthetic compact set for Mango wellness/preventive demo.', 'Expands the synthetic wellness vaccine catalog row.')
+on conflict (id) do update
+set
+  source_set_version = excluded.source_set_version,
+  set_category = excluded.set_category,
+  set_name = excluded.set_name,
+  billing_name = excluded.billing_name,
+  availability_status = excluded.availability_status,
+  amount_basis = excluded.amount_basis,
+  set_price_krw = excluded.set_price_krw,
+  sales_unit = excluded.sales_unit,
+  billing_reflection_enabled = excluded.billing_reflection_enabled,
+  target_species = excluded.target_species,
+  care_guide = excluded.care_guide,
+  internal_instruction = excluded.internal_instruction,
+  updated_at = now();
+
+insert into public.order_set_items (
+  id,
+  workspace_id,
+  order_set_id,
+  child_order_id,
+  sort_order,
+  default_selected,
+  billing_reflection_default,
+  default_quantity,
+  quantity_source,
+  unit_price_snapshot_krw
+)
+values
+  ('den194-setitem-kong-cbc', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-cbc', 10, true, true, 1, 'fixed_one', 35000),
+  ('den194-setitem-kong-ultrasound', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-abdomen-ultrasound', 20, true, true, 1, 'fixed_one', 65000),
+  ('den194-setitem-kong-fluid', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-fluid-therapy', 30, true, true, 1, 'fixed_one', 28000),
+  ('den194-setitem-kong-maropitant', 'clair-demo', 'den194-set-kong-vomit-compact', 'den194-catalog-maropitant', 40, true, true, 1, 'fixed_one', 28500),
+  ('den194-setitem-mango-vaccine', 'clair-demo', 'den194-set-mango-wellness-compact', 'den194-catalog-wellness-vaccine', 10, true, true, 1, 'fixed_one', 45000)
+on conflict (id) do update
+set
+  order_set_id = excluded.order_set_id,
+  child_order_id = excluded.child_order_id,
+  sort_order = excluded.sort_order,
+  default_selected = excluded.default_selected,
+  billing_reflection_default = excluded.billing_reflection_default,
+  default_quantity = excluded.default_quantity,
+  quantity_source = excluded.quantity_source,
+  unit_price_snapshot_krw = excluded.unit_price_snapshot_krw;
+
 insert into public.soap_notes (
   id,
   workspace_id,
@@ -1725,6 +1948,57 @@ set
   sort_order = excluded.sort_order,
   updated_at = now();
 
+-- DEMO-DB-PR-003: fulfillment work item seed foundation.
+-- Direct seed rows keep reset/readback deterministic; the RPC uses now() for completed timestamps.
+insert into public.order_fulfillment_work_items (
+  id,
+  workspace_id,
+  encounter_id,
+  order_id,
+  order_type,
+  queue_type,
+  status,
+  priority,
+  requested_by_user_id,
+  assigned_to_user_id,
+  due_at,
+  completed_at,
+  reason,
+  source_snapshot,
+  created_at,
+  updated_at
+)
+values
+  ('19431000-0000-4000-8000-000000000001', 'clair-demo', '19426000-0000-4000-8000-000000000001', '19429500-0000-4000-8000-000000000001', 'lab', 'lab', 'completed', 'high', '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000007', '2026-05-21T10:05:00+09:00', '2026-05-21T10:02:00+09:00', 'DEN-194 synthetic CBC result entered.', '{"patientName":"Kong Synthetic","guardianName":"DEN-194 Guardian 01","orderDisplayName":"DEN-194 CBC kong-vomit","serviceItemId":"19429000-0000-4000-8000-000000000001","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic CBC result WBC 21.4 marker.","detail":{"orderType":"lab","priority":"high","scenarioCode":"kong-vomit","synthetic":true}}'::jsonb, '2026-05-21T09:47:00+09:00', '2026-05-21T10:02:00+09:00'),
+  ('19431000-0000-4000-8000-000000000002', 'clair-demo', '19426000-0000-4000-8000-000000000001', '19429500-0000-4000-8000-000000000002', 'imaging', 'imaging', 'completed', 'high', '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000008', '2026-05-21T10:10:00+09:00', '2026-05-21T10:08:00+09:00', 'DEN-194 synthetic abdomen ultrasound result entered.', '{"patientName":"Kong Synthetic","guardianName":"DEN-194 Guardian 01","orderDisplayName":"DEN-194 abdomen ultrasound kong-vomit","serviceItemId":"19429000-0000-4000-8000-000000000002","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic imaging result abdomen marker.","detail":{"orderType":"imaging","priority":"high","scenarioCode":"kong-vomit","synthetic":true}}'::jsonb, '2026-05-21T09:48:00+09:00', '2026-05-21T10:08:00+09:00'),
+  ('19431000-0000-4000-8000-000000000003', 'clair-demo', '19426000-0000-4000-8000-000000000001', '19429500-0000-4000-8000-000000000003', 'treatment', 'treatment', 'completed', 'normal', '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000009', '2026-05-21T10:12:00+09:00', '2026-05-21T10:12:00+09:00', 'DEN-194 synthetic fluid therapy completed.', '{"patientName":"Kong Synthetic","guardianName":"DEN-194 Guardian 01","orderDisplayName":"DEN-194 fluid therapy kong-vomit","serviceItemId":"19429000-0000-4000-8000-000000000003","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic treatment completion marker.","detail":{"orderType":"treatment","priority":"normal","scenarioCode":"kong-vomit","synthetic":true}}'::jsonb, '2026-05-21T09:49:00+09:00', '2026-05-21T10:12:00+09:00'),
+  ('19431000-0000-4000-8000-000000000004', 'clair-demo', '19426000-0000-4000-8000-000000000001', '19429500-0000-4000-8000-000000000004', 'dispensing', 'dispensing', 'completed', 'normal', '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000009', '2026-05-21T10:15:00+09:00', '2026-05-21T10:15:00+09:00', 'DEN-194 synthetic maropitant dispensing completed.', '{"patientName":"Kong Synthetic","guardianName":"DEN-194 Guardian 01","orderDisplayName":"DEN-194 maropitant dispensing kong-vomit","serviceItemId":"19429000-0000-4000-8000-000000000004","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic dispensing completion marker.","detail":{"orderType":"dispensing","priority":"normal","scenarioCode":"kong-vomit","synthetic":true}}'::jsonb, '2026-05-21T09:50:00+09:00', '2026-05-21T10:15:00+09:00'),
+  ('19431000-0000-4000-8000-000000000005', 'clair-demo', '19426000-0000-4000-8000-000000000002', '19429500-0000-4000-8000-000000000005', 'lab', 'lab', 'completed', 'normal', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000007', '2026-05-21T10:45:00+09:00', '2026-05-21T10:45:00+09:00', 'DEN-194 synthetic urinalysis result entered.', '{"patientName":"Nabi Synthetic","guardianName":"DEN-194 Guardian 02","orderDisplayName":"DEN-194 urinalysis nabi-urinary","serviceItemId":"19429000-0000-4000-8000-000000000005","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic urinalysis result marker.","detail":{"orderType":"lab","priority":"normal","scenarioCode":"nabi-urinary","synthetic":true}}'::jsonb, '2026-05-21T10:27:00+09:00', '2026-05-21T10:45:00+09:00'),
+  ('19431000-0000-4000-8000-000000000006', 'clair-demo', '19426000-0000-4000-8000-000000000002', '19429500-0000-4000-8000-000000000006', 'imaging', 'imaging', 'completed', 'normal', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000008', '2026-05-21T10:50:00+09:00', '2026-05-21T10:50:00+09:00', 'DEN-194 synthetic urinary x-ray result entered.', '{"patientName":"Nabi Synthetic","guardianName":"DEN-194 Guardian 02","orderDisplayName":"DEN-194 urinary x-ray nabi-urinary","serviceItemId":"19429000-0000-4000-8000-000000000006","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic x-ray result marker.","detail":{"orderType":"imaging","priority":"normal","scenarioCode":"nabi-urinary","synthetic":true}}'::jsonb, '2026-05-21T10:30:00+09:00', '2026-05-21T10:50:00+09:00'),
+  ('19431000-0000-4000-8000-000000000007', 'clair-demo', '19426000-0000-4000-8000-000000000003', '19429500-0000-4000-8000-000000000007', 'treatment', 'treatment', 'completed', 'normal', '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000009', '2026-05-21T11:30:00+09:00', '2026-05-21T11:30:00+09:00', 'DEN-194 synthetic ear cleaning completed.', '{"patientName":"Bori Synthetic","guardianName":"DEN-194 Guardian 03","orderDisplayName":"DEN-194 ear cleaning bori-allergy","serviceItemId":"19429000-0000-4000-8000-000000000007","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic allergy treatment result marker.","detail":{"orderType":"treatment","priority":"normal","scenarioCode":"bori-allergy","synthetic":true}}'::jsonb, '2026-05-21T11:20:00+09:00', '2026-05-21T11:30:00+09:00'),
+  ('19431000-0000-4000-8000-000000000008', 'clair-demo', '19426000-0000-4000-8000-000000000003', '19429500-0000-4000-8000-000000000008', 'dispensing', 'dispensing', 'completed', 'normal', '00000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000009', '2026-05-21T11:32:00+09:00', '2026-05-21T11:32:00+09:00', 'DEN-194 synthetic allergy medication dispensing completed.', '{"patientName":"Bori Synthetic","guardianName":"DEN-194 Guardian 03","orderDisplayName":"DEN-194 allergy medication bori-allergy","serviceItemId":"19429000-0000-4000-8000-000000000004","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic dispensing result marker.","detail":{"orderType":"dispensing","priority":"normal","scenarioCode":"bori-allergy","synthetic":true}}'::jsonb, '2026-05-21T11:21:00+09:00', '2026-05-21T11:32:00+09:00'),
+  ('19431000-0000-4000-8000-000000000009', 'clair-demo', '19426000-0000-4000-8000-000000000004', '19429500-0000-4000-8000-000000000009', 'treatment', 'treatment', 'completed', 'low', '00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000009', '2026-05-21T13:50:00+09:00', '2026-05-21T13:50:00+09:00', 'DEN-194 synthetic wellness vaccine completed.', '{"patientName":"Mango Synthetic","guardianName":"DEN-194 Guardian 04","orderDisplayName":"DEN-194 wellness vaccine mango","serviceItemId":"19429000-0000-4000-8000-000000000008","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic vaccine completion marker.","detail":{"orderType":"treatment","priority":"low","scenarioCode":"mango-wellness","synthetic":true}}'::jsonb, '2026-05-21T13:40:00+09:00', '2026-05-21T13:50:00+09:00'),
+  ('19431000-0000-4000-8000-000000000010', 'clair-demo', '19426000-0000-4000-8000-000000000005', '19429500-0000-4000-8000-000000000010', 'imaging', 'imaging', 'completed', 'normal', '00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000008', '2026-05-21T15:00:00+09:00', '2026-05-21T15:00:00+09:00', 'DEN-194 synthetic patella x-ray result entered.', '{"patientName":"Choco Synthetic","guardianName":"DEN-194 Guardian 05","orderDisplayName":"DEN-194 patella x-ray choco","serviceItemId":"19429000-0000-4000-8000-000000000006","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic patella x-ray result marker.","detail":{"orderType":"imaging","priority":"normal","scenarioCode":"choco-rehab","synthetic":true}}'::jsonb, '2026-05-21T14:42:00+09:00', '2026-05-21T15:00:00+09:00'),
+  ('19431000-0000-4000-8000-000000000011', 'clair-demo', '19426000-0000-4000-8000-000000000005', '19429500-0000-4000-8000-000000000011', 'treatment', 'treatment', 'in_progress', 'normal', '00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000009', '2026-05-21T15:20:00+09:00', null, 'DEN-194 synthetic rehab work remains in queue.', '{"patientName":"Choco Synthetic","guardianName":"DEN-194 Guardian 05","orderDisplayName":"DEN-194 rehab plan choco","serviceItemId":"19429000-0000-4000-8000-000000000009","billingReflectionEnabled":true,"instruction":"DEN-194 synthetic rehab treatment pending marker.","detail":{"orderType":"treatment","priority":"normal","scenarioCode":"choco-rehab","synthetic":true}}'::jsonb, '2026-05-21T14:43:00+09:00', '2026-05-21T15:05:00+09:00')
+on conflict (workspace_id, order_id) do update
+set
+  id = excluded.id,
+  encounter_id = excluded.encounter_id,
+  order_type = excluded.order_type,
+  queue_type = excluded.queue_type,
+  status = excluded.status,
+  priority = excluded.priority,
+  requested_by_user_id = excluded.requested_by_user_id,
+  assigned_to_user_id = excluded.assigned_to_user_id,
+  due_at = excluded.due_at,
+  completed_at = excluded.completed_at,
+  cancelled_at = excluded.cancelled_at,
+  returned_at = excluded.returned_at,
+  reason = excluded.reason,
+  source_snapshot = excluded.source_snapshot,
+  created_at = excluded.created_at,
+  updated_at = excluded.updated_at;
+
 insert into public.order_events (
   id,
   workspace_id,
@@ -1843,6 +2117,105 @@ set
   status = excluded.status,
   paid_at = excluded.paid_at,
   metadata = excluded.metadata;
+
+-- DEMO-DB-PR-005: billing checkout session family seed foundation.
+-- Synthetic checkout snapshots only; no payment provider, receipt, refund, settlement, or accounting integration.
+insert into public.billing_checkout_sessions (
+  id,
+  workspace_id,
+  guardian_id,
+  payer_snapshot,
+  status,
+  subtotal_amount,
+  discount_amount,
+  surcharge_amount,
+  tax_amount,
+  total_amount,
+  selected_payment_method,
+  unpaid_reason,
+  payment_memo,
+  created_by_user_id,
+  prepared_at,
+  completed_at,
+  created_at,
+  updated_at
+)
+values
+  ('19433000-0000-4000-8000-000000000002', 'clair-demo', '19420000-0000-4000-8000-000000000002', '{"guardianId":"19420000-0000-4000-8000-000000000002","name":"DEN-194 Guardian 02","mobilePhone":"010-1941-0002","guardianCode":"DEN-194-G-02","scenarioCode":"nabi-urinary","synthetic":true}'::jsonb, 'paid', 85000.00, 0.00, 0.00, 0.00, 85000.00, 'card', null, 'DEN-194 synthetic card checkout for Nabi.', '00000000-0000-4000-8000-000000000011', '2026-05-21T11:06:00+09:00', '2026-05-21T11:08:00+09:00', '2026-05-21T11:06:00+09:00', '2026-05-21T11:08:00+09:00'),
+  ('19433000-0000-4000-8000-000000000004', 'clair-demo', '19420000-0000-4000-8000-000000000004', '{"guardianId":"19420000-0000-4000-8000-000000000004","name":"DEN-194 Guardian 04","mobilePhone":"010-1941-0004","guardianCode":"DEN-194-G-04","scenarioCode":"mango-wellness","synthetic":true}'::jsonb, 'paid', 45000.00, 0.00, 0.00, 0.00, 45000.00, 'cash', null, 'DEN-194 synthetic cash checkout for Mango.', '00000000-0000-4000-8000-000000000010', '2026-05-21T14:05:00+09:00', '2026-05-21T14:08:00+09:00', '2026-05-21T14:05:00+09:00', '2026-05-21T14:08:00+09:00')
+on conflict (id) do update
+set
+  guardian_id = excluded.guardian_id,
+  payer_snapshot = excluded.payer_snapshot,
+  status = excluded.status,
+  subtotal_amount = excluded.subtotal_amount,
+  discount_amount = excluded.discount_amount,
+  surcharge_amount = excluded.surcharge_amount,
+  tax_amount = excluded.tax_amount,
+  total_amount = excluded.total_amount,
+  selected_payment_method = excluded.selected_payment_method,
+  unpaid_reason = excluded.unpaid_reason,
+  payment_memo = excluded.payment_memo,
+  created_by_user_id = excluded.created_by_user_id,
+  prepared_at = excluded.prepared_at,
+  completed_at = excluded.completed_at,
+  created_at = excluded.created_at,
+  updated_at = excluded.updated_at;
+
+insert into public.billing_checkout_session_invoices (
+  id,
+  workspace_id,
+  checkout_session_id,
+  invoice_id,
+  encounter_id,
+  patient_id,
+  guardian_id,
+  invoice_status_snapshot,
+  amount_inclusion,
+  subtotal_amount,
+  discount_amount,
+  surcharge_amount,
+  tax_amount,
+  allocated_amount,
+  created_at
+)
+values
+  ('19433100-0000-4000-8000-000000000002', 'clair-demo', '19433000-0000-4000-8000-000000000002', '19429600-0000-4000-8000-000000000002', '19426000-0000-4000-8000-000000000002', '19421000-0000-4000-8000-000000000002', '19420000-0000-4000-8000-000000000002', 'waiting', 'payable', 85000.00, 0.00, 0.00, 0.00, 85000.00, '2026-05-21T11:06:00+09:00'),
+  ('19433100-0000-4000-8000-000000000004', 'clair-demo', '19433000-0000-4000-8000-000000000004', '19429600-0000-4000-8000-000000000004', '19426000-0000-4000-8000-000000000004', '19421000-0000-4000-8000-000000000004', '19420000-0000-4000-8000-000000000004', 'waiting', 'payable', 45000.00, 0.00, 0.00, 0.00, 45000.00, '2026-05-21T14:05:00+09:00')
+on conflict (id) do update
+set
+  checkout_session_id = excluded.checkout_session_id,
+  invoice_id = excluded.invoice_id,
+  encounter_id = excluded.encounter_id,
+  patient_id = excluded.patient_id,
+  guardian_id = excluded.guardian_id,
+  invoice_status_snapshot = excluded.invoice_status_snapshot,
+  amount_inclusion = excluded.amount_inclusion,
+  subtotal_amount = excluded.subtotal_amount,
+  discount_amount = excluded.discount_amount,
+  surcharge_amount = excluded.surcharge_amount,
+  tax_amount = excluded.tax_amount,
+  allocated_amount = excluded.allocated_amount,
+  created_at = excluded.created_at;
+
+insert into public.payment_allocations (
+  id,
+  workspace_id,
+  checkout_session_id,
+  payment_id,
+  invoice_id,
+  amount,
+  created_at
+)
+values
+  ('19433200-0000-4000-8000-000000000002', 'clair-demo', '19433000-0000-4000-8000-000000000002', '19429900-0000-4000-8000-000000000002', '19429600-0000-4000-8000-000000000002', 85000.00, '2026-05-21T11:08:00+09:00'),
+  ('19433200-0000-4000-8000-000000000004', 'clair-demo', '19433000-0000-4000-8000-000000000004', '19429900-0000-4000-8000-000000000004', '19429600-0000-4000-8000-000000000004', 45000.00, '2026-05-21T14:08:00+09:00')
+on conflict (workspace_id, payment_id, invoice_id) do update
+set
+  id = excluded.id,
+  checkout_session_id = excluded.checkout_session_id,
+  amount = excluded.amount,
+  created_at = excluded.created_at;
 
 insert into public.audit_events (
   id,

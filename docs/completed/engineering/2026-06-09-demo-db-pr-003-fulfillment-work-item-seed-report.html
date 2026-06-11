@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo DB PR 3 Fulfillment Work Item Seed Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo DB PR 3 Fulfillment Work Item Seed Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      UI를 바꾸지 않고 <code>clair-demo</code> local/dev seed에 주문별 fulfillment work item을 추가해,
+      reset 직후에도 부서별 업무 큐 데이터가 존재하도록 만드는 작업이었다. remote Supabase, production DB,
+      실제 병원/환자 데이터는 범위에서 제외했다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>supabase/seed.sql</code>에 synthetic fulfillment work item row 11개를 추가했다.</li>
+      <li>Lab 2개, imaging 3개, treatment 4개, dispensing 2개 queue type을 커버한다.</li>
+      <li><code>kong-vomit</code>, <code>nabi-urinary</code>, <code>bori-allergy</code>, <code>mango-wellness</code>, <code>choco-rehab</code> 시나리오의 기존 DEN-194 orders에 1:1로 연결했다.</li>
+      <li>readback SQL과 focused test를 fulfillment seed가 baseline으로 필요하도록 갱신했다.</li>
+      <li>seed inventory 문서에서 해결된 fulfillment gap과 남은 lab/billing gap을 분리했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      이제 demo DB reset 이후 <code>order_fulfillment_work_items</code>는 비어 있지 않아야 하며, readback은
+      queue type별 최소 개수를 확인한다. 남은 seed gap은 lab result-sheet catalog/link rows와 optional billing checkout session family다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 변경은 seed/readback/test/doc 범위이며 UI 연결은 하지 않았다.</li>
+      <li>Lab 결과지 카탈로그와 billing checkout session seed는 다음 PR 범위로 남겼다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      Demo DB PR 4는 CBC/urinalysis용 lab result-sheet catalog와 order catalog link seed를 추가하는 것이 좋다.
+      이렇게 하면 lab queue가 업무 단위에서 결과 입력 구조까지 이어진다.
+    </p>
+  </body>
+</html>

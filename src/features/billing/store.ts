@@ -71,11 +71,15 @@ export const useBillingStore = create<BillingStore>()((set, get) => ({
         ...state.invoiceLines.filter((line) => line.invoiceId !== invoice.id),
         ...invoiceLines.map((line) => ({ ...line })),
       ],
-      invoices: state.invoices.map((item) => item.id === invoice.id ? { ...item, ...invoice } : item),
+      invoices: state.invoices.some((item) => item.id === invoice.id)
+        ? state.invoices.map((item) => item.id === invoice.id ? { ...item, ...invoice } : item)
+        : [...state.invoices, { ...invoice }],
     })),
   applyPaymentStatusSnapshot: (invoice, payments) =>
     set((state) => ({
-      invoices: state.invoices.map((item) => item.id === invoice.id ? { ...item, ...invoice } : item),
+      invoices: state.invoices.some((item) => item.id === invoice.id)
+        ? state.invoices.map((item) => item.id === invoice.id ? { ...item, ...invoice } : item)
+        : [...state.invoices, { ...invoice }],
       paymentMethod: invoice.selectedPaymentMethod ?? state.paymentMethod,
       payments: [
         ...state.payments.filter((payment) => payment.invoiceId !== invoice.id),

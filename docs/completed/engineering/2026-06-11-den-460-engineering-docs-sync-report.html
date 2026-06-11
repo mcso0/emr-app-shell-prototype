@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-460 Engineering Docs Sync Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-460 Engineering Docs Sync Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      Demo completion 프로젝트에서 바뀐 API wiring, DB boundary, demo workflow, 검증 명령을
+      engineering docs에 일관되게 반영하는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>docs/engineering/testing/api-backed-demo-runbook.md</code>를 추가했다.</li>
+      <li><code>docs/engineering/api-boundaries/api-boundary-integration-guide.md</code>의 오래된 current-state 설명을 최신 API adoption 상태로 갱신했다.</li>
+      <li><code>docs/engineering/architecture/mock-live-boundary-map.md</code>에 현재 local-first demo completion boundary를 추가했다.</li>
+      <li><code>docs/engineering/current-status.md</code>, engineering README, seed readback contract, work index를 DEN-460 기준으로 동기화했다.</li>
+      <li><code>docs/engineering/testing/README.md</code>와 DEN-460 work item을 추가했다.</li>
+    </ul>
+
+    <h2>현재 의미</h2>
+    <p>
+      새 세션은 current status와 runbook만 읽어도 현재 데모가 synthetic local/dev/test API-backed foundation임을 이해할 수 있다.
+      remote Supabase, production readiness, 외부 결제/이메일/의료기기 연동, 전체 mock 제거는 여전히 별도 범위다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>제외 범위</h2>
+    <ul>
+      <li>코드 기능 변경은 하지 않았다.</li>
+      <li>DB schema, migration, RLS, seed는 변경하지 않았다.</li>
+      <li>remote/prod Supabase는 사용하지 않았다.</li>
+      <li>UI rewiring이나 mock fallback 제거는 포함하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 순번은 프로젝트 closeout이다. DEN-452부터 DEN-460까지의 상태를 종합해 demo readiness와 남은 gap을 냉정하게 정리하면 된다.
+    </p>
+  </body>
+</html>

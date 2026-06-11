@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo DB PR 2 Order Catalog Set Seed Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo DB PR 2 Order Catalog Set Seed Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      UI를 바꾸지 않고 <code>clair-demo</code> local/dev seed에 주문 카탈로그와 주문 세트의 최소 foundation을
+      추가하는 작업이었다. remote Supabase, production DB, 실제 병원/환자 데이터는 범위에서 제외했다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>supabase/seed.sql</code>에 synthetic order catalog row 9개를 추가했다.</li>
+      <li>Kong vomiting compact set 1개와 Mango wellness compact set 1개를 추가했다.</li>
+      <li>두 set에 포함되는 <code>order_set_items</code> 5개를 추가했다.</li>
+      <li>readback SQL과 focused test를 catalog/set seed가 baseline으로 필요하도록 갱신했다.</li>
+      <li>seed inventory 문서에서 해결된 gap과 남은 gap을 분리했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      이제 demo DB reset 이후 order catalog와 compact order set은 비어 있지 않아야 한다. 남은 seed gap은
+      <code>order_fulfillment_work_items</code>, lab result-sheet catalog/link rows, optional billing checkout session family다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 변경은 seed/readback/test/doc 범위이며 UI 연결은 하지 않았다.</li>
+      <li>Lab result sheet 항목과 fulfillment queue row는 다음 PR에서 별도 결정해야 한다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      Demo DB PR 3는 lab result-sheet catalog seed 또는 fulfillment work item seed/generation 중 하나를 선택해 진행하는 것이 좋다.
+      두 범위를 한 PR에 합치면 검증 범위가 커진다.
+    </p>
+  </body>
+</html>

@@ -41,6 +41,30 @@ Default interpretation:
 - "고정 스테이징", "fixed staging", "staging alias" means fixed staging.
 - "프로덕션", "사용자에게 배포", "production", "promote" means production and requires explicit approval.
 
+## Short Invocation Phrases
+
+Treat these short Korean requests as release-routing shortcuts. The safety rules above still apply.
+
+| User phrase | Interpret as | Allowed actions | Still blocked |
+| --- | --- | --- | --- |
+| `PR preview까지만.` | Work branch/PR review only | implement, commit, push, create/update PR, wait for CI/Secret Scan/Vercel preview, report PR preview URL | fixed staging alias, `staging` merge unless explicitly requested, `main`, production |
+| `PR만.` or `그냥 PR.` | Same as PR preview only | implement through PR preview review | fixed staging alias, production |
+| `고정 스테이징 갱신해줘. production 금지.` | Fixed staging integration/release | identify target PR/branch, verify it is merged to `staging` or merge approved source to `staging`, run gates, move only fixed staging alias | `main`, production, production env/secrets |
+| `staging에 올려줘. production 금지.` | Merge approved work to `staging`, then fixed staging if requested or implied | apply manual merge gate and report staging commit/deployment | production |
+| `production 릴리즈 준비해줘.` | Production approval packet only | inspect current `staging`, prepare checklist, verification plan, smoke path, rollback candidate | actual `main` merge, deploy, promote, alias change until explicit production approval |
+
+If a short phrase is ambiguous, ask one concise question before acting:
+
+```text
+PR preview, fixed staging, production 중 어느 범위야?
+```
+
+Short phrases do not weaken approval gates:
+
+- Fixed staging alias changes still require a clear fixed-staging request and must come from `staging` or an approved integration branch.
+- Production deploy/promote or `main` merge still requires explicit approval naming target, source commit, included work, verification, and rollback path.
+- When the user says only `PR`, default to PR preview and do not update fixed staging.
+
 ## Minimum Secret Safety Gate
 
 Before deployment work, check:

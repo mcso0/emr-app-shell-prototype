@@ -396,6 +396,35 @@ type FulfillmentWorkItem = {
   updatedAt?: string;
   workspaceId: string;
 };
+type LabResultSheetCatalogItem = {
+  categoryId: string;
+  categoryName: string;
+  id: string;
+  resultInputType: "number" | "text" | "select" | "positive_negative" | "grade";
+  resultUnit?: string;
+  sortOrder: number;
+  testItemName: string;
+};
+type LabResultSheetCatalogStatus = "idle" | "loading" | "ready" | "empty" | "error" | "permission_denied";
+type LabResultSheetCatalogLoadResult =
+  | {
+      items: LabResultSheetCatalogItem[];
+      status: "ready";
+    }
+  | {
+      items: [];
+      status: Exclude<LabResultSheetCatalogStatus, "idle" | "loading" | "ready">;
+    };
+type LabResultSaveOutcome =
+  | {
+      ok: true;
+    }
+  | {
+      message: string;
+      ok: false;
+      reason: "error" | "invalid" | "permission_denied";
+      retryable: boolean;
+    };
 
 function getInitialImagingReadingStatus(status?: ImagingStudyStatus): ImagingReadingStatus {
   if (status === "read" || status === "reviewed") return "completed";
@@ -632,6 +661,182 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType) {
   return { updateStatus, workItems };
 }
 
+async function loadLabResultSheetCatalog({
+  orderDisplayName,
+  serviceItemId,
+  workspaceId,
+}: {
+  orderDisplayName?: string;
+  serviceItemId?: string;
+  workspaceId: string;
+}): Promise<LabResultSheetCatalogLoadResult> {
+  const params = new URLSearchParams();
+  if (orderDisplayName) params.set("orderDisplayName", orderDisplayName);
+  if (serviceItemId) params.set("serviceItemId", serviceItemId);
+
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/lab-imaging/result-sheet-catalog?${params.toString()}`,
+      {
+        cache: "no-store",
+        headers: { "x-clair-demo-session-user-id": "user-tech" },
+      },
+    );
+    const body = (await response.json()) as {
+      denialReason?: string;
+      error?: string;
+      items?: LabResultSheetCatalogItem[];
+      ok?: boolean;
+    };
+
+    if (response.status === 401 || response.status === 403 || body.denialReason) {
+      return { items: [], status: "permission_denied" };
+    }
+    if (!response.ok || !body.ok || !Array.isArray(body.items)) {
+      return { items: [], status: "error" };
+    }
+    if (body.items.length === 0) return { items: [], status: "empty" };
+    return { items: body.items, status: "ready" };
+  } catch {
+    return { items: [], status: "error" };
+  }
+}
+
+function useLabResultSheetCatalogRows({
+  result,
+  workItem,
+  workspaceId,
+}: {
+  result?: LabResult;
+  workItem?: FulfillmentWorkItem;
+  workspaceId: string;
+}) {
+  const [state, setState] = useState<{
+    cacheKey: string;
+    rows: LabResultRow[];
+    status: LabResultSheetCatalogStatus;
+  }>({ cacheKey: "", rows: [], status: "idle" });
+  const [reloadToken, setReloadToken] = useState(0);
+  const orderDisplayName = workItem?.sourceSnapshot?.orderDisplayName ?? result?.resultName;
+  const serviceItemId = workItem?.sourceSnapshot?.serviceItemId;
+  const resultId = result?.id;
+  const resultRowCount = result?.rows.length ?? 0;
+  const cacheKey = [
+    workspaceId,
+    resultId ?? "",
+    serviceItemId ?? "",
+    orderDisplayName ?? "",
+  ].join(":");
+  const shouldLoad = Boolean(resultId && resultRowCount === 0 && orderDisplayName);
+
+  useEffect(() => {
+    if (!shouldLoad || !resultId || !orderDisplayName) return;
+
+    let canceled = false;
+
+    const load = async () => {
+      setState({ cacheKey, rows: [], status: "loading" });
+      const next = await loadLabResultSheetCatalog({
+        orderDisplayName,
+        serviceItemId,
+        workspaceId,
+      });
+      if (canceled) return;
+      setState({
+        cacheKey,
+        rows: next.items.map((item) => ({
+          id: `${resultId}-${item.id}`,
+          labTestItemId: item.id,
+          analyteName: item.testItemName,
+          judgment: "not_judged",
+          unit: item.resultUnit,
+        })),
+        status: next.status,
+      });
+    };
+
+    void load();
+
+    return () => {
+      canceled = true;
+    };
+  }, [cacheKey, orderDisplayName, reloadToken, resultId, serviceItemId, shouldLoad, workspaceId]);
+
+  const retry = useCallback(() => setReloadToken((current) => current + 1), []);
+
+  if (!shouldLoad) return { cacheKey, retry, rows: [], status: "idle" as const };
+  return state.cacheKey === cacheKey ? { ...state, retry } : { cacheKey, retry, rows: [], status: "loading" as const };
+}
+
+async function saveLabResultEntry({
+  result,
+  rows,
+  workItem,
+  workspaceId,
+}: {
+  result: LabResult;
+  rows: LabResultRow[];
+  workItem?: FulfillmentWorkItem;
+  workspaceId: string;
+}): Promise<LabResultSaveOutcome> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/lab-imaging/result-entries`,
+      {
+        body: JSON.stringify({
+          encounterId: result.encounterId,
+          orderId: result.orderId,
+          resultId: result.id,
+          rows,
+          workItemId: workItem?.id,
+        }),
+        cache: "no-store",
+        headers: {
+          "content-type": "application/json",
+          "x-clair-demo-session-user-id": "user-tech",
+        },
+        method: "POST",
+      },
+    );
+    const body = (await response.json()) as {
+      denialReason?: string;
+      error?: string;
+      ok?: boolean;
+    };
+    if (response.ok && body.ok === true) return { ok: true };
+
+    if (response.status === 401 || response.status === 403 || body.denialReason) {
+      return {
+        message: "저장 권한이 없습니다.",
+        ok: false,
+        reason: "permission_denied",
+        retryable: false,
+      };
+    }
+    if (response.status === 400 || body.error === "invalid_lab_result_entry_payload") {
+      return {
+        message: "저장할 검사 결과가 완전하지 않습니다.",
+        ok: false,
+        reason: "invalid",
+        retryable: false,
+      };
+    }
+    return {
+      message: "결과 저장에 실패했습니다.",
+      ok: false,
+      reason: "error",
+      retryable: true,
+    };
+  } catch {
+    return {
+      message: "네트워크 오류로 저장하지 못했습니다.",
+      ok: false,
+      reason: "error",
+      retryable: true,
+    };
+  }
+}
+
 function getFulfillmentTransitionPath(
   current: FulfillmentWorkItemStatus,
   target: "in_progress" | "completed" | "requested"
@@ -668,10 +873,12 @@ function applyFulfillmentToLabItems(
   workItems: FulfillmentWorkItem[]
 ): LabWorkItem[] {
   const workItemsByOrderId = getWorkItemsByOrderId(workItems);
+  const usedWorkItemIds = new Set<string>();
 
-  return items.map((item) => {
+  const mappedItems = items.map((item) => {
     const workItem = item.order ? workItemsByOrderId.get(item.order.id) : undefined;
     if (!workItem) return item;
+    usedWorkItemIds.add(workItem.id);
 
     return {
       ...item,
@@ -682,6 +889,13 @@ function applyFulfillmentToLabItems(
       technicianName: getStaffName(workItem.assignedToUserId ?? undefined) ?? item.technicianName,
     };
   });
+
+  return [
+    ...mappedItems,
+    ...createLiveLabItems(
+      workItems.filter((workItem) => !usedWorkItemIds.has(workItem.id)),
+    ),
+  ];
 }
 
 function applyFulfillmentToImagingItems(
@@ -689,10 +903,12 @@ function applyFulfillmentToImagingItems(
   workItems: FulfillmentWorkItem[]
 ): ImagingWorkItem[] {
   const workItemsByOrderId = getWorkItemsByOrderId(workItems);
+  const usedWorkItemIds = new Set<string>();
 
-  return items.map((item) => {
+  const mappedItems = items.map((item) => {
     const workItem = item.order ? workItemsByOrderId.get(item.order.id) : undefined;
     if (!workItem) return item;
+    usedWorkItemIds.add(workItem.id);
 
     return {
       ...item,
@@ -703,6 +919,13 @@ function applyFulfillmentToImagingItems(
       radiologistName: getStaffName(workItem.assignedToUserId ?? undefined) ?? item.radiologistName,
     };
   });
+
+  return [
+    ...mappedItems,
+    ...createLiveImagingItems(
+      workItems.filter((workItem) => !usedWorkItemIds.has(workItem.id)),
+    ),
+  ];
 }
 
 function createLiveLabItems(workItems: FulfillmentWorkItem[]): LabWorkItem[] {
@@ -1566,9 +1789,30 @@ export function ImagingSidePanel() {
   );
 }
 
-function LabResultInputSection({ assigneeName, result }: { assigneeName: string; result: LabResult }) {
+function LabResultInputSection({
+  assigneeName,
+  catalogStatus = "idle",
+  onCatalogRetry,
+  onSave,
+  result,
+}: {
+  assigneeName: string;
+  catalogStatus?: LabResultSheetCatalogStatus;
+  onCatalogRetry?: () => void;
+  onSave?: (rows: LabResultRow[]) => Promise<LabResultSaveOutcome>;
+  result: LabResult;
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
+  const [saveState, setSaveState] = useState<{
+    message?: string;
+    retryable?: boolean;
+    resultId: string;
+    value: "idle" | "saving" | "saved" | "error" | "invalid" | "permission_denied";
+  }>(() => ({ resultId: result.id, value: "idle" }));
+  const currentSaveState = saveState.resultId === result.id ? saveState.value : "idle";
+  const currentSaveMessage = saveState.resultId === result.id ? saveState.message : undefined;
+  const saveRetryable = saveState.resultId === result.id ? saveState.retryable === true : false;
   const initialRowValues = useMemo(
     () => Object.fromEntries(result.rows.map((row) => [row.id, row.value ?? ""])),
     [result.rows]
@@ -1592,6 +1836,41 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
     [result.rows, rowValues]
   );
   const abnormalRows = rows.filter((row) => row.judgment !== "normal" && row.judgment !== "not_judged");
+  const saveResult = async () => {
+    if (!onSave) return;
+    setSaveState({ resultId: result.id, value: "saving" });
+    const outcome = await onSave(rows);
+    setSaveState(
+      outcome.ok
+        ? { resultId: result.id, value: "saved" }
+        : {
+            message: outcome.message,
+            resultId: result.id,
+            retryable: outcome.retryable,
+            value: outcome.reason,
+          },
+    );
+  };
+  const catalogMessage =
+    catalogStatus === "loading"
+      ? "결과지 항목을 불러오는 중"
+      : catalogStatus === "permission_denied"
+        ? "결과지 항목을 볼 권한이 없습니다."
+        : catalogStatus === "error"
+          ? "결과지 항목을 불러오지 못했습니다."
+          : catalogStatus === "empty"
+            ? "연결된 결과지 항목이 없습니다."
+            : null;
+  const saveStatusLabel =
+    currentSaveState === "saved"
+      ? "서버 저장됨"
+      : currentSaveState === "saving"
+        ? "저장 중"
+        : currentSaveState === "permission_denied"
+          ? "저장 권한이 없습니다"
+          : currentSaveState === "invalid"
+            ? "저장 항목 확인 필요"
+            : "저장 실패";
 
   return (
     <EmrOrderGroupSection
@@ -1615,13 +1894,69 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
           <Button variant="outline" size="xs" className="bg-card">
             판정적용
           </Button>
-          <Button size="xs">저장</Button>
+          <Button
+            size="xs"
+            data-testid="lab-result-save-button"
+            disabled={!onSave || currentSaveState === "saving" || rows.length === 0}
+            onClick={saveResult}
+          >
+            {currentSaveState === "saving" ? "저장 중" : "저장"}
+          </Button>
+          {currentSaveState !== "idle" ? (
+            <span
+              data-testid="lab-result-save-status"
+              className={cn(
+                "emr-text-metadata font-medium",
+                currentSaveState === "error" || currentSaveState === "invalid" || currentSaveState === "permission_denied"
+                  ? "text-destructive"
+                  : "text-muted-foreground",
+              )}
+              title={currentSaveMessage}
+            >
+              {saveStatusLabel}
+            </span>
+          ) : null}
+          {saveRetryable ? (
+            <Button
+              variant="outline"
+              size="xs"
+              className="bg-card"
+              data-testid="lab-result-save-retry-button"
+              onClick={saveResult}
+            >
+              재시도
+            </Button>
+          ) : null}
         </>
       }
       collapsed={collapsed}
       onToggle={() => setCollapsed((current) => !current)}
     >
       <div>
+        {catalogMessage ? (
+          <div
+            data-testid="lab-result-catalog-status"
+            className={cn(
+              "mb-3 flex min-h-10 flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 emr-text-metadata font-medium",
+              catalogStatus === "permission_denied" || catalogStatus === "error"
+                ? "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]"
+                : "border-border bg-[var(--emr-surface-muted)] text-muted-foreground",
+            )}
+          >
+            <span>{catalogMessage}</span>
+            {catalogStatus === "error" && onCatalogRetry ? (
+              <Button
+                variant="outline"
+                size="xs"
+                className="bg-card"
+                data-testid="lab-result-catalog-retry-button"
+                onClick={onCatalogRetry}
+              >
+                다시 불러오기
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         <Table density={density} layout="scroll" minWidth={860} className="min-w-[860px] table-fixed">
           <colgroup>
             <col className="w-[32%]" />
@@ -1667,6 +2002,7 @@ function LabResultInputSection({ assigneeName, result }: { assigneeName: string;
                   <Input
                     aria-label={`${row.analyteName} 결과값`}
                     className="h-8 w-24"
+                    data-testid={`lab-result-input-${row.id}`}
                     value={row.value}
                     onChange={(event) => {
                       const nextValue = event.target.value;
@@ -2328,6 +2664,7 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const workspaceId = useWorkspaceIdFromPath();
   const fulfillmentQueue = useFulfillmentQueue("lab");
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(
     searchParams,
@@ -2337,6 +2674,42 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
     [detail?.order?.id, fulfillmentQueue.workItems]
+  );
+  const catalogRowsState = useLabResultSheetCatalogRows({
+    result: detail?.result,
+    workItem: fulfillmentWorkItem,
+    workspaceId,
+  });
+  const effectiveDetail = useMemo(() => {
+    if (!detail) return null;
+    if (detail.result.rows.length > 0 || catalogRowsState.rows.length === 0) return detail;
+
+    return {
+      ...detail,
+      result: {
+        ...detail.result,
+        rows: catalogRowsState.rows,
+      },
+    };
+  }, [catalogRowsState.rows, detail]);
+  const saveResultRows = useCallback(
+    (rows: LabResultRow[]) => {
+      if (!effectiveDetail) {
+        return Promise.resolve({
+          message: "선택된 검사 결과가 없습니다.",
+          ok: false,
+          reason: "invalid",
+          retryable: false,
+        } satisfies LabResultSaveOutcome);
+      }
+      return saveLabResultEntry({
+        result: effectiveDetail.result,
+        rows,
+        workItem: fulfillmentWorkItem,
+        workspaceId,
+      });
+    },
+    [effectiveDetail, fulfillmentWorkItem, workspaceId],
   );
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
   const initialAssignment = {
@@ -2398,13 +2771,15 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
     }
   }, [detail?.result.id, queryLabResultId, selectLabResult, selectedLabResultId]);
 
-  if (!detail) {
+  if (!effectiveDetail) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
         검사 대기열에서 항목을 선택해 주세요.
       </div>
     );
   }
+
+  const displayDetail = effectiveDetail;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
@@ -2425,7 +2800,7 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
             }
             badge={
               <Badge variant="secondary" className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground">
-                {getLabResultDocumentId(detail.result)}
+                {getLabResultDocumentId(displayDetail.result)}
               </Badge>
             }
             actions={
@@ -2483,9 +2858,9 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
               [
                 "요청 일시",
                 <span key="requested-at" className="flex flex-wrap items-center gap-1.5">
-                  <span>{formatShortDateTime(detail.result.collectedAt)}</span>
+                  <span>{formatShortDateTime(displayDetail.result.collectedAt)}</span>
                   <EmrStatusBadge
-                    label={getStatusLabel("labResult", detail.result.status)}
+                    label={getStatusLabel("labResult", displayDetail.result.status)}
                     marker="none"
                     testId="lab-result-status-label"
                   />
@@ -2493,13 +2868,13 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
               ],
               [
                 "환자 정보",
-                `${detail.patient.name}(${getPatientDisplayAge(detail.patient)}) · ${detail.patient.breed ?? getSpeciesLabel(detail.patient)}`,
+                `${displayDetail.patient.name}(${getPatientDisplayAge(displayDetail.patient)}) · ${displayDetail.patient.breed ?? getSpeciesLabel(displayDetail.patient)}`,
               ],
-              ["요청 수의사", getStaffName(detail.order?.requestedByUserId) ?? "이수지"],
+              ["요청 수의사", getStaffName(displayDetail.order?.requestedByUserId) ?? "이수지"],
               ["검사 담당", <span key="lab-assignee" aria-live="polite">{assignment.assigneeName}</span>],
               [
                 "수신 장비",
-                detail.equipmentReceipts.find((receipt) => receipt.status === "matched")?.equipmentName ?? "미수신",
+                displayDetail.equipmentReceipts.find((receipt) => receipt.status === "matched")?.equipmentName ?? "미수신",
               ],
             ].map(([label, value]) => (
               <div key={label as string} className="min-w-0 border-r border-border px-3 last:border-r-0">
@@ -2515,7 +2890,7 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
             value={resultTab}
             items={labResultTabItems.map((item) => ({
               ...item,
-              count: item.value === "all" ? detail.result.rows.length : item.value === "cbc" ? detail.result.rows.length : 0,
+              count: item.value === "all" ? displayDetail.result.rows.length : item.value === "cbc" ? displayDetail.result.rows.length : 0,
               disabled: item.value === "chemistry",
             }))}
             onValueChange={setResultTab}
@@ -2525,9 +2900,15 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 pb-10 pt-4">
-          <LabResultInputSection assigneeName={assignment.assigneeName} result={detail.result} />
-          <LabResultCommentSection result={detail.result} />
-          <AttachmentStrip attachments={detail.attachments} showImageExample />
+          <LabResultInputSection
+            assigneeName={assignment.assigneeName}
+            catalogStatus={detail?.result.rows.length === 0 ? catalogRowsState.status : "idle"}
+            result={displayDetail.result}
+            onCatalogRetry={catalogRowsState.retry}
+            onSave={saveResultRows}
+          />
+          <LabResultCommentSection result={displayDetail.result} />
+          <AttachmentStrip attachments={displayDetail.attachments} showImageExample />
         </div>
       </ScrollArea>
     </div>

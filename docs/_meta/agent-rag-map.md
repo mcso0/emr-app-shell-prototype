@@ -23,7 +23,7 @@ For most tasks, read only:
 1. `AGENTS.md`
 2. `docs/agent-start-here.md`
 3. `docs/engineering/current-status.md`
-4. The active Linear issue or `docs/work/` item
+4. The active Linear issue or `docs/work/` item; search the work index by keyword/ID first and open only the matching item
 5. The task-specific source docs listed below
 
 Read `docs/README.md`, `docs/_meta/README.md`, and `docs/_meta/intake-rules.md` when the task changes docs, planning, work routing, or durable operating rules.
@@ -63,6 +63,7 @@ Skip these unless the active issue explicitly links them or the task needs histo
 - Open only the smallest section needed for the current task.
 - If a source doc is too long, search within it for the relevant heading or term first.
 - Prefer `rg` for local search and use exact paths from the active issue whenever available.
+- Treat `docs/work/index.md`, long logs, generated artifacts, and broad test output as high-token surfaces. Query them with `rg` or bounded ranges before opening larger sections.
 - If two documents conflict, treat `docs/engineering/current-status.md` and the most specific approved source-of-truth doc as current.
 - If uncertainty affects product, security, data, or launch policy, stop and ask 승욱 instead of guessing.
 
