@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>홈 레퍼런스 기반 입원 화면 리디자인 시안 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --app: #f4f7fa;
+        --panel: #ffffff;
+        --panel-soft: #f8fafc;
+        --panel-blue: #f1f6fd;
+        --line: #d8e1ec;
+        --line-strong: #b7c4d2;
+        --ink: #172033;
+        --body: #334155;
+        --muted: #64748b;
+        --micro: #8291a4;
+        --command: #111827;
+        --accent: #2563eb;
+        --info: #1d4ed8;
+        --success: #047857;
+        --warning: #b45309;
+        --danger: #b91c1c;
+        --info-bg: #eff6ff;
+        --success-bg: #ecfdf5;
+        --warning-bg: #fffbeb;
+        --danger-bg: #fef2f2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--app);
+        color: var(--ink);
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.58;
+      }
+
+      main {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 34px 24px 72px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 8px;
+        font-size: 30px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 20px;
+        line-height: 1.3;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      p,
+      li,
+      td {
+        color: var(--body);
+        font-size: 14px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef2f7;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92em;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .hero,
+      .section {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+      }
+
+      .hero {
+        padding: 26px;
+      }
+
+      .section {
+        margin-top: 18px;
+        padding: 22px;
+      }
+
+      .meta {
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel-soft);
+        padding: 2px 9px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .badge.info {
+        border-color: #bfdbfe;
+        background: var(--info-bg);
+        color: var(--info);
+      }
+
+      .badge.success {
+        border-color: #bbf7d0;
+        background: var(--success-bg);
+        color: var(--success);
+      }
+
+      .badge.warning {
+        border-color: #fde68a;
+        background: var(--warning-bg);
+        color: var(--warning);
+      }
+
+      .badge.danger {
+        border-color: #fecaca;
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .decision {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-soft);
+        padding: 14px;
+      }
+
+      .decision.recommended {
+        border-color: #93c5fd;
+        background: #f8fbff;
+      }
+
+      .decision strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink);
+      }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        background: var(--panel-blue);
+        padding: 13px 14px;
+        color: #1e3a8a;
+        font-size: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--panel-soft);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .mockup {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #f7f9fc;
+      }
+
+      .mockup-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+        padding: 12px 14px;
+      }
+
+      .mockup-title {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .mockup-title strong {
+        color: var(--ink);
+        font-size: 15px;
+      }
+
+      .mockup-title span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .mockup-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        justify-content: flex-end;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        padding: 0 10px;
+        color: var(--body);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .button.primary {
+        border-color: var(--command);
+        background: var(--command);
+        color: #fff;
+      }
+
+      .mockup-body {
+        padding: 14px;
+      }
+
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .kpi {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 11px;
+      }
+
+      .kpi.selected {
+        border-color: #93c5fd;
+        background: #f8fbff;
+      }
+
+      .kpi.danger {
+        border-color: #fecaca;
+        background: var(--danger-bg);
+      }
+
+      .kpi.warning {
+        border-color: #fde68a;
+        background: var(--warning-bg);
+      }
+
+      .kpi-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .kpi-value {
+        margin-top: 5px;
+        color: var(--ink);
+        font-size: 21px;
+        font-weight: 800;
+        line-height: 1.1;
+      }
+
+      .kpi-note {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .segments {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .segment {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 0 11px;
+        color: var(--body);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .segment.active {
+        border-color: var(--command);
+        background: var(--command);
+        color: #fff;
+      }
+
+      .search {
+        min-width: 280px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        padding: 7px 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .board-table {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .board-row,
+      .board-header {
+        display: grid;
+        grid-template-columns: 78px minmax(142px, 1.15fr) minmax(160px, 1fr) minmax(190px, 1.35fr) 108px 116px;
+        gap: 10px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      .board-header {
+        background: var(--panel-soft);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .board-row:last-child {
+        border-bottom: 0;
+      }
+
+      .cell-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 780;
+      }
+
+      .cell-sub {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .tagline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 21px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--panel-soft);
+        padding: 1px 6px;
+        color: var(--body);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .status.danger {
+        border-color: #fecaca;
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .status.warning {
+        border-color: #fde68a;
+        background: var(--warning-bg);
+        color: var(--warning);
+      }
+
+      .status.success {
+        border-color: #bbf7d0;
+        background: var(--success-bg);
+        color: var(--success);
+      }
+
+      .ward-shell {
+        display: grid;
+        grid-template-columns: 276px minmax(0, 1fr) 280px;
+        min-height: 520px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      .ward-side,
+      .ward-detail {
+        background: #fbfdff;
+      }
+
+      .ward-side {
+        border-right: 1px solid var(--line);
+      }
+
+      .ward-detail {
+        border-left: 1px solid var(--line);
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 48px;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      .panel-head strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .panel-head span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .queue-block {
+        border-bottom: 1px solid var(--line);
+        padding: 10px;
+      }
+
+      .queue-block-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .queue-item {
+        display: grid;
+        gap: 5px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 9px;
+      }
+
+      .queue-item + .queue-item {
+        margin-top: 6px;
+      }
+
+      .queue-item.active {
+        border-color: #93c5fd;
+        background: #f4f8ff;
+      }
+
+      .queue-item.danger {
+        border-color: #fecaca;
+        background: #fff7f7;
+      }
+
+      .queue-item.warning {
+        border-color: #fde68a;
+        background: #fffbeb;
+      }
+
+      .queue-item.success {
+        border-color: #bbf7d0;
+        background: #f0fdf4;
+      }
+
+      .queue-main {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .queue-main strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .queue-main span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .queue-note {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .main-work {
+        min-width: 0;
+        background: #fff;
+      }
+
+      .main-work-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 48px;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      .main-work-title strong {
+        display: block;
+        color: var(--ink);
+        font-size: 14px;
+      }
+
+      .main-work-title span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .unified-table {
+        overflow-x: auto;
+      }
+
+      .unified-header,
+      .unified-row {
+        display: grid;
+        grid-template-columns: 74px minmax(132px, 1fr) minmax(128px, 0.95fr) minmax(190px, 1.3fr) 88px 92px;
+        gap: 10px;
+        align-items: center;
+        min-width: 780px;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+      }
+
+      .unified-header {
+        background: var(--panel-soft);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .unified-row {
+        cursor: pointer;
+        background: #fff;
+      }
+
+      .unified-row.selected {
+        background: #f4f8ff;
+        box-shadow: inset 3px 0 0 #60a5fa;
+      }
+
+      .drawer-card {
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+      }
+
+      .drawer-card h3 {
+        margin-bottom: 5px;
+        color: var(--ink);
+      }
+
+      .drawer-list {
+        display: grid;
+        gap: 7px;
+        margin-top: 10px;
+      }
+
+      .drawer-check {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+        padding: 8px;
+        color: var(--body);
+        font-size: 12px;
+      }
+
+      .room-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .room-card {
+        min-height: 132px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 11px;
+      }
+
+      .room-card.critical {
+        border-color: #fca5a5;
+        background: #fff8f8;
+      }
+
+      .room-card.ready {
+        border-color: #86efac;
+        background: #f8fff9;
+      }
+
+      .room-no {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .care-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .care-item {
+        display: grid;
+        grid-template-columns: 84px minmax(0, 1fr) 120px;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px 12px;
+      }
+
+      .care-time {
+        color: var(--ink);
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .caption {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .source-list li + li {
+        margin-top: 4px;
+      }
+
+      @media (max-width: 980px) {
+        main {
+          padding: 22px 14px 48px;
+        }
+
+        .grid.two,
+        .grid.three,
+        .kpi-row,
+        .room-grid,
+        .ward-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .ward-side,
+        .ward-detail {
+          border-left: 0;
+          border-right: 0;
+        }
+
+        .toolbar,
+        .mockup-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .search {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .board-table {
+          overflow-x: auto;
+        }
+
+        .board-row,
+        .board-header {
+          min-width: 900px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">2026-06-07 · Product Design · CLAiR EMR 입원 화면 · Home reference applied</p>
+      <div class="hero">
+        <div class="badge-row">
+          <span class="badge info">현재 화면: 입원 현황</span>
+          <span class="badge">참고 레퍼런스: 홈 업무 현황</span>
+          <span class="badge">대상 URL: /w/clair-demo/inpatient</span>
+          <span class="badge warning">계획/시안 산출물</span>
+        </div>
+        <h1>홈 레퍼런스 기반 입원 화면 리디자인 시안 보고서</h1>
+        <p>
+          홈 화면 레퍼런스의 핵심은 왼쪽에서 우선순위를 먼저 보고, 중앙에서 전체 업무를
+          비교하며, 오른쪽에서 선택한 업무의 실행 맥락을 확인하는 3분할 구조다. 이 구조를
+          입원 화면에 적용하면 병동 담당자가 <strong>어떤 입원 환자를 먼저 확인해야 하는지</strong>를
+          테이블을 읽기 전에 판단할 수 있다.
+        </p>
+        <div class="callout">
+          추천 방향은 <strong>Home-Referenced Ward Workspace</strong>다. 홈의
+          <code>다음 행동 / 업무 보드 / 선택한 업무</code> 구조를 입원 도메인에 맞춰
+          <code>입원 우선순위 / 입원 데이터 테이블 / 입원 상세</code>로 치환한다.
+        </div>
+      </div>
+
+      <section class="section">
+        <h2>요청과 산출물</h2>
+        <table>
+          <tbody>
+            <tr>
+              <th>요청</th>
+              <td>홈 화면 레퍼런스의 좌측 우선순위 패널, 중앙 업무 영역, 우측 상세 패널 구조를 참고해 입원 화면 시안을 다시 정리한다.</td>
+            </tr>
+            <tr>
+              <th>산출물</th>
+              <td>홈 레퍼런스 적용 원칙, 입원 화면 재시안, 구현 범위와 제외 범위를 담은 HTML 디자인 보고서.</td>
+            </tr>
+            <tr>
+              <th>비고</th>
+              <td>이번 작업은 구현 변경이 아니다. 앱 코드, Supabase, 배포 alias, 실데이터, 권한 정책은 변경하지 않았다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>현재 화면 진단</h2>
+        <div class="grid two">
+          <div class="decision">
+            <strong>좋은 점</strong>
+            <ul>
+              <li>입원 환자, 주의 태그, 퇴실 준비, 오늘 입실 수가 상단에서 바로 보인다.</li>
+              <li>강아지, 고양이, 집중 치료실 그룹 분리가 병동 현황판으로 이해하기 쉽다.</li>
+              <li>dense table과 row drawer 구조는 기존 CLAiR EMR 운영 화면과 잘 맞는다.</li>
+            </ul>
+          </div>
+          <div class="decision">
+            <strong>개선 필요</strong>
+            <ul>
+              <li><code>주의 태그 11개</code>는 총량 정보라 우선 행동으로 이어지기 어렵다.</li>
+              <li>필터가 종별 중심이라 <code>집중관리</code>, <code>퇴실준비</code>, <code>내 담당</code> 같은 실무 우선순위가 약하다.</li>
+              <li>테이블이 병동별로 반복되면서 헤더가 중복되고, 실제 환자 수 대비 화면이 넓게 비어 보인다.</li>
+              <li><code>퇴실/대기</code> 버튼만으로는 퇴실 체크리스트의 진행 상태를 판단하기 어렵다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>홈 레퍼런스에서 가져올 구조</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>홈 레퍼런스</th>
+              <th>입원 화면 적용</th>
+              <th>이유</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>다음 행동</code> 왼쪽 패널</td>
+              <td><code>입원 우선순위</code> 패널</td>
+              <td>상단 카드보다 먼저 읽히고, 테이블 세로 공간을 차지하지 않는다.</td>
+            </tr>
+            <tr>
+              <td>중앙 업무 보드</td>
+              <td>중앙 입원 데이터 테이블</td>
+              <td>입원은 방, 환자, 상태, 담당, 퇴실 준비를 비교해야 하므로 Kanban보다 table이 맞다.</td>
+            </tr>
+            <tr>
+              <td>선택한 업무 오른쪽 상세</td>
+              <td>선택한 입원 환자 상세 drawer</td>
+              <td>row 클릭 후 오늘 케어, 유의사항, 퇴실 체크리스트를 흐름을 막지 않고 확인한다.</td>
+            </tr>
+            <tr>
+              <td>Home은 원본 화면 이동 전 확인</td>
+              <td>입원은 현황 확인과 일부 체크 액션의 전 단계</td>
+              <td>live workflow mutation은 제외하고, session-only 상세 확인과 원본 행동 진입만 제안한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>수정 시안: Home-Referenced Ward Workspace</h2>
+        <p>
+          홈 화면의 3분할 레퍼런스를 입원 업무에 맞게 바꾼 추천안이다. 왼쪽은 카드형 KPI가 아니라
+          대기열처럼 구조화된 입원 우선순위 패널이고, 중앙은 기존 데이터 테이블 사용성을 유지한다.
+          row를 클릭하면 오른쪽 상세 패널에서 환자 세부, 오늘 케어, 퇴실 체크리스트를 확인한다.
+        </p>
+        <div class="mockup" aria-label="Home referenced ward workspace mockup">
+          <div class="mockup-head">
+            <div class="mockup-title">
+              <strong>입원 현황</strong>
+              <span>홈 레퍼런스 적용 · 왼쪽 입원 우선순위 + 중앙 데이터 테이블 + 오른쪽 입원 상세</span>
+            </div>
+            <div class="mockup-actions">
+              <span class="button">입원실 관리</span>
+              <span class="button primary">입실 추가</span>
+            </div>
+          </div>
+          <div class="mockup-body">
+            <div class="ward-shell">
+              <aside class="ward-side">
+                <div class="panel-head">
+                  <strong>입원 우선순위</strong>
+                  <span>전체 5</span>
+                </div>
+                <div class="queue-block">
+                  <div class="queue-block-title">
+                    <span>다음 행동</span>
+                    <span>3</span>
+                  </div>
+                  <div class="queue-item danger active">
+                    <div class="queue-main">
+                      <strong>집중관리</strong>
+                      <span>1</span>
+                    </div>
+                    <div class="queue-note">산소, 구토관찰, ICU · 콩이 먼저 확인</div>
+                    <div class="tagline">
+                      <span class="status danger">위험</span>
+                      <span class="status warning">구토관찰</span>
+                    </div>
+                  </div>
+                  <div class="queue-item warning">
+                    <div class="queue-main">
+                      <strong>퇴실 체크 필요</strong>
+                      <span>2</span>
+                    </div>
+                    <div class="queue-note">승인/안내/수납 인계 미완료</div>
+                  </div>
+                  <div class="queue-item">
+                    <div class="queue-main">
+                      <strong>오늘 입실 follow-up</strong>
+                      <span>2</span>
+                    </div>
+                    <div class="queue-note">신규 입실 후 첫 관찰/보호자 안내</div>
+                  </div>
+                </div>
+                <div class="queue-block">
+                  <div class="queue-block-title">
+                    <span>입원 보기</span>
+                    <span>필터</span>
+                  </div>
+                  <div class="queue-item active">
+                    <div class="queue-main">
+                      <strong>전체 입원</strong>
+                      <span>5</span>
+                    </div>
+                    <div class="queue-note">강아지 2 · 고양이 2 · ICU 1</div>
+                  </div>
+                  <div class="queue-item">
+                    <div class="queue-main">
+                      <strong>강아지 입원실</strong>
+                      <span>2</span>
+                    </div>
+                  </div>
+                  <div class="queue-item">
+                    <div class="queue-main">
+                      <strong>고양이 입원실</strong>
+                      <span>2</span>
+                    </div>
+                  </div>
+                  <div class="queue-item">
+                    <div class="queue-main">
+                      <strong>집중 치료실</strong>
+                      <span>1</span>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              <section class="main-work">
+                <div class="main-work-head">
+                  <div class="main-work-title">
+                    <strong>입원 데이터 테이블</strong>
+                    <span>기존 데이터 테이블 사용성을 유지하고 row 클릭으로 오른쪽 상세를 갱신</span>
+                  </div>
+                  <div class="mockup-actions">
+                    <span class="button">좁게</span>
+                    <span class="search">동물명, 보호자명, 입원실 검색</span>
+                  </div>
+                </div>
+                <div class="unified-table">
+                  <div class="unified-header">
+                    <span>입원실</span>
+                    <span>환자/보호자</span>
+                    <span>상태/주의</span>
+                    <span>진단/오늘 케어</span>
+                    <span>입실</span>
+                    <span>퇴실</span>
+                  </div>
+                  <div class="unified-row selected">
+                    <div>
+                      <div class="cell-title">ICU-01</div>
+                      <div class="cell-sub">집중 치료실</div>
+                    </div>
+                    <div>
+                      <div class="cell-title">콩이 · 푸들</div>
+                      <div class="cell-sub">김하늘 보호자</div>
+                    </div>
+                    <div class="tagline">
+                      <span class="status danger">집중관리</span>
+                      <span class="status warning">구토관찰</span>
+                    </div>
+                    <div>
+                      <div class="cell-title">급성 위장관염 의심</div>
+                      <div class="cell-sub">오후 회진 전 구토 횟수 재평가</div>
+                    </div>
+                    <div>
+                      <div class="cell-title">09:20</div>
+                      <div class="cell-sub">1일차</div>
+                    </div>
+                    <div><span class="button">대기</span></div>
+                  </div>
+                  <div class="unified-row">
+                    <div>
+                      <div class="cell-title">203호</div>
+                      <div class="cell-sub">강아지</div>
+                    </div>
+                    <div>
+                      <div class="cell-title">두부 · 포메라니안</div>
+                      <div class="cell-sub">정하린 보호자</div>
+                    </div>
+                    <div class="tagline">
+                      <span class="status success">퇴실준비</span>
+                      <span class="status">재활주의</span>
+                    </div>
+                    <div>
+                      <div class="cell-title">슬개골 수술 후 회복</div>
+                      <div class="cell-sub">보행 영상 확인 후 퇴실 안내</div>
+                    </div>
+                    <div>
+                      <div class="cell-title">05.04</div>
+                      <div class="cell-sub">3일차</div>
+                    </div>
+                    <div><span class="button primary">퇴실</span></div>
+                  </div>
+                  <div class="unified-row">
+                    <div>
+                      <div class="cell-title">201호</div>
+                      <div class="cell-sub">고양이</div>
+                    </div>
+                    <div>
+                      <div class="cell-title">코코 · 코숏</div>
+                      <div class="cell-sub">이지은 보호자</div>
+                    </div>
+                    <div class="tagline">
+                      <span class="status danger">산소</span>
+                      <span class="status warning">금식</span>
+                    </div>
+                    <div>
+                      <div class="cell-title">구토와 식욕저하</div>
+                      <div class="cell-sub">산소 케이지 반응 관찰</div>
+                    </div>
+                    <div>
+                      <div class="cell-title">05.05</div>
+                      <div class="cell-sub">2일차</div>
+                    </div>
+                    <div><span class="button">대기</span></div>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="ward-detail">
+                <div class="panel-head">
+                  <strong>입원 상세</strong>
+                  <span>선택한 row</span>
+                </div>
+                <div class="drawer-card">
+                  <h3>콩이</h3>
+                  <div class="cell-sub">ICU-01 · 김하늘 보호자 · 푸들</div>
+                  <div class="tagline" style="margin-top: 8px">
+                    <span class="status danger">집중관리</span>
+                    <span class="status warning">구토관찰</span>
+                    <span class="status">면회제한</span>
+                  </div>
+                </div>
+                <div class="drawer-card">
+                  <h3>오늘 케어 포인트</h3>
+                  <p>오전 수액 반응과 구토 횟수를 확인하고 오후 회진 전 보호자에게 중간 안내한다.</p>
+                </div>
+                <div class="drawer-card">
+                  <h3>퇴실 체크리스트</h3>
+                  <div class="drawer-list">
+                    <div class="drawer-check">
+                      <span>주치의 퇴실 승인</span>
+                      <span class="status">대기</span>
+                    </div>
+                    <div class="drawer-check">
+                      <span>보호자 투약/식이 안내</span>
+                      <span class="status">대기</span>
+                    </div>
+                    <div class="drawer-check">
+                      <span>수납 인계</span>
+                      <span class="status">대기</span>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          핵심 장점: 홈 화면처럼 왼쪽에서 우선순위를 먼저 보고, 중앙은 넓은 테이블 영역으로 남긴다.
+          오른쪽 상세 패널은 Home의 non-modal detail 패턴을 입원 환자 상세와 퇴실 체크리스트로 바꾼다.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>시안 2: Room Map Board</h2>
+        <p>
+          병상/입원실 배치를 우선으로 보는 방향이다. 실제 병동 운영에서 방 번호와
+          케이지 위치가 중요할 때 유리하지만, 많은 상세 정보는 drawer 의존도가 높아진다.
+        </p>
+        <div class="mockup" aria-label="Room Map Board mockup">
+          <div class="mockup-head">
+            <div class="mockup-title">
+              <strong>입원실 맵</strong>
+              <span>강아지 병동 · 고양이 병동 · ICU</span>
+            </div>
+            <div class="mockup-actions">
+              <span class="button">비어있는 입원실</span>
+              <span class="button primary">입실 추가</span>
+            </div>
+          </div>
+          <div class="mockup-body">
+            <div class="toolbar">
+              <div class="segments">
+                <span class="segment active">전체</span>
+                <span class="segment">강아지</span>
+                <span class="segment">고양이</span>
+                <span class="segment">ICU</span>
+              </div>
+              <div class="search">입원실, 동물명 검색</div>
+            </div>
+            <div class="room-grid">
+              <div class="room-card critical">
+                <div class="room-no">ICU-01 <span class="status danger">집중관리</span></div>
+                <h3>콩이</h3>
+                <p>구토 횟수 재평가, 수액 반응 확인</p>
+                <div class="tagline">
+                  <span class="status warning">구토관찰</span>
+                  <span class="status">면회제한</span>
+                </div>
+              </div>
+              <div class="room-card ready">
+                <div class="room-no">203호 <span class="status success">퇴실준비</span></div>
+                <h3>두부</h3>
+                <p>보행 영상 확인 후 퇴실 안내</p>
+                <div class="tagline">
+                  <span class="status">재활주의</span>
+                  <span class="status success">보행관찰</span>
+                </div>
+              </div>
+              <div class="room-card">
+                <div class="room-no">201호 <span class="status">입원중</span></div>
+                <h3>코코</h3>
+                <p>산소 케이지 반응 관찰</p>
+                <div class="tagline">
+                  <span class="status danger">산소</span>
+                  <span class="status warning">금식</span>
+                </div>
+              </div>
+              <div class="room-card">
+                <div class="room-no">202호 <span class="status">입원중</span></div>
+                <h3>나비</h3>
+                <p>저녁 투약 후 피부 발적 변화 확인</p>
+                <div class="tagline">
+                  <span class="status success">피부</span>
+                  <span class="status warning">투약확인</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          장점: 병상/방 배치가 직관적이다. 단점: 환자가 많아지면 스크롤과 카드 밀도 문제가 커지고,
+          기존 CLAiR dense operational table 원칙과는 거리가 생긴다.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>시안 3: Care Timeline Focus</h2>
+        <p>
+          입원실보다 오늘 수행해야 할 투약, 수액, 활력징후, 보호자 안내 같은 케어 항목을
+          시간순으로 보여주는 방향이다. 향후 입원 오더/케어 수행 기능이 열릴 때 유리하다.
+        </p>
+        <div class="mockup" aria-label="Care Timeline Focus mockup">
+          <div class="mockup-head">
+            <div class="mockup-title">
+              <strong>오늘 입원 케어</strong>
+              <span>지연, 예정, 완료 예정 작업 중심</span>
+            </div>
+            <div class="mockup-actions">
+              <span class="button">입원 현황</span>
+              <span class="button primary">케어 추가</span>
+            </div>
+          </div>
+          <div class="mockup-body">
+            <div class="toolbar">
+              <div class="segments">
+                <span class="segment active">전체 케어</span>
+                <span class="segment">지연</span>
+                <span class="segment">투약</span>
+                <span class="segment">수액</span>
+                <span class="segment">퇴실 안내</span>
+              </div>
+              <div class="search">환자명, 담당자, 케어 항목 검색</div>
+            </div>
+            <div class="care-list">
+              <div class="care-item">
+                <div class="care-time">09:20</div>
+                <div>
+                  <div class="cell-title">콩이 · 구토 횟수 재평가</div>
+                  <div class="cell-sub">ICU-01 · 송하윤 · 오후 회진 전 확인</div>
+                </div>
+                <div class="tagline"><span class="status danger">지연 위험</span></div>
+              </div>
+              <div class="care-item">
+                <div class="care-time">14:00</div>
+                <div>
+                  <div class="cell-title">두부 · 보행 영상 확인</div>
+                  <div class="cell-sub">203호 · 퇴실 안내 전 확인</div>
+                </div>
+                <div class="tagline"><span class="status success">퇴실준비</span></div>
+              </div>
+              <div class="care-item">
+                <div class="care-time">18:00</div>
+                <div>
+                  <div class="cell-title">나비 · 저녁 투약 후 피부 확인</div>
+                  <div class="cell-sub">202호 · 정민재 · 발적 변화 기록</div>
+                </div>
+                <div class="tagline"><span class="status warning">투약확인</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          장점: 실제 케어 수행 화면으로 확장하기 좋다. 단점: 현재 repo의 입원 화면은 session-only
+          현황판이므로, 이 방향은 입원 케어 오더/수행 모델이 별도 scope로 잡힌 뒤가 더 자연스럽다.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>추천 결정</h2>
+        <div class="grid three">
+          <div class="decision recommended">
+            <strong>1차 구현 추천: Home-Referenced Ward Workspace</strong>
+            <p>
+              홈 화면의 3분할 구조를 입원 도메인에 맞게 재사용한다. 왼쪽은 입원 우선순위,
+              중앙은 입원 데이터 테이블, 오른쪽은 선택 row 상세로 두면 시선 순서와 세로 공간
+              문제를 동시에 해결할 수 있다.
+            </p>
+          </div>
+          <div class="decision">
+            <strong>후속 후보: Room Map Board</strong>
+            <p>
+              실제 입원실 배치 정보와 빈 케이지 관리가 중요해질 때 별도 보기 모드로 추가한다.
+              현재 MVP의 기본 화면으로 쓰기에는 정보 밀도 대비 확장성이 낮다.
+            </p>
+          </div>
+          <div class="decision">
+            <strong>후속 후보: Care Timeline Focus</strong>
+            <p>
+              입원 케어 오더, 투약 수행, vital 기록, 지연 알림이 scope에 들어올 때 가장 가치가 커진다.
+              현재는 현황판 안의 drawer 또는 보조 탭으로 일부만 반영하는 것이 적절하다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>구현 범위 제안</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>범위</th>
+              <th>권장 작업</th>
+              <th>영향</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>왼쪽 병동 큐</td>
+              <td>홈의 <code>다음 행동</code> 패널을 참고해 상단 KPI 카드 4개를 <code>입원 우선순위</code> 사이드 패널로 이동한다.</td>
+              <td>첫 시선에서 우선순위 확인, 중앙 테이블 세로 공간 확보</td>
+            </tr>
+            <tr>
+              <td>필터</td>
+              <td>홈의 업무 렌즈처럼 왼쪽 큐 항목 클릭이 중앙 테이블 필터를 바꾸도록 한다. <code>전체/집중관리/퇴실준비/오늘입실/강아지/고양이/ICU</code>를 같은 패턴으로 다룬다.</td>
+              <td>필터와 업무 큐의 의미 통합</td>
+            </tr>
+            <tr>
+              <td>테이블</td>
+              <td>병동별 section 반복을 줄이고 기본은 하나의 기존 데이터 테이블형 worklist로 구성한다. row 선택 상태를 명확히 표시한다.</td>
+              <td>중복 헤더 감소, 기존 테이블 사용성 유지</td>
+            </tr>
+            <tr>
+              <td>Row 정보</td>
+              <td><code>환자/보호자</code>, <code>상태/주의</code>, <code>진단/오늘 케어</code>, <code>퇴실 준비</code> 중심으로 셀을 재구성한다.</td>
+              <td>의미 있는 정보 밀도 증가</td>
+            </tr>
+            <tr>
+              <td>Drawer</td>
+              <td>홈의 non-modal 상세 패널을 참고해 row 클릭 시 오른쪽 상세를 열고, 환자 요약, 케어 포인트, 유의 태그, 퇴실 체크리스트를 보여준다.</td>
+              <td>중앙 테이블은 스캔, 오른쪽 상세는 확인으로 역할 분리</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>제외 범위와 주의점</h2>
+        <ul>
+          <li>입원 live persistence, Supabase migration, RLS, server enforcement는 이번 디자인 시안 범위가 아니다.</li>
+          <li>실제 병원/보호자/환자 데이터는 사용하지 않는다. 현재와 동일하게 synthetic demo data 기준으로 판단한다.</li>
+          <li>퇴실 workflow를 실제로 완료 처리하는 기능은 별도 product/engineering scope가 필요하다.</li>
+          <li>입원 케어 지연 알림, 투약 수행, vital 기록은 향후 inpatient live workflow 또는 notification scope에서 다뤄야 한다.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>참고한 repo 맥락</h2>
+        <ul class="source-list">
+          <li><code>src/features/inpatient/module.tsx</code>: 현재 입원 화면 구현.</li>
+          <li><code>src/features/inpatient/data.ts</code>: 현재 mock inpatient admission data.</li>
+          <li><code>docs/work/inpatient/INPATIENT-PR-001-ward-workspace.md</code>: 최초 입원 워크스페이스 scope.</li>
+          <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-020-inpatient-table-status-standardization.md</code>: 입원 테이블/상태 표준화 scope.</li>
+          <li><code>docs/design/system/DESIGN.md</code>: CLAiR EMR light operational workspace 원칙.</li>
+          <li><code>docs/design/system/table-density-and-grid-ergonomics.md</code>: dense operational table 규칙.</li>
+          <li><code>docs/product/roadmap/product-mvp-scope.md</code>: full inpatient lifecycle은 MVP 기본 범위 밖이라는 제품 경계.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>다음 단계</h2>
+        <p>
+          다음 구현으로 진행한다면 <strong>Home-Referenced Ward Workspace</strong>를 기준으로
+          `src/features/inpatient/module.tsx`와 `src/features/inpatient/data.ts` 안에서
+          session-only UI 개선 PR을 잡는 것이 가장 안전하다. 구현 검증은
+          <code>tests/inpatient.spec.ts</code>, 데스크탑 브라우저 QA, 좁은 viewport overflow
+          확인을 포함해야 한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
