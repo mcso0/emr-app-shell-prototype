@@ -239,6 +239,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DEN-454                     | human_review | demo-data            | P0       | Linear DEN-454       | `docs/work/demo-data/DEN-454-billing-api-primary-invoice-payment-checkout-state.md`                    |
 | DEN-455                     | human_review | demo-data            | P0       | Linear DEN-455       | `docs/work/demo-data/DEN-455-billing-ux-loading-failure-retry-payment-state-clarity.md`                |
 | DEN-456                     | human_review | demo-data            | P0       | Linear DEN-456       | `docs/work/demo-data/DEN-456-dispensing-treatment-fulfillment-work-item-adoption.md`                   |
+| DEN-457                     | human_review | demo-data            | P0       | Linear DEN-457       | `docs/work/demo-data/DEN-457-full-visible-e2e-demo-reception-to-audit.md`                              |
 | CUSTOMER-LIVE-PR-001        | human_review | customer             | P0       | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md`                     |
 | CUSTOMER-LIVE-PR-002        | human_review | customer             | P0       | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md`                                |
 | CUSTOMER-LIVE-PR-003        | human_review | customer             | P0       | Project 06 / DEN-105 | `docs/work/customer/CUSTOMER-LIVE-PR-003-customer-schema-migration.md`                                 |

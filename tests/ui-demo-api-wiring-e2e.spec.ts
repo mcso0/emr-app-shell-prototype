@@ -337,6 +337,96 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
   );
 });
 
+test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billing, and audit surfaces", async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  await mockReceptionApi(page, calls);
+  await mockChartApi(page, calls);
+  await mockDownstreamDemoApis(page, calls);
+
+  await test.step("front desk sees an API-backed reception queue patient", async () => {
+    await page.goto("/w/clair-demo/reception?modulePanel=open");
+    await expect(page.getByTestId(`patient-card-${uiApiPatient.id}`)).toContainText(
+      "API Kong Synthetic",
+    );
+  });
+
+  await test.step("vet sees the same API-backed encounter in the chart queue", async () => {
+    await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+    await expect(
+      page.getByTestId(`order-queue-item-${uiApiEncounter.id}`),
+    ).toContainText("API Kong Synthetic");
+  });
+
+  await test.step("technician enters and saves a lab result through the result API", async () => {
+    await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed");
+    const liveLabQueueItem = page.getByTestId("lab-queue-item-live-lab-ui-api-lab-cbc");
+    await expect(liveLabQueueItem).toContainText("API Lab Kong");
+    await liveLabQueueItem.click();
+    await page
+      .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
+      .fill("21.4");
+    await page.getByTestId("lab-result-save-button").click();
+    await expect(page.getByTestId("lab-result-save-status")).toContainText("서버 저장됨");
+  });
+
+  await test.step("technician sees dispensing fulfillment readback in the execution screen", async () => {
+    await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+    const liveDispensingQueueItem = page.getByTestId(
+      "order-queue-item-live-fulfillment-ui-api-dispensing-maropitant",
+    );
+    await expect(liveDispensingQueueItem).toContainText("API Lab Kong");
+    await liveDispensingQueueItem.click();
+    await expect(page.getByTestId("dispensing-fulfillment-readback")).toContainText(
+      "조제 업무 큐",
+    );
+    await expect(page.getByTestId("dispensing-fulfillment-readback")).toContainText(
+      "오더 order-ui-api-maropitant",
+    );
+  });
+
+  await test.step("front desk sees API billing and checkout state", async () => {
+    await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
+    await expect(page.getByTestId("billing-instruction-info")).toContainText(
+      "API-INV-VISIBLE-260501",
+    );
+    await expect(page.getByTestId("billing-checkout-workspace")).toContainText(
+      "Visible API billing line",
+    );
+    await expect(page.getByTestId("billing-checkout-total")).toContainText(
+      "156,500원",
+    );
+  });
+
+  await test.step("admin can review the audit event for the billing handoff", async () => {
+    await page.goto("/w/clair-demo/orders?modulePanel=open");
+    await page.getByRole("button", { name: "감사 로그" }).click();
+    await expect(page.getByTestId("hospital-admin-audit-review")).toBeVisible();
+    await expect(page.getByTestId("audit-review-row-ui-api-audit-payment")).toContainText(
+      "invoice-coco-260501",
+    );
+  });
+
+  expect(calls).toEqual(
+    expect.arrayContaining([
+      "reception-profile-lookup",
+      "reception-calendar",
+      "reception-queue",
+      "chart-live-queue",
+      "fulfillment-lab",
+      "fulfillment-dispensing",
+      "fulfillment-treatment",
+      "lab-result-sheet-catalog",
+      "lab-result-entry",
+      "billing-invoice-lines-get",
+      "billing-payment-status-get",
+      "billing-checkout-post",
+      "audit-events",
+    ]),
+  );
+});
+
 test("billing screen prefers API invoice, payment, and checkout snapshots over mock state", async ({
   page,
 }) => {
@@ -1050,6 +1140,24 @@ async function expectJson(
 }
 
 async function mockDownstreamDemoApis(page: Page, calls: string[]) {
+  const visibleDemoInvoice = {
+    id: "invoice-coco-260501",
+    workspaceId,
+    encounterId: "encounter-coco-260501",
+    guardianId: "guardian-lee-jieun",
+    invoiceNo: "API-INV-VISIBLE-260501",
+    status: "paid",
+    subtotalAmount: 156500,
+    discountAmount: 0,
+    taxAmount: 0,
+    totalAmount: 156500,
+    issuedAt: "2026-05-21T10:18:00+09:00",
+    paidAt: "2026-05-21T10:25:00+09:00",
+    paymentState: "paid",
+    selectedPaymentMethod: "card",
+    createdAt: "2026-05-21T10:15:00+09:00",
+  };
+
   await page.route("**/api/workspaces/clair-demo/fulfillment/work-items?*", async (route) => {
     const url = new URL(route.request().url());
     const queueType = url.searchParams.get("queueType");
@@ -1136,8 +1244,25 @@ async function mockDownstreamDemoApis(page: Page, calls: string[]) {
     calls.push("billing-invoice-lines-get");
     await route.fulfill({
       contentType: "application/json",
-      json: { ok: false, status: 404, error: "test_keeps_fixture_invoice_lines" },
-      status: 404,
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-invoice-line-persistence",
+        invoice: visibleDemoInvoice,
+        lines: [
+          {
+            id: "invoice-line-visible-demo-cbc",
+            invoiceId: visibleDemoInvoice.id,
+            serviceItemId: "svc-lab-cbc",
+            orderId: "order-ui-api-cbc",
+            description: "Visible API billing line",
+            quantity: 1,
+            unitPrice: 156500,
+            lineTotal: 156500,
+          },
+        ],
+      },
+      status: 200,
     });
   });
 
@@ -1145,8 +1270,23 @@ async function mockDownstreamDemoApis(page: Page, calls: string[]) {
     calls.push("billing-payment-status-get");
     await route.fulfill({
       contentType: "application/json",
-      json: { ok: false, status: 404, error: "test_keeps_fixture_payment_status" },
-      status: 404,
+      json: {
+        ok: true,
+        status: 200,
+        enforcedBy: "billing-payment-status-persistence",
+        invoice: visibleDemoInvoice,
+        payments: [
+          {
+            id: "payment-visible-demo-card",
+            invoiceId: visibleDemoInvoice.id,
+            paymentMethod: "card",
+            amount: 156500,
+            status: "approved",
+            paidAt: "2026-05-21T10:25:00+09:00",
+          },
+        ],
+      },
+      status: 200,
     });
   });
 
@@ -1157,7 +1297,17 @@ async function mockDownstreamDemoApis(page: Page, calls: string[]) {
       json: {
         ok: true,
         status: 200,
-        rows: [],
+        rows: [
+          {
+            activityAt: "2026-05-21T10:25:00+09:00",
+            amountInclusion: "payable",
+            balanceAmount: 0,
+            invoiceId: visibleDemoInvoice.id,
+            payableAmount: 156500,
+            status: "paid",
+            totalAmount: 156500,
+          },
+        ],
         enforcedBy: "guardian-billing-ledger",
       },
       status: 200,
