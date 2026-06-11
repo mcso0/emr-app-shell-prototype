@@ -1,0 +1,98 @@
+.prdViewer {
+  --prd-background-dark: oklch(0.145 0 0);
+  --prd-foreground-dark: oklch(0.985 0 0);
+  --prd-surface-dark: oklch(0.205 0 0);
+  --prd-muted-dark: oklch(0.269 0 0);
+  --prd-muted-foreground-dark: oklch(0.708 0 0);
+  --prd-border-dark: oklch(1 0 0 / 10%);
+  --prd-input-dark: oklch(1 0 0 / 15%);
+  --prd-ring-dark: oklch(0.556 0 0);
+}
+
+:global(.dark) .prdViewer {
+  --background: var(--prd-background-dark);
+  --foreground: var(--prd-foreground-dark);
+  --card: var(--prd-surface-dark);
+  --card-foreground: var(--prd-foreground-dark);
+  --popover: var(--prd-surface-dark);
+  --popover-foreground: var(--prd-foreground-dark);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: var(--prd-surface-dark);
+  --secondary: var(--prd-muted-dark);
+  --secondary-foreground: var(--prd-foreground-dark);
+  --muted: var(--prd-muted-dark);
+  --muted-foreground: var(--prd-muted-foreground-dark);
+  --accent: var(--prd-muted-dark);
+  --accent-foreground: var(--prd-foreground-dark);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--prd-border-dark);
+  --input: var(--prd-input-dark);
+  --ring: var(--prd-ring-dark);
+}
+
+.prdDialogContent {
+  --prd-background-dark: oklch(0.145 0 0);
+  --prd-foreground-dark: oklch(0.985 0 0);
+  --prd-surface-dark: oklch(0.205 0 0);
+  --prd-muted-dark: oklch(0.269 0 0);
+  --prd-muted-foreground-dark: oklch(0.708 0 0);
+  --prd-border-dark: oklch(1 0 0 / 10%);
+  --prd-input-dark: oklch(1 0 0 / 15%);
+  --prd-ring-dark: oklch(0.556 0 0);
+}
+
+:global(.dark) .prdDialogContent {
+  --background: var(--prd-background-dark);
+  --foreground: var(--prd-foreground-dark);
+  --card: var(--prd-surface-dark);
+  --card-foreground: var(--prd-foreground-dark);
+  --popover: var(--prd-surface-dark);
+  --popover-foreground: var(--prd-foreground-dark);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: var(--prd-surface-dark);
+  --secondary: var(--prd-muted-dark);
+  --secondary-foreground: var(--prd-foreground-dark);
+  --muted: var(--prd-muted-dark);
+  --muted-foreground: var(--prd-muted-foreground-dark);
+  --accent: var(--prd-muted-dark);
+  --accent-foreground: var(--prd-foreground-dark);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--prd-border-dark);
+  --input: var(--prd-input-dark);
+  --ring: var(--prd-ring-dark);
+}
+
+.scrollArea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollArea::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollFade {
+  position: relative;
+  min-height: 0;
+}
+
+.scrollFade::before,
+.scrollFade::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 2rem;
+  pointer-events: none;
+}
+
+.scrollFade::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--background), transparent);
+}
+
+.scrollFade::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--background), transparent);
+}

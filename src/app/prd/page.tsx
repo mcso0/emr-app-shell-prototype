@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { MarkdownRenderer } from "@/lib/prd-viewer/markdown-renderer";
-import { getPrdDocGroups, type PrdDocEntry } from "@/lib/prd-viewer/registry";
 import { getResolvedPrdSlug, loadPrdDoc } from "@/lib/prd-viewer/doc-reader";
+import { getPrdDocGroups, type PrdDocEntry } from "@/lib/prd-viewer/registry";
+import { PrdHeaderControls } from "./prd-header-controls";
 import { PrdNavigation } from "./prd-navigation";
+import styles from "./prd-viewer.module.css";
 
 export const metadata: Metadata = {
-  title: "PRD Viewer",
+  title: "CLAiR Docs",
   description: "Read-only viewer for canonical CLAiR EMR product Markdown.",
 };
 
@@ -22,8 +25,16 @@ function normalizeDocParam(value: string | string[] | undefined) {
 
 function SourcePath({ doc }: { doc: PrdDocEntry }) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600">
-      Source: <code className="font-mono text-[12px] text-zinc-800">{doc.sourcePath}</code>
+    <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      Source: <code className="font-mono text-xs text-foreground">{doc.sourcePath}</code>
+    </div>
+  );
+}
+
+function ClairMark() {
+  return (
+    <div aria-hidden="true" className="grid size-7 place-items-center rounded-md bg-black">
+      <Image alt="" height={19} priority src="/clair-logo-mark.svg" width={15} />
     </div>
   );
 }
@@ -36,32 +47,51 @@ export default async function PrdPage({ searchParams }: PrdPageProps) {
   const groups = getPrdDocGroups();
 
   return (
-    <main className="min-h-screen bg-white text-zinc-950">
-      <div className="flex h-screen overflow-hidden">
-        <aside className="flex w-[292px] shrink-0 flex-col border-r border-zinc-200 bg-zinc-50/70 px-5 py-5">
-          <Link className="mb-6 block" href="/prd">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">CLAiR EMR</p>
-            <h1 className="mt-1 text-[18px] font-semibold leading-6 text-zinc-950">PRD Viewer</h1>
-          </Link>
+    <main className={`${styles.prdViewer} min-h-screen bg-background text-foreground`}>
+      <header className="sticky top-0 z-20 h-14 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+        <div className="flex h-full items-center justify-between gap-4 px-4 lg:px-6">
+          <div className="flex min-w-0 items-center gap-8">
+            <Link className="flex min-w-0 items-center gap-2" href="/prd">
+              <ClairMark />
+              <span className="whitespace-nowrap text-sm font-semibold">CLAiR Docs</span>
+            </Link>
+            <nav aria-label="CLAiR Docs top navigation" className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+              <Link className="transition-colors hover:text-foreground" href="/prd">
+                Docs
+              </Link>
+              <Link className="transition-colors hover:text-foreground" href="/prd?doc=epics-readme">
+                Epics
+              </Link>
+              <Link className="transition-colors hover:text-foreground" href="/prd?doc=features-readme">
+                Features
+              </Link>
+            </nav>
+          </div>
+          <div className="flex min-w-0 justify-end">
+            <PrdHeaderControls groups={groups} />
+          </div>
+        </div>
+      </header>
+
+      <div className="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_15rem]">
+        <aside className="hidden min-h-0 px-4 py-6 lg:flex lg:max-h-[calc(100vh-3.5rem)] lg:flex-col">
           <PrdNavigation activeSlug={resolvedSlug} groups={groups} />
         </aside>
 
-        <section className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto grid max-w-[1180px] grid-cols-[minmax(0,1fr)_220px] gap-10 px-10 py-8">
+        <section className={`${styles.scrollArea} min-w-0 overflow-y-auto lg:max-h-[calc(100vh-3.5rem)]`}>
+          <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
             <article className="min-w-0">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-4">
-                <div>
-                  <p className="text-[12px] font-medium text-zinc-500">Read-only product docs</p>
-                  <p className="mt-1 text-[13px] leading-5 text-zinc-600">
-                    Markdown remains canonical in <code className="font-mono">docs/product</code>.
-                  </p>
+              <div className="mb-10 flex flex-col gap-3 border-b pb-8">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Link className="hover:text-foreground" href="/prd">
+                    Docs
+                  </Link>
+                  <span>/</span>
+                  <span>Product</span>
                 </div>
-                <Link
-                  className="rounded-md border border-zinc-200 px-3 py-2 text-[13px] font-medium text-zinc-700 transition hover:border-zinc-400 hover:text-zinc-950"
-                  href="/login"
-                >
-                  앱으로 돌아가기
-                </Link>
+                <p className="text-base leading-7 text-muted-foreground">
+                  Markdown remains canonical in <code className="font-mono text-foreground">docs/product</code>.
+                </p>
               </div>
 
               {loadedDoc ? (
@@ -72,15 +102,17 @@ export default async function PrdPage({ searchParams }: PrdPageProps) {
                   </div>
                 </>
               ) : (
-                <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Document not found</p>
-                  <h2 className="mt-2 text-[22px] font-semibold text-zinc-950">등록되지 않은 PRD 문서야.</h2>
-                  <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-zinc-600">
-                    `/prd`는 registry에 등록된 <code className="font-mono">docs/product</code> Markdown만 읽어.
+                <div className="rounded-lg border border-dashed bg-muted/30 px-6 py-10">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Document not found
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold">등록되지 않은 PRD 문서야.</h2>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+                    `/prd`는 registry에 등록된 <code className="font-mono text-foreground">docs/product</code> Markdown만 읽어.
                     임의 파일 경로는 열지 않는다.
                   </p>
                   <Link
-                    className="mt-6 inline-flex rounded-md bg-zinc-950 px-4 py-2 text-[13px] font-medium text-white"
+                    className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
                     href="/prd"
                   >
                     기본 PRD로 이동
@@ -88,14 +120,20 @@ export default async function PrdPage({ searchParams }: PrdPageProps) {
                 </div>
               )}
             </article>
+          </div>
+        </section>
 
-            <aside className="sticky top-8 hidden h-[calc(100vh-4rem)] overflow-y-auto border-l border-zinc-200 pl-5 lg:block">
-              <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-500">On this page</h2>
+        <aside className="hidden max-h-[calc(100vh-3.5rem)] px-5 py-8 xl:block">
+          <div className={`${styles.scrollFade} h-full`}>
+            <div className={`${styles.scrollArea} h-full overflow-y-auto py-4`}>
+              <h2 className="mb-4 text-sm font-medium">
+                On this page
+              </h2>
               {loadedDoc && loadedDoc.toc.length > 0 ? (
-                <nav aria-label="Table of contents" className="space-y-1">
+                <nav aria-label="Table of contents" className="flex flex-col gap-2">
                   {loadedDoc.toc.map((item) => (
                     <a
-                      className={`block rounded-md py-1.5 text-[12px] leading-5 text-zinc-600 hover:text-zinc-950 ${
+                      className={`block text-sm leading-5 text-muted-foreground transition-colors hover:text-foreground ${
                         item.level === 1 ? "pl-0 font-medium" : item.level === 2 ? "pl-3" : "pl-6"
                       }`}
                       href={`#${item.id}`}
@@ -106,11 +144,11 @@ export default async function PrdPage({ searchParams }: PrdPageProps) {
                   ))}
                 </nav>
               ) : (
-                <p className="text-[12px] leading-5 text-zinc-500">표시할 목차가 없어.</p>
+                <p className="text-xs leading-5 text-muted-foreground">표시할 목차가 없어.</p>
               )}
-            </aside>
+            </div>
           </div>
-        </section>
+        </aside>
       </div>
     </main>
   );
