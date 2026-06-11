@@ -20,6 +20,7 @@ Use this README as the GitBook entry point for synthetic dataset design. The chi
 
 | Need | Start With |
 | --- | --- |
+| Understand the next empty-clinic default, reset, date, and demo operations direction | `clinic-start-state-and-demo-operations-v1.md` |
 | Understand the demo hospital and staff context | `virtual-hospital-profile.md`, then `staff-roles-workflow-v1.md` |
 | Review outpatient story coverage | `demo-scenarios-v1.md` |
 | Implement or inspect seed/mock data | `seed-handoff-v1.md` |
@@ -48,6 +49,7 @@ Use this README as the GitBook entry point for synthetic dataset design. The chi
 
 | Document | Purpose |
 | --- | --- |
+| `clinic-start-state-and-demo-operations-v1.md` | Empty-clinic default, explicit data modes, reset, date behavior, role validation, change history, state UX, and QA direction |
 | `research-notes.md` | Public reference sources and synthesis rules |
 | `virtual-hospital-profile.md` | VIP동물의료센터 청담점 synthetic hospital concept |
 | `demo-scenarios-v1.md` | Representative outpatient scenarios |
@@ -130,6 +132,9 @@ These rules affect storage, calculation, or downstream linkage and should be pre
 - Data contracts should keep source values, calculated values, and calculation sources separate so future fixtures can explain how quantities, totals, delete locks, and invoice candidates were produced.
 - Reference-screen observations should be archived as data candidates and UX/operational rules before they become implementation scope.
 - Demo content must stay clearly synthetic and workflow-oriented; it should not read like clinical advice.
+- The next default demo posture is an empty-clinic operating baseline: workspace, staff, patients, guardians, roles, order categories, catalog, and presets exist, but active daily work starts empty.
+- Reset should be explicit so demos remain repeatable without stale fallback data; scenario replay is deferred until the first baseline is stable.
+- Real-time day progression is preferred if previous-day work can remain visible by date without making the demo brittle; otherwise use a fixed review date plus reset first.
 
 ## Deferred UX Notes
 
@@ -166,3 +171,5 @@ The following can wait until screen implementation because they do not change th
 - 2026-05-19: Added guardian registration/detail reference data for normalized contact fields, cash receipt rules, consent/referral rows, duplicate detection, patient relationship management, guardian deletion locks, and change-history metadata.
 - 2026-05-19: Created DEN-99 synthetic virtual hospital demo dataset foundation.
 - 2026-05-24: Added GitBook-oriented reading order and private-reader boundary for DEN-254.
+- 2026-06-11: Added empty-clinic start state, reset, date, change-history, loading/error UX, role-validation, and demo operations direction from owner intake.
+- 2026-06-11: Refined the direction: master/setup data must exist, active daily work must start empty, legacy fixtures must not appear by default, scenario replay is deferred, reset is required, and real-time day progression needs an implementation-risk check.

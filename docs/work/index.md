@@ -227,6 +227,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-FULFILLMENT-PR-007 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-241 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-007-handoff-replay-regression.md`              |
 | CLINICAL-FULFILLMENT-PR-008 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-242 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-008-project-closeout-staging-readiness.md`     |
 | DEMO-DATA-PR-001            | human_review | demo-data            | P0       | Project 04 / DEN-99  | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md`                |
+| DEMO-DATA-PR-002            | ready        | demo-data            | P0       | TBD                  | `docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md`                           |
 | CUSTOMER-LIVE-PR-001        | human_review | customer             | P0       | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md`                     |
 | CUSTOMER-LIVE-PR-002        | human_review | customer             | P0       | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md`                                |
 | CUSTOMER-LIVE-PR-003        | human_review | customer             | P0       | Project 06 / DEN-105 | `docs/work/customer/CUSTOMER-LIVE-PR-003-customer-schema-migration.md`                                 |

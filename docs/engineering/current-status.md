@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-23
+Updated: 2026-06-11
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -9,7 +9,7 @@ This is the short startup status for new Codex sessions and human review. It sho
 - Current target: Product MVP.
 - The app is a veterinary EMR SaaS prototype with outpatient workflows from reception through billing.
 - The product has moved beyond a pure static demo: many auth, workspace, local-first DB/RLS, persistence, audit, billing, and customer-management foundations have been implemented in local-first form.
-- Remote Supabase staging/live validation, production deployment, real customer data, real provider integrations, payment provider confirmation, and final compliance/legal review are not complete.
+- Remote Supabase validation, production-demo deployment, DB/API hardening, migration/RLS work, and server-side enforcement may now be scoped for synthetic/demo data under active Linear/work items. Real customer data, real provider/payment side effects, and final compliance/legal review are not complete.
 - Client-only permission gating is not complete security. Treat server/API/DB/RLS enforcement as the required security boundary.
 - Use concise English for agent-facing plans and handoff notes. Keep user-facing result reviews in Korean unless requested otherwise.
 
@@ -43,7 +43,7 @@ The app currently has usable prototype screens for:
 | Audit | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface |
 | Auth/workspace | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, and local DB/RLS foundations |
 
-Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Remote Supabase staging replay remains gated by explicit approval.
+Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Its original remote staging replay was approval-gated at closeout; the current operating policy now allows scoped synthetic/demo remote validation under an active work item unless it triggers the cost/security/real-data/destructive-operation gates below.
 
 The latest detailed change history before this split is in [MVP Current Status History](current-status-history.md).
 
@@ -51,8 +51,8 @@ The latest detailed change history before this split is in [MVP Current Status H
 
 Do not claim these as done without a scoped work item and verification evidence:
 
-- remote Supabase staging/live project validation
-- production deploy and production monitoring
+- remote Supabase validation
+- production-demo deploy and production monitoring
 - real hospital/customer data import or storage
 - final clinical/business domain RLS replay for every live table
 - payment provider, receipt, refund, accounting, or settlement integrations
@@ -64,7 +64,8 @@ Do not claim these as done without a scoped work item and verification evidence:
 ## Guardrails
 
 - Do not treat client-only permission checks, hidden buttons, or mock role labels as complete security.
-- Do not run remote Supabase commands, migration push, production deploy, real email, payment, or provider integration without explicit approval from 승욱.
+- Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work is allowed when the active Linear issue or work item includes it.
+- Stop for explicit approval before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
 - Keep mock fallback and Sales Demo paths working unless a work item explicitly scopes their removal.
 - Use synthetic demo data only. Do not introduce real patient, guardian, hospital, payment, or identity data.
 - For Next.js application code, read the relevant guide in `node_modules/next/dist/docs/` before coding.

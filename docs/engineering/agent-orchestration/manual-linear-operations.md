@@ -1,6 +1,6 @@
 # Manual Linear Operations
 
-Updated: 2026-05-18
+Updated: 2026-06-11
 
 This document is the operating rule for running this project through Linear manually, without a live Symphony daemon. It keeps the useful parts of Symphony discipline: small issues, clear scope, predictable status handoff, Korean CEO-facing reports, and safe multi-Codex coordination.
 
@@ -90,6 +90,7 @@ Responsibilities:
 - Implement or coordinate implementation.
 - Attach Korean HTML reports for meaningful completed work.
 - Stop at `Human Review` unless the representative asks to commit, push, PR, or mark done.
+- Scoped synthetic/demo-data Supabase, migration/RLS, server/API, and production-demo deployment work may proceed when the active Linear issue includes it; do not treat those categories as blocked by default.
 
 Execution mode:
 
@@ -97,7 +98,7 @@ Execution mode:
 - Use direct work for small docs, narrow code changes, and high-conflict files.
 - Use sub-agents when the work naturally splits into independent roles such as codebase exploration, DB contract review, security review, UI implementation, or verification.
 - Keep one Linear issue owner and one final integrator even when sub-agents help.
-- Do not use sub-agents to bypass Linear status, branch, file ownership, security, remote Supabase, real data, or Human Review rules.
+- Do not use sub-agents to bypass Linear status, branch, file ownership, security, real-data, cost, external-publication, destructive-operation, or Human Review rules.
 
 ### Additional Codex Sessions
 
@@ -229,13 +230,19 @@ Ask the representative before:
 - Creating a new Linear project.
 - Moving work into a different project.
 - Adding or changing milestones.
-- Changing product role/permission policy.
-- Entering live Supabase, DB migration, RLS, payment, subscription, email delivery, or production deployment scope.
+- Changing canonical product role/permission policy.
+- Any action likely to create meaningful cost.
+- Exposing or weakening secrets, credentials, auth, private repo visibility, or security boundaries.
+- Using real customer, patient, guardian, staff, payment, identity, or hospital data.
+- Performing destructive or hard-to-rollback remote data changes.
+- Sending real external email, KakaoTalk, SMS, payment, provider, accounting, PACS, device, or other external side effects.
+- Opening private repo/project assets to public access or moving the private repo to open source.
+- Launching to real external users or public customers.
 - Making broad UI direction changes.
 - Combining unrelated issues into one PR.
 - Marking an issue `Done` without an explicit request.
 
-If the work is low-risk and clearly inside an existing issue's scope, Codex may proceed without asking.
+If the work is scoped to synthetic/demo data, low-risk, and clearly inside an existing issue's scope, Codex may proceed without asking, including Supabase validation, DB migration/RLS, server/API hardening, and production-demo deployment preparation.
 
 ## Rework and Done Rules
 

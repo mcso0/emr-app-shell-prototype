@@ -71,9 +71,9 @@ Choose one:
 - `propose_only`: draft plan or packet, no mutation
 - `local_edit`: edit repo files inside scope
 - `verify_local`: run local verification commands
-- `external_action_gated`: requires explicit 승욱 approval before external mutation
+- `external_action_gated`: requires explicit 승욱 approval before high-cost, security-sensitive, real-data, destructive, external-publication, or real-user-launch mutation
 
-External mutations include Linear creation/update, GitHub write actions, remote services, deployments, email, payments, and any real-data or live-infra action.
+Linear creation/update, GitHub write actions, scoped synthetic/demo remote services, and production-demo deployment preparation may proceed when the user or active Linear/work item explicitly scopes them. Treat actions as approval-gated when they can create meaningful cost, expose secrets, weaken security, publish private assets, use real data, perform destructive remote data changes, send real external communications/payments/provider side effects, or launch to real external users.
 
 ## Parent Model And Subagent Cost Policy
 
@@ -97,13 +97,16 @@ Subagent summaries are evidence, not authority. The parent thread must record th
 
 Stop before:
 
-- remote Supabase staging/live validation or mutation
-- migration push, remote SQL, or remote RLS work
-- production deploy or live env changes
+- meaningful cost or paid external-service usage
+- secret, credential, auth, private repo visibility, or security-boundary exposure
 - real hospital, staff, guardian, patient, billing, identity, or payment data
-- real email, KakaoTalk, PACS, device, accounting, payment, or provider integration
+- destructive or hard-to-rollback remote data changes
+- real email, KakaoTalk, SMS, PACS, device, accounting, payment, or provider side effects
+- public launch, real external-user access, or private repo/open-source publication
 - canonical role or permission policy changes
 - broad UI direction changes outside the active scope
+
+Scoped synthetic/demo-data Supabase validation, migration/RLS, server/API hardening, and production-demo deployment preparation are allowed when the active issue or work item explicitly includes them.
 
 If a gated action is required for correctness, do not suggest a weaker workaround. Explain the gate and ask 승욱 for explicit approval naming target environment, operation, verification, and stop condition.
 
@@ -181,7 +184,7 @@ When validating this skill, use at least these scenarios:
 
 1. `루멘, 이 요청을 작업 패킷으로 만들어줘.`
 2. `이거 바로 구현해줘.` with unclear scope.
-3. `remote Supabase에서 확인해줘.`
+3. `실제 비용/secret/real data가 걸린 production 작업 해줘.`
 4. `안전 점검 게이트 열어줘.`
 5. `리니어 프로젝트랑 이슈로 쪼개줘.`
 
