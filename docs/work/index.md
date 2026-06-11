@@ -242,6 +242,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DEN-457                     | human_review | demo-data            | P0       | Linear DEN-457       | `docs/work/demo-data/DEN-457-full-visible-e2e-demo-reception-to-audit.md`                              |
 | DEN-458                     | human_review | demo-data            | P0       | Linear DEN-458       | `docs/work/demo-data/DEN-458-local-supabase-replay-hardening.md`                                       |
 | DEN-459                     | human_review | demo-data            | P0       | Linear DEN-459       | `docs/work/demo-data/DEN-459-permission-rls-api-boundary-test-coverage.md`                             |
+| DEN-460                     | human_review | demo-data            | P0       | Linear DEN-460       | `docs/work/demo-data/DEN-460-engineering-docs-sync-current-status-api-contracts-demo-runbook.md`        |
 | CUSTOMER-LIVE-PR-001        | human_review | customer             | P0       | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md`                     |
 | CUSTOMER-LIVE-PR-002        | human_review | customer             | P0       | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md`                                |
 | CUSTOMER-LIVE-PR-003        | human_review | customer             | P0       | Project 06 / DEN-105 | `docs/work/customer/CUSTOMER-LIVE-PR-003-customer-schema-migration.md`                                 |

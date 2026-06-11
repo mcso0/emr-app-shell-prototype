@@ -11,7 +11,7 @@ source_docs:
 
 # Demo Seed Inventory Readback Contract
 
-This document started as the Demo DB PR 1 contract for `workspace_id = 'clair-demo'` and was updated through Demo DB PR 5. UI PR 1 adds the first reception/chart API wiring and route-boundary E2E coverage without changing the seed. UI PR 2 extends downstream UI/API adoption for lab result-sheet catalog, local/dev result entry, fulfillment route transitions, billing checkout, and audit review without changing the seed. DEN-452 adds durable local/dev/test lab result-entry persistence schema, RLS, RPC save/readback, and API route wiring without changing the seed. DEN-458 adds local replay diagnostics so seed readback failures can be separated from Docker, Supabase CLI, psql, or local database environment gaps. This document defines what the current synthetic `supabase/seed.sql` proves, how to read it back from a local/dev Supabase database, and which demo data families remain for later UI/API adoption work.
+This document started as the Demo DB PR 1 contract for `workspace_id = 'clair-demo'` and was updated through Demo DB PR 5. UI PR 1 adds the first reception/chart API wiring and route-boundary E2E coverage without changing the seed. UI PR 2 extends downstream UI/API adoption for lab result-sheet catalog, local/dev result entry, fulfillment route transitions, billing checkout, and audit review without changing the seed. DEN-452 adds durable local/dev/test lab result-entry persistence schema, RLS, RPC save/readback, and API route wiring without changing the seed. DEN-458 adds local replay diagnostics so seed readback failures can be separated from Docker, Supabase CLI, psql, or local database environment gaps. DEN-459 adds focused lab/billing/fulfillment API boundary regression coverage without changing seed data. This document defines what the current synthetic `supabase/seed.sql` proves, how to read it back from a local/dev Supabase database, and which demo data families remain for later UI/API adoption work.
 
 ## Current Judgment
 
@@ -177,6 +177,11 @@ Covered by DEN-456 through DEN-458:
 - DEN-456 makes the dispensing/treatment execution screen show selected fulfillment work-item readback and API mutation state.
 - DEN-457 adds a visible day-in-clinic E2E that walks reception, chart queue, lab result entry, dispensing fulfillment readback, billing checkout, and audit review surfaces with API-call assertions.
 - DEN-458 adds `npm run demo:seed:check` to classify local Docker/Supabase/psql environment gaps separately from seed/readback regressions.
+
+Covered by DEN-459 and DEN-460:
+
+- DEN-459 adds focused API-boundary regression coverage for lab result entry, fulfillment work item, and billing denial paths.
+- DEN-460 adds the current API-backed demo runbook at `docs/engineering/testing/api-backed-demo-runbook.md` and keeps this seed contract linked to the latest verification interpretation.
 
 Remaining adoption work:
 
