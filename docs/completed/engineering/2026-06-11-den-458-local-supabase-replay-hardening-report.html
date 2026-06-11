@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-458 Local Supabase Replay Hardening Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-458 Local Supabase Replay Hardening Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      local Supabase reset, seed, readback 흐름을 다음 세션에서도 재현 가능하게 만들고,
+      실패 원인이 seed gap인지 환경 gap인지 분리하는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>scripts/check-local-supabase-replay.mjs</code>를 추가했다.</li>
+      <li><code>npm run demo:seed:check</code> script를 추가했다.</li>
+      <li>기본 실행은 read-only diagnostics이고, <code>--readback</code>에서만 SQL readback을 실행하도록 했다.</li>
+      <li>readback DB URL이 local host가 아니면 <code>remote_guard</code>로 거부한다.</li>
+      <li>Docker, Supabase CLI, psql, local DB connection, migration/schema gap, seed gap을 메시지로 분리했다.</li>
+      <li>Demo seed inventory contract 문서와 static contract test를 갱신했다.</li>
+    </ul>
+
+    <h2>현재 진단 결과</h2>
+    <p>
+      이 머신에서는 Docker daemon은 정상으로 확인됐다. 다만 전역 <code>supabase</code> CLI와 <code>psql</code> CLI가
+      <code>PATH</code>에서 발견되지 않아 실제 SQL readback은 <code>environment_gap</code>으로 차단됐다.
+      따라서 현재 확인된 문제는 seed gap이 아니라 local toolchain gap이다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run demo:seed:check</code> 통과: Docker reachable, psql/supabase CLI gap 표시</li>
+      <li><code>npm run demo:seed:check -- --readback</code> 예상 차단: <code>environment_gap: psql CLI is required</code></li>
+      <li><code>npx playwright test tests/demo-seed-inventory-readback-contract.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>remote/prod Supabase는 사용하지 않았다.</li>
+      <li>DB schema, migration, seed, RLS는 변경하지 않았다.</li>
+      <li>UI 기능 변경은 포함하지 않았다.</li>
+      <li>실제 SQL readback은 <code>psql</code> 설치 후 다시 실행해야 한다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 순번은 permission, RLS, API boundary test coverage 확장이다. 그 전에 실제 local SQL readback까지 하려면
+      <code>psql</code> CLI를 설치하거나 PATH에 노출해야 한다.
+    </p>
+  </body>
+</html>

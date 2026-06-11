@@ -1,7 +1,7 @@
 ---
 status: "active"
 owner_area: "engineering"
-updated: "2026-06-09"
+updated: "2026-06-11"
 source_docs:
   - "docs/engineering/demo-data-architecture-2026-06-08.md"
   - "docs/engineering/current-status.md"
@@ -11,7 +11,7 @@ source_docs:
 
 # Demo Seed Inventory Readback Contract
 
-This document started as the Demo DB PR 1 contract for `workspace_id = 'clair-demo'` and was updated through Demo DB PR 5. UI PR 1 adds the first reception/chart API wiring and route-boundary E2E coverage without changing the seed. UI PR 2 extends downstream UI/API adoption for lab result-sheet catalog, local/dev result entry, fulfillment route transitions, billing checkout, and audit review without changing the seed. DEN-452 adds durable local/dev/test lab result-entry persistence schema, RLS, RPC save/readback, and API route wiring without changing the seed. This document defines what the current synthetic `supabase/seed.sql` proves, how to read it back from a local/dev Supabase database, and which demo data families remain for later UI/API adoption work.
+This document started as the Demo DB PR 1 contract for `workspace_id = 'clair-demo'` and was updated through Demo DB PR 5. UI PR 1 adds the first reception/chart API wiring and route-boundary E2E coverage without changing the seed. UI PR 2 extends downstream UI/API adoption for lab result-sheet catalog, local/dev result entry, fulfillment route transitions, billing checkout, and audit review without changing the seed. DEN-452 adds durable local/dev/test lab result-entry persistence schema, RLS, RPC save/readback, and API route wiring without changing the seed. DEN-458 adds local replay diagnostics so seed readback failures can be separated from Docker, Supabase CLI, psql, or local database environment gaps. This document defines what the current synthetic `supabase/seed.sql` proves, how to read it back from a local/dev Supabase database, and which demo data families remain for later UI/API adoption work.
 
 ## Current Judgment
 
@@ -71,6 +71,15 @@ psql "${SUPABASE_LOCAL_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/po
   -f supabase/snippets/demo_seed_inventory_readback.sql
 ```
 
+DEN-458 adds a safer first-pass helper:
+
+```bash
+npm run demo:seed:check
+npm run demo:seed:check -- --readback
+```
+
+Default mode is diagnostics only and does not reset or mutate a database. `--readback` runs the SQL snippet only when `SUPABASE_LOCAL_DB_URL` points to a local database host (`localhost`, `127.0.0.1`, or `::1`).
+
 The SQL returns one JSON object named `demo_seed_inventory_readback_contract`.
 
 Pass criteria:
@@ -93,6 +102,8 @@ Failure interpretation:
 - `fail` means the current baseline seed contract regressed and should be fixed before demo DB adoption continues.
 - `gap` means the data family is known missing from the current seed and should be scheduled into a later PR.
 - If the SQL itself cannot run because a table is missing, local migrations have not been applied or the migration set is incomplete.
+- `environment_gap` from `npm run demo:seed:check -- --readback` means local tooling or local DB setup is missing. Typical causes are Docker Desktop not running, local Supabase not started/reset, `psql` missing, or a non-matching `SUPABASE_LOCAL_DB_URL`.
+- `remote_guard` means the helper refused to run because the DB URL did not point to a local host. Do not bypass this for remote/prod Supabase replay without explicit approval.
 
 ## Demo Scenario Mapping
 
@@ -161,12 +172,18 @@ Covered by DEN-452:
 - The save/readback path uses workspace membership RLS and server permission checks before calling Supabase RPCs.
 - Focused static contract coverage and the synthetic route-boundary E2E cover result save/readback expectations.
 
+Covered by DEN-456 through DEN-458:
+
+- DEN-456 makes the dispensing/treatment execution screen show selected fulfillment work-item readback and API mutation state.
+- DEN-457 adds a visible day-in-clinic E2E that walks reception, chart queue, lab result entry, dispensing fulfillment readback, billing checkout, and audit review surfaces with API-call assertions.
+- DEN-458 adds `npm run demo:seed:check` to classify local Docker/Supabase/psql environment gaps separately from seed/readback regressions.
+
 Remaining adoption work:
 
 - Prefer Supabase-backed local/dev login and session replay for the `clair-demo` dataset.
-- Replay DEN-452 against local Supabase when Docker is available and keep any DB replay defects in the active Linear issue/PR.
-- Rewire dispensing/treatment execution and remaining billing invoice/list/detail store state to avoid mock-first visible state.
-- Add a full browser E2E flow that drives visible UI controls end to end after those screens read/write the seeded DB consistently.
+- Install or expose the local `psql` CLI before running SQL readback from the helper in environments where it is missing.
+- Replay DEN-452 and the demo seed readback against local Supabase after local CLI prerequisites are available.
+- Continue reducing mock-first visible state where future work items explicitly scope removal.
 
 ## Suggested Next PR
 

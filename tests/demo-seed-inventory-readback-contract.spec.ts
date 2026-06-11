@@ -10,6 +10,8 @@ const inventoryDoc = readFileSync(
   "docs/engineering/data-model/demo-seed-inventory-readback-contract.md",
   "utf8",
 );
+const replayHelper = readFileSync("scripts/check-local-supabase-replay.mjs", "utf8");
+const packageJson = readFileSync("package.json", "utf8");
 const normalizedInventoryDoc = inventoryDoc.toLowerCase();
 
 function withoutSqlComments(sql: string) {
@@ -153,4 +155,15 @@ test("demo seed inventory links seeded scenarios to order, billing, and audit pr
   expect(readbackSql).toContain("syntheticGuard");
   expect(inventoryDoc).toContain("baselineFailureCount");
   expect(inventoryDoc).toContain("knownGapCount");
+});
+
+test("local Supabase replay helper keeps readback local and classifies environment gaps", () => {
+  expect(packageJson).toContain("\"demo:seed:check\": \"node scripts/check-local-supabase-replay.mjs\"");
+  expect(replayHelper).toContain("SUPABASE_LOCAL_DB_URL");
+  expect(replayHelper).toContain("supabase/snippets/demo_seed_inventory_readback.sql");
+  expect(replayHelper).toContain("environment_gap");
+  expect(replayHelper).toContain("seed_gap");
+  expect(replayHelper).toContain("remote_guard");
+  expect(replayHelper).toContain("npx supabase db reset --local");
+  expect(replayHelper).not.toMatch(/--linked|db push|production|service_role/i);
 });
