@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-456 Dispensing/Treatment Fulfillment Adoption Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-456 Dispensing/Treatment Fulfillment Adoption Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      Dispensing/Treatment execution UI가 mock/local queue 상태만 따르지 않고, seeded
+      <code>order_fulfillment_work_items</code>를 읽고 상태 변경을 API 경계로 저장하도록 만드는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li>조제와 처치 fulfillment queue를 함께 읽는 shared client queue state와 refresh cache를 추가했다.</li>
+      <li>선택된 work item의 queue type, server status, assignee, order id를 지시서 상단에 readback으로 표시했다.</li>
+      <li>담당하기, 완료, 담당취소 액션이 기존 fulfillment PATCH API를 호출하고, 성공 후 다시 조회하도록 조정했다.</li>
+      <li>PATCH 실패 시 화면을 임의로 진행/완료 상태로 바꾸지 않고 mutation failure alert를 표시하도록 했다.</li>
+      <li>queue read loading, empty, retryable error, permission denied 상태를 visible alert로 구분했다.</li>
+      <li>Playwright coverage를 readback 표시, status refresh, permission denial, mutation failure case로 확장했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      조제/처치 화면은 Sales Demo fallback을 유지하면서도 fulfillment work item이 있으면 서버 readback을 화면에 드러낸다.
+      상태 변경은 API를 거쳐 re-read된 결과를 기준으로 보이므로, 서버 저장 실패가 조용한 local-only 성공처럼 보이지 않는다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/dispensing-fulfillment.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npm run lint</code> 통과: 기존 warning 5개 유지, error 없음</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>DB schema, migration, seed, RLS는 변경하지 않았다.</li>
+      <li>Lab result persistence, billing checkout, provider integration은 포함하지 않았다.</li>
+      <li>fixture 기반 Sales Demo와 unconfigured local fallback은 유지했다.</li>
+      <li>remote/prod Supabase 검증은 수행하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 순번은 접수부터 감사 로그까지 이어지는 visible E2E demo를 보강해, 연결된 API 경계들이 한 흐름에서
+      모순 없이 보이는지 검증하는 작업이다.
+    </p>
+  </body>
+</html>
