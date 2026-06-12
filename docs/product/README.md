@@ -15,6 +15,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Workspace auth and permissions: `docs/product/domain/workspace-auth-permissions.md`
 - Workspace hospital profile: `docs/product/domain/workspace-hospital-profile.md`
 - Auth/login current-state inventory: `docs/product/current-state/auth-login-onboarding-current-state.md`
+- Invite email delivery recovery feature spec: `docs/product/features/auth/invite-email-delivery-recovery-policy-spec.md`
 - Login invite onboarding feature spec: `docs/product/features/auth/login-invite-onboarding-spec.md`
 - Member role management feature spec: `docs/product/features/auth/member-role-management-spec.md`
 - Session logout policy feature spec: `docs/product/features/auth/session-logout-policy-spec.md`

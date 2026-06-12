@@ -164,6 +164,16 @@ export const prdDocRegistry = [
     tags: ["features", "template"],
   },
   {
+    slug: "invite-email-delivery-recovery-policy-spec",
+    title: "Invite Email Delivery Recovery Policy Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/auth/invite-email-delivery-recovery-policy-spec.md",
+    description:
+      "Product target for invite email delivery expectations, link lifecycle, resend, cancellation, and recovery states.",
+    tags: ["auth", "invites"],
+  },
+  {
     slug: "login-invite-onboarding-spec",
     title: "Login Invite Onboarding Spec",
     group: "Features",

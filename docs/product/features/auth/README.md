@@ -4,6 +4,7 @@ Canonical auth feature specifications live here.
 
 Current auth feature specs:
 
+- `invite-email-delivery-recovery-policy-spec.md`
 - `login-invite-onboarding-spec.md`
 - `member-role-management-spec.md`
 - `session-logout-policy-spec.md`
