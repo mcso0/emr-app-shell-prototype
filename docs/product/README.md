@@ -13,6 +13,9 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Outpatient workflow state model: `docs/product/domain/outpatient-workflow-state-model.md`
 - EMR domain entity map: `docs/product/domain/emr-domain-entity-map.md`
 - Workspace auth and permissions: `docs/product/domain/workspace-auth-permissions.md`
+- Workspace hospital profile: `docs/product/domain/workspace-hospital-profile.md`
+- Auth/login current-state inventory: `docs/product/current-state/auth-login-onboarding-current-state.md`
+- Login invite onboarding feature spec: `docs/product/features/auth/login-invite-onboarding-spec.md`
 - Role and permission source map: `docs/product/domain/role-permission-source-map.md`
 - Decision log index: `docs/product/decisions/decision-log-index.md`
 
@@ -41,6 +44,7 @@ Prefer updating the current canonical document over creating a new summary layer
 ## Subareas
 
 - `service/`: service-wide product definition, boundaries, and behavior.
+- `current-state/`: thin inventory of currently implemented prototype screens and gaps against product truth.
 - `domain/`: user-facing domain concepts, data requirements, workflow rules, and naming.
 - `prd/`: product requirements and success criteria.
 - `features/`: feature-level specs, requirements, and acceptance criteria.

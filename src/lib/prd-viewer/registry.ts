@@ -1,5 +1,6 @@
 export type PrdDocGroup =
   | "Start"
+  | "Current State"
   | "Service"
   | "Roadmap"
   | "Domain"
@@ -12,6 +13,7 @@ export type PrdDocGroup =
 
 export type ClairDocType =
   | "PRD"
+  | "Current State"
   | "Service"
   | "Roadmap"
   | "Domain"
@@ -52,6 +54,24 @@ export const prdDocRegistry = [
     sourcePath: "docs/product/prd/clair-emr-saas-prd.md",
     description: "Core CLAiR EMR product requirements.",
     tags: ["mvp", "requirements"],
+  },
+  {
+    slug: "auth-login-onboarding-current-state",
+    title: "Auth Login Onboarding Current State",
+    group: "Current State",
+    docType: "Current State",
+    sourcePath: "docs/product/current-state/auth-login-onboarding-current-state.md",
+    description: "Current implemented login, invite, signup, workspace creation, and auth-gate inventory.",
+    tags: ["auth", "current state"],
+  },
+  {
+    slug: "role-screen-access-current-state",
+    title: "Role Screen Access Current State",
+    group: "Current State",
+    docType: "Current State",
+    sourcePath: "docs/product/current-state/role-screen-access-current-state.md",
+    description: "Current implemented workspace module list compared against role/permission v1.",
+    tags: ["roles", "current state"],
   },
   {
     slug: "saas-operating-map",
@@ -108,6 +128,15 @@ export const prdDocRegistry = [
     tags: ["workspace", "auth"],
   },
   {
+    slug: "workspace-hospital-profile",
+    title: "Workspace Hospital Profile",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/workspace-hospital-profile.md",
+    description: "Workspace-owned hospital profile and basic settings requirements.",
+    tags: ["hospital", "workspace"],
+  },
+  {
     slug: "order-fulfillment-handoff",
     title: "Order Fulfillment Handoff",
     group: "Domain",
@@ -133,6 +162,15 @@ export const prdDocRegistry = [
     sourcePath: "docs/product/features/README.md",
     description: "Feature spec index and writing rules.",
     tags: ["features", "template"],
+  },
+  {
+    slug: "login-invite-onboarding-spec",
+    title: "Login Invite Onboarding Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/auth/login-invite-onboarding-spec.md",
+    description: "Product target for login, first admin onboarding, staff invites, and session policy drafts.",
+    tags: ["auth", "onboarding"],
   },
   {
     slug: "reception-appointment-spec",
