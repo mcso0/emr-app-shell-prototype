@@ -73,7 +73,7 @@ function resolveSafeSourcePath(entry: PrdDocEntry) {
   const fullPath = path.resolve(productDocsRoot, productRelativePath);
 
   if (!fullPath.startsWith(productDocsRoot)) {
-    throw new Error(`PRD viewer registry entry points outside docs/product: ${entry.sourcePath}`);
+    throw new Error(`CLAiR Docs registry entry points outside docs/product: ${entry.sourcePath}`);
   }
 
   return fullPath;

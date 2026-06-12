@@ -4,7 +4,7 @@ Use this file for small product-planning changes that do not need a standalone d
 
 ## 2026-06-11
 
-- `added`: Added PRD viewer operating guidance so `docs/product` remains canonical while `/prd` acts only as a read-only product-doc reader.
+- `added`: Added CLAiR Docs operating guidance so `docs/product` remains canonical while `/docs` acts only as a read-only product-doc reader. `/prd` is retained as a compatibility redirect.
 - `added`: Added epic and user-story template guidance for future product planning without bulk-creating planning records.
 
 ## 2026-06-05

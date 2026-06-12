@@ -16,7 +16,7 @@ last_updated: 2026-06-11
 
 Use this checklist before changing GitBook navigation, widening GitBook access, sharing a private GitBook link, or converting the docs site from private/internal to external-public after GitBook has been explicitly revived.
 
-Current decision: GitBook is inactive/deprecated. The active reader path is repo `docs/` plus the internal `/prd` product-doc viewer.
+Current decision: GitBook is inactive/deprecated. The active reader path is repo `docs/` plus the internal `/docs` product-doc viewer.
 
 ## Private/Internal Review
 
