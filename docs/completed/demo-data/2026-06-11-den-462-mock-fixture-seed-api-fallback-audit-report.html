@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-462 mock fixture seed API fallback 출처 감사 리포트</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --ink: #111827;
+        --muted: #64748b;
+        --line: #e2e8f0;
+        --accent: #2563eb;
+        --risk-high: #991b1b;
+        --risk-mid: #92400e;
+        --risk-low: #166534;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+
+      section {
+        margin-top: 16px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--card);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 19px;
+      }
+
+      h3 {
+        margin-top: 18px;
+        font-size: 16px;
+      }
+
+      p,
+      li {
+        font-size: 15px;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #eef2ff;
+        color: #1e3a8a;
+        font-size: 12px;
+      }
+
+      .risk-high {
+        color: var(--risk-high);
+        font-weight: 700;
+      }
+
+      .risk-mid {
+        color: var(--risk-mid);
+        font-weight: 700;
+      }
+
+      .risk-low {
+        color: var(--risk-low);
+        font-weight: 700;
+      }
+
+      .note {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-462 mock fixture seed API fallback 출처 감사 리포트</h1>
+      <p class="meta">
+        작성일: 2026-06-11 · Linear: DEN-462 · Project 00 Demo Reality Scope &amp; Audit
+      </p>
+
+      <section>
+        <h2>요청과 결론</h2>
+        <p>
+          CLAiR EMR 청담점 데모를 "새로 개업한 병원처럼 준비된 상태"로 만들기 전에,
+          주요 화면이 어떤 데이터 출처를 쓰는지 감사했다. 이번 작업은 구현이 아니라
+          조사/보고 작업이며, 코드와 fixture 데이터는 수정하지 않았다.
+        </p>
+        <p>
+          결론은 명확하다. 병원관리의 오더 카탈로그 같은 master seed는 유지할 수 있지만,
+          Home, Reception, Chart, Lab/Imaging, Dispensing/Treatment, Billing은 기본 화면에서
+          2026년 4월-5월 과거 업무 fixture가 노출될 가능성이 높다. 새 병원 기본값은
+          "마스터 데이터는 준비, 당일 업무는 비어 있음"이어야 하므로 daily-work fixture를
+          legacy scenario opt-in으로 격리하는 후속 구현이 필요하다.
+        </p>
+      </section>
+
+      <section>
+        <h2>참고한 기준 문서</h2>
+        <ul>
+          <li><code>docs/product/demo-data/clinic-start-state-and-demo-operations-v1.md</code></li>
+          <li><code>docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md</code></li>
+          <li><code>docs/product/demo-data/README.md</code></li>
+          <li><code>docs/engineering/current-status.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>화면별 데이터 출처 감사</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>화면/모듈</th>
+              <th>현재 데이터 출처</th>
+              <th>mock/fixture/local-first/API 여부</th>
+              <th>기본 시작 화면에 노출될 위험</th>
+              <th>empty-clinic 기준 조치</th>
+              <th>관련 파일 경로</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Auth / workspace entry</td>
+              <td>
+                mock auth 세션, Supabase 세션 감지, workspace API fallback, session/local storage.
+                기본 workspace는 <code>clair-demo</code>이고 표시명 일부는 아직
+                <code>VIP 동물의료센터 청담점</code>이다.
+              </td>
+              <td>mock session + API fallback + sessionStorage/localStorage</td>
+              <td>
+                <span class="risk-mid">중간</span><br />
+                daily work 자체보다 잘못된 병원명/데모 workspace 정체성이 새 청담점 기준과 충돌한다.
+              </td>
+              <td>수정 필요. workspace 이름과 기본 진입 계약을 새 seed 기준으로 맞추고, mock auth는 개발/시연 opt-in으로 명확히 유지한다.</td>
+              <td>
+                <code>src/features/auth/login-form.tsx</code><br />
+                <code>src/features/auth/mock-session.ts</code><br />
+                <code>src/features/auth/workspace-session.ts</code><br />
+                <code>src/features/auth/auth-gate.tsx</code><br />
+                <code>src/app/api/workspaces/route.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Home</td>
+              <td>
+                정적 mock dashboard. 2026-05-09 기준 접수/차트/검사/영상/처치/수납 업무 수,
+                환자명, 작업 카드가 하드코딩되어 있다.
+              </td>
+              <td>fixture mock + UI-only local-first store</td>
+              <td>
+                <span class="risk-high">높음</span><br />
+                새 병원 첫 화면에서 이미 바쁜 병원처럼 보이는 과거 업무가 즉시 노출된다.
+              </td>
+              <td>수정 필요. 기본 Home은 empty daily work dashboard로 바꾸고 legacy Home fixture는 scenario opt-in으로 격리한다.</td>
+              <td>
+                <code>src/features/home/home.mock.ts</code><br />
+                <code>src/features/home/home-workspace-store.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Reception / appointment</td>
+              <td>
+                접수 대기열과 예약은 <code>src/mocks/emr-domain.ts</code>의 appointments,
+                encounters, waiting queue를 기본으로 읽고, API queue/calendar 응답과 in-memory draft를 섞는다.
+                날짜 기준은 2026-05-01에 고정되어 있다.
+              </td>
+              <td>fixture mock + in-memory local-first + API overlay/fallback</td>
+              <td>
+                <span class="risk-high">높음</span><br />
+                API가 비어 있거나 실패해도 May 1 예약/대기/진료중 데이터가 기본 화면에 남을 수 있다.
+              </td>
+              <td>수정 필요. empty clinic에서는 오늘 예약/대기열을 빈 상태로 시작하고, legacy 접수 fixture는 명시적 scenario에서만 켠다.</td>
+              <td>
+                <code>src/features/reception/data.ts</code><br />
+                <code>src/features/reception/store.ts</code><br />
+                <code>src/features/reception/module.tsx</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/reception/queue/route.ts</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/reception/calendar/day/route.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Customer</td>
+              <td>
+                환자/보호자 master는 mock profile store에서 시작한다. 그러나 고객 목록 badge, 최근 업무,
+                삭제 잠금 계산은 mock appointment/encounter/invoice 상태를 함께 사용한다.
+              </td>
+              <td>fixture master + in-memory local-first + 일부 API fallback</td>
+              <td>
+                <span class="risk-mid">중간-높음</span><br />
+                환자/보호자 master는 새 병원 seed로 유지 가능하지만, "예약", "진료중", "수납대기" 같은 과거 업무 badge가 새 병원 기준을 깨뜨린다.
+              </td>
+              <td>부분 수정 필요. master seed는 유지하되, 업무 badge/locks/history는 active daily-work source에서만 계산하게 분리한다.</td>
+              <td>
+                <code>src/features/customer/data.ts</code><br />
+                <code>src/features/customer/module.tsx</code><br />
+                <code>src/features/reception/patient-profile-store.ts</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/customer/patients/[patientId]/profile/route.ts</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/customer/archive/route.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Chart</td>
+              <td>
+                mock encounter bundle과 queue가 기본이다. 기본 선택 encounter는
+                <code>encounter-coco-260501</code>이고, live queue는 Supabase role일 때만 우선된다.
+                chart handoff는 sessionStorage에 보관된다.
+              </td>
+              <td>fixture mock + API live queue + sessionStorage handoff + in-memory action stores</td>
+              <td>
+                <span class="risk-high">높음</span><br />
+                새 병원에서 첫 차트 화면이 과거 진료중 환자, SOAP, 오더 기록으로 열릴 수 있다.
+              </td>
+              <td>수정 필요. 기본 차트는 빈 대기열/선택 없음으로 시작하고, legacy encounter는 scenario replay에서만 선택되게 한다.</td>
+              <td>
+                <code>src/features/chart/data.ts</code><br />
+                <code>src/features/chart/store.ts</code><br />
+                <code>src/features/chart/module.tsx</code><br />
+                <code>src/features/chart/live-encounter-handoff.ts</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/chart/live-queue/route.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Lab / imaging</td>
+              <td>
+                lab result, imaging study, equipment receipt, attachment fixture를 기본으로 만들고,
+                fulfillment API work item이 있으면 덮어쓴다. non-live runtime에서는 base mock이 계속 남는다.
+              </td>
+              <td>fixture mock + API overlay + module-level memory cache</td>
+              <td>
+                <span class="risk-high">높음</span><br />
+                기본 검사/영상 화면에 과거 검사 대기, 진행, 결과 항목이 나타날 수 있다.
+              </td>
+              <td>수정 필요. empty clinic에서는 검사/영상 work queue가 비어야 하고, fixture는 scenario 전용으로 격리한다.</td>
+              <td>
+                <code>src/features/lab-imaging/data.ts</code><br />
+                <code>src/features/lab-imaging/store.ts</code><br />
+                <code>src/features/lab-imaging/module.tsx</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/fulfillment/work-items/route.ts</code><br />
+                <code>src/features/fulfillment/server-fulfillment-work-item-core.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Dispensing / treatment</td>
+              <td>
+                조제/처치 queue는 static order queue와 dispensing fixture를 기본으로 사용한다.
+                2026-04-14 처방 지시, 이전 이력, fulfillment API overlay가 섞인다.
+              </td>
+              <td>fixture mock + API overlay + live-only branch for Supabase runtime</td>
+              <td>
+                <span class="risk-high">높음</span><br />
+                새 병원 기본 상태에서 조제/처치 대기와 과거 약/처치 이력이 바로 보일 수 있다.
+              </td>
+              <td>수정 필요. 조제/처치 daily queue는 비어 있어야 하며, 과거 처방 상세/히스토리는 legacy scenario로 이동한다.</td>
+              <td>
+                <code>src/features/dispensing/data.ts</code><br />
+                <code>src/features/dispensing/module.tsx</code><br />
+                <code>src/features/order-queue/data.ts</code><br />
+                <code>src/features/fulfillment/server-fulfillment-work-item-core.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Billing</td>
+              <td>
+                invoices, invoice lines, payments fixture가 zustand store 초기값이다.
+                invoice-candidates/lines/payment-status API가 있으나 legacy invoice id에서는 mock fallback이 계속 쓰인다.
+              </td>
+              <td>fixture mock + in-memory local-first + namespaced API fallback</td>
+              <td>
+                <span class="risk-high">높음</span><br />
+                기본 수납 화면에 미수/결제대기/과거 invoice가 노출될 수 있다.
+              </td>
+              <td>수정 필요. empty clinic 기본은 invoice candidate와 unpaid invoice가 없어야 하며, billing fixture는 scenario 전용으로 분리한다.</td>
+              <td>
+                <code>src/features/billing/data.ts</code><br />
+                <code>src/features/billing/store.ts</code><br />
+                <code>src/features/billing/module.tsx</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/billing/invoice-candidates/route.ts</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/billing/invoice-lines/route.ts</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/billing/payment-status/route.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Hospital admin</td>
+              <td>
+                병원관리 기본 section은 orders이고, order catalog seed item을 먼저 보여준 뒤
+                order-catalog API 응답으로 교체한다. membership/audit는 별도 API를 사용한다.
+              </td>
+              <td>master seed fixture + API override/fallback</td>
+              <td>
+                <span class="risk-low">낮음-중간</span><br />
+                daily work는 아니므로 유지 가능성이 높다. 다만 API가 비어도 seed가 보이면 DB 누락을 숨길 수 있고, seed 기준/날짜가 명시되어야 한다.
+              </td>
+              <td>유지하되 정리 필요. order catalog는 empty-clinic master seed로 승격하고 fallback/DB source 표시를 명확히 한다.</td>
+              <td>
+                <code>src/features/hospital-admin/data.ts</code><br />
+                <code>src/features/hospital-admin/store.ts</code><br />
+                <code>src/features/hospital-admin/module.tsx</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/hospital-admin/order-catalog/route.ts</code><br />
+                <code>src/features/hospital-admin/server-order-catalog-core.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Audit / 변경 이력</td>
+              <td>
+                Supabase session이면 audit RPC를 사용하고, 그 외에는 mock live audit review events를 반환한다.
+                mock event에는 역할 변경, SOAP 저장, 오더 확정, 결제 상태 변경 같은 과거 업무 이력이 있다.
+              </td>
+              <td>API + Supabase RPC + mock fallback</td>
+              <td>
+                <span class="risk-mid">중간-높음</span><br />
+                새 병원에서 기본 변경 이력에 과거 진료/수납 이벤트가 보이면 empty-clinic 메시지가 깨진다.
+              </td>
+              <td>수정 필요. 기본 이력은 workspace 생성, seed/reset, 사용자 설정 같은 setup history만 남기고 임상/수납 이력은 scenario 전용으로 둔다.</td>
+              <td>
+                <code>src/features/hospital-admin/module.tsx</code><br />
+                <code>src/app/api/workspaces/[workspaceId]/audit/events/route.ts</code><br />
+                <code>src/features/audit/server-audit-event-review-core.ts</code><br />
+                <code>src/mocks/audit-log.ts</code><br />
+                <code>src/features/audit/server-audit-log-persistence-core.ts</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Workspace shell / global search / notifications</td>
+              <td>
+                command palette와 tab metadata가 mock patients, appointments, encounters, queue, lab/imaging,
+                invoices를 직접 참조한다. notification read state는 localStorage에 저장된다.
+              </td>
+              <td>fixture mock + localStorage</td>
+              <td>
+                <span class="risk-mid">중간</span><br />
+                각 화면을 비워도 전역 검색, 탭 metadata, 알림 badge에서 과거 환자/업무가 노출될 수 있다.
+              </td>
+              <td>수정 필요. shell도 동일한 active data source를 쓰거나 empty-clinic 모드에서는 legacy fixture 검색을 끈다.</td>
+              <td>
+                <code>src/shell/global-command-palette.tsx</code><br />
+                <code>src/shell/workspace-tabs-bar.tsx</code><br />
+                <code>src/shell/app-shell.tsx</code><br />
+                <code>src/features/notifications/mock-notifications.ts</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>기본 화면에 새어 나올 수 있는 stale fixture</h2>
+        <ul>
+          <li><code>src/features/home/home.mock.ts</code>: 2026-05-09 기준 운영 dashboard, 작업 카드, 환자명, 수납/검사/처치 count.</li>
+          <li><code>src/mocks/emr-domain.ts</code>: 2026-05-01 예약, 접수 대기, encounter, SOAP, orders, lab/imaging, invoice, payment, audit log의 중심 fixture.</li>
+          <li><code>src/features/reception/data.ts</code>, <code>src/features/reception/store.ts</code>: <code>TODAY_PREFIX=2026-05-01</code>, <code>DEFAULT_NOW=2026-05-01T10:45:00+09:00</code>.</li>
+          <li><code>src/features/chart/store.ts</code>, <code>src/features/chart/data.ts</code>: 기본 선택 <code>encounter-coco-260501</code>과 May 1 chart queue/history.</li>
+          <li><code>src/features/lab-imaging/store.ts</code>: 기본 선택 <code>lab-result-coco-cbc</code>, <code>imaging-coco-thorax</code>.</li>
+          <li><code>src/features/dispensing/data.ts</code>, <code>src/features/order-queue/data.ts</code>: 2026-04-14 처방/조제 상세와 260414/260501 queue fixture.</li>
+          <li><code>src/features/billing/store.ts</code>: 기본 선택 <code>invoice-coco-260501</code>, 2026-05-01 수납 상태.</li>
+          <li><code>src/features/audit/server-audit-event-review-core.ts</code>: 2026-05-20 mock 변경 이력에 임상/오더/결제 이벤트 포함.</li>
+          <li><code>supabase/seed.sql</code>: local Supabase seed에도 DEN-56/DEN-68/DEN-194 계열의 활성 예약, encounter, invoice, SOAP, work item이 들어 있다.</li>
+          <li><code>src/features/auth/workspace-session.ts</code>: workspace display name이 새 기준인 <code>CLAiR EMR 청담점</code>과 다르게 남아 있다.</li>
+          <li><code>src/shell/global-command-palette.tsx</code>, <code>src/shell/workspace-tabs-bar.tsx</code>, <code>src/features/notifications/mock-notifications.ts</code>: 화면별 정리 후에도 shell에서 과거 업무가 노출될 수 있다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>후속 작업 후보</h2>
+        <h3>P0</h3>
+        <ul>
+          <li>데이터 모드 계약을 먼저 만든다: empty-clinic seed, legacy scenario fixture, local-first draft, Supabase/local DB의 우선순위와 reset 범위.</li>
+          <li><code>src/mocks/emr-domain.ts</code>를 master seed와 daily-work scenario fixture로 분리한다.</li>
+          <li>Home, Reception, Chart, Lab/Imaging, Dispensing/Treatment, Billing의 기본 daily-work 화면을 빈 상태로 바꾸고 legacy fixture는 명시적 scenario에서만 켠다.</li>
+          <li><code>supabase/seed.sql</code>의 기본 local seed를 empty-clinic baseline으로 바꾸거나, 현재 활성 업무 seed를 별도 scenario seed script로 격리한다.</li>
+        </ul>
+
+        <h3>P1</h3>
+        <ul>
+          <li>Customer의 환자/보호자 master seed는 유지하되, 업무 badge/최근 업무/삭제 잠금 계산을 active daily-work source로 분리한다.</li>
+          <li>Hospital admin order catalog를 명시적 master seed로 정리하고, API fallback이 DB 누락을 숨기지 않게 source 표시/검증을 추가한다.</li>
+          <li>Audit 기본값을 setup/reset/user configuration history로 바꾸고, 임상/수납 변경 이력은 scenario mode에서만 노출한다.</li>
+          <li>global command palette, workspace tab metadata, notifications가 empty-clinic mode를 따르게 한다.</li>
+        </ul>
+
+        <h3>P2</h3>
+        <ul>
+          <li>legacy Sales demo scenario를 보존하되 developer/test opt-in replay와 reset UX를 별도 작업으로 설계한다.</li>
+          <li>역할별 smoke test를 추가해 empty-clinic baseline과 scenario mode가 서로 섞이지 않는지 검증한다.</li>
+          <li>master seed 규모가 커졌을 때 command palette/search 성능과 빈 상태 UX를 점검한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 제외와 안전 기준</h2>
+        <ul>
+          <li>이번 이슈에서는 코드, fixture, seed, DB, Supabase remote 데이터를 수정하지 않았다.</li>
+          <li>실제 환자/보호자/병원 데이터, secret, 비용 발생 작업, destructive remote 변경, 외부 발송/결제/provider side effect, 실제 고객 launch는 수행하지 않았다.</li>
+          <li>기존 PRD viewer 관련 dirty files와 package 변경은 이번 감사 범위 밖이라 건드리지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code>: 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
