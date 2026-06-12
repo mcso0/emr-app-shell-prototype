@@ -23,6 +23,15 @@ test("CLAiR Docs switches registered docs without leaving the read-only viewer",
   await expect(page.getByText("```")).toHaveCount(0);
 });
 
+test("CLAiR Docs renders Mermaid diagrams as diagrams", async ({ page }) => {
+  await page.goto("/docs?doc=emr-domain-entity-map");
+
+  await expect(page.getByRole("heading", { name: "Core Relationship" })).toBeVisible();
+  await expect(page.getByTestId("prd-mermaid-diagram")).toBeVisible();
+  await expect(page.getByTestId("prd-mermaid-diagram").locator("svg")).toBeVisible();
+  await expect(page.locator("pre").filter({ hasText: "erDiagram" })).toHaveCount(0);
+});
+
 test("CLAiR Docs search opens a command-style document picker", async ({ page }) => {
   await page.addInitScript(() =>
     window.localStorage.setItem(

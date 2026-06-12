@@ -1,6 +1,7 @@
 import path from "node:path";
 import Link from "next/link";
 import { findDocSlugBySourcePath, slugifyHeading } from "./doc-reader";
+import { MermaidDiagram } from "./mermaid-diagram";
 
 interface MarkdownRendererProps {
   markdown: string;
@@ -196,6 +197,12 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
       }
 
       if (index < lines.length) index += 1;
+
+      if (language.toLowerCase() === "mermaid") {
+        blocks.push(<MermaidDiagram chart={codeLines.join("\n")} key={`mermaid-${blockIndex}`} />);
+        blockIndex += 1;
+        continue;
+      }
 
       blocks.push(
         <figure
