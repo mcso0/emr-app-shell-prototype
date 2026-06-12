@@ -173,6 +173,16 @@ export const prdDocRegistry = [
     tags: ["auth", "onboarding"],
   },
   {
+    slug: "member-role-management-spec",
+    title: "Member Role Management Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/auth/member-role-management-spec.md",
+    description:
+      "Product target for staff invitations, role changes, membership status, and last-admin protection.",
+    tags: ["auth", "roles"],
+  },
+  {
     slug: "hospital-profile-onboarding-spec",
     title: "Hospital Profile Onboarding Spec",
     group: "Features",
