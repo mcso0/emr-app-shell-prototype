@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/sheet";
 import { MenuIcon } from "@/components/icons";
 import type { PrdDocEntry } from "@/lib/prd-viewer/registry";
+import { cn } from "@/lib/utils";
 import { PrdNavigation } from "./prd-navigation";
+import styles from "./prd-viewer.module.css";
 
 interface PrdMobileNavigationProps {
   groups: Array<{ group: string; docs: PrdDocEntry[] }>;
@@ -20,6 +22,26 @@ interface PrdMobileNavigationProps {
 
 export function PrdMobileNavigation({ groups, activeSlug }: PrdMobileNavigationProps) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (open) return;
+
+    let timeoutId: number | undefined;
+    const animationFrameId = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(() => {
+        if (!document.querySelector('[role="dialog"]')) {
+          document.body.style.removeProperty("overflow");
+        }
+      }, 240);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -34,13 +56,16 @@ export function PrdMobileNavigation({ groups, activeSlug }: PrdMobileNavigationP
       >
         <MenuIcon />
       </Button>
-      <SheetContent className="w-[20rem] max-w-[calc(100vw-2rem)] gap-0 border-r-0 p-0" side="left">
-        <SheetHeader className="px-4 py-4">
+      <SheetContent
+        className={cn(styles.prdViewer, "w-[20rem] max-w-[calc(100vw-2rem)] gap-0 border-r-0 p-0")}
+        side="left"
+      >
+        <SheetHeader className="shrink-0 px-4 py-4">
           <SheetTitle>Docs</SheetTitle>
           <SheetDescription className="sr-only">CLAiR Docs document list</SheetDescription>
         </SheetHeader>
         <div
-          className="min-h-0 flex-1 px-4 pb-4"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4"
           onClick={(event) => {
             if ((event.target as Element).closest("a")) {
               setOpen(false);

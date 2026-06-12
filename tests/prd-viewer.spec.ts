@@ -83,6 +83,7 @@ test("legacy PRD route redirects to canonical CLAiR Docs route", async ({ page }
 
 test("CLAiR Docs keeps the primary reading flow usable on mobile width", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => window.localStorage.setItem("prd-viewer-theme", "dark"));
   await page.goto("/docs?doc=features-readme");
 
   await expect(page.getByRole("link", { name: /CLAiR Docs/ })).toBeVisible();
@@ -91,9 +92,40 @@ test("CLAiR Docs keeps the primary reading flow usable on mobile width", async (
   await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Feature Specs" })).toBeVisible();
   await page.getByTestId("prd-mobile-nav-trigger").click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const mobileDocsDialog = page.getByRole("dialog", { name: "Docs" });
+  await expect(mobileDocsDialog).toBeVisible();
   await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("Product PRD");
-  await expect(page.getByRole("link", { name: "Feature Specs" })).toHaveAttribute("aria-current", "page");
+  const mobileDocScrollArea = mobileDocsDialog.getByTestId("prd-doc-navigation-scroll");
+  await expect(mobileDocScrollArea).toBeVisible();
+  await expect(
+    mobileDocScrollArea.evaluate((element) => element.scrollHeight > element.clientHeight)
+  ).resolves.toBe(true);
+  const activeMobileDoc = page.getByRole("link", { name: "Feature Specs" });
+  await expect(activeMobileDoc).toHaveAttribute("aria-current", "page");
+  await expect(
+    activeMobileDoc.evaluate((element) => {
+      const [red = 0, green = 0, blue = 0] =
+        getComputedStyle(element)
+          .backgroundColor.match(/\d+/g)
+          ?.slice(0, 3)
+          .map(Number) ?? [];
+
+      return blue <= Math.max(red, green) + 24;
+    })
+  ).resolves.toBe(true);
+  await mobileDocScrollArea.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect.poll(() => mobileDocScrollArea.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await mobileDocScrollArea.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await mobileDocsDialog.getByRole("button", { name: "Close" }).click();
+  await expect(mobileDocsDialog).toHaveCount(0);
+  const scrollYBeforeBodyWheel = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(scrollYBeforeBodyWheel);
+  await page.getByTestId("prd-mobile-nav-trigger").click();
   await page.getByRole("link", { name: "Product PRD" }).click();
   await expect(page).toHaveURL(/\/docs\?doc=product-prd/);
   await expect(page.getByRole("heading", { name: "동물병원 전용 EMR SaaS 서비스 PRD" })).toBeVisible();

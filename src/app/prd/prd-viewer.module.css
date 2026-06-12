@@ -65,6 +65,8 @@
 .scrollArea {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scrollArea::-webkit-scrollbar {
@@ -74,6 +76,7 @@
 .scrollFade {
   position: relative;
   min-height: 0;
+  overflow: hidden;
 }
 
 .scrollFade::before,
