@@ -5,6 +5,7 @@ import { MarkdownRenderer } from "@/lib/prd-viewer/markdown-renderer";
 import { getResolvedPrdSlug, loadPrdDoc } from "@/lib/prd-viewer/doc-reader";
 import { getPrdDocGroups, type PrdDocEntry } from "@/lib/prd-viewer/registry";
 import { PrdHeaderControls } from "../prd/prd-header-controls";
+import { PrdMobileNavigation } from "../prd/prd-mobile-navigation";
 import { PrdNavigation } from "../prd/prd-navigation";
 import styles from "../prd/prd-viewer.module.css";
 
@@ -67,7 +68,8 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
               </Link>
             </nav>
           </div>
-          <div className="flex min-w-0 justify-end">
+          <div className="flex min-w-0 justify-end gap-2">
+            <PrdMobileNavigation activeSlug={resolvedSlug} groups={groups} />
             <PrdHeaderControls groups={groups} />
           </div>
         </div>
