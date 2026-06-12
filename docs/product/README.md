@@ -14,11 +14,18 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - EMR domain entity map: `docs/product/domain/emr-domain-entity-map.md`
 - Workspace auth and permissions: `docs/product/domain/workspace-auth-permissions.md`
 - Workspace hospital profile: `docs/product/domain/workspace-hospital-profile.md`
+- Auth current implementation gap review: `docs/product/current-state/auth-current-implementation-gap-review.md`
+- Auth error and empty state UX spec: `docs/product/features/auth/auth-error-empty-state-ux-spec.md`
+- CLAiR internal operator recovery audit policy: `docs/product/features/auth/clair-internal-operator-recovery-audit-policy-spec.md`
+- Hospital admin member management UX spec: `docs/product/features/auth/hospital-admin-member-management-ux-spec.md`
 - Auth/login current-state inventory: `docs/product/current-state/auth-login-onboarding-current-state.md`
 - Invite email delivery recovery feature spec: `docs/product/features/auth/invite-email-delivery-recovery-policy-spec.md`
 - Login invite onboarding feature spec: `docs/product/features/auth/login-invite-onboarding-spec.md`
 - Member role management feature spec: `docs/product/features/auth/member-role-management-spec.md`
+- Password reset account recovery policy spec: `docs/product/features/auth/password-reset-account-recovery-policy-spec.md`
+- Role permission detail spec: `docs/product/features/auth/role-permission-detail-spec.md`
 - Session logout policy feature spec: `docs/product/features/auth/session-logout-policy-spec.md`
+- Workspace access guard policy spec: `docs/product/features/auth/workspace-access-guard-policy-spec.md`
 - Hospital profile onboarding feature spec: `docs/product/features/hospital-admin/hospital-profile-onboarding-spec.md`
 - Role and permission source map: `docs/product/domain/role-permission-source-map.md`
 - Decision log index: `docs/product/decisions/decision-log-index.md`

@@ -15,6 +15,7 @@ Use this file for small product-planning changes that do not need a standalone d
 - `added`: Added the member role management feature spec and registered it in CLAiR Docs under Features.
 - `added`: Added the session/logout policy feature spec and registered it in CLAiR Docs under Features.
 - `added`: Added the invite email delivery and recovery policy spec and registered it in CLAiR Docs under Features.
+- `added`: Added the remaining auth planning specs for internal operator recovery, password reset/account recovery, auth error states, workspace access guards, role-permission detail, hospital-admin member management UX, and current implementation gap review; registered them in CLAiR Docs.
 
 ## 2026-06-11
 

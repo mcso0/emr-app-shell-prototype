@@ -14,5 +14,6 @@ Canonical product rules still live in `docs/product/domain/`, `docs/product/feat
 
 ## Current Inventory Docs
 
+- `auth-current-implementation-gap-review.md`: current auth/workspace/member implementation gaps against the latest product planning docs.
 - `auth-login-onboarding-current-state.md`: login, signup placeholder, invite onboarding, workspace creation, and auth gate inventory.
 - `role-screen-access-current-state.md`: implemented workspace module list and comparison against product role/permission v1.
