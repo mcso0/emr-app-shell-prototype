@@ -8,6 +8,7 @@ Current feature specs:
 
 - `docs/product/features/auth/login-invite-onboarding-spec.md`
 - `docs/product/features/auth/member-role-management-spec.md`
+- `docs/product/features/auth/session-logout-policy-spec.md`
 - `docs/product/features/hospital-admin/hospital-profile-onboarding-spec.md`
 - `docs/product/features/home/home-command-entry-planning.md`
 - `docs/product/features/home/home-v1-epic-plan.md`

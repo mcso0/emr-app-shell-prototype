@@ -6,5 +6,6 @@ Current auth feature specs:
 
 - `login-invite-onboarding-spec.md`
 - `member-role-management-spec.md`
+- `session-logout-policy-spec.md`
 
 Use current-state inventory docs only for implemented-state comparison. Product requirements and acceptance criteria belong in this folder.

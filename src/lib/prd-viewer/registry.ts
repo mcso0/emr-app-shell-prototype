@@ -183,6 +183,16 @@ export const prdDocRegistry = [
     tags: ["auth", "roles"],
   },
   {
+    slug: "session-logout-policy-spec",
+    title: "Session Logout Policy Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/auth/session-logout-policy-spec.md",
+    description:
+      "Product target for session persistence, logout, expiry, shared-device risk, and recent-auth requirements.",
+    tags: ["auth", "session"],
+  },
+  {
     slug: "hospital-profile-onboarding-spec",
     title: "Hospital Profile Onboarding Spec",
     group: "Features",

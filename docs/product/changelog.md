@@ -13,6 +13,7 @@ Use this file for small product-planning changes that do not need a standalone d
 - `added`: Added the login/invite/onboarding feature spec and registered it as a CLAiR Docs feature document, keeping product target separate from current-state inventory.
 - `added`: Added the hospital profile onboarding feature spec and registered it in CLAiR Docs under Features.
 - `added`: Added the member role management feature spec and registered it in CLAiR Docs under Features.
+- `added`: Added the session/logout policy feature spec and registered it in CLAiR Docs under Features.
 
 ## 2026-06-11
 
