@@ -34,7 +34,7 @@ Out of scope:
 | Surface | Purpose |
 | --- | --- |
 | Members list | Show active/inactive members and key admin fields. |
-| Pending invites list | Show invites that need action or may expire. |
+| Pending invites section | Show invites that need action or may expire, separate from the member table. |
 | Invite staff form | Create a pending invitation with roles and staff metadata. |
 | Member detail/edit drawer | Edit roles, department, title, status, and review safety warnings. |
 | Audit/history link | Give admins traceability for sensitive changes. |
@@ -68,9 +68,12 @@ Pending invite list should show:
 - Use canonical roles only: `hospital_admin`, `vet`, `technician`, `front_desk`.
 - Do not expose demo-only `nurse` or `billing_admin` as product roles.
 - Role changes should explain effective permission impact.
+- Role editing should use visible role chips with a popover role picker.
 - Last-admin blocking should be explicit and actionable.
 - Deactivation should say workspace access is disabled, not account deleted.
+- Deactivation requires a reason.
 - Pending invite cancellation should warn that the link cannot be reused.
+- Last accessed at should be visible for staff in MVP when available.
 
 ## Core Flows
 
@@ -100,9 +103,9 @@ Pending invite list should show:
 
 This spec should appear in CLAiR Docs under `Features`.
 
-## Open Questions
+## MVP Decisions
 
-- Should pending invites appear in the same table as members or in a separate section?
-- Should role editing use checkboxes, segmented role chips, or a dedicated role picker?
-- Should member deactivation require a reason field?
-- Should admins see last accessed at for all staff in MVP?
+- Pending invites should appear in a separate section from active/inactive members.
+- Role editing should use role chips plus a popover role picker.
+- Member deactivation requires a reason field.
+- Admins should see last accessed at for staff when available.

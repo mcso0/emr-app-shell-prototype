@@ -37,6 +37,9 @@ Out of scope:
 - Customer-facing hospital admins cannot grant themselves CLAiR operator authority.
 - Recovery should prefer restoring a valid hospital admin path over directly changing clinical or billing records.
 - Operator access should never become a general hidden backdoor for routine hospital operations.
+- Earliest MVP operator recovery is limited to approved CLAiR operations/admin-support staff.
+- Before admin recovery, CLAiR should verify the hospital owner email, business registration information, and a phone call through the hospital representative number or existing registered contact.
+- MVP does not require an external support ticket ID, but every recovery must create an internal `operator_recovery_log_id`.
 
 ## Allowed Recovery Cases
 
@@ -68,7 +71,9 @@ Operator recovery actions should record:
 - reason category
 - before/after state
 - timestamp
+- internal `operator_recovery_log_id`
 - supporting ticket or approval reference when available
+- verification method used: owner email, business information, and phone confirmation
 
 Required audit events:
 
@@ -92,9 +97,11 @@ When recovery affects workspace access:
 
 This spec should appear in CLAiR Docs under `Features`.
 
-## Open Questions
+## MVP Decisions
 
-- What level of business/identity verification is required before CLAiR operator admin recovery?
-- Should every CLAiR operator recovery require a ticket/reference ID in MVP?
-- Should hospital admins receive an in-app notification after CLAiR operator recovery?
-- Who at CLAiR is allowed to perform recovery in the earliest operating model?
+- Admin recovery verification requires hospital owner email confirmation, business information confirmation, and phone confirmation.
+- The phone check should use the hospital representative number or an existing registered representative contact.
+- External ticket/reference ID is not required in MVP.
+- The system should automatically create an internal `operator_recovery_log_id`.
+- Hospital admins should be notified after operator recovery when the recovery affects workspace access.
+- Operator recovery is limited to approved CLAiR operations/admin-support staff in the earliest model.

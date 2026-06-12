@@ -37,6 +37,9 @@ Out of scope:
 - Password reset does not reactivate inactive membership.
 - Password reset should not reveal whether an email exists.
 - Invite acceptance for an existing account should require sign-in with the invited email.
+- MVP password reset links expire after 1 hour.
+- After a successful password reset, other active sessions should be logged out.
+- After reset, the user should explicitly sign in again instead of being silently entered into the workspace.
 
 ## Password Reset Flow
 
@@ -67,18 +70,20 @@ Acceptance criteria:
 ## Security Expectations
 
 - Reset links should be single-use or invalidated after success.
-- Reset links should expire.
+- Reset links should expire after 1 hour in MVP.
 - Password reset should not bypass recent-auth requirements for high-impact actions.
 - Sensitive changes after reset may require fresh authentication.
 - Account recovery attempts should be rate-limited in implementation.
+- Successful password reset should invalidate other sessions.
 
 ## CLAiR Docs Viewer Placement
 
 This spec should appear in CLAiR Docs under `Features`.
 
-## Open Questions
+## MVP Decisions
 
-- What should the MVP password reset link expiry be?
-- Should password reset immediately sign the user in, or require explicit login after reset?
-- Should a password reset force logout from other sessions?
-- Should staff without email access be handled only through hospital admin reinvite, or can CLAiR support correct it?
+- Password reset link expiry is 1 hour.
+- Password reset requires explicit login after reset.
+- Password reset logs out other sessions.
+- Staff without email access should normally use hospital-admin reinvite to the corrected email.
+- CLAiR support may correct or recover first-admin or access-critical cases through the internal operator recovery policy.

@@ -38,6 +38,9 @@ Out of scope:
 - Separate "not signed in", "not a member", "inactive member", and "not permitted".
 - Keep admin/support escalation visible only when useful.
 - Do not blame the user for security blocks.
+- Use short, plain, professional Korean copy for MVP.
+- Show CLAiR support contact only when the user cannot recover alone, such as invite expiry, inactive membership, or admin recovery.
+- Do not expose raw permission IDs in permission denied states.
 
 ## Required States
 
@@ -51,7 +54,7 @@ Out of scope:
 | Email mismatch | Use the invited email. | Sign in with invited email. |
 | Workspace membership inactive | Access to this workspace is inactive. | Contact hospital admin. |
 | Workspace not found or inaccessible | Workspace cannot be opened. | Return to login or workspace list. |
-| Permission denied | You do not have permission for this action. | Return to previous screen. |
+| Permission denied | You do not have enough permission for this action. | Return to previous screen or first allowed module. |
 | Recent auth required | Confirm identity before continuing. | Re-authenticate. |
 
 ## Empty States
@@ -75,9 +78,10 @@ Use one primary action and optional secondary action:
 
 This spec should appear in CLAiR Docs under `Features`.
 
-## Open Questions
+## MVP Decisions
 
-- Should auth error copy be casual/short or more formal for hospital staff?
-- Should CLAiR support contact be visible in every blocked state, or only admin/first-admin recovery states?
-- Should inactive members see the hospital admin contact if available?
-- Should permission denied states show the missing permission or keep details hidden?
+- Copy tone should be short, plain, and professional.
+- CLAiR support contact is not shown on every blocked state.
+- CLAiR support contact appears when the user cannot recover alone, such as expired invite, inactive membership without admin path, or admin recovery.
+- Inactive members should see hospital admin contact when available.
+- Permission denied states should not show raw permission IDs or sensitive access-policy details.

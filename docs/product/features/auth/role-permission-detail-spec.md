@@ -47,11 +47,11 @@ Out of scope:
 | --- | --- | --- | --- | --- |
 | Home | view, admin | view | view | view |
 | Reception/appointment | view, create, edit, admin | view | view | view, create, edit |
-| Customer/patient | view, create, edit, admin | view, edit clinical context | view, edit support context | view, create, edit |
+| Customer/patient | view, create, edit, admin | view, edit clinical and demographic context | view, edit support context | view, create, edit |
 | Chart/SOAP/diagnosis | view, create, edit, admin | view, create, edit | view | view |
 | Lab/imaging | view, create, edit, review, admin | view, create, edit, review | view, complete | view |
 | Dispensing/treatment | view, create, edit, review, admin | view, create, edit, review | view, complete | view |
-| Billing checkout | view, create, edit, admin | view | view support context | view, create, edit |
+| Billing checkout | view, create, edit, admin | view | view support context | view, create, edit, discount/adjust with audit |
 | Refund/adjustment approval | approve, admin | no | no | no |
 | Hospital profile/settings | admin | no | no | no |
 | Members/roles | admin | no | no | no |
@@ -64,6 +64,10 @@ Out of scope:
 - `hospital_admin` grants all workspace admin permissions.
 - Do not introduce deny rules in MVP.
 - Permission UI should explain access by assigned roles.
+- Vets can edit patient and guardian demographic/basic information as well as clinical profile fields.
+- Technicians can create assigned-work execution records, work memos, and status updates for lab, imaging, treatment, and dispensing work.
+- Technicians cannot write diagnosis, SOAP, or final clinical judgment.
+- Front desk can edit billing lines and amounts, including discount/adjustment cases, but these actions must be audited.
 
 ## High-Risk Actions
 
@@ -81,9 +85,10 @@ High-risk actions should require extra confirmation and may require recent-auth:
 
 This spec should appear in CLAiR Docs under `Features`.
 
-## Open Questions
+## MVP Decisions
 
-- Should vets be able to edit patient demographic fields, or only clinical profile fields?
-- Should technicians be able to create support records, or only complete assigned work?
-- Should front desk be able to edit billing lines, or only perform checkout/payment state changes?
-- Which catalog changes should require recent-auth or second confirmation?
+- Vets can edit patient and guardian demographic/basic information.
+- Technicians can write assigned-work execution records, work memos, and completion/status changes.
+- Technicians cannot write diagnosis, SOAP, or final clinical judgment.
+- Front desk can edit billing lines and amounts, including discounts, with audit trail.
+- Catalog changes affecting billing, price, fulfillment routing, or workspace-wide behavior require second confirmation and may require recent-auth in implementation.

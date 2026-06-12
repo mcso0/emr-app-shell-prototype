@@ -48,7 +48,7 @@ If any step fails, the user should see the correct state and recovery action.
 | Invalid workspace | Show inaccessible workspace or route fallback. |
 | Missing membership | Block and ask for invite/admin support. |
 | Inactive membership | Block and ask hospital admin or support. |
-| Missing permission | Show permission denied or route to default allowed screen. |
+| Missing permission | Show permission denied and offer the first allowed module when available. |
 | Recent-auth stale | Ask for fresh authentication before action continues. |
 
 ## Protected Action Policy
@@ -66,14 +66,16 @@ Screen access and mutation access are separate:
 - Ignore external URLs.
 - If target route is no longer authorized, route to the best allowed workspace screen.
 - If membership is inactive, do not route into workspace modules.
+- The default landing for a limited-permission user is the first allowed module.
+- Multi-workspace switching is out of MVP scope.
 
 ## CLAiR Docs Viewer Placement
 
 This spec should appear in CLAiR Docs under `Features`.
 
-## Open Questions
+## MVP Decisions
 
-- What is the default allowed workspace screen when a user has limited permissions?
-- Should permission denied route to home, previous page, or a dedicated access-denied page?
-- Should inactive membership show support contact or only hospital admin contact?
-- Should workspace switching be part of MVP if one account belongs to multiple hospitals?
+- Limited-permission users land on the first allowed module.
+- Permission denied should show a clear blocked state and a path to the first allowed module when available.
+- Inactive membership should show hospital admin contact when available, and CLAiR support only when the user cannot recover through the hospital admin path.
+- A single account belonging to multiple hospital workspaces is not included in MVP.
