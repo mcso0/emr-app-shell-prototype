@@ -77,7 +77,15 @@ test("CLAiR Docs keeps the primary reading flow usable on mobile width", async (
   await page.goto("/docs?doc=features-readme");
 
   await expect(page.getByRole("link", { name: /CLAiR Docs/ })).toBeVisible();
+  await expect(page.getByTestId("prd-mobile-nav-trigger")).toBeVisible();
   await expect(page.getByTestId("prd-search-trigger-mobile")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Feature Specs" })).toBeVisible();
+  await page.getByTestId("prd-mobile-nav-trigger").click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("Product PRD");
+  await expect(page.getByRole("link", { name: "Feature Specs" })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("link", { name: "Product PRD" }).click();
+  await expect(page).toHaveURL(/\/docs\?doc=product-prd/);
+  await expect(page.getByRole("heading", { name: "동물병원 전용 EMR SaaS 서비스 PRD" })).toBeVisible();
 });
