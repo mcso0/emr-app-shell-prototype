@@ -1,20 +1,22 @@
 ---
 id: DOCS-META-gitbook-docs-site-creation-plan
-status: approved
+status: deprecated
 area: docs-restructure
 doc_type: plan
 related_work:
   - DEN-257
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-24
+last_updated: 2026-06-11
 ---
 
 # GitBook Docs Site Creation Plan
 
-This plan defines how to create a GitBook docs site for CLAiR EMR docs without changing the repo source-of-truth model or publishing external-public documentation by default.
+> Inactive/deprecated: GitBook is no longer the active reader path. Preserve this plan for history and for a future explicit GitBook revival only.
 
-Current decision: use GitBook as a private/internal reader portal for 승욱 and project review. Do not create or publish the site from Codex; use this plan as the manual setup path.
+This plan defines the historical path for creating a GitBook docs site for CLAiR EMR docs without changing the repo source-of-truth model or publishing external-public documentation by default.
+
+Current decision: use repo `docs/` as source of truth and `/docs` as the internal product-doc reader. Do not create or publish a GitBook site from Codex unless 승욱 explicitly revives GitBook.
 
 ## Official GitBook Facts Checked
 

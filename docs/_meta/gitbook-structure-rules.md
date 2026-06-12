@@ -1,6 +1,6 @@
 ---
 id: DOCS-META-gitbook-structure-rules
-status: approved
+status: deprecated
 area: docs-restructure
 doc_type: operating_rule
 related_work:
@@ -9,20 +9,24 @@ related_work:
   - DEN-257
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-24
+last_updated: 2026-06-11
 ---
 
 # GitBook Structure Rules
 
-Use these rules when changing repo docs that affect GitBook navigation, human docs entry points, area README navigation, or GitBook reader boundaries.
+> Inactive/deprecated: GitBook is no longer the active reader path. Preserve this document for history and for a future explicit GitBook revival only. The active reader model is repo `docs/` as source of truth plus the internal `/docs` product-doc viewer.
+
+Use these rules only if 승욱 explicitly revives GitBook navigation or asks to inspect the historical GitBook setup. For current reader changes, update `docs/index.md`, relevant area READMEs, and the `/docs` viewer registry instead.
 
 ## Roles
 
 | Surface | Role |
 | --- | --- |
 | `docs/` | Canonical source of truth for product, design, engineering, work, and completion records. |
-| GitBook | Private/internal readable portal over repo docs. Do not edit GitBook copies as source. |
-| `docs/SUMMARY.md` | Curated GitBook sidebar map. |
+| `/docs` app route | Active internal read-only product-doc viewer over curated `docs/product/` Markdown. |
+| `/prd` app route | Legacy compatibility route that redirects to `/docs`. |
+| GitBook | Inactive/deprecated readable portal history. Do not edit GitBook copies as source. |
+| `docs/SUMMARY.md` | Legacy GitBook sidebar compatibility map, not active navigation. |
 | `docs/index.md` | Human-facing docs portal entry point. |
 | Area `README.md` files | Second-level navigation for each docs area. |
 | `docs/agent-start-here.md` | Compact Codex startup guide. |

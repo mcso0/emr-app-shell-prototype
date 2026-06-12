@@ -1,0 +1,237 @@
+export type PrdDocGroup =
+  | "Start"
+  | "Service"
+  | "Roadmap"
+  | "Domain"
+  | "Features"
+  | "Epics"
+  | "User Stories"
+  | "Decisions"
+  | "Glossary"
+  | "User Flows";
+
+export type ClairDocType =
+  | "PRD"
+  | "Service"
+  | "Roadmap"
+  | "Domain"
+  | "Feature"
+  | "Epic"
+  | "User Story"
+  | "Decision"
+  | "Glossary"
+  | "User Flow";
+
+export interface PrdDocEntry {
+  slug: string;
+  title: string;
+  group: PrdDocGroup;
+  docType: ClairDocType;
+  sourcePath: `docs/product/${string}.md`;
+  description?: string;
+  tags?: readonly string[];
+}
+
+export const defaultPrdDocSlug = "product-prd";
+
+export const prdDocRegistry = [
+  {
+    slug: "product-readme",
+    title: "Product Docs",
+    group: "Start",
+    docType: "PRD",
+    sourcePath: "docs/product/README.md",
+    description: "Product docs map and source-of-truth rules.",
+    tags: ["source of truth", "reader"],
+  },
+  {
+    slug: "product-prd",
+    title: "Product PRD",
+    group: "Start",
+    docType: "PRD",
+    sourcePath: "docs/product/prd/clair-emr-saas-prd.md",
+    description: "Core CLAiR EMR product requirements.",
+    tags: ["mvp", "requirements"],
+  },
+  {
+    slug: "saas-operating-map",
+    title: "SaaS Operating Map",
+    group: "Service",
+    docType: "Service",
+    sourcePath: "docs/product/service/clair-emr-saas-operating-map.md",
+    description: "Service boundaries, operating model, and product shape.",
+    tags: ["service", "boundaries"],
+  },
+  {
+    slug: "product-mvp-scope",
+    title: "Product MVP Scope",
+    group: "Roadmap",
+    docType: "Roadmap",
+    sourcePath: "docs/product/roadmap/product-mvp-scope.md",
+    description: "MVP scope, non-goals, and product sequencing.",
+    tags: ["mvp", "scope"],
+  },
+  {
+    slug: "outpatient-workflow-state-model",
+    title: "Outpatient Workflow State Model",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/outpatient-workflow-state-model.md",
+    description: "State model for reception through billing.",
+    tags: ["outpatient", "workflow"],
+  },
+  {
+    slug: "emr-domain-entity-map",
+    title: "EMR Domain Entity Map",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/emr-domain-entity-map.md",
+    description: "Core EMR domain entities and relationships.",
+    tags: ["entities", "domain"],
+  },
+  {
+    slug: "role-permission-source-map",
+    title: "Role Permission Source Map",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/role-permission-source-map.md",
+    description: "Product-facing role and permission source map.",
+    tags: ["roles", "permissions"],
+  },
+  {
+    slug: "workspace-auth-permissions",
+    title: "Workspace Auth And Permissions",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/workspace-auth-permissions.md",
+    description: "Workspace auth and permission product requirements.",
+    tags: ["workspace", "auth"],
+  },
+  {
+    slug: "order-fulfillment-handoff",
+    title: "Order Fulfillment Handoff",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/order-fulfillment-handoff.md",
+    description: "Product handoff from chart orders to fulfillment queues.",
+    tags: ["orders", "fulfillment"],
+  },
+  {
+    slug: "workspace-order-catalog-platform",
+    title: "Workspace Order Catalog Platform",
+    group: "Domain",
+    docType: "Domain",
+    sourcePath: "docs/product/domain/workspace-order-catalog-platform.md",
+    description: "Workspace order catalog platform requirements.",
+    tags: ["catalog", "workspace"],
+  },
+  {
+    slug: "features-readme",
+    title: "Feature Specs",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/README.md",
+    description: "Feature spec index and writing rules.",
+    tags: ["features", "template"],
+  },
+  {
+    slug: "reception-appointment-spec",
+    title: "Reception Appointment Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/reception-appointment-spec.md",
+    description: "Reception and appointment product behavior.",
+    tags: ["reception", "appointments"],
+  },
+  {
+    slug: "legacy-mvp-feature-spec",
+    title: "Legacy MVP Feature Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/legacy-mvp-feature-spec.md",
+    description: "Legacy all-in-one MVP feature reference.",
+    tags: ["legacy", "mvp"],
+  },
+  {
+    slug: "epics-readme",
+    title: "Epics",
+    group: "Epics",
+    docType: "Epic",
+    sourcePath: "docs/product/epics/README.md",
+    description: "Epic index and planning rules.",
+    tags: ["epics", "template"],
+  },
+  {
+    slug: "user-stories-readme",
+    title: "User Stories",
+    group: "User Stories",
+    docType: "User Story",
+    sourcePath: "docs/product/user-stories/README.md",
+    description: "User story index and acceptance criteria rules.",
+    tags: ["stories", "template"],
+  },
+  {
+    slug: "decision-log-index",
+    title: "Decision Log Index",
+    group: "Decisions",
+    docType: "Decision",
+    sourcePath: "docs/product/decisions/decision-log-index.md",
+    description: "Current product decision index.",
+    tags: ["decisions", "history"],
+  },
+  {
+    slug: "glossary-readme",
+    title: "Glossary",
+    group: "Glossary",
+    docType: "Glossary",
+    sourcePath: "docs/product/glossary/README.md",
+    description: "Shared product and domain terms.",
+    tags: ["terms", "language"],
+  },
+  {
+    slug: "user-flows-readme",
+    title: "User Flows",
+    group: "User Flows",
+    docType: "User Flow",
+    sourcePath: "docs/product/user-flows/README.md",
+    description: "User flow index and artifacts.",
+    tags: ["flows", "ux"],
+  },
+  {
+    slug: "emr-saas-userflow",
+    title: "EMR SaaS User Flow",
+    group: "User Flows",
+    docType: "User Flow",
+    sourcePath: "docs/product/user-flows/emr-saas-userflow.md",
+    description: "Product-level EMR SaaS workflow diagram.",
+    tags: ["flows", "saas"],
+  },
+] as const satisfies readonly PrdDocEntry[];
+
+export type PrdDocSlug = (typeof prdDocRegistry)[number]["slug"];
+
+export function getPrdDocBySlug(slug: string | undefined): PrdDocEntry | undefined {
+  return prdDocRegistry.find((doc) => doc.slug === slug);
+}
+
+export function getDefaultPrdDoc(): PrdDocEntry {
+  const defaultDoc = getPrdDocBySlug(defaultPrdDocSlug);
+
+  if (!defaultDoc) {
+    throw new Error(`Default PRD doc is missing from registry: ${defaultPrdDocSlug}`);
+  }
+
+  return defaultDoc;
+}
+
+export function getPrdDocGroups() {
+  const groups = new Map<PrdDocGroup, PrdDocEntry[]>();
+
+  for (const doc of prdDocRegistry) {
+    const entries = groups.get(doc.group) ?? [];
+    entries.push(doc);
+    groups.set(doc.group, entries);
+  }
+
+  return Array.from(groups.entries()).map(([group, docs]) => ({ group, docs }));
+}

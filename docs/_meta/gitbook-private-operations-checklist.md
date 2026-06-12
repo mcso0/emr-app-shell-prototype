@@ -1,20 +1,22 @@
 ---
 id: DOCS-META-gitbook-private-operations-checklist
-status: approved
+status: deprecated
 area: docs-restructure
 doc_type: checklist
 related_work:
   - DEN-256
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-24
+last_updated: 2026-06-11
 ---
 
 # GitBook Private Operations Checklist
 
-Use this checklist before changing GitBook navigation, widening GitBook access, sharing a private GitBook link, or converting the docs site from private/internal to external-public.
+> Inactive/deprecated: GitBook is no longer the active reader path. Use this checklist only if 승욱 explicitly revives GitBook, asks to widen GitBook access, or asks to publish/share a GitBook surface.
 
-Current decision: GitBook is a private/internal reader portal for 승욱 and project review. It is not an external-public product, marketing, support, or compliance site.
+Use this checklist before changing GitBook navigation, widening GitBook access, sharing a private GitBook link, or converting the docs site from private/internal to external-public after GitBook has been explicitly revived.
+
+Current decision: GitBook is inactive/deprecated. The active reader path is repo `docs/` plus the internal `/docs` product-doc viewer.
 
 ## Private/Internal Review
 
