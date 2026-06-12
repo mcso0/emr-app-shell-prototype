@@ -173,6 +173,15 @@ export const prdDocRegistry = [
     tags: ["auth", "onboarding"],
   },
   {
+    slug: "hospital-profile-onboarding-spec",
+    title: "Hospital Profile Onboarding Spec",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/hospital-admin/hospital-profile-onboarding-spec.md",
+    description: "Product target for first hospital admin profile confirmation and hospital basic settings.",
+    tags: ["hospital admin", "onboarding"],
+  },
+  {
     slug: "reception-appointment-spec",
     title: "Reception Appointment Spec",
     group: "Features",
