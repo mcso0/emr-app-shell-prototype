@@ -12,7 +12,7 @@ This repository does not maintain a separate LLM Wiki layer by default. Borrow L
 
 - Query: use this map to choose the smallest current source-doc set, then cite or link the canonical docs that support the answer.
 - Ingest: when durable knowledge changes, route it through `docs/_meta/intake-rules.md` and update the owning canonical doc instead of creating a duplicate generated summary.
-- Catalog: use `docs/index.md`, the internal `/prd` product-doc viewer, area READMEs, and `docs/work/index.md` as navigation surfaces; do not create a second global index unless 승욱 explicitly approves it. `docs/SUMMARY.md` is legacy GitBook compatibility, not active navigation.
+- Catalog: use `docs/index.md`, the internal `/docs` product-doc viewer, area READMEs, and `docs/work/index.md` as navigation surfaces; do not create a second global index unless 승욱 explicitly approves it. `docs/SUMMARY.md` is legacy GitBook compatibility, not active navigation.
 - Log: keep history near the owning area through work items, closeouts, changelogs, and current-status history; do not create a global LLM-maintained log by default.
 - Lint: when reviewing docs health, check for stale claims, broken source links, duplicate source-of-truth paths, and mock/live or security-completion overclaims.
 
@@ -45,7 +45,7 @@ Skip these unless the active issue explicitly links them or the task needs histo
 | Task type | Read after startup | Notes |
 | --- | --- | --- |
 | Docs or work routing | `docs/README.md`, `docs/_meta/README.md`, `docs/_meta/intake-rules.md`, `docs/_meta/documentation-depth-rules.md`, `docs/work/index.md` | Use for new plans, source-of-truth changes, Linear shaping, and closeouts. |
-| Product direction or MVP scope | `docs/product/README.md`, `docs/product/prd/clair-emr-saas-prd.md`, `docs/product/features/legacy-mvp-feature-spec.md`, `docs/product/user-flows/emr-saas-userflow.md` | Humans may use `/prd` as a read-only viewer, but agents should still read the source Markdown paths. |
+| Product direction or MVP scope | `docs/product/README.md`, `docs/product/prd/clair-emr-saas-prd.md`, `docs/product/features/legacy-mvp-feature-spec.md`, `docs/product/user-flows/emr-saas-userflow.md` | Humans may use `/docs` as a read-only viewer, but agents should still read the source Markdown paths. |
 | Role, auth, permission, or workspace policy | `docs/product/domain/workspace-auth-permissions.md`, `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`, `docs/engineering/auth-security/auth-login/README.md`, relevant auth-login status/work-order docs | Do not change role/permission policy without representative approval. |
 | DB, data model, migration, RLS, or persistence | `docs/product/domain/README.md`, `docs/engineering/data-model/README.md`, `docs/engineering/data-model/emr-saas-db-structure-spec.ko.md`, relevant `docs/engineering/auth-security/auth-login/*persistence*` docs, active work item | Scoped synthetic/demo Supabase, migration, RLS, and persistence work may proceed when an active issue includes it. Stop for real data, destructive remote changes, secret/security exposure, or high-cost external effects. |
 | UI or screen work | `docs/design/README.md`, `docs/design/system/DESIGN.md`, `docs/design/reference-screen-index.md`, relevant `docs/design/screens/**` or `docs/design/flows/**`, active screen work item | For Next.js app code, read the relevant `node_modules/next/dist/docs/` guide before coding. |
@@ -83,4 +83,4 @@ Update this map when:
 
 - a new canonical source document is created
 - a new workstream changes startup routing
-- `/prd` viewer registry or human docs entry point changes
+- `/docs` viewer registry or human docs entry point changes

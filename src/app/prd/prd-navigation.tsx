@@ -12,7 +12,7 @@ interface PrdNavigationProps {
 
 export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
   return (
-    <nav aria-label="PRD documents" className="flex min-h-0 flex-1 flex-col">
+    <nav aria-label="CLAiR Docs documents" className="flex min-h-0 flex-1 flex-col">
       <div className={`${styles.scrollFade} min-h-0 flex-1`}>
         <div className={`${styles.scrollArea} h-full overflow-y-auto py-4 pr-1`}>
           <div className="flex flex-col gap-6">
@@ -34,7 +34,7 @@ export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
                             ? "bg-primary font-medium text-primary-foreground"
                             : "text-foreground hover:bg-accent hover:text-accent-foreground"
                         )}
-                        href={`/prd?doc=${encodeURIComponent(doc.slug)}`}
+                        href={`/docs?doc=${encodeURIComponent(doc.slug)}`}
                         key={doc.slug}
                       >
                         {doc.title}

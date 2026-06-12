@@ -31,7 +31,7 @@ function resolveHref(href: string, sourcePath: string): string {
   const slug = normalized ? findDocSlugBySourcePath(normalized) : undefined;
 
   if (slug) {
-    return `/prd?doc=${encodeURIComponent(slug)}`;
+    return `/docs?doc=${encodeURIComponent(slug)}`;
   }
 
   return href;
@@ -66,7 +66,7 @@ function renderInline(text: string, sourcePath: string, keyPrefix: string) {
       const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
       if (linkMatch) {
         const href = resolveHref(linkMatch[2], sourcePath);
-        const isInternal = href.startsWith("/prd");
+        const isInternal = href.startsWith("/docs") || href.startsWith("/prd");
         nodes.push(
           <Link
             className="font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"

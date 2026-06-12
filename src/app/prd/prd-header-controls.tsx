@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation";
 import { SearchIcon } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Command,
@@ -26,7 +27,7 @@ import type { PrdDocEntry } from "@/lib/prd-viewer/registry";
 import styles from "./prd-viewer.module.css";
 
 interface PrdHeaderControlsProps {
-  groups: Array<{ group: string; docs: PrdDocEntry[] }>;
+  groups: Array<{ group: PrdDocEntry["group"]; docs: PrdDocEntry[] }>;
 }
 
 const RECENT_DOCS_STORAGE_KEY = "prd-viewer-recent-docs";
@@ -102,6 +103,7 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [recentDocSlugs, setRecentDocSlugs] = useState<string[]>([]);
+  const initialHtmlDarkClassRef = useRef<boolean | null>(null);
   const isDarkMode = useSyncExternalStore(subscribeThemeChange, getPreferredDarkMode, getServerThemeSnapshot);
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -110,7 +112,16 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
     if (!normalizedQuery) return docs;
 
     return docs.filter((doc) => {
-      const haystack = `${doc.title} ${doc.group} ${doc.sourcePath} ${doc.description ?? ""}`.toLowerCase();
+      const haystack = [
+        doc.title,
+        doc.group,
+        doc.docType,
+        doc.sourcePath,
+        doc.description ?? "",
+        ...(doc.tags ?? []),
+      ]
+        .join(" ")
+        .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
   }, [docs, normalizedQuery]);
@@ -134,7 +145,12 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
   }, [filteredDocs, groups, normalizedQuery]);
 
   useEffect(() => {
+    initialHtmlDarkClassRef.current ??= document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", isDarkMode);
+
+    return () => {
+      document.documentElement.classList.toggle("dark", initialHtmlDarkClassRef.current === true);
+    };
   }, [isDarkMode]);
 
   useEffect(() => {
@@ -169,7 +185,27 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
     window.localStorage.setItem(RECENT_DOCS_STORAGE_KEY, JSON.stringify(nextRecentDocSlugs));
     setIsSearchOpen(false);
     setQuery("");
-    router.push(`/prd?doc=${encodeURIComponent(slug)}`);
+    router.push(`/docs?doc=${encodeURIComponent(slug)}`);
+  }
+
+  function DocCommandContent({ doc, showDescription = false }: { doc: PrdDocEntry; showDescription?: boolean }) {
+    return (
+      <>
+        <span className="text-muted-foreground">→</span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate">{doc.title}</span>
+            <Badge className="shrink-0" variant="outline">
+              {doc.docType}
+            </Badge>
+          </span>
+          {showDescription ? (
+            <span className="truncate text-xs text-muted-foreground">{doc.description ?? doc.sourcePath}</span>
+          ) : null}
+        </span>
+        <span className="ml-auto hidden shrink-0 text-xs text-muted-foreground sm:inline">{doc.group}</span>
+      </>
+    );
   }
 
   return (
@@ -240,10 +276,12 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
                   {filteredGroups.map((group) => (
                     <CommandGroup heading={group.group} key={group.group}>
                       {group.docs.map((doc) => (
-                        <CommandItem key={doc.slug} onSelect={() => openDoc(doc.slug)} value={`${doc.title} ${doc.sourcePath}`}>
-                          <span className="text-muted-foreground">→</span>
-                          <span>{doc.title}</span>
-                          <span className="ml-auto truncate text-xs text-muted-foreground">{doc.sourcePath}</span>
+                        <CommandItem
+                          key={doc.slug}
+                          onSelect={() => openDoc(doc.slug)}
+                          value={`${doc.title} ${doc.docType} ${doc.sourcePath} ${doc.description ?? ""} ${(doc.tags ?? []).join(" ")}`}
+                        >
+                          <DocCommandContent doc={doc} showDescription />
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -254,9 +292,7 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
                   <CommandGroup heading="Pages">
                     {defaultPages.map((doc) => (
                       <CommandItem key={doc.slug} onSelect={() => openDoc(doc.slug)} value={doc.title}>
-                        <span className="text-muted-foreground">→</span>
-                        <span>{doc.title}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">{doc.group}</span>
+                        <DocCommandContent doc={doc} />
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -267,8 +303,13 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
                         {recentDocs.slice(0, 3).map((doc) => (
                           <CommandItem key={doc.slug} onSelect={() => openDoc(doc.slug)} value={`recent ${doc.title}`}>
                             <span className="text-muted-foreground">↳</span>
-                            <span>{doc.title}</span>
-                            <span className="ml-auto text-xs text-muted-foreground">{doc.group}</span>
+                            <span className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className="truncate">{doc.title}</span>
+                              <Badge className="shrink-0" variant="outline">
+                                {doc.docType}
+                              </Badge>
+                            </span>
+                            <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{doc.group}</span>
                           </CommandItem>
                         ))}
                       </CommandGroup>
