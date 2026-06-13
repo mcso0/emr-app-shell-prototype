@@ -228,6 +228,152 @@ last_updated: 2026-06-13
 - Permission or workspace membership details should not be exposed as the primary user-facing message. Detailed causes belong to admin-facing logs, support diagnostics, or developer telemetry.
 - KakaoTalk or external notification sending is deferred. MVP may show internal notification intent only if a later notification spec includes it.
 
+## Reservation Detail Planning V1
+
+This section is the product baseline for 예약 생성, 변경, 취소, 지연, 노쇼 handling. It does not compare against the current implementation; implementation gap review is deferred until other major feature plans are drafted.
+
+### Reservation Creation
+
+예약 생성은 planned visit을 만드는 action이다. It must not create an encounter until the patient is actually checked in.
+
+Required fields:
+
+- patient and guardian context
+- reservation date
+- reservation start time
+- estimated duration
+- visit purpose
+- department
+
+Optional fields:
+
+- assigned veterinarian
+- reception or reservation memo
+- internal caution note reference
+
+Rules:
+
+- 담당 수의사는 미지정으로 둘 수 있다.
+- 예약 시간은 hospital operating hours and veterinarian availability를 우선 참고하되, MVP에서는 hard automation 대신 warning 중심으로 둔다.
+- 같은 환자의 같은 날짜 active appointment or active encounter가 있으면 중복 경고를 보여준다.
+- 중복 경고 후에도 저장이 필요하면 override reason을 받는다.
+- 예약 생성 후 status는 예약확정이다.
+- 예약 생성 success state는 side panel and calendar에서 같은 날짜 기준으로 바로 확인되어야 한다.
+
+### Reservation Update
+
+예약 변경은 보호자 요청, 병원 사정, 담당 수의사 변경, 진료 목적 변경을 반영하는 action이다.
+
+Editable fields:
+
+- reservation date
+- reservation start time
+- estimated duration
+- assigned veterinarian
+- visit purpose
+- department
+- memo
+
+Rules:
+
+- 예약확정 and 지연 states can be updated.
+- 접수완료 appointment는 appointment 자체가 아니라 linked encounter 운영 상태를 기준으로 다룬다.
+- 노쇼 or 취소 상태의 appointment는 바로 수정하지 않고 재예약 action을 통해 새 appointment를 만든다.
+- 날짜나 시간이 바뀌면 calendar and side panel date scope must move the appointment to the new selected date.
+- 변경 전후 값, 변경자, 변경 시각은 audit-ready event data로 남길 수 있어야 한다.
+
+### Cancellation
+
+예약 취소는 planned visit을 더 이상 운영하지 않는 action이다.
+
+Rules:
+
+- 취소는 데스크 직원과 수의사가 수행할 수 있다.
+- 취소 사유는 필수다.
+- 취소된 예약은 기본 운영 목록에서 낮은 우선순위로 보인다.
+- 환자/보호자 이력에서는 취소 이력이 유지되어야 한다.
+- 취소된 예약은 접수 처리 action을 노출하지 않는다.
+- 취소 후 같은 건을 되살리는 대신 재예약을 권장한다.
+
+Recommended cancellation reason options:
+
+- 보호자 요청
+- 보호자 일정 변경
+- 병원 사정
+- 담당 수의사 일정 변경
+- 중복 예약 정리
+- 기타
+
+### Delay
+
+지연은 예약은 유지하지만 원래 예정 시간보다 내원 또는 진료 시작이 늦어지는 상태다.
+
+Rules:
+
+- 지연은 데스크 직원과 수의사가 표시할 수 있다.
+- 지연 사유는 선택 입력으로 둔다.
+- 지연 상태에서는 시간 변경, 접수 처리, 노쇼, 취소가 가능하다.
+- 보호자가 늦게 도착했지만 당일 진료를 유지하면 지연 또는 시간 변경으로 처리한다.
+- 보호자가 날짜를 미루면 예약 변경으로 처리한다.
+- 지연 상태는 오늘 운영 화면에서 예약확정보다 눈에 띄되, 진료대기와 혼동되지 않아야 한다.
+
+### No-show
+
+노쇼는 예약 시간이 지났고 환자/보호자가 내원하지 않은 상태다.
+
+Rules:
+
+- MVP에서는 자동 노쇼 확정이 아니라 수동 노쇼 처리를 기본값으로 둔다.
+- 노쇼는 데스크 직원과 수의사가 처리할 수 있다.
+- 노쇼 사유 또는 메모는 필수다.
+- 노쇼 상태에서는 접수 처리 action을 노출하지 않는다.
+- 노쇼 후 다시 방문 일정을 잡으려면 재예약 action으로 새 appointment를 만든다.
+- 노쇼 이력은 환자/보호자 이력에 남아야 한다.
+
+Recommended no-show reason options:
+
+- 연락 안 됨
+- 보호자 취소 의사 확인
+- 보호자 일정 착오
+- 병원 일정 변경 후 미내원
+- 기타
+
+### Date-scope UX
+
+The selected calendar date is the source of truth for the side-panel list.
+
+| Selected date | Side panel behavior | Primary actions |
+| --- | --- | --- |
+| Today | Shows today's `전체`, `대기`, and `예약` records as the operational workspace. | 현장 접수, 예약 생성, 예약 접수 처리, 지연/노쇼/취소 |
+| Past date | Shows that date's appointment and reception history. It should not read as today's live queue. | 이력 보기, 재예약, 제한된 메모 확인 |
+| Future date | Shows planned appointments for that date. Reception queue is empty unless records already exist. | 예약 생성, 예약 변경, 예약 취소 |
+
+UX requirements:
+
+- Show the selected date near the side-panel list title.
+- Show `오늘로 돌아가기` when selected date is not today.
+- Avoid labels like `오늘 대기` when the selected date is not today.
+- Future dates should emphasize 예약확정 and not imply current waiting queue activity.
+- Past dates should preserve history and avoid mutation-heavy actions except 재예약.
+
+### Appointment Detail Surface
+
+Appointment detail should expose one primary action based on status:
+
+| Status | Primary action | Secondary actions |
+| --- | --- | --- |
+| 예약확정 | 접수 처리 | 예약 변경, 지연 표시, 취소, 노쇼 |
+| 지연 | 접수 처리 | 시간 변경, 취소, 노쇼 |
+| 접수완료 | 진료/차트 보기 | linked encounter 보기 |
+| 노쇼 | 재예약 | 이력 보기 |
+| 취소 | 재예약 | 이력 보기 |
+
+The detail surface must make appointment and encounter different:
+
+- 예약 상세 is about planned visit information.
+- 접수 처리 creates or links the encounter.
+- 접수완료 이후에는 encounter detail becomes the operational source.
+
 ## Product Acceptance Criteria
 
 1. 데스크 직원은 예약 없이 온 환자를 현장 접수하고 진료대기 상태로 올릴 수 있다.

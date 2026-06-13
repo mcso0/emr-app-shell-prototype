@@ -9,6 +9,7 @@ Use this file for small product-planning changes that do not need a standalone d
 - `changed`: Moved Home / 원내 현황 later in the planning order because it summarizes cross-hospital operational work; Reception / 접수 예약 is the next feature-planning area.
 - `added`: Added `docs/product/current-state/reception-appointment-current-state.md` as the implemented reception/appointment screen, route, and workflow inventory before revising the canonical reception feature spec.
 - `changed`: Revised the canonical reception/appointment feature spec so 현장 접수, 예약 생성/변경/취소, and 예약 환자 접수 처리는 all first-class MVP planning scope; the side-panel default is `전체`, calendar date selection drives the list date scope, KakaoTalk delivery is deferred, and service UI copy uses polite Korean.
+- `added`: Added reservation detail planning v1 to the reception/appointment feature spec, covering reservation creation fields, update rules, cancellation reasons, delay/no-show handling, date-scope UX, and appointment-detail primary actions.
 
 ## 2026-06-12
 
