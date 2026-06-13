@@ -56,21 +56,21 @@ Implementation reference:
 - Appointment check-in and walk-in creation have server-route contracts and permission checks, but this document does not claim full production security.
 - Real external messaging is not implemented; KakaoTalk send is simulated UI feedback.
 
-## Planning Gaps To Resolve With 승욱
+## Planning Decisions Captured In Canonical Spec
 
-These are product questions for the next reception planning pass:
+These questions were answered with 승욱 on 2026-06-13 and folded into the canonical [Reception / Appointment Feature Spec](../features/reception-appointment-spec.md):
 
-1. Does reception v1 need one primary mode, or should `대기` and `예약` remain equal first-class modes?
-2. Should appointment creation be a core MVP action now, or should MVP focus on walk-in and appointment check-in first?
-3. What is the exact difference between `진료 접수`, `예약 생성`, and calendar draft task creation in product language?
-4. Which fields are required at reception time: visit purpose, department, veterinarian, duration, weight, memo, guardian phone, consent?
-5. How should duplicate same-day reception be handled: block, warn, or allow with reason?
-6. What are the MVP states for appointment delay, no-show, cancellation, and rebooking?
-7. Should front desk be able to assign and reassign veterinarian after check-in?
-8. Should week/month views be operational MVP surfaces or read-only overview surfaces?
-9. Which reception actions need audit reason entry: cancellation, no-show, veterinarian reassignment, duplicate override, or memo edits?
-10. Which parts of patient/guardian registration belong in reception planning versus customer-management planning?
+1. Reception v1 uses `전체` as the default side-panel tab, with `대기` and `예약` as filters.
+2. 현장 접수, 예약 생성/변경/취소, and 예약 환자 접수 처리는 all first-class MVP planning scope.
+3. Product language should use `진료 접수`, `예약`, and `대기열`; `task` stays an internal implementation term.
+4. Reception required fields are patient/guardian context, visit purpose, department, selected date/time, and duration. Veterinarian assignment can remain 미지정.
+5. Duplicate same-date active reception should warn and require a reason to override.
+6. Appointment states include 예약확정, 지연, 접수완료, 노쇼, and 취소.
+7. Desk staff and veterinarians can perform no-show/delay actions because small hospitals may operate with only veterinarians and desk staff.
+8. Day view is the primary operational surface. Week/month views are overview-first in MVP.
+9. Cancellation, no-show, veterinarian reassignment, and duplicate override need audit-ready event data and reason handling where relevant.
+10. Patient/guardian registration belongs canonically to customer management, while reception owns only the in-flow entry point and handoff.
 
 ## Next Planning Step
 
-Use this current-state inventory to revise the canonical [Reception / Appointment Feature Spec](../features/reception-appointment-spec.md) with 승욱's decisions. Do not run the broad implementation gap review until the other major feature plans are drafted.
+Use the revised canonical [Reception / Appointment Feature Spec](../features/reception-appointment-spec.md) as the product baseline for future implementation gap review. Do not run the broad implementation gap review until the other major feature plans are drafted.
