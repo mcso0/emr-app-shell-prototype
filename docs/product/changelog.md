@@ -6,6 +6,8 @@ Use this file for small product-planning changes that do not need a standalone d
 
 - `changed`: Promoted `docs/product/features/auth/README.md` into the Auth Foundation Planning Index, defining Auth as account, workspace entry, access permission, and member-management foundations.
 - `changed`: Marked the auth implementation gap review as deferred until the other major product-function plans are drafted.
+- `changed`: Moved Home / 원내 현황 later in the planning order because it summarizes cross-hospital operational work; Reception / 접수 예약 is the next feature-planning area.
+- `added`: Added `docs/product/current-state/reception-appointment-current-state.md` as the implemented reception/appointment screen, route, and workflow inventory before revising the canonical reception feature spec.
 
 ## 2026-06-12
 

@@ -75,11 +75,11 @@ The gap review is intentionally deferred until the other major feature plans are
 
 After this Auth foundation set, continue with major product-function planning before doing a broad implementation gap review:
 
-1. Home / 원내 현황
-2. Reception / 접수 예약
-3. Customer, patient, and guardian management
-4. Chart / 진료 차트
-5. Lab, imaging, dispensing, and treatment fulfillment
-6. Billing / 수납
-7. Hospital management beyond auth/member management
+1. Reception / 접수 예약
+2. Customer, patient, and guardian management
+3. Chart / 진료 차트
+4. Lab, imaging, dispensing, and treatment fulfillment
+5. Billing / 수납
+6. Hospital management beyond auth/member management
+7. Home / 원내 현황
 8. Cross-feature implementation gap review

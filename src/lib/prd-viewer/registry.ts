@@ -83,6 +83,15 @@ export const prdDocRegistry = [
     tags: ["auth", "current state"],
   },
   {
+    slug: "reception-appointment-current-state",
+    title: "Reception Appointment Current State",
+    group: "Current State",
+    docType: "Current State",
+    sourcePath: "docs/product/current-state/reception-appointment-current-state.md",
+    description: "Implemented reception and appointment screen, route, and workflow inventory.",
+    tags: ["reception", "appointments", "current state"],
+  },
+  {
     slug: "saas-operating-map",
     title: "SaaS Operating Map",
     group: "Service",

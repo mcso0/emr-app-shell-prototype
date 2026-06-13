@@ -16,6 +16,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Workspace hospital profile: `docs/product/domain/workspace-hospital-profile.md`
 - Auth foundation planning index: `docs/product/features/auth/README.md`
 - Auth current implementation gap review: `docs/product/current-state/auth-current-implementation-gap-review.md`
+- Reception/appointment current-state inventory: `docs/product/current-state/reception-appointment-current-state.md`
 - Auth error and empty state UX spec: `docs/product/features/auth/auth-error-empty-state-ux-spec.md`
 - CLAiR internal operator recovery audit policy: `docs/product/features/auth/clair-internal-operator-recovery-audit-policy-spec.md`
 - Hospital admin member management UX spec: `docs/product/features/auth/hospital-admin-member-management-ux-spec.md`
@@ -28,6 +29,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Session logout policy feature spec: `docs/product/features/auth/session-logout-policy-spec.md`
 - Workspace access guard policy spec: `docs/product/features/auth/workspace-access-guard-policy-spec.md`
 - Hospital profile onboarding feature spec: `docs/product/features/hospital-admin/hospital-profile-onboarding-spec.md`
+- Reception/appointment feature spec: `docs/product/features/reception-appointment-spec.md`
 - Role and permission source map: `docs/product/domain/role-permission-source-map.md`
 - Decision log index: `docs/product/decisions/decision-log-index.md`
 
