@@ -29,19 +29,24 @@ last_updated: 2026-06-13
 
 ### Calendar Board
 
-- 하루 예약과 접수 운영 밀도를 시간 기준으로 보여준다.
+- 선택 날짜의 예약과 접수 운영 밀도를 시간 기준으로 보여준다.
 - day view가 MVP의 기본 운영 화면이다.
-- week/month view는 밀도와 개요 확인용이며, 세부 조작은 day view를 우선한다.
+- week/month view도 예약 생성/변경의 planning surface다. Implementation may phase advanced interactions, but product UX should not force a day-view redirect for every action.
 - 담당 수의사별 lane 또는 filter로 예약/대기 분포를 확인한다.
-- 기본 선택은 오늘 출근일인 수의사 전체다.
-- 수의사 선택 옵션은 스케줄 board의 표시 대상만 바꾼다.
+- 기본 선택은 선택 날짜 출근일인 수의사 전체다.
+- 수의사 선택 옵션은 view 전환과 무관한 전역 calendar filter다.
+- Day view는 선택한 수의사별 lane을 보여주고, week/month view는 선택한 수의사의 일정만 grid/count/preview에 반영한다.
+- `미지정`은 별도 lane, filter option, or compact group으로 보여주되 공간을 과하게 차지하지 않는다.
 - 좌측 진료 대기열/환자 카드 선택 여부는 스케줄 board를 필터링하거나 선택 상태와 연결하지 않는다.
 - 각 schedule card는 상태색 배경 위에 담당 수의사 accent bar를 더해 수의사 배정을 빠르게 구분한다.
 - 동물 이름과 내원 목적을 보호자명/전화번호보다 높은 위계로 표시하고, 반복 목적은 작은 icon label을 병행한다.
 - day view의 현재 시간 line에는 현재 시각 label을 함께 표시한다.
-- 스케줄 운영 toolbar의 registration action은 `환자/보호자 등록`으로 단일화하고, 기존 환자 즉시 접수를 위한 primary `진료 접수`, `더보기`를 함께 배치한다.
-- 빈 시간대는 클릭 또는 드래그로 접수 task 생성 진입점이 된다. Notion Calendar처럼 calendar grid에서 직접 시간대를 선택하지만, 설정 UI는 popover가 아니라 우측 Detail Drawer를 사용한다.
+- 스케줄 운영 toolbar에는 `진료 접수`와 `예약 등록`을 명확한 entry point로 제공한다.
+- 빈 시간대는 클릭 또는 드래그로 접수 또는 예약 생성 진입점이 된다. Notion Calendar처럼 calendar grid에서 직접 시간대를 선택하지만, 설정 UI는 popover가 아니라 우측 Detail Drawer를 사용한다.
 - 생성 시간은 15분 고정 슬롯만 허용한다: `HH:00`, `HH:15`, `HH:30`, `HH:45`.
+- 오늘 현재 시각 이후 또는 미래 날짜 슬롯은 기본 intent가 예약이다.
+- 오늘 현재 시각부터 시작하거나 현재 시각과 겹치는 슬롯은 기본 intent가 접수다.
+- 과거 날짜 slot과 오늘의 이미 지난 slot은 이력 보기 또는 재예약으로 유도하고 직접 접수/예약 생성은 제한한다.
 
 ### Detail Drawer
 
@@ -124,13 +129,13 @@ last_updated: 2026-06-13
 
 ## Primary Flow 3: 하루 캘린더와 대기열 운영
 
-1. 데스크 직원은 day view에서 병원 내 시간대별 예약과 접수 현황을 확인한다.
+1. 데스크 직원은 calendar view에서 병원 내 시간대별 예약과 접수 현황을 확인한다.
 2. 화면 진입 시 기본 날짜는 오늘이고, side panel 기본 탭은 `전체`다.
 3. 날짜를 바꾸면 side panel도 선택 날짜의 접수/예약 records로 바뀐다.
 4. 과거 날짜는 이력처럼 읽히고, 미래 날짜는 예약 중심으로 읽혀야 한다.
-5. 기본적으로 선택 날짜 출근일인 수의사들이 선택되어 있고, 담당 수의사 selector로 표시할 수의사 schedule lane을 조정한다.
+5. 기본적으로 선택 날짜 출근일인 수의사들이 선택되어 있고, 담당 수의사 selector는 view 전환 후에도 유지된다.
 6. 좌측 진료 대기열의 환자 카드 선택은 환자/접수 상세 맥락을 여는 동작이며, 스케줄 표시 대상과 연결하지 않는다.
-7. 데스크 직원은 수의사별 스케줄과 빈 시간대를 확인한 뒤 현장 접수 환자를 배정한다.
+7. 데스크 직원은 수의사별 스케줄과 빈 시간대를 확인한 뒤 현장 접수 또는 예약 등록을 시작한다.
 8. 미지정 대기 환자를 확인하고 필요 시 담당 수의사를 지정한다.
 9. 접수완료/진료대기 환자를 진료팀이 확인할 수 있는 상태로 유지한다.
 10. 진료 화면으로 이동해도 같은 encounter context가 보존된다.
@@ -144,7 +149,44 @@ last_updated: 2026-06-13
 - 예약확정 card의 `접수 처리` action은 card background와 충분히 대비되는 solid button으로 표시한다.
 - 오늘 운영 흐름에서 취소/노쇼는 주요 대기보다 낮은 시각적 우선순위를 가진다.
 - 좌측 환자 카드 선택 강조와 스케줄 card 강조는 별개의 상태로 다룬다.
-- Existing task drag/drop schedule editing remains deferred until appointment mutation behavior is scoped. New session-only task creation by clicking or dragging empty time ranges is in scope for the calendar creation UX.
+- 수의사 filter가 걸려 일정이 없으면 `선택한 수의사의 일정이 없습니다` empty state를 보여준다.
+- Existing drag/drop schedule mutation can be implemented later, but product UX should reserve the interaction model for future direct schedule editing.
+
+## Calendar View Interaction Rules
+
+### Day View
+
+- Shows selected veterinarian lanes.
+- Multiple selected veterinarians render multiple lanes.
+- `미지정` can appear as a compact separate lane or group.
+- Empty slots can start 접수 or 예약 creation.
+- Selecting a card opens appointment or encounter detail.
+
+### Week View
+
+- Shows a weekly time grid filtered by selected veterinarians.
+- It does not split every day into veterinarian lanes.
+- Empty future slots can start 예약 등록.
+- Today or current-time slots can start 접수 when clinically appropriate.
+- Selecting a card opens detail without forcing a day-view redirect.
+
+### Month View
+
+- Shows monthly count, density, and short preview for selected veterinarians.
+- Date cells can start 예약 등록 or open a focused reservation creation surface.
+- Dense details should open in a sheet/drawer rather than overloading the month cell.
+- Month view should not imply live waiting queue operation.
+
+### Calendar Card States
+
+| 상태 | 카드 표시 |
+| --- | --- |
+| 예약확정 | `예약` badge, neutral card, veterinarian accent bar |
+| 지연 | `지연` badge, stronger emphasis than 예약확정 |
+| 접수완료 / 진료대기 | `접수완료` or `대기` badge, active-operation treatment |
+| 진료중 | `진료중` badge, active clinical treatment |
+| 노쇼 | `노쇼` badge, muted lower-priority card |
+| 취소 | `취소` badge, faded or muted card |
 
 ## Secondary Flow 4: 예약 생성/변경/취소
 

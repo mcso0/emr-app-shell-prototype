@@ -18,6 +18,32 @@ last_updated: 2026-06-13
 
 현재 구현된 Sales Demo Prototype 흐름을 제품 MVP 수준으로 보강하되, 당장 live DB/API persistence를 구현하지는 않는다. 다만 스펙은 이후 DB/API 전환을 염두에 둔 상태 모델과 데이터 경계를 기준으로 작성한다.
 
+## Reception And Appointment Definitions
+
+예약은 미래 또는 예정된 내원 약속이다. 아직 환자가 병원에 온 것은 아니고, 특정 날짜/시간에 방문하기로 계획된 상태다.
+
+접수는 환자가 실제로 병원에 도착해서 오늘 진료 업무로 들어온 상태다. 접수되는 순간 예약은 운영 업무로 전환되고, 환자는 대기열이나 진료 흐름에 들어간다.
+
+One-line definition:
+
+> 예약은 진료를 받기로 한 약속이고, 접수는 환자가 실제로 병원에 도착해 진료 업무가 시작되는 시점이다.
+
+Examples:
+
+- 보호자가 전화로 `내일 오전 10시에 진료받고 싶어요`라고 하면 예약이다.
+- 보호자가 환자와 함께 병원에 도착해서 데스크에서 확인하면 접수다.
+- 예약 없이 바로 방문해서 데스크에서 등록하면 현장 접수다.
+- 예약한 환자가 도착해서 확인하면 예약 접수 처리다.
+
+| 구분 | 예약 | 접수 |
+|---|---|---|
+| 의미 | 예정된 방문 약속 | 실제 내원 후 운영 시작 |
+| 시간 | 미래 또는 오늘의 예정 시간 | 도착 이후 현재 업무 |
+| 핵심 객체 | Appointment | Encounter / Queue |
+| 주요 상태 | 예약확정, 변경, 취소, 노쇼 | 진료대기, 진료중, 수납대기, 완료 |
+| 주 사용자 | 데스크, 보호자 응대 | 데스크, 수의사, 진료팀 |
+| 결과 | 예약 목록과 캘린더에 표시 | 대기열과 진료 흐름에 진입 |
+
 ## Planning Decisions
 
 - Product target: Product MVP 보강.
@@ -66,7 +92,8 @@ last_updated: 2026-06-13
 - automated scheduling optimization.
 - 입원 화면 또는 full 병원관리 화면.
 - 조제/처치 화면 디자인 변경.
-- Week/month view에서의 고급 편집, drag/drop 재배정, 자동 리마인더, 예약 대기자 자동 배정.
+- automatic reminder delivery and waitlist auto-assignment.
+- production implementation of drag/drop or resize-based appointment mutation unless separately scoped. Product planning still defines that calendar interactions should exist.
 
 ## Core Objects
 
@@ -118,12 +145,14 @@ last_updated: 2026-06-13
 
 병원 내 접수/예약 운영 스케줄을 보여주는 표시 단위다.
 
-- 기본 선택 대상은 오늘 출근일인 수의사 전체다.
-- 수의사 선택 옵션은 스케줄에 표시할 수의사 lane 또는 calendar scope를 바꾸는 control이다.
+- 기본 목적은 오늘 일자의 병원 접수, 예약, 대기 상태를 시간표로 확인하는 것이다.
+- 기본 선택 대상은 선택 날짜 출근일인 수의사 전체다.
+- 수의사 선택 옵션은 view 전환과 무관한 전역 캘린더 필터다.
 - 좌측 진료 대기열/환자 카드의 선택 여부는 스케줄 영역을 필터링하거나 연결하지 않는다.
 - 데스크 직원은 스케줄 영역에서 수의사별 예약/접수 현황과 빈 시간대를 확인한 뒤, 현장 접수 환자를 적절한 시간대 또는 담당 수의사로 배정한다.
-- 스케줄 운영 toolbar는 schedule controls 뒤에 divider를 두고, 업무 action을 `환자 등록`, `보호자 등록`, primary `접수`, `더보기` 순서로 제공한다.
-- Day view empty time slots can create session-only reception tasks by click or drag. The interaction must snap to exact 15-minute boundaries only: `HH:00`, `HH:15`, `HH:30`, and `HH:45`. The creation surface is the CLAiR right drawer, not a calendar popover.
+- 스케줄 운영 toolbar는 calendar controls와 업무 action을 분리해 보여준다.
+- Header-level primary entry points are `진료 접수` and `예약 등록`.
+- Calendar empty slots can start reception or reservation creation by click or drag. The interaction must snap to exact 15-minute boundaries only: `HH:00`, `HH:15`, `HH:30`, and `HH:45`. The creation surface is the CLAiR right drawer, not a calendar popover.
 
 ## State Model
 
@@ -200,7 +229,7 @@ last_updated: 2026-06-13
 9. 좌측 환자 카드 선택은 환자 상세/접수 맥락 선택이며, 스케줄 board의 표시 범위와 직접 연결하지 않는다.
 10. 데스크 직원은 스케줄의 빈 시간대와 수의사별 부하를 보고 현장 접수 환자를 배정한다.
 11. 접수 완료된 환자는 진료 화면에서 같은 encounter 맥락으로 이어진다.
-12. Day view의 빈 시간대는 15분 경계로만 신규 접수 또는 예약 생성의 진입점이 될 수 있다. Week/month view는 MVP에서 조회 중심으로 둔다.
+12. Day, week, and month views all support calendar-based reservation and reception entry points in product planning. Implementation may phase this by view, but the product behavior should be planned as editable calendar surfaces.
 
 ### 5. 노쇼/지연/상태 관리
 
@@ -227,6 +256,165 @@ last_updated: 2026-06-13
 - Calendar loading failure copy: `예약 일정을 불러오지 못했습니다.`
 - Permission or workspace membership details should not be exposed as the primary user-facing message. Detailed causes belong to admin-facing logs, support diagnostics, or developer telemetry.
 - KakaoTalk or external notification sending is deferred. MVP may show internal notification intent only if a later notification spec includes it.
+
+## Calendar Planning V1
+
+The calendar exists inside the 접수/예약 screen. Its primary job is to let staff review the selected date's hospital reception, appointment, and schedule state, then create or adjust reservations and receptions from that time-based context.
+
+### Calendar Purpose
+
+- The calendar is the time-based operating surface for reception and appointment work.
+- The side panel is the list surface for the selected date's 접수 and 예약 records.
+- The calendar and side panel share date scope, but selecting a side-panel row does not filter calendar lanes.
+- The calendar should make today's operational state easy to see while also supporting future appointment planning.
+
+### Header Entry Points
+
+The calendar header provides two explicit entry points:
+
+- `진료 접수`: starts a reception flow.
+- `예약 등록`: starts an appointment creation flow.
+
+Rules:
+
+- `진료 접수` creates or prepares an encounter-oriented reception flow.
+- `예약 등록` creates an appointment and does not create an encounter until check-in.
+- Both entry points use the same core patient/guardian, department, veterinarian, time, duration, purpose, and memo inputs where applicable.
+- The current implementation may use different modal/drawer surfaces, but product planning treats their input model as aligned.
+
+### Empty Slot Behavior
+
+Clicking or dragging an empty calendar slot creates a time-scoped draft.
+
+Rules:
+
+- Time selection snaps to 15-minute boundaries.
+- Click defaults to the smallest allowed slot duration.
+- Drag creates an explicit range such as `10:00-12:00`.
+- If the selected slot starts at the current time or overlaps the current time on today's date, the default intent is 접수.
+- If the selected slot starts after the current time or on a future date, the default intent is 예약.
+- The user can still choose between 접수 and 예약 when the intent is ambiguous.
+- Past-date slots, including earlier slots on today, do not create new 접수 or 예약 directly; they should guide users to history or rebooking.
+
+### View Behavior
+
+| View | Product role | Editing behavior |
+| --- | --- | --- |
+| Day | Main operational view for today's reception and appointment state. | Create 접수 or 예약 from slots, select cards, process check-in, update appointment via detail. |
+| Week | Weekly schedule planning view. | Create or update reservations from weekly time slots; selecting a day/time should not force a day-view redirect. |
+| Month | Monthly schedule planning and density view. | Create appointments from date cells and inspect counts/previews; detailed time selection can open a focused reservation surface. |
+
+Rules:
+
+- Day, week, and month are all planning-capable calendar views.
+- Implementation can phase advanced interactions, but the product spec should not define week/month as read-only.
+- Drag-to-reschedule and resize-to-change-duration are future interaction enhancements, not required for the first implementation pass.
+- Reservation detail remains the safer place for final mutation confirmation.
+
+### Veterinarian Filter
+
+The veterinarian filter is a global calendar filter independent of view.
+
+| View | Veterinarian filter behavior |
+| --- | --- |
+| Day | Shows selected veterinarian lanes. Multiple selected veterinarians render multiple lanes. `미지정` can appear as a compact separate lane or option. |
+| Week | Shows only schedules for selected veterinarians inside the weekly grid; it does not split the grid into veterinarian lanes. |
+| Month | Aggregates counts and previews for selected veterinarians across the month. |
+
+Rules:
+
+- Switching between `일`, `주`, and `월` must preserve selected veterinarian filters.
+- If no veterinarian is selected, default to all veterinarians.
+- `미지정` is a separate filter option or toggle.
+- The filter summary should remain visible, such as `이수지 외 1명` or `수의사 2명 선택`.
+- Empty states should explain filter impact: `선택한 수의사의 일정이 없습니다.`
+
+### Unassigned Lane
+
+- `미지정` should be visible without consuming too much space.
+- Day view can show `미지정` as a compact lane or grouped section.
+- Week/month should include unassigned appointments when `미지정` is selected or when all veterinarians are shown.
+- `미지정` must not look like missing data.
+
+### Calendar Card Content
+
+Calendar cards should show only the information needed for scanning.
+
+Minimum content:
+
+- patient name
+- guardian name
+- visit purpose
+- status badge
+- assigned veterinarian or `미지정`
+- start time and duration when space allows
+
+Priority:
+
+1. patient name
+2. appointment/reception status
+3. time
+4. visit purpose
+5. guardian and veterinarian context
+
+### Status Card Treatment
+
+| Status | Meaning | Card treatment |
+| --- | --- | --- |
+| 예약확정 | Planned appointment; patient has not arrived. | `예약` badge, neutral card, veterinarian accent bar. |
+| 지연 | Appointment is late or delayed. | `지연` badge, more noticeable emphasis than 예약확정. |
+| 접수완료 / 진료대기 | Patient arrived and is in operational queue. | `접수완료` or `대기` badge, active-operation treatment. |
+| 진료중 | Veterinarian started care. | `진료중` badge, active clinical treatment. |
+| 노쇼 | Appointment did not arrive. | `노쇼` badge, lower priority and muted appearance. |
+| 취소 | Appointment was cancelled. | `취소` badge, muted or faded appearance. |
+
+Rules:
+
+- Do not rely on color alone. Use badge labels.
+- Use a thin accent bar for veterinarian or assignment context.
+- Cancelled and no-show cards should not visually compete with active operational work.
+- Delayed cards should be more noticeable than normal appointments, but not confused with emergency triage.
+
+### Calendar Card Actions
+
+- Selecting a card opens appointment or encounter detail.
+- 예약확정 card detail offers `접수 처리`.
+- 접수완료 or 진료대기 card detail links to encounter or chart context.
+- 취소 and 노쇼 cards offer history and rebooking rather than check-in.
+- Direct drag-based time changes are planned as future interaction support; detail-based editing remains the reliable path.
+
+### Date State Rules
+
+| Date state | Calendar behavior | Allowed actions |
+| --- | --- | --- |
+| Today | Shows operational reception and appointment state. | 진료 접수, 예약 등록, 접수 처리, 예약 변경/취소, 지연/노쇼 |
+| Future | Shows planned appointments and available slots. | 예약 등록, 예약 변경, 예약 취소 |
+| Past | Shows historical appointment and reception records. | 이력 보기, 재예약 |
+
+Rules:
+
+- Today is the default date.
+- A non-today date must show a clear date label and `오늘로 돌아가기`.
+- Future dates should not imply a live waiting queue.
+- Past dates should not allow normal check-in or direct mutation-heavy actions.
+
+### Blocked Time
+
+Blocked time includes lunch, closed hours, veterinarian unavailable time, and hospital closure.
+
+Rules:
+
+- Blocked slots are visibly inactive.
+- Clicking a blocked slot should explain the reason, such as `예약할 수 없는 시간입니다.`
+- Staff may need an override path later, but it is not part of the default planning baseline.
+
+### Mobile Calendar
+
+- Mobile uses day view as the main usable calendar surface.
+- Veterinarian selection should be controlled through a compact selector/filter, not many side-by-side lanes.
+- Week/month on mobile should prioritize navigation, counts, and date selection before dense editing.
+- Selecting a card opens a full-height sheet.
+- Creating from a slot opens the same appointment/reception form model as desktop.
 
 ## Reservation Detail Planning V1
 
@@ -574,7 +762,12 @@ Mode rules:
 10. 노쇼와 취소는 데스크 직원과 수의사가 처리할 수 있고, 사유 입력이 필수다.
 11. 지연은 데스크 직원과 수의사가 처리할 수 있고, 시간 변경 또는 접수 처리로 해소된다.
 12. 같은 환자의 선택 날짜 active encounter가 있으면 중복 경고를 보여주고, override 시 사유를 받는다.
-13. 상태 변경은 이후 audit log와 DB/API persistence로 연결 가능한 이벤트 정보를 남길 수 있어야 한다.
+13. `진료 접수`와 `예약 등록`은 calendar header의 명확한 entry point로 제공된다.
+14. Calendar empty slot click/drag는 선택 시간에 따라 접수 또는 예약 의도를 기본값으로 제안한다.
+15. Day, week, and month views preserve veterinarian filter state across view changes.
+16. Week and month views are planning-capable calendar views, though advanced direct mutations can be phased in later.
+17. Calendar cards distinguish 예약확정, 지연, 접수완료/진료대기, 진료중, 노쇼, 취소 with labels and visual priority, not color alone.
+18. 상태 변경은 이후 audit log와 DB/API persistence로 연결 가능한 이벤트 정보를 남길 수 있어야 한다.
 
 ## Data And API Planning Notes
 
@@ -584,6 +777,8 @@ Mode rules:
 - Appointment check-in creates an encounter linked to the appointment.
 - Appointment creation, update, cancellation, delay, and no-show are first-class reception/appointment API concepts, not backlog-only concepts.
 - Queue and appointment reads must accept a date scope. Today is the default, but the UI must be able to request past and future dates.
+- Calendar reads should accept veterinarian filter scope and include unassigned records when requested.
+- Calendar card payloads should distinguish appointment status from encounter/queue status.
 - The UI may use mock/session-only state until persistence work is explicitly scoped.
 - Later API boundaries should provide reads for today appointments, effective encounters, queue rows, and patient/guardian search.
 - Later write boundaries should cover create appointment, update appointment, cancel appointment, mark no-show, check-in appointment, create walk-in encounter, assign veterinarian, and update queue status.

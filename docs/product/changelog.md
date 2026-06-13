@@ -11,6 +11,7 @@ Use this file for small product-planning changes that do not need a standalone d
 - `changed`: Revised the canonical reception/appointment feature spec so 현장 접수, 예약 생성/변경/취소, and 예약 환자 접수 처리는 all first-class MVP planning scope; the side-panel default is `전체`, calendar date selection drives the list date scope, KakaoTalk delivery is deferred, and service UI copy uses polite Korean.
 - `added`: Added reservation detail planning v1 to the reception/appointment feature spec, covering reservation creation fields, update rules, cancellation reasons, delay/no-show handling, date-scope UX, and appointment-detail primary actions.
 - `added`: Detailed the reservation detail screen structure, modes, mobile behavior, and UX flow so appointment detail, check-in confirmation, edit, cancellation, no-show, and rebooking surfaces have a shared planning baseline.
+- `added`: Added reception/appointment definitions and calendar planning v1, including header entry points, empty-slot behavior, day/week/month behavior, veterinarian filter persistence, unassigned handling, calendar card content, state treatment, blocked time, and mobile calendar rules.
 
 ## 2026-06-12
 
