@@ -173,6 +173,15 @@ export const prdDocRegistry = [
     tags: ["features", "template"],
   },
   {
+    slug: "auth-foundation-planning-index",
+    title: "Auth Foundation Planning Index",
+    group: "Features",
+    docType: "Feature",
+    sourcePath: "docs/product/features/auth/README.md",
+    description: "Auth planning map for account, workspace entry, access permission, and member-management foundations.",
+    tags: ["auth", "planning"],
+  },
+  {
     slug: "invite-email-delivery-recovery-policy-spec",
     title: "Invite Email Delivery Recovery Policy Spec",
     group: "Features",

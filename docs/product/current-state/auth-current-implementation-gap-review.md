@@ -1,9 +1,11 @@
 # Auth Current Implementation Gap Review
 
-Status: draft  
-Updated: 2026-06-12
+Status: deferred
+Updated: 2026-06-13
 
 This document compares the current implemented auth/workspace/member surfaces against the current product planning docs. It is a current-state review, not a product source of truth.
+
+This review is intentionally deferred as a full planning activity until the other major product-function plans are drafted. Keep it as a lightweight auth-specific reference for now; do not treat it as the final cross-product gap review.
 
 Source docs:
 
@@ -46,14 +48,15 @@ The current prototype already has useful foundations for login, invite acceptanc
 
 ## Recommended Next Review
 
-After the remaining auth planning docs are approved, review current screens in a fixed-stage flow and create implementation work items for:
+After the other major product-function plans are drafted, review current screens in a fixed-stage flow and create implementation work items for:
 
 1. customer-facing login/invite UX cleanup
 2. hospital-admin member management UX alignment
 3. workspace access guard enforcement
 4. invite delivery/recovery implementation
 5. password reset/account recovery implementation
+6. cross-feature gaps for home, reception, customer/patient, chart, fulfillment, billing, and hospital management
 
 ## Questions For 승욱
 
-Questions that require product-owner answers should be collected from the auth planning specs after this review, not answered in this current-state document.
+Auth-specific product-owner questions from the initial planning pass have been resolved in the auth feature specs. Future questions should be collected after the broader feature plans exist.

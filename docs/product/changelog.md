@@ -2,6 +2,11 @@
 
 Use this file for small product-planning changes that do not need a standalone decision record.
 
+## 2026-06-13
+
+- `changed`: Promoted `docs/product/features/auth/README.md` into the Auth Foundation Planning Index, defining Auth as account, workspace entry, access permission, and member-management foundations.
+- `changed`: Marked the auth implementation gap review as deferred until the other major product-function plans are drafted.
+
 ## 2026-06-12
 
 - `changed`: Clarified the product login and onboarding baseline: CLAiR operations creates hospital workspaces, first hospital admins enter through invite links, staff join through workspace invitations, and returning users sign in with email and password.

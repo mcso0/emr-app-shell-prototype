@@ -14,6 +14,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - EMR domain entity map: `docs/product/domain/emr-domain-entity-map.md`
 - Workspace auth and permissions: `docs/product/domain/workspace-auth-permissions.md`
 - Workspace hospital profile: `docs/product/domain/workspace-hospital-profile.md`
+- Auth foundation planning index: `docs/product/features/auth/README.md`
 - Auth current implementation gap review: `docs/product/current-state/auth-current-implementation-gap-review.md`
 - Auth error and empty state UX spec: `docs/product/features/auth/auth-error-empty-state-ux-spec.md`
 - CLAiR internal operator recovery audit policy: `docs/product/features/auth/clair-internal-operator-recovery-audit-policy-spec.md`

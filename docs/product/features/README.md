@@ -6,6 +6,7 @@ Use feature specs when a user-facing capability needs requirements and acceptanc
 
 Current feature specs:
 
+- `docs/product/features/auth/README.md`
 - `docs/product/features/auth/auth-error-empty-state-ux-spec.md`
 - `docs/product/features/auth/clair-internal-operator-recovery-audit-policy-spec.md`
 - `docs/product/features/auth/hospital-admin-member-management-ux-spec.md`
