@@ -48,6 +48,16 @@ last_updated: 2026-06-13
 - 예약 또는 접수 항목을 선택했을 때 열리는 상세 확인 영역.
 - 보호자/환자, 방문 목적, 예약/접수 시각, 담당 수의사, 상태, 메모를 확인한다.
 - 상태에 따라 주요 액션을 하나만 강하게 노출한다.
+- 예약 상세는 appointment를 확인하는 화면이고, 접수완료 이후의 운영 기준은 linked encounter다.
+- Desktop에서는 우측 drawer, mobile에서는 full-height sheet로 동작한다.
+- 예약 상세의 정보 위계는 status header, 환자/보호자 요약, 예약 시간/담당의, 방문 목적/메모, linked encounter, 변경 이력, sticky action footer 순서다.
+- Header에는 예약 상태, 예약 일시, 예상 소요 시간, 담당의 지정/미지정, primary action을 노출한다.
+- `예약확정`과 `지연` 상태에서는 `접수 처리`가 primary action이다.
+- `접수완료` 상태에서는 `진료/차트 보기`가 primary action이고, appointment edit보다 encounter context를 우선한다.
+- `노쇼`와 `취소` 상태에서는 `재예약`이 primary action이다.
+- 예약 변경, 지연 표시, 노쇼 처리, 예약 취소는 secondary action으로 둔다.
+- 취소와 노쇼는 confirmation surface에서 사유 또는 메모를 받는다.
+- Mobile에서는 footer에 primary button 하나를 유지하고, secondary actions는 menu로 접는다.
 
 ### Registration Quality
 
@@ -144,6 +154,29 @@ last_updated: 2026-06-13
 4. 기존 예약 상세에서 시간, 담당 수의사, 방문 목적, 메모를 변경할 수 있다.
 5. 예약 취소 시 취소 사유를 남긴다.
 6. 취소된 예약은 운영 목록에서 낮은 우선순위로 유지되며 환자/보호자 이력에서 확인된다.
+
+### Reservation Detail UI Flow
+
+1. 사용자가 side panel reservation row 또는 calendar reservation card를 선택한다.
+2. Reservation Detail Drawer가 열린다.
+3. Header에서 예약 상태와 primary action을 확인한다.
+4. Staff가 환자/보호자 요약을 확인한다.
+5. 예약 일시, 담당의, 진료과, 방문 목적, 메모를 확인한다.
+6. 필요하면 `예약 변경`으로 edit mode에 들어간다.
+7. 변경 중 drawer를 닫으려 하면 dirty-state confirmation을 보여준다.
+8. `접수 처리`를 선택하면 check-in confirmation으로 전환한다.
+9. 중복 active encounter가 있으면 warning과 override reason을 받는다.
+10. 접수 처리 후 appointment는 접수완료가 되고 linked encounter context로 이어진다.
+
+### Reservation Detail Required UI Feedback
+
+- 예약 상세 header는 현재 status와 selected date context를 함께 보여준다.
+- 담당의가 없으면 빈 값이 아니라 `담당의 미지정`으로 표시한다.
+- appointment와 encounter를 같은 카드처럼 보이게 하지 않는다.
+- 취소/노쇼/재예약은 현재 상태에 맞는 action만 보여준다.
+- 불가능한 action을 disabled로 길게 늘어놓지 말고 숨기거나 unavailable reason으로 설명한다.
+- 변경 이력은 접힌 상태로 제공하되, 취소/노쇼/지연 사유는 쉽게 확인 가능해야 한다.
+- Mobile sheet에서는 header와 footer가 sticky여야 한다.
 
 ## Secondary Flow 5: 노쇼/지연/상태 관리
 

@@ -374,6 +374,192 @@ The detail surface must make appointment and encounter different:
 - 접수 처리 creates or links the encounter.
 - 접수완료 이후에는 encounter detail becomes the operational source.
 
+### Reservation Detail Screen Structure
+
+예약 상세 화면은 appointment를 확인하고 필요한 운영 action을 수행하는 surface다. Desktop에서는 우측 Detail Drawer를 기본으로 하고, mobile에서는 full-height sheet로 동작한다.
+
+Recommended information hierarchy:
+
+1. Status header
+2. Patient and guardian summary
+3. Reservation schedule and assignment
+4. Visit purpose and memo
+5. Linked encounter or reception state
+6. Change history and audit-ready events
+7. Sticky action footer
+
+#### 1. Status Header
+
+The top area answers what this reservation is and what can be done now.
+
+Show:
+
+- appointment status badge: 예약확정, 지연, 접수완료, 노쇼, 취소
+- reservation date and start time
+- estimated duration
+- assigned veterinarian label or `담당의 미지정`
+- one primary action based on status
+
+Rules:
+
+- The primary action should be visually stronger than secondary actions.
+- Use `접수 처리` only when the appointment can still become an encounter.
+- If selected date is not today, show the selected date context near the header so the user does not mistake it for today's live queue.
+
+#### 2. Patient And Guardian Summary
+
+This section lets reception staff confirm that they are handling the right patient and guardian before changing or checking in the appointment.
+
+Show:
+
+- patient name
+- species, breed, sex/neuter state, age when available
+- guardian name
+- guardian phone
+- patient caution summary when available
+- link to patient or guardian detail
+
+Rules:
+
+- Patient name has the highest visual priority in this section.
+- Guardian phone is shown for operational confirmation, not as a primary title.
+- Detailed patient/guardian editing belongs to customer management. Reservation detail can link out or open the relevant profile surface.
+
+#### 3. Reservation Schedule And Assignment
+
+This section shows the planned visit slot.
+
+Show:
+
+- reservation date
+- start time
+- estimated duration
+- department
+- assigned veterinarian
+- created source when useful: desk-created, phone-created, imported, or internal
+
+Editable in `예약확정` or `지연`:
+
+- date
+- start time
+- duration
+- department
+- assigned veterinarian
+
+Rules:
+
+- Date/time changes must clearly show where the appointment will move.
+- If the new time conflicts with another active appointment, show a warning and require an override reason to continue.
+- If the assigned veterinarian is unavailable, warn but do not hard-block in MVP.
+
+#### 4. Visit Purpose And Memo
+
+This section explains why the patient is coming in.
+
+Show:
+
+- visit purpose
+- reservation memo
+- internal reception memo
+- last related visit summary when available
+
+Editable in `예약확정` or `지연`:
+
+- visit purpose
+- reservation memo
+- internal reception memo
+
+Rules:
+
+- Clinical diagnosis, SOAP, or final medical judgment does not belong in reservation detail.
+- Internal memo should be visibly staff-only when that distinction exists.
+
+#### 5. Linked Encounter Or Reception State
+
+This section appears when the appointment has been checked in or otherwise linked to operational care work.
+
+Show when `접수완료`:
+
+- linked encounter id or display label
+- checked-in time
+- queue status
+- current assigned veterinarian
+- link to chart or encounter detail
+
+Rules:
+
+- After check-in, the encounter becomes the operational source for care workflow.
+- Appointment edits should be limited after check-in; operational changes belong to encounter or queue handling.
+
+#### 6. Change History
+
+This section is compact by default and expandable.
+
+Show:
+
+- created time and actor
+- latest update time and actor
+- cancellation/no-show/delay reason when applicable
+- important changes such as time change, veterinarian reassignment, duplicate override
+
+Rules:
+
+- History is not the primary work area, but it must be available for accountability.
+- Long audit details can be deferred to admin/audit surfaces later.
+
+#### 7. Sticky Action Footer
+
+Actions should stay reachable without forcing staff to scroll to the top.
+
+Primary action by status:
+
+- 예약확정: `접수 처리`
+- 지연: `접수 처리`
+- 접수완료: `진료/차트 보기`
+- 노쇼: `재예약`
+- 취소: `재예약`
+
+Secondary actions:
+
+- 예약 변경
+- 지연 표시
+- 노쇼 처리
+- 예약 취소
+- 이력 보기
+
+Rules:
+
+- Destructive or irreversible actions such as 취소 and 노쇼 require confirmation and a reason.
+- Do not show disabled action clutter when an action is impossible; hide it or move it to an explanatory unavailable state.
+- On mobile, footer actions collapse into one primary button plus a secondary actions menu.
+
+### Reservation Detail Modes
+
+| Mode | Purpose | Entry | Exit |
+| --- | --- | --- | --- |
+| View | Confirm appointment and choose an action. | Appointment card, calendar card, search result | Close drawer/sheet |
+| Edit | Change schedule, assignment, purpose, or memo. | `예약 변경` | Save, cancel, or dirty-state confirmation |
+| Check-in confirmation | Confirm appointment before creating encounter. | `접수 처리` | Check in, cancel |
+| Cancel confirmation | Capture cancellation reason. | `예약 취소` | Confirm cancellation, cancel |
+| No-show confirmation | Capture no-show reason or memo. | `노쇼 처리` | Confirm no-show, cancel |
+| Rebook | Create a new appointment from cancelled/no-show history. | `재예약` | Save new appointment, cancel |
+
+Mode rules:
+
+- Edit mode should preserve the read-only summary context so staff know which patient/guardian they are editing.
+- Dirty edit state must warn before closing.
+- Check-in confirmation should show any duplicate active encounter warning before creating the encounter.
+- Rebook creates a new appointment and keeps the old no-show/cancelled appointment as history.
+
+### Mobile Behavior
+
+- Reservation detail opens as a full-height sheet.
+- Header and footer remain sticky.
+- Patient/guardian summary appears above editable schedule fields.
+- Secondary actions collapse behind a menu.
+- Long history is collapsed by default.
+- Form labels remain visible; do not rely on placeholder-only fields.
+
 ## Product Acceptance Criteria
 
 1. 데스크 직원은 예약 없이 온 환자를 현장 접수하고 진료대기 상태로 올릴 수 있다.
