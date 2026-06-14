@@ -416,6 +416,45 @@ Rules:
 - Selecting a card opens a full-height sheet.
 - Creating from a slot opens the same appointment/reception form model as desktop.
 
+## Exception Handling V1
+
+This section defines reception/appointment exception behavior before implementation gap review. The main principle is to preserve appointment and encounter history instead of overwriting past operational records.
+
+### Exception Handling Principles
+
+1. 예약과 접수는 섞지 않는다. 예약 변경은 Appointment 변경이고, 실제 도착 이후 문제는 Encounter / Queue 기준으로 처리한다.
+2. 중복 가능성은 완전 차단보다 warning and reason-based override를 기본값으로 둔다. 병원 현장에는 예외가 많기 때문이다.
+3. 과거 기록은 덮어쓰지 않는다. 노쇼 후 도착, 과거 예약 접수, 접수 후 취소 같은 케이스는 이력을 유지하고 새 접수, 재예약, encounter 취소로 처리한다.
+4. 수의사 미지정은 정상 운영 상태다. 빈 값이 아니라 별도 group/filter/lane으로 관리한다.
+5. 실패와 충돌은 중복 생성 방지가 핵심이다. 재시도 전에 최신 상태를 먼저 재조회한다.
+
+### Exception Case Table
+
+| Exception case | Recommended handling |
+| --- | --- |
+| 보호자가 예약 시간보다 일찍 도착 | 접수 가능. 기존 예약 시간은 유지하고 실제 접수 시각은 별도 기록한다. 대기열은 접수 시각 기준으로 표시한다. |
+| 보호자가 예약 시간보다 늦게 도착 | `지연` 상태로 표시한다. 진료 가능하면 접수 처리하고, 어렵다면 예약 시간 변경 또는 재예약으로 유도한다. |
+| 환자 검색 결과 오늘 예약이 이미 있음 | 기본은 기존 예약을 접수 처리하도록 유도한다. 별도 현장 접수가 필요하면 중복 경고 후 사유를 입력받는다. |
+| 한 보호자가 여러 환자를 데려옴 | 보호자는 공유하되 환자별로 개별 접수/예약을 만든다. Encounter는 환자별로 분리한다. |
+| 같은 시간대에 여러 환자 동시 예약 | 허용한다. 같은 보호자와 같은 시간대면 grouped reservation처럼 묶어 보여줄 수 있으나, appointment/encounter는 환자별로 유지한다. |
+| 담당 수의사가 갑자기 unavailable | 해당 수의사 일정에 warning을 표시하고, 다른 수의사 재배정 또는 `미지정` 전환을 제공한다. |
+| 점심시간 또는 진료 종료 직전 접수 요청 | 기본은 warning이다. 병원 운영 정책상 가능하면 override reason을 받고 진행한다. |
+| 예약 변경 중 다른 사용자가 먼저 수정 | 저장 시 conflict 안내를 보여준다. 최신 정보를 다시 불러온 뒤 다시 수정하게 한다. |
+| 접수 처리 중 network/API 실패 | 접수 실패 안내를 보여주고, 재시도 전 appointment/encounter 상태를 재조회한다. 중복 encounter 생성을 막는다. |
+| 환자/보호자 정보가 불완전 | 필수 정보 부족 경고를 보여준다. 최소 필수 정보 입력 후 접수 가능하게 하고, 나머지는 추후 보완으로 둔다. |
+| 접수 후 바로 취소 | appointment 취소가 아니라 encounter 취소로 처리한다. 취소 사유는 필수다. |
+| 노쇼 처리 후 보호자가 뒤늦게 도착 | 기존 노쇼는 이력으로 유지한다. 당일 진료가 가능하면 새 현장 접수로 생성하고, 아니면 재예약을 만든다. |
+| 미지정 예약/접수를 누가 가져갈지 불명확 | 데스크 또는 수의사가 담당의를 지정할 수 있다. 미지정 queue/lane은 별도 group으로 계속 보인다. |
+| 과거 예약을 실수로 오늘 접수하려는 경우 | 직접 접수를 차단한다. `재예약` 또는 `오늘 현장 접수로 새로 생성`을 유도한다. |
+
+### Required UX Feedback
+
+- Duplicate warning copy should name the existing record: `오늘 예약이 있습니다. 이 예약을 접수 처리할까요?`
+- Separate walk-in override should require a short reason.
+- Conflict copy should be polite and operational: `예약 정보가 다른 사용자에 의해 변경되었습니다. 최신 정보를 다시 불러온 뒤 수정해 주세요.`
+- API failure copy should not imply success: `접수 처리에 실패했습니다. 상태를 다시 확인해 주세요.`
+- Past-record guardrail should explain the safer path: `지난 예약은 바로 접수할 수 없습니다. 재예약하거나 오늘 현장 접수로 새로 생성해 주세요.`
+
 ## Reservation Detail Planning V1
 
 This section is the product baseline for 예약 생성, 변경, 취소, 지연, 노쇼 handling. It does not compare against the current implementation; implementation gap review is deferred until other major feature plans are drafted.

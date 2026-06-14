@@ -12,6 +12,7 @@ Use this file for small product-planning changes that do not need a standalone d
 - `added`: Added reservation detail planning v1 to the reception/appointment feature spec, covering reservation creation fields, update rules, cancellation reasons, delay/no-show handling, date-scope UX, and appointment-detail primary actions.
 - `added`: Detailed the reservation detail screen structure, modes, mobile behavior, and UX flow so appointment detail, check-in confirmation, edit, cancellation, no-show, and rebooking surfaces have a shared planning baseline.
 - `added`: Added reception/appointment definitions and calendar planning v1, including header entry points, empty-slot behavior, day/week/month behavior, veterinarian filter persistence, unassigned handling, calendar card content, state treatment, blocked time, and mobile calendar rules.
+- `added`: Added reception/appointment exception handling v1, including early/late arrival, existing same-day appointment discovery, multi-patient guardians, unavailable veterinarians, blocked-time overrides, edit conflicts, API failures, no-show late arrivals, and past-record guardrails.
 
 ## 2026-06-12
 
