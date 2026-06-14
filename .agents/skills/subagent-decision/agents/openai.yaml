@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent Decision"
+  short_description: "Decide safe subagent usage"
+  default_prompt: "Use $subagent-decision to decide whether this task should use subagents before implementation."
