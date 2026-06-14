@@ -88,7 +88,7 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
                 return (
                   <Link
                     aria-current={isActive ? "page" : undefined}
-                    className={`rounded-md px-3 py-1.5 transition-colors hover:text-foreground ${
+                    className={`inline-flex h-[var(--clair-control-height-md)] items-center rounded-md px-3 transition-colors hover:text-foreground ${
                       isActive ? "bg-muted font-medium text-foreground" : ""
                     }`}
                     href={`/docs?area=${area.area}`}

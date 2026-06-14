@@ -220,7 +220,7 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
           className="hidden w-full max-w-56 justify-between gap-4 rounded-md text-muted-foreground sm:inline-flex"
           data-testid="prd-search-trigger"
           onClick={openSearch}
-          size="sm"
+          size="default"
           type="button"
           variant="outline"
         >
@@ -237,7 +237,7 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
           className="sm:hidden"
           data-testid="prd-search-trigger-mobile"
           onClick={openSearch}
-          size="icon-sm"
+          size="icon"
           type="button"
           variant="outline"
         >
@@ -247,7 +247,7 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
           aria-label={isDarkMode ? "라이트 모드로 전환" : "다크 모드로 전환"}
           data-testid="prd-theme-toggle"
           onClick={() => setTheme(!isDarkMode)}
-          size="icon-sm"
+          size="icon"
           type="button"
           variant="ghost"
         >
