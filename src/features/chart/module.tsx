@@ -314,12 +314,17 @@ const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
 const CHART_RESIZER_HEIGHT_PX = 16;
 const CHART_RESIZER_STEP_PERCENT = 5;
+const chartSelectedEncounterStoragePrefix =
+  "clair-emr:chart-selected-encounter:v1";
+const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const chartQueueFilterItems = [
   { value: "all", label: "전체" },
   { value: "appointment", label: "예약" },
   { value: "walk-in", label: "외래" },
 ];
+
+const emptyChartQueueItems: OrderQueueItem[] = [];
 
 const orderTypeMeta: Record<EmrOrderType, { handoff: string; label: string }> =
   {
@@ -619,10 +624,63 @@ function getSelectedBundle(
 
   if (options.allowMockFallback === false) return null;
 
+  if (!selectedEncounterId) return getChartEncounter(legacySalesDemoDefaultEncounterId);
+
   return (
     getChartEncounter(selectedEncounterId) ??
-    getChartEncounter("encounter-coco-260501")
+    getChartEncounter(legacySalesDemoDefaultEncounterId)
   );
+}
+
+function getSelectedEncounterStorageKey(workspaceId: string) {
+  return `${chartSelectedEncounterStoragePrefix}:${workspaceId}`;
+}
+
+function readStoredSelectedChartEncounterId(workspaceId: string) {
+  if (typeof window === "undefined") return null;
+
+  const value = window.sessionStorage.getItem(
+    getSelectedEncounterStorageKey(workspaceId),
+  );
+  return value && value.trim() ? value : null;
+}
+
+function saveSelectedChartEncounterId(workspaceId: string, encounterId: string) {
+  if (typeof window === "undefined" || !encounterId) return;
+
+  window.sessionStorage.setItem(
+    getSelectedEncounterStorageKey(workspaceId),
+    encounterId,
+  );
+}
+
+function chooseRecoverableLiveEncounterId({
+  currentEncounterId,
+  explicitEncounterId,
+  records,
+  workspaceId,
+}: {
+  currentEncounterId: string;
+  explicitEncounterId: string | null;
+  records: ChartLiveQueueRecord[];
+  workspaceId: string;
+}) {
+  const liveEncounterIds = new Set(
+    records.map((record) => record.encounter.id),
+  );
+  if (explicitEncounterId && liveEncounterIds.has(explicitEncounterId)) {
+    return explicitEncounterId;
+  }
+  if (currentEncounterId && liveEncounterIds.has(currentEncounterId)) {
+    return currentEncounterId;
+  }
+
+  const storedEncounterId = readStoredSelectedChartEncounterId(workspaceId);
+  if (storedEncounterId && liveEncounterIds.has(storedEncounterId)) {
+    return storedEncounterId;
+  }
+
+  return records[0]?.encounter.id ?? null;
 }
 
 function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
@@ -736,6 +794,13 @@ function useExplicitChartEncounterId() {
   return searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
 }
 
+function useDemoScenarioChartEncounterId() {
+  const searchParams = useSearchParams();
+  const scenario = getDemoScenarioFromParams(searchParams);
+
+  return scenario?.encounterId ?? null;
+}
+
 export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
@@ -761,7 +826,15 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
-  const items = liveMode ? liveItems : preparedEmptyClinic ? [] : mockItems;
+  const items = useMemo(
+    () =>
+      liveMode
+        ? liveItems
+        : preparedEmptyClinic
+          ? emptyChartQueueItems
+          : mockItems,
+    [liveItems, liveMode, mockItems, preparedEmptyClinic],
+  );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
 
   useEffect(() => {
@@ -796,12 +869,18 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
       });
       setLiveQueueState({ records: result.queue, status: "ready" });
 
-      if (
-        !explicitQueryEncounterId &&
-        result.queue.length > 0 &&
-        !result.queue.some((record) => record.encounter.id === selectedEncounterId)
-      ) {
-        selectEncounter(result.queue[0].encounter.id);
+      const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
+        currentEncounterId: selectedEncounterId,
+        explicitEncounterId: explicitQueryEncounterId,
+        records: result.queue,
+        workspaceId,
+      });
+
+      if (nextSelectedEncounterId) {
+        saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId);
+        if (selectedEncounterId !== nextSelectedEncounterId) {
+          selectEncounter(nextSelectedEncounterId);
+        }
       }
     }
 
@@ -825,12 +904,28 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     if (!liveMode || liveQueueStatus !== "ready" || liveItems.length === 0) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
     if (explicitQueryEncounterId) return;
+    saveSelectedChartEncounterId(workspaceId, liveItems[0].id);
     selectEncounter(liveItems[0].id);
   }, [
     explicitQueryEncounterId,
     liveItems,
     liveMode,
     liveQueueStatus,
+    selectEncounter,
+    selectedEncounterId,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (liveMode || items.length === 0) return;
+    if (items.some((item) => item.id === selectedEncounterId)) return;
+    selectEncounter(
+      items.find((item) => item.id === legacySalesDemoDefaultEncounterId)?.id ??
+        items[0].id,
+    );
+  }, [
+    items,
+    liveMode,
     selectEncounter,
     selectedEncounterId,
   ]);
@@ -851,6 +946,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
       title="진료/차트"
       onCollapse={() => setModulePanelOpen(false)}
       onSelectItem={(itemId) => {
+        if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
         selectEncounter(itemId);
         setSelectedQueueItem("treatment", itemId);
       }}
@@ -866,10 +962,11 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
     !isPreparedEmptyClinicWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
@@ -913,10 +1010,11 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
     !isPreparedEmptyClinicWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
@@ -2627,10 +2725,11 @@ export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
     !isPreparedEmptyClinicWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
@@ -4905,10 +5004,11 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
     !isPreparedEmptyClinicWorkspace(workspaceId) &&
-    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
   const {
     hydrated: authHydrated,

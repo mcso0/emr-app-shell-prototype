@@ -169,11 +169,33 @@ test("chart live queue route stays server-owned and separate from demo encounter
 test("Cheongdam prepared-empty mode keeps live chart queue records visible", () => {
   const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
 
+  expect(moduleSource).toContain("const items = useMemo(");
+  expect(moduleSource).toContain("liveMode\n        ? liveItems");
   expect(moduleSource).toContain(
-    "const items = liveMode ? liveItems : preparedEmptyClinic ? [] : mockItems;",
+    "preparedEmptyClinic\n          ? emptyChartQueueItems\n          : mockItems",
   );
   expect(moduleSource).not.toContain(
     "const items = preparedEmptyClinic ? [] : liveMode ? liveItems : mockItems;",
+  );
+});
+
+test("Cheongdam live chart selection recovers live encounters without legacy fixture overwrite", () => {
+  const storeSource = readFileSync("src/features/chart/store.ts", "utf8");
+  const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(storeSource).toContain('selectedEncounterId: ""');
+  expect(moduleSource).toContain("chooseRecoverableLiveEncounterId");
+  expect(moduleSource).toContain(
+    "saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId)",
+  );
+  expect(moduleSource).toContain(
+    "if (options.allowMockFallback === false) return null;",
+  );
+  expect(moduleSource).toContain(
+    "selectedEncounterId === demoScenarioEncounterId",
+  );
+  expect(moduleSource).not.toContain(
+    "selectedEncounterId === explicitQueryEncounterId",
   );
 });
 

@@ -31,11 +31,18 @@ test("chart live queue preserves explicit encounter deep links", () => {
   const source = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(source).toContain("const explicitQueryEncounterId =");
-  expect(source).toContain("!explicitQueryEncounterId &&");
   expect(source).toContain("if (explicitQueryEncounterId) return;");
+  expect(source).toContain("chooseRecoverableLiveEncounterId");
+  expect(source).toContain("explicitEncounterId: explicitQueryEncounterId");
   expect(source).toContain("function useExplicitChartEncounterId()");
   expect(source).toContain(
-    "allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId",
+    "function useDemoScenarioChartEncounterId()",
+  );
+  expect(source).toContain(
+    "selectedEncounterId === demoScenarioEncounterId",
+  );
+  expect(source).toContain(
+    "saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId)",
   );
 });
 

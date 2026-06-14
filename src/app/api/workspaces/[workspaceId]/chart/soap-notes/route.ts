@@ -1,8 +1,13 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   createSupabaseChartSoapNoteGateway,
   readChartSoapNote,
@@ -47,10 +52,20 @@ export async function GET(request: Request, { params }: RouteContext) {
   const url = new URL(request.url);
   const encounterId = url.searchParams.get("encounterId");
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await readChartSoapNote({
     actorUserId: identity.actorUserId,
     workspaceId,
     encounterId,
+    permissionAdapter,
     gateway: client
       ? createSupabaseChartSoapNoteGateway(
           client as unknown as SupabaseChartSoapNoteRpcClient
@@ -91,10 +106,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await saveChartSoapNote({
     actorUserId: identity.actorUserId,
     workspaceId,
     input,
+    permissionAdapter,
     gateway: client
       ? createSupabaseChartSoapNoteGateway(
           client as unknown as SupabaseChartSoapNoteRpcClient
