@@ -35,7 +35,7 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 
 ## Reader Surface
 
-The repo `docs/product/` tree is the source of truth. The internal `/docs` app route is a read-only viewer over a curated subset of these Markdown files. The legacy `/prd` route redirects to `/docs` for compatibility.
+The repo `docs/product/` tree is the source of truth for product planning. The internal `/docs` app route is a read-only viewer over a curated subset of product, design, and high-level development Markdown files. The legacy `/prd` route redirects to `/docs` for compatibility.
 
 - Edit Markdown in `docs/product/`, not in the viewer.
 - Do not copy product docs into `site/`, `public/`, a CMS, or generated duplicate document stores.

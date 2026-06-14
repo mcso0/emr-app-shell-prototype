@@ -3,7 +3,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { MarkdownRenderer } from "@/lib/prd-viewer/markdown-renderer";
 import { getResolvedPrdSlug, loadPrdDoc } from "@/lib/prd-viewer/doc-reader";
-import { getPrdDocGroups, type PrdDocEntry } from "@/lib/prd-viewer/registry";
+import {
+  clairDocsAreas,
+  getPrdDocAreaBySlug,
+  getPrdDocGroups,
+  getPrdDocGroupsByArea,
+  normalizeClairDocsArea,
+  type ClairDocsArea,
+  type PrdDocEntry,
+} from "@/lib/prd-viewer/registry";
 import { PrdHeaderControls } from "../prd/prd-header-controls";
 import { PrdMobileNavigation } from "../prd/prd-mobile-navigation";
 import { PrdNavigation } from "../prd/prd-navigation";
@@ -16,6 +24,7 @@ export const metadata: Metadata = {
 
 interface ClairDocsPageProps {
   searchParams: Promise<{
+    area?: string | string[];
     doc?: string | string[];
   }>;
 }
@@ -32,6 +41,16 @@ function SourcePath({ doc }: { doc: PrdDocEntry }) {
   );
 }
 
+function getAreaLabel(area: ClairDocsArea) {
+  return clairDocsAreas.find((entry) => entry.area === area)?.label ?? "기획";
+}
+
+function getAreaRoot(area: ClairDocsArea) {
+  if (area === "design") return "docs/design";
+  if (area === "development") return "docs/engineering";
+  return "docs/product";
+}
+
 function ClairMark() {
   return (
     <div aria-hidden="true" className="grid size-7 place-items-center rounded-md bg-black">
@@ -43,9 +62,15 @@ function ClairMark() {
 export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps) {
   const params = await searchParams;
   const requestedSlug = normalizeDocParam(params.doc);
-  const loadedDoc = await loadPrdDoc(requestedSlug);
-  const resolvedSlug = loadedDoc?.entry.slug ?? getResolvedPrdSlug(requestedSlug);
-  const groups = getPrdDocGroups();
+  const requestedArea = normalizeClairDocsArea(normalizeDocParam(params.area));
+  const activeArea = getPrdDocAreaBySlug(requestedSlug) ?? requestedArea;
+  const loadedDoc = await loadPrdDoc(requestedSlug, activeArea);
+  const resolvedSlug = loadedDoc?.entry.slug ?? getResolvedPrdSlug(requestedSlug, activeArea);
+  const resolvedArea = loadedDoc?.entry.area ?? activeArea;
+  const areaGroups = getPrdDocGroupsByArea(resolvedArea);
+  const searchGroups = getPrdDocGroups();
+  const areaLabel = getAreaLabel(resolvedArea);
+  const areaRoot = getAreaRoot(resolvedArea);
 
   return (
     <main className={`${styles.prdViewer} min-h-screen bg-background text-foreground`}>
@@ -56,28 +81,35 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
               <ClairMark />
               <span className="whitespace-nowrap text-sm font-semibold">CLAiR Docs</span>
             </Link>
-            <nav aria-label="CLAiR Docs top navigation" className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-              <Link className="transition-colors hover:text-foreground" href="/docs">
-                Docs
-              </Link>
-              <Link className="transition-colors hover:text-foreground" href="/docs?doc=epics-readme">
-                Epics
-              </Link>
-              <Link className="transition-colors hover:text-foreground" href="/docs?doc=features-readme">
-                Features
-              </Link>
+            <nav aria-label="CLAiR Docs top navigation" className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+              {clairDocsAreas.map((area) => {
+                const isActive = area.area === resolvedArea;
+
+                return (
+                  <Link
+                    aria-current={isActive ? "page" : undefined}
+                    className={`rounded-md px-3 py-1.5 transition-colors hover:text-foreground ${
+                      isActive ? "bg-muted font-medium text-foreground" : ""
+                    }`}
+                    href={`/docs?area=${area.area}`}
+                    key={area.area}
+                  >
+                    {area.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
           <div className="flex min-w-0 justify-end gap-2">
-            <PrdMobileNavigation activeSlug={resolvedSlug} groups={groups} />
-            <PrdHeaderControls groups={groups} />
+            <PrdMobileNavigation activeSlug={resolvedSlug} areaLabel={areaLabel} groups={areaGroups} />
+            <PrdHeaderControls groups={searchGroups} />
           </div>
         </div>
       </header>
 
       <div className="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_15rem]">
         <aside className="hidden min-h-0 px-4 py-6 lg:flex lg:max-h-[calc(100vh-3.5rem)] lg:flex-col">
-          <PrdNavigation activeSlug={resolvedSlug} groups={groups} />
+          <PrdNavigation activeSlug={resolvedSlug} groups={areaGroups} />
         </aside>
 
         <section className={`${styles.scrollArea} min-w-0 overflow-y-auto lg:max-h-[calc(100vh-3.5rem)]`}>
@@ -89,10 +121,10 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
                     Docs
                   </Link>
                   <span>/</span>
-                  <span>Product</span>
+                  <span>{areaLabel}</span>
                 </div>
                 <p className="text-base leading-7 text-muted-foreground">
-                  Markdown remains canonical in <code className="font-mono text-foreground">docs/product</code>.
+                  Markdown remains canonical in <code className="font-mono text-foreground">{areaRoot}</code>.
                 </p>
               </div>
 
@@ -110,7 +142,7 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
                   </p>
                   <h2 className="mt-2 text-2xl font-semibold">등록되지 않은 CLAiR Docs 문서야.</h2>
                   <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-                    `/docs`는 registry에 등록된 <code className="font-mono text-foreground">docs/product</code> Markdown만 읽어.
+                    `/docs`는 registry에 등록된 curated Markdown만 읽어.
                     임의 파일 경로는 열지 않는다.
                   </p>
                   <Link

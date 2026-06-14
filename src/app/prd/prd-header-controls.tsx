@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation";
 import { SearchIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -27,13 +25,15 @@ import type { PrdDocEntry } from "@/lib/prd-viewer/registry";
 import styles from "./prd-viewer.module.css";
 
 interface PrdHeaderControlsProps {
-  groups: Array<{ group: PrdDocEntry["group"]; docs: PrdDocEntry[] }>;
+  groups: Array<{ group: string; docs: PrdDocEntry[] }>;
 }
 
 const RECENT_DOCS_STORAGE_KEY = "prd-viewer-recent-docs";
 const MAX_RECENT_DOCS = 6;
 const DEFAULT_PAGE_SLUGS = [
   "product-prd",
+  "design-readme",
+  "engineering-readme",
   "epics-readme",
   "features-readme",
   "user-stories-readme",
@@ -114,7 +114,9 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
     return docs.filter((doc) => {
       const haystack = [
         doc.title,
+        doc.area,
         doc.group,
+        doc.section,
         doc.docType,
         doc.sourcePath,
         doc.description ?? "",
@@ -203,7 +205,9 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
             <span className="truncate text-xs text-muted-foreground">{doc.description ?? doc.sourcePath}</span>
           ) : null}
         </span>
-        <span className="ml-auto hidden shrink-0 text-xs text-muted-foreground sm:inline">{doc.group}</span>
+        <span className="ml-auto hidden shrink-0 text-xs text-muted-foreground sm:inline">
+          {doc.area} / {doc.section}
+        </span>
       </>
     );
   }
@@ -239,11 +243,6 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
         >
           <SearchIcon />
         </Button>
-        <Link className={buttonVariants({ size: "sm", variant: "outline" })} href="/login">
-          <span className="hidden sm:inline">CLAiR App</span>
-          <span className="sm:hidden">App</span>
-          <CdsNavigationExternalLinkIcon data-icon="inline-end" />
-        </Link>
         <Button
           aria-label={isDarkMode ? "라이트 모드로 전환" : "다크 모드로 전환"}
           data-testid="prd-theme-toggle"
@@ -309,7 +308,9 @@ export function PrdHeaderControls({ groups }: PrdHeaderControlsProps) {
                                 {doc.docType}
                               </Badge>
                             </span>
-                            <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{doc.group}</span>
+                            <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">
+                              {doc.area} / {doc.section}
+                            </span>
                           </CommandItem>
                         ))}
                       </CommandGroup>

@@ -14,7 +14,11 @@ function normalizeDocsPath(href: string, sourcePath: string): string | null {
   const cleanHref = href.split("#")[0]?.trim();
   if (!cleanHref || !cleanHref.endsWith(".md")) return null;
 
-  if (cleanHref.startsWith("docs/product/")) {
+  if (
+    cleanHref.startsWith("docs/product/") ||
+    cleanHref.startsWith("docs/design/") ||
+    cleanHref.startsWith("docs/engineering/")
+  ) {
     return cleanHref;
   }
 

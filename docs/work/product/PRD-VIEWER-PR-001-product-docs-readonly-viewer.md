@@ -10,7 +10,7 @@ source_docs:
   - "docs/_meta/agent-rag-map.md"
   - "docs/_meta/intake-rules.md"
 dependencies: []
-updated: "2026-06-12"
+updated: "2026-06-14"
 ---
 
 # CLAiR Docs Read-Only Product Viewer
@@ -58,6 +58,15 @@ Create an internal CLAiR Docs read-only viewer that renders canonical `docs/prod
 - `npm run build` passed on 2026-06-12.
 - `npx playwright test tests/prd-viewer.spec.ts` passed on 2026-06-12.
 
+Additional IA refresh verification on 2026-06-14:
+
+- `npm run docs:check` passed.
+- `npm run lint` passed with pre-existing warnings only.
+- `npx tsc --noEmit` passed.
+- `npx next build --webpack` passed.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/prd-viewer.spec.ts --config=playwright.config.ts` passed.
+- `npm run build` in the temporary `/tmp/clair-docs-auth-planning` worktree failed because Turbopack rejects the temporary `node_modules` symlink that points outside the filesystem root. The same code path passed with webpack build; Vercel preview remains the deployment verification path.
+
 ## Handoff Notes
 
 - Keep the viewer registry explicit. Do not auto-expose every Markdown file under `docs/`.
@@ -72,3 +81,12 @@ Create an internal CLAiR Docs read-only viewer that renders canonical `docs/prod
 - Extend the explicit registry with document type, description, and tags for command search.
 - Strengthen product planning document placement rules for PRD, epic, feature, user story, decision, and domain docs.
 - Preserve Vercel Deployment Protection for previews; do not change public access or production deployment policy in this work.
+
+## Follow-Up Scope Added 2026-06-14
+
+- Rework CLAiR Docs information architecture from product-only navigation to `기획 / 디자인 / 개발` top-level reader tabs.
+- Keep source Markdown in the existing `docs/product`, `docs/design`, and `docs/engineering` locations; do not move files for this IA pass.
+- Preserve all existing viewer slugs and `/docs?doc=<slug>` / `/prd?doc=<slug>` compatibility.
+- Add registry metadata for reader area, section, order, audience, exposure, sensitivity, and source-of-truth posture.
+- Keep design and development tabs curated. Do not expose sensitive auth/security, DB/RLS, operations, launch, completed, or archive documents by default.
+- Implementation basis: `docs/design/wireframes/clair-docs-ia-sitemap.md`.

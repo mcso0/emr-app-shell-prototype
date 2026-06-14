@@ -18,9 +18,10 @@ import styles from "./prd-viewer.module.css";
 interface PrdMobileNavigationProps {
   groups: Array<{ group: string; docs: PrdDocEntry[] }>;
   activeSlug: string;
+  areaLabel: string;
 }
 
-export function PrdMobileNavigation({ groups, activeSlug }: PrdMobileNavigationProps) {
+export function PrdMobileNavigation({ groups, activeSlug, areaLabel }: PrdMobileNavigationProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function PrdMobileNavigation({ groups, activeSlug }: PrdMobileNavigationP
         side="left"
       >
         <SheetHeader className="shrink-0 px-4 py-4">
-          <SheetTitle>Docs</SheetTitle>
+          <SheetTitle>{areaLabel} Docs</SheetTitle>
           <SheetDescription className="sr-only">CLAiR Docs document list</SheetDescription>
         </SheetHeader>
         <div

@@ -9,7 +9,7 @@ Start here:
 3. `docs/work/index.md` for PR-sized work tracking.
 4. The linked work item and its source documents.
 
-For product planning review, use the internal `/docs` app route as a read-only viewer over curated `docs/product/` Markdown. The legacy `/prd` route redirects there for compatibility. The repository `docs/` folder remains the source of truth. GitBook is no longer the active reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
+For planning, design, and implementation review, use the internal `/docs` app route as a read-only viewer over curated Markdown from `docs/product/`, `docs/design/`, and safe high-level `docs/engineering/` entries. The legacy `/prd` route redirects there for compatibility. The repository `docs/` folder remains the source of truth. GitBook is no longer the active reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
 
 ## Operating Model
 
@@ -39,7 +39,7 @@ Canonical docs are organized by purpose:
 | Surface | Current role |
 |---|---|
 | Repo `docs/` | Canonical source of truth and editing surface |
-| `/docs` app route | Internal read-only viewer for curated product Markdown |
+| `/docs` app route | Internal read-only viewer for curated planning, design, and high-level development Markdown |
 | `/prd` app route | Legacy compatibility route that redirects to `/docs` |
 | `docs/index.md` | Human and agent routing portal |
 | `docs/SUMMARY.md` | Legacy GitBook sidebar compatibility file, not active navigation |
