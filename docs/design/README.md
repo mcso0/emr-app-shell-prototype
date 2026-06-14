@@ -5,6 +5,7 @@ Design docs explain how CLAiR EMR should look, behave, and remain usable across 
 ## Read First
 
 - Design system: `docs/design/system/DESIGN.md`
+- CLAiR Docs IA wireframe: `docs/design/wireframes/clair-docs-ia-wireframe.html`
 - Reference screen index: `docs/design/reference-screen-index.md`
 - Senior product design development points: `docs/design/flows/2026-05-12-senior-product-design-development-points.md`
 - UI QA index: `docs/design/qa/README.md`
@@ -17,6 +18,7 @@ Design docs explain how CLAiR EMR should look, behave, and remain usable across 
 - `flows/`: task sequence, navigation, cross-screen continuity, and interaction flow.
 - `screens/`: concrete screen-level layout, density, state, and interaction rules.
 - `system/`: reusable UI foundations, tokens, components, and conventions.
+- `wireframes/`: static HTML wireframes for reviewing information architecture or screen structure before implementation.
 - `qa/`: visual, responsive, and interaction QA checklists.
 - `assets/`: design assets and reference material.
 - `assets/reference-screens/`: checked-in reference images.

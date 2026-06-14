@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR Docs IA Wireframe</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #09090b;
+        --panel: #111113;
+        --panel-2: #18181b;
+        --panel-3: #202024;
+        --line: #2a2a2f;
+        --line-soft: #1f1f23;
+        --text: #f4f4f5;
+        --muted: #a1a1aa;
+        --faint: #71717a;
+        --planning: #e7c96d;
+        --design: #79d5c9;
+        --dev: #9ab7ff;
+        --danger: #f38b8b;
+        --ok: #7ed59b;
+        --radius: 8px;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          var(--bg);
+        background-size: 24px 24px, 24px 24px, auto;
+        color: var(--text);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: 56px 1fr;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 300px) 1fr auto;
+        align-items: center;
+        gap: 24px;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(9, 9, 11, 0.88);
+        backdrop-filter: blur(18px);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      .mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        background:
+          linear-gradient(145deg, #fff 0 42%, transparent 43%),
+          linear-gradient(35deg, transparent 0 40%, #fff 41% 68%, transparent 69%),
+          #050505;
+        border: 1px solid #27272a;
+      }
+
+      .tabs {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .tab {
+        min-width: 88px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .tab.active {
+        color: var(--text);
+        border-color: var(--line);
+        background: var(--panel-2);
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .search {
+        width: 240px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #0f0f12;
+        color: var(--muted);
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .kbd {
+        padding: 1px 5px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      .button {
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        color: var(--text);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 72px 320px minmax(0, 1fr) 300px;
+        min-height: calc(100vh - 56px);
+      }
+
+      .rail,
+      .nav,
+      .aside {
+        border-right: 1px solid var(--line-soft);
+        background: rgba(13, 13, 15, 0.86);
+      }
+
+      .rail {
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .rail-item {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius);
+        display: grid;
+        place-items: center;
+        border: 1px solid transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .rail-item.active {
+        border-color: var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+      }
+
+      .nav {
+        padding: 18px 16px;
+        overflow: auto;
+      }
+
+      .nav-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .eyebrow {
+        color: var(--faint);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .nav h2 {
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .view-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 18px;
+        padding: 4px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+
+      .view-switch span {
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .view-switch span.active {
+        background: var(--panel-3);
+        color: var(--text);
+      }
+
+      .section {
+        margin-bottom: 22px;
+      }
+
+      .section + .section {
+        padding-top: 18px;
+        border-top: 1px solid var(--line-soft);
+      }
+
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .tree {
+        display: grid;
+        gap: 4px;
+      }
+
+      .tree-row {
+        min-height: 34px;
+        display: grid;
+        grid-template-columns: 18px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: var(--radius);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .tree-row.active {
+        background: var(--panel-2);
+        color: var(--text);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--faint);
+      }
+
+      .dot.planning {
+        background: var(--planning);
+      }
+
+      .dot.design {
+        background: var(--design);
+      }
+
+      .dot.dev {
+        background: var(--dev);
+      }
+
+      .count {
+        color: var(--faint);
+        font-size: 11px;
+      }
+
+      .content {
+        padding: 28px;
+        overflow: auto;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 20px;
+        align-items: start;
+        margin-bottom: 24px;
+      }
+
+      .hero h1 {
+        font-size: clamp(32px, 4vw, 56px);
+        line-height: 0.98;
+        letter-spacing: 0;
+        max-width: 760px;
+      }
+
+      .hero p {
+        margin-top: 12px;
+        max-width: 720px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .status-card {
+        width: 280px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(17, 17, 19, 0.8);
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .status-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .status-card ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+
+      .status-card li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 3px 8px;
+        color: var(--muted);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .pill.ok {
+        color: var(--ok);
+        border-color: rgba(126, 213, 155, 0.35);
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+
+      .area-card {
+        min-height: 190px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(17, 17, 19, 0.72);
+        padding: 16px;
+      }
+
+      .area-card h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 16px;
+      }
+
+      .area-card ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+
+      .area-card li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 0;
+        border-top: 1px solid var(--line-soft);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.45fr) minmax(0, 1fr);
+        gap: 14px;
+        align-items: stretch;
+        margin-bottom: 24px;
+      }
+
+      .pane {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(17, 17, 19, 0.72);
+        overflow: hidden;
+      }
+
+      .pane-head {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(24, 24, 27, 0.72);
+      }
+
+      .pane-head h3 {
+        font-size: 13px;
+      }
+
+      .list {
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .doc-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        min-height: 54px;
+        padding: 10px;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        background: #101013;
+      }
+
+      .doc-row.active {
+        border-color: rgba(231, 201, 109, 0.42);
+        background: rgba(231, 201, 109, 0.08);
+      }
+
+      .doc-row strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .doc-row span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .canvas {
+        padding: 18px;
+        min-height: 440px;
+      }
+
+      .map {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 16px;
+        align-items: center;
+        min-height: 380px;
+      }
+
+      .root-node,
+      .node {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel-2);
+        padding: 12px;
+      }
+
+      .root-node {
+        border-color: rgba(244, 244, 245, 0.32);
+      }
+
+      .node-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .node h4,
+      .root-node h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+      }
+
+      .node p,
+      .root-node p {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .doc-stack {
+        display: grid;
+        gap: 6px;
+        margin-top: 12px;
+      }
+
+      .mini-doc {
+        border: 1px solid var(--line-soft);
+        border-radius: 6px;
+        padding: 7px;
+        color: var(--muted);
+        font-size: 11px;
+        background: rgba(9, 9, 11, 0.54);
+      }
+
+      .aside {
+        border-right: 0;
+        border-left: 1px solid var(--line-soft);
+        padding: 18px 16px;
+        overflow: auto;
+      }
+
+      .aside-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(17, 17, 19, 0.72);
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+
+      .aside-card h3 {
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .aside-card p,
+      .aside-card li {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .aside-card ul,
+      .aside-card ol {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .meta {
+        display: grid;
+        gap: 8px;
+      }
+
+      .meta div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .code {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: #0c0c0f;
+        padding: 10px;
+        color: #d4d4d8;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          "Liberation Mono",
+          monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 1180px) {
+        .layout {
+          grid-template-columns: 64px 280px minmax(0, 1fr);
+        }
+
+        .aside {
+          display: none;
+        }
+
+        .matrix {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 860px) {
+        .topbar {
+          grid-template-columns: 1fr auto;
+        }
+
+        .tabs,
+        .search {
+          display: none;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .rail,
+        .nav {
+          display: none;
+        }
+
+        .hero,
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .status-card {
+          width: auto;
+        }
+
+        .map,
+        .node-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="#">
+          <span class="mark" aria-hidden="true"></span>
+          <span>CLAiR Docs</span>
+        </a>
+
+        <nav class="tabs" aria-label="Docs area">
+          <a class="tab active" href="#">기획</a>
+          <a class="tab" href="#">디자인</a>
+          <a class="tab" href="#">개발</a>
+        </nav>
+
+        <div class="actions">
+          <div class="search">
+            <span>Search docs, feature, type...</span>
+            <span class="kbd">⌘K</span>
+          </div>
+          <a class="button" href="#">CLAiR App</a>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="rail" aria-label="View modes">
+          <div class="rail-item active">IA</div>
+          <div class="rail-item">F</div>
+          <div class="rail-item">T</div>
+          <div class="rail-item">G</div>
+        </aside>
+
+        <aside class="nav" aria-label="Docs navigation">
+          <div class="nav-title">
+            <div>
+              <div class="eyebrow">Workspace</div>
+              <h2>문서 구조</h2>
+            </div>
+            <span class="pill">draft</span>
+          </div>
+
+          <div class="view-switch" aria-label="Navigation mode">
+            <span class="active">영역별</span>
+            <span>기능별</span>
+          </div>
+
+          <section class="section">
+            <div class="section-head">
+              <span class="eyebrow">기획</span>
+              <span class="count">18</span>
+            </div>
+            <div class="tree">
+              <div class="tree-row active"><span class="dot planning"></span><span>PRD</span><span class="count">2</span></div>
+              <div class="tree-row"><span class="dot planning"></span><span>기능명세</span><span class="count">9</span></div>
+              <div class="tree-row"><span class="dot planning"></span><span>에픽</span><span class="count">1</span></div>
+              <div class="tree-row"><span class="dot planning"></span><span>세부 기획</span><span class="count">5</span></div>
+              <div class="tree-row"><span class="dot planning"></span><span>예외 케이스</span><span class="count">1</span></div>
+              <div class="tree-row"><span class="dot planning"></span><span>현재 구현 상태</span><span class="count">4</span></div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <span class="eyebrow">디자인</span>
+              <span class="count">12</span>
+            </div>
+            <div class="tree">
+              <div class="tree-row"><span class="dot design"></span><span>UX Flow</span><span class="count">3</span></div>
+              <div class="tree-row"><span class="dot design"></span><span>화면 기획</span><span class="count">4</span></div>
+              <div class="tree-row"><span class="dot design"></span><span>와이어프레임</span><span class="count">1</span></div>
+              <div class="tree-row"><span class="dot design"></span><span>디자인 시스템</span><span class="count">3</span></div>
+              <div class="tree-row"><span class="dot design"></span><span>UI QA</span><span class="count">1</span></div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <span class="eyebrow">개발</span>
+              <span class="count">curated</span>
+            </div>
+            <div class="tree">
+              <div class="tree-row"><span class="dot dev"></span><span>아키텍처</span><span class="count">3</span></div>
+              <div class="tree-row"><span class="dot dev"></span><span>DB / 데이터 모델</span><span class="count">2</span></div>
+              <div class="tree-row"><span class="dot dev"></span><span>API</span><span class="count">2</span></div>
+              <div class="tree-row"><span class="dot dev"></span><span>인증 / 권한</span><span class="count">limited</span></div>
+              <div class="tree-row"><span class="dot dev"></span><span>테스트 / 운영</span><span class="count">limited</span></div>
+            </div>
+          </section>
+        </aside>
+
+        <section class="content">
+          <div class="hero">
+            <div>
+              <div class="eyebrow">Wireframe · CLAiR Docs IA</div>
+              <h1>파일은 그대로 두고, 읽는 구조만 다시 설계한다.</h1>
+              <p>
+                Repo의 docs 폴더는 source of truth로 유지하고, 사이트에서는 Manyfast처럼 PRD, 기능명세,
+                유저플로우를 넘나드는 탐색 구조를 제공한다. 1차 구조는 기획, 디자인, 개발이고,
+                2차 구조는 기능별 패키지다.
+              </p>
+            </div>
+            <div class="status-card">
+              <strong>핵심 원칙</strong>
+              <ul>
+                <li><span>File move</span><span class="pill">avoid</span></li>
+                <li><span>Site IA</span><span class="pill ok">redesign</span></li>
+                <li><span>Registry</span><span class="pill ok">metadata</span></li>
+                <li><span>Security docs</span><span class="pill">curated</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <section class="matrix" aria-label="Top level information architecture">
+            <article class="area-card">
+              <h3><span class="dot planning"></span>기획</h3>
+              <ul>
+                <li><span>PRD</span><span class="pill">overview</span></li>
+                <li><span>기능명세</span><span class="pill">spec</span></li>
+                <li><span>에픽 / 세부 기획</span><span class="pill">scope</span></li>
+                <li><span>예외 케이스</span><span class="pill">rules</span></li>
+                <li><span>현재 구현 상태</span><span class="pill">inventory</span></li>
+              </ul>
+            </article>
+
+            <article class="area-card">
+              <h3><span class="dot design"></span>디자인</h3>
+              <ul>
+                <li><span>UX Flow</span><span class="pill">flow</span></li>
+                <li><span>화면 기획</span><span class="pill">screen</span></li>
+                <li><span>와이어프레임</span><span class="pill">html</span></li>
+                <li><span>디자인 시스템</span><span class="pill">system</span></li>
+                <li><span>UI QA</span><span class="pill">review</span></li>
+              </ul>
+            </article>
+
+            <article class="area-card">
+              <h3><span class="dot dev"></span>개발</h3>
+              <ul>
+                <li><span>아키텍처</span><span class="pill">read only</span></li>
+                <li><span>DB / 데이터 모델</span><span class="pill">curated</span></li>
+                <li><span>API</span><span class="pill">curated</span></li>
+                <li><span>인증 / 권한</span><span class="pill">limited</span></li>
+                <li><span>테스트 / 운영</span><span class="pill">limited</span></li>
+              </ul>
+            </article>
+          </section>
+
+          <section class="workspace" aria-label="Feature package view">
+            <div class="pane">
+              <div class="pane-head">
+                <h3>기능별 보기</h3>
+                <span class="pill">Manyfast style</span>
+              </div>
+              <div class="list">
+                <div class="doc-row"><div><strong>인증 / 권한</strong><span>Auth, role, workspace entry</span></div><span class="count">8</span></div>
+                <div class="doc-row active"><div><strong>접수 / 예약</strong><span>Appointment, reception, calendar</span></div><span class="count">6</span></div>
+                <div class="doc-row"><div><strong>고객 / 환자</strong><span>Guardian, patient profile</span></div><span class="count">4</span></div>
+                <div class="doc-row"><div><strong>진료 / 차트</strong><span>SOAP, orders, handoff</span></div><span class="count">5</span></div>
+                <div class="doc-row"><div><strong>검사 / 처치</strong><span>Lab, imaging, dispensing</span></div><span class="count">4</span></div>
+                <div class="doc-row"><div><strong>수납</strong><span>Billing, payment, ledger</span></div><span class="count">3</span></div>
+              </div>
+            </div>
+
+            <div class="pane">
+              <div class="pane-head">
+                <h3>접수 / 예약 문서 패키지</h3>
+                <span class="pill ok">selected</span>
+              </div>
+              <div class="canvas">
+                <div class="map">
+                  <div class="root-node">
+                    <h4>접수 / 예약</h4>
+                    <p>예약은 예정된 약속, 접수는 실제 내원 후 운영 시작.</p>
+                  </div>
+
+                  <div class="node-grid">
+                    <article class="node">
+                      <h4>기능명세</h4>
+                      <p>Reception Appointment Spec</p>
+                      <div class="doc-stack">
+                        <span class="mini-doc">docs/product/features/reception-appointment-spec.md</span>
+                        <span class="mini-doc">정의, 캘린더, 예외 케이스</span>
+                      </div>
+                    </article>
+                    <article class="node">
+                      <h4>UX Flow</h4>
+                      <p>화면 흐름과 상태별 피드백.</p>
+                      <div class="doc-stack">
+                        <span class="mini-doc">docs/design/ux-flows/reception-appointment-flow.md</span>
+                        <span class="mini-doc">drawer, calendar, mobile</span>
+                      </div>
+                    </article>
+                    <article class="node">
+                      <h4>현재 구현 상태</h4>
+                      <p>현재 화면과 route inventory.</p>
+                      <div class="doc-stack">
+                        <span class="mini-doc">docs/product/current-state/reception-appointment-current-state.md</span>
+                        <span class="mini-doc">gap review 전 참고</span>
+                      </div>
+                    </article>
+                    <article class="node">
+                      <h4>세부 기획</h4>
+                      <p>캘린더, 예약 상세, 예외 케이스를 기능명세 안에서 anchor로 노출.</p>
+                      <div class="doc-stack">
+                        <span class="mini-doc">#calendar-planning-v1</span>
+                        <span class="mini-doc">#exception-handling-v1</span>
+                      </div>
+                    </article>
+                    <article class="node">
+                      <h4>디자인 산출물</h4>
+                      <p>와이어프레임, 화면 기획, QA 기준.</p>
+                      <div class="doc-stack">
+                        <span class="mini-doc">docs/design/wireframes</span>
+                        <span class="mini-doc">docs/design/screens/reception</span>
+                      </div>
+                    </article>
+                    <article class="node">
+                      <h4>개발 연결</h4>
+                      <p>API, data, test 문서는 curated 노출.</p>
+                      <div class="doc-stack">
+                        <span class="mini-doc">src/features/reception</span>
+                        <span class="mini-doc">tests/reception*.spec.ts</span>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <aside class="aside" aria-label="Wireframe notes">
+          <div class="aside-card">
+            <h3>Registry metadata</h3>
+            <div class="meta">
+              <div><span>area</span><span class="pill">planning</span></div>
+              <div><span>feature</span><span class="pill">reception</span></div>
+              <div><span>docType</span><span class="pill">feature-spec</span></div>
+              <div><span>audience</span><span class="pill">internal</span></div>
+            </div>
+            <div class="code">{
+  title: "Reception Appointment Spec",
+  area: "planning",
+  feature: "reception",
+  docType: "feature-spec",
+  sourcePath: "docs/product/features/reception-appointment-spec.md"
+}</div>
+          </div>
+
+          <div class="aside-card">
+            <h3>수정 방향</h3>
+            <ol>
+              <li>파일 이동 없이 CLAiR Docs registry를 먼저 확장한다.</li>
+              <li>상단 탭을 기획, 디자인, 개발로 재구성한다.</li>
+              <li>좌측은 영역별 보기와 기능별 보기를 전환한다.</li>
+              <li>본문은 선택한 기능의 문서 패키지를 보여준다.</li>
+              <li>개발 문서는 승인된 문서만 노출한다.</li>
+            </ol>
+          </div>
+
+          <div class="aside-card">
+            <h3>주의</h3>
+            <p>
+              사이트 IA와 repo 폴더 구조를 1:1로 맞추지 않는다. Repo 구조는 agent와 link 안정성을 위해 유지하고,
+              사이트는 사람이 읽기 쉬운 가상 목차로 구성한다.
+            </p>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>
