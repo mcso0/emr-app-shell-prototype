@@ -51,8 +51,11 @@ import {
 } from "@/features/inpatient/data";
 import { useInpatientStore } from "@/features/inpatient/store";
 import { useLayoutStore } from "@/stores/layout-store";
+import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import type { EmrTableDensity } from "@/components/emr/table-density";
+import type { ShellComponentProps } from "@/types/emr";
 
 type InpatientSemanticTone = "danger" | "info" | "neutral" | "success" | "warning";
 
@@ -382,18 +385,40 @@ function InpatientWardSection({
   );
 }
 
-export function InpatientContent() {
-  const [selectedDate, setSelectedDate] = useState(inpatientTodayDate);
+export function InpatientContent({ workspaceId }: ShellComponentProps) {
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    preparedEmptyClinic ? getWorkspaceOperatingDate(workspaceId) : inpatientTodayDate
+  );
   const filter = useInpatientStore((state) => state.filter);
   const searchField = useInpatientStore((state) => state.searchField);
   const searchQuery = useInpatientStore((state) => state.searchQuery);
   const setFilter = useInpatientStore((state) => state.setFilter);
   const setSearchQuery = useInpatientStore((state) => state.setSearchQuery);
   const [tableDensity, setTableDensity] = useState<EmrTableDensity>("compact");
-  const counts = useMemo(() => getInpatientCounts(), []);
+  const counts = useMemo(
+    () =>
+      preparedEmptyClinic
+        ? {
+            all: 0,
+            dog: 0,
+            cat: 0,
+            icu: 0,
+            admitted: 0,
+            critical: 0,
+            discharge_ready: 0,
+            cautionTags: 0,
+            todayAdmissions: 0,
+          }
+        : getInpatientCounts(),
+    [preparedEmptyClinic],
+  );
   const visibleAdmissions = useMemo(
-    () => getFilteredInpatientAdmissions({ filter, searchField, searchQuery }),
-    [filter, searchField, searchQuery]
+    () =>
+      preparedEmptyClinic
+        ? []
+        : getFilteredInpatientAdmissions({ filter, searchField, searchQuery }),
+    [filter, preparedEmptyClinic, searchField, searchQuery]
   );
   const groupedAdmissions = inpatientWardGroups.map((group) => ({
     ...group,
@@ -500,7 +525,9 @@ export function InpatientContent() {
           ))}
           {!visibleAdmissions.length ? (
             <div className="rounded-lg border bg-card p-8 text-center text-[13px] text-muted-foreground">
-              검색 조건에 맞는 입원 환자가 없습니다.
+              {preparedEmptyClinic
+                ? "아직 입원 중인 환자가 없습니다."
+                : "검색 조건에 맞는 입원 환자가 없습니다."}
             </div>
           ) : null}
         </div>
@@ -509,9 +536,17 @@ export function InpatientContent() {
   );
 }
 
-export function InpatientDrawer() {
+export function InpatientDrawer({ workspaceId }: ShellComponentProps) {
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const selectedAdmissionId = useInpatientStore((state) => state.selectedAdmissionId);
+  if (isPreparedEmptyClinicWorkspace(workspaceId)) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-4 text-[13px] text-muted-foreground">
+        아직 입원 중인 환자가 없습니다.
+      </div>
+    );
+  }
+
   const admission = getInpatientAdmission(
     activeDrawer?.type === "inpatient-admission" ? activeDrawer.id : selectedAdmissionId
   );

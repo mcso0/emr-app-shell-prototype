@@ -96,6 +96,7 @@ import {
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
@@ -927,6 +928,7 @@ function getLabDetailFromSearchParams(
   searchParams: { get: (name: string) => string | null },
   selectedLabResultId: string,
   workItems: FulfillmentWorkItem[] = [],
+  options: { allowMockFallback?: boolean } = {},
 ) {
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryLabResultId = searchParams.get("labResultId") ?? scenario?.labResultId;
@@ -935,7 +937,12 @@ function getLabDetailFromSearchParams(
   const liveFallbackDetail = isLiveAuthRuntime() ? getFirstLiveLabDetail(workItems) : null;
 
   return {
-    detail: liveDetail ?? liveFallbackDetail ?? (isLiveAuthRuntime() ? null : getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc")),
+    detail:
+      liveDetail ??
+      liveFallbackDetail ??
+      (options.allowMockFallback === false || isLiveAuthRuntime()
+        ? null
+        : getLabDetail(effectiveLabResultId) ?? getLabDetail("lab-result-coco-cbc")),
     queryLabResultId,
   };
 }
@@ -944,6 +951,7 @@ function getImagingDetailFromSearchParams(
   searchParams: { get: (name: string) => string | null },
   selectedImagingStudyId: string,
   workItems: FulfillmentWorkItem[] = [],
+  options: { allowMockFallback?: boolean } = {},
 ) {
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryImagingStudyId = searchParams.get("imagingStudyId") ?? scenario?.imagingStudyId;
@@ -952,7 +960,12 @@ function getImagingDetailFromSearchParams(
   const liveFallbackDetail = isLiveAuthRuntime() ? getFirstLiveImagingDetail(workItems) : null;
 
   return {
-    detail: liveDetail ?? liveFallbackDetail ?? (isLiveAuthRuntime() ? null : getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax")),
+    detail:
+      liveDetail ??
+      liveFallbackDetail ??
+      (options.allowMockFallback === false || isLiveAuthRuntime()
+        ? null
+        : getImagingDetail(effectiveImagingStudyId) ?? getImagingDetail("imaging-coco-thorax")),
     queryImagingStudyId,
   };
 }
@@ -1224,14 +1237,18 @@ function ImagingChartQueueItem({
   );
 }
 
-export function LabSidePanel() {
+export function LabSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [queueView, setQueueView] = useState<LabQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<LabResult["status"]>>(() => new Set());
   const fulfillmentQueue = useFulfillmentQueue("lab");
-  const baseItems = useMemo(() => getLabWorkItems(), []);
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const baseItems = useMemo(
+    () => (preparedEmptyClinic ? [] : getLabWorkItems()),
+    [preparedEmptyClinic],
+  );
   const items = useMemo(
     () => getLabItemsForRuntime(baseItems, fulfillmentQueue.workItems),
     [baseItems, fulfillmentQueue.workItems]
@@ -1326,14 +1343,18 @@ export function LabSidePanel() {
   );
 }
 
-export function ImagingSidePanel() {
+export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [queueView, setQueueView] = useState<ImagingQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<ImagingStudyStatus>>(() => new Set());
   const fulfillmentQueue = useFulfillmentQueue("imaging");
-  const baseItems = useMemo(() => getImagingWorkItems(), []);
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const baseItems = useMemo(
+    () => (preparedEmptyClinic ? [] : getImagingWorkItems()),
+    [preparedEmptyClinic],
+  );
   const items = useMemo(
     () => getImagingItemsForRuntime(baseItems, fulfillmentQueue.workItems),
     [baseItems, fulfillmentQueue.workItems]
@@ -1785,16 +1806,21 @@ function AttachmentStrip({
   );
 }
 
-function useCurrentLabDetail() {
+function useCurrentLabDetail(workspaceId: string) {
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const fulfillmentQueue = useFulfillmentQueue("lab");
 
-  return getLabDetailFromSearchParams(searchParams, selectedLabResultId, fulfillmentQueue.workItems);
+  return getLabDetailFromSearchParams(
+    searchParams,
+    selectedLabResultId,
+    fulfillmentQueue.workItems,
+    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
+  );
 }
 
-export function LabHeader() {
-  const { detail } = useCurrentLabDetail();
+export function LabHeader({ workspaceId }: ShellComponentProps) {
+  const { detail } = useCurrentLabDetail(workspaceId);
 
   if (!detail) return null;
 
@@ -1827,8 +1853,8 @@ export function LabHeader() {
   );
 }
 
-export function LabContentAside() {
-  const { detail } = useCurrentLabDetail();
+export function LabContentAside({ workspaceId }: ShellComponentProps) {
+  const { detail } = useCurrentLabDetail(workspaceId);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
   const groups = detail ? getLabHistoryGroups(detail) : [];
@@ -1887,12 +1913,15 @@ export function LabContentAside() {
   );
 }
 
-export function LabRightPanel() {
-  const { detail } = useCurrentLabDetail();
+export function LabRightPanel({ workspaceId }: ShellComponentProps) {
+  const { detail } = useCurrentLabDetail(workspaceId);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const [expandedReceiptIds, setExpandedReceiptIds] = useState<Set<string> | null>(null);
   const [receiptToPaste, setReceiptToPaste] = useState<EquipmentReceipt | null>(null);
-  const labWorkItems = useMemo(() => getLabWorkItems(), []);
+  const labWorkItems = useMemo(
+    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getLabWorkItems()),
+    [workspaceId],
+  );
   const workItemByOrderId = useMemo(() => {
     const map = new Map<string, LabWorkItem>();
 
@@ -2156,7 +2185,7 @@ function LabReceiptCard({
   );
 }
 
-export function LabContent({ hasRightPanel }: ShellComponentProps) {
+export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
@@ -2169,6 +2198,7 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
     searchParams,
     selectedLabResultId,
     fulfillmentQueue.workItems,
+    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
   );
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
@@ -2370,16 +2400,21 @@ export function LabContent({ hasRightPanel }: ShellComponentProps) {
   );
 }
 
-function useCurrentImagingDetail() {
+function useCurrentImagingDetail(workspaceId: string) {
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const fulfillmentQueue = useFulfillmentQueue("imaging");
 
-  return getImagingDetailFromSearchParams(searchParams, selectedImagingStudyId, fulfillmentQueue.workItems);
+  return getImagingDetailFromSearchParams(
+    searchParams,
+    selectedImagingStudyId,
+    fulfillmentQueue.workItems,
+    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
+  );
 }
 
-export function ImagingHeader({ hasRightPanel }: ShellComponentProps) {
-  const { detail } = useCurrentImagingDetail();
+export function ImagingHeader({ hasRightPanel, workspaceId }: ShellComponentProps) {
+  const { detail } = useCurrentImagingDetail(workspaceId);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
@@ -2444,13 +2479,16 @@ function getImagingHistoryGroups(detail: ImagingDetail, allItems: ImagingWorkIte
   }));
 }
 
-export function ImagingContentAside() {
-  const { detail } = useCurrentImagingDetail();
+export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
+  const { detail } = useCurrentImagingDetail(workspaceId);
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
-  const allItems = useMemo(() => getImagingWorkItems(), []);
+  const allItems = useMemo(
+    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getImagingWorkItems()),
+    [workspaceId],
+  );
   const groups = detail ? getImagingHistoryGroups(detail, allItems) : [];
   const totalHistoryCount = groups.reduce((total, group) => total + group.count, 0);
   const toggleHistoryGroup = (date: string) => {
@@ -2647,7 +2685,7 @@ function ImagingReadingSections({ study }: { study: ImagingStudy }) {
   );
 }
 
-export function ImagingContent() {
+export function ImagingContent({ workspaceId }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
@@ -2658,6 +2696,7 @@ export function ImagingContent() {
     searchParams,
     selectedImagingStudyId,
     fulfillmentQueue.workItems,
+    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
   );
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
@@ -2835,10 +2874,16 @@ function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
   );
 }
 
-export function ImagingRightPanel() {
-  const { detail } = useCurrentImagingDetail();
-  const labItems = useMemo(() => getLabWorkItems(), []);
-  const imagingItems = useMemo(() => getImagingWorkItems(), []);
+export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
+  const { detail } = useCurrentImagingDetail(workspaceId);
+  const labItems = useMemo(
+    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getLabWorkItems()),
+    [workspaceId],
+  );
+  const imagingItems = useMemo(
+    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getImagingWorkItems()),
+    [workspaceId],
+  );
 
   if (!detail) {
     return (

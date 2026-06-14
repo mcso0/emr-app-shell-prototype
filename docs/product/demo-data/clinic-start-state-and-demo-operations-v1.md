@@ -1,7 +1,7 @@
 ---
 title: "Clinic Start State and Demo Operations"
 status: "draft"
-updated: "2026-06-11"
+updated: "2026-06-12"
 owner: "product"
 source_request: "2026-06-11 owner intake"
 ---
@@ -48,6 +48,14 @@ The app needs explicit data modes so staff and reviewers do not confuse old fixt
 | Remote staging/live | Validates remote persistence or live infrastructure | Approval-gated |
 
 Old fixture records, legacy log-style records, and past dummy daily work must not appear in the default clinic start state. Mock fallback must not silently override local-first or seed data. If the selected data source is loading, screens should show loading or empty states rather than flash old fallback records.
+
+## Current Implementation Notes
+
+As of 2026-06-12, the default prepared clinic workspace is `workspace-clair-cheongdam`. Its reception start state is scoped to the current operating date and must not merge `clair-demo` legacy appointment, encounter, queue, or fixed May 2026 fixture data.
+
+The legacy Sales Demo workspace remains `clair-demo`. It is an explicit opt-in regression/demo path and may continue to show `2026-05-01` fixture work such as the Kong/Nabi/Coco scenario records.
+
+Cheongdam reception read states now keep loading, error, retry, and empty-copy hooks separate from legacy fixture fallback. If queue or calendar reads fail, the UI should keep the prepared empty-clinic state, expose retry actions, and avoid telling reviewers that `clair-demo` local demo data is being maintained. Session-created reception drafts must carry the active workspace/date rather than defaulting to `clair-demo`.
 
 ## Demo Date Model
 
@@ -165,6 +173,13 @@ The PRD/docs viewer should eventually expose scenario-level planning for epics, 
 - full production-grade RLS/security certification
 - scenario replay implementation in the first pass
 - automatic long-running calendar simulation before resettable baseline and date-history behavior are validated
+
+## Changelog
+
+- 2026-06-12: Added DEN-483 rework boundary for seeded patient/guardian usage in Cheongdam walk-in reception creation. The reception drawer now preserves a selected live lookup patient through the display-label re-search, so the generated walk-in payload keeps seeded patient and guardian IDs. Staging write-through creation remains approval-gated because it would create active daily work in the empty-clinic baseline.
+- 2026-06-12: Added DEN-468/DEN-491 implementation boundary for Cheongdam work modules and shell surfaces. Home, chart, lab, imaging, dispensing/treatment, inpatient, billing, global command search, and global notification badge/drawer now use prepared empty-clinic states for `workspace-clair-cheongdam`, while staging has synthetic master data for staff, guardians, patients, service/order catalog, pricing, and order sets with zero active daily work.
+- 2026-06-12: Added DEN-472/DEN-473 implementation boundary for Cheongdam reception loading/error/retry/empty hooks and workspace-aware session draft creation.
+- 2026-06-12: Recorded implementation boundary for `workspace-clair-cheongdam` as the prepared empty-clinic default and `clair-demo` as the explicit legacy Sales Demo fixture path.
 
 ## Open Decisions
 

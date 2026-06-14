@@ -1,0 +1,167 @@
+import { expect, test } from "@playwright/test";
+
+import {
+  getReceptionPatientSummaries,
+  getReceptionQueueRows,
+  getTodayAppointments,
+} from "../src/features/reception/data";
+import {
+  formatKoreanOperatingDateLabel,
+  getWorkspaceOperatingDate,
+} from "../src/lib/emr-domain/demo-date";
+import {
+  LEGACY_SALES_DEMO_WORKSPACE_ID,
+  PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+} from "../src/lib/emr-domain/demo-workspaces";
+
+test("Cheongdam prepared clinic scope does not inherit legacy daily work", () => {
+  const operatingDate = "2026-06-12";
+  const scope = {
+    operatingDate,
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+  };
+
+  expect(getTodayAppointments([], [], scope)).toEqual([]);
+  expect(getReceptionQueueRows([], scope)).toEqual([]);
+  expect(
+    getReceptionPatientSummaries([], undefined, scope).filter(
+      (summary) => summary.activeEncounter || summary.latestAppointment
+    )
+  ).toEqual([]);
+});
+
+test("legacy Sales Demo scope still exposes the fixture day explicitly", () => {
+  const appointments = getTodayAppointments([], [], {
+    workspaceId: LEGACY_SALES_DEMO_WORKSPACE_ID,
+  });
+  const queueRows = getReceptionQueueRows([], {
+    workspaceId: LEGACY_SALES_DEMO_WORKSPACE_ID,
+  });
+
+  expect(appointments.map((appointment) => appointment.id)).toContain(
+    "appointment-nabi-260501"
+  );
+  expect(queueRows.map((row) => row.patient.name)).toContain("코코");
+});
+
+test("Cheongdam reception screen starts from current date and no visible fixture cards", async ({
+  page,
+}) => {
+  const operatingDate = getWorkspaceOperatingDate(PREPARED_EMPTY_CLINIC_WORKSPACE_ID);
+  const operatingDateLabel = formatKoreanOperatingDateLabel(operatingDate);
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception?modulePanel=open`
+  );
+
+  await expect(
+    page.getByRole("button", { name: `${operatingDateLabel} 날짜 선택` })
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toHaveCount(0);
+  await expect(page.locator('[data-testid^="appointment-card-"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
+});
+
+test("Cheongdam reception read errors keep empty-clinic state with retry hooks", async ({
+  page,
+}) => {
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 403,
+          denialReason: "workspace_membership_missing",
+        }),
+      });
+    }
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 403,
+          denialReason: "workspace_membership_missing",
+        }),
+      });
+    }
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception?modulePanel=open`
+  );
+
+  await expect(page.getByTestId("reception-queue-read-alert")).toContainText(
+    "기존 데모 업무는 표시하지 않고"
+  );
+  await expect(page.getByTestId("reception-calendar-read-alert")).toContainText(
+    "기존 데모 업무는 표시하지 않고"
+  );
+  await expect(page.getByRole("button", { name: "대기열 다시 시도" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "캘린더 다시 시도" })).toBeVisible();
+  await expect(page.getByText("아직 접수 대기 업무가 없습니다.")).toBeVisible();
+  await expect(page.getByText("26.05.01")).toHaveCount(0);
+  await expect(page.getByText("콩이")).toHaveCount(0);
+  await expect(page.getByText("나비")).toHaveCount(0);
+  await expect(page.getByText("코코")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="appointment-card-"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
+});
+
+test("Cheongdam work modules do not render legacy active-work fixtures", async ({
+  page,
+}) => {
+  const modules = [
+    "home",
+    "treatment",
+    "lab",
+    "imaging",
+    "dispensing",
+    "billing",
+    "inpatient",
+  ];
+
+  for (const moduleId of modules) {
+    await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/${moduleId}`);
+
+    await expect(page.getByText("26.05.01")).toHaveCount(0);
+    await expect(page.getByText("26.04.14")).toHaveCount(0);
+    await expect(page.getByText("26.05.06")).toHaveCount(0);
+    await expect(page.getByText("콩이")).toHaveCount(0);
+    await expect(page.getByText("나비")).toHaveCount(0);
+    await expect(page.getByText("코코")).toHaveCount(0);
+    await expect(page.getByText("하루")).toHaveCount(0);
+  }
+});
+
+test("Cheongdam shell search and notifications do not expose legacy daily work", async ({
+  page,
+}) => {
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/home`);
+
+  await expect(page.getByTestId("global-notification-badge")).toHaveCount(0);
+
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
+  await page.getByLabel("통합 검색", { exact: true }).fill("콩이");
+
+  await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
+  await expect(page.locator('[id^="command-result-patient-"]')).toHaveCount(0);
+  await expect(page.locator('[id^="command-result-appointment-"]')).toHaveCount(0);
+  await expect(page.locator('[id^="command-result-encounter-"]')).toHaveCount(0);
+});
+
+test("legacy Sales Demo route keeps the fixed fixture date and cards", async ({
+  page,
+}) => {
+  await page.goto(`/w/${LEGACY_SALES_DEMO_WORKSPACE_ID}/reception?modulePanel=open`);
+
+  await expect(page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
+  await expect(page.getByTestId("appointment-card-appointment-nabi-260501")).toBeVisible();
+});

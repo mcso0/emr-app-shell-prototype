@@ -2,6 +2,7 @@ import {
   HOME_ROLE_LABELS,
   HOME_ROLE_USER_NAMES,
 } from "@/features/home/home.presets";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import type {
   HomeDashboardData,
   HomeFlowSummaryItem,
@@ -715,7 +716,37 @@ function createQuickStatus(tasks: HomeTask[]): HomeQuickStatus[] {
 export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashboardData {
   const roleTasks = tasksByRole[role];
 
-  void workspaceId;
+  if (isPreparedEmptyClinicWorkspace(workspaceId)) {
+    return {
+      role,
+      roleLabel: HOME_ROLE_LABELS[role],
+      userName: HOME_ROLE_USER_NAMES[role],
+      hospitalName: "VIP동물의료센터 청담점",
+      todayLabel: new Intl.DateTimeFormat("ko-KR", {
+        dateStyle: "full",
+        timeZone: "Asia/Seoul",
+      }).format(new Date()),
+      columns: homeKanbanColumns,
+      tasks: [],
+      hospitalTasks: [],
+      notifications: [],
+      quickStatus: createQuickStatus([]),
+      emptyLaunchers: emptyLaunchersByRole[role].map((launcher) => ({
+        ...launcher,
+        href: launcher.href.replace("/w/clair-demo", `/w/${workspaceId}`),
+      })),
+      flowSummary: flowSummary.map((item) => ({
+        ...item,
+        count: 0,
+        detail: "준비됨",
+        href: item.href.replace("/w/clair-demo", `/w/${workspaceId}`),
+        overdueCount: 0,
+        unassignedCount: 0,
+      })),
+      roleNextActions: [],
+      updatedAt: new Date().toISOString(),
+    };
+  }
 
   return {
     role,

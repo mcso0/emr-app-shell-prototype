@@ -14,6 +14,7 @@ Actual schema, ERD, RLS, indexes, migrations, and persistence details belong in 
 ## Current Domain Sources
 
 - `workspace-auth-permissions.md`: workspace creation, membership, canonical roles, multi-role permission behavior, and personal profile authorization boundaries.
+- `workspace-hospital-profile.md`: workspace-owned hospital identity, contact, business, brand, operating-hour, and deferred referral settings requirements.
 - `outpatient-workflow-state-model.md`: outpatient appointment, encounter, queue, chart, order, result, billing, and audit state transitions.
 - `emr-domain-entity-map.md`: product-level relationships between workspace, patient, guardian, encounter, order, invoice, payment, and audit.
 - `workspace-order-catalog-platform.md`: workspace-scoped order catalog platform policy for CLAiR presets, hospital customization, chart snapshots, routing, billing gates, and CSV template scope.

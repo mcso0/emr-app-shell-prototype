@@ -1,5 +1,6 @@
 export type PrdDocGroup =
   | "Start"
+  | "Current State"
   | "Service"
   | "Roadmap"
   | "Domain"
@@ -34,6 +35,20 @@ export const prdDocRegistry = [
     group: "Start",
     sourcePath: "docs/product/prd/clair-emr-saas-prd.md",
     description: "Core CLAiR EMR product requirements.",
+  },
+  {
+    slug: "auth-login-onboarding-current-state",
+    title: "Auth Login Onboarding Current State",
+    group: "Current State",
+    sourcePath: "docs/product/current-state/auth-login-onboarding-current-state.md",
+    description: "Current implemented login, invite, signup, workspace creation, and auth-gate inventory.",
+  },
+  {
+    slug: "role-screen-access-current-state",
+    title: "Role Screen Access Current State",
+    group: "Current State",
+    sourcePath: "docs/product/current-state/role-screen-access-current-state.md",
+    description: "Current implemented workspace module list compared against role/permission v1.",
   },
   {
     slug: "saas-operating-map",
@@ -72,6 +87,12 @@ export const prdDocRegistry = [
     sourcePath: "docs/product/domain/workspace-auth-permissions.md",
   },
   {
+    slug: "workspace-hospital-profile",
+    title: "Workspace Hospital Profile",
+    group: "Domain",
+    sourcePath: "docs/product/domain/workspace-hospital-profile.md",
+  },
+  {
     slug: "order-fulfillment-handoff",
     title: "Order Fulfillment Handoff",
     group: "Domain",
@@ -88,6 +109,13 @@ export const prdDocRegistry = [
     title: "Feature Specs",
     group: "Features",
     sourcePath: "docs/product/features/README.md",
+  },
+  {
+    slug: "login-invite-onboarding-spec",
+    title: "Login Invite Onboarding Spec",
+    group: "Features",
+    sourcePath: "docs/product/features/auth/login-invite-onboarding-spec.md",
+    description: "Product target for login, first admin onboarding, staff invites, and session policy drafts.",
   },
   {
     slug: "reception-appointment-spec",

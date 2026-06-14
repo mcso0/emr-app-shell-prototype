@@ -2,6 +2,16 @@
 
 Use this file for small product-planning changes that do not need a standalone decision record.
 
+## 2026-06-12
+
+- `changed`: Clarified the product login and onboarding baseline: CLAiR operations creates hospital workspaces, first hospital admins enter through invite links, staff join through workspace invitations, and returning users sign in with email and password.
+- `changed`: Confirmed role/permission v1 keeps `hospital_admin`, `vet`, `technician`, and `front_desk` as canonical roles; demo mock role selection is excluded from real product planning, and `billing_admin`/`수납 관리자` remains outside the MVP canonical role set.
+- `added`: Added the workspace hospital profile source doc for hospital basic settings, including identity, address, brand assets, contacts, representative/business fields, public links, operating hours, and deferred referral settings.
+- `added`: Added a thin auth/login/onboarding current-state inventory so implemented screens can be compared against the agreed product login and onboarding baseline without mixing prototype state into product truth.
+- `changed`: Expanded the role/permission matrix v1 by screen area, clarifying reception, customer/patient, chart, lab/imaging, dispensing/treatment, billing, inpatient, hospital profile, order catalog, member management, and audit access by canonical role.
+- `added`: Added a role/screen current-state inventory to keep the implemented workspace module list separate from canonical product permission policy.
+- `added`: Added the login/invite/onboarding feature spec and registered it as a CLAiR Docs feature document, keeping product target separate from current-state inventory.
+
 ## 2026-06-11
 
 - `added`: Added PRD viewer operating guidance so `docs/product` remains canonical while `/prd` acts only as a read-only product-doc reader.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -77,6 +77,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getAppointmentPatient,
+  getEffectiveEncounters,
   getFilteredReceptionPatients,
   getGuardianDisplay,
   getReceptionPatientSummaries,
@@ -109,7 +110,10 @@ import type {
   ReceptionWalkInEncounterRecord,
   ReceptionWalkInEncounterResponse,
 } from "@/features/reception/walk-in-encounter";
-import { saveChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
+import {
+  readChartLiveEncounterHandoff,
+  saveChartLiveEncounterHandoff,
+} from "@/features/chart/live-encounter-handoff";
 import {
   useReceptionStore,
   type ReceptionCalendarDraftSelection,
@@ -120,6 +124,21 @@ import {
   ReceptionSearchInput,
 } from "@/features/reception/reception-list-search";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import {
+  formatKoreanOperatingDateLabel,
+  formatOperatingMonthLabel,
+  formatOperatingShortTime,
+  formatShortOperatingDate,
+  getOperatingDateFromIso,
+  getOperatingIsoAtMinutes,
+  getOperatingMinutesFromIso,
+  getWorkspaceOperatingDate,
+} from "@/lib/emr-domain/demo-date";
+import {
+  LEGACY_SALES_DEMO_WORKSPACE_ID,
+  isLegacySalesDemoWorkspace,
+  isPreparedEmptyClinicWorkspace,
+} from "@/lib/emr-domain/demo-workspaces";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import {
@@ -128,22 +147,23 @@ import {
   mockStaffUsers,
 } from "@/mocks/emr-domain";
 import { useLayoutStore } from "@/stores/layout-store";
-import type { Appointment, Encounter, Patient } from "@/types/emr-domain";
+import type {
+  Appointment,
+  Encounter,
+  Guardian,
+  Patient,
+  PatientGuardian,
+} from "@/types/emr-domain";
 import type { ShellComponentProps } from "@/types/emr";
 
 const allVeterinarians = mockStaffUsers.filter(
   (user) => user.role === "veterinarian",
-);
-const todayWorkingVeterinarianIds = new Set([
-  "user-vet-suji",
-  "user-vet-doyun",
-]);
-const todayWorkingVeterinarians = allVeterinarians.filter((user) =>
-  todayWorkingVeterinarianIds.has(user.id),
-);
-const otherVeterinarians = allVeterinarians.filter(
-  (user) => !todayWorkingVeterinarianIds.has(user.id),
-);
+).map((user) => ({
+  id: user.id,
+  initial: user.initial,
+  name: user.name,
+  role: "veterinarian" as const,
+}));
 const defaultVeterinarian = allVeterinarians[0];
 const veterinarianHeaderToneClasses = [
   "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-text)]",
@@ -211,7 +231,34 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
 type ReceptionCalendarView = (typeof calendarViewItems)[number]["value"];
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
-type Veterinarian = (typeof allVeterinarians)[number];
+type Veterinarian = {
+  department?: string;
+  id: string;
+  initial?: string;
+  name: string;
+  role: "veterinarian";
+  title?: string;
+};
+type WorkspaceStaffReadResponse =
+  | {
+      ok: true;
+      status: 200;
+      staff: Array<{
+        department?: string;
+        displayName: string;
+        id: string;
+        initial?: string;
+        roles: string[];
+        status: string;
+        title?: string;
+      }>;
+    }
+  | {
+      ok: false;
+      status?: number;
+      denialReason?: string;
+      error?: string;
+    };
 type WalkInReceptionInput = {
   department?: string;
   durationMinutes?: number;
@@ -258,21 +305,29 @@ function getVeterinarianFilterLabel(selectedVeterinarians: Veterinarian[]) {
     : `${firstVeterinarian.name} +${selectedVeterinarians.length - 1}`;
 }
 
-function getVeterinarianToneIndex(veterinarian: Veterinarian) {
-  const veterinarianIndex = allVeterinarians.findIndex(
+function getVeterinarianToneIndex(
+  veterinarian: Veterinarian,
+  veterinarians: Veterinarian[] = allVeterinarians,
+) {
+  const veterinarianIndex = veterinarians.findIndex(
     (item) => item.id === veterinarian.id,
   );
 
   return veterinarianIndex >= 0 ? veterinarianIndex : 0;
 }
 
-function getVeterinarianAccentClassName(veterinarianId?: string) {
+function getVeterinarianAccentClassName(
+  veterinarianId?: string,
+  veterinarians: Veterinarian[] = allVeterinarians,
+) {
   if (!veterinarianId) return "bg-[var(--emr-line-strong)]";
 
-  const veterinarian = allVeterinarians.find(
+  const veterinarian = veterinarians.find(
     (item) => item.id === veterinarianId,
   );
-  const toneIndex = veterinarian ? getVeterinarianToneIndex(veterinarian) : 0;
+  const toneIndex = veterinarian
+    ? getVeterinarianToneIndex(veterinarian, veterinarians)
+    : 0;
 
   return veterinarianAccentToneClasses[
     toneIndex % veterinarianAccentToneClasses.length
@@ -517,6 +572,53 @@ async function loadReceptionCalendar({
   }
 }
 
+async function loadWorkspaceVeterinarians({
+  actorId,
+  workspaceId,
+}: {
+  actorId?: string;
+  workspaceId: string;
+}): Promise<WorkspaceStaffReadResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/staff?role=vet`,
+      {
+        cache: "no-store",
+        headers: actorId
+          ? { "x-clair-demo-session-user-id": actorId }
+          : undefined,
+      },
+    );
+    const body = (await response.json()) as WorkspaceStaffReadResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+function mapWorkspaceStaffToVeterinarians(
+  response: WorkspaceStaffReadResponse,
+): Veterinarian[] {
+  if (!response.ok) return [];
+
+  return response.staff
+    .filter((member) => member.status === "active" && member.roles.includes("vet"))
+    .map((member) => ({
+      department: member.department,
+      id: member.id,
+      initial: member.initial,
+      name: member.displayName,
+      role: "veterinarian" as const,
+      title: member.title,
+    }));
+}
+
 function getWalkInRouteErrorMessage(
   result: Extract<ReceptionWalkInEncounterResponse, { ok: false }>,
 ) {
@@ -528,11 +630,11 @@ function getWalkInRouteErrorMessage(
     );
   }
   if (result.denialReason === "patient_unavailable")
-    return "접수할 환자를 찾을 수 없습니다.";
+    return "접수를 생성할 수 없습니다.";
   if (result.denialReason === "guardian_unavailable")
-    return "연결할 보호자를 찾을 수 없습니다.";
+    return "접수를 생성할 수 없습니다.";
   if (result.denialReason === "patient_guardian_link_missing") {
-    return "선택한 보호자와 환자 연결을 확인해 주세요.";
+    return "접수를 생성할 수 없습니다.";
   }
   if (
     result.denialReason === "permission_missing" ||
@@ -543,7 +645,7 @@ function getWalkInRouteErrorMessage(
     return "이 workspace에서 현장 접수를 생성할 권한이 없습니다.";
   }
 
-  return "현장 접수 생성에 실패했습니다.";
+  return "접수를 생성할 수 없습니다.";
 }
 
 function getAppointmentCheckInRouteErrorMessage(
@@ -576,25 +678,51 @@ function getReceptionReadFailureMessage(
     ReceptionQueueReadResponse | ReceptionCalendarReadResponse,
     { ok: false }
   >,
+  workspaceId?: string,
 ) {
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const localFallbackText = preparedEmptyClinic
+    ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지해."
+    : "현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+
   if (
     result.denialReason === "permission_missing" ||
     result.denialReason === "inactive_user" ||
     result.denialReason === "workspace_membership_missing" ||
     result.denialReason === "workspace_membership_inactive"
   ) {
-    return "접수 보기 권한 또는 workspace membership을 확인해야 해. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+    return `접수 보기 권한 또는 workspace membership을 확인해야 해. ${localFallbackText}`;
   }
 
   if (result.denialReason === "unauthenticated") {
-    return "로그인 세션을 확인하지 못했어. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+    return `로그인 세션을 확인하지 못했어. ${localFallbackText}`;
   }
 
   if (result.error === "supabase_client_missing") {
-    return "live Supabase read 연결이 구성되지 않았어. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+    return `live Supabase read 연결이 구성되지 않았어. ${localFallbackText}`;
   }
 
-  return "서버 read 결과를 반영하지 못했어. 현재 화면은 로컬 데모/세션 데이터 기준으로 유지돼.";
+  return `서버 read 결과를 반영하지 못했어. ${localFallbackText}`;
+}
+
+function getReceptionEmptyStateCopy({
+  listMode,
+  searchQuery,
+  workspaceId,
+}: {
+  listMode: ReceptionSideListMode;
+  searchQuery: string;
+  workspaceId: string;
+}) {
+  if (searchQuery.trim()) return "검색 결과가 없습니다.";
+  if (isPreparedEmptyClinicWorkspace(workspaceId)) {
+    if (listMode === "appointment") return "오늘 예정된 예약이 아직 없습니다.";
+    if (listMode === "reception") return "아직 접수 대기 업무가 없습니다.";
+    return "아직 오늘 접수/예약 업무가 없습니다.";
+  }
+  if (listMode === "appointment") return "예약 목록이 비어 있습니다.";
+  if (listMode === "reception") return "대기열이 비어 있습니다.";
+  return "목록이 비어 있습니다.";
 }
 
 const recentPatientWeightKgByPatientId: Record<string, string> = {
@@ -609,9 +737,7 @@ const getRecentPatientWeightKg = (patient?: Patient) =>
   patient ? (recentPatientWeightKgByPatientId[patient.id] ?? "0.00") : "0.00";
 
 const getShortTime = (dateTime?: string) => {
-  if (!dateTime) return "-";
-
-  return dateTime.slice(11, 16);
+  return formatOperatingShortTime(dateTime);
 };
 
 const getShortDate = (dateTime?: string) => {
@@ -621,7 +747,7 @@ const getShortDate = (dateTime?: string) => {
 };
 
 const getAppointmentHour = (appointment: Appointment) =>
-  Number(appointment.scheduledStartAt.slice(11, 13));
+  Math.floor((getMinutesInDayFromDateTime(appointment.scheduledStartAt) ?? 0) / 60);
 
 const getScheduleHourLabel = (hour: number) =>
   `${String(hour).padStart(2, "0")}:00`;
@@ -633,16 +759,21 @@ const getScheduleTimeLabelFromMinutes = (minutes: number) => {
   return `${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 };
 
-const getReceptionIsoAtMinutes = (minutes: number) =>
-  `2026-05-01T${getScheduleTimeLabelFromMinutes(minutes)}:00+09:00`;
+const getReceptionIsoAtMinutes = (date: string, minutes: number) =>
+  getOperatingIsoAtMinutes(date, minutes);
 
 const getDraftScheduleStartAt = (draft: ReceptionDraftCheckIn) =>
   draft.plannedStartAt ??
   draft.encounter.checkedInAt ??
   draft.encounter.createdAt;
 
+const isDraftOnOperatingDate = (
+  draft: ReceptionDraftCheckIn,
+  operatingDate: string,
+) => getOperatingDateFromIso(getDraftScheduleStartAt(draft)) === operatingDate;
+
 const getDraftScheduleHour = (draft: ReceptionDraftCheckIn) =>
-  Number(getDraftScheduleStartAt(draft).slice(11, 13));
+  Math.floor((getOperatingMinutesFromIso(getDraftScheduleStartAt(draft)) ?? 0) / 60);
 
 const getDraftDurationLabel = (draft: ReceptionDraftCheckIn) =>
   draft.durationMinutes ? `${draft.durationMinutes}분` : defaultWalkInDuration;
@@ -795,12 +926,14 @@ const validateReceptionCalendarSelection = ({
   appointments,
   draftCheckIns,
   endMinutes,
+  operatingDate,
   startMinutes,
   veterinarianId,
 }: {
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   endMinutes: number;
+  operatingDate: string;
   startMinutes: number;
   veterinarianId: string;
 }): ReceptionCalendarSelectionValidationResult => {
@@ -886,7 +1019,10 @@ const validateReceptionCalendarSelection = ({
 
   return {
     ...normalized,
-    plannedStartAt: getReceptionIsoAtMinutes(normalized.startMinutes),
+    plannedStartAt: getReceptionIsoAtMinutes(
+      operatingDate,
+      normalized.startMinutes,
+    ),
     valid: true,
   };
 };
@@ -926,14 +1062,7 @@ const getDayCurrentTimeOffset = () => {
 };
 
 const getMinutesInDayFromDateTime = (dateTime?: string) => {
-  if (!dateTime) return undefined;
-
-  const hours = Number(dateTime.slice(11, 13));
-  const minutes = Number(dateTime.slice(14, 16));
-
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return undefined;
-
-  return hours * 60 + minutes;
+  return getOperatingMinutesFromIso(dateTime);
 };
 
 const getWaitMinutesFromTime = (dateTime?: string) => {
@@ -1007,8 +1136,40 @@ const getReceptionDrawerDurationLabel = ({
   return appointment ? getAppointmentDurationLabel(appointment) : "30분";
 };
 
-const getStaffDisplayName = (userId?: string) =>
-  userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
+const getStaffDisplayName = (
+  userId?: string,
+  staff: Veterinarian[] = allVeterinarians,
+) =>
+  userId
+    ? (staff.find((user) => user.id === userId)?.name ??
+      mockStaffUsers.find((user) => user.id === userId)?.name)
+    : undefined;
+
+const getPrimaryGuardianFromProfiles = ({
+  guardians,
+  patientGuardians,
+  patientId,
+  workspaceId,
+}: {
+  guardians: Guardian[];
+  patientGuardians: PatientGuardian[];
+  patientId?: string;
+  workspaceId: string;
+}) => {
+  if (!patientId) return undefined;
+
+  const primaryGuardianId = patientGuardians.find(
+    (link) => link.patientId === patientId && link.isPrimary,
+  )?.guardianId;
+
+  return primaryGuardianId
+    ? guardians.find(
+        (guardian) =>
+          guardian.id === primaryGuardianId &&
+          guardian.workspaceId === workspaceId,
+      )
+    : undefined;
+};
 
 const getSpeciesLabel = (species: Patient["species"]) => {
   if (species === "dog") return "강아지";
@@ -1025,10 +1186,13 @@ const getSpeciesLabel = (species: Patient["species"]) => {
   return "기타";
 };
 
-const getReceptionVeterinarianSelectLabel = (veterinarianId: string) =>
+const getReceptionVeterinarianSelectLabel = (
+  veterinarianId: string,
+  veterinarians: Veterinarian[] = allVeterinarians,
+) =>
   veterinarianId === unassignedVeterinarianValue
     ? "수의사 미지정"
-    : (getStaffDisplayName(veterinarianId) ?? "수의사 미지정");
+    : (getStaffDisplayName(veterinarianId, veterinarians) ?? "수의사 미지정");
 
 const getReceptionEncounterStatusLabel = (status: Encounter["status"]) =>
   status === "waiting" ? "진료대기" : getStatusLabel("encounter", status);
@@ -1217,10 +1381,7 @@ function CalendarTaskCard({
           <span className="flex w-full min-w-0 items-center gap-[6px] overflow-hidden">
             <CalendarTaskBadge type={badgeType} />
             {!noShow && secondaryBadgeLabel ? (
-              <CalendarTaskBadge
-                testId={secondaryBadgeTestId}
-                type="외래"
-              />
+              <CalendarTaskBadge testId={secondaryBadgeTestId} type="외래" />
             ) : null}
           </span>
           <span
@@ -1245,9 +1406,11 @@ function CalendarTaskCard({
 const getReceptionVisitSummary = ({
   appointment,
   encounter,
+  veterinarians = allVeterinarians,
 }: {
   appointment?: Appointment;
   encounter?: Encounter;
+  veterinarians?: Veterinarian[];
 }) => {
   const checkedInAt = encounter?.checkedInAt
     ? `${getShortTime(encounter.checkedInAt)} 접수`
@@ -1256,8 +1419,8 @@ const getReceptionVisitSummary = ({
     ? `${getShortTime(appointment.scheduledStartAt)} 예약`
     : null;
   const veterinarianName =
-    getStaffDisplayName(encounter?.primaryVeterinarianId) ??
-    getStaffDisplayName(appointment?.assignedVeterinarianId) ??
+    getStaffDisplayName(encounter?.primaryVeterinarianId, veterinarians) ??
+    getStaffDisplayName(appointment?.assignedVeterinarianId, veterinarians) ??
     "담당의 미지정";
   const encounterNo = encounter?.encounterNo ?? "encounter 생성 전";
 
@@ -1506,17 +1669,29 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : (params.workspaceId?.[0] ?? "clair-demo");
+      : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
+  const operatingDate = getWorkspaceOperatingDate(workspaceId);
   const querySelectedPatientId =
     searchParams.get("patientId") ?? scenario?.patientId;
   const patientSummaries = useMemo(
     () =>
-      getReceptionPatientSummaries(draftCheckIns, {
-        guardians,
-        patientGuardians,
-        patients,
-      }),
-    [draftCheckIns, guardians, patientGuardians, patients],
+      getReceptionPatientSummaries(
+        draftCheckIns,
+        {
+          guardians,
+          patientGuardians,
+          patients,
+        },
+        { operatingDate, workspaceId },
+      ),
+    [
+      draftCheckIns,
+      guardians,
+      operatingDate,
+      patientGuardians,
+      patients,
+      workspaceId,
+    ],
   );
   const filteredPatients = useMemo(
     () => getFilteredReceptionPatients(patientSummaries, searchQuery),
@@ -1530,6 +1705,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     receptionQueueTabItems.find((item) => item.value === listMode)?.label ??
     "전체";
   const sideListCount = visiblePatients.length;
+  const emptyStateCopy = getReceptionEmptyStateCopy({
+    listMode,
+    searchQuery,
+    workspaceId,
+  });
 
   return (
     <EmrSubpanel>
@@ -1549,9 +1729,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       {queueReadStatus === "loading" ? (
-        <ReceptionPanelStateMessage>
-          대기열 불러오는 중
-        </ReceptionPanelStateMessage>
+        <ReceptionPanelStateMessage>대기열 확인 중</ReceptionPanelStateMessage>
       ) : null}
       {queueReadStatus === "error" ? (
         <EmrInlineAlert
@@ -1570,7 +1748,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           testId="reception-queue-read-alert"
         >
           {queueReadError ??
-            "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼."}
+            (isPreparedEmptyClinicWorkspace(workspaceId)
+              ? "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지해."
+              : "현재 목록은 로컬 데모/세션 데이터 기준으로 유지돼.")}
         </EmrInlineAlert>
       ) : null}
       {cardActionFeedback ? (
@@ -1684,7 +1864,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             />
           ))
         ) : (
-          <ReceptionEmptyState>검색 결과가 없습니다.</ReceptionEmptyState>
+          <ReceptionEmptyState>{emptyStateCopy}</ReceptionEmptyState>
         )}
       </EmrSubpanelBody>
     </EmrSubpanel>
@@ -1756,7 +1936,11 @@ function getReceptionSideListItems(
     );
   }
 
-  return sortReceptionSideListItems(summaries);
+  return sortReceptionSideListItems(
+    summaries.filter(
+      (summary) => summary.activeEncounter || summary.latestAppointment,
+    ),
+  );
 }
 
 function ScheduleAppointmentCard({
@@ -1764,11 +1948,13 @@ function ScheduleAppointmentCard({
   onClearCalendarTransientSelection,
   onSelect,
   selected,
+  veterinarians = allVeterinarians,
 }: {
   appointment: Appointment;
   onClearCalendarTransientSelection: () => void;
   onSelect: () => void;
   selected: boolean;
+  veterinarians?: Veterinarian[];
 }) {
   const patient = getAppointmentPatient(appointment);
   const visitPurpose = appointment.visitPurpose ?? "내원";
@@ -1785,6 +1971,7 @@ function ScheduleAppointmentCard({
     <CalendarTaskCard
       accentClassName={getVeterinarianAccentClassName(
         appointment.assignedVeterinarianId,
+        veterinarians,
       )}
       accentTestId={`appointment-accent-${appointment.id}`}
       ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${visitPurpose}`}
@@ -1811,10 +1998,12 @@ function ScheduleWalkInQueueCard({
   draft,
   onClearCalendarTransientSelection,
   onSelectPatient,
+  veterinarians = allVeterinarians,
 }: {
   draft: ReceptionDraftCheckIn;
   onClearCalendarTransientSelection: () => void;
   onSelectPatient: (patientId: string) => void;
+  veterinarians?: Veterinarian[];
 }) {
   const patients = usePatientProfileStore((state) => state.patients);
   const guardians = usePatientProfileStore((state) => state.guardians);
@@ -1832,6 +2021,7 @@ function ScheduleWalkInQueueCard({
     getMockPatientBundle(draft.encounter.patientId)?.primaryGuardian;
   const veterinarianName = getStaffDisplayName(
     draft.encounter.primaryVeterinarianId,
+    veterinarians,
   );
   const durationLabel = getDraftDurationLabel(draft);
   const visitPurpose = draft.encounter.chiefComplaint ?? "현장 접수";
@@ -1843,6 +2033,7 @@ function ScheduleWalkInQueueCard({
     <CalendarTaskCard
       accentClassName={getVeterinarianAccentClassName(
         draft.encounter.primaryVeterinarianId,
+        veterinarians,
       )}
       accentTestId={`walkin-accent-${draft.encounter.id}`}
       ariaLabel={`${getReceptionEncounterStatusLabel(draft.encounter.status)} ${patientLabel} · ${visitPurpose}`}
@@ -1863,104 +2054,141 @@ function ScheduleWalkInQueueCard({
   );
 }
 
-const receptionToolbarDateLabel = "26.05.01 (금)";
-const receptionToolbarWeekLabel = "26.04.27 - 26.05.03";
-const receptionToolbarMonthLabel = "26.05";
-const receptionDateControlLabels: Record<
-  ReceptionCalendarView,
-  {
-    dateLabel: string;
-    pickerLabel: string;
-    previousLabel: string;
-    nextLabel: string;
-  }
-> = {
-  day: {
-    dateLabel: receptionToolbarDateLabel,
-    pickerLabel: "날짜 선택",
-    previousLabel: "이전 날짜",
-    nextLabel: "다음 날짜",
-  },
-  week: {
-    dateLabel: receptionToolbarWeekLabel,
-    pickerLabel: "주 선택",
-    previousLabel: "이전 주",
-    nextLabel: "다음 주",
-  },
-  month: {
-    dateLabel: receptionToolbarMonthLabel,
-    pickerLabel: "월 선택",
-    previousLabel: "이전 월",
-    nextLabel: "다음 월",
-  },
-};
 const receptionDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
-const receptionDatePickerCells = [
-  { key: "2026-04-26", day: "26", inMonth: false },
-  { key: "2026-04-27", day: "27", inMonth: false },
-  { key: "2026-04-28", day: "28", inMonth: false },
-  { key: "2026-04-29", day: "29", inMonth: false },
-  { key: "2026-04-30", day: "30", inMonth: false },
-  { key: "2026-05-01", day: "1", inMonth: true, selected: true },
-  { key: "2026-05-02", day: "2", inMonth: true },
-  { key: "2026-05-03", day: "3", inMonth: true },
-  { key: "2026-05-04", day: "4", inMonth: true },
-  { key: "2026-05-05", day: "5", inMonth: true },
-  { key: "2026-05-06", day: "6", inMonth: true },
-  { key: "2026-05-07", day: "7", inMonth: true },
-  { key: "2026-05-08", day: "8", inMonth: true },
-  { key: "2026-05-09", day: "9", inMonth: true },
-  { key: "2026-05-10", day: "10", inMonth: true },
-  { key: "2026-05-11", day: "11", inMonth: true },
-  { key: "2026-05-12", day: "12", inMonth: true },
-  { key: "2026-05-13", day: "13", inMonth: true },
-  { key: "2026-05-14", day: "14", inMonth: true },
-  { key: "2026-05-15", day: "15", inMonth: true },
-  { key: "2026-05-16", day: "16", inMonth: true },
-  { key: "2026-05-17", day: "17", inMonth: true },
-  { key: "2026-05-18", day: "18", inMonth: true },
-  { key: "2026-05-19", day: "19", inMonth: true },
-  { key: "2026-05-20", day: "20", inMonth: true },
-  { key: "2026-05-21", day: "21", inMonth: true },
-  { key: "2026-05-22", day: "22", inMonth: true },
-  { key: "2026-05-23", day: "23", inMonth: true },
-  { key: "2026-05-24", day: "24", inMonth: true },
-  { key: "2026-05-25", day: "25", inMonth: true },
-  { key: "2026-05-26", day: "26", inMonth: true },
-  { key: "2026-05-27", day: "27", inMonth: true },
-  { key: "2026-05-28", day: "28", inMonth: true },
-  { key: "2026-05-29", day: "29", inMonth: true },
-  { key: "2026-05-30", day: "30", inMonth: true },
-];
-const receptionWeekPickerRows = [
-  { key: "2026-04-13", label: "26.04.13 - 26.04.19" },
-  { key: "2026-04-20", label: "26.04.20 - 26.04.26" },
-  { key: "2026-04-27", label: receptionToolbarWeekLabel, selected: true },
-  { key: "2026-05-04", label: "26.05.04 - 26.05.10" },
-  { key: "2026-05-11", label: "26.05.11 - 26.05.17" },
-];
-const receptionMonthPickerItems = [
-  "26.01",
-  "26.02",
-  "26.03",
-  "26.04",
-  receptionToolbarMonthLabel,
-  "26.06",
-  "26.07",
-  "26.08",
-  "26.09",
-  "26.10",
-  "26.11",
-  "26.12",
-];
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function parseIsoDateParts(date: string) {
+  const match = isoDatePattern.exec(date);
+  if (!match) return { year: 2026, month: 5, day: 1 };
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+}
+
+function getIsoDateFromUtcDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function addDaysToIsoDate(date: string, days: number) {
+  const parts = parseIsoDateParts(date);
+  const utcDate = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + days),
+  );
+
+  return getIsoDateFromUtcDate(utcDate);
+}
+
+function getStartOfWeekIsoDate(date: string) {
+  const parts = parseIsoDateParts(date);
+  const utcDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  const dayOffset = utcDate.getUTCDay();
+
+  return addDaysToIsoDate(date, -dayOffset);
+}
+
+function getReceptionWeekLabel(date: string) {
+  const weekStart = getStartOfWeekIsoDate(date);
+  const weekEnd = addDaysToIsoDate(weekStart, 6);
+
+  return `${formatShortOperatingDate(weekStart)} - ${formatShortOperatingDate(weekEnd)}`;
+}
+
+function getReceptionDateControlLabels(operatingDate: string) {
+  const dateLabel = formatKoreanOperatingDateLabel(operatingDate);
+
+  return {
+    day: {
+      dateLabel,
+      pickerLabel: "날짜 선택",
+      previousLabel: "이전 날짜",
+      nextLabel: "다음 날짜",
+    },
+    week: {
+      dateLabel: getReceptionWeekLabel(operatingDate),
+      pickerLabel: "주 선택",
+      previousLabel: "이전 주",
+      nextLabel: "다음 주",
+    },
+    month: {
+      dateLabel: formatOperatingMonthLabel(operatingDate),
+      pickerLabel: "월 선택",
+      previousLabel: "이전 월",
+      nextLabel: "다음 월",
+    },
+  } satisfies Record<
+    ReceptionCalendarView,
+    {
+      dateLabel: string;
+      pickerLabel: string;
+      previousLabel: string;
+      nextLabel: string;
+    }
+  >;
+}
+
+function getReceptionDatePickerCells(operatingDate: string) {
+  const parts = parseIsoDateParts(operatingDate);
+  const monthStart = new Date(Date.UTC(parts.year, parts.month - 1, 1));
+  const firstCellDate = new Date(monthStart);
+  firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
+
+  return Array.from({ length: 35 }, (_, index) => {
+    const cellDate = new Date(firstCellDate);
+    cellDate.setUTCDate(firstCellDate.getUTCDate() + index);
+    const key = getIsoDateFromUtcDate(cellDate);
+
+    return {
+      key,
+      day: String(cellDate.getUTCDate()),
+      inMonth: cellDate.getUTCMonth() === parts.month - 1,
+      selected: key === operatingDate,
+    };
+  });
+}
+
+function getReceptionWeekPickerRows(operatingDate: string) {
+  const selectedWeekStart = getStartOfWeekIsoDate(operatingDate);
+
+  return [-2, -1, 0, 1, 2].map((offset) => {
+    const key = addDaysToIsoDate(selectedWeekStart, offset * 7);
+
+    return {
+      key,
+      label: getReceptionWeekLabel(key),
+      selected: key === selectedWeekStart,
+    };
+  });
+}
+
+function getReceptionMonthPickerItems(operatingDate: string) {
+  const { year, month } = parseIsoDateParts(operatingDate);
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const monthNumber = index + 1;
+
+    return {
+      label: `${String(year).slice(2)}.${String(monthNumber).padStart(2, "0")}`,
+      selected: monthNumber === month,
+    };
+  });
+}
 
 function ReceptionScheduleDateControl({
+  operatingDate,
   view,
 }: {
+  operatingDate: string;
   view: ReceptionCalendarView;
 }) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const dateControlLabel = receptionDateControlLabels[view];
+  const dateControlLabel = getReceptionDateControlLabels(operatingDate)[view];
+  const datePickerCells = getReceptionDatePickerCells(operatingDate);
+  const weekPickerRows = getReceptionWeekPickerRows(operatingDate);
+  const monthPickerItems = getReceptionMonthPickerItems(operatingDate);
+  const operatingDateParts = parseIsoDateParts(operatingDate);
 
   return (
     <div
@@ -2010,7 +2238,7 @@ function ReceptionScheduleDateControl({
             <>
               <div className="flex items-center justify-between">
                 <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                  2026년 5월
+                  {operatingDateParts.year}년 {operatingDateParts.month}월
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -2040,7 +2268,7 @@ function ReceptionScheduleDateControl({
                     {weekday}
                   </span>
                 ))}
-                {receptionDatePickerCells.map((cell) => (
+                {datePickerCells.map((cell) => (
                   <button
                     key={cell.key}
                     type="button"
@@ -2054,7 +2282,7 @@ function ReceptionScheduleDateControl({
                     )}
                     aria-label={
                       cell.selected
-                        ? `${receptionToolbarDateLabel} 선택됨`
+                        ? `${formatKoreanOperatingDateLabel(cell.key)} 선택됨`
                         : `${cell.day}일 선택`
                     }
                     aria-pressed={cell.selected}
@@ -2070,7 +2298,7 @@ function ReceptionScheduleDateControl({
             <>
               <div className="flex items-center justify-between">
                 <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                  2026년 4월 - 5월
+                  {operatingDateParts.year}년 {operatingDateParts.month}월
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -2092,7 +2320,7 @@ function ReceptionScheduleDateControl({
                 </div>
               </div>
               <div className="grid gap-1">
-                {receptionWeekPickerRows.map((week) => (
+                {weekPickerRows.map((week) => (
                   <button
                     key={week.key}
                     type="button"
@@ -2120,7 +2348,7 @@ function ReceptionScheduleDateControl({
             <>
               <div className="flex items-center justify-between">
                 <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                  2026년
+                  {operatingDateParts.year}년
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -2142,26 +2370,26 @@ function ReceptionScheduleDateControl({
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1">
-                {receptionMonthPickerItems.map((month) => {
-                  const selected = month === receptionToolbarMonthLabel;
-
+                {monthPickerItems.map((month) => {
                   return (
                     <button
-                      key={month}
+                      key={month.label}
                       type="button"
                       className={cn(
                         "flex h-8 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                        selected
+                        month.selected
                           ? "bg-primary text-primary-foreground hover:bg-primary/90"
                           : "text-foreground",
                       )}
                       aria-label={
-                        selected ? `${month} 선택됨` : `${month} 월 선택`
+                        month.selected
+                          ? `${month.label} 선택됨`
+                          : `${month.label} 월 선택`
                       }
-                      aria-pressed={selected}
+                      aria-pressed={month.selected}
                       onClick={() => setDatePickerOpen(false)}
                     >
-                      {month}
+                      {month.label}
                     </button>
                   );
                 })}
@@ -2185,22 +2413,33 @@ function ReceptionScheduleDateControl({
 }
 
 function ScheduleToolbar({
+  operatingDate,
   onCreateWalkIn,
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
+  veterinarians,
   view,
   onViewChange,
 }: {
+  operatingDate: string;
   onCreateWalkIn: () => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
+  veterinarians: Veterinarian[];
   view: ReceptionCalendarView;
   onViewChange: (view: ReceptionCalendarView) => void;
 }) {
-  const selectedVeterinarians = allVeterinarians.filter((veterinarian) =>
+  const selectedVeterinarians = veterinarians.filter((veterinarian) =>
     selectedVeterinarianIds.includes(veterinarian.id),
+  );
+  const todayWorkingVeterinarians = veterinarians.slice(0, 4);
+  const todayWorkingVeterinarianIds = new Set(
+    todayWorkingVeterinarians.map((veterinarian) => veterinarian.id),
+  );
+  const otherVeterinarians = veterinarians.filter(
+    (veterinarian) => !todayWorkingVeterinarianIds.has(veterinarian.id),
   );
   const veterinarianLabel = getVeterinarianFilterLabel(selectedVeterinarians);
 
@@ -2210,7 +2449,10 @@ function ScheduleToolbar({
       data-testid="schedule-toolbar"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <ReceptionScheduleDateControl view={view} />
+        <ReceptionScheduleDateControl
+          operatingDate={operatingDate}
+          view={view}
+        />
         <span className="ml-2 rounded-md bg-muted px-2 py-1 emr-text-metadata font-medium leading-4 text-muted-foreground">
           영업시간{" "}
           <span className="font-semibold text-primary">
@@ -2392,6 +2634,7 @@ function ScheduleSelectionCell({
   appointments,
   draftCheckIns,
   hour,
+  operatingDate,
   onAffordancePointerMove,
   onCreateDraft,
   testId,
@@ -2402,6 +2645,7 @@ function ScheduleSelectionCell({
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
   hour: number;
+  operatingDate: string;
   onAffordancePointerMove: () => void;
   onCreateDraft: (draft: ReceptionCalendarDraftInput) => void;
   testId: string;
@@ -2475,6 +2719,7 @@ function ScheduleSelectionCell({
           appointments,
           draftCheckIns,
           endMinutes: selectionEnd,
+          operatingDate,
           startMinutes: selectionStart,
           veterinarianId: veterinarian.id,
         })
@@ -2485,6 +2730,7 @@ function ScheduleSelectionCell({
       appointments,
       draftCheckIns,
       endMinutes,
+      operatingDate,
       startMinutes,
       veterinarianId: veterinarian.id,
     });
@@ -2518,6 +2764,7 @@ function ScheduleSelectionCell({
           appointments,
           draftCheckIns,
           endMinutes: startMinutes + scheduleSlotMinutes,
+          operatingDate,
           startMinutes,
           veterinarianId: veterinarian.id,
         });
@@ -2617,6 +2864,7 @@ function ScheduleSelectionCell({
             appointments,
             draftCheckIns,
             endMinutes: slotMinutes + scheduleSlotMinutes,
+            operatingDate,
             startMinutes: slotMinutes,
             veterinarianId: veterinarian.id,
           });
@@ -2658,6 +2906,7 @@ function ReceptionVisitContextBanner({
   patientName,
   patientNo,
   reason,
+  veterinarians = allVeterinarians,
 }: {
   appointment?: Appointment;
   encounter?: Encounter;
@@ -2665,6 +2914,7 @@ function ReceptionVisitContextBanner({
   patientName: string;
   patientNo: string;
   reason: string;
+  veterinarians?: Veterinarian[];
 }) {
   const statusLabel = encounter
     ? getReceptionEncounterStatusLabel(encounter.status)
@@ -2676,7 +2926,11 @@ function ReceptionVisitContextBanner({
     : appointment
       ? getAppointmentTone(appointment.status)
       : "default";
-  const summary = getReceptionVisitSummary({ appointment, encounter });
+  const summary = getReceptionVisitSummary({
+    appointment,
+    encounter,
+    veterinarians,
+  });
 
   return (
     <section className="border-b bg-[var(--emr-status-info-bg)] px-4 py-3">
@@ -2706,6 +2960,7 @@ function DayScheduleBoard({
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  operatingDate,
   onEmptySlotAffordancePointerMove,
   onClearCalendarTransientSelection,
   onCreateCalendarDraft,
@@ -2718,6 +2973,7 @@ function DayScheduleBoard({
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  operatingDate: string;
   onEmptySlotAffordancePointerMove: () => void;
   onClearCalendarTransientSelection: () => void;
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
@@ -2730,7 +2986,9 @@ function DayScheduleBoard({
   const currentTimeOffset = getDayCurrentTimeOffset();
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
   const walkInDrafts = draftCheckIns.filter(
-    (draft) => draft.receptionType === "walk_in",
+    (draft) =>
+      draft.receptionType === "walk_in" &&
+      isDraftOnOperatingDate(draft, operatingDate),
   );
   const unassignedWalkIns = walkInDrafts.filter(
     (draft) => !draft.encounter.primaryVeterinarianId,
@@ -2755,7 +3013,10 @@ function DayScheduleBoard({
           return (
             <div key={veterinarian.id} className="border-r p-2 last:border-r-0">
               <VeterinarianLaneHeader
-                toneIndex={getVeterinarianToneIndex(veterinarian)}
+                toneIndex={getVeterinarianToneIndex(
+                  veterinarian,
+                  selectedVeterinarians,
+                )}
                 veterinarian={veterinarian}
               />
               <div className="mt-1 flex flex-col gap-1">
@@ -2786,6 +3047,7 @@ function DayScheduleBoard({
               <ScheduleWalkInQueueCard
                 key={draft.encounter.id}
                 draft={draft}
+                veterinarians={selectedVeterinarians}
                 onClearCalendarTransientSelection={
                   onClearCalendarTransientSelection
                 }
@@ -2890,6 +3152,7 @@ function DayScheduleBoard({
                             <ScheduleAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
+                              veterinarians={selectedVeterinarians}
                               onClearCalendarTransientSelection={
                                 onClearCalendarTransientSelection
                               }
@@ -2903,6 +3166,7 @@ function DayScheduleBoard({
                             <ScheduleWalkInQueueCard
                               key={draft.encounter.id}
                               draft={draft}
+                              veterinarians={selectedVeterinarians}
                               onClearCalendarTransientSelection={
                                 onClearCalendarTransientSelection
                               }
@@ -2917,6 +3181,7 @@ function DayScheduleBoard({
                           appointments={appointments}
                           draftCheckIns={draftCheckIns}
                           hour={hour}
+                          operatingDate={operatingDate}
                           onAffordancePointerMove={
                             onEmptySlotAffordancePointerMove
                           }
@@ -2941,29 +3206,35 @@ function WeekScheduleBoard({
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  operatingDate,
   onEmptySlotAffordancePointerMove,
   onClearCalendarTransientSelection,
   onCreateWalkIn,
   onSelectPatient,
   onSelectAppointment,
   selectedAppointmentId,
+  veterinarians = allVeterinarians,
 }: {
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  operatingDate: string;
   onEmptySlotAffordancePointerMove: () => void;
   onClearCalendarTransientSelection: () => void;
   onCreateWalkIn: () => void;
   onSelectPatient: (patientId: string) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
+  veterinarians?: Veterinarian[];
 }) {
   const currentTimeOffset = getDayCurrentTimeOffset();
   const activeDayIndex = weekDays.findIndex((day) => day.active);
   const dayColumnWidth = "calc((100% - 56px) / 7)";
   const weekScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
   const walkInDrafts = draftCheckIns.filter(
-    (draft) => draft.receptionType === "walk_in",
+    (draft) =>
+      draft.receptionType === "walk_in" &&
+      isDraftOnOperatingDate(draft, operatingDate),
   );
 
   return (
@@ -3063,6 +3334,7 @@ function WeekScheduleBoard({
                     <ScheduleAppointmentCard
                       key={`${day.day}-${hour}-${appointment.id}`}
                       appointment={appointment}
+                      veterinarians={veterinarians}
                       onClearCalendarTransientSelection={
                         onClearCalendarTransientSelection
                       }
@@ -3076,6 +3348,7 @@ function WeekScheduleBoard({
                     <ScheduleWalkInQueueCard
                       key={`${day.day}-${hour}-${draft.encounter.id}`}
                       draft={draft}
+                      veterinarians={veterinarians}
                       onClearCalendarTransientSelection={
                         onClearCalendarTransientSelection
                       }
@@ -3156,6 +3429,7 @@ function ReceptionScheduleBoard({
   emptySlotAffordanceSuspended,
   appointments,
   draftCheckIns,
+  operatingDate,
   onClearCalendarDraft,
   onClearCalendarTransientSelection,
   onEmptySlotAffordancePointerMove,
@@ -3171,6 +3445,7 @@ function ReceptionScheduleBoard({
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
   draftCheckIns: ReceptionDraftCheckIn[];
+  operatingDate: string;
   onClearCalendarDraft: () => void;
   onClearCalendarTransientSelection: () => void;
   onEmptySlotAffordancePointerMove: () => void;
@@ -3198,6 +3473,7 @@ function ReceptionScheduleBoard({
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
+              operatingDate={operatingDate}
               onEmptySlotAffordancePointerMove={
                 onEmptySlotAffordancePointerMove
               }
@@ -3216,6 +3492,7 @@ function ReceptionScheduleBoard({
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
               draftCheckIns={draftCheckIns}
+              operatingDate={operatingDate}
               onEmptySlotAffordancePointerMove={
                 onEmptySlotAffordancePointerMove
               }
@@ -3223,6 +3500,7 @@ function ReceptionScheduleBoard({
                 onClearCalendarTransientSelection
               }
               selectedAppointmentId={selectedAppointmentId}
+              veterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
               onSelectPatient={onSelectPatient}
               onCreateWalkIn={onCreateWalkIn}
@@ -3252,6 +3530,9 @@ export function ReceptionContent() {
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     allVeterinarians.map((veterinarian) => veterinarian.id),
   );
+  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
+    Veterinarian[]
+  >([]);
   const selectedAppointmentId = useReceptionStore(
     (state) => state.selectedAppointmentId,
   );
@@ -3321,36 +3602,95 @@ export function ReceptionContent() {
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : (params.workspaceId?.[0] ?? "clair-demo");
+      : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
+  const operatingDate = getWorkspaceOperatingDate(workspaceId);
+  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const veterinarians =
+    liveStaffSourceEnabled && workspaceVeterinarians.length > 0
+      ? workspaceVeterinarians
+      : allVeterinarians;
+	  const veterinarianStaffMembers = useMemo(
+    () =>
+      veterinarians.map((veterinarian) => ({
+        displayName: veterinarian.name,
+        id: veterinarian.id,
+      })),
+	    [veterinarians],
+	  );
+	  const veterinarianIds = useMemo(
+	    () => veterinarians.map((veterinarian) => veterinarian.id),
+	    [veterinarians],
+	  );
+	  const effectiveSelectedVeterinarianIds = useMemo(() => {
+	    const selectedIds = selectedVeterinarianIds.filter((id) =>
+	      veterinarianIds.includes(id),
+	    );
+
+	    return selectedIds.length > 0 ? selectedIds : veterinarianIds;
+	  }, [selectedVeterinarianIds, veterinarianIds]);
+  const workspaceDraftCheckIns = useMemo(
+    () =>
+      draftCheckIns.filter(
+        (draft) => draft.encounter.workspaceId === workspaceId,
+      ),
+    [draftCheckIns, workspaceId],
+  );
   const appointments = useMemo(
-    () => getTodayAppointments(draftCheckIns, persistedCalendarAppointments),
-    [draftCheckIns, persistedCalendarAppointments],
+    () =>
+      getTodayAppointments(
+        workspaceDraftCheckIns,
+        persistedCalendarAppointments,
+        {
+          operatingDate,
+          workspaceId,
+        },
+      ),
+    [
+      operatingDate,
+      persistedCalendarAppointments,
+      workspaceDraftCheckIns,
+      workspaceId,
+    ],
   );
   const patientSummaries = useMemo(
     () =>
-      getReceptionPatientSummaries(draftCheckIns, {
-        guardians,
-        patientGuardians,
-        patients,
-      }),
-    [draftCheckIns, guardians, patientGuardians, patients],
-  );
-  const selectedVeterinarians = useMemo(
-    () =>
-      allVeterinarians.filter((veterinarian) =>
-        selectedVeterinarianIds.includes(veterinarian.id),
-      ),
-    [selectedVeterinarianIds],
-  );
+      getReceptionPatientSummaries(
+        workspaceDraftCheckIns,
+        {
+          guardians,
+          patientGuardians,
+          patients,
+        },
+	        { operatingDate, staffMembers: veterinarianStaffMembers, workspaceId },
+	      ),
+    [
+      guardians,
+	      operatingDate,
+	      patientGuardians,
+	      patients,
+	      veterinarianStaffMembers,
+	      workspaceDraftCheckIns,
+	      workspaceId,
+	    ],
+	  );
+	  const selectedVeterinarians = useMemo(
+	    () =>
+		      veterinarians.filter((veterinarian) =>
+		        effectiveSelectedVeterinarianIds.includes(veterinarian.id),
+		      ),
+		    [effectiveSelectedVeterinarianIds, veterinarians],
+		  );
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
         (appointment) =>
           appointment.assignedVeterinarianId &&
-          selectedVeterinarianIds.includes(appointment.assignedVeterinarianId),
-      ),
-    [appointments, selectedVeterinarianIds],
-  );
+	          effectiveSelectedVeterinarianIds.includes(
+	            appointment.assignedVeterinarianId,
+	          ),
+	      ),
+	    [appointments, effectiveSelectedVeterinarianIds],
+	  );
   const selectedBundle = getMockPatientBundle(selectedPatientId);
   const selectedPatient = patients.find(
     (patient) => patient.id === selectedPatientId,
@@ -3376,17 +3716,23 @@ export function ReceptionContent() {
     patientSpecialNote: selectedPatient?.specialNote,
   });
   const lastMessageDelivery = messageDeliveries.at(-1);
-  const toggleVeterinarian = (veterinarianId: string) => {
-    setSelectedVeterinarianIds((current) => {
-      if (current.includes(veterinarianId)) {
-        return current.length > 1
-          ? current.filter((id) => id !== veterinarianId)
-          : current;
-      }
+	  const toggleVeterinarian = (veterinarianId: string) => {
+	    setSelectedVeterinarianIds((current) => {
+	      const currentInWorkspace = current.filter((id) =>
+	        veterinarianIds.includes(id),
+	      );
+	      const baseSelection =
+	        currentInWorkspace.length > 0 ? currentInWorkspace : veterinarianIds;
 
-      return [...current, veterinarianId];
-    });
-  };
+	      if (baseSelection.includes(veterinarianId)) {
+	        return baseSelection.length > 1
+	          ? baseSelection.filter((id) => id !== veterinarianId)
+	          : baseSelection;
+	      }
+
+	      return [...baseSelection, veterinarianId];
+	    });
+	  };
   function clearCalendarTransientSelection() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
@@ -3439,6 +3785,32 @@ export function ReceptionContent() {
   }, [activeDrawer?.type, calendarDraftSelection, setCalendarDraftSelection]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadStaff() {
+      if (!liveStaffSourceEnabled) {
+        setWorkspaceVeterinarians([]);
+        return;
+      }
+
+      const result = await loadWorkspaceVeterinarians({
+        actorId: authSession?.id,
+        workspaceId,
+      });
+      if (cancelled) return;
+
+      const nextVeterinarians = mapWorkspaceStaffToVeterinarians(result);
+      setWorkspaceVeterinarians(nextVeterinarians);
+    }
+
+    void loadStaff();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authSession?.id, liveStaffSourceEnabled, workspaceId]);
+
+  useEffect(() => {
     if (queryPatientId && queryPatientId !== selectedPatientId) {
       selectPatient(queryPatientId);
     }
@@ -3462,92 +3834,93 @@ export function ReceptionContent() {
     selectedEncounterId,
     selectedPatientId,
   ]);
-  useEffect(() => {
-    let cancelled = false;
+  const refreshReceptionReads = useCallback(
+    async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+      if (showLoading) {
+        setReceptionCalendarReadStatus("loading");
+        setReceptionQueueReadStatus("loading");
+      }
 
-    async function loadCalendar() {
-      setReceptionCalendarReadStatus("loading");
-      const result = await loadReceptionCalendar({
-        actorId: authSession?.id,
-        date: "2026-05-01",
-        workspaceId,
-      });
+      const [calendarResult, queueResult] = await Promise.all([
+        loadReceptionCalendar({
+          actorId: authSession?.id,
+          date: operatingDate,
+          workspaceId,
+        }),
+        loadReceptionQueue({
+          actorId: authSession?.id,
+          workspaceId,
+        }),
+      ]);
 
-      if (cancelled) return;
-
-      if (!result.ok) {
+      if (!calendarResult.ok) {
         setReceptionCalendarReadStatus(
           "error",
-          getReceptionReadFailureMessage(result),
+          getReceptionReadFailureMessage(calendarResult, workspaceId),
         );
-        return;
+      } else {
+        applyPersistedReceptionCalendar(calendarResult.records);
       }
 
-      applyPersistedReceptionCalendar(result.records);
-    }
+      if (!queueResult.ok) {
+        setReceptionQueueReadStatus(
+          "error",
+          getReceptionReadFailureMessage(queueResult, workspaceId),
+        );
+      } else {
+        applyPersistedReceptionQueue(queueResult.queue);
+      }
+    },
+    [
+      applyPersistedReceptionCalendar,
+      applyPersistedReceptionQueue,
+      authSession?.id,
+      operatingDate,
+      setReceptionCalendarReadStatus,
+      setReceptionQueueReadStatus,
+      workspaceId,
+    ],
+  );
 
-    void loadCalendar();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    applyPersistedReceptionCalendar,
-    authSession?.id,
-    readRetryNonce,
-    setReceptionCalendarReadStatus,
-    workspaceId,
-  ]);
   useEffect(() => {
     let cancelled = false;
 
-    async function loadQueue() {
-      setReceptionQueueReadStatus("loading");
-      const result = await loadReceptionQueue({
-        actorId: authSession?.id,
-        workspaceId,
-      });
-
-      if (cancelled) return;
-
-      if (!result.ok) {
-        setReceptionQueueReadStatus(
-          "error",
-          getReceptionReadFailureMessage(result),
-        );
-        return;
-      }
-
-      applyPersistedReceptionQueue(result.queue);
+    async function refresh() {
+      await refreshReceptionReads({ showLoading: true });
     }
 
-    void loadQueue();
+    void refresh().then(() => {
+      if (cancelled) return;
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [
-    applyPersistedReceptionQueue,
-    authSession?.id,
-    readRetryNonce,
-    setReceptionQueueReadStatus,
-    workspaceId,
-  ]);
+  }, [readRetryNonce, refreshReceptionReads]);
 
-  if (!selectedPatient) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        환자를 선택해 주세요.
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!liveStaffSourceEnabled) return;
+
+    const refresh = () => {
+      void refreshReceptionReads();
+    };
+    window.addEventListener("focus", refresh);
+    const intervalId = window.setInterval(refresh, 9000);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(intervalId);
+    };
+  }, [liveStaffSourceEnabled, refreshReceptionReads]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ScheduleToolbar
+        operatingDate={operatingDate}
         view={calendarView}
         onViewChange={setCalendarView}
-        selectedVeterinarianIds={selectedVeterinarianIds}
+        selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
+        veterinarians={veterinarians}
         onToggleVeterinarian={toggleVeterinarian}
         onCreateWalkIn={openWalkInDialog}
         onUnifiedPatientReady={(patientId) => {
@@ -3561,7 +3934,9 @@ export function ReceptionContent() {
         <WalkInReceptionDialog
           initialPatientId={walkInInitialPatientId}
           open={walkInDialogOpen}
+          operatingDate={operatingDate}
           patientSummaries={patientSummaries}
+          veterinarians={veterinarians}
           workspaceId={workspaceId}
           onOpenChange={(nextOpen) => {
             setWalkInDialogOpen(nextOpen);
@@ -3577,6 +3952,7 @@ export function ReceptionContent() {
               searchText: selectedSummary.searchText,
             });
             applyWalkInCheckIn({ ...input, walkIn });
+            requestReceptionReadRetry();
             saveChartLiveEncounterHandoff({
               encounter: walkIn.encounter,
               patient: selectedSummary.patient,
@@ -3596,7 +3972,7 @@ export function ReceptionContent() {
           카카오톡 발송 완료: {lastMessageDelivery.bodySnapshot}
         </div>
       ) : null}
-      {scenario || queryPatientId || queryEncounterId ? (
+      {(scenario || queryPatientId || queryEncounterId) && selectedPatient ? (
         <ReceptionVisitContextBanner
           appointment={selectedAppointment}
           encounter={selectedEncounter}
@@ -3604,6 +3980,7 @@ export function ReceptionContent() {
           patientName={selectedPatient.name}
           patientNo={selectedPatient.patientNo}
           reason={selectedVisitReason}
+          veterinarians={veterinarians}
         />
       ) : null}
       {calendarReadStatus === "loading" ? (
@@ -3628,14 +4005,17 @@ export function ReceptionContent() {
           testId="reception-calendar-read-alert"
         >
           {calendarReadError ??
-            "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼."}
+            (isPreparedEmptyClinicWorkspace(workspaceId)
+              ? "기존 데모 예약은 표시하지 않고 준비된 빈 병원 캘린더를 유지해."
+              : "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지돼.")}
         </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard
         calendarDraftSelection={calendarDraftSelection}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
         appointments={visibleAppointments}
-        draftCheckIns={draftCheckIns}
+        draftCheckIns={workspaceDraftCheckIns}
+        operatingDate={operatingDate}
         onClearCalendarDraft={clearCalendarDraft}
         onClearCalendarTransientSelection={clearCalendarTransientSelection}
         onEmptySlotAffordancePointerMove={() =>
@@ -3678,7 +4058,9 @@ function WalkInReceptionDialog({
   onCreate,
   onOpenChange,
   open,
+  operatingDate,
   patientSummaries,
+  veterinarians,
   workspaceId,
 }: {
   initialPatientId?: string;
@@ -3689,7 +4071,9 @@ function WalkInReceptionDialog({
   ) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
+  veterinarians: Veterinarian[];
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
@@ -3711,6 +4095,8 @@ function WalkInReceptionDialog({
   const [lookupResults, setLookupResults] = useState<
     ReceptionPatientGuardianLookupItem[]
   >([]);
+  const [selectedLookupSummary, setSelectedLookupSummary] =
+    useState<ReceptionPatientSummary | null>(null);
   const [lookupState, setLookupState] = useState<"idle" | "loading" | "error">(
     "idle",
   );
@@ -3732,7 +4118,11 @@ function WalkInReceptionDialog({
     ? lookupPatientSummaries
     : patientSummaries;
   const patientSummaryOptions = useMemo(() => {
-    const summaries = [...lookupPatientSummaries, ...patientSummaries];
+    const summaries = [
+      ...(selectedLookupSummary ? [selectedLookupSummary] : []),
+      ...lookupPatientSummaries,
+      ...patientSummaries,
+    ];
     const uniqueSummaries = new Map<string, ReceptionPatientSummary>();
 
     summaries.forEach((summary) =>
@@ -3740,12 +4130,17 @@ function WalkInReceptionDialog({
     );
 
     return Array.from(uniqueSummaries.values());
-  }, [lookupPatientSummaries, patientSummaries]);
+  }, [lookupPatientSummaries, patientSummaries, selectedLookupSummary]);
   const selectedSummary = patientSummaryOptions.find(
     (summary) => summary.patient.id === receptionPatientId,
   );
   const patient = selectedSummary?.patient;
   const guardian = selectedSummary?.primaryGuardian;
+  const patientOptionText = selectedSummary
+    ? getReceptionPatientOptionLabel(selectedSummary)
+    : "";
+  const lookupMatchesSelectedPatient =
+    Boolean(selectedSummary) && lookupQuery === patientOptionText;
   const visitPurpose = [
     receptionPurposeTags.join(", "),
     receptionVisitPurpose.trim(),
@@ -3753,14 +4148,12 @@ function WalkInReceptionDialog({
     .filter(Boolean)
     .join(" · ");
   const canCreate = Boolean(patient && visitPurpose);
-  const patientOptionText = selectedSummary
-    ? getReceptionPatientOptionLabel(selectedSummary)
-    : "";
   const patientWeightKg = getRecentPatientWeightKg(patient);
   const purposeChips = [...receptionPurposeChips, ...customPurposeTags];
   const patientSearchPlaceholder = "동물명 또는 보호자명으로 검색";
-  const lookupHelper =
-    lookupActive && lookupState === "loading"
+  const lookupHelper = lookupMatchesSelectedPatient
+    ? patientOptionText
+    : lookupActive && lookupState === "loading"
       ? "DB 환자 검색 중입니다."
       : lookupActive && lookupState === "error"
         ? "환자 검색을 불러오지 못했습니다."
@@ -3771,9 +4164,15 @@ function WalkInReceptionDialog({
           : patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다.";
   const selectReceptionPatient = (summary: ReceptionPatientSummary) => {
     setReceptionPatientId(summary.patient.id);
+    setSelectedLookupSummary(summary);
     setLookupQuery(getReceptionPatientOptionLabel(summary));
     setPatientLookupOpen(false);
   };
+  const effectiveReceptionVeterinarianId =
+    receptionVeterinarianId !== unassignedVeterinarianValue &&
+    veterinarians.some((veterinarian) => veterinarian.id === receptionVeterinarianId)
+      ? receptionVeterinarianId
+      : unassignedVeterinarianValue;
 
   useEffect(() => {
     if (!open) return;
@@ -3868,9 +4267,9 @@ function WalkInReceptionDialog({
   };
   const create = async () => {
     const selectedVeterinarianId =
-      receptionVeterinarianId === unassignedVeterinarianValue
-        ? undefined
-        : receptionVeterinarianId;
+	      effectiveReceptionVeterinarianId === unassignedVeterinarianValue
+	        ? undefined
+	        : effectiveReceptionVeterinarianId;
 
     if (!patient || submitting) return;
 
@@ -3882,6 +4281,10 @@ function WalkInReceptionDialog({
       memo: receptionMemo.trim() || undefined,
       patientId: patient.id,
       patientName: patient.name,
+      plannedStartAt: getReceptionIsoAtMinutes(
+        operatingDate,
+        dayCurrentTimeMinutes,
+      ),
       primaryVeterinarianId: selectedVeterinarianId,
       sendKakaoMessage,
       visitPurpose,
@@ -3959,6 +4362,16 @@ function WalkInReceptionDialog({
                       onFocus={() => setPatientLookupOpen(true)}
                       onValueChange={(value) => {
                         setLookupQuery(value);
+                        if (
+                          selectedLookupSummary &&
+                          value !==
+                            getReceptionPatientOptionLabel(
+                              selectedLookupSummary,
+                            )
+                        ) {
+                          setReceptionPatientId("");
+                          setSelectedLookupSummary(null);
+                        }
                         setPatientLookupOpen(true);
                       }}
                     />
@@ -3970,6 +4383,7 @@ function WalkInReceptionDialog({
                         onClick={() => {
                           setLookupQuery("");
                           setReceptionPatientId("");
+                          setSelectedLookupSummary(null);
                           setPatientLookupOpen(true);
                         }}
                       >
@@ -3997,6 +4411,7 @@ function WalkInReceptionDialog({
                         ) : null}
                         {lookupActive &&
                         lookupState === "idle" &&
+                        !lookupMatchesSelectedPatient &&
                         selectablePatientSummaries.length === 0 ? (
                           <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
                             검색 결과가 없습니다.
@@ -4157,8 +4572,8 @@ function WalkInReceptionDialog({
                   label="담당의"
                   helper="담당의 지정 후 시간을 설정할 수 있습니다."
                 >
-                  <Select
-                    value={receptionVeterinarianId}
+	                  <Select
+	                    value={effectiveReceptionVeterinarianId}
                     onValueChange={(value) => {
                       if (value) setReceptionVeterinarianId(value);
                     }}
@@ -4173,9 +4588,10 @@ function WalkInReceptionDialog({
                         aria-hidden="true"
                       />
                       <span className="min-w-0 flex-1 truncate text-left">
-                        {getReceptionVeterinarianSelectLabel(
-                          receptionVeterinarianId,
-                        )}
+	                        {getReceptionVeterinarianSelectLabel(
+	                          effectiveReceptionVeterinarianId,
+	                          veterinarians,
+	                        )}
                       </span>
                     </SelectTrigger>
                     <SelectContent>
@@ -4183,7 +4599,7 @@ function WalkInReceptionDialog({
                         <SelectItem value={unassignedVeterinarianValue}>
                           수의사 미지정
                         </SelectItem>
-                        {allVeterinarians.map((veterinarian) => (
+                        {veterinarians.map((veterinarian) => (
                           <SelectItem
                             key={veterinarian.id}
                             value={veterinarian.id}
@@ -4207,7 +4623,7 @@ function WalkInReceptionDialog({
                       aria-label="접수일"
                       className="h-10 bg-card pl-9"
                       readOnly
-                      value="26.05.01"
+                      value={formatShortOperatingDate(operatingDate)}
                     />
                   </div>
                 </RegistrationFormField>
@@ -4305,6 +4721,8 @@ function getReceptionDrawerPatientNo(
   activeDrawer: { type: string; id: string },
   draftCheckIns: ReceptionDraftCheckIn[],
   appointments: Appointment[],
+  patients: Patient[],
+  workspaceId: string,
 ) {
   if (activeDrawer.type === "reception-appointment") {
     const appointment = appointments.find(
@@ -4312,25 +4730,30 @@ function getReceptionDrawerPatientNo(
     );
 
     return appointment
-      ? getMockPatientBundle(appointment.patientId)?.patient.patientNo
+      ? (patients.find((patient) => patient.id === appointment.patientId)
+          ?.patientNo ??
+          getMockPatientBundle(appointment.patientId)?.patient.patientNo)
       : undefined;
   }
 
-  const encounter =
-    draftCheckIns
-      .map((draft) => draft.encounter)
-      .find((item) => item.id === activeDrawer.id) ??
-    mockEncounters.find((item) => item.id === activeDrawer.id);
+  const encounter = getEffectiveEncounters(draftCheckIns, {
+    operatingDate: getWorkspaceOperatingDate(workspaceId),
+    workspaceId,
+  }).find((item) => item.id === activeDrawer.id);
 
   return encounter
-    ? getMockPatientBundle(encounter.patientId)?.patient.patientNo
+    ? (patients.find((patient) => patient.id === encounter.patientId)
+        ?.patientNo ??
+        getMockPatientBundle(encounter.patientId)?.patient.patientNo)
     : undefined;
 }
 
 function ReceptionDraftTaskDrawer({
   selection,
+  veterinarians = allVeterinarians,
 }: {
   selection: ReceptionCalendarDraftSelection;
+  veterinarians?: Veterinarian[];
 }) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
@@ -4339,6 +4762,9 @@ function ReceptionDraftTaskDrawer({
   );
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
+  );
+  const requestReceptionReadRetry = useReceptionStore(
+    (state) => state.requestReceptionReadRetry,
   );
   const selectedPatientId = useReceptionStore(
     (state) => state.selectedPatientId,
@@ -4359,12 +4785,18 @@ function ReceptionDraftTaskDrawer({
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : (params.workspaceId?.[0] ?? "clair-demo");
+      : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
   const close = () => {
     if (submitting) return;
     setCalendarDraftSelection(undefined);
     setActiveDrawer(null);
   };
+  const effectiveVeterinarianId =
+    veterinarianId !== unassignedVeterinarianValue &&
+    veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
+      ? veterinarianId
+      : unassignedVeterinarianValue;
+
   const create = async () => {
     if (!patient || submitting) return;
 
@@ -4375,10 +4807,11 @@ function ReceptionDraftTaskDrawer({
       guardianId: guardian?.id,
       memo,
       patientId: patient.id,
+      plannedStartAt: selection.plannedStartAt,
       primaryVeterinarianId:
-        veterinarianId === unassignedVeterinarianValue
-          ? undefined
-          : veterinarianId,
+	        effectiveVeterinarianId === unassignedVeterinarianValue
+	          ? undefined
+	          : effectiveVeterinarianId,
       visitPurpose,
     };
 
@@ -4402,6 +4835,7 @@ function ReceptionDraftTaskDrawer({
       plannedStartAt: selection.plannedStartAt,
       walkIn: result.walkIn,
     });
+    requestReceptionReadRetry();
     saveChartLiveEncounterHandoff({
       encounter: result.walkIn.encounter,
       patient,
@@ -4462,12 +4896,15 @@ function ReceptionDraftTaskDrawer({
             </ReceptionFormField>
             <ReceptionFormField label="담당의">
               <Select
-                value={veterinarianId}
+	                value={effectiveVeterinarianId}
                 onValueChange={(value) => value && setVeterinarianId(value)}
               >
                 <SelectTrigger aria-label="담당의" className="w-full bg-card">
                   <span className="flex flex-1 text-left">
-                    {getReceptionVeterinarianSelectLabel(veterinarianId)}
+	                    {getReceptionVeterinarianSelectLabel(
+	                      effectiveVeterinarianId,
+	                      veterinarians,
+	                    )}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
@@ -4475,7 +4912,7 @@ function ReceptionDraftTaskDrawer({
                     <SelectItem value={unassignedVeterinarianValue}>
                       수의사 미지정
                     </SelectItem>
-                    {allVeterinarians.map((veterinarian) => (
+                    {veterinarians.map((veterinarian) => (
                       <SelectItem key={veterinarian.id} value={veterinarian.id}>
                         {veterinarian.name}
                       </SelectItem>
@@ -4514,7 +4951,10 @@ function ReceptionDraftTaskDrawer({
             <ReceptionFormField label="접수일">
               <Input
                 aria-label="접수일"
-                value="26.05.01"
+                value={formatShortOperatingDate(
+                  getOperatingDateFromIso(selection.plannedStartAt) ??
+                    getWorkspaceOperatingDate(workspaceId),
+                )}
                 readOnly
                 className="h-9 bg-card"
               />
@@ -4592,15 +5032,30 @@ export function ReceptionDrawer() {
   const selectedPatientId = useReceptionStore(
     (state) => state.selectedPatientId,
   );
-  const authSession = useMockAuthStore((state) => state.session);
-  const appointments = useMemo(
-    () => getTodayAppointments(draftCheckIns),
-    [draftCheckIns],
+  const patients = usePatientProfileStore((state) => state.patients);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
   );
+  const authSession = useMockAuthStore((state) => state.session);
+  const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
+    Veterinarian[]
+  >([]);
   const workspaceId =
     typeof params.workspaceId === "string"
       ? params.workspaceId
-      : (params.workspaceId?.[0] ?? "clair-demo");
+      : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
+  const operatingDate = getWorkspaceOperatingDate(workspaceId);
+  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const veterinarians =
+    liveStaffSourceEnabled && workspaceVeterinarians.length > 0
+      ? workspaceVeterinarians
+      : allVeterinarians;
+  const appointments = useMemo(
+    () =>
+      getTodayAppointments(draftCheckIns, [], { operatingDate, workspaceId }),
+    [draftCheckIns, operatingDate, workspaceId],
+  );
   useEffect(() => {
     if (activeDrawer?.type === "reception-form") {
       setActiveDrawer(null);
@@ -4618,12 +5073,46 @@ export function ReceptionDrawer() {
       activeDrawer,
       draftCheckIns,
       appointments,
+      patients,
+      workspaceId,
     );
 
     if (subtitle) {
       setActiveDrawer({ ...activeDrawer, subtitle });
     }
-  }, [activeDrawer, appointments, draftCheckIns, setActiveDrawer]);
+  }, [
+    activeDrawer,
+    appointments,
+    draftCheckIns,
+    patients,
+    setActiveDrawer,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStaff() {
+      if (!liveStaffSourceEnabled) {
+        setWorkspaceVeterinarians([]);
+        return;
+      }
+
+      const result = await loadWorkspaceVeterinarians({
+        actorId: authSession?.id,
+        workspaceId,
+      });
+      if (cancelled) return;
+
+      setWorkspaceVeterinarians(mapWorkspaceStaffToVeterinarians(result));
+    }
+
+    void loadStaff();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authSession?.id, liveStaffSourceEnabled, workspaceId]);
 
   if (activeDrawer?.type === "reception-patient") {
     return <PatientProfileDrawer patientId={activeDrawer.id} />;
@@ -4638,7 +5127,12 @@ export function ReceptionDrawer() {
   }
 
   if (activeDrawer?.type === "reception-draft-task" && calendarDraftSelection) {
-    return <ReceptionDraftTaskDrawer selection={calendarDraftSelection} />;
+    return (
+      <ReceptionDraftTaskDrawer
+        selection={calendarDraftSelection}
+        veterinarians={veterinarians}
+      />
+    );
   }
 
   const selectedAppointment =
@@ -4649,7 +5143,7 @@ export function ReceptionDrawer() {
     activeDrawer?.type === "reception-encounter"
       ? [
           ...draftCheckIns.map((draft) => draft.encounter),
-          ...mockEncounters,
+          ...(isLegacySalesDemoWorkspace(workspaceId) ? mockEncounters : []),
         ].find((encounter) => encounter.id === activeDrawer.id)
       : undefined;
   const patientId =
@@ -4658,17 +5152,44 @@ export function ReceptionDrawer() {
     (activeDrawer?.type === "reception-patient"
       ? activeDrawer.id
       : selectedPatientId);
-  const bundle =
+  const mockBundle =
     getMockPatientBundle(patientId) ?? getMockPatientBundle(selectedPatientId);
-  const patient = bundle?.patient;
-  const guardian = bundle?.primaryGuardian;
-  const recentEncounters = bundle
-    ? [...bundle.encounters].sort((a, b) =>
-        (b.checkedInAt ?? b.createdAt).localeCompare(
-          a.checkedInAt ?? a.createdAt,
-        ),
-      )
-    : [];
+  const liveHandoff = selectedDrawerEncounter
+    ? readChartLiveEncounterHandoff(selectedDrawerEncounter.id)
+    : null;
+  const livePatient =
+    liveHandoff?.patient ??
+    patients.find(
+      (item) => item.id === patientId && item.workspaceId === workspaceId,
+    );
+  const liveGuardian =
+    liveHandoff?.primaryGuardian ??
+    getPrimaryGuardianFromProfiles({
+      guardians,
+      patientGuardians,
+      patientId,
+      workspaceId,
+    });
+  const patient = livePatient ?? mockBundle?.patient;
+  const guardian = liveGuardian ?? mockBundle?.primaryGuardian;
+  const liveEncounters = getEffectiveEncounters(draftCheckIns, {
+    operatingDate,
+    workspaceId,
+  }).filter((encounter) => encounter.patientId === patient?.id);
+  const recentEncounters =
+    livePatient || liveEncounters.length
+      ? [...liveEncounters].sort((a, b) =>
+          (b.checkedInAt ?? b.createdAt).localeCompare(
+            a.checkedInAt ?? a.createdAt,
+          ),
+        )
+      : mockBundle
+        ? [...mockBundle.encounters].sort((a, b) =>
+            (b.checkedInAt ?? b.createdAt).localeCompare(
+              a.checkedInAt ?? a.createdAt,
+            ),
+          )
+        : [];
   const selectedEncounter = selectedAppointment
     ? recentEncounters.find(
         (encounter) => encounter.appointmentId === selectedAppointment.id,
@@ -4688,10 +5209,11 @@ export function ReceptionDrawer() {
   const visitSummary = getReceptionVisitSummary({
     appointment: selectedAppointment,
     encounter: selectedEncounter,
+    veterinarians,
   });
   const veterinarianName =
-    getStaffDisplayName(selectedEncounter?.primaryVeterinarianId) ??
-    getStaffDisplayName(selectedAppointment?.assignedVeterinarianId) ??
+    getStaffDisplayName(selectedEncounter?.primaryVeterinarianId, veterinarians) ??
+    getStaffDisplayName(selectedAppointment?.assignedVeterinarianId, veterinarians) ??
     defaultVeterinarian?.name ??
     "담당의 미지정";
   const receptionDate = getShortDate(
@@ -4705,7 +5227,7 @@ export function ReceptionDrawer() {
     setActiveDrawer(null);
   };
 
-  if (!patient || !bundle) {
+  if (!patient) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         환자를 선택해 주세요.
@@ -4893,7 +5415,7 @@ export function ReceptionDrawer() {
                     {encounter.status === "completed" ? "확정진단" : "가진단"}
                   </span>
                   <span className="truncate">
-                    {defaultVeterinarian?.name ?? "수의사"}
+                    {veterinarians[0]?.name ?? defaultVeterinarian?.name ?? "수의사"}
                   </span>
                 </div>
               ))}
@@ -4929,8 +5451,9 @@ export function ReceptionDrawer() {
             createWalkInCheckIn({
               guardianId: guardian?.id,
               patientId: patient.id,
-              primaryVeterinarianId: defaultVeterinarian?.id,
+              primaryVeterinarianId: veterinarians[0]?.id ?? defaultVeterinarian?.id,
               visitPurpose: "현장 접수",
+              workspaceId,
             });
             setActiveDrawer(null);
           }}

@@ -166,6 +166,17 @@ test("chart live queue route stays server-owned and separate from demo encounter
   );
 });
 
+test("Cheongdam prepared-empty mode keeps live chart queue records visible", () => {
+  const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(moduleSource).toContain(
+    "const items = liveMode ? liveItems : preparedEmptyClinic ? [] : mockItems;",
+  );
+  expect(moduleSource).not.toContain(
+    "const items = preparedEmptyClinic ? [] : liveMode ? liveItems : mockItems;",
+  );
+});
+
 function createFakeChartLiveQueueClient(
   calls: string[],
   options: { directProfileReadFails?: boolean } = {},

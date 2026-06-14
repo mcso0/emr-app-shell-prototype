@@ -5,6 +5,7 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
+import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { mockAppointments, mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
 import type { Appointment, Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 
@@ -106,10 +107,11 @@ export function createMockReceptionCalendarReadGateway(
         };
       }
 
-      const appointments = (dataset.appointments ?? []).filter(
-        (appointment) =>
-          appointment.workspaceId === workspaceId && appointment.scheduledStartAt.startsWith(date)
-      );
+	      const appointments = (dataset.appointments ?? []).filter(
+	        (appointment) =>
+	          appointment.workspaceId === workspaceId &&
+	          getOperatingDateFromIso(appointment.scheduledStartAt) === date
+	      );
       const appointmentRecords = appointments.map((appointment) => {
         const encounter = (dataset.encounters ?? []).find(
           (item) => item.workspaceId === workspaceId && item.appointmentId === appointment.id
@@ -127,11 +129,11 @@ export function createMockReceptionCalendarReadGateway(
       const walkInRecords = (dataset.encounters ?? [])
         .filter(
           (encounter) =>
-            encounter.workspaceId === workspaceId &&
-            !encounter.appointmentId &&
-            encounter.checkedInAt?.startsWith(date) &&
-            !appointmentEncounterIds.has(encounter.id)
-        )
+	            encounter.workspaceId === workspaceId &&
+	            !encounter.appointmentId &&
+	            getOperatingDateFromIso(encounter.checkedInAt) === date &&
+	            !appointmentEncounterIds.has(encounter.id)
+	        )
         .map((encounter) => ({
           encounter,
           queueEntry: (dataset.waitingQueueEntries ?? []).find(

@@ -126,6 +126,7 @@ import {
   getSpeciesLabel,
 } from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -624,6 +625,30 @@ function getSelectedBundle(
   );
 }
 
+function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
+  const rows = getChartHistoryRows(bundle.patient.id);
+
+  if (rows.some((row) => row.encounter.id === bundle.encounter.id)) {
+    return rows;
+  }
+
+  const currentRow: ChartHistoryRow = {
+    diagnoses: bundle.diagnoses.filter(
+      (diagnosis) => diagnosis.encounterId === bundle.encounter.id,
+    ),
+    encounter: bundle.encounter,
+    soapNote: bundle.soapNotes.find(
+      (soapNote) => soapNote.encounterId === bundle.encounter.id,
+    ),
+  };
+
+  return [currentRow, ...rows].sort((a, b) =>
+    (b.encounter.checkedInAt ?? b.encounter.createdAt).localeCompare(
+      a.encounter.checkedInAt ?? a.encounter.createdAt,
+    ),
+  );
+}
+
 function mapLiveChartQueueRecordToItem(
   record: ChartLiveQueueRecord,
 ): OrderQueueItem {
@@ -729,13 +754,14 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const liveMode = authSession?.role === "supabase";
   const mockItems = useMemo(() => getChartQueueItems(), []);
   const liveItems = useMemo(
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
-  const items = liveMode ? liveItems : mockItems;
+  const items = liveMode ? liveItems : preparedEmptyClinic ? [] : mockItems;
   const explicitQueryEncounterId = useExplicitChartEncounterId();
 
   useEffect(() => {
@@ -811,7 +837,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
 
   return (
       <EmrOrderQueueSidePanel
-      dateLabel="26.05.05 (화)"
+      dateLabel={preparedEmptyClinic ? "오늘" : "26.05.05 (화)"}
       filterAriaLabel="진료 대기 유형 필터"
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
@@ -832,7 +858,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   );
 }
 
-export function ChartHeader() {
+export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -842,7 +868,8 @@ export function ChartHeader() {
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
@@ -878,7 +905,7 @@ export function ChartHeader() {
   );
 }
 
-export function ChartContentAside() {
+export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -888,7 +915,8 @@ export function ChartContentAside() {
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
@@ -900,7 +928,7 @@ export function ChartContentAside() {
     allowMockFallback,
   });
   const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
+    () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
     [bundle],
   );
   const historyGroups = useMemo(
@@ -2591,7 +2619,7 @@ function AssessmentHistory({
   );
 }
 
-function ChartRightPanel() {
+export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -2601,13 +2629,14 @@ function ChartRightPanel() {
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
   const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
+    () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
     [bundle],
   );
 
@@ -4866,7 +4895,7 @@ function EmptyChartState() {
   );
 }
 
-export function ChartContent() {
+export function ChartContent({ workspaceId }: ShellComponentProps) {
   useScenarioEncounterSync();
 
   const selectedEncounterId = useChartStore(
@@ -4878,7 +4907,8 @@ export function ChartContent() {
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    (allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId);
   const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
   const {
     hydrated: authHydrated,
@@ -5511,5 +5541,3 @@ export function ChartContent() {
     </div>
   );
 }
-
-export { ChartRightPanel };

@@ -4,10 +4,11 @@ import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { buttonVariants } from "@/components/ui/button";
 import { createDemoHref, getGoldenDemoScenario } from "@/lib/emr-domain/demo-scenarios";
+import { LEGACY_SALES_DEMO_WORKSPACE_ID } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 
 export function DemoLauncher() {
-  const workspaceId = "clair-demo";
+  const workspaceId = LEGACY_SALES_DEMO_WORKSPACE_ID;
   const scenario = getGoldenDemoScenario();
   const quickStarts = [
     ["데스크", "접수에서 김하늘/콩이 내원 맥락 확인", "reception"],

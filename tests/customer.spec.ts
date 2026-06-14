@@ -1,5 +1,91 @@
 import { expect, test } from "@playwright/test";
 
+test("Cheongdam customer workspace renders seeded DB patients instead of legacy fixtures", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+
+  await page.route(`**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        enforcedBy: "reception-patient-guardian-lookup",
+        patients: [
+          {
+            patient: {
+              id: "49121000-0000-4000-8000-000000000001",
+              workspaceId,
+              patientNo: "CD-P-001",
+              name: "루미",
+              species: "dog",
+              breed: "Maltese",
+              birthDate: "2025-11-20",
+              sex: "female",
+              neutered: false,
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            primaryGuardian: {
+              id: "49120000-0000-4000-8000-000000000001",
+              workspaceId,
+              name: "김서윤",
+              mobilePhone: "010-4911-0001",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            searchText: "루미 CD-P-001 Maltese 김서윤 010-4911-0001",
+          },
+          {
+            patient: {
+              id: "49121000-0000-4000-8000-000000000005",
+              workspaceId,
+              patientNo: "CD-P-005",
+              name: "모카",
+              species: "cat",
+              breed: "Russian blue",
+              birthDate: "2023-06-05",
+              sex: "male",
+              neutered: false,
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            primaryGuardian: {
+              id: "49120000-0000-4000-8000-000000000005",
+              workspaceId,
+              name: "정유나",
+              mobilePhone: "010-4911-0005",
+              createdAt: "2026-06-12T00:00:00.000Z",
+              updatedAt: "2026-06-12T00:00:00.000Z",
+            },
+            searchText: "모카 CD-P-005 Russian blue 정유나 010-4911-0005",
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/customer?modulePanel=open`);
+
+  await expect(page.getByTestId("customer-patient-table")).toBeVisible();
+  await expect(page.getByText("CD-P-001")).toBeVisible();
+  await expect(page.getByText("루미")).toBeVisible();
+  await expect(page.getByText("김서윤")).toBeVisible();
+  await expect(page.getByText("CD-P-005")).toBeVisible();
+  await expect(page.getByText("모카")).toBeVisible();
+  await expect(page.getByText("정유나")).toBeVisible();
+  await expect(page.getByText("P-260414-0008")).toHaveCount(0);
+  await expect(page.getByText("코코")).toHaveCount(0);
+  await expect(page.getByText("나비")).toHaveCount(0);
+  await expect(page.getByTestId("customer-side-panel-patient")).toContainText("2");
+  await expect(page.getByTestId("customer-side-panel-guardian")).toContainText("2");
+});
+
 test("customer workspace renders animal master list and opens the common patient drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 

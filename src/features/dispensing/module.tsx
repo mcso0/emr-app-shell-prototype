@@ -48,6 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import {
@@ -102,6 +103,7 @@ type DispensingContentBodyProps = Pick<
   ShellComponentProps,
   "hasRightPanel" | "moduleId"
 > & {
+  preparedEmptyClinic: boolean;
   selectedQueueItem: OrderQueueItem | null;
 };
 
@@ -332,12 +334,13 @@ function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
   };
 }
 
-export function DispensingSidePanel() {
+export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
   const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const items = useMemo(
-    () => getQueueItemsForRuntime(fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems]
+    () => (preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems)),
+    [fulfillmentQueue.workItems, preparedEmptyClinic]
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
@@ -358,19 +361,22 @@ export function DispensingSidePanel() {
   );
 }
 
-export function DispensingHeader({ moduleId }: ShellComponentProps) {
+export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps) {
   const {
     selectedQueueItemIds,
   } =
     useLayoutStore();
   const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const items = useMemo(
-    () => getQueueItemsForRuntime(fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems],
+    () => (preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems)),
+    [fulfillmentQueue.workItems, preparedEmptyClinic],
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-    getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
+    (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
+
+  if (!selectedQueueItem && preparedEmptyClinic) return null;
 
   return (
     <EmrPatientContextBar
@@ -401,20 +407,22 @@ function getDispensingInstructionType(selectedQueueItem: OrderQueueItem | null) 
   return selectedQueueItem?.orderTypeCategory === "treatment" ? "처치" : "조제";
 }
 
-export function DispensingContentAside({ moduleId }: ShellComponentProps) {
+export function DispensingContentAside({ moduleId, workspaceId }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
   const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const items = useMemo(
-    () => getQueueItemsForRuntime(fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems],
+    () => (preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems)),
+    [fulfillmentQueue.workItems, preparedEmptyClinic],
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-    getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
+    (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
   const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
-  const totalHistoryCount = historyGroups.reduce((total, group) => total + group.count, 0);
+  const visibleHistoryGroups = preparedEmptyClinic ? [] : historyGroups;
+  const totalHistoryCount = visibleHistoryGroups.reduce((total, group) => total + group.count, 0);
   const toggleHistoryGroup = (date: string) => {
     setCollapsedHistoryGroups((current) => {
       const next = new Set(current);
@@ -439,7 +447,7 @@ export function DispensingContentAside({ moduleId }: ShellComponentProps) {
       <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-1">
-          {historyGroups.map((group) => (
+          {visibleHistoryGroups.map((group) => (
             <EmrContentHistoryGroup
               key={group.date}
               collapsed={collapsedHistoryGroups.has(group.date)}
@@ -759,13 +767,16 @@ function GroupStatusAction({
 export function DispensingContent({
   hasRightPanel,
   moduleId,
+  workspaceId,
 }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const selectedQueueItem = useMemo(() => {
-    const items = getQueueItemsForRuntime(fulfillmentQueue.workItems);
-    return items.find((item) => item.id === selectedQueueItemIds[moduleId]) ?? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]);
-  }, [fulfillmentQueue.workItems, moduleId, selectedQueueItemIds]);
+    const items = preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems);
+    return items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
+      (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
+  }, [fulfillmentQueue.workItems, moduleId, preparedEmptyClinic, selectedQueueItemIds]);
 
   return (
     <DispensingContentBody
@@ -773,6 +784,7 @@ export function DispensingContent({
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
+      preparedEmptyClinic={preparedEmptyClinic}
       selectedQueueItem={selectedQueueItem}
     />
   );
@@ -782,6 +794,7 @@ function DispensingContentBody({
   hasRightPanel,
   fulfillmentQueue,
   moduleId,
+  preparedEmptyClinic,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
@@ -798,7 +811,7 @@ function DispensingContentBody({
     [fulfillmentQueue.workItems, selectedQueueItem]
   );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
-    cloneOrderTableGroups(selectedQueueItemId)
+    preparedEmptyClinic ? [] : cloneOrderTableGroups(selectedQueueItemId)
   );
   const selectedQueueStatusLabel = getQueueStatusLabel(moduleId, selectedQueueItem);
   const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
@@ -880,6 +893,14 @@ function DispensingContentBody({
       current.map((group) => (group.id === groupId ? updater(group) : group))
     );
   };
+
+  if (!selectedQueueItem && preparedEmptyClinic) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
+        아직 조제/처치 요청이 없습니다.
+      </div>
+    );
+  }
   const completeGroupRows = (groupId: string, rowIds: string[]) => {
     setTableGroups((current) =>
       current.map((group) => {
