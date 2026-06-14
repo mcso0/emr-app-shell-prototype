@@ -7,7 +7,7 @@ import {
   clairDocsAreas,
   getPrdDocAreaBySlug,
   getPrdDocGroups,
-  getPrdDocGroupsByArea,
+  getPrdDocNavigationGroupsByArea,
   normalizeClairDocsArea,
   type ClairDocsArea,
   type PrdDocEntry,
@@ -15,6 +15,7 @@ import {
 import { PrdHeaderControls } from "../prd/prd-header-controls";
 import { PrdMobileNavigation } from "../prd/prd-mobile-navigation";
 import { PrdNavigation } from "../prd/prd-navigation";
+import { PrdPlanningFeatureIndex } from "../prd/prd-planning-feature-index";
 import styles from "../prd/prd-viewer.module.css";
 
 export const metadata: Metadata = {
@@ -67,7 +68,7 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
   const loadedDoc = await loadPrdDoc(requestedSlug, activeArea);
   const resolvedSlug = loadedDoc?.entry.slug ?? getResolvedPrdSlug(requestedSlug, activeArea);
   const resolvedArea = loadedDoc?.entry.area ?? activeArea;
-  const areaGroups = getPrdDocGroupsByArea(resolvedArea);
+  const areaGroups = getPrdDocNavigationGroupsByArea(resolvedArea);
   const searchGroups = getPrdDocGroups();
   const areaLabel = getAreaLabel(resolvedArea);
   const areaRoot = getAreaRoot(resolvedArea);
@@ -131,6 +132,7 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
               {loadedDoc ? (
                 <>
                   <SourcePath doc={loadedDoc.entry} />
+                  <PrdPlanningFeatureIndex doc={loadedDoc.entry} />
                   <div className="mt-8">
                     <MarkdownRenderer markdown={loadedDoc.markdown} sourcePath={loadedDoc.entry.sourcePath} />
                   </div>

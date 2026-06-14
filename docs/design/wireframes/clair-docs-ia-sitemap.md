@@ -34,6 +34,9 @@ Registry entries must carry these fields:
 | `area` | Top-level tab: `planning`, `design`, or `development` |
 | `section` | Left-nav section inside the selected tab |
 | `order` | Stable sort order inside the section |
+| `planningCategory` equivalent | Planning-only first-level IA grouping: product, workflow, feature, domain/policy, current/gap |
+| `planningFeature` equivalent | Planning-only second-level feature grouping such as `Auth / 계정 / 권한` or `접수 / 예약` |
+| `planningItemKind` equivalent | Planning-only item role such as PRD, feature spec, detail spec, epic index, story index, current state, or gap |
 | `audience` | `internal_default`, `internal_review`, or `restricted` |
 | `exposure` | `default_tab`, `index_only`, `approval_required`, or `excluded` |
 | `sensitivity` | Reader-boundary risk classification |
@@ -83,6 +86,69 @@ All existing CLAiR Docs slugs remain valid and move into `기획`.
 | `glossary-readme` | Glossary | 기획 | 글로서리 |
 | `user-flows-readme` | User Flows | 기획 | 유저 플로우 |
 | `emr-saas-userflow` | User Flows | 기획 | 유저 플로우 |
+
+## Planning Navigation IA
+
+The planning tab should not be a flat document-type list. It should guide a planner from product context into workflow, feature area, detailed specs, epics, stories, and implementation gaps.
+
+Left navigation uses a three-level shape:
+
+```text
+기획
+- 제품 전체
+  - Product Docs
+  - Product PRD
+  - Product MVP Scope
+  - SaaS Operating Map
+  - Glossary
+- 메인 업무 흐름
+  - 외래 메인 흐름
+    - Outpatient Workflow State Model
+    - EMR SaaS User Flow
+    - User Flows
+- 기능 영역
+  - 기획 운영
+    - Feature Specs
+    - Epics
+    - User Stories
+  - Auth / 계정 / 권한
+    - Auth Foundation Planning Index
+    - Login Invite Onboarding Spec
+    - Member Role Management Spec
+    - Session Logout Policy Spec
+    - Role Permission Detail Spec
+  - 접수 / 예약
+    - Reception Appointment Spec
+  - 오더 / 수행
+    - Order Fulfillment Handoff
+    - Workspace Order Catalog Platform
+  - 병원 관리
+    - Hospital Profile Onboarding Spec
+    - Hospital Admin Member Management UX Spec
+  - 전체 MVP 기능
+    - Legacy MVP Feature Spec
+- 도메인 / 정책
+  - EMR Domain Entity Map
+  - Role Permission Source Map
+  - Workspace Auth And Permissions
+  - Workspace Hospital Profile
+  - Decision Log Index
+- 현재 구현 / Gap
+  - Auth / 계정 / 권한
+    - Auth Login Onboarding Current State
+    - Role Screen Access Current State
+    - Auth Current Implementation Gap Review
+  - 접수 / 예약
+    - Reception Appointment Current State
+```
+
+When a planning document belongs to a feature group, the document page should show a related-document index above the Markdown body. The index is a shadcn `Card` containing a shadcn `Table`, with `Badge` values for document role. This approximates a Notion-like database table without creating a second source-of-truth store.
+
+Future feature-specific epic and user-story documents should be added to the same feature group so they appear in this index:
+
+```text
+기능 영역 > 세부 기능 > Epic Index > Epic detail > User Stories / Acceptance Criteria / Done Criteria
+```
 
 ## New Curated Design Entries
 

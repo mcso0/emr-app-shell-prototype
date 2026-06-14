@@ -67,6 +67,14 @@ Additional IA refresh verification on 2026-06-14:
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/prd-viewer.spec.ts --config=playwright.config.ts` passed.
 - `npm run build` in the temporary `/tmp/clair-docs-auth-planning` worktree failed because Turbopack rejects the temporary `node_modules` symlink that points outside the filesystem root. The same code path passed with webpack build; Vercel preview remains the deployment verification path.
 
+Additional planning IA refinement verification on 2026-06-14:
+
+- `npm run docs:check` passed.
+- `npm run lint` passed with pre-existing warnings only.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing Turbopack NFT trace warning.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/prd-viewer.spec.ts --config=playwright.config.ts` passed.
+
 ## Handoff Notes
 
 - Keep the viewer registry explicit. Do not auto-expose every Markdown file under `docs/`.
@@ -90,3 +98,9 @@ Additional IA refresh verification on 2026-06-14:
 - Add registry metadata for reader area, section, order, audience, exposure, sensitivity, and source-of-truth posture.
 - Keep design and development tabs curated. Do not expose sensitive auth/security, DB/RLS, operations, launch, completed, or archive documents by default.
 - Implementation basis: `docs/design/wireframes/clair-docs-ia-sitemap.md`.
+
+## Follow-Up Scope Added 2026-06-14 Planning IA Refinement
+
+- Rework the `기획` tab from a flat document-type list into planner-facing hierarchy: `제품 전체`, `메인 업무 흐름`, `기능 영역`, `도메인 / 정책`, and `현재 구현 / Gap`.
+- Add feature-level subgroups such as `Auth / 계정 / 권한`, `접수 / 예약`, `오더 / 수행`, and `병원 관리`.
+- Add a shadcn `Card` + `Table` + `Badge` related-document index on feature planning pages so feature specs, detail specs, current state, gap, and future epic/user-story docs can be found from the same feature context.

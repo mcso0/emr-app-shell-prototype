@@ -10,13 +10,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { MenuIcon } from "@/components/icons";
-import type { PrdDocEntry } from "@/lib/prd-viewer/registry";
+import type { PrdDocNavigationGroup } from "@/lib/prd-viewer/registry";
 import { cn } from "@/lib/utils";
 import { PrdNavigation } from "./prd-navigation";
 import styles from "./prd-viewer.module.css";
 
 interface PrdMobileNavigationProps {
-  groups: Array<{ group: string; docs: PrdDocEntry[] }>;
+  groups: PrdDocNavigationGroup[];
   activeSlug: string;
   areaLabel: string;
 }

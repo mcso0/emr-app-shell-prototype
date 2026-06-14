@@ -35,6 +35,43 @@ export type ClairDocsSourceOfTruth =
 
 export type ClairDocsSourceRoot = "product" | "design" | "engineering";
 
+export type ClairPlanningCategory =
+  | "product"
+  | "workflow"
+  | "feature"
+  | "domain-policy"
+  | "current-gap";
+
+export type ClairPlanningItemKind =
+  | "overview"
+  | "prd"
+  | "roadmap"
+  | "workflow"
+  | "domain"
+  | "policy"
+  | "feature-spec"
+  | "detail-spec"
+  | "epic-index"
+  | "story-index"
+  | "current-state"
+  | "gap"
+  | "decision"
+  | "glossary";
+
+export interface ClairPlanningMetadata {
+  category: ClairPlanningCategory;
+  feature?: string;
+  featureOrder?: number;
+  itemKind: ClairPlanningItemKind;
+  itemOrder?: number;
+}
+
+export interface PrdDocNavigationGroup {
+  group: string;
+  docs: PrdDocEntry[];
+  children?: PrdDocNavigationGroup[];
+}
+
 export type ClairDocType =
   | "PRD"
   | "Current State"
@@ -86,6 +123,230 @@ export const clairDocsAreas = [
   { area: "design", label: "디자인" },
   { area: "development", label: "개발" },
 ] as const satisfies Array<{ area: ClairDocsArea; label: string }>;
+
+export const planningCategoryConfig = [
+  { category: "product", label: "제품 전체", order: 10 },
+  { category: "workflow", label: "메인 업무 흐름", order: 20 },
+  { category: "feature", label: "기능 영역", order: 30 },
+  { category: "domain-policy", label: "도메인 / 정책", order: 40 },
+  { category: "current-gap", label: "현재 구현 / Gap", order: 50 },
+] as const satisfies Array<{ category: ClairPlanningCategory; label: string; order: number }>;
+
+export const planningItemKindLabels = {
+  overview: "Overview",
+  prd: "PRD",
+  roadmap: "Roadmap",
+  workflow: "Workflow",
+  domain: "Domain",
+  policy: "Policy",
+  "feature-spec": "Feature Spec",
+  "detail-spec": "Detail Spec",
+  "epic-index": "Epic Index",
+  "story-index": "User Story Index",
+  "current-state": "Current State",
+  gap: "Gap",
+  decision: "Decision",
+  glossary: "Glossary",
+} as const satisfies Record<ClairPlanningItemKind, string>;
+
+const planningMetadataBySlug: Partial<Record<string, ClairPlanningMetadata>> = {
+  "product-readme": { category: "product", itemKind: "overview", itemOrder: 10 },
+  "product-prd": { category: "product", itemKind: "prd", itemOrder: 20 },
+  "product-mvp-scope": { category: "product", itemKind: "roadmap", itemOrder: 30 },
+  "saas-operating-map": { category: "product", itemKind: "overview", itemOrder: 40 },
+  "glossary-readme": { category: "product", itemKind: "glossary", itemOrder: 50 },
+
+  "outpatient-workflow-state-model": {
+    category: "workflow",
+    feature: "외래 메인 흐름",
+    featureOrder: 10,
+    itemKind: "workflow",
+    itemOrder: 10,
+  },
+  "emr-saas-userflow": {
+    category: "workflow",
+    feature: "외래 메인 흐름",
+    featureOrder: 10,
+    itemKind: "workflow",
+    itemOrder: 20,
+  },
+  "user-flows-readme": {
+    category: "workflow",
+    feature: "외래 메인 흐름",
+    featureOrder: 10,
+    itemKind: "overview",
+    itemOrder: 30,
+  },
+
+  "features-readme": {
+    category: "feature",
+    feature: "기획 운영",
+    featureOrder: 5,
+    itemKind: "overview",
+    itemOrder: 10,
+  },
+  "auth-foundation-planning-index": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "overview",
+    itemOrder: 10,
+  },
+  "login-invite-onboarding-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "feature-spec",
+    itemOrder: 20,
+  },
+  "member-role-management-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "detail-spec",
+    itemOrder: 30,
+  },
+  "session-logout-policy-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "detail-spec",
+    itemOrder: 40,
+  },
+  "invite-email-delivery-recovery-policy-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "detail-spec",
+    itemOrder: 50,
+  },
+  "password-reset-account-recovery-policy-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "detail-spec",
+    itemOrder: 60,
+  },
+  "auth-error-empty-state-ux-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "detail-spec",
+    itemOrder: 70,
+  },
+  "workspace-access-guard-policy-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "policy",
+    itemOrder: 80,
+  },
+  "role-permission-detail-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "policy",
+    itemOrder: 90,
+  },
+  "clair-internal-operator-recovery-audit-policy-spec": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "policy",
+    itemOrder: 100,
+  },
+  "reception-appointment-spec": {
+    category: "feature",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "feature-spec",
+    itemOrder: 10,
+  },
+  "hospital-profile-onboarding-spec": {
+    category: "feature",
+    feature: "병원 관리",
+    featureOrder: 70,
+    itemKind: "feature-spec",
+    itemOrder: 10,
+  },
+  "hospital-admin-member-management-ux-spec": {
+    category: "feature",
+    feature: "병원 관리",
+    featureOrder: 70,
+    itemKind: "detail-spec",
+    itemOrder: 20,
+  },
+  "order-fulfillment-handoff": {
+    category: "feature",
+    feature: "오더 / 수행",
+    featureOrder: 40,
+    itemKind: "feature-spec",
+    itemOrder: 10,
+  },
+  "workspace-order-catalog-platform": {
+    category: "feature",
+    feature: "오더 / 수행",
+    featureOrder: 40,
+    itemKind: "feature-spec",
+    itemOrder: 20,
+  },
+  "legacy-mvp-feature-spec": {
+    category: "feature",
+    feature: "전체 MVP 기능",
+    featureOrder: 90,
+    itemKind: "feature-spec",
+    itemOrder: 10,
+  },
+  "epics-readme": {
+    category: "feature",
+    feature: "기획 운영",
+    featureOrder: 5,
+    itemKind: "epic-index",
+    itemOrder: 20,
+  },
+  "user-stories-readme": {
+    category: "feature",
+    feature: "기획 운영",
+    featureOrder: 5,
+    itemKind: "story-index",
+    itemOrder: 30,
+  },
+
+  "emr-domain-entity-map": { category: "domain-policy", itemKind: "domain", itemOrder: 10 },
+  "role-permission-source-map": { category: "domain-policy", itemKind: "policy", itemOrder: 20 },
+  "workspace-auth-permissions": { category: "domain-policy", itemKind: "policy", itemOrder: 30 },
+  "workspace-hospital-profile": { category: "domain-policy", itemKind: "domain", itemOrder: 40 },
+  "decision-log-index": { category: "domain-policy", itemKind: "decision", itemOrder: 50 },
+
+  "auth-login-onboarding-current-state": {
+    category: "current-gap",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "current-state",
+    itemOrder: 10,
+  },
+  "role-screen-access-current-state": {
+    category: "current-gap",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "current-state",
+    itemOrder: 20,
+  },
+  "auth-current-implementation-gap-review": {
+    category: "current-gap",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "gap",
+    itemOrder: 30,
+  },
+  "reception-appointment-current-state": {
+    category: "current-gap",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "current-state",
+    itemOrder: 10,
+  },
+};
 
 const defaultReaderMetadata = {
   audience: "internal_default",
@@ -812,6 +1073,103 @@ export function getPrdDocGroupsByArea(area: ClairDocsArea) {
       docs: group.docs.filter((doc) => doc.area === area),
     }))
     .filter((group) => group.docs.length > 0);
+}
+
+function getPlanningCategoryOrder(category: ClairPlanningCategory) {
+  return planningCategoryConfig.find((entry) => entry.category === category)?.order ?? 999;
+}
+
+export function getPlanningCategoryLabel(category: ClairPlanningCategory) {
+  return planningCategoryConfig.find((entry) => entry.category === category)?.label ?? category;
+}
+
+export function getPlanningMetadata(doc: PrdDocEntry): ClairPlanningMetadata | undefined {
+  return planningMetadataBySlug[doc.slug];
+}
+
+function getPlanningSortOrder(doc: PrdDocEntry) {
+  const metadata = getPlanningMetadata(doc);
+
+  return metadata?.itemOrder ?? doc.order;
+}
+
+function sortPlanningDocs(docs: PrdDocEntry[]) {
+  return docs.sort((a, b) => getPlanningSortOrder(a) - getPlanningSortOrder(b) || a.title.localeCompare(b.title));
+}
+
+function getPlanningNavigationGroups(docs: PrdDocEntry[]): PrdDocNavigationGroup[] {
+  const categoryGroups = new Map<
+    ClairPlanningCategory,
+    {
+      docs: PrdDocEntry[];
+      featureGroups: Map<string, { order: number; docs: PrdDocEntry[] }>;
+    }
+  >();
+
+  for (const doc of docs) {
+    const metadata = getPlanningMetadata(doc);
+    const category = metadata?.category ?? "feature";
+    const categoryGroup = categoryGroups.get(category) ?? {
+      docs: [],
+      featureGroups: new Map<string, { order: number; docs: PrdDocEntry[] }>(),
+    };
+
+    if (metadata?.feature) {
+      const featureGroup = categoryGroup.featureGroups.get(metadata.feature) ?? {
+        order: metadata.featureOrder ?? 999,
+        docs: [],
+      };
+      featureGroup.docs.push(doc);
+      categoryGroup.featureGroups.set(metadata.feature, featureGroup);
+    } else {
+      categoryGroup.docs.push(doc);
+    }
+
+    categoryGroups.set(category, categoryGroup);
+  }
+
+  return Array.from(categoryGroups.entries())
+    .sort(([categoryA], [categoryB]) => getPlanningCategoryOrder(categoryA) - getPlanningCategoryOrder(categoryB))
+    .map(([category, group]) => ({
+      group: getPlanningCategoryLabel(category),
+      docs: sortPlanningDocs(group.docs),
+      children: Array.from(group.featureGroups.entries())
+        .sort(([, featureA], [, featureB]) => featureA.order - featureB.order)
+        .map(([feature, featureGroup]) => ({
+          group: feature,
+          docs: sortPlanningDocs(featureGroup.docs),
+        })),
+    }));
+}
+
+export function getPrdDocNavigationGroupsByArea(area: ClairDocsArea): PrdDocNavigationGroup[] {
+  const docs = prdDocRegistry.filter((doc) => isDefaultVisibleDoc(doc) && doc.area === area);
+
+  if (area === "planning") {
+    return getPlanningNavigationGroups(docs);
+  }
+
+  return getPrdDocGroupsByArea(area);
+}
+
+export function getPlanningFeatureDocs(entry: PrdDocEntry): PrdDocEntry[] {
+  const metadata = getPlanningMetadata(entry);
+
+  if (entry.area !== "planning" || !metadata?.feature) {
+    return [];
+  }
+
+  return sortPlanningDocs(
+    prdDocRegistry.filter((doc) => {
+      const candidateMetadata = getPlanningMetadata(doc);
+
+      return (
+        doc.area === "planning" &&
+        isDefaultVisibleDoc(doc) &&
+        candidateMetadata?.feature === metadata.feature
+      );
+    })
+  );
 }
 
 export function normalizeClairDocsArea(area: string | undefined): ClairDocsArea {

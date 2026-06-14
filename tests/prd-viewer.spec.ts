@@ -12,6 +12,9 @@ test("CLAiR Docs renders the canonical product PRD from docs/product", async ({ 
   await expect(page.getByRole("heading", { name: "동물병원 전용 EMR SaaS 서비스 PRD" })).toBeVisible();
   await expect(page.getByText("docs/product/prd/clair-emr-saas-prd.md")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("Product PRD");
+  await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("제품 전체");
+  await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("메인 업무 흐름");
+  await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("기능 영역");
   await expect(page.getByRole("navigation", { name: "Table of contents" })).toContainText("Overview");
 });
 
@@ -44,6 +47,21 @@ test("CLAiR Docs switches registered docs without leaving the read-only viewer",
   await expect(page.getByRole("heading", { name: "EMR Domain Entity Map" })).toBeVisible();
   await expect(page.getByText("docs/product/domain/emr-domain-entity-map.md")).toBeVisible();
   await expect(page.getByText("```")).toHaveCount(0);
+});
+
+test("CLAiR Docs shows planning feature hierarchy and related document index", async ({ page }) => {
+  await page.goto("/docs?doc=reception-appointment-spec");
+
+  const docsNavigation = page.getByRole("navigation", { name: "CLAiR Docs documents" });
+  await expect(docsNavigation).toContainText("기획 운영");
+  await expect(docsNavigation).toContainText("접수 / 예약");
+  await expect(docsNavigation).toContainText("Reception Appointment Spec");
+
+  const featureIndex = page.locator('[data-slot="card"]').filter({ hasText: "Reception Appointment Current State" });
+  await expect(featureIndex).toBeVisible();
+  await expect(featureIndex).toContainText("Feature Spec");
+  await expect(featureIndex).toContainText("Current State");
+  await expect(featureIndex.getByRole("link", { name: "Reception Appointment Current State" })).toBeVisible();
 });
 
 test("CLAiR Docs renders Mermaid diagrams as diagrams", async ({ page }) => {
