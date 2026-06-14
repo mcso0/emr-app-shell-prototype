@@ -75,6 +75,14 @@ Additional planning IA refinement verification on 2026-06-14:
 - `npm run build` passed with the existing Turbopack NFT trace warning.
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/prd-viewer.spec.ts --config=playwright.config.ts` passed.
 
+Additional feature package / Epic Index verification on 2026-06-14:
+
+- `npm run docs:check` passed.
+- `npm run lint` passed with pre-existing warnings only.
+- `npx tsc --noEmit` passed.
+- `npm run build` passed with the existing Turbopack NFT trace warning.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/prd-viewer.spec.ts --config=playwright.config.ts` passed with 11 tests.
+
 ## Handoff Notes
 
 - Keep the viewer registry explicit. Do not auto-expose every Markdown file under `docs/`.
@@ -103,4 +111,13 @@ Additional planning IA refinement verification on 2026-06-14:
 
 - Rework the `기획` tab from a flat document-type list into planner-facing hierarchy: `제품 전체`, `메인 업무 흐름`, `기능 영역`, `도메인 / 정책`, and `현재 구현 / Gap`.
 - Add feature-level subgroups such as `Auth / 계정 / 권한`, `접수 / 예약`, `오더 / 수행`, and `병원 관리`.
-- Add a shadcn `Card` + `Table` + `Badge` related-document index on feature planning pages so feature specs, detail specs, current state, gap, and future epic/user-story docs can be found from the same feature context.
+- Add a shadcn `Card` + `Table` + `Badge` related-document index on feature planning pages so feature specs, detail specs, current state, gap, and future epic/user-story docs can be found from the same feature context. Superseded by the feature package / Epic Index refinement below.
+
+## Follow-Up Scope Added 2026-06-14 Feature Package / Epic Index Refinement
+
+- Replace the generic feature related-document table with a feature package navigation model.
+- Use `접수 / 예약` as the first concrete package with Overview, Users / Roles, Feature Spec, Epic Index, and Current State.
+- Add a registry-driven shadcn Epic Index table only on Epic Index documents.
+- Add a parent-link button on Epic detail documents instead of relying on browser history.
+- Keep User Stories inside Epic detail documents for this pass; do not split story files until the package has enough volume.
+- Preserve existing CLAiR Docs slugs and keep the actual CLAiR EMR service screens out of scope.

@@ -41,7 +41,10 @@ test("CLAiR Docs switches top-level planning, design, and development areas", as
 test("CLAiR Docs switches registered docs without leaving the read-only viewer", async ({ page }) => {
   await page.goto("/docs");
 
-  await page.getByRole("link", { name: "EMR Domain Entity Map" }).click();
+  await page
+    .getByRole("navigation", { name: "CLAiR Docs documents" })
+    .getByRole("link", { name: "EMR Domain Entity Map" })
+    .click();
 
   await expect(page).toHaveURL(/\/docs\?doc=emr-domain-entity-map/);
   await expect(page.getByRole("heading", { name: "EMR Domain Entity Map" })).toBeVisible();
@@ -49,19 +52,36 @@ test("CLAiR Docs switches registered docs without leaving the read-only viewer",
   await expect(page.getByText("```")).toHaveCount(0);
 });
 
-test("CLAiR Docs shows planning feature hierarchy and related document index", async ({ page }) => {
+test("CLAiR Docs shows planning feature package hierarchy", async ({ page }) => {
   await page.goto("/docs?doc=reception-appointment-spec");
 
   const docsNavigation = page.getByRole("navigation", { name: "CLAiR Docs documents" });
-  await expect(docsNavigation).toContainText("기획 운영");
   await expect(docsNavigation).toContainText("접수 / 예약");
-  await expect(docsNavigation).toContainText("Reception Appointment Spec");
+  await expect(docsNavigation).toContainText("Overview");
+  await expect(docsNavigation).toContainText("Users / Roles");
+  await expect(docsNavigation).toContainText("Feature Spec");
+  await expect(docsNavigation).toContainText("Epic Index");
+  await expect(docsNavigation).toContainText("Reception Appointment Current State");
+  await expect(page.locator('[data-slot="card"]').filter({ hasText: "Reception Appointment Current State" })).toHaveCount(0);
+});
 
-  const featureIndex = page.locator('[data-slot="card"]').filter({ hasText: "Reception Appointment Current State" });
-  await expect(featureIndex).toBeVisible();
-  await expect(featureIndex).toContainText("Feature Spec");
-  await expect(featureIndex).toContainText("Current State");
-  await expect(featureIndex.getByRole("link", { name: "Reception Appointment Current State" })).toBeVisible();
+test("CLAiR Docs renders reception epic index and epic detail navigation", async ({ page }) => {
+  await page.goto("/docs?doc=reception-appointment-epics");
+
+  await expect(page.getByRole("heading", { name: "Reception / Appointment Epic Index" })).toBeVisible();
+  const epicIndex = page.locator('[data-slot="card"]').filter({ hasText: "접수 / 예약 Epic Index" });
+  await expect(epicIndex).toBeVisible();
+  await expect(epicIndex.getByRole("link", { name: /RA-EPIC-001/ })).toBeVisible();
+  await expect(epicIndex).toContainText("Draft");
+  await expect(epicIndex).toContainText("P0");
+
+  await epicIndex.getByRole("link", { name: /예약 환자 접수 처리/ }).click();
+
+  await expect(page).toHaveURL(/\/docs\?doc=reception-appointment-epic-appointment-check-in/);
+  await expect(page.getByRole("heading", { name: "예약 환자 접수 처리" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Epic Index로 돌아가기" })).toBeVisible();
+  await page.getByRole("link", { name: "Epic Index로 돌아가기" }).click();
+  await expect(page).toHaveURL(/\/docs\?doc=reception-appointment-epics/);
 });
 
 test("CLAiR Docs renders Mermaid diagrams as diagrams", async ({ page }) => {

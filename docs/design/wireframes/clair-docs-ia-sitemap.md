@@ -78,7 +78,11 @@ All existing CLAiR Docs slugs remain valid and move into `기획`.
 | `member-role-management-spec` | Features | 기획 | 기능명세 |
 | `session-logout-policy-spec` | Features | 기획 | 기능명세 |
 | `hospital-profile-onboarding-spec` | Features | 기획 | 기능명세 |
+| `reception-appointment-overview` | Features | 기획 | 접수 / 예약 |
+| `reception-appointment-users-roles` | Features | 기획 | 접수 / 예약 |
 | `reception-appointment-spec` | Features | 기획 | 기능명세 |
+| `reception-appointment-epics` | Epics | 기획 | 접수 / 예약 |
+| `reception-appointment-epic-appointment-check-in` | Epics | 기획 | 접수 / 예약 |
 | `legacy-mvp-feature-spec` | Features | 기획 | 기능명세 |
 | `epics-readme` | Epics | 기획 | 에픽 |
 | `user-stories-readme` | User Stories | 기획 | 유저 스토리 |
@@ -100,6 +104,9 @@ Left navigation uses a three-level shape:
   - Product PRD
   - Product MVP Scope
   - SaaS Operating Map
+  - Feature Specs
+  - Epics
+  - User Stories
   - Glossary
 - 메인 업무 흐름
   - 외래 메인 흐름
@@ -107,18 +114,21 @@ Left navigation uses a three-level shape:
     - EMR SaaS User Flow
     - User Flows
 - 기능 영역
-  - 기획 운영
-    - Feature Specs
-    - Epics
-    - User Stories
   - Auth / 계정 / 권한
     - Auth Foundation Planning Index
     - Login Invite Onboarding Spec
     - Member Role Management Spec
     - Session Logout Policy Spec
     - Role Permission Detail Spec
+    - Auth Login Onboarding Current State
+    - Role Screen Access Current State
+    - Auth Current Implementation Gap Review
   - 접수 / 예약
-    - Reception Appointment Spec
+    - Overview
+    - Users / Roles
+    - Feature Spec
+    - Epic Index
+    - Current State
   - 오더 / 수행
     - Order Fulfillment Handoff
     - Workspace Order Catalog Platform
@@ -133,22 +143,19 @@ Left navigation uses a three-level shape:
   - Workspace Auth And Permissions
   - Workspace Hospital Profile
   - Decision Log Index
-- 현재 구현 / Gap
-  - Auth / 계정 / 권한
-    - Auth Login Onboarding Current State
-    - Role Screen Access Current State
-    - Auth Current Implementation Gap Review
-  - 접수 / 예약
-    - Reception Appointment Current State
 ```
 
-When a planning document belongs to a feature group, the document page should show a related-document index above the Markdown body. The index is a shadcn `Card` containing a shadcn `Table`, with `Badge` values for document role. This approximates a Notion-like database table without creating a second source-of-truth store.
+Feature packages should expose their package-level documents directly in the left navigation. Do not add a generic related-document table above every planning document.
 
-Future feature-specific epic and user-story documents should be added to the same feature group so they appear in this index:
+Epic Index documents are the only planning pages that render a registry-driven shadcn `Card` + `Table` + `Badge` index. Each Epic table row links to a separate Epic detail Markdown document. Epic detail documents should render a parent-link button back to their Epic Index.
+
+Feature-specific epic and user-story planning should use this hierarchy:
 
 ```text
-기능 영역 > 세부 기능 > Epic Index > Epic detail > User Stories / Acceptance Criteria / Done Criteria
+기능 영역 > 기능 패키지 > Epic Index > Epic detail > User Stories / Acceptance Criteria / Done Criteria
 ```
+
+User Story files are optional. For the first implementation pass, user stories live inside the Epic detail document as sections to avoid premature file proliferation.
 
 ## New Curated Design Entries
 

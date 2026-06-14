@@ -47,11 +47,13 @@ export type ClairPlanningItemKind =
   | "prd"
   | "roadmap"
   | "workflow"
+  | "users"
   | "domain"
   | "policy"
   | "feature-spec"
   | "detail-spec"
   | "epic-index"
+  | "epic-detail"
   | "story-index"
   | "current-state"
   | "gap"
@@ -64,6 +66,12 @@ export interface ClairPlanningMetadata {
   featureOrder?: number;
   itemKind: ClairPlanningItemKind;
   itemOrder?: number;
+  parentSlug?: string;
+  record?: {
+    id: string;
+    status: "draft" | "review" | "approved" | "deferred";
+    priority?: "P0" | "P1" | "P2";
+  };
 }
 
 export interface PrdDocNavigationGroup {
@@ -137,11 +145,13 @@ export const planningItemKindLabels = {
   prd: "PRD",
   roadmap: "Roadmap",
   workflow: "Workflow",
+  users: "Users / Roles",
   domain: "Domain",
   policy: "Policy",
   "feature-spec": "Feature Spec",
   "detail-spec": "Detail Spec",
   "epic-index": "Epic Index",
+  "epic-detail": "Epic",
   "story-index": "User Story Index",
   "current-state": "Current State",
   gap: "Gap",
@@ -179,11 +189,9 @@ const planningMetadataBySlug: Partial<Record<string, ClairPlanningMetadata>> = {
   },
 
   "features-readme": {
-    category: "feature",
-    feature: "기획 운영",
-    featureOrder: 5,
+    category: "product",
     itemKind: "overview",
-    itemOrder: 10,
+    itemOrder: 60,
   },
   "auth-foundation-planning-index": {
     category: "feature",
@@ -255,12 +263,74 @@ const planningMetadataBySlug: Partial<Record<string, ClairPlanningMetadata>> = {
     itemKind: "policy",
     itemOrder: 100,
   },
+  "auth-login-onboarding-current-state": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "current-state",
+    itemOrder: 110,
+  },
+  "role-screen-access-current-state": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "current-state",
+    itemOrder: 120,
+  },
+  "auth-current-implementation-gap-review": {
+    category: "feature",
+    feature: "Auth / 계정 / 권한",
+    featureOrder: 10,
+    itemKind: "gap",
+    itemOrder: 130,
+  },
+  "reception-appointment-overview": {
+    category: "feature",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "overview",
+    itemOrder: 10,
+  },
+  "reception-appointment-users-roles": {
+    category: "feature",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "users",
+    itemOrder: 20,
+  },
   "reception-appointment-spec": {
     category: "feature",
     feature: "접수 / 예약",
     featureOrder: 20,
     itemKind: "feature-spec",
-    itemOrder: 10,
+    itemOrder: 30,
+  },
+  "reception-appointment-epics": {
+    category: "feature",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "epic-index",
+    itemOrder: 40,
+  },
+  "reception-appointment-epic-appointment-check-in": {
+    category: "feature",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "epic-detail",
+    itemOrder: 41,
+    parentSlug: "reception-appointment-epics",
+    record: {
+      id: "RA-EPIC-001",
+      status: "draft",
+      priority: "P0",
+    },
+  },
+  "reception-appointment-current-state": {
+    category: "feature",
+    feature: "접수 / 예약",
+    featureOrder: 20,
+    itemKind: "current-state",
+    itemOrder: 50,
   },
   "hospital-profile-onboarding-spec": {
     category: "feature",
@@ -297,55 +367,14 @@ const planningMetadataBySlug: Partial<Record<string, ClairPlanningMetadata>> = {
     itemKind: "feature-spec",
     itemOrder: 10,
   },
-  "epics-readme": {
-    category: "feature",
-    feature: "기획 운영",
-    featureOrder: 5,
-    itemKind: "epic-index",
-    itemOrder: 20,
-  },
-  "user-stories-readme": {
-    category: "feature",
-    feature: "기획 운영",
-    featureOrder: 5,
-    itemKind: "story-index",
-    itemOrder: 30,
-  },
+  "epics-readme": { category: "product", itemKind: "epic-index", itemOrder: 70 },
+  "user-stories-readme": { category: "product", itemKind: "story-index", itemOrder: 80 },
 
   "emr-domain-entity-map": { category: "domain-policy", itemKind: "domain", itemOrder: 10 },
   "role-permission-source-map": { category: "domain-policy", itemKind: "policy", itemOrder: 20 },
   "workspace-auth-permissions": { category: "domain-policy", itemKind: "policy", itemOrder: 30 },
   "workspace-hospital-profile": { category: "domain-policy", itemKind: "domain", itemOrder: 40 },
   "decision-log-index": { category: "domain-policy", itemKind: "decision", itemOrder: 50 },
-
-  "auth-login-onboarding-current-state": {
-    category: "current-gap",
-    feature: "Auth / 계정 / 권한",
-    featureOrder: 10,
-    itemKind: "current-state",
-    itemOrder: 10,
-  },
-  "role-screen-access-current-state": {
-    category: "current-gap",
-    feature: "Auth / 계정 / 권한",
-    featureOrder: 10,
-    itemKind: "current-state",
-    itemOrder: 20,
-  },
-  "auth-current-implementation-gap-review": {
-    category: "current-gap",
-    feature: "Auth / 계정 / 권한",
-    featureOrder: 10,
-    itemKind: "gap",
-    itemOrder: 30,
-  },
-  "reception-appointment-current-state": {
-    category: "current-gap",
-    feature: "접수 / 예약",
-    featureOrder: 20,
-    itemKind: "current-state",
-    itemOrder: 10,
-  },
 };
 
 const defaultReaderMetadata = {
@@ -706,8 +735,32 @@ export const prdDocRegistry = [
     tags: ["hospital admin", "onboarding"],
   }),
   defineDoc({
+    slug: "reception-appointment-overview",
+    title: "Overview",
+    area: "planning",
+    group: "Features",
+    section: "기능명세",
+    order: 135,
+    docType: "Feature",
+    sourcePath: "docs/product/features/reception-appointment/README.md",
+    description: "Reception and appointment package overview, purpose, scope, and document map.",
+    tags: ["reception", "appointments", "overview"],
+  }),
+  defineDoc({
+    slug: "reception-appointment-users-roles",
+    title: "Users / Roles",
+    area: "planning",
+    group: "Features",
+    section: "기능명세",
+    order: 136,
+    docType: "Feature",
+    sourcePath: "docs/product/features/reception-appointment/users-roles.md",
+    description: "Primary users, role boundaries, and permission expectations for reception and appointment work.",
+    tags: ["reception", "appointments", "roles"],
+  }),
+  defineDoc({
     slug: "reception-appointment-spec",
-    title: "Reception Appointment Spec",
+    title: "Feature Spec",
     area: "planning",
     group: "Features",
     section: "기능명세",
@@ -716,6 +769,31 @@ export const prdDocRegistry = [
     sourcePath: "docs/product/features/reception-appointment-spec.md",
     description: "Reception and appointment product behavior.",
     tags: ["reception", "appointments"],
+  }),
+  defineDoc({
+    slug: "reception-appointment-epics",
+    title: "Epic Index",
+    area: "planning",
+    group: "Epics",
+    section: "에픽",
+    order: 141,
+    docType: "Epic",
+    sourcePath: "docs/product/features/reception-appointment/epics/README.md",
+    description: "Reception and appointment epic index.",
+    tags: ["reception", "appointments", "epics"],
+  }),
+  defineDoc({
+    slug: "reception-appointment-epic-appointment-check-in",
+    title: "예약 환자 접수 처리",
+    area: "planning",
+    group: "Epics",
+    section: "에픽",
+    order: 142,
+    docType: "Epic",
+    sourcePath: "docs/product/features/reception-appointment/epics/appointment-check-in.md",
+    exposure: "index_only",
+    description: "Epic detail for converting an arrived appointment into today's encounter and queue flow.",
+    tags: ["reception", "appointments", "check-in"],
   }),
   defineDoc({
     slug: "legacy-mvp-feature-spec",
@@ -1041,6 +1119,10 @@ function isDefaultVisibleDoc(doc: PrdDocEntry) {
   return doc.exposure === "default_tab" || doc.exposure === "index_only";
 }
 
+function isDefaultNavigationDoc(doc: PrdDocEntry) {
+  return doc.exposure === "default_tab";
+}
+
 export function getDefaultPrdDoc(area: ClairDocsArea = "planning"): PrdDocEntry {
   const defaultDoc = getPrdDocBySlug(defaultDocSlugByArea[area]);
 
@@ -1143,7 +1225,7 @@ function getPlanningNavigationGroups(docs: PrdDocEntry[]): PrdDocNavigationGroup
 }
 
 export function getPrdDocNavigationGroupsByArea(area: ClairDocsArea): PrdDocNavigationGroup[] {
-  const docs = prdDocRegistry.filter((doc) => isDefaultVisibleDoc(doc) && doc.area === area);
+  const docs = prdDocRegistry.filter((doc) => isDefaultNavigationDoc(doc) && doc.area === area);
 
   if (area === "planning") {
     return getPlanningNavigationGroups(docs);
@@ -1170,6 +1252,34 @@ export function getPlanningFeatureDocs(entry: PrdDocEntry): PrdDocEntry[] {
       );
     })
   );
+}
+
+export function getPlanningEpicDocs(entry: PrdDocEntry): PrdDocEntry[] {
+  const metadata = getPlanningMetadata(entry);
+
+  if (entry.area !== "planning" || metadata?.itemKind !== "epic-index" || !metadata.feature) {
+    return [];
+  }
+
+  return sortPlanningDocs(
+    prdDocRegistry.filter((doc) => {
+      const candidateMetadata = getPlanningMetadata(doc);
+
+      return (
+        doc.area === "planning" &&
+        isDefaultVisibleDoc(doc) &&
+        candidateMetadata?.feature === metadata.feature &&
+        candidateMetadata?.itemKind === "epic-detail" &&
+        candidateMetadata?.parentSlug === entry.slug
+      );
+    })
+  );
+}
+
+export function getPlanningParentDoc(entry: PrdDocEntry): PrdDocEntry | undefined {
+  const parentSlug = getPlanningMetadata(entry)?.parentSlug;
+
+  return parentSlug ? getPrdDocBySlug(parentSlug) : undefined;
 }
 
 export function normalizeClairDocsArea(area: string | undefined): ClairDocsArea {

@@ -15,7 +15,7 @@ import {
 import { PrdHeaderControls } from "../prd/prd-header-controls";
 import { PrdMobileNavigation } from "../prd/prd-mobile-navigation";
 import { PrdNavigation } from "../prd/prd-navigation";
-import { PrdPlanningFeatureIndex } from "../prd/prd-planning-feature-index";
+import { PrdPlanningEpicSurface } from "../prd/prd-planning-epic-surface";
 import styles from "../prd/prd-viewer.module.css";
 
 export const metadata: Metadata = {
@@ -132,7 +132,7 @@ export default async function ClairDocsPage({ searchParams }: ClairDocsPageProps
               {loadedDoc ? (
                 <>
                   <SourcePath doc={loadedDoc.entry} />
-                  <PrdPlanningFeatureIndex doc={loadedDoc.entry} />
+                  <PrdPlanningEpicSurface doc={loadedDoc.entry} />
                   <div className="mt-8">
                     <MarkdownRenderer markdown={loadedDoc.markdown} sourcePath={loadedDoc.entry.sourcePath} />
                   </div>
