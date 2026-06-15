@@ -27,12 +27,49 @@ const badgeVariants = cva(
   }
 )
 
+type BadgeVariantProps = VariantProps<typeof badgeVariants>
+
+/**
+ * Compact generic label or chip for non-domain status metadata.
+ *
+ * Use Badge for short categories, filters, and lightweight labels. Do not use
+ * generic Badge to encode EMR workflow status; use `EmrStatusBadge` or a
+ * feature-specific status component for clinical, billing, or fulfillment state.
+ *
+ * @summary compact generic label or chip
+ */
+export type BadgeProps = Omit<useRender.ComponentProps<"span">, "className" | "render"> & {
+  /**
+   * Generic visual emphasis. Domain status tone belongs in EMR-specific status
+   * components instead of ad hoc Badge variants.
+   */
+  variant?: BadgeVariantProps["variant"]
+  /**
+   * Optional custom renderer from Base UI. Keep default span rendering unless a
+   * consuming component needs a specific semantic element.
+   */
+  render?: useRender.ComponentProps<"span">["render"]
+  /**
+   * Additional classes for layout composition. Avoid custom status colors here.
+   */
+  className?: string
+}
+
+/**
+ * Compact generic label or chip for non-domain status metadata.
+ *
+ * Use Badge for short categories, filters, and lightweight labels. Do not use
+ * generic Badge to encode EMR workflow status; use `EmrStatusBadge` or a
+ * feature-specific status component for clinical, billing, or fulfillment state.
+ *
+ * @summary compact generic label or chip
+ */
 function Badge({
   className,
   variant = "default",
   render,
   ...props
-}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+}: BadgeProps) {
   return useRender({
     defaultTagName: "span",
     props: mergeProps<"span">(

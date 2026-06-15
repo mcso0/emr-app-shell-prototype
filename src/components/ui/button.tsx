@@ -45,13 +45,57 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonVariantProps = VariantProps<typeof buttonVariants>
+
+/**
+ * Command button for explicit user actions in CLAiR EMR.
+ *
+ * Use Button for save, retry, cancel, destructive, and other non-navigation commands.
+ * Use Links or route-aware controls for navigation. Icon-only buttons must include
+ * an accessible label such as `aria-label`.
+ *
+ * @summary command button for explicit EMR actions
+ */
+export type ButtonProps = ButtonPrimitive.Props & {
+  /**
+   * Visual command priority. Use `default` for the main action, `outline` or
+   * `secondary` for supporting actions, `ghost` for quiet actions, and
+   * `destructive` only for high-risk actions such as delete or cancel.
+   */
+  variant?: ButtonVariantProps["variant"]
+  /**
+   * Control height and icon scale. Use smaller sizes in dense tables and panels,
+   * and reserve larger sizes for spacious dialogs.
+   */
+  size?: ButtonVariantProps["size"]
+  /**
+   * Shape of the button. Keep `default` for most EMR controls; use `round` only
+   * for compact pill-like commands.
+   */
+  roundness?: ButtonVariantProps["roundness"]
+  /**
+   * Additional classes for layout composition. Prefer existing variants and sizes
+   * before adding custom visual styling.
+   */
+  className?: string
+}
+
+/**
+ * Command button for explicit user actions in CLAiR EMR.
+ *
+ * Use Button for save, retry, cancel, destructive, and other non-navigation commands.
+ * Use Links or route-aware controls for navigation. Icon-only buttons must include
+ * an accessible label such as `aria-label`.
+ *
+ * @summary command button for explicit EMR actions
+ */
 function Button({
   className,
   variant = "default",
   size = "default",
   roundness = "default",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
   return (
     <ButtonPrimitive
       data-slot="button"

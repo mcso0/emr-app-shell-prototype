@@ -25,6 +25,12 @@
 - After meaningful work, update affected source docs/work items and add a `docs/completed/` closeout when useful.
 - Give the final result review using `docs/_meta/result-review-rules.md`.
 
+## Storybook MCP
+
+- For shared UI or design-system work, use the project-scoped `clair_storybook` MCP server when local Storybook is running.
+- Query Storybook documentation before using design-system component props. Do not invent undocumented props or variants.
+- The local endpoint is `http://127.0.0.1:6006/mcp`; keep it local and do not publish, tunnel, or share it without explicit approval.
+
 ## Core Safety
 
 - Keep changes inside the user request and active work item scope.

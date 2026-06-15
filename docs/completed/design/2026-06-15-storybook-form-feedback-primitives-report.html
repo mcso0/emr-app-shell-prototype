@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storybook Form/Feedback Primitive Stories Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8f8fa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f3f4f6;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Human Review</p>
+      <h1>Storybook Form/Feedback Primitive Stories</h1>
+      <p>
+        Storybook 5단계의 두 번째 form/feedback primitive 묶음으로 기존 앱 컴포넌트인
+        <code>Textarea</code>, <code>Select</code>, <code>Field</code>/<code>FieldError</code>를 문서화했다.
+        새 런타임 API는 만들지 않고, co-located story만 추가했다.
+      </p>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li><code>Design System/UI/Textarea</code> story를 추가했다.</li>
+          <li><code>Design System/UI/Select</code> story를 추가했다.</li>
+          <li><code>Design System/UI/Field</code> story를 추가해 label, description, error, fieldset 조합을 문서화했다.</li>
+          <li>각 story meta에 autodocs, args, argTypes, component description을 넣었다.</li>
+          <li>각 story 설명에 사용할 때와 쓰지 말아야 할 때를 짧게 기록했다.</li>
+          <li>새 work item <code>DESIGN-SYSTEM-PR-055</code>를 Human Review 상태로 기록했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <p>
+          런타임 컴포넌트 API 변경, 신규 shared primitive, 실제 feature workflow story, DB/Supabase/권한/배포/외부 연동,
+          실환자·보호자·병원·결제·신원 데이터 사용은 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 범위 밖 warning 5개는 유지됨.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li><code>npm run build-storybook</code> 통과.</li>
+          <li><code>npm run storybook -- --ci --smoke-test</code> 통과.</li>
+          <li>Storybook MCP <code>list-all-documentation</code>에서 <code>Field</code>, <code>Select</code>, <code>Textarea</code> 확인.</li>
+          <li>Storybook MCP <code>get-documentation</code>으로 신규 3개 컴포넌트 문서 확인.</li>
+          <li>Storybook MCP <code>run-story-tests</code> focused 실행으로 <code>design-system-ui-textarea--default</code> 통과 확인.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>주의 사항</h2>
+        <p>
+          이번 선택지는 실제 존재하는 컴포넌트 조사 결과에 맞춰 정했다. <code>EmptyState</code>라는 독립 primitive는
+          <code>src/components/ui</code>와 <code>src/components/emr</code>에서 확인되지 않아 제외했다.
+          MCP 테스트 중 첫 broad run은 Vite dependency optimizer reload로 일시 실패했지만 자동 재실행에서 전체 40개 story가 통과했고,
+          focused run도 별도로 통과했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          Human Review에서 문서화 수준과 예시가 충분한지 확인한 뒤, 다음 Storybook 묶음에서는 checkbox, switch, dialog처럼
+          form interaction과 feedback surface 사이에 걸친 primitive를 이어서 등록하는 것이 자연스럽다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

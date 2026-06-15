@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storybook Foundation Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8f8fa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f3f4f6;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Human Review</p>
+      <h1>Storybook Foundation</h1>
+      <p>
+        CLAiR EMR 디자인시스템을 Storybook에서 볼 수 있는 첫 기반을 추가했다. 이번 단계는 컴포넌트 카탈로그 완성이 아니라,
+        Storybook이 앱과 같은 CSS, 폰트, 토큰 기준으로 뜨는지 확인하는 초기 설치 작업이다.
+      </p>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>Storybook 10과 Next.js Vite framework를 설치했다.</li>
+          <li><code>npm run storybook</code>, <code>npm run build-storybook</code> 스크립트를 추가했고 telemetry는 비활성화했다.</li>
+          <li><code>.storybook/preview.tsx</code>에서 <code>src/app/globals.css</code>를 불러와 EMR token, Tailwind, Pretendard 기준을 공유하게 했다.</li>
+          <li>Storybook docs와 Vitest addon 기반을 추가했다.</li>
+          <li>자동 생성된 예제 story 파일은 CLAiR 디자인시스템과 무관해 제거했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <p>
+          Storybook MCP/AI addon, Chromatic 배포, 실제 컴포넌트 story 작성, 업무 화면 story 작성, DB/Supabase/권한/배포 작업은 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx eslint .storybook/main.ts .storybook/preview.tsx vitest.config.ts vitest.shims.d.ts eslint.config.mjs</code> 통과</li>
+          <li><code>npm run build-storybook</code> 통과</li>
+          <li><code>npm run storybook -- --ci --smoke-test</code> 통과</li>
+          <li><code>npm run lint</code> 통과: 기존 warning 6개 남음</li>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+        </ul>
+        <p>
+          현재 story 파일이 없다는 warning은 의도된 상태다. 다음 단계에서 실제 디자인시스템 컴포넌트 story를 추가하면 사라진다.
+          별도 Vite 앱인 <code>lottie-ai-chart-writing/</code>는 루트 Next.js 검증 대상에서 제외했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          안정된 primitive부터 story를 추가하는 것이 좋다. 우선순위는 <code>Button</code>, <code>Badge</code>, <code>Input</code>,
+          <code>SegmentedControl</code>, <code>EmrStatusBadge</code>, <code>EmrInlineAlert</code> 순서가 적절하다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

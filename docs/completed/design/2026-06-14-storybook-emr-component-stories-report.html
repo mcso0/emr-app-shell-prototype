@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storybook EMR Component Stories Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8f8fa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f3f4f6;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Human Review</p>
+      <h1>Storybook EMR Component Stories</h1>
+      <p>
+        Storybook 카탈로그를 Button, Badge, Input에서 다음 재사용 컴포넌트까지 확장했다. 이제 필터/모드 전환,
+        EMR 상태 표시, 지속형 인라인 피드백을 Storybook에서 직접 확인할 수 있다.
+      </p>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li><code>SegmentedControl</code> story를 추가하고 필터, count, tabs variant, 축약 라벨 접근성 예시를 넣었다.</li>
+          <li><code>EmrStatusBadge</code> story를 추가하고 지원 상태, marker 제거, unknown label fallback 경계를 문서화했다.</li>
+          <li><code>EmrInlineAlert</code> story를 추가하고 severity, recovery action, icon 제거 경계를 문서화했다.</li>
+          <li>새 work item <code>DESIGN-SYSTEM-PR-050</code>를 Human Review 상태로 기록했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <p>
+          Storybook MCP/AI addon, Chromatic 배포, feature workflow story, 새 status resolver API, DB/Supabase/권한/배포/실데이터
+          작업은 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code></li>
+          <li><code>npx tsc --noEmit</code></li>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run build-storybook</code></li>
+          <li><code>npm run storybook -- --ci --smoke-test</code></li>
+          <li>로컬 Storybook에서 새 3개 컴포넌트 sidebar와 preview 렌더링 확인</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          여섯 개 story의 사용/비사용 설명을 검토한 뒤, Storybook MCP/AI addon을 붙여 agent가 카탈로그를 읽는 경로를
+          검증하는 것이 적절하다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

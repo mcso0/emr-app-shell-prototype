@@ -3,7 +3,53 @@ import { Input as InputPrimitive } from "@base-ui/react/input"
 
 import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: React.ComponentProps<typeof InputPrimitive>) {
+/**
+ * Compact text entry control for EMR forms, filters, and dialogs.
+ *
+ * Keep visible labels at the call site with Field or form layout components.
+ * Placeholder text should be a hint or example, not the only accessible label.
+ *
+ * @summary compact EMR text entry control
+ */
+export type InputProps = Omit<
+  React.ComponentProps<typeof InputPrimitive>,
+  "aria-invalid" | "className" | "disabled" | "placeholder" | "type"
+> & {
+  /**
+   * Native input type. Use the narrowest type that matches the field, such as
+   * `search`, `tel`, `email`, `number`, or `file`.
+   */
+  type?: React.HTMLInputTypeAttribute
+  /**
+   * Short input hint. Do not use placeholders as the only accessible label.
+   */
+  placeholder?: string
+  /**
+   * Visual disabled affordance for unavailable or locked fields. Do not treat
+   * disabled inputs as the security boundary.
+   */
+  disabled?: boolean
+  /**
+   * Marks the input as invalid for assistive technology and EMR invalid styling.
+   * Pair it with visible error/help text at the call site.
+   */
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"]
+  /**
+   * Additional classes for layout composition. Prefer the built-in EMR control
+   * sizing and state tokens for visual consistency.
+   */
+  className?: string
+}
+
+/**
+ * Compact text entry control for EMR forms, filters, and dialogs.
+ *
+ * Keep visible labels at the call site with Field or form layout components.
+ * Placeholder text should be a hint or example, not the only accessible label.
+ *
+ * @summary compact EMR text entry control
+ */
+function Input({ className, type, ...props }: InputProps) {
   return (
     <InputPrimitive
       type={type}
