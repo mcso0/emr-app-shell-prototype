@@ -1,6 +1,7 @@
 import path from "node:path";
 import Link from "next/link";
 import { findDocSlugBySourcePath, slugifyHeading } from "./doc-reader";
+import { MermaidDiagram } from "./mermaid-diagram";
 
 interface MarkdownRendererProps {
   markdown: string;
@@ -13,7 +14,11 @@ function normalizeDocsPath(href: string, sourcePath: string): string | null {
   const cleanHref = href.split("#")[0]?.trim();
   if (!cleanHref || !cleanHref.endsWith(".md")) return null;
 
-  if (cleanHref.startsWith("docs/")) {
+  if (
+    cleanHref.startsWith("docs/product/") ||
+    cleanHref.startsWith("docs/design/") ||
+    cleanHref.startsWith("docs/engineering/")
+  ) {
     return cleanHref;
   }
 
@@ -54,7 +59,7 @@ function renderInline(text: string, sourcePath: string, keyPrefix: string) {
     if (token.startsWith("`")) {
       nodes.push(
         <code
-          className="rounded bg-zinc-100 px-1.5 py-0.5 text-[12px] text-zinc-800"
+          className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-foreground"
           key={`${keyPrefix}-code-${index}`}
         >
           {token.slice(1, -1)}
@@ -66,10 +71,10 @@ function renderInline(text: string, sourcePath: string, keyPrefix: string) {
       const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
       if (linkMatch) {
         const href = resolveHref(linkMatch[2], sourcePath);
-        const isInternal = href.startsWith("/docs");
+        const isInternal = href.startsWith("/docs") || href.startsWith("/prd");
         nodes.push(
           <Link
-            className="font-medium text-zinc-950 underline decoration-zinc-300 underline-offset-4 hover:decoration-zinc-950"
+            className="font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
             href={href}
             key={`${keyPrefix}-link-${index}`}
             target={isInternal ? undefined : "_blank"}
@@ -119,79 +124,6 @@ function isBlockStart(line: string, nextLine?: string) {
   );
 }
 
-function extractMermaidLabel(raw: string) {
-  const bracketLabel = /[A-Za-z0-9_-]+\["([^"]+)"\]/.exec(raw);
-  if (bracketLabel) return bracketLabel[1];
-
-  return raw.replace(/["[\]{}()]/g, "").replace(/_/g, " ").trim();
-}
-
-function renderMermaidPreview(code: string, key: string) {
-  const lines = code
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("%%"));
-  const mode = lines[0] ?? "mermaid";
-  const body = lines.slice(1);
-
-  const flowEdges = body
-    .filter((line) => line.includes("-->"))
-    .map((line) => line.split("-->").map((part) => extractMermaidLabel(part)));
-  const erRows = body
-    .filter((line) => line.includes(":"))
-    .map((line) => {
-      const [relation, label = "relates"] = line.split(":");
-      return {
-        relation: relation.trim().replace(/\s+/g, " "),
-        label: label.trim(),
-      };
-    });
-
-  return (
-    <figure className="my-6 overflow-hidden rounded-lg border border-zinc-200 bg-white" key={key}>
-      <figcaption className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-4 py-2">
-        <span className="text-[12px] font-semibold text-zinc-700">학습 다이어그램</span>
-        <span className="font-mono text-[11px] text-zinc-500">{mode}</span>
-      </figcaption>
-
-      {mode.startsWith("flowchart") && flowEdges.length > 0 ? (
-        <div className="space-y-3 px-4 py-4">
-          {flowEdges.map((edge, edgeIndex) => (
-            <div className="flex flex-wrap items-center gap-2" key={`${key}-edge-${edgeIndex}`}>
-              {edge.map((node, nodeIndex) => (
-                <div className="contents" key={`${key}-node-${edgeIndex}-${nodeIndex}`}>
-                  {nodeIndex > 0 ? <span className="text-[13px] text-zinc-400">→</span> : null}
-                  <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-[12px] font-medium text-zinc-800">
-                    {node}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : mode === "erDiagram" && erRows.length > 0 ? (
-        <div className="divide-y divide-zinc-100 px-4 py-2">
-          {erRows.map((row, rowIndex) => (
-            <div className="grid gap-2 py-3 text-[12px] sm:grid-cols-[minmax(0,1fr)_140px]" key={`${key}-er-${rowIndex}`}>
-              <code className="rounded bg-zinc-50 px-2 py-1 text-zinc-700">{row.relation}</code>
-              <span className="font-medium text-zinc-600">{row.label}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <details className="border-t border-zinc-200 bg-zinc-950 text-zinc-50">
-        <summary className="cursor-pointer px-4 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">
-          Mermaid source
-        </summary>
-        <pre className="overflow-x-auto p-4 text-[12px] leading-6">
-          <code>{code}</code>
-        </pre>
-      </details>
-    </figure>
-  );
-}
-
 export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps) {
   const lines = markdown.split(/\r?\n/);
   const usedIds = new Map<string, number>();
@@ -216,7 +148,7 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
     }
 
     if (/^---+$/.test(trimmed)) {
-      blocks.push(<hr className="my-8 border-zinc-200" key={`hr-${blockIndex}`} />);
+      blocks.push(<hr className="my-8 border-border" key={`hr-${blockIndex}`} />);
       index += 1;
       blockIndex += 1;
       continue;
@@ -231,14 +163,14 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
 
       if (level === 1) {
         blocks.push(
-          <h1 className="mb-5 text-[28px] font-semibold leading-tight text-zinc-950" id={id} key={id}>
+          <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance text-foreground" id={id} key={id}>
             {content}
           </h1>
         );
       } else if (level === 2) {
         blocks.push(
           <h2
-            className="mb-4 mt-10 border-b border-zinc-200 pb-2 text-[20px] font-semibold text-zinc-950"
+            className="scroll-m-20 border-b border-border pb-2 pt-10 text-3xl font-semibold tracking-tight text-foreground first:pt-0"
             id={id}
             key={id}
           >
@@ -247,7 +179,7 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
         );
       } else {
         blocks.push(
-          <h3 className="mb-3 mt-8 text-[16px] font-semibold text-zinc-950" id={id} key={id}>
+          <h3 className="scroll-m-20 pt-8 text-2xl font-semibold tracking-tight text-foreground" id={id} key={id}>
             {content}
           </h3>
         );
@@ -270,25 +202,27 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
 
       if (index < lines.length) index += 1;
 
-      if (language === "mermaid") {
-        blocks.push(renderMermaidPreview(codeLines.join("\n"), `code-${blockIndex}`));
-      } else {
-        blocks.push(
-          <figure
-            className="my-5 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 text-zinc-50"
-            key={`code-${blockIndex}`}
-          >
-            {language ? (
-              <figcaption className="border-b border-zinc-800 px-4 py-2 text-[11px] uppercase tracking-[0.08em] text-zinc-400">
-                {language}
-              </figcaption>
-            ) : null}
-            <pre className="overflow-x-auto p-4 text-[12px] leading-6">
-              <code>{codeLines.join("\n")}</code>
-            </pre>
-          </figure>
-        );
+      if (language.toLowerCase() === "mermaid") {
+        blocks.push(<MermaidDiagram chart={codeLines.join("\n")} key={`mermaid-${blockIndex}`} />);
+        blockIndex += 1;
+        continue;
       }
+
+      blocks.push(
+        <figure
+          className="my-6 overflow-hidden rounded-lg border bg-foreground text-background"
+          key={`code-${blockIndex}`}
+        >
+          {language ? (
+            <figcaption className="border-b border-background/20 px-4 py-2 text-[11px] uppercase tracking-[0.08em] text-background/70">
+              {language}
+            </figcaption>
+          ) : null}
+          <pre className="overflow-x-auto p-4 text-sm leading-7">
+            <code>{codeLines.join("\n")}</code>
+          </pre>
+        </figure>
+      );
       blockIndex += 1;
       continue;
     }
@@ -304,12 +238,12 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
       }
 
       blocks.push(
-        <div className="my-6 overflow-x-auto rounded-lg border border-zinc-200" key={`table-${blockIndex}`}>
-          <table className="w-full min-w-[560px] border-collapse text-left text-[13px]">
-            <thead className="bg-zinc-50 text-zinc-950">
+        <div className="my-6 w-full overflow-x-auto rounded-lg border" key={`table-${blockIndex}`}>
+          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+            <thead className="bg-muted/50 text-foreground">
               <tr>
                 {header.map((cell, cellIndex) => (
-                  <th className="border-b border-zinc-200 px-3 py-2 font-semibold" key={cellIndex}>
+                  <th className="border-b px-3 py-2 font-semibold" key={cellIndex}>
                     {renderInline(cell, sourcePath, `table-h-${blockIndex}-${cellIndex}`)}
                   </th>
                 ))}
@@ -317,9 +251,9 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
             </thead>
             <tbody>
               {rows.map((row, rowIndex) => (
-                <tr className="border-b border-zinc-100 last:border-b-0" key={rowIndex}>
+                <tr className="border-b last:border-b-0" key={rowIndex}>
                   {header.map((_, cellIndex) => (
-                    <td className="px-3 py-2 align-top text-zinc-700" key={cellIndex}>
+                    <td className="px-3 py-2 align-top text-muted-foreground" key={cellIndex}>
                       {renderInline(row[cellIndex] ?? "", sourcePath, `table-${blockIndex}-${rowIndex}-${cellIndex}`)}
                     </td>
                   ))}
@@ -343,7 +277,7 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
 
       blocks.push(
         <blockquote
-          className="my-5 rounded-r-lg border-l-4 border-zinc-300 bg-zinc-50 px-4 py-3 text-[13px] leading-6 text-zinc-700"
+          className="mt-6 border-l-2 bg-muted/30 py-2 pl-6 text-sm leading-7 text-muted-foreground italic"
           key={`quote-${blockIndex}`}
         >
           {quoteLines.map((quoteLine, quoteIndex) => (
@@ -368,7 +302,7 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
         index += 1;
       }
 
-      const className = "my-4 space-y-2 pl-5 text-[14px] leading-7 text-zinc-700";
+      const className = "my-6 flex flex-col gap-2 pl-6 text-sm leading-7 text-muted-foreground";
       const children = items.map((item, itemIndex) => (
         <li key={itemIndex}>{renderInline(item, sourcePath, `list-${blockIndex}-${itemIndex}`)}</li>
       ));
@@ -398,7 +332,7 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
 
     const paragraph = paragraphLines.join(" ");
     blocks.push(
-      <p className="my-4 text-[14px] leading-7 text-zinc-700" key={`p-${blockIndex}`}>
+      <p className="leading-7 text-muted-foreground [&:not(:first-child)]:mt-6" key={`p-${blockIndex}`}>
         {renderInline(paragraph, sourcePath, `p-${blockIndex}`)}
       </p>
     );

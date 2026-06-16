@@ -65,9 +65,9 @@
       <ul>
         <li><code>/docs</code>를 클레어 독스의 권장 진입점으로 추가했다.</li>
         <li>기존 <code>/prd</code>는 product 문서 링크 호환용으로 유지했다.</li>
-        <li>기획, 디자인, 개발, 스터디 탭을 가진 curated docs viewer로 확장했다.</li>
+        <li>원래 CLAiR Docs의 상단 헤더 디자인을 유지하고, 기획, 디자인, 개발 옆에 스터디 탭을 추가했다.</li>
         <li><code>docs/study</code>에 홈, 학습 목차, 용어 사전, 다이어그램, 1강 수업 기록, 템플릿을 추가했다.</li>
-        <li>Mermaid 코드블록을 학습용 다이어그램 박스로 보여주는 lightweight preview를 추가했다.</li>
+        <li>오른쪽 헤더 검색과 라이트/다크 테마 토글을 복구하고, Mermaid 다이어그램 렌더링을 연결했다.</li>
         <li>문서 포털과 agent RAG map에 Study Center 경로를 연결했다.</li>
         <li>Playwright 테스트를 CLAiR Docs와 Study 탭 기준으로 갱신했다.</li>
       </ul>
@@ -79,6 +79,7 @@
         <li><code>npx tsc --noEmit</code> 통과</li>
         <li><code>npx playwright test tests/prd-viewer.spec.ts</code> 통과</li>
         <li><code>npm run build</code> 통과</li>
+        <li>인앱 브라우저에서 <code>/docs?doc=study-home</code>의 로고, 상단 탭, 검색, 테마 토글, 스터디 활성 상태 확인</li>
       </ul>
 
       <h2>주의 사항</h2>
@@ -88,7 +89,7 @@
           React hook lint 오류가 발생해 실패했다. 이번 Study Center 변경 파일의 focused lint는 통과했다.
         </li>
         <li>Study 문서는 학습 보조 자료이며 제품/보안/DB/런칭 기준의 source of truth가 아니다.</li>
-        <li>실제 Mermaid SVG 렌더링, 학습 진도 저장, 사이트 안 실시간 퀴즈 생성은 후속 후보로 남겼다.</li>
+        <li>학습 진도 저장, 사이트 안 실시간 퀴즈 생성은 후속 후보로 남겼다.</li>
       </ul>
 
       <h2>다음 단계</h2>

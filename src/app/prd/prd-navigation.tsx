@@ -1,99 +1,64 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { docsSections, type DocsSectionKey, type PrdDocEntry } from "@/lib/prd-viewer/registry";
+import type { PrdDocEntry, PrdDocNavigationGroup } from "@/lib/prd-viewer/registry";
+import { cn } from "@/lib/utils";
+import styles from "./prd-viewer.module.css";
 
 interface PrdNavigationProps {
-  groups: Array<{ group: string; docs: PrdDocEntry[] }>;
+  groups: PrdDocNavigationGroup[];
   activeSlug: string;
-  activeSection: DocsSectionKey;
 }
 
-export function PrdNavigation({ groups, activeSlug, activeSection }: PrdNavigationProps) {
-  const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().toLowerCase();
-
-  const filteredGroups = useMemo(() => {
-    if (!normalizedQuery) return groups;
-
-    return groups
-      .map((group) => ({
-        ...group,
-        docs: group.docs.filter((doc) => {
-          const haystack = `${doc.title} ${doc.group} ${doc.sourcePath} ${doc.description ?? ""}`.toLowerCase();
-          return haystack.includes(normalizedQuery);
-        }),
-      }))
-      .filter((group) => group.docs.length > 0);
-  }, [groups, normalizedQuery]);
+function PrdNavigationLink({ activeSlug, doc }: { activeSlug: string; doc: PrdDocEntry }) {
+  const isActive = doc.slug === activeSlug;
 
   return (
+    <Link
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "block rounded-md px-2 py-2 text-sm leading-5 transition",
+        isActive
+          ? "bg-muted font-medium text-foreground"
+          : "text-foreground hover:bg-accent hover:text-accent-foreground"
+      )}
+      href={`/docs?doc=${encodeURIComponent(doc.slug)}`}
+    >
+      {doc.title}
+    </Link>
+  );
+}
+
+export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
+  return (
     <nav aria-label="CLAiR Docs documents" className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-zinc-200 bg-white p-1">
-        {docsSections.map((section) => {
-          const isActive = section.key === activeSection;
-
-          return (
-            <Link
-              aria-current={isActive ? "page" : undefined}
-              className={`rounded-md px-2 py-1.5 text-center text-[12px] font-medium transition ${
-                isActive ? "bg-zinc-950 text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
-              }`}
-              href={`/docs?doc=${encodeURIComponent(section.defaultSlug)}`}
-              key={section.key}
-            >
-              {section.label}
-            </Link>
-          );
-        })}
-      </div>
-
-      <label className="mb-2 text-[12px] font-medium text-zinc-600" htmlFor="prd-doc-search">
-        문서 검색
-      </label>
-      <input
-        className="mb-4 h-9 rounded-md border border-zinc-200 bg-white px-3 text-[13px] outline-none transition focus:border-zinc-500"
-        id="prd-doc-search"
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="encounter, role, study..."
-        type="search"
-        value={query}
-      />
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        {filteredGroups.length > 0 ? (
-          filteredGroups.map((group) => (
-            <section className="mb-5" key={group.group}>
-              <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
-                {group.group}
-              </h2>
-              <div className="space-y-1">
-                {group.docs.map((doc) => {
-                  const isActive = doc.slug === activeSlug;
-
-                  return (
-                    <Link
-                      aria-current={isActive ? "page" : undefined}
-                      className={`block rounded-md px-2 py-2 text-[13px] leading-5 transition ${
-                        isActive
-                          ? "bg-zinc-950 font-medium text-white"
-                          : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950"
-                      }`}
-                      href={`/docs?doc=${encodeURIComponent(doc.slug)}`}
-                      key={doc.slug}
-                    >
-                      {doc.title}
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          ))
-        ) : (
-          <p className="rounded-md border border-dashed border-zinc-200 px-3 py-4 text-[13px] leading-5 text-zinc-500">
-            검색 결과가 없어.
-          </p>
-        )}
+      <div className={`${styles.scrollFade} min-h-0 flex-1`}>
+        <div className={`${styles.scrollArea} h-full overflow-y-auto py-4 pr-1`} data-testid="prd-doc-navigation-scroll">
+          <div className="flex flex-col gap-6">
+            {groups.map((group) => (
+              <section className="flex flex-col gap-2" key={group.group}>
+                <h3 className="px-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {group.group}
+                </h3>
+                <div className="flex flex-col gap-1">
+                  {group.docs.map((doc) => (
+                    <PrdNavigationLink activeSlug={activeSlug} doc={doc} key={doc.slug} />
+                  ))}
+                  {group.children?.map((child) => (
+                    <div className="flex flex-col gap-1 pt-2" key={child.group}>
+                      <h4 className="px-2 text-xs font-medium text-muted-foreground">{child.group}</h4>
+                      <div className="flex flex-col gap-1">
+                        {child.docs.map((doc) => (
+                          <PrdNavigationLink activeSlug={activeSlug} doc={doc} key={doc.slug} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
       </div>
     </nav>
   );

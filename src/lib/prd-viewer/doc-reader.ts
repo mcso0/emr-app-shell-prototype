@@ -3,10 +3,10 @@ import path from "node:path";
 import { cache } from "react";
 import {
   defaultPrdDocSlug,
-  getDefaultDocForSection,
   getDefaultPrdDoc,
   getPrdDocBySlug,
   prdDocRegistry,
+  type ClairDocsArea,
   type PrdDocEntry,
 } from "./registry";
 
@@ -22,7 +22,12 @@ export interface LoadedPrdDoc {
   toc: PrdTocItem[];
 }
 
-const docsRoot = path.join(process.cwd(), "docs");
+const allowedDocsRoots = [
+  path.join(process.cwd(), "docs", "product"),
+  path.join(process.cwd(), "docs", "design"),
+  path.join(process.cwd(), "docs", "engineering"),
+  path.join(process.cwd(), "docs", "study"),
+];
 
 export function slugifyHeading(text: string): string {
   const slug = text
@@ -70,35 +75,33 @@ export function extractToc(markdown: string): PrdTocItem[] {
 }
 
 function resolveSafeSourcePath(entry: PrdDocEntry) {
-  const docsRelativePath = entry.sourcePath.replace(/^docs\//, "");
-  const fullPath = path.resolve(docsRoot, docsRelativePath);
+  const fullPath = path.resolve(process.cwd(), entry.sourcePath);
+  const isAllowedPath = allowedDocsRoots.some((root) => fullPath === root || fullPath.startsWith(`${root}${path.sep}`));
 
-  if (!fullPath.startsWith(`${docsRoot}${path.sep}`)) {
-    throw new Error(`Docs viewer registry entry points outside docs: ${entry.sourcePath}`);
+  if (!isAllowedPath) {
+    throw new Error(`CLAiR Docs registry entry points outside allowed docs roots: ${entry.sourcePath}`);
   }
 
   return fullPath;
 }
 
-export const loadPrdDoc = cache(
-  async (slug: string | undefined, sectionKey?: string): Promise<LoadedPrdDoc | null> => {
-    const entry = getPrdDocBySlug(slug) ?? (slug ? undefined : sectionKey ? getDefaultDocForSection(sectionKey) : getDefaultPrdDoc());
+export const loadPrdDoc = cache(async (slug: string | undefined, area?: ClairDocsArea): Promise<LoadedPrdDoc | null> => {
+  const entry = getPrdDocBySlug(slug) ?? (slug ? undefined : getDefaultPrdDoc(area));
 
-    if (!entry) return null;
+  if (!entry) return null;
 
-    const raw = await readFile(resolveSafeSourcePath(entry), "utf8");
-    const markdown = stripFrontmatter(raw);
+  const raw = await readFile(resolveSafeSourcePath(entry), "utf8");
+  const markdown = stripFrontmatter(raw);
 
-    return {
-      entry,
-      markdown,
-      toc: extractToc(markdown),
-    };
-  }
-);
+  return {
+    entry,
+    markdown,
+    toc: extractToc(markdown),
+  };
+});
 
-export function getResolvedPrdSlug(slug: string | undefined, sectionKey?: string): string {
-  return getPrdDocBySlug(slug)?.slug ?? (slug ? slug : sectionKey ? getDefaultDocForSection(sectionKey).slug : defaultPrdDocSlug);
+export function getResolvedPrdSlug(slug: string | undefined, area?: ClairDocsArea): string {
+  return getPrdDocBySlug(slug)?.slug ?? (slug ? slug : area ? getDefaultPrdDoc(area).slug : defaultPrdDocSlug);
 }
 
 export function findDocSlugBySourcePath(sourcePath: string): string | undefined {

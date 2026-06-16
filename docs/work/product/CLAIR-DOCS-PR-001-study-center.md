@@ -31,7 +31,7 @@ Add a local/internal Study section to CLAiR Docs so 승욱 can continue project 
 - Archive the first study session covering `patient`, `appointment`, `encounter`, `queue entry`, and the next `order` relationship question.
 - Expand the existing read-only docs viewer into CLAiR Docs with curated section tabs for 기획, 디자인, 개발, and 스터디.
 - Add a preferred `/docs` route while keeping `/prd` as a compatibility path.
-- Add lightweight Mermaid preview handling without adding a new runtime dependency.
+- Restore the original CLAiR Docs header/search/theme layout and use Mermaid rendering for study diagrams.
 - Update focused docs navigation references and viewer regression coverage.
 
 ## Out Of Scope
@@ -55,13 +55,14 @@ Add a local/internal Study section to CLAiR Docs so 승욱 can continue project 
 - `npm run docs:check` passed on 2026-06-17.
 - Focused `npx eslint src/app/prd/page.tsx src/app/prd/prd-navigation.tsx src/app/docs/page.tsx src/lib/prd-viewer/registry.ts src/lib/prd-viewer/doc-reader.ts src/lib/prd-viewer/markdown-renderer.tsx tests/prd-viewer.spec.ts` passed on 2026-06-17.
 - `npx tsc --noEmit` passed on 2026-06-17 after restoring missing local npm dependencies with `npm install`.
-- `npx playwright test tests/prd-viewer.spec.ts` passed on 2026-06-17.
-- `npm run build` passed on 2026-06-17.
+- `npx playwright test tests/prd-viewer.spec.ts` passed on 2026-06-17 after restoring the original top-header layout.
+- `npm run build` passed on 2026-06-17. Turbopack reported an existing file-tracing warning for the docs reader, but compilation and page generation completed.
+- In-app browser check passed on 2026-06-17: `/docs?doc=study-home` shows the CLAiR Docs logo, `기획 / 디자인 / 개발 / 스터디` top tabs, search, theme toggle, active Study tab, and `docs/study/README.md`.
 - Full `npm run lint` is blocked by unrelated in-progress reception changes in `src/features/reception/module.tsx`.
 
 ## Handoff Notes
 
 - Study notes are local/internal learning aids and should not become product or engineering truth.
 - Keep the viewer registry curated; do not auto-expose sensitive engineering, auth, DB/RLS, launch, or completed-report docs.
-- Future enhancement candidates: richer Mermaid SVG rendering, study progress state, and a dedicated review-question mode.
+- Future enhancement candidates: study progress state and a dedicated review-question mode.
 - Closeout: `docs/completed/product/2026-06-17-clair-docs-study-center-report.html`.
