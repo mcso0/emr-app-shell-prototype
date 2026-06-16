@@ -277,14 +277,27 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   };
 }
 
-function getQueueItemsForRuntime(workItems: FulfillmentWorkItem[]) {
-  if (isLiveAuthRuntime()) {
+function getQueueItemsForRuntime(
+  workItems: FulfillmentWorkItem[],
+  options: { allowFixtureItems?: boolean } = {},
+) {
+  const allowFixtureItems = options.allowFixtureItems ?? true;
+  if (isLiveAuthRuntime() || !allowFixtureItems) {
     return workItems
       .filter((workItem) => workItem.queueType === "dispensing" || workItem.queueType === "treatment")
       .map(createLiveQueueItem);
   }
 
   return applyFulfillmentToQueueItems(getOrderQueueItems("dispensing"), workItems);
+}
+
+function getQueueItemsForWorkspace(
+  workspaceId: string,
+  workItems: FulfillmentWorkItem[],
+) {
+  return getQueueItemsForRuntime(workItems, {
+    allowFixtureItems: !isPreparedEmptyClinicWorkspace(workspaceId),
+  });
 }
 
 function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
@@ -308,6 +321,92 @@ function mapFulfillmentToQueueStatusId(status: FulfillmentWorkItemStatus, fallba
   if (status === "in_progress" || status === "accepted") return "inProgress";
   if (status === "requested") return "waiting";
   return fallback;
+}
+
+function mapFulfillmentToOrderGroupWorkStatus(status: FulfillmentWorkItemStatus) {
+  if (status === "completed") return "완료";
+  if (status === "accepted" || status === "in_progress") return "진행중";
+  return "요청";
+}
+
+function mapFulfillmentToOrderRowWorkStatus(status: FulfillmentWorkItemStatus) {
+  if (status === "completed") return "완료";
+  return "대기";
+}
+
+function getFulfillmentTransitionPath(
+  current: FulfillmentWorkItemStatus,
+  target: "in_progress" | "completed" | "requested",
+): FulfillmentWorkItemStatus[] | null {
+  if (target === "in_progress") {
+    if (current === "requested") return ["accepted", "in_progress"];
+    if (current === "accepted") return ["in_progress"];
+    if (current === "returned") return ["requested", "accepted", "in_progress"];
+    if (current === "in_progress") return [];
+    return null;
+  }
+
+  if (target === "completed") {
+    if (current === "requested") return ["accepted", "in_progress", "completed"];
+    if (current === "accepted") return ["in_progress", "completed"];
+    if (current === "in_progress") return ["completed"];
+    if (current === "returned") return ["requested", "accepted", "in_progress", "completed"];
+    if (current === "completed") return [];
+    return null;
+  }
+
+  if (current === "requested") return [];
+  if (current === "accepted" || current === "in_progress") return ["returned", "requested"];
+  if (current === "returned") return ["requested"];
+  return null;
+}
+
+function createLiveOrderTableGroups(
+  selectedQueueItem: OrderQueueItem | null,
+  workItem?: FulfillmentWorkItem,
+): OrderTableGroup[] {
+  if (!selectedQueueItem || !workItem) return [];
+
+  const instructionType = getDispensingInstructionType(selectedQueueItem);
+  const groupId = workItem.queueType === "treatment" ? "live-treatment" : "live-dispensing";
+  const groupWorkStatus = mapFulfillmentToOrderGroupWorkStatus(workItem.status);
+  const rowWorkStatus = mapFulfillmentToOrderRowWorkStatus(workItem.status);
+
+  return [
+    {
+      id: groupId,
+      label: instructionType,
+      title: `${instructionType} 오더`,
+      workStatus: groupWorkStatus,
+      assigneeIds: workItem.assignedToUserId ? [workItem.assignedToUserId] : [],
+      rows: [
+        {
+          id: `live-order-row-${workItem.id}`,
+          category: instructionType,
+          name: selectedQueueItem.orderName,
+          route: workItem.queueType === "dispensing" ? "PO" : "-",
+          dose: workItem.sourceSnapshot?.instruction ?? selectedQueueItem.orderName,
+          frequency: "-",
+          status: workItem.status === "cancelled" ? "취소" : "요청",
+          requestedAt: `2026.04.14 ${selectedQueueItem.time}`,
+          doctor: selectedQueueItem.requesterName,
+          days: "1",
+          doseTiming: "-",
+          servings: "1",
+          amount: "1",
+          unit: "ea",
+          quantity: "1",
+          dosageForm: "-",
+          storage: "지시 확인",
+          medicationGuide: workItem.sourceSnapshot?.instruction ?? "오더 지시 확인",
+          assignee: selectedQueueItem.assigneeName ?? "미지정",
+          assigneeId: workItem.assignedToUserId ?? undefined,
+          assigneeInitial: selectedQueueItem.assigneeName?.slice(0, 1) ?? "-",
+          workStatus: rowWorkStatus,
+        },
+      ],
+    },
+  ];
 }
 
 function getDispensingTaskCardTypeLabel(item: OrderQueueItem) {
@@ -337,10 +436,9 @@ function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
 export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
   const fulfillmentQueue = useDispensingFulfillmentQueue();
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const items = useMemo(
-    () => (preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems)),
-    [fulfillmentQueue.workItems, preparedEmptyClinic]
+    () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
+    [fulfillmentQueue.workItems, workspaceId]
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
@@ -369,8 +467,8 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
   const fulfillmentQueue = useDispensingFulfillmentQueue();
   const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const items = useMemo(
-    () => (preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems)),
-    [fulfillmentQueue.workItems, preparedEmptyClinic],
+    () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
+    [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
@@ -414,8 +512,8 @@ export function DispensingContentAside({ moduleId, workspaceId }: ShellComponent
   const fulfillmentQueue = useDispensingFulfillmentQueue();
   const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const items = useMemo(
-    () => (preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems)),
-    [fulfillmentQueue.workItems, preparedEmptyClinic],
+    () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
+    [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
@@ -773,10 +871,10 @@ export function DispensingContent({
   const fulfillmentQueue = useDispensingFulfillmentQueue();
   const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const selectedQueueItem = useMemo(() => {
-    const items = preparedEmptyClinic ? [] : getQueueItemsForRuntime(fulfillmentQueue.workItems);
+    const items = getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems);
     return items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
       (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
-  }, [fulfillmentQueue.workItems, moduleId, preparedEmptyClinic, selectedQueueItemIds]);
+  }, [fulfillmentQueue.workItems, moduleId, preparedEmptyClinic, selectedQueueItemIds, workspaceId]);
 
   return (
     <DispensingContentBody
@@ -811,7 +909,9 @@ function DispensingContentBody({
     [fulfillmentQueue.workItems, selectedQueueItem]
   );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
-    preparedEmptyClinic ? [] : cloneOrderTableGroups(selectedQueueItemId)
+    preparedEmptyClinic
+      ? createLiveOrderTableGroups(selectedQueueItem, selectedFulfillmentWorkItem)
+      : cloneOrderTableGroups(selectedQueueItemId)
   );
   const selectedQueueStatusLabel = getQueueStatusLabel(moduleId, selectedQueueItem);
   const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
@@ -924,29 +1024,45 @@ function DispensingContentBody({
   };
   const startGroup = (groupId: string) => {
     if (selectedFulfillmentWorkItem) {
-      const transitionPath: FulfillmentWorkItemStatus[] =
-        selectedFulfillmentWorkItem.status === "returned"
-          ? ["requested", "accepted", "in_progress"]
-          : ["accepted", "in_progress"];
+      const transitionPath = getFulfillmentTransitionPath(
+        selectedFulfillmentWorkItem.status,
+        "in_progress",
+      );
+      if (!transitionPath) return;
       void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, transitionPath);
     }
     updateGroup(groupId, startOrderGroup);
   };
   const completeGroup = (groupId: string) => {
     if (selectedFulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["completed"]);
+      const transitionPath = getFulfillmentTransitionPath(
+        selectedFulfillmentWorkItem.status,
+        "completed",
+      );
+      if (!transitionPath) return;
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, transitionPath);
     }
     updateGroup(groupId, completeOrderGroup);
   };
   const completeInstruction = () => {
     if (selectedFulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["completed"]);
+      const transitionPath = getFulfillmentTransitionPath(
+        selectedFulfillmentWorkItem.status,
+        "completed",
+      );
+      if (!transitionPath) return;
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, transitionPath);
     }
     setTableGroups((current) => current.map(completeInstructionGroup));
   };
   const cancelGroupAssignment = (groupId: string) => {
     if (selectedFulfillmentWorkItem) {
-      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, ["returned", "requested"]);
+      const transitionPath = getFulfillmentTransitionPath(
+        selectedFulfillmentWorkItem.status,
+        "requested",
+      );
+      if (!transitionPath) return;
+      void fulfillmentQueue.updateStatus(selectedFulfillmentWorkItem.id, transitionPath);
     }
     updateGroup(groupId, cancelOrderGroupAssignment);
   };

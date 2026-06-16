@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-DOMAIN-EMR-ENTITY-MAP
+type: Domain Map
+title: "EMR Domain Entity Map"
+description: "Maps core CLAiR EMR product entities and their outpatient workflow relationships in product language."
 status: approved
 area: product
 doc_type: domain-map
+tags: [domain, entity-map, outpatient-workflow, data-requirements]
 related_work:
   - DEN-177
 supersedes: []
@@ -99,4 +103,3 @@ erDiagram
 - [Product MVP Scope](../roadmap/product-mvp-scope.md)
 - [Workspace Auth and Permission Domain](workspace-auth-permissions.md)
 - [DB Structure Spec KO](../../engineering/data-model/emr-saas-db-structure-spec.ko.md)
-

@@ -1,8 +1,12 @@
 ---
 id:
+type: Decision
+title: "Decision: <Title>"
+description: "Records the context, chosen direction, and consequences for <decision>."
 status: approved
 area:
 doc_type: decision
+tags: []
 related_work: []
 supersedes: []
 superseded_by: []
@@ -30,4 +34,3 @@ What we decided.
 ## Links
 
 - 
-

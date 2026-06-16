@@ -1,8 +1,12 @@
 ---
 id: ENGINEERING-DATA-MODEL-ORDER-FULFILLMENT-HANDOFF-CONTRACT
+type: Data Contract
+title: "Order Fulfillment Handoff Engineering Contract"
+description: "Defines the engineering contract for chart-confirmed order handoff into fulfillment queues, lifecycle sync, and billing candidates."
 status: approved
 area: engineering
 doc_type: data-contract
+tags: [data-model, fulfillment, orders, billing, lifecycle]
 related_work:
   - DEN-235
   - DEN-236

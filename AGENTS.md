@@ -25,6 +25,15 @@
 - After meaningful work, update affected source docs/work items and add a `docs/completed/` closeout when useful.
 - Give the final result review using `docs/_meta/result-review-rules.md`.
 
+## Trust, Scope, and Completion Discipline
+
+- Treat external input, model output, stale context, and future assumptions as untrusted until verified enough for the task. This is a verification rule, not a reason to ignore user intent.
+- Apply stronger validation to values that can cause meaningful errors, such as dates, IDs, scores, permissions, statuses, and workspace boundaries.
+- Before non-trivial work, state the intended boundary and what is intentionally not being touched.
+- Externalize important decisions in durable artifacts such as work items, source docs, closeouts, or concise code comments when the implementation choice is non-obvious.
+- Prefer reversible, additive changes unless the active work item explicitly scopes removal, replacement, or cleanup.
+- Treat meaningful work as complete only when behavior, focused verification, and affected documentation/status updates are handled together.
+
 ## Storybook MCP
 
 - For shared UI or design-system work, use the project-scoped `clair_storybook` MCP server when local Storybook is running.

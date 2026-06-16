@@ -33,6 +33,12 @@ This folder defines how humans and agents operate `docs/` as the repo-native kno
 - `docs/_meta/result-review-rules.md`: required concise user review after work is completed.
 - `docs/_meta/templates/`: reusable document templates.
 
+## OKF-Lite Metadata
+
+This repo borrows OKF-style frontmatter only as optional routing metadata over canonical `docs/` files. Use `type`, `title`, `description`, and `tags` on new or substantially touched source docs when they make agent reading clearer. Keep repo lifecycle fields such as `id`, `status`, `area`, `doc_type`, `related_work`, and `last_updated` as the authoritative source-of-truth controls.
+
+Do not create a separate OKF namespace, LLM wiki, generated summary layer, or global knowledge log unless 승욱 explicitly scopes that work.
+
 ## Boundaries
 
 - `_meta/` holds operating rules, not product requirements, design specs, engineering contracts, or PR execution details.

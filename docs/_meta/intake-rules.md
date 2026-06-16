@@ -29,6 +29,17 @@ When a user references LLM Wiki, persistent synthesis, accumulated agent memory,
 - Treat generated summaries as routing aids, not authority. Product status, security, DB, RLS, Supabase, launch, and completion claims must be checked against canonical source docs.
 - Preserve lightweight operations: query with the agent RAG map, ingest through canonical docs, lint for stale or duplicate claims, and keep logs close to work items or owning areas.
 
+## OKF-Lite Intake
+
+When a user asks to apply OKF, LLM Wiki, or agent-readable knowledge formatting at Level 1, route it as metadata hygiene over existing canonical docs:
+
+- Add or preserve lightweight frontmatter on new and substantially touched source docs.
+- Prefer `type`, `title`, `description`, and `tags` as optional routing fields.
+- Keep existing lifecycle fields such as `id`, `status`, `area`, `doc_type`, `related_work`, and `last_updated`.
+- Update templates before broad retroactive edits.
+- Do not backfill archive, completed reports, compatibility stubs, generated HTML, or asset files by default.
+- Do not include real patient, guardian, hospital, staff, payment, identity, credential, or provider data in metadata examples.
+
 ## Routing Table
 
 | User instruction sounds like | Route to |

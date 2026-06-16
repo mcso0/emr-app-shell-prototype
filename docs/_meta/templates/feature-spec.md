@@ -1,8 +1,12 @@
 ---
 id:
+type: Feature Spec
+title: "Feature: <Name>"
+description: "Defines the product behavior, scope, and acceptance criteria for <feature>."
 status: draft
 area: product
 doc_type: feature
+tags: []
 related_work: []
 supersedes: []
 superseded_by: []
@@ -45,4 +49,3 @@ Out of scope:
 ## Open Questions
 
 - 
-

@@ -1,3 +1,19 @@
+---
+id: PRODUCT-DOMAIN-WORKSPACE-AUTH-PERMISSIONS
+type: Domain Contract
+title: "Workspace Auth and Permission Domain"
+description: "Defines workspace-based auth, membership, roles, permission behavior, and profile authorization boundaries."
+status: approved
+area: product
+doc_type: domain-contract
+tags: [domain, workspace-auth, roles, permissions, onboarding]
+related_work:
+  - DEN-18
+supersedes: []
+superseded_by: []
+last_updated: 2026-06-12
+---
+
 # Workspace Auth and Permission Domain
 
 Updated: 2026-06-12

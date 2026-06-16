@@ -19,6 +19,16 @@ Use the minimum code that solves the requested problem.
 - Do not add broad handling for impossible or unsupported scenarios.
 - Prefer a smaller direct implementation when it solves the same task.
 
+## Complexity Budget
+
+Before adding code, dependencies, or abstractions, choose the smallest option that fits the existing project boundaries.
+
+- Check native platform features, Next.js/Supabase capabilities, and existing dependencies before adding a new dependency.
+- Do not add an abstraction unless there is a second real caller or implementation.
+- Prefer a small change in an existing module over a new file, framework-level pattern, or cross-cutting helper.
+- Do not implement speculative "later" flexibility; leave the upgrade trigger in a work item or concise comment only when it is known.
+- Never simplify away trust-boundary validation, permissions, workspace scoping, audit, money/data integrity, accessibility, or required verification.
+
 ## Surgical Changes
 
 Touch only what the task requires.

@@ -16,6 +16,19 @@ This repository does not maintain a separate LLM Wiki layer by default. Borrow L
 - Log: keep history near the owning area through work items, closeouts, changelogs, and current-status history; do not create a global LLM-maintained log by default.
 - Lint: when reviewing docs health, check for stale claims, broken source links, duplicate source-of-truth paths, and mock/live or security-completion overclaims.
 
+## OKF-Lite Metadata
+
+Use Open Knowledge Format style only as lightweight metadata over the existing `docs/` system. Do not create a separate OKF bundle, `docs/wiki/`, generated summary layer, or global agent-maintained log unless 승욱 explicitly approves that scope.
+
+For new or substantially touched canonical source docs, add these fields when they clarify agent routing:
+
+- `type`: human-readable knowledge type, such as `Product Requirement`, `Domain Contract`, `Data Contract`, `Operating Rule`, `Decision`, `Work Item`, or `Closeout`.
+- `title`: reader-facing title that matches or closely mirrors the first heading.
+- `description`: one concise sentence explaining what the doc makes knowable.
+- `tags`: short routing tags for area, workflow, or domain concepts.
+
+Keep existing repo fields such as `id`, `status`, `area`, `doc_type`, `related_work`, and `last_updated`; they remain the internal source-of-truth lifecycle fields. Treat OKF-style metadata as optional routing help, not authority over product status, security completion, DB/RLS readiness, launch readiness, or work acceptance.
+
 ## Default Startup Set
 
 For most tasks, read only:

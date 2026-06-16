@@ -1,8 +1,12 @@
 ---
 id: ENGINEERING-ARCHITECTURE-MOCK-LIVE-BOUNDARY-MAP
+type: Boundary Map
+title: "Mock And Live Boundary Map"
+description: "Defines how CLAiR EMR work is described across mock, local-first, remote staging, and production/live boundaries."
 status: approved
 area: engineering
 doc_type: boundary-map
+tags: [mock-live-boundary, local-first, staging, production, approval-gates]
 related_work:
   - DEN-179
 supersedes: []
@@ -69,4 +73,3 @@ If the boundary is remote or live, approval must name the environment, operation
 - [SaaS Operating Map](../../product/service/clair-emr-saas-operating-map.md)
 - [SaaS Launch Approval Gates](../auth-security/auth-login/saas-launch-approval-gates.md)
 - [Auth DB Env Secret Verification Gates](../auth-security/auth-login/auth-db-env-secret-verification-gates.md)
-

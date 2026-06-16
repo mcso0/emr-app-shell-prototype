@@ -1,8 +1,12 @@
 ---
 id: ENGINEERING-DATA-MODEL-EMR-SAAS-KO
+type: Data Model
+title: "CLAiR EMR SaaS DB Structure And Spec Draft (KO)"
+description: "Korean primary draft for the CLAiR EMR database structure and domain schema."
 status: approved
 area: engineering
 doc_type: data_model
+tags: [data-model, schema, korean-reference, veterinary-emr]
 related_work: []
 supersedes: []
 superseded_by: []

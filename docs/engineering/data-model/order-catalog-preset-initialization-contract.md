@@ -1,8 +1,12 @@
 ---
 id: ENGINEERING-DATA-MODEL-ORDER-CATALOG-PRESET-INITIALIZATION
+type: Data Contract
+title: "Order Catalog Preset Initialization Contract"
+description: "Defines how CLAiR system order presets initialize, merge into, and preserve workspace-owned order catalog rows."
 status: approved
 area: engineering
 doc_type: data-contract
+tags: [data-model, order-catalog, presets, workspace, migration-boundary]
 related_work:
   - DEN-281
   - DEN-282

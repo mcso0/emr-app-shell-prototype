@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-495 Fulfillment live spine handoff report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f2f4f8;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+      .meta {
+        color: #5d667a;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-495 Fulfillment live spine handoff report</h1>
+    <p class="meta">작성일: 2026-06-14 · 범위: Synthetic Demo Production local-first fulfillment handoff</p>
+
+    <h2>요약</h2>
+    <p>
+      Chart/Order에서 확정된 live order가 fulfillment work item으로 넘어온 뒤,
+      Cheongdam lab, imaging, dispensing, treatment 화면에서 legacy fixture row에 덮이지 않고
+      standalone live row로 보이도록 정리했다. 원격 Supabase apply/readback/RLS 검증은 수행하지 않았다.
+    </p>
+
+    <h2>주요 변경</h2>
+    <ul>
+      <li><code>sync-from-orders</code> route의 Supabase 세션 경로에 DB-backed workspace permission adapter를 연결했다.</li>
+      <li>lab/imaging queue helper가 Cheongdam prepared-empty workspace에서 fixture fallback 없이 live work item rows만 생성하도록 했다.</li>
+      <li>dispensing/treatment queue가 Cheongdam prepared-empty workspace에서 fixture queue를 합성하지 않고 live work item rows만 표시하도록 했다.</li>
+      <li>dispensing/treatment live detail에 최소 live table group을 만들어 담당/완료 액션이 live work item mutation으로 이어지게 했다.</li>
+      <li>dispensing/treatment 완료/재요청 액션이 현재 fulfillment status에 맞는 transition path를 거치도록 보강했다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit --pretty false</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run lint -- --ignore-pattern 'lottie-ai-chart-writing/**' --ignore-pattern 'storybook-static/**'</code>: 0 errors, 기존 warnings 5개</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3105 npx playwright test tests/dispensing-fulfillment.spec.ts tests/lab-imaging.spec.ts --grep "Cheongdam|dispensing treatment workspace" --reporter=line</code>: 4 passed</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3106 npx playwright test tests/fulfillment-work-item-server.spec.ts tests/chart-order-action-persistence-server.spec.ts tests/fulfillment-handoff-replay.spec.ts --reporter=line</code>: 25 passed</li>
+    </ul>
+
+    <h2>DEN-496 handoff</h2>
+    <ul>
+      <li>Active work item shape: <code>{ id, workspaceId, encounterId, orderId, queueType, status, sourceSnapshot }</code>.</li>
+      <li>Completed work item shape adds <code>completedAt</code>, lifecycle status <code>completed</code>, and billing candidate sync summary when applicable.</li>
+      <li>Billing candidate contract candidate: use server-owned <code>sourceSnapshot</code> fields for display/service/billing context; chart <code>Order 청구</code> remains the trusted billing handoff action.</li>
+      <li>Lab/imaging completion still records <code>vet_review_required</code> before automatic billing candidate sync.</li>
+      <li>Remote Supabase apply/readback/RLS, full audit coverage, and production-demo deployment remain unverified and must not be claimed from this closeout.</li>
+    </ul>
+  </body>
+</html>

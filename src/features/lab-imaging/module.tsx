@@ -783,12 +783,24 @@ function createLiveImagingItems(workItems: FulfillmentWorkItem[]): ImagingWorkIt
     });
 }
 
-function getLabItemsForRuntime(baseItems: LabWorkItem[], workItems: FulfillmentWorkItem[]) {
-  return isLiveAuthRuntime() ? createLiveLabItems(workItems) : applyFulfillmentToLabItems(baseItems, workItems);
+function getLabItemsForRuntime(
+  baseItems: LabWorkItem[],
+  workItems: FulfillmentWorkItem[],
+  options: { allowFixtureItems?: boolean } = {},
+) {
+  const allowFixtureItems = options.allowFixtureItems ?? true;
+  if (isLiveAuthRuntime() || !allowFixtureItems) return createLiveLabItems(workItems);
+  return applyFulfillmentToLabItems(baseItems, workItems);
 }
 
-function getImagingItemsForRuntime(baseItems: ImagingWorkItem[], workItems: FulfillmentWorkItem[]) {
-  return isLiveAuthRuntime() ? createLiveImagingItems(workItems) : applyFulfillmentToImagingItems(baseItems, workItems);
+function getImagingItemsForRuntime(
+  baseItems: ImagingWorkItem[],
+  workItems: FulfillmentWorkItem[],
+  options: { allowFixtureItems?: boolean } = {},
+) {
+  const allowFixtureItems = options.allowFixtureItems ?? true;
+  if (isLiveAuthRuntime() || !allowFixtureItems) return createLiveImagingItems(workItems);
+  return applyFulfillmentToImagingItems(baseItems, workItems);
 }
 
 function getLiveLabDetail(labResultId: string, workItems: FulfillmentWorkItem[]): LabDetail | null {
@@ -1250,8 +1262,10 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
     [preparedEmptyClinic],
   );
   const items = useMemo(
-    () => getLabItemsForRuntime(baseItems, fulfillmentQueue.workItems),
-    [baseItems, fulfillmentQueue.workItems]
+    () => getLabItemsForRuntime(baseItems, fulfillmentQueue.workItems, {
+      allowFixtureItems: !preparedEmptyClinic,
+    }),
+    [baseItems, fulfillmentQueue.workItems, preparedEmptyClinic]
   );
   useEffect(() => {
     if (!items.length || items.some((item) => item.result.id === selectedLabResultId)) return;
@@ -1356,8 +1370,10 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
     [preparedEmptyClinic],
   );
   const items = useMemo(
-    () => getImagingItemsForRuntime(baseItems, fulfillmentQueue.workItems),
-    [baseItems, fulfillmentQueue.workItems]
+    () => getImagingItemsForRuntime(baseItems, fulfillmentQueue.workItems, {
+      allowFixtureItems: !preparedEmptyClinic,
+    }),
+    [baseItems, fulfillmentQueue.workItems, preparedEmptyClinic]
   );
   useEffect(() => {
     if (!items.length || items.some((item) => item.study.id === selectedImagingStudyId)) return;

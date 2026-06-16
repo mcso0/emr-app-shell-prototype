@@ -1,3 +1,15 @@
+---
+id: PRODUCT-DOMAIN-README
+type: Area Index
+title: "Product Domain Docs"
+description: "Indexes product-language domain concepts, data requirements, and workflow rules before engineering schema work."
+status: active
+area: product
+doc_type: area-index
+tags: [product-domain, data-requirements, workflow-rules]
+last_updated: 2026-06-16
+---
+
 # Product Domain Docs
 
 Domain docs describe business concepts and data requirements in product language.

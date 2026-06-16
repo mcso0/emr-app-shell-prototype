@@ -1,8 +1,12 @@
 ---
 id: ENGINEERING-DATA-MODEL-BILLING-CHECKOUT-SESSION-ALLOCATION-ADJUSTMENT
+type: Data Model Proposal
+title: "Billing Checkout Session, Allocation, And Adjustment Model"
+description: "Proposes checkout session, payment allocation, adjustment audit, and RPC transaction boundaries for guardian-centered billing."
 status: review
 area: engineering
 doc_type: data-model-proposal
+tags: [data-model, billing, checkout, payments, audit]
 related_work:
   - DEN-365
   - DEN-358
