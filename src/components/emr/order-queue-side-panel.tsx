@@ -80,11 +80,6 @@ const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
   wait: "대기 긴 순",
 };
 
-const orderQueueDisplayDensityLabels: Record<OrderQueueDisplayDensity, string> = {
-  compact: "촘촘",
-  default: "기본",
-};
-
 const fallbackStatusColorToken = "--emr-status-neutral-text";
 
 const normalizeQueueSearchText = (value: string) => value.toLocaleLowerCase("ko").trim();
@@ -160,17 +155,6 @@ function getResolvedStatuses(
     .map(createFallbackStatus);
 
   return [...statuses, ...fallbackStatuses].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-function getDetailFilterLabel(
-  filter: OrderQueueDetailFilter,
-  statuses: OrderQueueStatusDefinition[]
-) {
-  if (filter === "all") return "전체 조건";
-  if (filter === "unassigned") return "담당 미정";
-
-  const statusId = filter.replace("status:", "");
-  return statuses.find((status) => status.id === statusId)?.label ?? "상태";
 }
 
 function matchesDetailFilter(item: OrderQueueItem, filter: OrderQueueDetailFilter) {
@@ -297,7 +281,11 @@ export function EmrOrderQueueSidePanel({
               density={displayDensity}
               onDensityChange={setDisplayDensity}
             />
-            <EmrListHeaderIconButton ariaLabel="검색" onClick={() => setSearchActive(true)}>
+            <EmrListHeaderIconButton
+              ariaLabel="대기열 검색 열기"
+              data-testid="order-queue-search-control"
+              onClick={() => setSearchActive(true)}
+            >
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
@@ -349,7 +337,9 @@ function OrderQueueSortMenu({
             variant="outline"
             size="sm"
             className="h-7 max-w-[92px] gap-1 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] px-2 text-[11px] font-medium text-[var(--emr-text-secondary)]"
-            aria-label={`현재 정렬: ${orderQueueSortLabels[sortKey]}`}
+            aria-label="대기열 정렬"
+            data-sort-key={sortKey}
+            data-testid="order-queue-sort-control"
           />
         }
       >
@@ -383,7 +373,11 @@ function OrderQueueFilterMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <EmrListHeaderIconButton ariaLabel={`필터: ${getDetailFilterLabel(filter, statuses)}`} />
+          <EmrListHeaderIconButton
+            ariaLabel="대기열 필터"
+            data-filter={filter}
+            data-testid="order-queue-filter-control"
+          />
         }
       >
         <CdsActionsListFilterIcon aria-hidden="true" className="size-4" />
@@ -421,7 +415,9 @@ function OrderQueueDisplayMenu({
             variant="outline"
             size="icon-xs"
             className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0 text-[11px] font-semibold"
-            aria-label={`표시 옵션: ${orderQueueDisplayDensityLabels[density]}`}
+            aria-label="대기열 표시 옵션"
+            data-density={density}
+            data-testid="order-queue-density-control"
           />
         }
       >

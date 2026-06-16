@@ -148,6 +148,7 @@ function scanText(file, content) {
 function isSafePlaceholder(value) {
   const normalized = value.trim().replace(/^["']|["']$/g, "");
   if (placeholderPattern.test(normalized)) return true;
+  if (/^\$\{\{\s*(secrets|vars)\.[A-Z0-9_]+\s*\}\}$/i.test(normalized)) return true;
   if (/^(https?:\/\/)?localhost(?:[:/]|$)/i.test(normalized)) return true;
   if (/^postgres(?:ql)?:\/\/[^:]+:(?:password|postgres|example|placeholder|changeme)@/i.test(normalized)) {
     return true;
