@@ -253,7 +253,11 @@ export function EmrListHeader({
             <div className="emr-text-section flex min-w-0 flex-1 items-center gap-1.5 font-medium text-[var(--emr-text-secondary)]">
               {leadingAction}
               {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
-              <span className="truncate">{label}</span>
+              {typeof label === "string" ? (
+                <span className="truncate">{label}</span>
+              ) : (
+                <div className="min-w-0">{label}</div>
+              )}
               {count !== undefined ? (
                 <Badge variant="secondary" className="emr-text-metadata h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 font-medium text-[var(--emr-text-primary)]">
                   {count}

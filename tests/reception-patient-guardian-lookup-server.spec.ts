@@ -80,6 +80,7 @@ test("supabase reception lookup gateway maps DB rows and keeps workspace scope i
               breed: "Korean Shorthair",
               sex: "female",
               neutered: true,
+              weightKg: 4.75,
               handlingCautionLocked: true,
               status: "active",
               createdAt: "2026-05-19T00:00:00.000Z",
@@ -110,7 +111,7 @@ test("supabase reception lookup gateway maps DB rows and keeps workspace scope i
     ok: true,
     patients: [
       {
-        patient: { id: "patient-db-luna", name: "루나", workspaceId: "clair-demo" },
+        patient: { id: "patient-db-luna", name: "루나", weightKg: 4.75, workspaceId: "clair-demo" },
         primaryGuardian: { id: "guardian-db-jiyu", name: "박지유" },
       },
     ],
@@ -133,6 +134,7 @@ test("supabase reception lookup gateway maps snake_case DB profile rows", async 
               estimated_age_text: "5세",
               sex: "male",
               neutered: true,
+              weight_kg: 6.25,
               handling_caution_locked: true,
               status: "active",
               created_at: "2026-05-19T00:00:00.000Z",
@@ -169,6 +171,7 @@ test("supabase reception lookup gateway maps snake_case DB profile rows", async 
           patientNo: "P-DB-0003",
           name: "마루",
           estimatedAgeText: "5세",
+          weightKg: 6.25,
         },
         primaryGuardian: {
           id: "guardian-db-harin",
@@ -260,6 +263,7 @@ test("reception lookup reader migration keeps the query workspace-scoped", () =>
   expect(migrationSource).toContain("create or replace function public.clair_search_reception_patient_guardian_lookup");
   expect(migrationSource).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
   expect(migrationSource).toContain("p.workspace_id = p_workspace_id");
+  expect(migrationSource).toContain("'weightKg', weight_kg");
   expect(migrationSource).toContain("grant execute on function public.clair_search_reception_patient_guardian_lookup");
   expect(migrationSource).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });

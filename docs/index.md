@@ -1,6 +1,6 @@
 # CLAiR EMR Docs Portal
 
-This page is the human-facing entry point for the CLAiR EMR documentation portal. The repository `docs/` folder remains the source of truth. The internal `/prd` app route is the active read-only viewer for curated product planning docs, and Linear is used for PR-sized work tracking. GitBook is no longer the active reader path.
+This page is the human-facing entry point for the CLAiR EMR documentation portal. The repository `docs/` folder remains the source of truth. The internal `/docs` app route is the active read-only CLAiR Docs viewer for curated planning and study docs, and Linear is used for PR-sized work tracking. GitBook is no longer the active reader path.
 
 ## Start Here
 
@@ -18,7 +18,8 @@ Use detailed history, completed reports, and archived plans only when the active
 | Surface | Role |
 | --- | --- |
 | Repo `docs/` | Source of truth for product, design, engineering, work, and completion records |
-| `/prd` app route | Internal read-only product-doc viewer backed by curated `docs/product/` Markdown |
+| `/docs` app route | Internal read-only CLAiR Docs viewer backed by curated `docs/` Markdown |
+| `/prd` app route | Legacy-compatible product-doc viewer path retained for existing links |
 | GitBook | Inactive/deprecated reader path preserved for history; do not treat it as active navigation or editing source |
 | Linear | Work start point, status board, Human Review handoff, and PR-sized issue tracking |
 | Codex | Reads only startup docs plus task-specific source docs to avoid token waste |
@@ -48,6 +49,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | Product docs | [Product Docs](product/README.md) |
 | Design docs | [Design Docs](design/README.md) |
 | Engineering docs | [Engineering Docs](engineering/README.md) |
+| Study docs | [CLAiR Study Center](study/README.md) |
 | Work tracking | [Work Index](work/index.md), [Work Inbox](work/inbox.md) |
 | Completion records | [Completed Docs](completed/README.md) |
 | Historical records | [Archive](archive/README.md) |
@@ -55,7 +57,8 @@ Use detailed history, completed reports, and archived plans only when the active
 ## Reader Rules
 
 - Keep `docs/` as the canonical source. Edit repo files, not GitBook copies.
-- Use `/prd` for read-only review of curated product docs.
+- Use `/docs` for read-only review of curated product, design, engineering, and study docs.
+- Keep `/prd` as a compatibility path for product-doc links until old references are migrated.
 - Keep current guidance visible through this portal and area README files.
 - Keep `archive/`, `completed/`, and long history documents out of the main reading path unless they are needed for a specific task.
 - Treat GitBook as inactive/deprecated by default.

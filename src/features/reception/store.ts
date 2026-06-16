@@ -14,6 +14,7 @@ import type {
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
+import type { ReceptionEncounterUpdateRecord } from "@/features/reception/encounter-update";
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
 import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
 import type { ReceptionWalkInEncounterRecord } from "@/features/reception/walk-in-encounter";
@@ -42,6 +43,7 @@ export type ReceptionCalendarDraftSelection = {
 type ReceptionStore = {
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
   messageDeliveries: MessageDelivery[];
+  operatingDateByWorkspace: Record<EmrId, string>;
   searchQuery: string;
   selectedAppointmentId?: EmrId;
   selectedEncounterId?: EmrId;
@@ -53,6 +55,7 @@ type ReceptionStore = {
   queueReadError?: string;
   queueReadStatus: ReceptionQueueReadStatus;
   readRetryNonce: number;
+  applyAppointmentCreate: (appointment: Appointment) => void;
   applyPersistedReceptionCalendar: (records: ReceptionCalendarReadRecord[]) => void;
   applyPersistedReceptionQueue: (queue: ReceptionQueueReadRecord[]) => void;
   clearWorkspaceSessionDrafts: (workspaceId: EmrId) => void;
@@ -60,8 +63,10 @@ type ReceptionStore = {
     encounterId: EmrId;
     workspaceId: EmrId;
   }) => void;
+  applyEncounterUpdate: (update: ReceptionEncounterUpdateRecord) => void;
   requestReceptionReadRetry: () => void;
   setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
+  setWorkspaceOperatingDate: (workspaceId: EmrId, operatingDate: string) => void;
   setSearchQuery: (query: string) => void;
   setReceptionCalendarReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
   setReceptionQueueReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
@@ -229,6 +234,7 @@ const createSessionCheckInMessage = ({
 export const useReceptionStore = create<ReceptionStore>()((set) => ({
   calendarDraftSelection: undefined,
   messageDeliveries: [],
+  operatingDateByWorkspace: {},
   searchQuery: "",
   selectedPatientId: DEFAULT_PATIENT_ID,
   draftCheckIns: [],
@@ -236,6 +242,17 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
   calendarReadStatus: "idle",
   queueReadStatus: "idle",
   readRetryNonce: 0,
+  applyAppointmentCreate: (appointment) =>
+    set((state) => ({
+      persistedCalendarAppointments: [
+        appointment,
+        ...state.persistedCalendarAppointments.filter(
+          (item) => item.id !== appointment.id,
+        ),
+      ],
+      selectedAppointmentId: appointment.id,
+      selectedPatientId: appointment.patientId,
+    })),
   applyPersistedReceptionCalendar: (records) =>
     set((state) => {
       const persistedCalendarAppointments = records.flatMap((record) =>
@@ -331,12 +348,36 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
           ? undefined
           : state.selectedEncounterId,
     })),
+  applyEncounterUpdate: (update) =>
+    set((state) => ({
+      draftCheckIns: state.draftCheckIns.map((draft) =>
+        draft.encounter.id === update.encounter.id
+          ? {
+              ...draft,
+              department: update.encounter.department,
+              durationMinutes: update.encounter.durationMinutes,
+              encounter: update.encounter,
+              memo: update.encounter.receptionMemo,
+              queueEntry: update.queueEntry ?? draft.queueEntry,
+            }
+          : draft,
+      ),
+      selectedEncounterId: update.encounter.id,
+      selectedPatientId: update.encounter.patientId,
+    })),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   requestReceptionReadRetry: () =>
     set((state) => ({
       readRetryNonce: state.readRetryNonce + 1,
     })),
   setCalendarDraftSelection: (calendarDraftSelection) => set({ calendarDraftSelection }),
+  setWorkspaceOperatingDate: (workspaceId, operatingDate) =>
+    set((state) => ({
+      operatingDateByWorkspace: {
+        ...state.operatingDateByWorkspace,
+        [workspaceId]: operatingDate,
+      },
+    })),
   setReceptionCalendarReadStatus: (calendarReadStatus, calendarReadError) =>
     set({ calendarReadError, calendarReadStatus }),
   setReceptionQueueReadStatus: (queueReadStatus, queueReadError) =>

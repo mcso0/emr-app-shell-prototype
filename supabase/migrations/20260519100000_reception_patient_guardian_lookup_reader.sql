@@ -95,6 +95,7 @@ as $$
           'neutered', neutered,
           'microchipNo', microchip_no,
           'patientRegistrationNo', patient_registration_no,
+          'weightKg', weight_kg,
           'allergyNote', allergy_note,
           'specialNote', special_note,
           'handlingCautionNote', handling_caution_note,

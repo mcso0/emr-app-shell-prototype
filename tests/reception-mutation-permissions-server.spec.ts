@@ -7,6 +7,7 @@ import {
 } from "../src/features/reception/reception-mutation-permissions";
 import { createReceptionAppointmentCheckIn } from "../src/features/reception/server-appointment-check-in-core";
 import { cancelReceptionEncounter } from "../src/features/reception/server-encounter-cancel-core";
+import { createReceptionEncounterUpdate } from "../src/features/reception/server-encounter-update-core";
 import { registerReceptionPatientGuardian } from "../src/features/reception/server-patient-guardian-registration-core";
 import { createReceptionWalkInEncounter } from "../src/features/reception/server-walk-in-encounter-core";
 
@@ -131,8 +132,10 @@ const deniedPermissionCases = [
 
 test("DEN-61 reception mutation permission matrix keeps all mutation writes on reception create", () => {
   expect(receptionMutationPermissionMatrix).toMatchObject({
+    appointment_create: { requiredPermission: "reception:create" },
     appointment_check_in: { requiredPermission: "reception:create" },
     encounter_cancel: { requiredPermission: "reception:update" },
+    encounter_update: { requiredPermission: "reception:update" },
     patient_guardian_registration: { requiredPermission: "reception:create" },
     walk_in_encounter_create: { requiredPermission: "reception:create" },
   });
@@ -196,6 +199,22 @@ for (const permissionCase of deniedPermissionCases) {
       actorUserId: permissionCase.actorUserId,
       encounterId: "encounter-coco-260501",
       workspaceId,
+      permissionAdapter: permissionCase.adapter,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: permissionCase.status,
+      denialReason: permissionCase.denialReason,
+    });
+  });
+
+  test(`DEN-517 encounter update denies ${permissionCase.name}`, async () => {
+    const result = await createReceptionEncounterUpdate({
+      actorUserId: permissionCase.actorUserId,
+      encounterId: "encounter-coco-260501",
+      workspaceId,
+      input: { durationMinutes: 30, visitPurpose: "구토 재진" },
       permissionAdapter: permissionCase.adapter,
     });
 

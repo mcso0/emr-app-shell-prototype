@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-517 접수 상세 드로어 및 수정 모드 리포트</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; margin: 40px; color: #111827; }
+      h1, h2 { line-height: 1.3; }
+      code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+      th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; }
+      th { background: #f9fafb; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-517 접수 상세 드로어 및 수정 모드 리포트</h1>
+    <p>
+      결과: 접수 상세 드로어의 정보 위계를 환자/보호자 중심으로 정리하고,
+      접수 정보 수정을 실제 API/DB 계약을 통과하는 흐름으로 구현했다.
+    </p>
+
+    <h2>요청 사항</h2>
+    <ul>
+      <li>접수 상세 드로어에서 내부 코드와 중복 방문 목적 표시를 제거한다.</li>
+      <li>푸터를 <code>접수 취소</code>와 <code>닫기</code>, <code>수정하기</code> 구조로 바꾼다.</li>
+      <li><code>수정하기</code> 전 확인 모달을 거쳐 수정 모드로 들어간다.</li>
+      <li>환자와 접수일자는 수정하지 않고, 체중/방문 목적/소요시간/진료과/담당의/접수 메모만 수정한다.</li>
+      <li>수정 저장은 mock-only가 아니라 API/DB write/readback 기준을 포함한다.</li>
+    </ul>
+
+    <h2>변경 사항</h2>
+    <table>
+      <thead>
+        <tr><th>영역</th><th>내용</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>UI</td>
+          <td>상단 요약을 환자/보호자 중심으로 재구성하고, 중복 방문 목적과 <code>차트보기</code> 버튼을 제거했다.</td>
+        </tr>
+        <tr>
+          <td>수정 모드</td>
+          <td><code>수정하기</code> 확인 모달, 보기/수정 전환, 저장/닫기 동작을 추가했다.</td>
+        </tr>
+        <tr>
+          <td>API/DB</td>
+          <td><code>PATCH /api/workspaces/[workspaceId]/reception/encounters/[encounterId]</code>와 <code>clair_update_reception_encounter</code> RPC 계약을 추가했다.</td>
+        </tr>
+        <tr>
+          <td>보안/감사</td>
+          <td><code>encounter_update</code>는 <code>reception:update</code> 권한을 요구하고, <code>reception.encounter_updated</code> audit event를 남긴다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증 결과</h2>
+    <ul>
+      <li><code>npx playwright test tests/reception-encounter-update-server.spec.ts tests/reception-mutation-permissions-server.spec.ts --grep-invert "route requires an actor" --reporter=line</code>: 32 passed</li>
+      <li><code>npm run lint</code>: 통과. 기존 경고 5개만 남음.</li>
+      <li><code>git diff --check</code>: 통과.</li>
+    </ul>
+
+    <h2>제약 및 리스크</h2>
+    <p>
+      현재 worktree에는 DEN-517 외부의 PRD/docs viewer 변경이 섞여 있으며,
+      해당 변경이 <code>@/components/ui/command</code>와 <code>mermaid</code>를 찾지 못해
+      <code>npx tsc</code>와 dev-server 기반 route/UI 검증을 막고 있다.
+      DEN-517의 core, static route ownership, permission, migration 검증은 통과했다.
+    </p>
+
+    <h2>다음 작업</h2>
+    <p>
+      다음 이슈로 넘어가기 전에 이 수정 계약을 반영해야 한다.
+      이후 접수 상세나 예약 상세를 고칠 때는 새 encounter update API를 우회하지 말고,
+      환자 체중은 계속 patient source of truth에 writeback해야 한다.
+    </p>
+  </body>
+</html>

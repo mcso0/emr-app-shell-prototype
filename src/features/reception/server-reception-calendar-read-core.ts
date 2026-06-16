@@ -370,6 +370,7 @@ function mapPatient(value: unknown): Patient | undefined {
     microchipNo: getString(row.microchipNo) ?? getString(row.microchip_no),
     patientRegistrationNo:
       getString(row.patientRegistrationNo) ?? getString(row.patient_registration_no),
+    weightKg: getNumber(row.weightKg) ?? getNumber(row.weight_kg),
     allergyNote: getString(row.allergyNote) ?? getString(row.allergy_note),
     specialNote: getString(row.specialNote) ?? getString(row.special_note),
     handlingCautionNote:

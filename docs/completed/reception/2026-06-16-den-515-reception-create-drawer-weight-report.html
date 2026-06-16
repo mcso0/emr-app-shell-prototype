@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-515 접수 생성 드로우와 환자 체중 저장 보고</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        color: #111827;
+        background: #f8fafc;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 36px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin-top: 28px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        font-size: 15px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        font-size: 13px;
+      }
+      .summary {
+        color: #475569;
+      }
+      .callout {
+        padding: 14px 16px;
+        border-left: 4px solid #0284c7;
+        background: #f0f9ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-515 접수 생성 드로우와 환자 체중 저장 보고</h1>
+      <p class="summary">
+        접수/예약 화면의 첫 번째 생성 QA를 처리하면서 접수 생성 진입점,
+        드로우 기반 접수 폼, 환자 체중 조회/저장 계약을 정비했다.
+      </p>
+
+      <h2>핵심 결론</h2>
+      <div class="callout">
+        이제 접수 생성은 오른쪽 드로우에서 열리고, 체중은 환자 선택 전에는
+        입력할 수 없다. 환자를 선택하면 DB/API에서 내려온 최근 체중이 채워지고,
+        접수 생성 시 입력한 체중이 환자 프로필의 <code>weight_kg</code>로
+        다시 저장되는 계약까지 연결했다.
+      </div>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li>상단 버튼을 <code>+ 진료 접수</code>에서 <code>+ 접수/예약</code> 드롭다운으로 변경했다.</li>
+        <li><code>접수하기</code>는 오른쪽 접수 생성 드로우를 열도록 연결했다.</li>
+        <li><code>예약하기</code>는 DEN-516에서 실제 예약 시간 검증과 함께 연결하도록 임시 안내만 남겼다.</li>
+        <li>기존 모달 접수 폼을 제거하고, 접수 생성 UX를 드로우 경로로 통일했다.</li>
+        <li>환자 미선택 상태에서는 체중 입력을 비활성화했다.</li>
+        <li>환자 선택 시 <code>patient.weightKg</code>를 체중 입력에 반영하고, 없으면 빈 활성 입력으로 유지했다.</li>
+        <li>방문 목적 하단의 빠른 태그와 설명 문구를 제거했다.</li>
+        <li>드로우 셸 타이틀을 <code>접수 상세</code>, 드래그 초안 타이틀을 <code>접수 생성</code>으로 맞췄다.</li>
+      </ul>
+
+      <h2>DB/API 고려</h2>
+      <ul>
+        <li>환자/보호자 검색 API 응답에 <code>patient.weightKg</code>를 포함하도록 매퍼와 RPC reader를 확장했다.</li>
+        <li>walk-in 접수 생성 payload에 <code>weightKg</code>를 추가했다.</li>
+        <li>walk-in writer RPC는 양수 체중만 허용하고, 제공된 경우 <code>public.patients.weight_kg</code>를 갱신한다.</li>
+        <li>mock-only 처리가 아니라 synthetic/demo DB SQL과 서버 core 테스트로 read/write 계약을 검증했다.</li>
+        <li>원격 Supabase migration 실행이나 비용 발생 작업은 수행하지 않았다.</li>
+      </ul>
+
+      <h2>변경 파일</h2>
+      <ul>
+        <li><code>src/features/reception/module.tsx</code></li>
+        <li><code>src/features/reception/walk-in-encounter.ts</code></li>
+        <li><code>src/features/reception/server-walk-in-encounter-core.ts</code></li>
+        <li><code>src/features/reception/server-patient-guardian-lookup-core.ts</code></li>
+        <li><code>src/features/reception/patient-profile-store.ts</code></li>
+        <li><code>src/features/customer/server-patient-profile-core.ts</code></li>
+        <li><code>src/types/emr-domain.ts</code></li>
+        <li><code>src/mocks/emr-domain.ts</code></li>
+        <li><code>src/shell/workspace-frame.tsx</code></li>
+        <li><code>supabase/migrations/20260519100000_reception_patient_guardian_lookup_reader.sql</code></li>
+        <li><code>supabase/migrations/20260519120000_reception_walk_in_encounter_writer.sql</code></li>
+        <li><code>tests/reception.spec.ts</code></li>
+        <li><code>tests/reception-patient-guardian-lookup-server.spec.ts</code></li>
+        <li><code>tests/reception-walk-in-encounter-server.spec.ts</code></li>
+      </ul>
+
+      <h2>검증</h2>
+      <ul>
+        <li>접수 생성 관련 Playwright 테스트 4개 통과</li>
+        <li>환자 검색/접수 생성 서버 core 테스트 14개 통과</li>
+        <li><code>npm run docs:check</code>: 713개 문서/에이전트 markdown 검사 통과</li>
+        <li><code>git diff --check</code>: 통과</li>
+        <li><code>npm run lint</code>: 로컬 의존성 <code>eslint-plugin-storybook</code> 누락으로 lint 실행 전 차단</li>
+        <li><code>npx tsc --noEmit --pretty false --incremental false</code>: 기존 Storybook/Vitest 타입 해석 오류로 차단, 수정 파일 기준 필터링 오류 없음</li>
+      </ul>
+
+      <h2>다음 이슈 반영 메모</h2>
+      <ul>
+        <li>DEN-516은 이 드로우 방향을 재사용해 예약 생성과 시간 충돌 검증을 붙여야 한다.</li>
+        <li>DEN-516 완료 전까지 <code>예약하기</code>는 실제 데이터를 만들지 않는다.</li>
+        <li>DEN-517 접수 상세/수정 작업은 새 <code>weightKg</code> 계약과 <code>접수 상세</code> 타이틀을 기준으로 이어가야 한다.</li>
+      </ul>
+    </main>
+  </body>
+</html>

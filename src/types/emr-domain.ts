@@ -171,6 +171,7 @@ export type Patient = {
   neutered?: boolean;
   microchipNo?: string;
   patientRegistrationNo?: string;
+  weightKg?: number;
   allergyNote?: string;
   specialNote?: string;
   handlingCautionNote?: string;

@@ -9,6 +9,7 @@ export type ReceptionWalkInEncounterInput = {
   plannedStartAt?: string;
   primaryVeterinarianId?: string;
   visitPurpose?: string;
+  weightKg?: number;
 };
 
 export type ReceptionWalkInEncounterRecord = {

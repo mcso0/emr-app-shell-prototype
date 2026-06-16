@@ -23,6 +23,7 @@ declare
   v_encounter_no text := 'E-' || to_char(v_event_time at time zone 'Asia/Seoul', 'YYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
   v_duration_minutes integer := nullif(p_walk_in->>'durationMinutes', '')::integer;
   v_visit_purpose text := nullif(btrim(p_walk_in->>'visitPurpose'), '');
+  v_weight_kg numeric(6,2) := nullif(p_walk_in->>'weightKg', '')::numeric(6,2);
   v_encounter_row jsonb;
   v_queue_row jsonb;
 begin
@@ -69,6 +70,10 @@ begin
       and 'vet' = any(um.roles)
   ) then
     raise exception 'primary_veterinarian_unavailable';
+  end if;
+
+  if v_weight_kg is not null and v_weight_kg <= 0 then
+    raise exception 'invalid_weight';
   end if;
 
   insert into public.encounters (
@@ -128,6 +133,15 @@ begin
     v_event_time
   )
   returning id into v_queue_entry_id;
+
+  if v_weight_kg is not null then
+    update public.patients
+    set
+      weight_kg = v_weight_kg,
+      updated_at = v_event_time
+    where workspace_id = p_workspace_id
+      and id = v_patient_id;
+  end if;
 
   select jsonb_build_object(
     'id', e.id::text,
