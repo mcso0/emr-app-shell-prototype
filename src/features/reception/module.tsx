@@ -4283,6 +4283,7 @@ function WalkInReceptionDialog({
     : "";
   const lookupMatchesSelectedPatient =
     Boolean(selectedSummary) && lookupQuery === patientOptionText;
+  const shouldShowPatientLookup = patientLookupOpen && lookupActive;
   const visitPurpose = [
     receptionPurposeTags.join(", "),
     receptionVisitPurpose.trim(),
@@ -4532,7 +4533,7 @@ function WalkInReceptionDialog({
                         />
                       </button>
                     ) : null}
-                    {patientLookupOpen ? (
+                    {shouldShowPatientLookup ? (
                       <div
                         role="listbox"
                         aria-label="검색 결과"

@@ -691,13 +691,15 @@ test("patient guardian registration creates a new guardian and patient after con
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("보호자명은 필수입니다.")).toBeVisible();
   await page.getByLabel("보호자명").fill("김새봄");
-  await page.getByLabel("보호자 생년월일").fill("1993-1213-123");
+  await page.getByLabel("보호자 생년월일").fill("19931340");
+  await expect(page.getByLabel("보호자 생년월일")).toHaveValue("1993-13-40");
   await page.getByLabel("보호자 휴대전화").fill("010-2222-3333");
   await page.getByRole("button", { name: "다음" }).click();
   await expect(
     page.getByText("생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요."),
   ).toBeVisible();
-  await page.getByLabel("보호자 생년월일").fill("1993-11-23");
+  await page.getByLabel("보호자 생년월일").fill("19931123");
+  await expect(page.getByLabel("보호자 생년월일")).toHaveValue("1993-11-23");
   await page.getByRole("button", { name: "다음" }).click();
   await expect(
     page.getByText("개인정보 수집 동의가 필요합니다."),
@@ -723,6 +725,8 @@ test("patient guardian registration creates a new guardian and patient after con
   await page.getByLabel("품종").fill("푸");
   await page.getByRole("option", { name: "푸들" }).click();
   await page.getByLabel("나이 년").fill("2");
+  await expect(page.getByLabel("나이 년").locator("..")).toContainText("년");
+  await expect(page.getByLabel("나이 개월").locator("..")).toContainText("개월");
   await expect(page.getByText("개인정보 동의")).toHaveCount(0);
   await page.getByRole("button", { name: "다음" }).click();
 
@@ -2546,6 +2550,10 @@ test("reception walk-in dialog uses DB-backed patient lookup states", async ({
   await page.getByTestId("schedule-check-in-button").click();
 
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await walkInForm.getByLabel("환자 검색").click();
+  await expect(page.getByRole("listbox", { name: "검색 결과" })).toHaveCount(0);
+  await walkInForm.getByLabel("환자 검색").fill("루");
+  await expect(page.getByRole("listbox", { name: "검색 결과" })).toBeVisible();
   await walkInForm.getByLabel("환자 검색").fill("루나");
   await expect(walkInForm.getByText("DB 검색 결과 1건")).toBeVisible();
   await page.getByRole("option", { name: /루나.*박지유/ }).click();
