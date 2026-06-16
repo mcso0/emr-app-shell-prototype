@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-513 접수/예약 QA 스펙 정리 리포트</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; color: #111827; margin: 40px; max-width: 880px; }
+      h1, h2 { line-height: 1.25; }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; }
+      th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+      th { background: #f3f4f6; text-align: left; }
+      .pass { color: #047857; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-513 접수/예약 QA 스펙 정리 리포트</h1>
+    <p>
+      접수/예약 QA에서 나온 요청사항을 QA-REC-001~014 원장부로 정리하고,
+      이후 구현/검증 이슈에 빠짐없이 분배했는지 확인했다.
+    </p>
+
+    <h2>결론</h2>
+    <p class="pass">Human Review로 넘길 수 있는 상태다.</p>
+    <p>
+      DEN-513의 QA 원장부는 Linear 이슈 본문에 유지되며, 구현과 검증은 DEN-514~519 및 DEN-518 closeout에서 추적된다.
+    </p>
+
+    <h2>분배 결과</h2>
+    <table>
+      <thead>
+        <tr><th>범위</th><th>담당 이슈</th><th>상태</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>날짜 이동, date picker, 오늘 버튼, 대기열 검색/필터/card polish</td><td>DEN-514</td><td>Human Review</td></tr>
+        <tr><td>접수/예약 생성 드로어, 체중 입력/readback, 캘린더 드래그 생성 UX</td><td>DEN-515</td><td>Human Review</td></tr>
+        <tr><td>예약 생성, 시간 충돌 방지, 예약-접수 전환</td><td>DEN-516</td><td>Human Review</td></tr>
+        <tr><td>접수 상세 드로어 정보 위계, 수정 모드, encounter update DB/API 경계</td><td>DEN-517</td><td>Human Review</td></tr>
+        <tr><td>통합 회귀 검증, QA-REC-001~014 pass/fail 표, 최종 closeout</td><td>DEN-518</td><td>Human Review</td></tr>
+        <tr><td>DB/API/fallback 경계와 synthetic/demo 데이터 원칙</td><td>DEN-519</td><td>Human Review</td></tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li>DEN-518에서 QA-REC-001~014 전체가 Pass로 재검증됐다.</li>
+      <li>접수/예약 UI 전체 회귀: <code>tests/reception.spec.ts</code> 49 passed</li>
+      <li>서버/API/권한/감사 회귀: 47 passed</li>
+      <li>lint, TypeScript, docs check 모두 통과했다.</li>
+    </ul>
+
+    <h2>남은 작업</h2>
+    <p>
+      현재 DEN-513 기준으로 별도 Rework는 없다. 이후 새 QA 항목이 나오면 기존 QA-REC에 덧붙이지 말고
+      새 후속 이슈로 분리하는 편이 추적성이 좋다.
+    </p>
+  </body>
+</html>
