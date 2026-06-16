@@ -27,7 +27,7 @@ import type {
 } from "@/types/emr-domain";
 
 export type ReceptionWalkInEncounterFieldErrors = Partial<
-  Record<"patientId" | "durationMinutes" | "plannedStartAt", string>
+  Record<"patientId" | "durationMinutes" | "plannedStartAt" | "weightKg", string>
 >;
 
 type SupabaseWalkInMembershipRow = {

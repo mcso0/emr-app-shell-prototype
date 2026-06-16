@@ -1,6 +1,7 @@
 import type { PermissionId } from "@/types/emr-domain";
 
 export type ReceptionMutationId =
+  | "appointment_create"
   | "appointment_check_in"
   | "encounter_cancel"
   | "patient_guardian_registration"
@@ -12,6 +13,10 @@ export type ReceptionMutationPermissionContract = {
 };
 
 export const receptionMutationPermissionMatrix = {
+  appointment_create: {
+    auditHookPoint: "reception.appointment.create",
+    requiredPermission: "reception:create",
+  },
   appointment_check_in: {
     auditHookPoint: "reception.appointment.check_in",
     requiredPermission: "reception:create",

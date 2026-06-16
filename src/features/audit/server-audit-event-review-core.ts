@@ -173,6 +173,7 @@ const supportedReviewEventTypes = new Set<LiveAuditEventType>([
   "workspace.membership_roles_changed",
   "workspace.membership_status_changed",
   "reception.walk_in_created",
+  "reception.appointment_created",
   "reception.appointment_checked_in",
   "reception.encounter_cancelled",
   "chart.soap_saved",

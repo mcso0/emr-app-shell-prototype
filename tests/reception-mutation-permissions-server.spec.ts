@@ -131,6 +131,7 @@ const deniedPermissionCases = [
 
 test("DEN-61 reception mutation permission matrix keeps all mutation writes on reception create", () => {
   expect(receptionMutationPermissionMatrix).toMatchObject({
+    appointment_create: { requiredPermission: "reception:create" },
     appointment_check_in: { requiredPermission: "reception:create" },
     encounter_cancel: { requiredPermission: "reception:update" },
     patient_guardian_registration: { requiredPermission: "reception:create" },

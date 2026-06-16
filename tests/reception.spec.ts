@@ -5,6 +5,13 @@ async function openWalkInReceptionForm(page: Page) {
   await page.getByRole("menuitem", { name: "접수하기" }).click();
 }
 
+async function submitAppointmentCheckInForm(page: Page) {
+  await page.getByRole("button", { name: "접수하기" }).last().click();
+  const form = page.getByTestId("appointment-check-in-form-drawer").last();
+  await expect(form).toBeVisible();
+  await form.getByRole("button", { name: "생성" }).click();
+}
+
 async function mockReceptionWalkInCreate(
   page: Page,
   {
@@ -636,7 +643,7 @@ test("reception cards open the reception detail drawer", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByLabel("소요시간")).toHaveValue("15분");
   await expect(
-    page.getByRole("button", { name: "접수 처리" }).last(),
+    page.getByRole("button", { name: "접수하기" }).last(),
   ).toBeVisible();
 });
 
@@ -1407,7 +1414,7 @@ test("reception check-in converts a confirmed appointment into a waiting encount
   await expect(nabiAppointment).not.toContainText("예약확정");
 
   await nabiAppointment.click();
-  await page.getByRole("button", { name: "접수 처리" }).last().click();
+  await submitAppointmentCheckInForm(page);
 
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
@@ -1429,6 +1436,11 @@ test("server-backed appointment check-in sends the appointment transition reques
     async (route) => {
       requested = true;
       expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toMatchObject({
+        durationMinutes: 15,
+        visitPurpose: "피부 재진",
+        weightKg: 4.8,
+      });
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -1490,7 +1502,7 @@ test("server-backed appointment check-in sends the appointment transition reques
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await page.getByRole("button", { name: "접수 처리" }).last().click();
+  await submitAppointmentCheckInForm(page);
 
   expect(requested).toBe(true);
   await expect(nabiAppointment).toContainText("예약");
@@ -1608,7 +1620,7 @@ test("appointment check-in persistence regression reloads from queue and calenda
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await page.getByRole("button", { name: "접수 처리" }).last().click();
+  await submitAppointmentCheckInForm(page);
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
 
@@ -1774,6 +1786,109 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await expect(
     walkInCalendarCard.locator('[data-testid^="walkin-accent-"]'),
   ).toHaveClass(/emr-line-strong/);
+});
+
+test("reception creates a reservation through the unified check-in menu", async ({
+  page,
+}) => {
+  let createdAppointment: Record<string, unknown> | null = null;
+  let latestBody: Record<string, unknown> | undefined;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/calendar/day**",
+    async (route) => {
+      if (!createdAppointment) {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "clair-demo",
+          date: "2026-05-01",
+          records: [{ appointment: createdAppointment }],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/appointments",
+    async (route) => {
+      latestBody = route.request().postDataJSON() as Record<string, unknown>;
+      createdAppointment = {
+        id: "appointment-den516-ui",
+        workspaceId: "clair-demo",
+        patientId: latestBody.patientId,
+        guardianId: latestBody.guardianId,
+        assignedVeterinarianId: latestBody.assignedVeterinarianId,
+        scheduledStartAt: latestBody.scheduledStartAt,
+        scheduledEndAt: "2026-05-01T09:30:00+09:00",
+        visitPurpose: latestBody.reservationMemo,
+        symptomNote: latestBody.reservationMemo,
+        status: "confirmed",
+        createdByUserId: "user-front-desk",
+        createdAt: "2026-05-01T08:55:00+09:00",
+        updatedAt: "2026-05-01T08:55:00+09:00",
+      };
+
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId: "clair-demo",
+          appointment: createdAppointment,
+          enforcedBy: "reception-appointment-create",
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/reception");
+
+  await page.getByTestId("schedule-check-in-button").click();
+  await page.getByRole("menuitem", { name: "예약하기" }).click();
+
+  const drawer = page.getByTestId("reservation-create-drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toContainText("예약 생성");
+  await expect(drawer.getByLabel("체중")).toBeDisabled();
+
+  await drawer.getByLabel("환자 검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await expect(drawer.getByLabel("체중")).toHaveValue("4.80");
+
+  await drawer.getByLabel("예약 메모").fill("DEN-516 예약 생성 UI 검증");
+  await drawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => latestBody).toMatchObject({
+    patientId: "patient-nabi",
+    guardianId: "guardian-oh-sea",
+    durationMinutes: 30,
+    reservationMemo: "DEN-516 예약 생성 UI 검증",
+  });
+  expect(String(latestBody?.scheduledStartAt)).toMatch(
+    /^2026-05-01T09:00:00\+09:00$/,
+  );
+
+  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  const detailDrawer = page.getByTestId("workspace-drawer").last();
+  await expect(detailDrawer).toContainText("예약 상세");
+  await expect(detailDrawer).toContainText(
+    "DEN-516 예약 생성 UI 검증",
+  );
+
+  const reservationCard = page
+    .locator('[data-testid^="appointment-card-"]')
+    .filter({ hasText: "DEN-516 예약 생성 UI 검증" });
+  await expect(reservationCard).toBeVisible();
 });
 
 test("Cheongdam empty reception still renders the calendar workspace", async ({

@@ -18,6 +18,7 @@ import {
   type SupabaseLiveAuditAppendRpcClient,
 } from "@/features/audit/server-audit-log-persistence";
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
+import type { ReceptionAppointmentCheckInInput } from "@/features/reception/appointment-check-in";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,6 +57,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
   if (rateLimitResponse) return rateLimitResponse;
 
+  const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
@@ -69,6 +71,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const result = await createReceptionAppointmentCheckIn({
     actorUserId: identity.actorUserId,
     appointmentId,
+    input,
     workspaceId,
     permissionAdapter,
     gateway: client
@@ -85,4 +88,15 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
 
   return Response.json(result, { status: result.status });
+}
+
+async function readJsonBody(request: Request): Promise<ReceptionAppointmentCheckInInput | undefined> {
+  try {
+    const value = (await request.json()) as unknown;
+    return value && typeof value === "object"
+      ? (value as ReceptionAppointmentCheckInInput)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }

@@ -97,9 +97,14 @@ import {
 import { useMockAuthStore } from "@/features/auth/session-store";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import type {
+  ReceptionAppointmentCheckInInput,
   ReceptionAppointmentCheckInRecord,
   ReceptionAppointmentCheckInResponse,
 } from "@/features/reception/appointment-check-in";
+import type {
+  ReceptionAppointmentCreateInput,
+  ReceptionAppointmentCreateResponse,
+} from "@/features/reception/appointment-create";
 import type {
   ReceptionPatientGuardianLookupItem,
   ReceptionPatientGuardianLookupResponse,
@@ -523,13 +528,49 @@ async function submitWalkInEncounter({
   }
 }
 
+async function submitAppointmentCreate({
+  actorRole,
+  input,
+  workspaceId,
+}: {
+  actorRole?: string;
+  input: ReceptionAppointmentCreateInput;
+  workspaceId: string;
+}): Promise<ReceptionAppointmentCreateResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/appointments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    const body = (await response.json()) as ReceptionAppointmentCreateResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
 async function submitAppointmentCheckIn({
   actorRole,
   appointmentId,
+  input,
   workspaceId,
 }: {
   actorRole?: string;
   appointmentId: string;
+  input?: ReceptionAppointmentCheckInInput;
   workspaceId: string;
 }): Promise<ReceptionAppointmentCheckInResponse> {
   try {
@@ -538,8 +579,10 @@ async function submitAppointmentCheckIn({
       {
         method: "POST",
         headers: {
+          ...(input ? { "Content-Type": "application/json" } : {}),
           "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
         },
+        body: input ? JSON.stringify(input) : undefined,
       },
     );
     const body = (await response.json()) as ReceptionAppointmentCheckInResponse;
@@ -781,6 +824,42 @@ function getAppointmentCheckInRouteErrorMessage(
   return "예약 접수 처리에 실패했습니다.";
 }
 
+function getAppointmentCreateRouteErrorMessage(
+  result: Extract<ReceptionAppointmentCreateResponse, { ok: false }>,
+) {
+  if (result.error === "rate_limited")
+    return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (result.error === "invalid_input") {
+    return (
+      Object.values(result.fieldErrors ?? {})[0] ?? "예약 정보를 확인해 주세요."
+    );
+  }
+  if (result.denialReason === "appointment_slot_unavailable")
+    return "이미 예약된 시간대입니다.";
+  if (result.denialReason === "appointment_closed_day")
+    return "휴진일에는 예약을 생성할 수 없습니다.";
+  if (result.denialReason === "appointment_outside_business_hours")
+    return "진료 시간 안에서 예약 시간을 선택해 주세요.";
+  if (
+    result.denialReason === "patient_unavailable" ||
+    result.denialReason === "guardian_unavailable" ||
+    result.denialReason === "patient_guardian_link_missing" ||
+    result.denialReason === "primary_veterinarian_unavailable"
+  ) {
+    return "예약 대상 정보를 확인해 주세요.";
+  }
+  if (
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 예약을 생성할 권한이 없습니다.";
+  }
+
+  return "예약을 생성할 수 없습니다.";
+}
+
 function getEncounterCancelRouteErrorMessage(
   result: Extract<ReceptionEncounterCancelResponse, { ok: false }>,
 ) {
@@ -872,6 +951,52 @@ const parseWeightKgInput = (value: string) => {
     ? Math.round(weightKg * 100) / 100
     : undefined;
 };
+
+const getReservationTimeOptions = (
+  date: string,
+  durationMinutes: number,
+  appointments: Appointment[],
+) => {
+  const options: Array<{ disabled: boolean; label: string; minutes: number; reason?: string }> = [];
+
+  for (
+    let minutes = dayBusinessOpenHour * 60;
+    minutes <= dayBusinessCloseHour * 60 - durationMinutes;
+    minutes += 30
+  ) {
+    const startAt = getReceptionIsoAtMinutes(date, minutes);
+    const startMs = Date.parse(startAt);
+    const endMs = startMs + durationMinutes * 60_000;
+    const conflict = appointments.some((appointment) => {
+      if (
+        getOperatingDateFromIso(appointment.scheduledStartAt) !== date ||
+        !["requested", "confirmed", "changed"].includes(appointment.status)
+      ) {
+        return false;
+      }
+      const appointmentStartMs = Date.parse(appointment.scheduledStartAt);
+      const appointmentEndMs = appointment.scheduledEndAt
+        ? Date.parse(appointment.scheduledEndAt)
+        : appointmentStartMs + 30 * 60_000;
+      return startMs < appointmentEndMs && endMs > appointmentStartMs;
+    });
+
+    options.push({
+      disabled: conflict,
+      label: getScheduleTimeLabelFromMinutes(minutes),
+      minutes,
+      reason: conflict ? "예약됨" : undefined,
+    });
+  }
+
+  return options;
+};
+
+const isClosedReservationDate = (date: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    weekday: "short",
+  }).format(new Date(`${date}T00:00:00+09:00`)) === "Sun";
 
 const getShortTime = (dateTime?: string) => {
   return formatOperatingShortTime(dateTime);
@@ -2455,6 +2580,7 @@ function ReceptionScheduleDateControl({
   const showingToday = operatingDate === todayDate;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!datePickerOpen) setPickerMonthDate(operatingDate);
   }, [datePickerOpen, operatingDate]);
 
@@ -2726,6 +2852,7 @@ function ReceptionScheduleDateControl({
 function ScheduleToolbar({
   onOperatingDateChange,
   operatingDate,
+  onCreateReservation,
   onCreateWalkIn,
   onUnifiedPatientReady,
   onToggleVeterinarian,
@@ -2737,6 +2864,7 @@ function ScheduleToolbar({
 }: {
   onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
+  onCreateReservation: () => void;
   onCreateWalkIn: () => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
@@ -2851,9 +2979,7 @@ function ScheduleToolbar({
             </DropdownMenuItem>
             <DropdownMenuItem
               className="h-8 cursor-pointer"
-              onClick={() =>
-                toast.info("예약 생성은 다음 예약 시간 검증 작업에서 연결됩니다.")
-              }
+              onClick={onCreateReservation}
             >
               예약하기
             </DropdownMenuItem>
@@ -3929,10 +4055,6 @@ export function ReceptionContent() {
     (state) => state.persistedCalendarAppointments,
   );
   const patients = usePatientProfileStore((state) => state.patients);
-  const guardians = usePatientProfileStore((state) => state.guardians);
-  const patientGuardians = usePatientProfileStore(
-    (state) => state.patientGuardians,
-  );
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const authSession = useMockAuthStore((state) => state.session);
@@ -3955,14 +4077,6 @@ export function ReceptionContent() {
     liveStaffSourceEnabled && workspaceVeterinarians.length > 0
       ? workspaceVeterinarians
       : allVeterinarians;
-	  const veterinarianStaffMembers = useMemo(
-    () =>
-      veterinarians.map((veterinarian) => ({
-        displayName: veterinarian.name,
-        id: veterinarian.id,
-      })),
-	    [veterinarians],
-	  );
 	  const veterinarianIds = useMemo(
 	    () => veterinarians.map((veterinarian) => veterinarian.id),
 	    [veterinarians],
@@ -3998,27 +4112,6 @@ export function ReceptionContent() {
       workspaceId,
     ],
   );
-  const patientSummaries = useMemo(
-    () =>
-      getReceptionPatientSummaries(
-        workspaceDraftCheckIns,
-        {
-          guardians,
-          patientGuardians,
-          patients,
-        },
-	        { operatingDate, staffMembers: veterinarianStaffMembers, workspaceId },
-	      ),
-    [
-      guardians,
-	      operatingDate,
-	      patientGuardians,
-	      patients,
-	      veterinarianStaffMembers,
-	      workspaceDraftCheckIns,
-	      workspaceId,
-	    ],
-	  );
 	  const selectedVeterinarians = useMemo(
 	    () =>
 		      veterinarians.filter((veterinarian) =>
@@ -4106,6 +4199,13 @@ export function ReceptionContent() {
     setActiveDrawer({
       type: "reception-form",
       id: "walk-in",
+    });
+  };
+  const openReservationDialog = () => {
+    setCalendarDraftSelection(undefined);
+    setActiveDrawer({
+      type: "reception-reservation-form",
+      id: "new",
     });
   };
   const openCalendarDraftDrawer = (draft: ReceptionCalendarDraftInput) => {
@@ -4309,6 +4409,7 @@ export function ReceptionContent() {
         todayDate={defaultOperatingDate}
         veterinarians={veterinarians}
         onToggleVeterinarian={toggleVeterinarian}
+        onCreateReservation={openReservationDialog}
         onCreateWalkIn={openWalkInDialog}
         onUnifiedPatientReady={(patientId) => {
           selectPatient(patientId);
@@ -4548,6 +4649,7 @@ function ReceptionWalkInFormDrawer({
     );
 
     if (!initialSummary) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPatientId(initialSummary.patient.id);
     setSelectedLookupSummary(initialSummary);
     setLookupQuery(getReceptionPatientOptionLabel(initialSummary));
@@ -4557,6 +4659,7 @@ function ReceptionWalkInFormDrawer({
   useEffect(() => {
     const query = lookupQuery.trim();
     if (!query) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLookupResults([]);
       setLookupState("idle");
       return;
@@ -4613,6 +4716,7 @@ function ReceptionWalkInFormDrawer({
   }, [authSession?.id, lookupQuery, workspaceId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWeightKg(formatPatientWeightKgInput(patient?.weightKg));
   }, [patient?.id, patient?.weightKg]);
 
@@ -4957,6 +5061,561 @@ function ReceptionWalkInFormDrawer({
   );
 }
 
+function ReceptionReservationFormDrawer({
+  appointments,
+  onCreate,
+  operatingDate,
+  patientSummaries,
+  todayDate,
+  veterinarians,
+  workspaceId,
+}: {
+  appointments: Appointment[];
+  onCreate: (appointment: Appointment) => void;
+  operatingDate: string;
+  patientSummaries: ReceptionPatientSummary[];
+  todayDate: string;
+  veterinarians: Veterinarian[];
+  workspaceId: string;
+}) {
+  const authSession = useMockAuthStore((state) => state.session);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const [date, setDate] = useState(operatingDate < todayDate ? todayDate : operatingDate);
+  const [duration, setDuration] = useState(defaultWalkInDuration);
+  const [memo, setMemo] = useState("");
+  const [patientQuery, setPatientQuery] = useState("");
+  const [patientId, setPatientId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [timeMinutes, setTimeMinutes] = useState(dayBusinessOpenHour * 60);
+  const [veterinarianId, setVeterinarianId] = useState(
+    defaultVeterinarian?.id ?? unassignedVeterinarianValue,
+  );
+  const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
+  const timeOptions = useMemo(
+    () => getReservationTimeOptions(date, durationMinutes, appointments),
+    [appointments, date, durationMinutes],
+  );
+  const selectedSummary = patientSummaries.find(
+    (summary) => summary.patient.id === patientId,
+  );
+  const selectedPatient = selectedSummary?.patient;
+  const selectedGuardian = selectedSummary?.primaryGuardian;
+  const filteredSummaries = patientSummaries.filter((summary) =>
+    getReceptionPatientOptionLabel(summary)
+      .toLowerCase()
+      .includes(patientQuery.trim().toLowerCase()),
+  );
+  const selectedTimeOption = timeOptions.find((option) => option.minutes === timeMinutes);
+  const closedDay = isClosedReservationDate(date);
+  const effectiveVeterinarianId =
+    veterinarianId !== unassignedVeterinarianValue &&
+    veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
+      ? veterinarianId
+      : undefined;
+  const canCreate =
+    Boolean(selectedPatient) &&
+    Boolean(selectedTimeOption) &&
+    !selectedTimeOption?.disabled &&
+    !closedDay &&
+    date >= todayDate;
+
+  useEffect(() => {
+    const firstAvailable = timeOptions.find((option) => !option.disabled);
+    if (!timeOptions.some((option) => option.minutes === timeMinutes && !option.disabled)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTimeMinutes(firstAvailable?.minutes ?? dayBusinessOpenHour * 60);
+    }
+  }, [timeMinutes, timeOptions]);
+
+  const create = async () => {
+    if (!selectedPatient || submitting || !canCreate) return;
+
+    const input: ReceptionAppointmentCreateInput = {
+      assignedVeterinarianId: effectiveVeterinarianId,
+      durationMinutes,
+      guardianId: selectedGuardian?.id,
+      patientId: selectedPatient.id,
+      reservationMemo: memo.trim() || undefined,
+      scheduledStartAt: getReceptionIsoAtMinutes(date, timeMinutes),
+    };
+
+    setSubmitting(true);
+    const result = await submitAppointmentCreate({
+      actorRole: authSession?.role,
+      input,
+      workspaceId,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(getAppointmentCreateRouteErrorMessage(result));
+      return;
+    }
+
+    onCreate(result.appointment);
+    toast.success("예약을 생성했습니다.");
+  };
+
+  return (
+    <div
+      className="flex h-[calc(100%-48px)] flex-col"
+      data-testid="reservation-create-drawer"
+    >
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-5 p-4">
+          <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
+            <h2 className="emr-text-body font-semibold">예약 생성</h2>
+            <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
+              진료 시간 안에서 예약 가능한 시간을 선택합니다.
+            </div>
+          </section>
+
+          <RegistrationFormSection separated={false} title="환자 정보">
+            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+              <RegistrationFormField
+                label="환자 검색"
+                required
+                helper={
+                  selectedSummary
+                    ? getReceptionPatientOptionLabel(selectedSummary)
+                    : "환자명, 동물 정보, 보호자명으로 검색합니다."
+                }
+              >
+                <Select
+                  value={patientId}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setPatientId(value);
+                    const summary = patientSummaries.find(
+                      (item) => item.patient.id === value,
+                    );
+                    setPatientQuery(summary ? getReceptionPatientOptionLabel(summary) : "");
+                  }}
+                >
+                  <SelectTrigger aria-label="환자 검색" className="w-full bg-card">
+                    <SelectValue placeholder="환자 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        aria-label="예약 환자 검색어"
+                        className="h-8"
+                        placeholder="환자/보호자 검색"
+                        value={patientQuery}
+                        onValueChange={setPatientQuery}
+                      />
+                    </div>
+                    <SelectGroup>
+                      {filteredSummaries.map((summary) => (
+                        <SelectItem key={summary.patient.id} value={summary.patient.id}>
+                          {getReceptionPatientOptionLabel(summary)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+
+              <RegistrationFormField label="체중">
+                <Input
+                  aria-label="체중"
+                  className="h-10 bg-card text-right"
+                  disabled={!selectedPatient}
+                  readOnly
+                  value={formatPatientWeightKgInput(selectedPatient?.weightKg)}
+                  placeholder="0.00"
+                />
+              </RegistrationFormField>
+            </div>
+          </RegistrationFormSection>
+
+          <RegistrationFormSection title="예약 정보">
+            <section className="grid grid-cols-2 gap-3">
+              <RegistrationFormField label="예약일" required>
+                <Input
+                  aria-label="예약일"
+                  className="h-10 bg-card"
+                  min={todayDate}
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                />
+              </RegistrationFormField>
+              <RegistrationFormField label="담당의">
+                <Select
+                  value={veterinarianId}
+                  onValueChange={(value) => value && setVeterinarianId(value)}
+                >
+                  <SelectTrigger aria-label="담당의" className="w-full bg-card">
+                    <span className="flex flex-1 text-left">
+                      {getReceptionVeterinarianSelectLabel(
+                        veterinarianId,
+                        veterinarians,
+                      )}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value={unassignedVeterinarianValue}>
+                        수의사 미지정
+                      </SelectItem>
+                      {veterinarians.map((veterinarian) => (
+                        <SelectItem key={veterinarian.id} value={veterinarian.id}>
+                          {veterinarian.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+            </section>
+
+            <section className="grid grid-cols-2 gap-3">
+              <RegistrationFormField
+                label="예약시간"
+                required
+                helper={closedDay ? "휴진일입니다." : undefined}
+              >
+                <Select
+                  value={String(timeMinutes)}
+                  onValueChange={(value) => setTimeMinutes(Number(value))}
+                  disabled={closedDay}
+                >
+                  <SelectTrigger aria-label="예약시간" className="w-full bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {timeOptions.map((option) => (
+                        <SelectItem
+                          key={option.minutes}
+                          value={String(option.minutes)}
+                          disabled={option.disabled}
+                        >
+                          {option.label}
+                          {option.reason ? ` · ${option.reason}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+              <RegistrationFormField label="예상시간" required>
+                <Select
+                  value={duration}
+                  onValueChange={(value) => value && setDuration(value)}
+                >
+                  <SelectTrigger aria-label="예상시간" className="w-full bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {receptionDurationOptions.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+            </section>
+
+            <RegistrationFormField label="예약 메모">
+              <Textarea
+                aria-label="예약 메모"
+                className="min-h-24 resize-none bg-card"
+                placeholder="예약 메모를 입력해주세요"
+                value={memo}
+                onChange={(event) => setMemo(event.target.value)}
+              />
+            </RegistrationFormField>
+          </RegistrationFormSection>
+        </div>
+      </ScrollArea>
+      <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card p-4">
+        <Button variant="ghost" onClick={() => setActiveDrawer(null)} disabled={submitting}>
+          취소
+        </Button>
+        <Button onClick={create} disabled={!canCreate || submitting}>
+          {submitting ? "생성 중" : "생성"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ReceptionAppointmentCheckInFormDrawer({
+  appointment,
+  currentOperatingMinutes,
+  guardian,
+  onCheckIn,
+  patient,
+  veterinarians,
+  workspaceId,
+}: {
+  appointment: Appointment;
+  currentOperatingMinutes: number;
+  guardian?: Guardian;
+  onCheckIn: (checkIn: ReceptionAppointmentCheckInRecord, weightKg?: number) => void;
+  patient: Patient;
+  veterinarians: Veterinarian[];
+  workspaceId: string;
+}) {
+  const authSession = useMockAuthStore((state) => state.session);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const appointmentDate =
+    getOperatingDateFromIso(appointment.scheduledStartAt) ??
+    getWorkspaceOperatingDate(workspaceId);
+  const appointmentStartMinutes =
+    getOperatingMinutesFromIso(appointment.scheduledStartAt) ??
+    currentOperatingMinutes;
+  const [department, setDepartment] = useState(defaultWalkInDepartment);
+  const [duration, setDuration] = useState(
+    getReceptionDrawerDurationLabel({ appointment }),
+  );
+  const [memo, setMemo] = useState(appointment.symptomNote ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [timeMinutes, setTimeMinutes] = useState(
+    Math.max(currentOperatingMinutes, appointmentStartMinutes),
+  );
+  const [veterinarianId, setVeterinarianId] = useState(
+    appointment.assignedVeterinarianId ?? unassignedVeterinarianValue,
+  );
+  const [visitPurpose, setVisitPurpose] = useState(
+    appointment.visitPurpose ?? appointment.symptomNote ?? "예약 접수",
+  );
+  const [weightKg, setWeightKg] = useState(
+    formatPatientWeightKgInput(patient.weightKg),
+  );
+  const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
+  const effectiveVeterinarianId =
+    veterinarianId !== unassignedVeterinarianValue &&
+    veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
+      ? veterinarianId
+      : undefined;
+  const parsedWeightKg = parseWeightKgInput(weightKg);
+  const timeOptions = useMemo(() => {
+    const firstMinute = Math.max(currentOperatingMinutes, dayBusinessOpenHour * 60);
+    const options: Array<{ label: string; minutes: number }> = [];
+
+    for (
+      let minutes = firstMinute;
+      minutes <= dayBusinessCloseHour * 60 - durationMinutes;
+      minutes += 30
+    ) {
+      options.push({
+        label: getScheduleTimeLabelFromMinutes(minutes),
+        minutes,
+      });
+    }
+
+    return options.length > 0
+      ? options
+      : [{ label: getScheduleTimeLabelFromMinutes(firstMinute), minutes: firstMinute }];
+  }, [currentOperatingMinutes, durationMinutes]);
+  const canCreate = Boolean(visitPurpose.trim()) && !submitting;
+
+  useEffect(() => {
+    if (!timeOptions.some((option) => option.minutes === timeMinutes)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTimeMinutes(timeOptions[0]?.minutes ?? currentOperatingMinutes);
+    }
+  }, [currentOperatingMinutes, timeMinutes, timeOptions]);
+
+  const create = async () => {
+    if (!canCreate) return;
+
+    const input: ReceptionAppointmentCheckInInput = {
+      checkedInAt: getReceptionIsoAtMinutes(appointmentDate, timeMinutes),
+      department,
+      durationMinutes,
+      memo,
+      primaryVeterinarianId: effectiveVeterinarianId,
+      visitPurpose,
+      weightKg: parsedWeightKg,
+    };
+
+    setSubmitting(true);
+    const result = await submitAppointmentCheckIn({
+      actorRole: authSession?.role,
+      appointmentId: appointment.id,
+      input,
+      workspaceId,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error(getAppointmentCheckInRouteErrorMessage(result));
+      return;
+    }
+
+    onCheckIn(result.checkIn, parsedWeightKg);
+    toast.success("예약 건을 접수했습니다.");
+  };
+
+  return (
+    <div
+      className="flex h-[calc(100%-48px)] flex-col"
+      data-testid="appointment-check-in-form-drawer"
+    >
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-5 p-4">
+          <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
+            <div className="emr-text-body font-semibold">접수 생성</div>
+            <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
+              {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} · 예약 건
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 gap-3">
+            <ReceptionFormField label="진료과" required>
+              <Select value={department} onValueChange={(value) => value && setDepartment(value)}>
+                <SelectTrigger aria-label="진료과" className="w-full bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="영상의학과 · 방사선종양학과">
+                      영상의학과 · 방사선종양학과
+                    </SelectItem>
+                    <SelectItem value="내과">내과</SelectItem>
+                    <SelectItem value="외과">외과</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </ReceptionFormField>
+            <ReceptionFormField label="담당의">
+              <Select
+                value={veterinarianId}
+                onValueChange={(value) => value && setVeterinarianId(value)}
+              >
+                <SelectTrigger aria-label="담당의" className="w-full bg-card">
+                  <span className="flex flex-1 text-left">
+                    {getReceptionVeterinarianSelectLabel(veterinarianId, veterinarians)}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value={unassignedVeterinarianValue}>
+                      수의사 미지정
+                    </SelectItem>
+                    {veterinarians.map((veterinarian) => (
+                      <SelectItem key={veterinarian.id} value={veterinarian.id}>
+                        {veterinarian.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </ReceptionFormField>
+          </section>
+
+          <section className="grid grid-cols-[minmax(0,1fr)_104px] gap-3">
+            <ReceptionFormField label="보호자 및 동물검색" required>
+              <Input
+                value={`${patient.name} · ${guardian?.name ?? "보호자 미지정"} ${guardian?.mobilePhone ?? ""}`}
+                readOnly
+                className="h-9 bg-card"
+              />
+            </ReceptionFormField>
+            <ReceptionFormField label="체중">
+              <div className="relative">
+                <Input
+                  aria-label="체중"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={weightKg}
+                  className="h-9 bg-card pr-9"
+                  onValueChange={(value) =>
+                    setWeightKg(value.replace(/[^\d.]/g, ""))
+                  }
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium leading-4 text-foreground">
+                  kg
+                </span>
+              </div>
+            </ReceptionFormField>
+          </section>
+
+          <ReceptionFormField label="방문 목적" required>
+            <Textarea
+              aria-label="방문 목적"
+              className="min-h-24 resize-none bg-card"
+              value={visitPurpose}
+              onChange={(event) => setVisitPurpose(event.target.value)}
+            />
+          </ReceptionFormField>
+
+          <section className="grid grid-cols-3 gap-3">
+            <ReceptionFormField label="접수일">
+              <Input
+                aria-label="접수일"
+                value={formatShortOperatingDate(appointmentDate)}
+                readOnly
+                className="h-9 bg-card"
+              />
+            </ReceptionFormField>
+            <ReceptionFormField label="접수시간">
+              <Select
+                value={String(timeMinutes)}
+                onValueChange={(value) => setTimeMinutes(Number(value))}
+              >
+                <SelectTrigger aria-label="접수시간" className="w-full bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.minutes} value={String(option.minutes)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </ReceptionFormField>
+            <ReceptionFormField label="소요시간" required>
+              <Select value={duration} onValueChange={(value) => value && setDuration(value)}>
+                <SelectTrigger aria-label="소요시간" className="w-full bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {receptionDurationOptions.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </ReceptionFormField>
+          </section>
+
+          <ReceptionFormField label="접수 메모">
+            <Textarea
+              aria-label="접수 메모"
+              className="min-h-24 resize-none bg-card"
+              placeholder="접수 메모를 입력해주세요"
+              value={memo}
+              onChange={(event) => setMemo(event.target.value)}
+            />
+          </ReceptionFormField>
+        </div>
+      </ScrollArea>
+      <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t bg-card p-4">
+        <Button variant="ghost" onClick={() => setActiveDrawer(null)} disabled={submitting}>
+          취소
+        </Button>
+        <Button onClick={create} disabled={!canCreate}>
+          {submitting ? "저장 중" : "생성"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function ReceptionDraftTaskDrawer({
   selection,
   veterinarians = allVeterinarians,
@@ -5008,6 +5667,7 @@ function ReceptionDraftTaskDrawer({
       : unassignedVeterinarianValue;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWeightKg(formatPatientWeightKgInput(patient?.weightKg));
   }, [patient?.id, patient?.weightKg]);
 
@@ -5261,6 +5921,9 @@ export function ReceptionDrawer() {
   const applyAppointmentCheckIn = useReceptionStore(
     (state) => state.applyAppointmentCheckIn,
   );
+  const applyAppointmentCreate = useReceptionStore(
+    (state) => state.applyAppointmentCreate,
+  );
   const applyWalkInCheckIn = useReceptionStore(
     (state) => state.applyWalkInCheckIn,
   );
@@ -5273,6 +5936,9 @@ export function ReceptionDrawer() {
   );
   const createWalkInCheckIn = useReceptionStore(
     (state) => state.createWalkInCheckIn,
+  );
+  const persistedCalendarAppointments = useReceptionStore(
+    (state) => state.persistedCalendarAppointments,
   );
   const requestReceptionReadRetry = useReceptionStore(
     (state) => state.requestReceptionReadRetry,
@@ -5340,8 +6006,11 @@ export function ReceptionDrawer() {
   );
   const appointments = useMemo(
     () =>
-      getTodayAppointments(draftCheckIns, [], { operatingDate, workspaceId }),
-    [draftCheckIns, operatingDate, workspaceId],
+      getTodayAppointments(draftCheckIns, persistedCalendarAppointments, {
+        operatingDate,
+        workspaceId,
+      }),
+    [draftCheckIns, operatingDate, persistedCalendarAppointments, workspaceId],
   );
   useEffect(() => {
     if (!activeDrawer || activeDrawer.subtitle) return;
@@ -5448,6 +6117,27 @@ export function ReceptionDrawer() {
     );
   }
 
+  if (activeDrawer?.type === "reception-reservation-form") {
+    return (
+      <ReceptionReservationFormDrawer
+        appointments={appointments}
+        operatingDate={operatingDate}
+        patientSummaries={patientSummaries}
+        todayDate={getWorkspaceOperatingDate(workspaceId)}
+        veterinarians={veterinarians}
+        workspaceId={workspaceId}
+        onCreate={(appointment) => {
+          applyAppointmentCreate(appointment);
+          requestReceptionReadRetry();
+          setActiveDrawer({
+            type: "reception-appointment",
+            id: appointment.id,
+          });
+        }}
+      />
+    );
+  }
+
   if (activeDrawer?.type === "reception-draft-task" && calendarDraftSelection) {
     return (
       <ReceptionDraftTaskDrawer
@@ -5458,7 +6148,8 @@ export function ReceptionDrawer() {
   }
 
   const selectedAppointment =
-    activeDrawer?.type === "reception-appointment"
+    activeDrawer?.type === "reception-appointment" ||
+    activeDrawer?.type === "reception-appointment-check-in-form"
       ? appointments.find((appointment) => appointment.id === activeDrawer.id)
       : undefined;
   const selectedDrawerEncounter =
@@ -5553,13 +6244,6 @@ export function ReceptionDrawer() {
     selectedEncounter &&
     (selectedEncounter.status === "waiting" ||
       selectedEncounter.status === "in_consultation");
-  const handleAppointmentCheckIn = async (
-    appointment: Appointment,
-    checkIn: ReceptionAppointmentCheckInRecord,
-  ) => {
-    applyAppointmentCheckIn({ appointment, checkIn });
-    setActiveDrawer(null);
-  };
   const handleCancelSelectedEncounter = async () => {
     if (!selectedEncounter || cancelSubmitting) return;
 
@@ -5591,6 +6275,42 @@ export function ReceptionDrawer() {
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         환자를 선택해 주세요.
       </div>
+    );
+  }
+
+  if (
+    activeDrawer?.type === "reception-appointment-check-in-form" &&
+    selectedAppointment
+  ) {
+    return (
+      <ReceptionAppointmentCheckInFormDrawer
+        appointment={selectedAppointment}
+        currentOperatingMinutes={currentOperatingMinutes}
+        guardian={guardian}
+        patient={patient}
+        veterinarians={veterinarians}
+        workspaceId={workspaceId}
+        onCheckIn={(checkIn, weightKg) => {
+          applyAppointmentCheckIn({ appointment: selectedAppointment, checkIn });
+          if (weightKg !== undefined) {
+            updatePatient(patient.id, { weightKg });
+          }
+          requestReceptionReadRetry();
+          saveChartLiveEncounterHandoff({
+            encounter: checkIn.encounter,
+            patient: weightKg === undefined ? patient : { ...patient, weightKg },
+            primaryGuardian: guardian,
+            veterinarianName: getStaffDisplayName(
+              checkIn.encounter.primaryVeterinarianId,
+              veterinarians,
+            ),
+          });
+          setActiveDrawer({
+            type: "reception-encounter",
+            id: checkIn.encounter.id,
+          });
+        }}
+      />
     );
   }
 
@@ -5794,20 +6514,9 @@ export function ReceptionDrawer() {
             <Button
               onClick={() => {
                 if (selectedAppointment) {
-                  void submitAppointmentCheckIn({
-                    actorRole: authSession?.role,
-                    appointmentId: selectedAppointment.id,
-                    workspaceId,
-                  }).then((result) => {
-                    if (!result.ok) {
-                      toast.error(getAppointmentCheckInRouteErrorMessage(result));
-                      return;
-                    }
-
-                    void handleAppointmentCheckIn(
-                      selectedAppointment,
-                      result.checkIn,
-                    );
+                  setActiveDrawer({
+                    type: "reception-appointment-check-in-form",
+                    id: selectedAppointment.id,
                   });
                   return;
                 }
@@ -5825,7 +6534,7 @@ export function ReceptionDrawer() {
                 selectedAppointment && selectedAppointment.status !== "confirmed",
               )}
             >
-              {selectedAppointment ? "접수 처리" : "생성"}
+              {selectedAppointment ? "접수하기" : "생성"}
             </Button>
           ) : null}
         </div>
