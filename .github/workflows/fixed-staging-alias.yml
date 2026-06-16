@@ -26,13 +26,7 @@ jobs:
     name: Update fixed staging alias
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.deployment_status.state == 'success' &&
-        (
-          github.ref_name == 'staging' ||
-          github.event.deployment.ref == 'staging'
-        )
-      )
+      github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -51,6 +45,7 @@ jobs:
       - name: Resolve deployment URL
         env:
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.event.deployment.sha || github.sha }}
           DEPLOYMENT_STATUS_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
           DISPATCH_DEPLOYMENT_URL: ${{ github.event.inputs.deployment_url }}
           DISPATCH_DRY_RUN: ${{ github.event.inputs.dry_run }}
@@ -60,6 +55,24 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             deployment_url="${DISPATCH_DEPLOYMENT_URL:-https://$STAGING_BRANCH_ALIAS}"
           else
+            git fetch --no-tags --depth=1 origin staging
+            staging_sha="$(git rev-parse origin/staging)"
+
+            if [ -z "$EVENT_SHA" ]; then
+              echo "Deployment status event did not include a commit SHA; leaving fixed staging unchanged."
+              echo "SHOULD_UPDATE_ALIAS=false" >> "$GITHUB_ENV"
+              exit 0
+            fi
+
+            echo "Deployment SHA: $EVENT_SHA"
+            echo "Current origin/staging SHA: $staging_sha"
+
+            if [ "$EVENT_SHA" != "$staging_sha" ]; then
+              echo "Deployment is not the current staging commit; leaving fixed staging unchanged."
+              echo "SHOULD_UPDATE_ALIAS=false" >> "$GITHUB_ENV"
+              exit 0
+            fi
+
             deployment_url="$DEPLOYMENT_STATUS_URL"
           fi
 
@@ -69,6 +82,7 @@ jobs:
           fi
 
           echo "VERCEL_DEPLOYMENT_URL=$deployment_url" >> "$GITHUB_ENV"
+          echo "SHOULD_UPDATE_ALIAS=true" >> "$GITHUB_ENV"
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DISPATCH_DRY_RUN" = "true" ]; then
             echo "ALIAS_SCRIPT_ARGS=--dry-run" >> "$GITHUB_ENV"
@@ -77,6 +91,7 @@ jobs:
           fi
 
       - name: Update alias
+        if: env.SHOULD_UPDATE_ALIAS == 'true'
         env:
           VERCEL_TOKEN: ${{secrets.VERCEL_TOKEN}}
         run: node scripts/update-fixed-staging-alias.mjs $ALIAS_SCRIPT_ARGS
