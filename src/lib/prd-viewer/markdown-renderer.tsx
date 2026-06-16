@@ -13,7 +13,7 @@ function normalizeDocsPath(href: string, sourcePath: string): string | null {
   const cleanHref = href.split("#")[0]?.trim();
   if (!cleanHref || !cleanHref.endsWith(".md")) return null;
 
-  if (cleanHref.startsWith("docs/product/")) {
+  if (cleanHref.startsWith("docs/")) {
     return cleanHref;
   }
 
@@ -31,7 +31,7 @@ function resolveHref(href: string, sourcePath: string): string {
   const slug = normalized ? findDocSlugBySourcePath(normalized) : undefined;
 
   if (slug) {
-    return `/prd?doc=${encodeURIComponent(slug)}`;
+    return `/docs?doc=${encodeURIComponent(slug)}`;
   }
 
   return href;
@@ -66,7 +66,7 @@ function renderInline(text: string, sourcePath: string, keyPrefix: string) {
       const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
       if (linkMatch) {
         const href = resolveHref(linkMatch[2], sourcePath);
-        const isInternal = href.startsWith("/prd");
+        const isInternal = href.startsWith("/docs");
         nodes.push(
           <Link
             className="font-medium text-zinc-950 underline decoration-zinc-300 underline-offset-4 hover:decoration-zinc-950"
@@ -116,6 +116,79 @@ function isBlockStart(line: string, nextLine?: string) {
     /^\d+\.\s+/.test(trimmed) ||
     /^---+$/.test(trimmed) ||
     (trimmed.includes("|") && !!nextLine && isTableSeparator(nextLine))
+  );
+}
+
+function extractMermaidLabel(raw: string) {
+  const bracketLabel = /[A-Za-z0-9_-]+\["([^"]+)"\]/.exec(raw);
+  if (bracketLabel) return bracketLabel[1];
+
+  return raw.replace(/["[\]{}()]/g, "").replace(/_/g, " ").trim();
+}
+
+function renderMermaidPreview(code: string, key: string) {
+  const lines = code
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("%%"));
+  const mode = lines[0] ?? "mermaid";
+  const body = lines.slice(1);
+
+  const flowEdges = body
+    .filter((line) => line.includes("-->"))
+    .map((line) => line.split("-->").map((part) => extractMermaidLabel(part)));
+  const erRows = body
+    .filter((line) => line.includes(":"))
+    .map((line) => {
+      const [relation, label = "relates"] = line.split(":");
+      return {
+        relation: relation.trim().replace(/\s+/g, " "),
+        label: label.trim(),
+      };
+    });
+
+  return (
+    <figure className="my-6 overflow-hidden rounded-lg border border-zinc-200 bg-white" key={key}>
+      <figcaption className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50 px-4 py-2">
+        <span className="text-[12px] font-semibold text-zinc-700">학습 다이어그램</span>
+        <span className="font-mono text-[11px] text-zinc-500">{mode}</span>
+      </figcaption>
+
+      {mode.startsWith("flowchart") && flowEdges.length > 0 ? (
+        <div className="space-y-3 px-4 py-4">
+          {flowEdges.map((edge, edgeIndex) => (
+            <div className="flex flex-wrap items-center gap-2" key={`${key}-edge-${edgeIndex}`}>
+              {edge.map((node, nodeIndex) => (
+                <div className="contents" key={`${key}-node-${edgeIndex}-${nodeIndex}`}>
+                  {nodeIndex > 0 ? <span className="text-[13px] text-zinc-400">→</span> : null}
+                  <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-[12px] font-medium text-zinc-800">
+                    {node}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : mode === "erDiagram" && erRows.length > 0 ? (
+        <div className="divide-y divide-zinc-100 px-4 py-2">
+          {erRows.map((row, rowIndex) => (
+            <div className="grid gap-2 py-3 text-[12px] sm:grid-cols-[minmax(0,1fr)_140px]" key={`${key}-er-${rowIndex}`}>
+              <code className="rounded bg-zinc-50 px-2 py-1 text-zinc-700">{row.relation}</code>
+              <span className="font-medium text-zinc-600">{row.label}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <details className="border-t border-zinc-200 bg-zinc-950 text-zinc-50">
+        <summary className="cursor-pointer px-4 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-400">
+          Mermaid source
+        </summary>
+        <pre className="overflow-x-auto p-4 text-[12px] leading-6">
+          <code>{code}</code>
+        </pre>
+      </details>
+    </figure>
   );
 }
 
@@ -197,21 +270,25 @@ export function MarkdownRenderer({ markdown, sourcePath }: MarkdownRendererProps
 
       if (index < lines.length) index += 1;
 
-      blocks.push(
-        <figure
-          className="my-5 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 text-zinc-50"
-          key={`code-${blockIndex}`}
-        >
-          {language ? (
-            <figcaption className="border-b border-zinc-800 px-4 py-2 text-[11px] uppercase tracking-[0.08em] text-zinc-400">
-              {language}
-            </figcaption>
-          ) : null}
-          <pre className="overflow-x-auto p-4 text-[12px] leading-6">
-            <code>{codeLines.join("\n")}</code>
-          </pre>
-        </figure>
-      );
+      if (language === "mermaid") {
+        blocks.push(renderMermaidPreview(codeLines.join("\n"), `code-${blockIndex}`));
+      } else {
+        blocks.push(
+          <figure
+            className="my-5 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 text-zinc-50"
+            key={`code-${blockIndex}`}
+          >
+            {language ? (
+              <figcaption className="border-b border-zinc-800 px-4 py-2 text-[11px] uppercase tracking-[0.08em] text-zinc-400">
+                {language}
+              </figcaption>
+            ) : null}
+            <pre className="overflow-x-auto p-4 text-[12px] leading-6">
+              <code>{codeLines.join("\n")}</code>
+            </pre>
+          </figure>
+        );
+      }
       blockIndex += 1;
       continue;
     }

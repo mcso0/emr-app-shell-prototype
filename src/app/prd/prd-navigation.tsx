@@ -2,14 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { PrdDocEntry } from "@/lib/prd-viewer/registry";
+import { docsSections, type DocsSectionKey, type PrdDocEntry } from "@/lib/prd-viewer/registry";
 
 interface PrdNavigationProps {
   groups: Array<{ group: string; docs: PrdDocEntry[] }>;
   activeSlug: string;
+  activeSection: DocsSectionKey;
 }
 
-export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
+export function PrdNavigation({ groups, activeSlug, activeSection }: PrdNavigationProps) {
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -28,7 +29,26 @@ export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
   }, [groups, normalizedQuery]);
 
   return (
-    <nav aria-label="PRD documents" className="flex min-h-0 flex-1 flex-col">
+    <nav aria-label="CLAiR Docs documents" className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg border border-zinc-200 bg-white p-1">
+        {docsSections.map((section) => {
+          const isActive = section.key === activeSection;
+
+          return (
+            <Link
+              aria-current={isActive ? "page" : undefined}
+              className={`rounded-md px-2 py-1.5 text-center text-[12px] font-medium transition ${
+                isActive ? "bg-zinc-950 text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
+              }`}
+              href={`/docs?doc=${encodeURIComponent(section.defaultSlug)}`}
+              key={section.key}
+            >
+              {section.label}
+            </Link>
+          );
+        })}
+      </div>
+
       <label className="mb-2 text-[12px] font-medium text-zinc-600" htmlFor="prd-doc-search">
         문서 검색
       </label>
@@ -36,7 +56,7 @@ export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
         className="mb-4 h-9 rounded-md border border-zinc-200 bg-white px-3 text-[13px] outline-none transition focus:border-zinc-500"
         id="prd-doc-search"
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="PRD, domain, role..."
+        placeholder="encounter, role, study..."
         type="search"
         value={query}
       />
@@ -59,7 +79,7 @@ export function PrdNavigation({ groups, activeSlug }: PrdNavigationProps) {
                           ? "bg-zinc-950 font-medium text-white"
                           : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950"
                       }`}
-                      href={`/prd?doc=${encodeURIComponent(doc.slug)}`}
+                      href={`/docs?doc=${encodeURIComponent(doc.slug)}`}
                       key={doc.slug}
                     >
                       {doc.title}

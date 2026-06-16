@@ -3,6 +3,7 @@ import path from "node:path";
 import { cache } from "react";
 import {
   defaultPrdDocSlug,
+  getDefaultDocForSection,
   getDefaultPrdDoc,
   getPrdDocBySlug,
   prdDocRegistry,
@@ -21,7 +22,7 @@ export interface LoadedPrdDoc {
   toc: PrdTocItem[];
 }
 
-const productDocsRoot = path.join(process.cwd(), "docs", "product");
+const docsRoot = path.join(process.cwd(), "docs");
 
 export function slugifyHeading(text: string): string {
   const slug = text
@@ -69,33 +70,35 @@ export function extractToc(markdown: string): PrdTocItem[] {
 }
 
 function resolveSafeSourcePath(entry: PrdDocEntry) {
-  const productRelativePath = entry.sourcePath.replace(/^docs\/product\//, "");
-  const fullPath = path.resolve(productDocsRoot, productRelativePath);
+  const docsRelativePath = entry.sourcePath.replace(/^docs\//, "");
+  const fullPath = path.resolve(docsRoot, docsRelativePath);
 
-  if (!fullPath.startsWith(productDocsRoot)) {
-    throw new Error(`PRD viewer registry entry points outside docs/product: ${entry.sourcePath}`);
+  if (!fullPath.startsWith(`${docsRoot}${path.sep}`)) {
+    throw new Error(`Docs viewer registry entry points outside docs: ${entry.sourcePath}`);
   }
 
   return fullPath;
 }
 
-export const loadPrdDoc = cache(async (slug: string | undefined): Promise<LoadedPrdDoc | null> => {
-  const entry = getPrdDocBySlug(slug) ?? (slug ? undefined : getDefaultPrdDoc());
+export const loadPrdDoc = cache(
+  async (slug: string | undefined, sectionKey?: string): Promise<LoadedPrdDoc | null> => {
+    const entry = getPrdDocBySlug(slug) ?? (slug ? undefined : sectionKey ? getDefaultDocForSection(sectionKey) : getDefaultPrdDoc());
 
-  if (!entry) return null;
+    if (!entry) return null;
 
-  const raw = await readFile(resolveSafeSourcePath(entry), "utf8");
-  const markdown = stripFrontmatter(raw);
+    const raw = await readFile(resolveSafeSourcePath(entry), "utf8");
+    const markdown = stripFrontmatter(raw);
 
-  return {
-    entry,
-    markdown,
-    toc: extractToc(markdown),
-  };
-});
+    return {
+      entry,
+      markdown,
+      toc: extractToc(markdown),
+    };
+  }
+);
 
-export function getResolvedPrdSlug(slug: string | undefined): string {
-  return getPrdDocBySlug(slug)?.slug ?? (slug ? slug : defaultPrdDocSlug);
+export function getResolvedPrdSlug(slug: string | undefined, sectionKey?: string): string {
+  return getPrdDocBySlug(slug)?.slug ?? (slug ? slug : sectionKey ? getDefaultDocForSection(sectionKey).slug : defaultPrdDocSlug);
 }
 
 export function findDocSlugBySourcePath(sourcePath: string): string | undefined {

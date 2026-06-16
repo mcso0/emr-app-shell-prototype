@@ -1,18 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MarkdownRenderer } from "@/lib/prd-viewer/markdown-renderer";
-import { getPrdDocGroups, type PrdDocEntry } from "@/lib/prd-viewer/registry";
+import {
+  docsSections,
+  getDocsSection,
+  getPrdDocBySlug,
+  getPrdDocGroups,
+  type DocsSectionKey,
+  type PrdDocEntry,
+} from "@/lib/prd-viewer/registry";
 import { getResolvedPrdSlug, loadPrdDoc } from "@/lib/prd-viewer/doc-reader";
 import { PrdNavigation } from "./prd-navigation";
 
 export const metadata: Metadata = {
-  title: "PRD Viewer",
-  description: "Read-only viewer for canonical CLAiR EMR product Markdown.",
+  title: "CLAiR Docs",
+  description: "Read-only viewer for curated CLAiR EMR Markdown docs.",
 };
 
 interface PrdPageProps {
   searchParams: Promise<{
     doc?: string | string[];
+    section?: string | string[];
   }>;
 }
 
@@ -31,19 +39,23 @@ function SourcePath({ doc }: { doc: PrdDocEntry }) {
 export default async function PrdPage({ searchParams }: PrdPageProps) {
   const params = await searchParams;
   const requestedSlug = normalizeDocParam(params.doc);
-  const loadedDoc = await loadPrdDoc(requestedSlug);
-  const resolvedSlug = loadedDoc?.entry.slug ?? getResolvedPrdSlug(requestedSlug);
-  const groups = getPrdDocGroups();
+  const requestedSection = normalizeDocParam(params.section);
+  const sectionFromParam = getDocsSection(requestedSection);
+  const loadedDoc = await loadPrdDoc(requestedSlug, sectionFromParam?.key);
+  const resolvedSlug = loadedDoc?.entry.slug ?? getResolvedPrdSlug(requestedSlug, sectionFromParam?.key);
+  const activeSection = loadedDoc?.entry.section ?? getPrdDocBySlug(resolvedSlug)?.section ?? sectionFromParam?.key ?? "product";
+  const activeSectionMeta = docsSections.find((section) => section.key === activeSection) ?? docsSections[0];
+  const groups = getPrdDocGroups(activeSection as DocsSectionKey);
 
   return (
     <main className="min-h-screen bg-white text-zinc-950">
       <div className="flex h-screen overflow-hidden">
         <aside className="flex w-[292px] shrink-0 flex-col border-r border-zinc-200 bg-zinc-50/70 px-5 py-5">
-          <Link className="mb-6 block" href="/prd">
+          <Link className="mb-6 block" href="/docs">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">CLAiR EMR</p>
-            <h1 className="mt-1 text-[18px] font-semibold leading-6 text-zinc-950">PRD Viewer</h1>
+            <h1 className="mt-1 text-[18px] font-semibold leading-6 text-zinc-950">CLAiR Docs</h1>
           </Link>
-          <PrdNavigation activeSlug={resolvedSlug} groups={groups} />
+          <PrdNavigation activeSection={activeSection as DocsSectionKey} activeSlug={resolvedSlug} groups={groups} />
         </aside>
 
         <section className="min-w-0 flex-1 overflow-y-auto">
@@ -51,9 +63,9 @@ export default async function PrdPage({ searchParams }: PrdPageProps) {
             <article className="min-w-0">
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-4">
                 <div>
-                  <p className="text-[12px] font-medium text-zinc-500">Read-only product docs</p>
+                  <p className="text-[12px] font-medium text-zinc-500">{activeSectionMeta.title} docs</p>
                   <p className="mt-1 text-[13px] leading-5 text-zinc-600">
-                    Markdown remains canonical in <code className="font-mono">docs/product</code>.
+                    Markdown remains canonical in <code className="font-mono">docs/</code>. {activeSectionMeta.description}
                   </p>
                 </div>
                 <Link
@@ -74,16 +86,16 @@ export default async function PrdPage({ searchParams }: PrdPageProps) {
               ) : (
                 <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10">
                   <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Document not found</p>
-                  <h2 className="mt-2 text-[22px] font-semibold text-zinc-950">등록되지 않은 PRD 문서야.</h2>
+                  <h2 className="mt-2 text-[22px] font-semibold text-zinc-950">등록되지 않은 클레어 독스 문서야.</h2>
                   <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-zinc-600">
-                    `/prd`는 registry에 등록된 <code className="font-mono">docs/product</code> Markdown만 읽어.
+                    클레어 독스는 registry에 등록된 curated <code className="font-mono">docs/</code> Markdown만 읽어.
                     임의 파일 경로는 열지 않는다.
                   </p>
                   <Link
                     className="mt-6 inline-flex rounded-md bg-zinc-950 px-4 py-2 text-[13px] font-medium text-white"
-                    href="/prd"
+                    href="/docs"
                   >
-                    기본 PRD로 이동
+                    기본 문서로 이동
                   </Link>
                 </div>
               )}
