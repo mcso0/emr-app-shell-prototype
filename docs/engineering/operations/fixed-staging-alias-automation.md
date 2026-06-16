@@ -23,7 +23,7 @@ This runbook defines the repo-owned automation that keeps the fixed staging URL 
 
 - Workflow: `.github/workflows/fixed-staging-alias.yml`
 - Script: `scripts/update-fixed-staging-alias.mjs`
-- Trigger: GitHub `deployment_status` success event where the GitHub ref name or deployment ref is `staging`
+- Trigger: GitHub `deployment_status` success event; the workflow updates the alias only when the deployment SHA matches current `origin/staging`
 - Action: inspect the successful Vercel deployment URL, then run `vercel alias set <deployment-url> emr-app-shell-prototype-staging-mcso0s-projects.vercel.app`
 
 The script rejects:
