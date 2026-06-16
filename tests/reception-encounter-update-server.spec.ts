@@ -7,7 +7,8 @@ import {
   createSupabaseReceptionEncounterUpdateGateway,
 } from "../src/features/reception/server-encounter-update-core";
 
-const encounterId = "encounter-coco-260501";
+const encounterId = "encounter-haru-260430";
+const nonEditableEncounterId = "encounter-coco-260501";
 
 const validInput = {
   department: "내과",
@@ -102,6 +103,18 @@ test("encounter update core validates editable state and weight", async () => {
     ok: false,
     status: 409,
     denialReason: "encounter_unavailable",
+  });
+
+  const nonEditable = await createReceptionEncounterUpdate({
+    actorUserId: "user-front-desk",
+    encounterId: nonEditableEncounterId,
+    input: validInput,
+    workspaceId: "clair-demo",
+  });
+  expect(nonEditable).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "encounter_not_editable",
   });
 
   const invalidWeight = await createReceptionEncounterUpdate({
