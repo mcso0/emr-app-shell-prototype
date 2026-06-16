@@ -12,7 +12,7 @@ source_docs:
   - "docs/product/roadmap/product-mvp-scope.md"
 dependencies:
   - "DEMO-DATA-PR-001"
-updated: "2026-06-12"
+updated: "2026-06-16"
 ---
 
 # Clinic Start State and Demo Operations
@@ -111,6 +111,18 @@ Stop and ask 승욱 before:
 - provider/payment/email/KakaoTalk/PACS/device integration
 
 ## Notes
+
+- 2026-06-16 DEN-507 scoped implementation note:
+  - Added an admin-only `세션 초기화` control in the Cheongdam workspace topbar for `workspace-clair-cheongdam`, positioned left of the notification icon with a divider before the original topbar actions.
+  - Added `POST /api/workspaces/[workspaceId]/demo/session-reset`, using the existing server session, actor identity, workspace permission adapter, and shared workspace mutation rate-limit boundary.
+  - Added Supabase RPC contract `public.clair_reset_cheongdam_demo_session(text, text)` for Cheongdam only. The RPC requires `auth.uid()`, rejects actor mismatch, requires `private.clair_is_workspace_admin(p_workspace_id)`, deletes daily-work rows across reception/chart/orders/fulfillment/billing, and only removes generated patient rows matching the registration-writer pattern `P-YYMMDD-XXXXXX`. Guardian deletion is limited to guardians that were linked to those generated patients and do not carry the `CD-G-*` seed code.
+  - Reset explicitly preserves workspaces, users, memberships, permission policies, service/order catalog, hospital-admin setup, external provider/payment/message state, and Cheongdam `CD-*` seed master records.
+  - Mock mode remains local-only: the button clears known browser demo/session keys and refreshes the home surface without claiming remote DB mutation. Supabase sessions may see the control because client-side role claims are not enough for workspace admin resolution; the route and RPC remain the authoritative admin gates.
+  - Focused verification covered TypeScript, reset core permission/RPC mapping, route/rate-limit source checks, migration source safety checks, and the home confirmation/control flow.
+  - Staging replay completed on 2026-06-16: final preview `dpl_3pZe4hU3iHdPiMpKkcFhDkSQGxii` built the API/UI route, Supabase staging applied the reset RPC, and marker `DEN507-STAGING-RESET-VERIFY-20260616T1518KST` was created across reception, chart, fulfillment, and billing flow tables before reset.
+  - Staging reset readback confirmed all marker counts returned to 0; Cheongdam seed guardians 25, seed patients 25, service items 12, and user memberships 6 remained; generated-patient pattern and daily-work/billing flow tables returned to 0.
+  - Staging replay found existing billing checkout references, so the reset RPC now also removes `billing_checkout_sessions`, `billing_checkout_session_invoices`, `billing_invoice_status_transition_events`, `invoice_adjustments`, and `payment_allocations` for the Cheongdam demo workspace.
+  - Closeout: `docs/completed/demo-data/2026-06-16-den-507-demo-session-reset-report.html`.
 
 - 2026-06-12 DEN-468/DEN-491 implementation note:
   - Cheongdam home, chart, lab, imaging, dispensing/treatment, inpatient, and billing modules now suppress legacy active daily-work fixtures and fixed May 2026 labels for `workspace-clair-cheongdam`.
