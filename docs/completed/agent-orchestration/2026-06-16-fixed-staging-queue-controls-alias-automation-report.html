@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>고정 스테이징 대기열 컨트롤 및 alias 자동화 결과</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8fafc;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #d8e0ec;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #edf2f7;
+        padding: 2px 6px;
+        font-size: 0.92em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>고정 스테이징 대기열 컨트롤 및 alias 자동화 결과</h1>
+      <p>
+        진료/차트와 조제/처치 좌측 대기열 헤더가 다시 compact 컨트롤 형태로 보이도록 정리했고,
+        staging 브랜치 배포가 완료되면 고정 staging URL이 최신 배포를 따라가도록 자동화 경로를 추가했다.
+      </p>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>대기열 정렬 버튼은 아이콘과 <code>요청순</code> 같은 짧은 텍스트만 보이도록 유지했다.</li>
+          <li>필터, 표시 옵션, 검색은 각각 아이콘 버튼, <code>M</code>/<code>S</code> 밀도 버튼, inline search 트리거로 동작한다.</li>
+          <li><code>현재 정렬:</code>, <code>필터: 전체 조건</code>, <code>표시 옵션: 기본</code> 같은 과거형 상태 문구가 주 컨트롤 이름으로 노출되지 않게 했다.</li>
+          <li>GitHub Action과 dry-run 가능한 스크립트로 fixed staging alias 업데이트를 자동화했다.</li>
+          <li>필요한 GitHub Secret과 배포 후 사람이 확인해야 하는 smoke checklist를 문서화했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npx tsc --noEmit --pretty false</code> 통과</li>
+          <li><code>npm run lint</code> 통과, 기존 warning 5개만 남음</li>
+          <li><code>npm run build</code> 통과</li>
+          <li>Focused Playwright: 진료/차트와 조제/처치 대기열 헤더 테스트 통과</li>
+          <li>Alias dry-run: staging branch alias 기준 실행 계획 검증 통과</li>
+          <li>로컬 브라우저 DOM 확인: 두 화면 모두 과거형 문구 count 0, inline search 열림</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 리스크</h2>
+        <ul>
+          <li>실제 GitHub Action alias 변경은 GitHub에 <code>VERCEL_TOKEN</code> secret이 설정된 뒤 staging deployment status 이벤트에서 확인해야 한다.</li>
+          <li>고정 staging은 Vercel Deployment Protection 또는 SSO 설정에 따라 브라우저 접근 방식이 달라질 수 있다.</li>
+          <li>Production alias와 <code>main</code> promote는 이번 범위에서 제외했다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

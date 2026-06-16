@@ -14,6 +14,7 @@
     "owner-os:dashboard": "node scripts/owner-os.mjs dashboard",
     "owner-os:eval": "node scripts/owner-os.mjs eval",
     "owner-os:packet:check": "node scripts/validate-owner-os-packets.mjs",
+    "release:staging-alias:dry-run": "node scripts/update-fixed-staging-alias.mjs --dry-run",
     "security:secrets": "node scripts/scan-secrets.mjs",
     "storybook": "storybook dev -p 6006 --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry"

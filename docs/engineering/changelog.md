@@ -2,6 +2,10 @@
 
 Use this file for small engineering-planning changes that do not need a standalone ADR or decision record.
 
+## 2026-06-16
+
+- `added`: Added fixed staging alias automation and smoke-check runbook so successful `staging` branch Vercel deployments can update `emr-app-shell-prototype-staging-mcso0s-projects.vercel.app` without committing secrets or touching production.
+
 ## 2026-05-31
 
 - `fixed`: DEN-368 routes demo string invoice ids through the mock billing persistence boundary even when a Supabase staging session is present, while preserving Supabase RPC usage for UUID invoices; fixed staging replay now passes proceed, unpaid, and paid billing actions.

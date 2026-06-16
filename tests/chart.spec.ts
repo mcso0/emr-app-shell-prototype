@@ -97,7 +97,23 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
     "/w/clair-demo/treatment?modulePanel=open&aside=history&right=open",
   );
 
-  await expect(page.getByText("진료 대기열")).toBeVisible();
+  const sidePanel = page.locator("aside").first();
+  await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
+  await expect(
+    sidePanel.getByTestId("order-queue-sort-control"),
+  ).toContainText("요청순");
+  await expect(
+    sidePanel.getByTestId("order-queue-sort-control"),
+  ).not.toContainText("현재 정렬");
+  await expect(
+    sidePanel.getByTestId("order-queue-filter-control"),
+  ).toHaveAttribute("aria-label", "대기열 필터");
+  await expect(
+    sidePanel.getByTestId("order-queue-density-control"),
+  ).toHaveText("M");
+  await sidePanel.getByTestId("order-queue-search-control").click();
+  await expect(sidePanel.getByLabel("진료 대기열 검색")).toBeVisible();
+  await page.keyboard.press("Escape");
   const selectedQueueCard = page.getByTestId(
     "order-queue-item-encounter-coco-260501",
   );

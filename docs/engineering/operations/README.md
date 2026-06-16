@@ -12,6 +12,7 @@ Use this README as the GitBook entry point for launch, staging, and operational-
 | --- | --- |
 | Release environment policy and deploy routing | `release-environment-policy.md` |
 | GitHub/Vercel PR preview and fixed staging automation plan | `github-vercel-release-automation-plan.md` |
+| Fixed staging alias automation and smoke checklist | `fixed-staging-alias-automation.md` |
 | Vercel Git integration and preview readiness check | `vercel-git-integration-preview-checks.md` |
 | Vercel Git integration approval and execution plan | `vercel-git-integration-execution-plan.md` |
 | Hobby/free staging branch release model | `hobby-free-staging-branch-release-plan.md` |
@@ -27,6 +28,7 @@ Use this README as the GitBook entry point for launch, staging, and operational-
 | --- | --- |
 | `release-environment-policy.md` | Operating policy for PR previews, fixed staging, production promote, secret/env safety, alias rules, and release rollback reporting. |
 | `github-vercel-release-automation-plan.md` | Current GitHub/Vercel setup observations and staged plan for PR preview, `main` fixed staging, and future production promote automation. |
+| `fixed-staging-alias-automation.md` | GitHub Action and script runbook for updating the fixed staging alias after successful `staging` branch Vercel deployments, plus post-deploy smoke checks. |
 | `vercel-git-integration-preview-checks.md` | Read-only DEN-447 verification of Vercel Git Integration evidence, missing UI-only checks, and safe next execution shape for PR preview validation. |
 | `vercel-git-integration-execution-plan.md` | DEN-447 follow-up execution plan for approval-gated Vercel Git Integration confirmation, PR preview validation, and non-change boundaries for fixed staging/production. |
 | `hobby-free-staging-branch-release-plan.md` | Current target release model for Hobby/free: PR Preview, long-lived `staging` branch for fixed staging, and `main` as Vercel Production. |
