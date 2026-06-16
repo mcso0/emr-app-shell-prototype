@@ -7,7 +7,7 @@ import {
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
 import { getOperatingDateFromIso } from "@/lib/emr-domain/demo-date";
 import { mockAppointments, mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
-import type { Appointment, Encounter, WaitingQueueEntry } from "@/types/emr-domain";
+import type { Appointment, Encounter, Guardian, Patient, WaitingQueueEntry } from "@/types/emr-domain";
 
 export type ReceptionCalendarReadGateway = {
   listReceptionDay(input: {
@@ -214,127 +214,207 @@ function mapCalendarRows(data: unknown): ReceptionCalendarReadRecord[] {
       const value = row as {
         appointment?: unknown;
         encounter?: unknown;
+        patient?: unknown;
+        primaryGuardian?: unknown;
+        primary_guardian?: unknown;
         queueEntry?: unknown;
         queue_entry?: unknown;
       };
       const appointment = mapAppointment(value.appointment);
       const encounter = mapEncounter(value.encounter);
+      const patient = mapPatient(value.patient);
+      const primaryGuardian = mapGuardian(value.primaryGuardian ?? value.primary_guardian);
       const queueEntry = mapQueueEntry(value.queueEntry ?? value.queue_entry);
 
       if (!appointment && !encounter) return null;
 
-      return { appointment: appointment ?? undefined, encounter: encounter ?? undefined, queueEntry: queueEntry ?? undefined };
+      return {
+        appointment: appointment ?? undefined,
+        encounter: encounter ?? undefined,
+        patient,
+        primaryGuardian,
+        queueEntry: queueEntry ?? undefined,
+      };
     })
     .filter((record): record is ReceptionCalendarReadRecord => Boolean(record));
 }
 
 function mapAppointment(value: unknown): Appointment | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<Appointment>;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const patientId = getString(row.patientId) ?? getString(row.patient_id);
+  const scheduledStartAt = getString(row.scheduledStartAt) ?? getString(row.scheduled_start_at);
+  const status = getString(row.status);
+  const createdAt = getString(row.createdAt) ?? getString(row.created_at);
+  const updatedAt = getString(row.updatedAt) ?? getString(row.updated_at);
 
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.patientId !== "string" ||
-    typeof row.scheduledStartAt !== "string" ||
-    typeof row.status !== "string" ||
-    typeof row.createdAt !== "string" ||
-    typeof row.updatedAt !== "string"
-  ) {
+  if (!id || !workspaceId || !patientId || !scheduledStartAt || !status || !createdAt || !updatedAt) {
     return null;
   }
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    patientId: row.patientId,
-    guardianId: getString(row.guardianId),
-    assignedVeterinarianId: getString(row.assignedVeterinarianId),
-    scheduledStartAt: row.scheduledStartAt,
-    scheduledEndAt: getString(row.scheduledEndAt),
-    visitPurpose: getString(row.visitPurpose),
-    symptomNote: getString(row.symptomNote),
-    status: row.status as Appointment["status"],
-    createdByUserId: getString(row.createdByUserId),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    id,
+    workspaceId,
+    patientId,
+    guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
+    assignedVeterinarianId:
+      getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id),
+    scheduledStartAt,
+    scheduledEndAt: getString(row.scheduledEndAt) ?? getString(row.scheduled_end_at),
+    visitPurpose: getString(row.visitPurpose) ?? getString(row.visit_purpose),
+    symptomNote: getString(row.symptomNote) ?? getString(row.symptom_note),
+    status: status as Appointment["status"],
+    createdByUserId: getString(row.createdByUserId) ?? getString(row.created_by_user_id),
+    createdAt,
+    updatedAt,
   };
 }
 
 function mapEncounter(value: unknown): Encounter | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<Encounter>;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const patientId = getString(row.patientId) ?? getString(row.patient_id);
+  const encounterNo = getString(row.encounterNo) ?? getString(row.encounter_no);
+  const status = getString(row.status);
+  const createdAt = getString(row.createdAt) ?? getString(row.created_at);
+  const updatedAt = getString(row.updatedAt) ?? getString(row.updated_at);
 
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.patientId !== "string" ||
-    typeof row.encounterNo !== "string" ||
-    typeof row.status !== "string" ||
-    typeof row.createdAt !== "string" ||
-    typeof row.updatedAt !== "string"
-  ) {
+  if (!id || !workspaceId || !patientId || !encounterNo || !status || !createdAt || !updatedAt) {
     return null;
   }
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    patientId: row.patientId,
-    guardianId: getString(row.guardianId),
-    appointmentId: getString(row.appointmentId),
-    primaryVeterinarianId: getString(row.primaryVeterinarianId),
-    encounterNo: row.encounterNo,
-    receptionType: row.receptionType,
+    id,
+    workspaceId,
+    patientId,
+    guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
+    appointmentId: getString(row.appointmentId) ?? getString(row.appointment_id),
+    primaryVeterinarianId:
+      getString(row.primaryVeterinarianId) ?? getString(row.primary_veterinarian_id),
+    encounterNo,
+    receptionType: (getString(row.receptionType) ??
+      getString(row.reception_type)) as Encounter["receptionType"],
     department: getString(row.department),
-    durationMinutes: getNumber(row.durationMinutes),
-    chiefComplaint: getString(row.chiefComplaint),
-    visitPurpose: getString(row.visitPurpose),
-    receptionMemo: getString(row.receptionMemo),
-    status: row.status as Encounter["status"],
-    checkedInAt: getString(row.checkedInAt),
-    checkedInByUserId: getString(row.checkedInByUserId),
-    startedAt: getString(row.startedAt),
-    completedAt: getString(row.completedAt),
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    durationMinutes: getNumber(row.durationMinutes) ?? getNumber(row.duration_minutes),
+    chiefComplaint: getString(row.chiefComplaint) ?? getString(row.chief_complaint),
+    visitPurpose: getString(row.visitPurpose) ?? getString(row.visit_purpose),
+    receptionMemo: getString(row.receptionMemo) ?? getString(row.reception_memo),
+    status: status as Encounter["status"],
+    checkedInAt: getString(row.checkedInAt) ?? getString(row.checked_in_at),
+    checkedInByUserId: getString(row.checkedInByUserId) ?? getString(row.checked_in_by_user_id),
+    startedAt: getString(row.startedAt) ?? getString(row.started_at),
+    completedAt: getString(row.completedAt) ?? getString(row.completed_at),
+    createdAt,
+    updatedAt,
   };
 }
 
 function mapQueueEntry(value: unknown): WaitingQueueEntry | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<WaitingQueueEntry>;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const encounterId = getString(row.encounterId) ?? getString(row.encounter_id);
+  const queueType = getString(row.queueType) ?? getString(row.queue_type);
+  const status = getString(row.status);
+  const enteredAt = getString(row.enteredAt) ?? getString(row.entered_at);
 
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.encounterId !== "string" ||
-    typeof row.queueType !== "string" ||
-    typeof row.status !== "string" ||
-    typeof row.priority !== "string" ||
-    typeof row.enteredAt !== "string"
-  ) {
+  if (!id || !workspaceId || !encounterId || !queueType || !status || !enteredAt) {
     return null;
   }
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    encounterId: row.encounterId,
-    queueType: row.queueType as WaitingQueueEntry["queueType"],
-    status: row.status as WaitingQueueEntry["status"],
-    priority: row.priority as WaitingQueueEntry["priority"],
-    sortOrder: getNumber(row.sortOrder),
-    enteredAt: row.enteredAt,
-    calledAt: getString(row.calledAt),
-    finishedAt: getString(row.finishedAt),
+    id,
+    workspaceId,
+    encounterId,
+    queueType: queueType as WaitingQueueEntry["queueType"],
+    status: status as WaitingQueueEntry["status"],
+    priority: (getString(row.priority) as WaitingQueueEntry["priority"] | undefined) ?? "normal",
+    sortOrder: getNumber(row.sortOrder) ?? getNumber(row.sort_order),
+    enteredAt,
+    calledAt: getString(row.calledAt) ?? getString(row.called_at),
+    finishedAt: getString(row.finishedAt) ?? getString(row.finished_at),
   };
 }
 
+function mapPatient(value: unknown): Patient | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const patientNo = getString(row.patientNo) ?? getString(row.patient_no);
+  const name = getString(row.name);
+  const species = getString(row.species);
+  const sex = getString(row.sex);
+  const status = getString(row.status);
+
+  if (!id || !workspaceId || !patientNo || !name || !species || !sex || !status) {
+    return undefined;
+  }
+
+  return {
+    id,
+    workspaceId,
+    patientNo,
+    name,
+    species: species as Patient["species"],
+    breed: getString(row.breed),
+    birthDate: getString(row.birthDate) ?? getString(row.birth_date),
+    estimatedAgeText: getString(row.estimatedAgeText) ?? getString(row.estimated_age_text),
+    sex: sex as Patient["sex"],
+    neutered: getBoolean(row.neutered),
+    microchipNo: getString(row.microchipNo) ?? getString(row.microchip_no),
+    patientRegistrationNo:
+      getString(row.patientRegistrationNo) ?? getString(row.patient_registration_no),
+    allergyNote: getString(row.allergyNote) ?? getString(row.allergy_note),
+    specialNote: getString(row.specialNote) ?? getString(row.special_note),
+    handlingCautionNote:
+      getString(row.handlingCautionNote) ?? getString(row.handling_caution_note),
+    handlingCautionLocked:
+      getBoolean(row.handlingCautionLocked) ?? getBoolean(row.handling_caution_locked) ?? true,
+    status: status as Patient["status"],
+    createdAt: getString(row.createdAt) ?? getString(row.created_at) ?? new Date(0).toISOString(),
+    updatedAt: getString(row.updatedAt) ?? getString(row.updated_at) ?? new Date(0).toISOString(),
+  };
+}
+
+function mapGuardian(value: unknown): Guardian | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const name = getString(row.name);
+
+  if (!id || !workspaceId || !name) return undefined;
+
+  return {
+    id,
+    workspaceId,
+    name,
+    mobilePhone: getString(row.mobilePhone) ?? getString(row.mobile_phone),
+    phone: getString(row.phone),
+    email: getString(row.email),
+    birthDate: getString(row.birthDate) ?? getString(row.birth_date),
+    address: getString(row.address),
+    occupation: getString(row.occupation),
+    memo: getString(row.memo),
+    createdAt: getString(row.createdAt) ?? getString(row.created_at) ?? new Date(0).toISOString(),
+    updatedAt: getString(row.updatedAt) ?? getString(row.updated_at) ?? new Date(0).toISOString(),
+  };
+}
+
+function getBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : undefined;
+}
+
 function getString(value: unknown) {
-  return typeof value === "string" ? value : undefined;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function getNumber(value: unknown) {
-  return typeof value === "number" ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }

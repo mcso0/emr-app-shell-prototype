@@ -125,7 +125,7 @@ begin
     'consultation',
     'waiting',
     'normal',
-    v_now
+    v_event_time
   )
   returning id into v_queue_entry_id;
 

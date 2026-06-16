@@ -2066,6 +2066,169 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
   await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
 });
 
+test("Cheongdam reception readback hydrates live patient profiles after refresh", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const patientId = "49121000-0000-4000-8000-000000000071";
+  const guardianId = "49120000-0000-4000-8000-000000000071";
+  const veterinarianId = "49110000-0000-4000-8000-000000000003";
+  const encounterId = "encounter-cheongdam-readback-luna";
+  const persistedWalkIn = {
+    encounter: {
+      id: encounterId,
+      workspaceId,
+      patientId,
+      guardianId,
+      primaryVeterinarianId: veterinarianId,
+      encounterNo: "E-260616-LUNA",
+      receptionType: "walk_in",
+      department: "내과",
+      durationMinutes: 30,
+      chiefComplaint: "DEN-512 refresh readback",
+      visitPurpose: "DEN-512 refresh readback",
+      status: "waiting",
+      checkedInAt: "2026-06-16T14:15:00+09:00",
+      createdAt: "2026-06-16T14:15:00+09:00",
+      updatedAt: "2026-06-16T14:15:00+09:00",
+    },
+    queueEntry: {
+      id: "queue-cheongdam-readback-luna",
+      workspaceId,
+      encounterId,
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      sortOrder: 1,
+      enteredAt: "2026-06-16T14:15:00+09:00",
+    },
+  };
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: veterinarianId,
+              displayName: "청담 원장",
+              initial: "청",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [persistedWalkIn],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          date: "2026-06-16",
+          records: [persistedWalkIn],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      const query =
+        new URL(route.request().url()).searchParams.get("query") ?? "";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "reception-patient-guardian-lookup",
+          patients:
+            query === ""
+              ? [
+                  {
+                    patient: {
+                      id: patientId,
+                      workspaceId,
+                      patientNo: "CD-P-071",
+                      name: "루나",
+                      species: "cat",
+                      breed: "Korean Shorthair",
+                      sex: "female",
+                      neutered: true,
+                      handlingCautionLocked: true,
+                      status: "active",
+                      createdAt: "2026-06-16T00:00:00+09:00",
+                      updatedAt: "2026-06-16T00:00:00+09:00",
+                    },
+                    primaryGuardian: {
+                      id: guardianId,
+                      workspaceId,
+                      name: "박지유",
+                      mobilePhone: "010-7100-0071",
+                      createdAt: "2026-06-16T00:00:00+09:00",
+                      updatedAt: "2026-06-16T00:00:00+09:00",
+                    },
+                    searchText: "루나 박지유 010-7100-0071",
+                  },
+                ]
+              : [],
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  const sidePanel = page.locator("aside").first();
+  const patientCard = sidePanel.getByTestId(`patient-card-${patientId}`);
+  await expect(patientCard).toContainText("루나");
+  await expect(patientCard).toContainText("박지유");
+  await expect(patientCard).toContainText("DEN-512 refresh readback");
+  await expect(patientCard).toContainText("청담 원장");
+  await expect(page.getByTestId(`walkin-card-${encounterId}`)).toContainText(
+    "루나",
+  );
+  await expect(page.getByTestId(`walkin-card-${encounterId}`)).toContainText(
+    "14:15",
+  );
+
+  await page.reload();
+
+  await expect(patientCard).toContainText("루나");
+  await expect(patientCard).toContainText("청담 원장");
+  await expect(page.getByTestId(`walkin-card-${encounterId}`)).toContainText(
+    "DEN-512 refresh readback",
+  );
+});
+
 test("Cheongdam walk-in create failure does not say the selected DB patient is missing", async ({
   page,
 }) => {

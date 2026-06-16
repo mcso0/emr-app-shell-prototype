@@ -1,7 +1,9 @@
-import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
+import type { Encounter, Guardian, Patient, WaitingQueueEntry } from "@/types/emr-domain";
 
 export type ReceptionQueueReadRecord = {
   encounter: Encounter;
+  patient?: Patient;
+  primaryGuardian?: Guardian;
   queueEntry: WaitingQueueEntry;
 };
 

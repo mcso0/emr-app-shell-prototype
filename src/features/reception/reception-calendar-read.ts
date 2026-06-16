@@ -1,8 +1,10 @@
-import type { Appointment, Encounter, WaitingQueueEntry } from "@/types/emr-domain";
+import type { Appointment, Encounter, Guardian, Patient, WaitingQueueEntry } from "@/types/emr-domain";
 
 export type ReceptionCalendarReadRecord = {
   appointment?: Appointment;
   encounter?: Encounter;
+  patient?: Patient;
+  primaryGuardian?: Guardian;
   queueEntry?: WaitingQueueEntry;
 };
 

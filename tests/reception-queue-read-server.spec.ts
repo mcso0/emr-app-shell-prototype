@@ -144,6 +144,88 @@ test("supabase reception queue gateway maps rows and keeps workspace scope in th
   });
 });
 
+test("supabase reception queue gateway accepts snake_case readback rows with embedded profiles", async () => {
+  const gateway = createSupabaseReceptionQueueReadGateway({
+    async rpc() {
+      return {
+        data: [
+          {
+            encounter: {
+              id: "encounter-db-walkin-live",
+              workspace_id: "clair-demo",
+              patient_id: "patient-live-luna",
+              guardian_id: "guardian-live-jiyu",
+              primary_veterinarian_id: "user-vet-suji",
+              encounter_no: "E-LIVE-0002",
+              reception_type: "walk_in",
+              duration_minutes: 30,
+              chief_complaint: "readback verification",
+              visit_purpose: "readback verification",
+              status: "waiting",
+              checked_in_at: "2026-05-19T11:15:00+09:00",
+              created_at: "2026-05-19T11:15:00+09:00",
+              updated_at: "2026-05-19T11:15:00+09:00",
+            },
+            patient: {
+              id: "patient-live-luna",
+              workspace_id: "clair-demo",
+              patient_no: "P-LIVE-0002",
+              name: "루나",
+              species: "cat",
+              sex: "female",
+              handling_caution_locked: true,
+              status: "active",
+              created_at: "2026-05-19T00:00:00+09:00",
+              updated_at: "2026-05-19T00:00:00+09:00",
+            },
+            primary_guardian: {
+              id: "guardian-live-jiyu",
+              workspace_id: "clair-demo",
+              name: "박지유",
+              mobile_phone: "010-2222-3333",
+              created_at: "2026-05-19T00:00:00+09:00",
+              updated_at: "2026-05-19T00:00:00+09:00",
+            },
+            queue_entry: {
+              id: "queue-db-walkin-live",
+              workspace_id: "clair-demo",
+              encounter_id: "encounter-db-walkin-live",
+              queue_type: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sort_order: 1,
+              entered_at: "2026-05-19T11:15:00+09:00",
+            },
+          },
+        ],
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.listReceptionQueue({ workspaceId: "clair-demo" });
+
+  expect(result).toMatchObject({
+    ok: true,
+    queue: [
+      {
+        encounter: {
+          id: "encounter-db-walkin-live",
+          patientId: "patient-live-luna",
+          primaryVeterinarianId: "user-vet-suji",
+          checkedInAt: "2026-05-19T11:15:00+09:00",
+        },
+        patient: { id: "patient-live-luna", name: "루나" },
+        primaryGuardian: { id: "guardian-live-jiyu", name: "박지유" },
+        queueEntry: {
+          id: "queue-db-walkin-live",
+          enteredAt: "2026-05-19T11:15:00+09:00",
+        },
+      },
+    ],
+  });
+});
+
 test("reception queue read route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/queue/route.ts",

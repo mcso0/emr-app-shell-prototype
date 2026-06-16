@@ -554,68 +554,75 @@ function mapWalkInRecord(
 
 function mapEncounter(value: unknown): Encounter | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<Encounter> & {
-    receptionType?: string;
-    reception_type?: string;
-  };
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.patientId !== "string" ||
-    typeof row.encounterNo !== "string" ||
-    typeof row.status !== "string"
-  ) {
-    return null;
-  }
+  const row = value as Record<string, unknown>;
+  const id = trimToUndefined(row.id);
+  const workspaceId = trimToUndefined(row.workspaceId) ?? trimToUndefined(row.workspace_id);
+  const patientId = trimToUndefined(row.patientId) ?? trimToUndefined(row.patient_id);
+  const encounterNo = trimToUndefined(row.encounterNo) ?? trimToUndefined(row.encounter_no);
+  const status = trimToUndefined(row.status);
+
+  if (!id || !workspaceId || !patientId || !encounterNo || !status) return null;
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    patientId: row.patientId,
-    guardianId: trimToUndefined(row.guardianId),
-    appointmentId: trimToUndefined(row.appointmentId),
-    primaryVeterinarianId: trimToUndefined(row.primaryVeterinarianId),
-    encounterNo: row.encounterNo,
-    receptionType: (row.receptionType ??
-      row.reception_type) as Encounter["receptionType"],
+    id,
+    workspaceId,
+    patientId,
+    guardianId: trimToUndefined(row.guardianId) ?? trimToUndefined(row.guardian_id),
+    appointmentId: trimToUndefined(row.appointmentId) ?? trimToUndefined(row.appointment_id),
+    primaryVeterinarianId:
+      trimToUndefined(row.primaryVeterinarianId) ??
+      trimToUndefined(row.primary_veterinarian_id),
+    encounterNo,
+    receptionType: (trimToUndefined(row.receptionType) ??
+      trimToUndefined(row.reception_type)) as Encounter["receptionType"],
     department: trimToUndefined(row.department),
-    durationMinutes:
-      typeof row.durationMinutes === "number" ? row.durationMinutes : undefined,
-    chiefComplaint: trimToUndefined(row.chiefComplaint),
-    visitPurpose: trimToUndefined(row.visitPurpose),
-    receptionMemo: trimToUndefined(row.receptionMemo),
-    status: row.status as Encounter["status"],
-    checkedInAt: trimToUndefined(row.checkedInAt) ?? new Date(0).toISOString(),
-    checkedInByUserId: trimToUndefined(row.checkedInByUserId),
-    createdAt: trimToUndefined(row.createdAt) ?? new Date(0).toISOString(),
-    updatedAt: trimToUndefined(row.updatedAt) ?? new Date(0).toISOString(),
+    durationMinutes: getNumber(row.durationMinutes) ?? getNumber(row.duration_minutes),
+    chiefComplaint: trimToUndefined(row.chiefComplaint) ?? trimToUndefined(row.chief_complaint),
+    visitPurpose: trimToUndefined(row.visitPurpose) ?? trimToUndefined(row.visit_purpose),
+    receptionMemo: trimToUndefined(row.receptionMemo) ?? trimToUndefined(row.reception_memo),
+    status: status as Encounter["status"],
+    checkedInAt:
+      trimToUndefined(row.checkedInAt) ??
+      trimToUndefined(row.checked_in_at) ??
+      new Date(0).toISOString(),
+    checkedInByUserId:
+      trimToUndefined(row.checkedInByUserId) ?? trimToUndefined(row.checked_in_by_user_id),
+    createdAt:
+      trimToUndefined(row.createdAt) ??
+      trimToUndefined(row.created_at) ??
+      new Date(0).toISOString(),
+    updatedAt:
+      trimToUndefined(row.updatedAt) ??
+      trimToUndefined(row.updated_at) ??
+      new Date(0).toISOString(),
   };
 }
 
 function mapQueueEntry(value: unknown): WaitingQueueEntry | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<WaitingQueueEntry>;
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.encounterId !== "string" ||
-    typeof row.queueType !== "string" ||
-    typeof row.status !== "string"
-  ) {
-    return null;
-  }
+  const row = value as Record<string, unknown>;
+  const id = trimToUndefined(row.id);
+  const workspaceId = trimToUndefined(row.workspaceId) ?? trimToUndefined(row.workspace_id);
+  const encounterId = trimToUndefined(row.encounterId) ?? trimToUndefined(row.encounter_id);
+  const queueType = trimToUndefined(row.queueType) ?? trimToUndefined(row.queue_type);
+  const status = trimToUndefined(row.status);
+
+  if (!id || !workspaceId || !encounterId || !queueType || !status) return null;
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    encounterId: row.encounterId,
-    queueType: row.queueType as WaitingQueueEntry["queueType"],
-    status: row.status as WaitingQueueEntry["status"],
-    priority: row.priority ?? "normal",
-    sortOrder: typeof row.sortOrder === "number" ? row.sortOrder : undefined,
-    enteredAt: trimToUndefined(row.enteredAt) ?? new Date(0).toISOString(),
-    calledAt: trimToUndefined(row.calledAt),
-    finishedAt: trimToUndefined(row.finishedAt),
+    id,
+    workspaceId,
+    encounterId,
+    queueType: queueType as WaitingQueueEntry["queueType"],
+    status: status as WaitingQueueEntry["status"],
+    priority: (trimToUndefined(row.priority) as WaitingQueueEntry["priority"] | undefined) ?? "normal",
+    sortOrder: getNumber(row.sortOrder) ?? getNumber(row.sort_order),
+    enteredAt:
+      trimToUndefined(row.enteredAt) ??
+      trimToUndefined(row.entered_at) ??
+      new Date(0).toISOString(),
+    calledAt: trimToUndefined(row.calledAt) ?? trimToUndefined(row.called_at),
+    finishedAt: trimToUndefined(row.finishedAt) ?? trimToUndefined(row.finished_at),
   };
 }
 
@@ -665,8 +672,12 @@ function createDemoReceptionWalkInPermissionAdapter() {
   });
 }
 
-function trimToUndefined(value?: string) {
+function trimToUndefined(value?: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 const uuidPattern =

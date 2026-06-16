@@ -117,6 +117,70 @@ test("supabase reception lookup gateway maps DB rows and keeps workspace scope i
   });
 });
 
+test("supabase reception lookup gateway maps snake_case DB profile rows", async () => {
+  const gateway = createSupabaseReceptionPatientGuardianLookupGateway({
+    async rpc() {
+      return {
+        data: [
+          {
+            patient: {
+              id: "patient-db-maru",
+              workspace_id: "clair-demo",
+              patient_no: "P-DB-0003",
+              name: "마루",
+              species: "dog",
+              birth_date: "2021-03-12",
+              estimated_age_text: "5세",
+              sex: "male",
+              neutered: true,
+              handling_caution_locked: true,
+              status: "active",
+              created_at: "2026-05-19T00:00:00.000Z",
+              updated_at: "2026-05-19T00:00:00.000Z",
+            },
+            primary_guardian: {
+              id: "guardian-db-harin",
+              workspace_id: "clair-demo",
+              name: "정하린",
+              mobile_phone: "010-4444-5555",
+              created_at: "2026-05-19T00:00:00.000Z",
+              updated_at: "2026-05-19T00:00:00.000Z",
+            },
+            search_text: "마루 정하린 010-4444-5555",
+          },
+        ],
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.searchPatientGuardianLookup({
+    workspaceId: "clair-demo",
+    query: "마루",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    patients: [
+      {
+        patient: {
+          id: "patient-db-maru",
+          workspaceId: "clair-demo",
+          patientNo: "P-DB-0003",
+          name: "마루",
+          estimatedAgeText: "5세",
+        },
+        primaryGuardian: {
+          id: "guardian-db-harin",
+          name: "정하린",
+          mobilePhone: "010-4444-5555",
+        },
+        searchText: "마루 정하린 010-4444-5555",
+      },
+    ],
+  });
+});
+
 test("supabase reception lookup gateway resolves Korean staging display aliases", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseReceptionPatientGuardianLookupGateway({

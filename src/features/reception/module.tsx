@@ -103,8 +103,14 @@ import type {
   ReceptionPatientGuardianLookupItem,
   ReceptionPatientGuardianLookupResponse,
 } from "@/features/reception/patient-guardian-lookup";
-import type { ReceptionCalendarReadResponse } from "@/features/reception/reception-calendar-read";
-import type { ReceptionQueueReadResponse } from "@/features/reception/reception-queue-read";
+import type {
+  ReceptionCalendarReadRecord,
+  ReceptionCalendarReadResponse,
+} from "@/features/reception/reception-calendar-read";
+import type {
+  ReceptionQueueReadRecord,
+  ReceptionQueueReadResponse,
+} from "@/features/reception/reception-queue-read";
 import type {
   ReceptionEncounterCancelResponse,
 } from "@/features/reception/encounter-cancel";
@@ -448,6 +454,48 @@ const mapLookupItemToReceptionPatientSummary = (
     getReceptionPatientSearchText(item.patient, item.primaryGuardian),
 });
 
+type ReceptionReadbackProfileRecord =
+  | ReceptionCalendarReadRecord
+  | ReceptionQueueReadRecord;
+
+const getReceptionReadbackRecords = ({
+  calendarResult,
+  queueResult,
+}: {
+  calendarResult: ReceptionCalendarReadResponse;
+  queueResult: ReceptionQueueReadResponse;
+}): ReceptionReadbackProfileRecord[] => [
+  ...(calendarResult.ok ? calendarResult.records : []),
+  ...(queueResult.ok ? queueResult.queue : []),
+];
+
+const getReadbackPatientIds = (records: ReceptionReadbackProfileRecord[]) =>
+  Array.from(
+    new Set(
+      records
+        .map((record) => record.patient?.id ?? record.encounter?.patientId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+const getEmbeddedReadbackLookupItems = (
+  records: ReceptionReadbackProfileRecord[],
+): ReceptionPatientGuardianLookupItem[] =>
+  records
+    .map((record) =>
+      record.patient
+        ? {
+            patient: record.patient,
+            ...(record.primaryGuardian
+              ? { primaryGuardian: record.primaryGuardian }
+              : {}),
+          }
+        : null,
+    )
+    .filter(
+      (item): item is ReceptionPatientGuardianLookupItem => Boolean(item),
+    );
+
 async function submitWalkInEncounter({
   actorRole,
   input,
@@ -605,6 +653,36 @@ async function loadReceptionCalendar({
     return body;
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
+  }
+}
+
+async function loadReceptionProfileLookup({
+  actorId,
+  workspaceId,
+}: {
+  actorId?: string;
+  workspaceId: string;
+}): Promise<ReceptionPatientGuardianLookupResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?query=`,
+      {
+        cache: "no-store",
+        headers: actorId
+          ? { "x-clair-demo-session-user-id": actorId }
+          : undefined,
+      },
+    );
+    const body = (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return body;
+      return { ok: false, error: "db_read_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, error: "db_read_failed" };
   }
 }
 
@@ -3982,6 +4060,35 @@ export function ReceptionContent() {
           workspaceId,
         }),
       ]);
+      const readbackRecords = getReceptionReadbackRecords({
+        calendarResult,
+        queueResult,
+      });
+      const embeddedLookupItems = getEmbeddedReadbackLookupItems(readbackRecords);
+
+      embeddedLookupItems.forEach(applyPatientGuardianLookupItem);
+
+      const knownPatientIds = new Set([
+        ...patients.map((patient) => patient.id),
+        ...embeddedLookupItems.map((item) => item.patient.id),
+      ]);
+      const missingReadbackPatientIds = getReadbackPatientIds(
+        readbackRecords,
+      ).filter((patientId) => !knownPatientIds.has(patientId));
+
+      if (liveStaffSourceEnabled && missingReadbackPatientIds.length > 0) {
+        const profileResult = await loadReceptionProfileLookup({
+          actorId: authSession?.id,
+          workspaceId,
+        });
+
+        if (profileResult.ok) {
+          const missingPatientIds = new Set(missingReadbackPatientIds);
+          profileResult.patients
+            .filter((item) => missingPatientIds.has(item.patient.id))
+            .forEach(applyPatientGuardianLookupItem);
+        }
+      }
 
       if (!calendarResult.ok) {
         setReceptionCalendarReadStatus(
@@ -4002,10 +4109,13 @@ export function ReceptionContent() {
       }
     },
     [
+      applyPatientGuardianLookupItem,
       applyPersistedReceptionCalendar,
       applyPersistedReceptionQueue,
       authSession?.id,
+      liveStaffSourceEnabled,
       operatingDate,
+      patients,
       setReceptionCalendarReadStatus,
       setReceptionQueueReadStatus,
       workspaceId,

@@ -321,6 +321,7 @@ test("walk-in encounter writer migration keeps encounter and queue writes scoped
   expect(migrationSource).toContain("null");
 	  expect(migrationSource).toContain("insert into public.waiting_queue_entries");
 	  expect(migrationSource).toContain("v_planned_start_at");
+	  expect(migrationSource).toContain("v_event_time");
 	  expect(migrationSource).toContain("primary_veterinarian_unavailable");
 	  expect(migrationSource).toContain("'vet' = any(um.roles)");
 	  expect(migrationSource).toContain("'consultation'");
