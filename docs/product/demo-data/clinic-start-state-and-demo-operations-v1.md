@@ -1,7 +1,7 @@
 ---
 title: "Clinic Start State and Demo Operations"
 status: "draft"
-updated: "2026-06-12"
+updated: "2026-06-16"
 owner: "product"
 source_request: "2026-06-11 owner intake"
 ---
@@ -82,6 +82,16 @@ The demo needs two separate concepts:
 - Progression: keep user-created work by date so the next real day can start clean while previous-day work remains reviewable.
 
 The first pass must support reset. Scenario replay is useful but should not be built before the basic clinic setup works. Real day progression is the preferred direction, but it should be accepted only after the audit confirms the state model can keep previous-day records without stale-default leakage.
+
+As of 2026-06-16, the first Cheongdam reset implementation exists for `workspace-clair-cheongdam`:
+
+- The visible reset control appears in the Cheongdam workspace topbar only for the hospital administrator mock/admin context, left of the notification icon and separated from the original topbar actions by a divider.
+- The server route is `POST /api/workspaces/[workspaceId]/demo/session-reset`.
+- Remote Supabase reset is backed by `public.clair_reset_cheongdam_demo_session(text, text)`, limited to `workspace-clair-cheongdam`, `auth.uid()` actor match, and active workspace admin membership.
+- Reset clears daily-work state across reception queue, appointments, encounters, SOAP/diagnoses, orders, fulfillment work items, invoices, invoice lines, and payments.
+- Reset removes generated patient rows only when they match the current registration writer pattern `P-YYMMDD-XXXXXX`. Guardian removal is limited to guardians linked to those generated patients and never deletes `CD-G-*` seed guardians.
+- Reset does not touch users, memberships, workspace config, permission policies, service/order catalog, hospital-admin setup, external providers/payments/messages, or `CD-*` Cheongdam seed master data.
+- Mock/local mode is browser-state reset only and should not be treated as server security. Supabase sessions rely on the server route and RPC to decide whether the user is an active workspace admin.
 
 ## Role-Based Work Validation
 
@@ -176,6 +186,7 @@ The PRD/docs viewer should eventually expose scenario-level planning for epics, 
 
 ## Changelog
 
+- 2026-06-16: Added DEN-507 Cheongdam synthetic demo session reset contract and implementation boundary. Reset is admin-only, Cheongdam-only, server/API-backed for Supabase, local-only in mock mode, and preserves Cheongdam seed master/config data while deleting daily-work, billing checkout flow state, and safely identified generated registration records. Staging replay/readback confirmed the synthetic reception/chart/fulfillment/billing marker was removed and seed guardians/patients stayed at 25/25.
 - 2026-06-12: Added DEN-483 rework boundary for seeded patient/guardian usage in Cheongdam walk-in reception creation. The reception drawer now preserves a selected live lookup patient through the display-label re-search, so the generated walk-in payload keeps seeded patient and guardian IDs. Staging write-through creation remains approval-gated because it would create active daily work in the empty-clinic baseline.
 - 2026-06-12: Added DEN-468/DEN-491 implementation boundary for Cheongdam work modules and shell surfaces. Home, chart, lab, imaging, dispensing/treatment, inpatient, billing, global command search, and global notification badge/drawer now use prepared empty-clinic states for `workspace-clair-cheongdam`, while staging has synthetic master data for staff, guardians, patients, service/order catalog, pricing, and order sets with zero active daily work.
 - 2026-06-12: Added DEN-472/DEN-473 implementation boundary for Cheongdam reception loading/error/retry/empty hooks and workspace-aware session draft creation.

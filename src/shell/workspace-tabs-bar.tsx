@@ -19,6 +19,7 @@ import {
 } from "@/features/auth/personal-profile-session";
 import { useBillingStore } from "@/features/billing/store";
 import { useChartStore } from "@/features/chart/store";
+import { DemoSessionResetControl } from "@/features/demo-session/demo-session-reset-control";
 import { getInpatientAdmission } from "@/features/inpatient/data";
 import { useInpatientStore } from "@/features/inpatient/store";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
@@ -45,6 +46,7 @@ type WorkspaceTabsBarProps = {
   notificationBadgeCount: number;
   notificationDrawerOpen: boolean;
   tabs: WorkspaceTab[];
+  workspaceId: string;
   onActivateTab: (tabId: string) => void;
   onBack: () => void;
   onCloseTab: (tabId: string) => void;
@@ -250,6 +252,7 @@ export function WorkspaceTabsBar({
   notificationBadgeCount,
   notificationDrawerOpen,
   tabs,
+  workspaceId,
   onActivateTab,
   onBack,
   onCloseTab,
@@ -365,6 +368,11 @@ export function WorkspaceTabsBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-[var(--emr-topbar-action-gap)]">
+        <DemoSessionResetControl
+          session={session}
+          showTrailingDivider
+          workspaceId={workspaceId}
+        />
         <Button
           variant="ghost"
           size="icon"

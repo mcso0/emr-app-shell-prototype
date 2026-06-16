@@ -9,6 +9,7 @@ const protectedRoutes = [
   "src/app/api/workspaces/[workspaceId]/invitations/[invitationId]/accept/route.ts",
   "src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/roles/route.ts",
   "src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/status/route.ts",
+  "src/app/api/workspaces/[workspaceId]/demo/session-reset/route.ts",
   "src/app/api/workspaces/[workspaceId]/reception/patient-guardian-registration/route.ts",
   "src/app/api/workspaces/[workspaceId]/reception/walk-in-encounters/route.ts",
   "src/app/api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in/route.ts",

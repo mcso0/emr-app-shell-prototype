@@ -13,6 +13,7 @@ import {
   LEGACY_SALES_DEMO_WORKSPACE_ID,
   PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
 } from "../src/lib/emr-domain/demo-workspaces";
+import { MOCK_AUTH_STORAGE_KEY } from "../src/features/auth/mock-session";
 
 test("Cheongdam prepared clinic scope does not inherit legacy daily work", () => {
   const operatingDate = "2026-06-12";
@@ -155,6 +156,83 @@ test("Cheongdam shell search and notifications do not expose legacy daily work",
   await expect(page.locator('[id^="command-result-patient-"]')).toHaveCount(0);
   await expect(page.locator('[id^="command-result-appointment-"]')).toHaveCount(0);
   await expect(page.locator('[id^="command-result-encounter-"]')).toHaveCount(0);
+});
+
+test("Cheongdam admin can invoke synthetic demo session reset from workspace topbar", async ({
+  page,
+}) => {
+  let resetCalled = false;
+
+  await page.addInitScript(
+    ([storageKey]) => {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          id: "mock-session-admin-reset",
+          role: "hospital_admin",
+          storageMode: "local",
+          issuedAt: "2026-06-16T00:00:00.000Z",
+        })
+      );
+      window.localStorage.setItem(
+        "clair-emr:chart-selected-encounter:v1:workspace-clair-cheongdam",
+        "encounter-to-clear"
+      );
+    },
+    [MOCK_AUTH_STORAGE_KEY]
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/demo/session-reset`,
+    async (route) => {
+      resetCalled = true;
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().headers()["x-clair-demo-session-user-id"]).toBe("user-admin");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+          mode: "remote_supabase",
+          enforcedBy: "demo-session-reset",
+          counts: {
+            appointments: 0,
+            encounters: 1,
+            waitingQueueEntries: 1,
+            soapNotes: 0,
+            diagnoses: 0,
+            orderGroups: 0,
+            orders: 0,
+            fulfillmentWorkItems: 0,
+            invoices: 0,
+            invoiceLines: 0,
+            payments: 0,
+            generatedPatients: 1,
+            generatedGuardians: 1,
+          },
+        }),
+      });
+    }
+  );
+
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/home`);
+  await page.getByTestId("demo-session-reset-button").click();
+  await expect(page.getByText("데모 세션을 처음 상태로 초기화할까?")).toBeVisible();
+  await page.getByRole("button", { name: "초기화", exact: true }).click();
+
+  await expect(page.getByText("데모 세션을 초기화했어.")).toBeVisible();
+  await expect
+    .poll(() => resetCalled)
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.localStorage.getItem(
+          "clair-emr:chart-selected-encounter:v1:workspace-clair-cheongdam"
+        )
+      )
+    )
+    .toBeNull();
 });
 
 test("legacy Sales Demo route keeps the fixed fixture date and cards", async ({

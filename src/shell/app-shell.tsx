@@ -455,6 +455,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             notificationBadgeCount={notificationBadgeCount}
             notificationDrawerOpen={notificationDrawerOpen}
             tabs={tabs}
+            workspaceId={workspaceId}
             onActivateTab={handleActivateTab}
             onBack={handleTabBack}
             onCloseTab={handleCloseTab}
