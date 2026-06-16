@@ -14,6 +14,7 @@ import {
   type NotificationLocalState,
   writeNotificationLocalState,
 } from "@/features/notifications/mock-notifications";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
@@ -54,6 +55,8 @@ const crossModuleQueryKeys = [
   "right",
 ] as const;
 
+const emptyGlobalNotifications: GlobalNotification[] = [];
+
 function getCrossModuleNavigationSearch(
   search: string,
   currentModuleLayout: { hasContentAside: boolean; hasRightPanel: boolean }
@@ -89,6 +92,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
+  const workspaceNotifications = isPreparedEmptyClinicWorkspace(workspaceId)
+    ? emptyGlobalNotifications
+    : mockGlobalNotifications;
   const navigationSearch = useMemo(
     () =>
       getCrossModuleNavigationSearch(search, {
@@ -105,13 +111,13 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
   const [notificationLocalState, setNotificationLocalState] = useState<NotificationLocalState>(() =>
-    getInitialNotificationLocalState(mockGlobalNotifications)
+    getInitialNotificationLocalState(workspaceNotifications)
   );
   const [notificationLocalStateHydrated, setNotificationLocalStateHydrated] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
   const notifications = useMemo(
-    () => applyNotificationLocalState(mockGlobalNotifications, notificationLocalState),
-    [notificationLocalState]
+    () => applyNotificationLocalState(workspaceNotifications, notificationLocalState),
+    [notificationLocalState, workspaceNotifications]
   );
   const notificationBadgeCount = useMemo(
     () => resolveNotificationBadgeCount(notifications),
@@ -184,14 +190,14 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   useEffect(() => {
     const hydrateTimer = window.setTimeout(() => {
-      setNotificationLocalState(readNotificationLocalState(window.localStorage, mockGlobalNotifications));
+      setNotificationLocalState(readNotificationLocalState(window.localStorage, workspaceNotifications));
       setNotificationLocalStateHydrated(true);
     }, 0);
 
     return () => {
       window.clearTimeout(hydrateTimer);
     };
-  }, []);
+  }, [workspaceNotifications]);
 
   useEffect(() => {
     if (!notificationLocalStateHydrated) return;
@@ -449,6 +455,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             notificationBadgeCount={notificationBadgeCount}
             notificationDrawerOpen={notificationDrawerOpen}
             tabs={tabs}
+            workspaceId={workspaceId}
             onActivateTab={handleActivateTab}
             onBack={handleTabBack}
             onCloseTab={handleCloseTab}

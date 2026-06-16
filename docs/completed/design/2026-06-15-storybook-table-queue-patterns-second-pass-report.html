@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storybook Table/Queue Pattern Second Pass Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8f8fa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f3f4f6;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Human Review</p>
+      <h1>Storybook Table/Queue Pattern Second Pass</h1>
+      <p>
+        기존 <code>Design System/EMR/Table Queue Patterns</code> story에 sortable/filterable header, row selection,
+        density selector, long text cell 패턴을 추가했다. 새 production API는 만들지 않았다.
+      </p>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li>정렬/필터 header 패턴을 추가했다.</li>
+          <li>행 선택 checkbox 패턴을 추가했다.</li>
+          <li>표 밀도 selector 패턴을 추가했다.</li>
+          <li>긴 텍스트 cell truncate/wrap 패턴을 추가했다.</li>
+          <li>새 work item <code>DESIGN-SYSTEM-PR-061</code>를 Human Review 상태로 기록했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <p>
+          production table abstraction, feature module refactor, Storybook/Vitest 설정 변경, DB/Supabase/권한/배포/외부 연동은 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 범위 밖 warning 5개는 유지됨.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li><code>npm run build-storybook</code> 통과.</li>
+          <li><code>npm run storybook -- --ci --smoke-test</code> 통과.</li>
+          <li>Storybook MCP documentation에서 신규 패턴 4개 확인.</li>
+          <li>Storybook MCP <code>run-story-tests</code> focused 실행으로 <code>design-system-emr-table-queue-patterns--sortable-filterable-header</code> 통과 확인.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>주의 사항</h2>
+        <p>
+          첫 focused MCP 실행은 Vite dependency optimizer 관련 dynamic import 실패가 있었지만,
+          PR-056 정책대로 재실행했고 focused story test가 통과했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          다음 순서는 반복되는 MCP 첫 실행 reload 실패를 줄이기 위한 Vitest/Vite optimizer 안정화 검토다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -256,6 +256,8 @@ test("diagnosis route stays server-owned and secret-free", () => {
   expect(routeSource).toContain("readServerSession");
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
   expect(routeSource).toContain("enforceWorkspaceMutationRateLimit");
+  expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(routeSource).toContain("permissionAdapter");
   expect(serverSource).toContain('import "server-only"');
   expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });

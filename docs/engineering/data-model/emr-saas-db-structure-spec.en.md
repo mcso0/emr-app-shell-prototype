@@ -1,3 +1,18 @@
+---
+id: ENGINEERING-DATA-MODEL-EMR-SAAS-EN
+type: Data Model
+title: "CLAiR EMR SaaS DB Structure And Spec Draft (EN)"
+description: "English companion draft for the CLAiR EMR database structure and domain schema."
+status: approved
+area: engineering
+doc_type: data_model
+tags: [data-model, schema, english-reference, veterinary-emr]
+related_work: []
+supersedes: []
+superseded_by: []
+last_updated: 2026-05-17
+---
+
 # CLAiR EMR SaaS DB Structure And Spec Draft (EN)
 
 This document is the English version of the database structure draft for the veterinary EMR SaaS project.

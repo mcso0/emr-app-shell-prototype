@@ -1,4 +1,48 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
+import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
+
+async function grantCheongdamWorkspaceAccess(page: Page) {
+  await page.addInitScript(
+    ([storageKey, workspaceId]) => {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          currentWorkspaceId: workspaceId,
+          workspaces: [
+            {
+              id: workspaceId,
+              displayName: "VIP동물의료센터 청담점",
+              representativeName: "김승욱",
+              contactEmail: "owner@cheongdam.test",
+              contactPhone: null,
+              subscriptionStatus: "trialing",
+              createdBySessionId: "playwright-default-session",
+              createdAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          memberships: [
+            {
+              id: "membership-cheongdam-playwright-admin",
+              workspaceId,
+              userSessionId: "playwright-default-session",
+              displayName: "Playwright Admin",
+              email: "admin@cheongdam.test",
+              roles: ["hospital_admin"],
+              status: "active",
+              createdAt: "2026-06-14T00:00:00.000Z",
+              activatedAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          invitations: [],
+          updatedAt: "2026-06-14T00:00:00.000Z",
+        })
+      );
+    },
+    [SESSION_WORKSPACES_STORAGE_KEY, PREPARED_EMPTY_CLINIC_WORKSPACE_ID]
+  );
+}
 
 test("lab workspace renders result input, equipment receipts, and attachments", async ({ page }) => {
   await page.goto("/w/clair-demo/lab?modulePanel=open");
@@ -58,6 +102,61 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(page.getByText("coco-cbc-260501.pdf")).toBeVisible();
   await expect(page.getByText("cbc-smear-preview.png")).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
+});
+
+test("Cheongdam lab workspace renders live fulfillment rows without legacy result fixtures", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  const liveWorkItem = {
+    assignedToUserId: null,
+    createdAt: "2026-06-14T01:20:00.000Z",
+    encounterId: "encounter-cheongdam-live-lab-001",
+    id: "work-cheongdam-lab-001",
+    orderId: "order-cheongdam-lab-001",
+    queueType: "lab",
+    requestedByUserId: "user-vet",
+    sourceSnapshot: {
+      detail: { breed: "푸들", age: "3세" },
+      guardianName: "정보호",
+      instruction: "CBC 우선 확인",
+      orderDisplayName: "CBC 검사",
+      patientName: "모카",
+      requestingVetName: "김민준",
+      serviceItemId: "svc-live-cbc",
+    },
+    status: "requested",
+    updatedAt: "2026-06-14T01:20:00.000Z",
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+  };
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items**`,
+    async (route) => {
+      const url = new URL(route.request().url());
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems: url.searchParams.get("queueType") === "lab" ? [liveWorkItem] : [],
+        }),
+      });
+    }
+  );
+
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=closed`);
+
+  const sidePanel = page.locator("aside").first();
+  await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("모카");
+  await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("CBC 검사");
+  await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
+  await expect(page.getByText("모카").first()).toBeVisible();
 });
 
 test("lab workspace shows equipment receipts in the right panel", async ({ page }) => {
@@ -181,6 +280,61 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(summaryPanel.getByRole("textbox", { name: "영상 종합 코멘트" })).toBeVisible();
   await expect(summaryPanel.getByText("coco-thorax-lateral.png")).toBeVisible();
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
+});
+
+test("Cheongdam imaging workspace renders live fulfillment rows without legacy study fixtures", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  const liveWorkItem = {
+    assignedToUserId: null,
+    createdAt: "2026-06-14T01:25:00.000Z",
+    encounterId: "encounter-cheongdam-live-imaging-001",
+    id: "work-cheongdam-imaging-001",
+    orderId: "order-cheongdam-imaging-001",
+    queueType: "imaging",
+    requestedByUserId: "user-vet",
+    sourceSnapshot: {
+      detail: { bodyPart: "복부", modality: "초음파" },
+      guardianName: "한보호",
+      instruction: "복부 통증 평가",
+      orderDisplayName: "복부 초음파",
+      patientName: "하늘",
+      requestingVetName: "김민준",
+      serviceItemId: "svc-live-us",
+    },
+    status: "requested",
+    updatedAt: "2026-06-14T01:25:00.000Z",
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+  };
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items**`,
+    async (route) => {
+      const url = new URL(route.request().url());
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "fulfillment-work-item-persistence",
+          workItems: url.searchParams.get("queueType") === "imaging" ? [liveWorkItem] : [],
+        }),
+      });
+    }
+  );
+
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/imaging?modulePanel=open&aside=closed`);
+
+  const sidePanel = page.locator("aside").first();
+  await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("하늘");
+  await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("복부 초음파");
+  await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
+  await expect(page.getByText("하늘").first()).toBeVisible();
 });
 
 test("imaging workspace prioritizes Kong abdomen study from demo query", async ({ page }) => {

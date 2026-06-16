@@ -32,6 +32,7 @@ import {
   createInviteOtpRedirectTo,
   getSafeInviteNextHref,
 } from "@/features/auth/invite-otp-handoff";
+import { DEFAULT_PREPARED_EMPTY_CLINIC_RECEPTION_HREF } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 
 const storageOptions: Array<{
@@ -51,7 +52,7 @@ const storageOptions: Array<{
   },
 ];
 
-const defaultWorkspaceHref = "/w/clair-demo/reception?modulePanel=open&aside=closed";
+const defaultWorkspaceHref = DEFAULT_PREPARED_EMPTY_CLINIC_RECEPTION_HREF;
 const inviteOtpLength = 8;
 const mockInviteOtpToken = "0".repeat(inviteOtpLength);
 const loginFormClassName = "flex w-full flex-col gap-5";

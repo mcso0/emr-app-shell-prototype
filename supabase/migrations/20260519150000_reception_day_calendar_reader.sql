@@ -11,8 +11,8 @@ security definer
 set search_path = public, private
 as $$
 declare
-  v_day_start timestamptz := p_day::timestamptz;
-  v_day_end timestamptz := (p_day + 1)::timestamptz;
+  v_day_start timestamptz := (p_day::text || ' 00:00:00 Asia/Seoul')::timestamptz;
+  v_day_end timestamptz := ((p_day + 1)::text || ' 00:00:00 Asia/Seoul')::timestamptz;
   v_result jsonb;
 begin
   if not private.clair_is_active_workspace_member(p_workspace_id) then

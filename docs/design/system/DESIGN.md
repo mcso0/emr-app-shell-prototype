@@ -1,8 +1,16 @@
 ---
+id: DESIGN-SYSTEM-CLAIR-EMR
+type: Design System
+title: "CLAiR EMR Design"
+description: "Defines the CLAiR EMR visual, interaction, density, token, and component design standards."
 version: "alpha"
 name: "CLAiR EMR"
 status: "active"
+area: design
+doc_type: design-system
+tags: [design-system, ui, tokens, components, density]
 updated: "2026-06-08"
+last_updated: "2026-06-08"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"

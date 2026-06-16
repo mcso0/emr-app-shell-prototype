@@ -1,8 +1,13 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   createSupabaseChartDiagnosisGateway,
   readChartDiagnoses,
@@ -42,10 +47,20 @@ export async function GET(request: Request, { params }: RouteContext) {
   const url = new URL(request.url);
   const encounterId = url.searchParams.get("encounterId");
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await readChartDiagnoses({
     actorUserId: identity.actorUserId,
     workspaceId,
     encounterId,
+    permissionAdapter,
     gateway: client
       ? createSupabaseChartDiagnosisGateway(
           client as unknown as SupabaseChartDiagnosisRpcClient
@@ -86,10 +101,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient
+        ),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : undefined;
   const result = await saveChartDiagnoses({
     actorUserId: identity.actorUserId,
     workspaceId,
     input,
+    permissionAdapter,
     gateway: client
       ? createSupabaseChartDiagnosisGateway(
           client as unknown as SupabaseChartDiagnosisRpcClient

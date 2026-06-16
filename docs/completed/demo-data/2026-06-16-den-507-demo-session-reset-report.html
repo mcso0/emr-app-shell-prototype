@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-507 Cheongdam 데모 세션 초기화 완료 보고</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 880px;
+        color: #172033;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        border-top: 1px solid #d9e0ea;
+        font-size: 18px;
+        margin-top: 28px;
+        padding-top: 18px;
+      }
+      code {
+        background: #f3f6fa;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-507 Cheongdam 데모 세션 초기화 완료 보고</h1>
+    <p>
+      반복 QA와 시연을 위해 Cheongdam synthetic demo workspace를 처음 상태로 되돌리는
+      초기화 기능을 추가했다. 이번 작업은 실제 병원 운영 출시가 아니라
+      <code>workspace-clair-cheongdam</code> synthetic demo 환경의 반복 검증을 위한 장치다.
+    </p>
+
+    <h2>요청 사항</h2>
+    <ul>
+      <li>데모 중 생성된 접수, 진료, 오더, 처리, 수납 흐름을 초기 상태로 되돌릴 것.</li>
+      <li>실제 환자, 보호자, 병원, 결제, 신원, 외부 연동 데이터는 사용하거나 건드리지 않을 것.</li>
+      <li>client-only UI가 아니라 서버/API 보안 경계까지 포함할 것.</li>
+    </ul>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>Cheongdam workspace topbar의 알림 아이콘 왼쪽에 관리자 전용 <code>세션 초기화</code> 버튼과 확인 다이얼로그를 추가했다.</li>
+      <li><code>POST /api/workspaces/[workspaceId]/demo/session-reset</code> route를 추가했다.</li>
+      <li>Supabase RPC <code>public.clair_reset_cheongdam_demo_session(text, text)</code> migration을 추가했다.</li>
+      <li>RPC는 Cheongdam workspace allowlist, <code>auth.uid()</code> actor match, active workspace admin membership을 요구한다.</li>
+      <li>daily-work 상태는 reception, appointment, encounter, SOAP/diagnosis, order, fulfillment, invoice/payment 범위를 정리한다.</li>
+      <li>신규 환자는 registration writer가 만든 <code>P-YYMMDD-XXXXXX</code> 형식만 삭제하고, 보호자는 그 환자와 연결된 guardian 중 <code>CD-G-*</code> seed가 아닌 경우만 삭제한다.</li>
+    </ul>
+
+    <h2>보존 범위</h2>
+    <ul>
+      <li>workspace, users, memberships, permission policies</li>
+      <li>service/order catalog, order sets, hospital-admin setup</li>
+      <li>Cheongdam <code>CD-*</code> seed guardian/patient master data</li>
+      <li>외부 provider, payment, email, Kakao, PACS, device, accounting side effects</li>
+    </ul>
+
+    <h2>검증 결과</h2>
+    <ul>
+      <li><code>./node_modules/.bin/tsc --noEmit</code> 통과</li>
+      <li><code>tests/demo-session-reset-server.spec.ts</code> 6개 통과</li>
+      <li>Cheongdam topbar reset confirmation/control flow 통과</li>
+      <li>workspace mutation route rate-limit registry check 통과</li>
+      <li>
+        Staging 배포/readback 완료: final preview <code>dpl_3pZe4hU3iHdPiMpKkcFhDkSQGxii</code>에 API/UI가
+        빌드됐고, Supabase staging에 reset RPC를 적용했다. 검증 marker
+        <code>DEN507-STAGING-RESET-VERIFY-20260616T1518KST</code>로 reception encounter,
+        SOAP note, lab order, fulfillment work item, invoice line, payment를 생성한 뒤 reset을
+        실행했다.
+      </li>
+      <li>
+        Reset 반환 count는 encounters 11, waiting queue entries 11, soap notes 3, orders 7,
+        fulfillment work items 6, invoices 4, invoice lines 4, payments 3,
+        billing checkout sessions 1, billing checkout session invoices 1,
+        billing invoice status events 2, generated patients 2, generated guardians 2였다.
+      </li>
+      <li>
+        Reset 후 readback에서 Reception, Chart, Fulfillment, Billing marker count는 모두 0이었다.
+        Cheongdam seed master data는 seed guardians 25, seed patients 25, service items 12,
+        user memberships 6으로 유지됐고, generated patient pattern과 daily-work/billing flow
+        tables는 0으로 돌아왔다.
+      </li>
+    </ul>
+
+    <h2>주의 사항</h2>
+    <ul>
+      <li>현재 mock mode는 browser/session state reset만 수행한다. 원격 DB 보안을 대체하지 않는다.</li>
+      <li>Supabase 실세션에서는 클라이언트가 workspace admin 여부를 단정하지 않고, route/RPC가 최종 권한을 판정한다.</li>
+      <li>이번 작업은 reset 기능 범위만 처리했다. 접수 UX, 시간, 담당자, handoff 이슈는 별도 scope다.</li>
+      <li>Supabase CLI가 이 worktree에 없어 migration 파일은 repo timestamp 규칙으로 직접 추가했다.</li>
+    </ul>
+
+    <h2>후속 참고</h2>
+    <p>
+      Staging replay 중 기존 billing checkout session 참조가 발견되어 reset RPC 범위에
+      checkout session, checkout-invoice join, invoice status event, invoice adjustment,
+      payment allocation cleanup을 추가했다. Vercel preview URL은 Deployment Protection으로
+      직접 HTTP 접근 시 401이 반환되지만, Vercel inspect 기준 배포 상태는 Ready다.
+    </p>
+  </body>
+</html>

@@ -3,24 +3,74 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * One option in a SegmentedControl.
+ */
 export type SegmentedControlItem<TValue extends string> = {
+  /**
+   * Stable value emitted through `onValueChange`.
+   */
   value: TValue;
+  /**
+   * Short visible label. Keep labels compact enough for dense EMR toolbars.
+   */
   label: ReactNode;
+  /**
+   * Full accessible label when the visible label is abbreviated.
+   */
   ariaLabel?: string;
+  /**
+   * Optional count for queue filters. Use only when the count matches the
+   * currently visible data set.
+   */
   count?: number;
+  /**
+   * Optional browser tooltip for extra context.
+   */
   title?: string;
 };
 
-type SegmentedControlProps<TValue extends string> = {
+export type SegmentedControlProps<TValue extends string> = {
+  /**
+   * Currently selected item value.
+   */
   value: TValue;
+  /**
+   * Small mutually exclusive option set. Avoid long taxonomies.
+   */
   items: Array<SegmentedControlItem<TValue>>;
+  /**
+   * Required group label that names what this control changes.
+   */
   "aria-label": string;
+  /**
+   * Additional classes for the outer group.
+   */
   className?: string;
+  /**
+   * Additional classes for each item button.
+   */
   itemClassName?: string;
+  /**
+   * Visual mode. Use `pill` for filters and `tabs` for compact display settings.
+   */
   variant?: "pill" | "tabs";
+  /**
+   * Called with the selected item value. The consuming screen owns state,
+   * persistence, analytics, and permission behavior.
+   */
   onValueChange: (value: TValue) => void;
 };
 
+/**
+ * Compact mutually exclusive filter or mode selector.
+ *
+ * Use SegmentedControl for small filters and display modes that update the
+ * current view in place. Do not use it for shell navigation, long category
+ * lists, or actions that require confirmation.
+ *
+ * @summary compact filter or mode selector
+ */
 export function SegmentedControl<TValue extends string>({
   value,
   items,

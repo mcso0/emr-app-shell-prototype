@@ -16,6 +16,7 @@ const firstEncounter: Encounter = {
   patientId: "19421000-0000-4000-8000-000000000001",
   guardianId: "19420000-0000-4000-8000-000000000001",
   encounterNo: "E-DEN194-0001",
+  primaryVeterinarianId: "19410000-0000-4000-8000-000000000001",
   status: "waiting",
   checkedInAt: "2026-05-30T00:00:00.000Z",
   createdAt: "2026-05-30T00:00:00.000Z",
@@ -27,6 +28,7 @@ const secondEncounter: Encounter = {
   patientId: "19421000-0000-4000-8000-000000000002",
   guardianId: "19420000-0000-4000-8000-000000000002",
   encounterNo: "E-DEN194-0002",
+  primaryVeterinarianId: "19410000-0000-4000-8000-000000000002",
 };
 const billingEncounter: Encounter = {
   ...firstEncounter,
@@ -60,11 +62,13 @@ test("chart live queue hydrates multiple live encounters without patient-specifi
         encounter: { id: firstEncounter.id, encounterNo: "E-DEN194-0001" },
         patient: { name: "Kong Synthetic" },
         primaryGuardian: { name: "DEN-194 Guardian 01" },
+        veterinarianName: "청담 원장",
       },
       {
         encounter: { id: secondEncounter.id, encounterNo: "E-DEN194-0002" },
         patient: { name: "Nabi Synthetic" },
         primaryGuardian: { name: "DEN-194 Guardian 02" },
+        veterinarianName: "김도윤",
       },
     ],
   });
@@ -72,6 +76,7 @@ test("chart live queue hydrates multiple live encounters without patient-specifi
     "rpc:clair_list_reception_queue:clair-demo",
     "from:patients:clair-demo:19421000-0000-4000-8000-000000000001,19421000-0000-4000-8000-000000000002",
     "from:guardians:clair-demo:19420000-0000-4000-8000-000000000001,19420000-0000-4000-8000-000000000002",
+    "from:users::19410000-0000-4000-8000-000000000001,19410000-0000-4000-8000-000000000002",
   ]);
 });
 
@@ -102,6 +107,7 @@ test("chart live queue falls back to reception profile lookup when direct profil
     "rpc:clair_list_reception_queue:clair-demo",
     "from:patients:clair-demo:19421000-0000-4000-8000-000000000001,19421000-0000-4000-8000-000000000002",
     "from:guardians:clair-demo:19420000-0000-4000-8000-000000000001,19420000-0000-4000-8000-000000000002",
+    "from:users::19410000-0000-4000-8000-000000000001,19410000-0000-4000-8000-000000000002",
     "rpc:clair_search_reception_patient_guardian_lookup:clair-demo",
   ]);
 });
@@ -160,9 +166,43 @@ test("chart live queue route stays server-owned and separate from demo encounter
   expect(serverSource).toContain('import "server-only"');
   expect(coreSource).toContain('from("patients")');
   expect(coreSource).toContain('from("guardians")');
+  expect(coreSource).toContain('from("users")');
   expect(coreSource).not.toContain("stagingDemoEncounterNoCandidates");
   expect(`${routeSource}\n${serverSource}\n${coreSource}`).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET/i,
+  );
+});
+
+test("Cheongdam prepared-empty mode keeps live chart queue records visible", () => {
+  const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(moduleSource).toContain("const items = useMemo(");
+  expect(moduleSource).toContain("liveMode\n        ? liveItems");
+  expect(moduleSource).toContain(
+    "preparedEmptyClinic\n          ? emptyChartQueueItems\n          : mockItems",
+  );
+  expect(moduleSource).not.toContain(
+    "const items = preparedEmptyClinic ? [] : liveMode ? liveItems : mockItems;",
+  );
+});
+
+test("Cheongdam live chart selection recovers live encounters without legacy fixture overwrite", () => {
+  const storeSource = readFileSync("src/features/chart/store.ts", "utf8");
+  const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(storeSource).toContain('selectedEncounterId: ""');
+  expect(moduleSource).toContain("chooseRecoverableLiveEncounterId");
+  expect(moduleSource).toContain(
+    "saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId)",
+  );
+  expect(moduleSource).toContain(
+    "if (options.allowMockFallback === false) return null;",
+  );
+  expect(moduleSource).toContain(
+    "selectedEncounterId === demoScenarioEncounterId",
+  );
+  expect(moduleSource).not.toContain(
+    "selectedEncounterId === explicitQueryEncounterId",
   );
 });
 
@@ -192,7 +232,7 @@ function createFakeChartLiveQueueClient(
         error: null,
       };
     },
-    from(tableName: "patients" | "guardians") {
+    from(tableName: "patients" | "guardians" | "users") {
       return {
         select() {
           let scopedWorkspaceId = "";
@@ -220,7 +260,9 @@ function createFakeChartLiveQueueClient(
                 data:
                   tableName === "patients"
                     ? patientRows.filter((row) => selectedIds.includes(row.id))
-                    : guardianRows.filter((row) => selectedIds.includes(row.id)),
+                    : tableName === "guardians"
+                      ? guardianRows.filter((row) => selectedIds.includes(row.id))
+                      : staffRows.filter((row) => selectedIds.includes(row.id)),
                 error: null,
               });
             },
@@ -271,5 +313,16 @@ const guardianRows = [
     name: "DEN-194 Guardian 02",
     created_at: "2026-05-30T00:00:00.000Z",
     updated_at: "2026-05-30T00:00:00.000Z",
+  },
+];
+
+const staffRows = [
+  {
+    id: "19410000-0000-4000-8000-000000000001",
+    display_name: "청담 원장",
+  },
+  {
+    id: "19410000-0000-4000-8000-000000000002",
+    display_name: "김도윤",
   },
 ];

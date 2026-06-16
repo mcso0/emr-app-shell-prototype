@@ -1,8 +1,12 @@
 ---
 id: ""
+type: "Work Item"
+title: "Work Item Title"
+description: "Defines one PR-sized goal, scope, done criteria, source docs, and verification."
 status: "backlog"
 area: ""
 priority: ""
+tags: []
 target_pr: ""
 source_docs: []
 dependencies: []

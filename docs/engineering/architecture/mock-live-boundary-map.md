@@ -1,8 +1,12 @@
 ---
 id: ENGINEERING-ARCHITECTURE-MOCK-LIVE-BOUNDARY-MAP
+type: Boundary Map
+title: "Mock And Live Boundary Map"
+description: "Defines how CLAiR EMR work is described across mock, local-first, remote staging, and production/live boundaries."
 status: approved
 area: engineering
 doc_type: boundary-map
+tags: [mock-live-boundary, local-first, staging, production, approval-gates]
 related_work:
   - DEN-179
 supersedes: []

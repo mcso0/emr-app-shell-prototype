@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-511 reception QA replay report</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        background: #f8fafc;
+        color: #111827;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        background: #fff;
+        padding: 32px;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 28px;
+      }
+      h2 {
+        margin-top: 32px;
+        font-size: 20px;
+      }
+      code {
+        border-radius: 6px;
+        background: #f3f4f6;
+        padding: 2px 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border: 1px solid #e5e7eb;
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+      .pass {
+        color: #047857;
+        font-weight: 700;
+      }
+      .partial {
+        color: #b45309;
+        font-weight: 700;
+      }
+      .fail {
+        color: #b91c1c;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-511 Reception QA Replay Report</h1>
+      <p>
+        <strong>Overall result:</strong>
+        <span class="partial">PARTIAL</span>. 입력 UX, 진료시간 기본값,
+        접수 상세 drawer, 접수 취소는 staging에서 확인됐다. 하지만 접수
+        생성 후 새로고침하면 Reception 대기열과 Chart 대기열에서 같은
+        synthetic encounter가 유지되지 않아 Reception → Chart readback은
+        통과하지 못했다.
+      </p>
+
+      <h2>환경</h2>
+      <ul>
+        <li>
+          Fixed staging URL:
+          <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code>
+        </li>
+        <li>
+          Preview deployment:
+          <code>https://emr-app-shell-prototype-auw65egok-mcso0s-projects.vercel.app</code>
+        </li>
+        <li>Deployed commit: <code>11c95c4c</code></li>
+        <li>
+          Supabase staging: 전체 <code>db push</code>는 remote-only migration
+          drift로 사용하지 않았고, DEN-510 취소 RPC SQL만 제한 적용했다.
+        </li>
+      </ul>
+
+      <h2>QA 데이터</h2>
+      <ul>
+        <li>Guardian: <code>QA Guardian 20260616-823696</code></li>
+        <li>Patient: <code>QA Patient 20260616-823696</code></li>
+        <li>Visit purpose: <code>DEN-511 staging replay 접수 QA</code></li>
+        <li>
+          Kakao checkbox was unchecked before creating the walk-in encounter.
+        </li>
+      </ul>
+
+      <h2>단계별 결과</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>결과</th>
+            <th>증거</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>보호자 생년월일 자동 하이픈</td>
+            <td class="pass">PASS</td>
+            <td><code>19931123</code> 입력 후 <code>1993-11-23</code> 표시.</td>
+          </tr>
+          <tr>
+            <td>동물 나이 년/개월 UI</td>
+            <td class="pass">PASS</td>
+            <td><code>7</code>, <code>4</code> 입력 필드 옆에 <code>년</code>, <code>개월</code> 표시.</td>
+          </tr>
+          <tr>
+            <td>빈 환자 검색 dropdown 숨김</td>
+            <td class="pass">PASS</td>
+            <td>환자 검색 focus + 빈 값에서 검색 결과 listbox count <code>0</code>.</td>
+          </tr>
+          <tr>
+            <td>한 글자 환자 검색 dropdown 표시</td>
+            <td class="pass">PASS</td>
+            <td><code>Q</code> 입력 시 검색 결과 listbox visible.</td>
+          </tr>
+          <tr>
+            <td>진료시간 기본값</td>
+            <td class="pass">PASS</td>
+            <td>모달 open 시 <code>16:28</code>, 담당의 지정 후 <code>16:30</code> KST 슬롯 표시.</td>
+          </tr>
+          <tr>
+            <td>생성 직후 Reception 카드</td>
+            <td class="pass">PASS</td>
+            <td>대기열 카드에 synthetic 환자/보호자, 방문 목적, <code>청담 원장</code>, <code>16:30 접수</code> 표시.</td>
+          </tr>
+          <tr>
+            <td>Refresh 후 Reception readback</td>
+            <td class="fail">FAIL</td>
+            <td>대기열 count가 <code>0</code>으로 돌아감. 캘린더에는 <code>환자 미지정</code>, <code>보호자 미지정</code> 카드가 남음.</td>
+          </tr>
+          <tr>
+            <td>Chart queue handoff</td>
+            <td class="fail">FAIL</td>
+            <td>Chart 진료 대기열 count <code>0</code>. 같은 synthetic encounter가 보이지 않음.</td>
+          </tr>
+          <tr>
+            <td>캘린더 카드 drawer</td>
+            <td class="partial">PARTIAL</td>
+            <td>접수 상세 drawer가 열리고 환자/보호자/방문 목적은 보임. 다만 캘린더 카드 접근 이름은 <code>환자 미지정</code>으로 남음.</td>
+          </tr>
+          <tr>
+            <td>접수 취소</td>
+            <td class="pass">PASS</td>
+            <td>확인 dialog에서 취소 후 새로고침 시 캘린더 카드와 대기열에서 제거됨.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Blocker</h2>
+      <p>
+        새 walk-in 생성 직후 client state에는 정상으로 보이지만, 서버
+        readback 또는 projection 경로에서 encounter와 patient/guardian,
+        consultation queue 연결이 일관되게 복원되지 않는다. 결과적으로
+        Reception 대기열은 refresh 후 사라지고, Chart queue에서도 같은
+        접수가 보이지 않는다.
+      </p>
+
+      <h2>Claim Boundary</h2>
+      <p>
+        Synthetic Demo Production claim은 아직 <strong>Reception → Chart
+        지속 readback 통과</strong>로 확장하면 안 된다. 이번 replay는
+        입력 UX와 접수 상세/취소 일부가 staging에서 개선됐음을 확인했지만,
+        spine 신뢰성 기준인 같은 synthetic encounter의 refresh/readback은
+        실패했다.
+      </p>
+
+      <h2>다음 권장 작업</h2>
+      <p>
+        새 follow-up 구현 이슈로 walk-in create 응답, reception queue read,
+        calendar day read, chart live queue projection이 같은 encounter,
+        patient, guardian, primary veterinarian, queue row를 읽는지 좁혀서
+        수정해야 한다.
+      </p>
+    </main>
+  </body>
+</html>

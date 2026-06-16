@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-DOMAIN-WORKSPACE-ORDER-CATALOG-PLATFORM
+type: Domain Contract
+title: "Workspace Order Catalog Platform"
+description: "Defines the product contract for workspace-scoped order catalog presets, customization, routing, and billing gates."
 status: approved
 area: product
 doc_type: domain-contract
+tags: [domain, order-catalog, workspace, presets, billing]
 related_work:
   - DEN-279
   - DEN-280

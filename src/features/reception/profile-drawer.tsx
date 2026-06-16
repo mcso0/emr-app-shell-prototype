@@ -352,6 +352,44 @@ const getBirthDateFromAge = ({ months, years }: { months: string; years: string 
   return formatRegistrationDate(birthDate);
 };
 
+const formatBirthDateInput = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+};
+
+const formatAgeNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 3);
+
+function AgePartInput({
+  ariaLabel,
+  onValueChange,
+  unit,
+  value,
+}: {
+  ariaLabel: string;
+  onValueChange: (value: string) => void;
+  unit: "년" | "개월";
+  value: string;
+}) {
+  return (
+    <div className="relative min-w-0">
+      <Input
+        aria-label={ariaLabel}
+        className="h-10 bg-card pr-10 text-right"
+        inputMode="numeric"
+        placeholder="0"
+        value={value}
+        onValueChange={(nextValue) => onValueChange(formatAgeNumberInput(nextValue))}
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium text-muted-foreground">
+        {unit}
+      </span>
+    </div>
+  );
+}
+
 const getAgeTextFromBirthDate = (birthDateValue: string) => {
   const birthDate = new Date(`${birthDateValue}T00:00:00+09:00`);
 
@@ -2062,11 +2100,9 @@ export function NewPatientDialog({
                   }
                 >
                   <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      className="h-10 bg-card"
-                      aria-label="나이 년"
-                      inputMode="numeric"
-                      placeholder="년"
+                    <AgePartInput
+                      ariaLabel="나이 년"
+                      unit="년"
                       value={draft.ageYears}
                       onValueChange={(ageYears) =>
                         setDraft((current) => ({
@@ -2076,11 +2112,9 @@ export function NewPatientDialog({
                         }))
                       }
                     />
-                    <Input
-                      className="h-10 bg-card"
-                      aria-label="나이 개월"
-                      inputMode="numeric"
-                      placeholder="개월"
+                    <AgePartInput
+                      ariaLabel="나이 개월"
+                      unit="개월"
                       value={draft.ageMonths}
                       onValueChange={(ageMonths) =>
                         setDraft((current) => ({
@@ -2108,7 +2142,7 @@ export function NewPatientDialog({
                         ...current,
                         ageMonths: "",
                         ageYears: "",
-                        birthDate,
+                        birthDate: formatBirthDateInput(birthDate),
                       }))
                     }
                   />
@@ -2306,11 +2340,15 @@ function NewGuardianDialog({
                 </RegistrationFormField>
                 <RegistrationFormField label="생년월일">
                   <Input
+                    aria-label="보호자 생년월일"
                     className="h-10 bg-card"
                     placeholder="날짜 선택 또는 직접 입력"
                     value={draft.birthDate}
                     onValueChange={(birthDate) =>
-                      setDraft((current) => ({ ...current, birthDate }))
+                      setDraft((current) => ({
+                        ...current,
+                        birthDate: formatBirthDateInput(birthDate),
+                      }))
                     }
                   />
                 </RegistrationFormField>
@@ -3242,7 +3280,10 @@ function PatientGuardianRegistrationButton({
                           placeholder="YYYY-MM-DD"
                           value={guardianDraft.birthDate}
                           onValueChange={(birthDate) =>
-                            setGuardianDraft((current) => ({ ...current, birthDate }))
+                            setGuardianDraft((current) => ({
+                              ...current,
+                              birthDate: formatBirthDateInput(birthDate),
+                            }))
                           }
                         />
                       </RegistrationFormField>
@@ -3698,11 +3739,9 @@ function PatientGuardianRegistrationButton({
                         }
                       >
                         <div className="grid grid-cols-2 gap-2">
-                          <Input
-                            aria-label="나이 년"
-                            className="h-10 bg-card"
-                            inputMode="numeric"
-                            placeholder="년"
+                          <AgePartInput
+                            ariaLabel="나이 년"
+                            unit="년"
                             value={patientDraft.ageYears}
                             onValueChange={(ageYears) =>
                               setPatientDraft((current) => ({
@@ -3715,11 +3754,9 @@ function PatientGuardianRegistrationButton({
                               }))
                             }
                           />
-                          <Input
-                            aria-label="나이 개월"
-                            className="h-10 bg-card"
-                            inputMode="numeric"
-                            placeholder="개월"
+                          <AgePartInput
+                            ariaLabel="나이 개월"
+                            unit="개월"
                             value={patientDraft.ageMonths}
                             onValueChange={(ageMonths) =>
                               setPatientDraft((current) => ({
@@ -3745,7 +3782,7 @@ function PatientGuardianRegistrationButton({
                               ...current,
                               ageMonths: "",
                               ageYears: "",
-                              birthDate,
+                              birthDate: formatBirthDateInput(birthDate),
                             }))
                           }
                         />

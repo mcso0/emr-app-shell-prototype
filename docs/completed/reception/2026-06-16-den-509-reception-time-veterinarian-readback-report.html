@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-509 Reception Time and Veterinarian Readback Fix</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 32px;
+        color: #111827;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      .note {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .warning {
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-509 Reception Time and Veterinarian Readback Fix</h1>
+    <p>
+      Reception QA에서 발견된 진료시간/담당 수의사 readback 불일치를 수정했다.
+      접수 생성 시점의 운영 시간, 캘린더 카드, 접수 drawer, Chart queue/context가
+      같은 KST 표시 규칙과 같은 담당 수의사 source를 사용하도록 맞췄다.
+    </p>
+
+    <h2>변경 요약</h2>
+    <ul>
+      <li>walk-in 접수 모달의 <code>진료시간</code>이 placeholder가 아니라 현재 운영 시각을 표시하고, 같은 값을 <code>plannedStartAt</code>으로 전송한다.</li>
+      <li>prepared-empty workspace에서는 현재 KST 시각을 사용하고, legacy fixture workspace는 기존 고정 운영 시각을 유지한다.</li>
+      <li>Reception 대기 카드, 캘린더 card, 접수 drawer의 날짜/시간 표시를 <code>demo-date</code> KST helper 기준으로 통일했다.</li>
+      <li>Reception side panel이 live vet staff list를 읽어 UUID 담당 수의사도 카드에 표시하도록 보강했다.</li>
+      <li>Chart live queue server projection이 <code>users.display_name</code>을 읽어 <code>veterinarianName</code>을 싣도록 보강했다.</li>
+      <li>Chart handoff cache와 live queue bundle이 <code>veterinarianName</code>을 보존해 Header, queue card, instruction info에서 같은 담당자명을 사용한다.</li>
+      <li>Chart explicit encounter deep link가 live/mock queue fallback에 의해 legacy encounter로 덮어써지지 않도록 guard를 추가했다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx eslint src/features/reception/module.tsx src/features/chart/data.ts src/features/chart/live-encounter-handoff.ts src/features/chart/module.tsx src/features/chart/server-chart-live-queue-core.ts tests/chart-live-queue-server.spec.ts tests/reception.spec.ts</code> 통과. 기존 <code>src/features/chart/module.tsx</code> hook dependency warning 2건은 남아 있다.</li>
+      <li><code>npx tsc --noEmit</code> 통과.</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/chart-live-queue-server.spec.ts --reporter=line</code> 통과: 6 passed.</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/reception.spec.ts --grep "server-backed walk-in encounter sends minimal reception payload|walk-in persistence regression reloads from queue and calendar reads" --reporter=line</code> 통과: 2 passed.</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/chart.spec.ts --grep "chart live queue preserves explicit encounter deep links" --reporter=line</code> 통과: 1 passed.</li>
+    </ul>
+
+    <h2>검증 포인트</h2>
+    <ul>
+      <li>walk-in form의 <code>진료시간</code> field가 legacy workspace에서 <code>10:45</code>를 표시하고, payload <code>plannedStartAt</code>도 <code>2026-05-01T10:45:00+09:00</code>로 전송되는 것을 확인했다.</li>
+      <li>server persisted readback에 UTC <code>Z</code> timestamp가 들어와도 Reception calendar card가 KST <code>10:15</code>로 표시되는 것을 확인했다.</li>
+      <li>walk-in 생성 후 Chart deep link가 legacy queue item으로 덮이지 않고 생성 encounter context를 유지하는 것을 확인했다.</li>
+      <li>live chart queue record가 UUID 담당 수의사명(<code>청담 원장</code>, <code>김도윤</code>)을 hydrate하는 것을 확인했다.</li>
+    </ul>
+
+    <h2>범위 제외</h2>
+    <ul>
+      <li>DEN-508 입력 UX 개선(생년월일 하이픈, 동물 나이 년/개월 라벨, 빈 검색어 dropdown 숨김)은 구현하지 않았다.</li>
+      <li>DEN-510 캘린더 카드 drawer 전환 및 접수 취소 route/UI는 구현하지 않았다.</li>
+      <li>DEN-511 staging manual QA replay와 claim boundary 업데이트는 아직 수행하지 않았다.</li>
+      <li>원격 staging DB reset/delete, production deploy, 실데이터/외부 알림/결제/provider side effect는 수행하지 않았다.</li>
+    </ul>
+
+    <div class="warning">
+      <strong>검증 caveat:</strong>
+      Playwright 기본 <code>3000</code> 포트에는 다른 worktree dev server가 떠 있어서
+      <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109</code>로 별도 포트에서 검증했다.
+      실행 중 <code>NO_COLOR</code> 경고와 Tiptap duplicate extension warning은 관찰됐지만
+      이번 변경 검증의 실패 원인은 아니었다.
+    </div>
+
+    <div class="note">
+      <strong>현재 상태:</strong>
+      DEN-509 구현과 focused verification은 완료됐다. 다음 단계는 Human Review에서
+      staging synthetic QA로 Reception → Chart 시간/담당자 readback을 재확인하는 것이다.
+    </div>
+  </body>
+</html>

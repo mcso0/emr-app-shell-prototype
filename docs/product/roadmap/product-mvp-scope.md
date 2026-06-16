@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-ROADMAP-PRODUCT-MVP-SCOPE
+type: Product Scope
+title: "Product MVP Scope And Non-Goals"
+description: "Defines the current Product MVP boundaries, non-goals, deferred work, and approval gates."
 status: approved
 area: product
 doc_type: roadmap-scope
+tags: [mvp, scope, non-goals, approval-gates]
 related_work:
   - DEN-175
 supersedes: []

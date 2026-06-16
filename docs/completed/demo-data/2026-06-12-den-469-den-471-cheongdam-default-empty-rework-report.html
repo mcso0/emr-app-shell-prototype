@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-469/DEN-471 Cheongdam 기본 빈 병원 상태 재작업 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #1f2937;
+      }
+      h1, h2 {
+        color: #111827;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d1d5db;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-469/DEN-471 Cheongdam 기본 빈 병원 상태 재작업 보고서</h1>
+
+    <h2>요청</h2>
+    <p>
+      스테이징 Cheongdam workspace 진입은 성공하지만 접수 본문에
+      <code>26.05.01</code>, 콩이/나비/코코/하루 같은 legacy daily work가
+      보이는 문제를 수정한다. Cheongdam은 새로 개업한 병원처럼 준비된
+      마스터/설정 데이터만 있고 active daily work는 기본 노출되지 않아야 한다.
+      Sales Demo <code>clair-demo</code>는 삭제하지 않고 명시적 legacy demo로 보존한다.
+    </p>
+
+    <h2>변경 요약</h2>
+    <ul>
+      <li><code>workspace-clair-cheongdam</code>을 prepared empty clinic 기본 workspace로 분리했다.</li>
+      <li>Reception helper가 workspace/date scope를 받아 Cheongdam에서는 legacy appointment, encounter, queue fixture를 섞지 않게 했다.</li>
+      <li>Reception 날짜 기준을 workspace별로 계산해 Cheongdam은 현재 운영일, <code>clair-demo</code>는 기존 <code>2026-05-01</code> fixture date를 유지한다.</li>
+      <li>로그인 기본 이동 경로를 Cheongdam reception으로 변경했고, Sales Demo launcher는 계속 <code>clair-demo</code>를 사용한다.</li>
+      <li>stale mock flash 방지를 위해 Cheongdam loading/error/local fallback 계산에서도 legacy daily work가 나오지 않도록 테스트를 추가했다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>파일</th>
+          <th>내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>src/lib/emr-domain/demo-workspaces.ts</code></td>
+          <td>Cheongdam prepared clinic과 legacy Sales Demo workspace 상수 분리</td>
+        </tr>
+        <tr>
+          <td><code>src/lib/emr-domain/demo-date.ts</code></td>
+          <td>현재 운영일, legacy fixture date, 화면 날짜 label helper 추가</td>
+        </tr>
+        <tr>
+          <td><code>src/features/reception/data.ts</code></td>
+          <td>Reception appointments, queue, summaries를 workspace/date scope 기반으로 계산</td>
+        </tr>
+        <tr>
+          <td><code>src/features/reception/module.tsx</code></td>
+          <td>Cheongdam route의 날짜 표시, API read date, 캘린더 draft date, 화면 카드 계산을 current operating date로 연결</td>
+        </tr>
+        <tr>
+          <td><code>src/features/auth/login-form.tsx</code>, <code>src/features/auth/workspace-session.ts</code></td>
+          <td>기본 로그인 이동과 Cheongdam mock access/display 보강</td>
+        </tr>
+        <tr>
+          <td><code>tests/demo-reality-start-state.spec.ts</code></td>
+          <td>Cheongdam 빈 active daily work와 Sales Demo fixture 보존 회귀 테스트 추가</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/demo-reality-start-state.spec.ts tests/sales-demo-flow.spec.ts</code>: 7개 통과</li>
+      <li><code>npm run lint -- --ignore-pattern 'lottie-ai-chart-writing/**'</code>: 에러 없음, 기존 warning 5개</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li>로컬 Browser 검증: <code>/w/workspace-clair-cheongdam/reception?modulePanel=open</code> 로그인 후 <code>26.06.12 (금)</code>, appointment/walk-in card 0개, <code>26.05.01</code>/콩이/나비 노출 없음</li>
+      <li>Vercel preview 배포: <code>https://emr-app-shell-prototype-faywpsekk-mcso0s-projects.vercel.app</code>, deployment <code>dpl_CV4YxfY3419w6xDyugWrbQrRDY8V</code>, status <code>Ready</code>, target <code>preview</code></li>
+      <li>고정 staging alias 갱신: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code>가 새 preview deployment를 가리키도록 변경했다.</li>
+      <li>고정 staging Cheongdam 검증: <code>/w/workspace-clair-cheongdam/reception?modulePanel=open</code>에서 <code>VIP동물의료센터 청담점</code>, <code>26.06.12 (금)</code>, appointment card 0개, <code>26.05.01</code>/콩이/나비/코코 노출 없음.</li>
+      <li>고정 staging Sales Demo 보존 검증: <code>/w/clair-demo/reception?modulePanel=open</code>에서 <code>CLAiR Medium Animal Hospital</code>, <code>26.05.01 (금)</code>, 콩이/나비/코코 fixture 노출 유지.</li>
+    </ul>
+
+    <h2>검증 제한</h2>
+    <ul>
+      <li><code>npm run lint</code> 일반 실행은 기존 미추적 <code>lottie-ai-chart-writing/</code> 때문에 ESLint formatter <code>Invalid string length</code>로 실패했다. 해당 dirty folder는 요청 범위 밖이라 수정하지 않았다.</li>
+      <li><code>npx tsc --noEmit</code> 일반 실행도 기존 미추적 <code>lottie-ai-chart-writing/</code> 및 stale <code>.next</code> type reference 때문에 실패했다. 변경 파일 범위의 filtered TypeScript output에는 에러가 없었다.</li>
+      <li>고정 staging alias 변경은 Vercel preview deployment를 대상으로만 수행했다. Supabase remote mutation, provider/payment/email side effect, real customer data 작업은 수행하지 않았다.</li>
+    </ul>
+
+    <h2>남은 일</h2>
+    <p>
+      DEN-472, DEN-473, DEN-491 범위의 로딩/빈 상태/오류 상태/shell search tabs notifications
+      cleanup은 별도 P1 후속으로 계속 진행해야 한다. Chart, Billing, Lab/Imaging,
+      Dispensing/Treatment 전체 Cheongdam default cleanup은 각 이슈 검증에서 이어서 확인한다.
+    </p>
+  </body>
+</html>

@@ -4,6 +4,7 @@ Canonical feature specification documents live here.
 
 Current feature specs:
 
+- `docs/product/features/auth/login-invite-onboarding-spec.md`
 - `docs/product/features/home/home-command-entry-planning.md`
 - `docs/product/features/home/home-v1-epic-plan.md`
 - `docs/product/features/home/home-v1-reference-research.md`

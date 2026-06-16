@@ -10,6 +10,7 @@ export type ChartLiveEncounterHandoff = {
   patient: Patient;
   primaryGuardian?: Guardian;
   updatedAt: string;
+  veterinarianName?: string;
 };
 
 type StoredHandoffs = Record<string, ChartLiveEncounterHandoff>;
@@ -18,6 +19,7 @@ export function saveChartLiveEncounterHandoff({
   encounter,
   patient,
   primaryGuardian,
+  veterinarianName,
 }: Omit<ChartLiveEncounterHandoff, "updatedAt">) {
   if (typeof window === "undefined") return;
 
@@ -29,6 +31,7 @@ export function saveChartLiveEncounterHandoff({
       patient,
       primaryGuardian,
       updatedAt: new Date().toISOString(),
+      veterinarianName,
     },
   };
   const trimmed = Object.fromEntries(

@@ -8,6 +8,9 @@ import {
 import type { AppIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
+/**
+ * Severity controls default role, icon, and semantic token tone.
+ */
 export type EmrInlineAlertSeverity = "error" | "warning" | "info" | "success";
 
 type EmrInlineAlertRule = {
@@ -44,14 +47,45 @@ export const emrInlineAlertSeverityRules = {
 } as const satisfies Record<EmrInlineAlertSeverity, EmrInlineAlertRule>;
 
 export type EmrInlineAlertProps = Omit<ComponentPropsWithoutRef<"section">, "title"> & {
+  /**
+   * Concise impact-oriented title. The title should make the alert meaning clear
+   * without relying on color alone.
+   */
   title: ReactNode;
+  /**
+   * Severity determines default ARIA role, icon, and tone. `error` and `warning`
+   * default to `alert`; `info` and `success` default to `status`.
+   */
   severity?: EmrInlineAlertSeverity;
+  /**
+   * Primary recovery or next-step action. The feature owns callbacks, permission
+   * checks, logging, and persistence.
+   */
   action?: ReactNode;
+  /**
+   * Secondary recovery action, such as viewing local demo state or details.
+   */
   secondaryAction?: ReactNode;
+  /**
+   * Custom icon node, or `false` to hide the icon when surrounding context
+   * already communicates the alert role.
+   */
   icon?: ReactNode | false;
+  /**
+   * Optional test hook for feature-level regression coverage.
+   */
   testId?: string;
 };
 
+/**
+ * Persistent in-context feedback for EMR workflow state.
+ *
+ * Use EmrInlineAlert for read failures, degraded live/demo boundaries,
+ * permission blockers, financial preflight warnings, and in-context success.
+ * Use toasts for transient feedback and FieldError for field-level validation.
+ *
+ * @summary persistent EMR workflow feedback
+ */
 export function EmrInlineAlert({
   action,
   children,

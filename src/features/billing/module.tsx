@@ -67,6 +67,7 @@ import {
   type BillingInvoiceStatusTransitionTarget,
 } from "@/features/billing/store";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
@@ -312,6 +313,10 @@ type GuardianCheckoutSessionSnapshot = {
   selectedInvoiceIds: string[];
   status: "prepared";
 };
+
+const emptyBillingInvoices: Invoice[] = [];
+const emptyBillingInvoiceLines: InvoiceLine[] = [];
+const emptyBillingPayments: Payment[] = [];
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   draft: "수납대기",
@@ -815,6 +820,7 @@ function useBillingWorkspaceData() {
     typeof params.workspaceId === "string"
       ? params.workspaceId
       : params.workspaceId?.[0] ?? "clair-demo";
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
   const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
   const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
@@ -831,21 +837,28 @@ function useBillingWorkspaceData() {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
+  const workspaceInvoices = preparedEmptyClinic ? emptyBillingInvoices : invoices;
+  const workspaceInvoiceLines = preparedEmptyClinic
+    ? emptyBillingInvoiceLines
+    : invoiceLines;
+  const workspacePayments = preparedEmptyClinic ? emptyBillingPayments : payments;
   const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
   const baseDetail =
-    getBillingDetail(effectiveInvoiceId, invoices, invoiceLines, payments) ??
-    getBillingDetail("invoice-coco-260501", invoices, invoiceLines, payments);
+    getBillingDetail(effectiveInvoiceId, workspaceInvoices, workspaceInvoiceLines, workspacePayments) ??
+    (preparedEmptyClinic
+      ? null
+      : getBillingDetail("invoice-coco-260501", workspaceInvoices, workspaceInvoiceLines, workspacePayments));
   const effectiveInvoiceLines =
     baseDetail && persistedCandidates.encounterId === baseDetail.encounter.id
       ? mergeInvoiceCandidateLines(
-          invoiceLines,
+          workspaceInvoiceLines,
           persistedCandidates.candidates,
           baseDetail.invoice.id,
         )
-      : invoiceLines;
+      : workspaceInvoiceLines;
   const effectiveInvoices = useMemo(
     () =>
-      invoices.map((invoice) => {
+      workspaceInvoices.map((invoice) => {
         const subtotalAmount = effectiveInvoiceLines
           .filter((line) => line.invoiceId === invoice.id)
           .reduce((total, line) => total + line.lineTotal, 0);
@@ -859,21 +872,23 @@ function useBillingWorkspaceData() {
           ),
         };
       }),
-    [effectiveInvoiceLines, invoices],
+    [effectiveInvoiceLines, workspaceInvoices],
   );
   const detail =
     getBillingDetail(
       effectiveInvoiceId,
       effectiveInvoices,
       effectiveInvoiceLines,
-      payments,
+      workspacePayments,
     ) ??
-    getBillingDetail(
-      "invoice-coco-260501",
-      effectiveInvoices,
-      effectiveInvoiceLines,
-      payments,
-    );
+    (preparedEmptyClinic
+      ? null
+      : getBillingDetail(
+          "invoice-coco-260501",
+          effectiveInvoices,
+          effectiveInvoiceLines,
+          workspacePayments,
+        ));
   const baseEncounterId = baseDetail?.encounter.id;
   const baseEncounterWorkspaceId = baseDetail?.encounter.workspaceId;
   const baseInvoiceId = baseDetail?.invoice.id;
@@ -991,9 +1006,9 @@ function useBillingWorkspaceData() {
       getBillingGuardianGroups(
         effectiveInvoices,
         effectiveInvoiceLines,
-        payments,
+        workspacePayments,
       ),
-    [effectiveInvoiceLines, effectiveInvoices, payments],
+    [effectiveInvoiceLines, effectiveInvoices, workspacePayments],
   );
 
   const liveCandidateDetail =
@@ -1015,7 +1030,7 @@ function useBillingWorkspaceData() {
     groups,
     invoiceLines: effectiveInvoiceLines,
     invoices: effectiveInvoices,
-    payments,
+    payments: workspacePayments,
     queryInvoiceId,
     selectedInvoiceId,
   };
@@ -1195,7 +1210,7 @@ function QueueItem({
   );
 }
 
-export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
+export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentProps) {
   const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const invoices = useBillingStore((state) => state.invoices);
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
@@ -1208,13 +1223,16 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<
     Set<BillingFilter>
   >(() => new Set());
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const groupedRows = useMemo(
     () =>
       billingQueueGroups.map((group) => ({
         ...group,
-        rows: getBillingQueueRows(invoices, invoiceLines, payments, group.value),
+        rows: preparedEmptyClinic
+          ? []
+          : getBillingQueueRows(invoices, invoiceLines, payments, group.value),
       })),
-    [invoiceLines, invoices, payments],
+    [invoiceLines, invoices, payments, preparedEmptyClinic],
   );
   const totalRowCount = groupedRows.reduce(
     (total, group) => total + group.rows.length,
@@ -1241,7 +1259,7 @@ export function BillingSidePanel({ moduleLabel }: ShellComponentProps) {
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
       />
-      <EmrDateNavigator dateLabel="26.05.01 (금)" todayLabel="오늘" />
+      <EmrDateNavigator dateLabel={preparedEmptyClinic ? "오늘" : "26.05.01 (금)"} todayLabel="오늘" />
       <EmrListHeader
         label="전체"
         count={totalRowCount}

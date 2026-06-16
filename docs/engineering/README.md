@@ -39,7 +39,8 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - Engineering docs describe implementation contracts and verification guidance. User-facing domain requirements belong in `docs/product/domain/`.
 - Do not treat client-only permission checks, hidden UI, or mock role labels as complete security.
 - Do not claim remote Supabase staging/live validation, production deployment, RLS completeness, external integrations, or compliance/legal readiness unless scoped work verified it.
-- Remote Supabase commands, migration push, production deploy, real email, payment, and provider integration remain explicit-approval work.
+- Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work may proceed when an active Linear issue or work item includes it.
+- Explicit approval is still required before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
 - Keep completed reports in `docs/completed/`; if a closeout changes current engineering truth, update the relevant engineering source doc too.
 
 ## Adding Engineering Docs

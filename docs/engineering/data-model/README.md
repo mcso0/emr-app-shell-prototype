@@ -1,3 +1,15 @@
+---
+id: ENGINEERING-DATA-MODEL-README
+type: Area Index
+title: "Data Model"
+description: "Indexes engineering data model, schema, persistence, handoff, and migration-boundary references."
+status: active
+area: engineering
+doc_type: area-index
+tags: [data-model, schema, persistence, migrations]
+last_updated: 2026-06-16
+---
+
 # Data Model
 
 Canonical engineering data model documents live here. Use this README as the GitBook entry point for schema, persistence, handoff, and migration-boundary references.

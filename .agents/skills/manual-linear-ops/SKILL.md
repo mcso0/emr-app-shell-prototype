@@ -17,7 +17,8 @@ Use this repo's manual Linear workflow as a lightweight Symphony replacement. Ke
 - Individual work threads must stop at PR preview for deployment review; route fixed staging, production, Vercel alias, or promote requests through `$release-deployment-ops`.
 - Stop meaningful issue work at `Human Review`; move to `Done` only when 승욱 explicitly accepts or asks.
 - Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo, link, or wording fixes.
-- Do not enter live Supabase, DB migration, RLS, payment or subscription, email delivery, production deploy, or role and permission policy changes without explicit approval.
+- Scoped synthetic/demo-data Supabase, DB migration, RLS, server/API, and production-demo deployment work may proceed when the active Linear issue includes it.
+- Ask 승욱 before meaningful cost, secret/security exposure, private repo/public exposure, real data use, destructive remote data changes, real external communications/payments/providers, real customer launch, or canonical role/permission policy changes.
 - If an approval-gated action is the better or necessary path for the active issue, do not choose a weaker workaround just to avoid the gate. Stop, explain the required gated operation, and ask 승욱 for explicit approval before continuing.
 
 ## Required Workflow

@@ -12,9 +12,22 @@ This repository does not maintain a separate LLM Wiki layer by default. Borrow L
 
 - Query: use this map to choose the smallest current source-doc set, then cite or link the canonical docs that support the answer.
 - Ingest: when durable knowledge changes, route it through `docs/_meta/intake-rules.md` and update the owning canonical doc instead of creating a duplicate generated summary.
-- Catalog: use `docs/index.md`, `docs/SUMMARY.md`, area READMEs, and `docs/work/index.md` as navigation surfaces; do not create a second global index unless 승욱 explicitly approves it.
+- Catalog: use `docs/index.md`, the internal `/prd` product-doc viewer, area READMEs, and `docs/work/index.md` as navigation surfaces; do not create a second global index unless 승욱 explicitly approves it. `docs/SUMMARY.md` is legacy GitBook compatibility, not active navigation.
 - Log: keep history near the owning area through work items, closeouts, changelogs, and current-status history; do not create a global LLM-maintained log by default.
 - Lint: when reviewing docs health, check for stale claims, broken source links, duplicate source-of-truth paths, and mock/live or security-completion overclaims.
+
+## OKF-Lite Metadata
+
+Use Open Knowledge Format style only as lightweight metadata over the existing `docs/` system. Do not create a separate OKF bundle, `docs/wiki/`, generated summary layer, or global agent-maintained log unless 승욱 explicitly approves that scope.
+
+For new or substantially touched canonical source docs, add these fields when they clarify agent routing:
+
+- `type`: human-readable knowledge type, such as `Product Requirement`, `Domain Contract`, `Data Contract`, `Operating Rule`, `Decision`, `Work Item`, or `Closeout`.
+- `title`: reader-facing title that matches or closely mirrors the first heading.
+- `description`: one concise sentence explaining what the doc makes knowable.
+- `tags`: short routing tags for area, workflow, or domain concepts.
+
+Keep existing repo fields such as `id`, `status`, `area`, `doc_type`, `related_work`, and `last_updated`; they remain the internal source-of-truth lifecycle fields. Treat OKF-style metadata as optional routing help, not authority over product status, security completion, DB/RLS readiness, launch readiness, or work acceptance.
 
 ## Default Startup Set
 
@@ -45,14 +58,14 @@ Skip these unless the active issue explicitly links them or the task needs histo
 | Task type | Read after startup | Notes |
 | --- | --- | --- |
 | Docs or work routing | `docs/README.md`, `docs/_meta/README.md`, `docs/_meta/intake-rules.md`, `docs/_meta/documentation-depth-rules.md`, `docs/work/index.md` | Use for new plans, source-of-truth changes, Linear shaping, and closeouts. |
-| Product direction or MVP scope | `docs/product/README.md`, `docs/product/prd/clair-emr-saas-prd.md`, `docs/product/features/legacy-mvp-feature-spec.md`, `docs/product/user-flows/emr-saas-userflow.md` | Prefer future baseline docs once created: SaaS operating map, MVP scope, workflow state model, and domain entity map. |
+| Product direction or MVP scope | `docs/product/README.md`, `docs/product/prd/clair-emr-saas-prd.md`, `docs/product/features/legacy-mvp-feature-spec.md`, `docs/product/user-flows/emr-saas-userflow.md` | Humans may use `/prd` as a read-only viewer, but agents should still read the source Markdown paths. |
 | Role, auth, permission, or workspace policy | `docs/product/domain/workspace-auth-permissions.md`, `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`, `docs/engineering/auth-security/auth-login/README.md`, relevant auth-login status/work-order docs | Do not change role/permission policy without representative approval. |
-| DB, data model, migration, RLS, or persistence | `docs/product/domain/README.md`, `docs/engineering/data-model/README.md`, `docs/engineering/data-model/emr-saas-db-structure-spec.ko.md`, relevant `docs/engineering/auth-security/auth-login/*persistence*` docs, active work item | Remote Supabase, migration push, RLS, and live data work remain approval-gated. |
+| DB, data model, migration, RLS, or persistence | `docs/product/domain/README.md`, `docs/engineering/data-model/README.md`, `docs/engineering/data-model/emr-saas-db-structure-spec.ko.md`, relevant `docs/engineering/auth-security/auth-login/*persistence*` docs, active work item | Scoped synthetic/demo Supabase, migration, RLS, and persistence work may proceed when an active issue includes it. Stop for real data, destructive remote changes, secret/security exposure, or high-cost external effects. |
 | UI or screen work | `docs/design/README.md`, `docs/design/system/DESIGN.md`, `docs/design/reference-screen-index.md`, relevant `docs/design/screens/**` or `docs/design/flows/**`, active screen work item | For Next.js app code, read the relevant `node_modules/next/dist/docs/` guide before coding. |
 | Design system or shared components | `docs/design/system/DESIGN.md`, `docs/design/system/component-ownership-rules.md`, `docs/design/system/ui-refactor-dod.md`, `docs/design/system/ui-refactor-operating-model.md` | Use existing tokens and shared primitives before adding new patterns. |
 | QA or visual review | `docs/design/qa/README.md`, `docs/design/qa/core-workspace-ui-review-checklist.md`, `docs/design/qa/interaction-accessibility-audit.md`, `docs/design/qa/responsive-dense-layout-audit.md`, relevant Playwright specs | Use screenshots or browser verification when UI quality matters. |
 | Testing, CI, or regression | `docs/engineering/testing/mvp-gap-analysis.md`, active work item verification section, relevant `tests/*.spec.ts` | Prefer narrow verification first, then broaden when risk requires it. |
-| Release, deployment, or operations | `docs/engineering/operations/README.md`, `docs/engineering/operations/release-environment-policy.md`, `docs/engineering/operations/vercel-git-integration-execution-plan.md`, `.agents/skills/release-deployment-ops/SKILL.md`, `docs/engineering/auth-security/auth-login/auth-db-env-secret-verification-gates.md`, relevant launch readiness docs | PR previews are for work branches; fixed staging belongs to main/integration release flow; production deploy, real email, payment, and remote Supabase remain approval-gated. |
+| Release, deployment, or operations | `docs/engineering/operations/README.md`, `docs/engineering/operations/release-environment-policy.md`, `docs/engineering/operations/vercel-git-integration-execution-plan.md`, `.agents/skills/release-deployment-ops/SKILL.md`, `docs/engineering/auth-security/auth-login/live-supabase-readiness-execution-mode.md`, `docs/engineering/auth-security/auth-login/auth-db-env-secret-verification-gates.md`, relevant launch readiness docs | PR previews are for work branches; fixed staging belongs to main/integration release flow. Production-demo deployment and synthetic/demo remote validation may proceed when scoped; stop for meaningful cost, secret/security exposure, real external email/payment/provider side effects, real data, destructive remote changes, public launch, or real external-user access. |
 | Linear operations | `docs/engineering/agent-orchestration/manual-linear-operations.md`, active Linear project/issue, `docs/work/index.md` | One issue/branch/PR remains the default; 승욱-approved work bundles may group related issues, while release deployment is routed separately. |
 | Owner OS routing or work packet creation | `docs/product/service/clair-owner-os-product-plan.md`, `.agents/skills/clair-owner-os-router/SKILL.md`, `.agents/skills/codex-agent-router/SKILL.md` when subagent cost routing is relevant, active Linear issue or `docs/work/agent-orchestration/OWNER-OS-*.md` | Start with classification, depth, autonomy, approval gates, output shape, and 5.5 parent/subagent cost posture before editing. |
 | Owner Safety OS or 안전 점검 게이트 | `docs/_meta/owner-safety-os.md`, `docs/_meta/non-developer-codex-workflow.md`, `.agents/skills/emr-owner-safety-os/SKILL.md` | Start with lightweight intake only. Do not load full checklists, modify files, or run full review until 승욱 approves the proposed scope. `작업 점검 하자` remains a legacy alias. |
@@ -84,4 +97,4 @@ Update this map when:
 
 - a new canonical source document is created
 - a new workstream changes startup routing
-- GitBook sidebar structure changes the human docs entry point
+- `/prd` viewer registry or human docs entry point changes

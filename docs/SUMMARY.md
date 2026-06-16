@@ -1,5 +1,7 @@
 # Summary
 
+> Legacy GitBook compatibility file. The active human reader path is the repo docs portal plus the internal `/prd` product-doc viewer. Keep this file only to preserve historical GitBook/sidebar context unless 승욱 explicitly revives GitBook.
+
 ## Start Here
 
 - [Docs Portal](index.md)

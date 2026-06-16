@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -68,9 +69,15 @@ import {
   type CustomerPatientRow,
   type CustomerWorkBadge,
 } from "@/features/customer/data";
+import { useMockAuthStore } from "@/features/auth/session-store";
 import { useCustomerStore, type CustomerListMode } from "@/features/customer/store";
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
+import type { ReceptionPatientGuardianLookupResponse } from "@/features/reception/patient-guardian-lookup";
+import {
+  LEGACY_SALES_DEMO_WORKSPACE_ID,
+  isPreparedEmptyClinicWorkspace,
+} from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
@@ -216,6 +223,12 @@ type CustomerRowActionFeedback = {
   body: ReactNode;
   title: string;
 };
+
+function getCustomerWorkspaceId(value?: string | string[]) {
+  return typeof value === "string"
+    ? value
+    : (value?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
+}
 
 function compareCustomerTableValues(left: CustomerTableSortValue, right: CustomerTableSortValue) {
   const leftEmpty = left === null || left === undefined || left === "";
@@ -718,6 +731,8 @@ function CustomerDataTable<TRow extends { id: string }>({
 }
 
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const setListMode = useCustomerStore((state) => state.setListMode);
   const guardians = usePatientProfileStore((state) => state.guardians);
@@ -726,12 +741,24 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["master"]));
   const patientCount = useMemo(
-    () => getCustomerPatientRows({ guardians, patientGuardians, patients }).length,
-    [guardians, patientGuardians, patients]
+    () =>
+      getCustomerPatientRows({
+        guardians,
+        patientGuardians,
+        patients,
+        workspaceId,
+      }).length,
+    [guardians, patientGuardians, patients, workspaceId]
   );
   const guardianCount = useMemo(
-    () => getCustomerGuardianRows({ guardians, patientGuardians, patients }).length,
-    [guardians, patientGuardians, patients]
+    () =>
+      getCustomerGuardianRows({
+        guardians,
+        patientGuardians,
+        patients,
+        workspaceId,
+      }).length,
+    [guardians, patientGuardians, patients, workspaceId]
   );
   const customerCounts: Record<CustomerListMode, number> = {
     deleted: 0,
@@ -1132,18 +1159,66 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
 }
 
 export function CustomerContent() {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const query = useCustomerStore((state) => state.query);
+  const authSession = useMockAuthStore((state) => state.session);
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem,
+  );
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
+  useEffect(() => {
+    if (!isPreparedEmptyClinicWorkspace(workspaceId)) return;
+
+    let cancelled = false;
+
+    async function loadSeededCustomerProfiles() {
+      try {
+        const headers = authSession?.id
+          ? { "x-clair-demo-session-user-id": authSession.id }
+          : undefined;
+        const response = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?query=`,
+          {
+            cache: "no-store",
+            headers,
+          },
+        );
+        const result =
+          (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+        if (cancelled || !response.ok || !result.ok) return;
+
+        result.patients.forEach((item) => applyPatientGuardianLookupItem(item));
+      } catch {
+        // Keep the workspace-filtered empty state if live customer seed read fails.
+      }
+    }
+
+    void loadSeededCustomerProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPatientGuardianLookupItem, authSession?.id, workspaceId]);
   const patientRows = useMemo(
-    () => filterCustomerRows(getCustomerPatientRows({ guardians, patientGuardians, patients }), query),
-    [guardians, patientGuardians, patients, query]
+    () =>
+      filterCustomerRows(
+        getCustomerPatientRows({ guardians, patientGuardians, patients, workspaceId }),
+        query,
+      ),
+    [guardians, patientGuardians, patients, query, workspaceId]
   );
   const guardianRows = useMemo(
-    () => filterCustomerRows(getCustomerGuardianRows({ guardians, patientGuardians, patients }), query),
-    [guardians, patientGuardians, patients, query]
+    () =>
+      filterCustomerRows(
+        getCustomerGuardianRows({ guardians, patientGuardians, patients, workspaceId }),
+        query,
+      ),
+    [guardians, patientGuardians, patients, query, workspaceId]
   );
 
   return (

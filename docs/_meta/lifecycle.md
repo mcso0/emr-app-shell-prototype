@@ -47,6 +47,19 @@ last_updated:
 
 Use an empty list (`[]`) when a field has no linked items yet.
 
+## Optional OKF-Lite Metadata
+
+New or substantially touched canonical source docs may also include these optional routing fields:
+
+```md
+type:
+title:
+description:
+tags:
+```
+
+These fields borrow Open Knowledge Format style for agent-readable context. They do not replace the required lifecycle fields above. Use them to make a document easier to route, search, and summarize; do not treat them as authority over status, scope, security completion, DB/RLS readiness, launch readiness, or work acceptance.
+
 ## Change Verbs
 
 Use these verbs in changelogs and closeouts:
@@ -67,4 +80,3 @@ Do not delete meaningful work history. Use status and links instead:
 - Replaced: mark as `superseded` and link `superseded_by`.
 - Historical only: move to `archive/` and mark `archived`.
 - Delete only accidental empty files, typo files, or immediate duplicates with no decision value.
-

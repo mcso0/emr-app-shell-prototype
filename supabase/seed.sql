@@ -205,6 +205,97 @@ set
   permissions = excluded.permissions,
   updated_at = now();
 
+-- Demo Reality & Launch Readiness: Cheongdam empty-clinic workspace access seed.
+-- Keeps the Sales Demo `clair-demo` fixture separate while allowing seeded admin login
+-- to enter the prepared Cheongdam workspace route.
+
+select 'cheongdam_workspace_access_seed_contract_version:2026-06-12' as cheongdam_workspace_access_seed_contract_version;
+
+insert into public.workspaces (id, display_name, status, created_by_user_id)
+values (
+  'workspace-clair-cheongdam',
+  'VIP동물의료센터 청담점',
+  'active',
+  '00000000-0000-4000-8000-000000000001'
+)
+on conflict (id) do update
+set
+  display_name = excluded.display_name,
+  status = excluded.status,
+  created_by_user_id = excluded.created_by_user_id,
+  updated_at = now();
+
+insert into public.user_memberships (
+  id,
+  workspace_id,
+  user_id,
+  roles,
+  department,
+  title,
+  status,
+  activated_at
+)
+values (
+  '49100000-0000-4000-8000-000000000001',
+  'workspace-clair-cheongdam',
+  '00000000-0000-4000-8000-000000000001',
+  array['hospital_admin'],
+  'Operations',
+  'Hospital Admin',
+  'active',
+  now()
+)
+on conflict (workspace_id, user_id) do update
+set
+  roles = excluded.roles,
+  department = excluded.department,
+  title = excluded.title,
+  status = excluded.status,
+  activated_at = excluded.activated_at,
+  updated_at = now();
+
+insert into public.permission_policies (
+  workspace_id,
+  name,
+  scope,
+  target_role,
+  permissions
+)
+values
+  (
+    'workspace-clair-cheongdam',
+    'Hospital admin full access',
+    'role',
+    'hospital_admin',
+    '{"allowed":["*"]}'::jsonb
+  ),
+  (
+    'workspace-clair-cheongdam',
+    'Veterinarian MVP access',
+    'role',
+    'vet',
+    '{"allowed":["reception:view","patient:view","encounter:view","chart:view","chart:update","order:create","order:update","dispensing:view","lab:view","imaging:view","billing:view"]}'::jsonb
+  ),
+  (
+    'workspace-clair-cheongdam',
+    'Technician MVP access',
+    'role',
+    'technician',
+    '{"allowed":["reception:view","patient:view","encounter:view","chart:view","order:update","dispensing:view","dispensing:complete","lab:view","lab:update","imaging:view","imaging:update"]}'::jsonb
+  ),
+  (
+    'workspace-clair-cheongdam',
+    'Front desk MVP access',
+    'role',
+    'front_desk',
+    '{"allowed":["reception:view","reception:create","reception:update","patient:view","patient:create","patient:update","encounter:view","billing:view","billing:issue"]}'::jsonb
+  )
+on conflict (workspace_id, target_role) where scope = 'role' do update
+set
+  name = excluded.name,
+  permissions = excluded.permissions,
+  updated_at = now();
+
 -- DEN-56: reception domain synthetic seed contract.
 -- Uses local-only synthetic data. Do not replace with production guardian, patient, or clinic data.
 

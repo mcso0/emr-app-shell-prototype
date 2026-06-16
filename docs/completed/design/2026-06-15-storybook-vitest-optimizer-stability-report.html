@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Storybook Vitest Optimizer Stability Report</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8f8fa;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+      }
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.25;
+      }
+      p,
+      li {
+        font-size: 14px;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f3f4f6;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="status">Human Review</p>
+      <h1>Storybook Vitest Optimizer Stability</h1>
+      <p>
+        Storybook MCP focused test 첫 실행에서 반복되던 Vite dependency optimizer reload를 줄이기 위해
+        Vitest Storybook project config에 Base UI 패키지 preload 목록을 명시했다.
+      </p>
+
+      <section>
+        <h2>변경 사항</h2>
+        <ul>
+          <li><code>vitest.config.ts</code>에 <code>optimizeDeps.include</code>를 추가했다.</li>
+          <li>현재 Storybook primitive와 pattern에서 쓰는 Base UI 하위 패키지를 명시했다.</li>
+          <li>runtime component나 story behavior는 변경하지 않았다.</li>
+          <li>새 work item <code>DESIGN-SYSTEM-PR-062</code>를 Human Review 상태로 기록했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <p>
+          패키지 업그레이드, <code>storybook/test</code> helper migration, runtime API 변경, DB/Supabase/권한/배포/외부 연동은 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run lint</code> 통과. 기존 5개 warning은 남아 있다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li><code>npm run build-storybook</code> 통과. 기존 Storybook build warning은 남아 있다.</li>
+          <li><code>npm run storybook -- --ci --smoke-test</code> 통과.</li>
+          <li>
+            Storybook MCP focused story test 통과:
+            <code>design-system-ui-dialog--default</code>,
+            <code>design-system-ui-popover--default</code>,
+            <code>design-system-emr-table-queue-patterns--sortable-filterable-header</code>.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>주의 사항</h2>
+        <p>
+          이 변경은 첫 실행 reload를 줄이는 안정화다. Storybook 서버를 깨끗하게 재시작한 뒤 대표 focused test는
+          이전 Base UI optimizer reload 실패 없이 첫 실행에서 통과했다. 향후 새 Base UI 하위 패키지를 Storybook에
+          추가하면 같은 목록에 포함할지 검토해야 한다.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

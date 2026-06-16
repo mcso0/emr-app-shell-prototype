@@ -5,7 +5,7 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import type { ChartLiveQueueRecord } from "@/features/chart/chart-live-queue";
-import { getChartQueueRows } from "@/features/chart/data";
+import { getChartQueueRows, getChartStaffName } from "@/features/chart/data";
 import {
   createSupabaseReceptionQueueReadGateway,
   type SupabaseReceptionQueueReadRpcClient,
@@ -89,7 +89,7 @@ export function createMockChartLiveQueueGateway(): ChartLiveQueueGateway {
 }
 
 export type SupabaseChartLiveQueueClient = SupabaseReceptionQueueReadRpcClient & {
-  from(tableName: "patients" | "guardians"): SupabaseChartLiveQueueTableBuilder;
+  from(tableName: "patients" | "guardians" | "users"): SupabaseChartLiveQueueTableBuilder;
   rpc(
     functionName: "clair_search_reception_patient_guardian_lookup",
     args: {
@@ -136,8 +136,14 @@ export function createSupabaseChartLiveQueueGateway(
           .map((record) => record.encounter.guardianId)
           .filter((value): value is string => Boolean(value)),
       );
+      const veterinarianIds = uniqueStrings(
+        consultationRecords
+          .map((record) => record.encounter.primaryVeterinarianId)
+          .filter((value): value is string => Boolean(value)),
+      );
       const patients = await readSupabasePatients(client, workspaceId, patientIds);
       const guardians = await readSupabaseGuardians(client, workspaceId, guardianIds);
+      const staffUsers = await readSupabaseStaffDisplayNames(client, veterinarianIds);
       const lookupProfiles =
         patients.ok && guardians.ok
           ? { ok: true as const, patients: [], guardians: [] }
@@ -163,6 +169,11 @@ export function createSupabaseChartLiveQueueGateway(
       const guardianById = new Map(
         hydratedGuardians.map((guardian) => [guardian.id, guardian]),
       );
+      const veterinarianNameById = new Map(
+        staffUsers.ok
+          ? staffUsers.users.map((user) => [user.id, user.displayName])
+          : [],
+      );
 
       const queue = consultationRecords
         .map((record): ChartLiveQueueRecord | null => {
@@ -177,6 +188,10 @@ export function createSupabaseChartLiveQueueGateway(
             patient,
             ...(primaryGuardian ? { primaryGuardian } : {}),
             queueEntry: record.queueEntry,
+            veterinarianName: record.encounter.primaryVeterinarianId
+              ? veterinarianNameById.get(record.encounter.primaryVeterinarianId) ??
+                getChartStaffName(record.encounter.primaryVeterinarianId)
+              : undefined,
           };
         })
         .filter((record): record is ChartLiveQueueRecord => Boolean(record));
@@ -271,6 +286,8 @@ const guardianSelectColumns = `
   updated_at
 `;
 
+const staffUserSelectColumns = "id, display_name";
+
 async function readSupabasePatients(
   client: SupabaseChartLiveQueueClient,
   workspaceId: string,
@@ -305,6 +322,22 @@ async function readSupabaseGuardians(
   if (error) return { ok: false };
 
   return { ok: true, guardians: mapGuardianRows(data) };
+}
+
+async function readSupabaseStaffDisplayNames(
+  client: SupabaseChartLiveQueueClient,
+  userIds: string[],
+): Promise<{ ok: true; users: Array<{ displayName: string; id: string }> } | { ok: false }> {
+  if (userIds.length === 0) return { ok: true, users: [] };
+
+  const { data, error } = await client
+    .from("users")
+    .select(staffUserSelectColumns)
+    .in("id", userIds);
+
+  if (error) return { ok: false };
+
+  return { ok: true, users: mapStaffUserRows(data) };
 }
 
 async function readSupabaseLookupProfiles(
@@ -410,6 +443,20 @@ function mapGuardianRows(data: unknown): Guardian[] {
       };
     })
     .filter((guardian): guardian is Guardian => Boolean(guardian));
+}
+
+function mapStaffUserRows(data: unknown): Array<{ displayName: string; id: string }> {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((row): { displayName: string; id: string } | null => {
+      const value = row as Record<string, unknown>;
+      const id = getString(value.id);
+      const displayName = getString(value.display_name) ?? getString(value.displayName);
+
+      return id && displayName ? { displayName, id } : null;
+    })
+    .filter((user): user is { displayName: string; id: string } => Boolean(user));
 }
 
 function uniqueStrings(values: string[]) {

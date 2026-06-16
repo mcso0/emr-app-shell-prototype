@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-DOMAIN-ROLE-PERMISSION-SOURCE-MAP
+type: Domain Map
+title: "Role And Permission Source Map"
+description: "Defines canonical role and permission truth sources and change gates for CLAiR EMR."
 status: approved
 area: product
 doc_type: domain-map
+tags: [domain, roles, permissions, workspace-auth]
 related_work:
   - DEN-178
 supersedes: []

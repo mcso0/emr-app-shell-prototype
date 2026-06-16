@@ -166,6 +166,91 @@ test("supabase reception calendar gateway maps rows and keeps workspace date sco
   });
 });
 
+test("supabase reception calendar gateway accepts snake_case walk-in rows with embedded profiles", async () => {
+  const gateway = createSupabaseReceptionCalendarReadGateway({
+    async rpc() {
+      return {
+        data: [
+          {
+            encounter: {
+              id: "encounter-calendar-live-luna",
+              workspace_id: "clair-demo",
+              patient_id: "patient-live-luna",
+              guardian_id: "guardian-live-jiyu",
+              primary_veterinarian_id: "user-vet-suji",
+              encounter_no: "E-CAL-0002",
+              reception_type: "walk_in",
+              duration_minutes: 30,
+              chief_complaint: "calendar readback verification",
+              visit_purpose: "calendar readback verification",
+              status: "waiting",
+              checked_in_at: "2026-05-01T14:15:00+09:00",
+              created_at: "2026-05-01T14:15:00+09:00",
+              updated_at: "2026-05-01T14:15:00+09:00",
+            },
+            patient: {
+              id: "patient-live-luna",
+              workspace_id: "clair-demo",
+              patient_no: "P-LIVE-0002",
+              name: "루나",
+              species: "cat",
+              sex: "female",
+              handling_caution_locked: true,
+              status: "active",
+              created_at: "2026-05-01T00:00:00+09:00",
+              updated_at: "2026-05-01T00:00:00+09:00",
+            },
+            primary_guardian: {
+              id: "guardian-live-jiyu",
+              workspace_id: "clair-demo",
+              name: "박지유",
+              mobile_phone: "010-2222-3333",
+              created_at: "2026-05-01T00:00:00+09:00",
+              updated_at: "2026-05-01T00:00:00+09:00",
+            },
+            queue_entry: {
+              id: "queue-calendar-live-luna",
+              workspace_id: "clair-demo",
+              encounter_id: "encounter-calendar-live-luna",
+              queue_type: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sort_order: 1,
+              entered_at: "2026-05-01T14:15:00+09:00",
+            },
+          },
+        ],
+        error: null,
+      };
+    },
+  });
+
+  const result = await gateway.listReceptionDay({
+    date: "2026-05-01",
+    workspaceId: "clair-demo",
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    records: [
+      {
+        encounter: {
+          id: "encounter-calendar-live-luna",
+          patientId: "patient-live-luna",
+          primaryVeterinarianId: "user-vet-suji",
+          checkedInAt: "2026-05-01T14:15:00+09:00",
+        },
+        patient: { id: "patient-live-luna", name: "루나" },
+        primaryGuardian: { id: "guardian-live-jiyu", name: "박지유" },
+        queueEntry: {
+          id: "queue-calendar-live-luna",
+          enteredAt: "2026-05-01T14:15:00+09:00",
+        },
+      },
+    ],
+  });
+});
+
 test("reception calendar read route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/calendar/day/route.ts",

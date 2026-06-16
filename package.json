@@ -14,7 +14,9 @@
     "owner-os:dashboard": "node scripts/owner-os.mjs dashboard",
     "owner-os:eval": "node scripts/owner-os.mjs eval",
     "owner-os:packet:check": "node scripts/validate-owner-os-packets.mjs",
-    "security:secrets": "node scripts/scan-secrets.mjs"
+    "security:secrets": "node scripts/scan-secrets.mjs",
+    "storybook": "storybook dev -p 6006 --disable-telemetry",
+    "build-storybook": "storybook build --disable-telemetry"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -49,14 +51,25 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@storybook/addon-docs": "^10.4.4",
+    "@storybook/addon-mcp": "^0.6.0",
+    "@storybook/addon-vitest": "^10.4.4",
+    "@storybook/nextjs-vite": "^10.4.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/browser-playwright": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "eslint-plugin-storybook": "^10.4.4",
+    "playwright": "^1.60.0",
+    "storybook": "^10.4.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   },
   "overrides": {
     "postcss": "8.5.12"

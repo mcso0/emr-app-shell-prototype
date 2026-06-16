@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-PRD-CLAIR-EMR-SAAS
+type: Product Requirement
+title: "동물병원 전용 EMR SaaS 서비스 PRD"
+description: "Defines the original product goals, users, value proposition, and core feature requirements for CLAiR EMR."
 status: approved
 area: product
 doc_type: prd
+tags: [prd, product, veterinary-emr, mvp]
 related_work: []
 supersedes: []
 superseded_by: []
