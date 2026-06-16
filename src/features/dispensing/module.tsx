@@ -888,34 +888,6 @@ function completeInstructionGroup(group: OrderTableGroup) {
   };
 }
 
-function getFulfillmentTransitionPath(
-  current: FulfillmentWorkItemStatus,
-  target: "in_progress" | "completed" | "requested",
-): FulfillmentWorkItemStatus[] | null {
-  if (target === "in_progress") {
-    if (current === "requested") return ["accepted", "in_progress"];
-    if (current === "accepted") return ["in_progress"];
-    if (current === "returned") return ["requested", "accepted", "in_progress"];
-    if (current === "in_progress") return [];
-    return null;
-  }
-
-  if (target === "completed") {
-    if (current === "requested") return ["accepted", "in_progress", "completed"];
-    if (current === "accepted") return ["in_progress", "completed"];
-    if (current === "in_progress") return ["completed"];
-    if (current === "returned") return ["requested", "accepted", "in_progress", "completed"];
-    if (current === "completed") return [];
-    return null;
-  }
-
-  if (current === "requested") return [];
-  if (current === "returned") return ["requested"];
-  if (current === "accepted" || current === "in_progress") return ["returned", "requested"];
-
-  return null;
-}
-
 function assignOrderInGroup(group: OrderTableGroup, rowId: string, technicianId: string) {
   const technician = findTechnician(technicianId);
   const rows = group.rows.map((row) =>

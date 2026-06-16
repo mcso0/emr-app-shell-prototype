@@ -46,6 +46,7 @@ Implement inline search mode for side-panel queue headers so queue search icons 
 - Closing search clears the query and restores the existing header controls.
 - Selection remains explicit: typing does not change the selected task/card.
 - The shared queue header search mode is implemented through `EmrListHeader.search`; treatment/dispensing order queues, lab queues, and imaging queues reuse the same inline header pattern.
+- Staging integration must preserve the DEN-436 inactive-header controls: visible sort label button (`요청순` by default), filter icon button, display density button (`M`/`S`), and search icon trigger.
 
 ## Verification
 

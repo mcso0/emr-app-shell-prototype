@@ -2709,7 +2709,6 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
-  const workspaceId = useWorkspaceIdFromPath();
   const fulfillmentQueue = useFulfillmentQueue("lab");
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(
     searchParams,

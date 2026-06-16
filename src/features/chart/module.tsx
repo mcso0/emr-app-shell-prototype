@@ -864,9 +864,10 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
+  const liveMode = liveQueueStatus === "ready";
   const items = useMemo(
-    () => (liveQueueStatus === "ready" ? liveItems : mockItems),
-    [liveItems, liveQueueStatus, mockItems],
+    () => (liveMode ? liveItems : mockItems),
+    [liveItems, liveMode, mockItems],
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
 
