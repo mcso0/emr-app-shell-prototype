@@ -279,6 +279,11 @@ export function createMockReceptionWalkInEncounterGateway(
 	        enteredAt: eventTime,
 	      };
 
+      if (input.weightKg !== undefined) {
+        patient.weightKg = input.weightKg;
+        patient.updatedAt = eventTime;
+      }
+
       return { ok: true, walkIn: { encounter, queueEntry } };
     },
   };
@@ -439,10 +444,14 @@ function normalizeWalkInInput(
         : undefined,
 	    guardianId: trimToUndefined(input.guardianId),
 	    memo: trimToUndefined(input.memo),
-	    patientId: trimToUndefined(input.patientId) ?? "",
-	    plannedStartAt: trimToUndefined(input.plannedStartAt),
-	    primaryVeterinarianId: trimToUndefined(input.primaryVeterinarianId),
-	    visitPurpose: trimToUndefined(input.visitPurpose),
+    patientId: trimToUndefined(input.patientId) ?? "",
+    plannedStartAt: trimToUndefined(input.plannedStartAt),
+    primaryVeterinarianId: trimToUndefined(input.primaryVeterinarianId),
+    visitPurpose: trimToUndefined(input.visitPurpose),
+    weightKg:
+      typeof input.weightKg === "number" && Number.isFinite(input.weightKg)
+        ? Math.round(input.weightKg * 100) / 100
+        : undefined,
 	  };
 }
 
@@ -459,12 +468,15 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
 	  if (input.durationMinutes !== undefined && input.durationMinutes <= 0) {
 	    fieldErrors.durationMinutes = "예상 진료시간을 확인해 주세요.";
 	  }
-	  if (
-	    input.plannedStartAt !== undefined &&
-	    Number.isNaN(new Date(input.plannedStartAt).getTime())
-	  ) {
-	    fieldErrors.plannedStartAt = "접수 예정 시간을 확인해 주세요.";
-	  }
+  if (
+    input.plannedStartAt !== undefined &&
+    Number.isNaN(new Date(input.plannedStartAt).getTime())
+  ) {
+    fieldErrors.plannedStartAt = "접수 예정 시간을 확인해 주세요.";
+  }
+  if (input.weightKg !== undefined && input.weightKg <= 0) {
+    fieldErrors.weightKg = "체중은 0보다 커야 합니다.";
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };

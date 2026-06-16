@@ -20,6 +20,7 @@ const validWalkInInput = {
   durationMinutes: 30,
   visitPurpose: "구토 재진 상담",
   memo: "보호자가 식욕 저하를 걱정함",
+  weightKg: 4.35,
 };
 
 test("walk-in encounter route requires an actor and preserves mock fallback", async ({
@@ -135,7 +136,7 @@ test("walk-in encounter core validates patient and guardian workspace context", 
 test("supabase walk-in encounter gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   let createPayload:
-    | { plannedStartAt?: string; primaryVeterinarianId?: string }
+    | { plannedStartAt?: string; primaryVeterinarianId?: string; weightKg?: number }
     | undefined;
   const gateway = createSupabaseReceptionWalkInEncounterGateway({
     from(tableName: string) {
@@ -176,7 +177,7 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
       }
 
       const createArgs = args as {
-        p_walk_in: { patientId: string; primaryVeterinarianId?: string };
+        p_walk_in: { patientId: string; primaryVeterinarianId?: string; weightKg?: number };
         p_workspace_id: string;
       };
       createPayload = createArgs.p_walk_in;
@@ -232,6 +233,7 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
     "49110000-0000-4000-8000-000000000003",
   );
   expect(createPayload?.plannedStartAt).toBe("2026-05-19T11:15:00+09:00");
+  expect(createPayload?.weightKg).toBe(4.35);
   expect(result).toMatchObject({
     ok: true,
     walkIn: {
@@ -322,6 +324,8 @@ test("walk-in encounter writer migration keeps encounter and queue writes scoped
 	  expect(migrationSource).toContain("insert into public.waiting_queue_entries");
 	  expect(migrationSource).toContain("v_planned_start_at");
 	  expect(migrationSource).toContain("v_event_time");
+	  expect(migrationSource).toContain("v_weight_kg");
+	  expect(migrationSource).toContain("weight_kg = v_weight_kg");
 	  expect(migrationSource).toContain("primary_veterinarian_unavailable");
 	  expect(migrationSource).toContain("'vet' = any(um.roles)");
 	  expect(migrationSource).toContain("'consultation'");

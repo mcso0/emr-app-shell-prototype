@@ -266,6 +266,7 @@ function mapPatient(value: unknown): Patient | null {
     microchipNo: getString(row.microchipNo) ?? getString(row.microchip_no),
     patientRegistrationNo:
       getString(row.patientRegistrationNo) ?? getString(row.patient_registration_no),
+    weightKg: getNumber(row.weightKg) ?? getNumber(row.weight_kg),
     allergyNote: getString(row.allergyNote) ?? getString(row.allergy_note),
     specialNote: getString(row.specialNote) ?? getString(row.special_note),
     handlingCautionNote:
@@ -309,6 +310,10 @@ function mapGuardian(value: unknown): Guardian | undefined {
 
 function getString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function createDemoReceptionLookupPermissionAdapter() {

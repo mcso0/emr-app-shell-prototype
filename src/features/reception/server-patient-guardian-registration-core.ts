@@ -529,6 +529,7 @@ function mapPatient(value: unknown): Patient | null {
     neutered: typeof row.neutered === "boolean" ? row.neutered : undefined,
     microchipNo: trimToUndefined(row.microchipNo),
     patientRegistrationNo: trimToUndefined(row.patientRegistrationNo),
+    weightKg: typeof row.weightKg === "number" ? row.weightKg : undefined,
     allergyNote: trimToUndefined(row.allergyNote),
     specialNote: trimToUndefined(row.specialNote),
     handlingCautionNote: trimToUndefined(row.handlingCautionNote),

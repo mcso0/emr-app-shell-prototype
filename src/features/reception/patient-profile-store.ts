@@ -190,6 +190,7 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
       neutered: input.neutered ?? false,
       microchipNo,
       patientRegistrationNo: input.patientRegistrationNo?.trim() || undefined,
+      weightKg: undefined,
       specialNote: input.specialNote?.trim() || undefined,
       handlingCautionLocked: true,
       status: "active",

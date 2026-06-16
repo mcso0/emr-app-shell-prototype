@@ -34,6 +34,7 @@ import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   CircleCloseFillIcon,
   ExcelFileIcon,
 } from "@/components/icons";
@@ -88,7 +89,6 @@ import {
 } from "@/features/reception/data";
 import {
   GuardianProfileDrawer,
-  RegistrationDialogCloseButton,
   RegistrationFormField,
   RegistrationFormSection,
   NewUnifiedRegistrationButton,
@@ -281,6 +281,7 @@ type WalkInReceptionInput = {
   primaryVeterinarianId?: string;
   sendKakaoMessage?: boolean;
   visitPurpose?: string;
+  weightKg?: number;
 };
 const unassignedVeterinarianValue = "unassigned";
 
@@ -398,14 +399,6 @@ const defaultWalkInDuration = "30분";
 const receptionDurationOptions = [15, 30, 45, 60, 90, 120, 180, 240].map(
   (minutes) => `${minutes}분`,
 );
-const receptionPurposeChips = [
-  "예방접종",
-  "구토/설사",
-  "피부",
-  "수술 후 확인",
-  "건강검진",
-];
-
 const getReceptionPatientAgeText = (patient: Patient) => {
   if (patient.estimatedAgeText) return patient.estimatedAgeText;
   if (!patient.birthDate) return "나이 미상";
@@ -865,16 +858,20 @@ function getReceptionEmptyStateCopy({
   return "목록이 비어 있습니다.";
 }
 
-const recentPatientWeightKgByPatientId: Record<string, string> = {
-  "patient-coco": "4.20",
-  "patient-kong": "5.10",
-  "patient-dubu": "8.40",
-  "patient-haru": "3.20",
-  "patient-nabi": "4.80",
-};
+const formatPatientWeightKgInput = (weightKg?: number) =>
+  typeof weightKg === "number" && Number.isFinite(weightKg)
+    ? weightKg.toFixed(2)
+    : "";
 
-const getRecentPatientWeightKg = (patient?: Patient) =>
-  patient ? (recentPatientWeightKgByPatientId[patient.id] ?? "0.00") : "0.00";
+const parseWeightKgInput = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+
+  const weightKg = Number(normalized);
+  return Number.isFinite(weightKg) && weightKg > 0
+    ? Math.round(weightKg * 100) / 100
+    : undefined;
+};
 
 const getShortTime = (dateTime?: string) => {
   return formatOperatingShortTime(dateTime);
@@ -2833,15 +2830,35 @@ function ScheduleToolbar({
           className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
         />
         <NewUnifiedRegistrationButton onPatientReady={onUnifiedPatientReady} />
-        <Button
-          data-testid="schedule-check-in-button"
-          size="sm"
-          className="px-3 font-semibold"
-          onClick={onCreateWalkIn}
-        >
-          <CdsActionsPlusIcon data-icon="inline-start" />
-          진료 접수
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            data-testid="schedule-check-in-button"
+            className={buttonVariants({
+              size: "sm",
+              className: "px-3 font-semibold",
+            })}
+          >
+            <CdsActionsPlusIcon data-icon="inline-start" />
+            접수/예약
+            <ChevronDownIcon data-icon="inline-end" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem
+              className="h-8 cursor-pointer"
+              onClick={onCreateWalkIn}
+            >
+              접수하기
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="h-8 cursor-pointer"
+              onClick={() =>
+                toast.info("예약 생성은 다음 예약 시간 검증 작업에서 연결됩니다.")
+              }
+            >
+              예약하기
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label="더보기"
@@ -3851,10 +3868,6 @@ export function ReceptionContent() {
     useState<ReceptionCalendarView>("day");
   const [emptySlotAffordanceSuspended, setEmptySlotAffordanceSuspended] =
     useState(false);
-  const [walkInInitialPatientId, setWalkInInitialPatientId] = useState<
-    string | undefined
-  >();
-  const [walkInDialogOpen, setWalkInDialogOpen] = useState(false);
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
     allVeterinarians.map((veterinarian) => veterinarian.id),
   );
@@ -3887,9 +3900,6 @@ export function ReceptionContent() {
   );
   const applyPersistedReceptionQueue = useReceptionStore(
     (state) => state.applyPersistedReceptionQueue,
-  );
-  const applyWalkInCheckIn = useReceptionStore(
-    (state) => state.applyWalkInCheckIn,
   );
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
@@ -4092,10 +4102,11 @@ export function ReceptionContent() {
     });
   };
   const openWalkInDialog = () => {
-    setActiveDrawer(null);
     setCalendarDraftSelection(undefined);
-    setWalkInInitialPatientId(undefined);
-    setWalkInDialogOpen(true);
+    setActiveDrawer({
+      type: "reception-form",
+      id: "walk-in",
+    });
   };
   const openCalendarDraftDrawer = (draft: ReceptionCalendarDraftInput) => {
     const id = `calendar-draft-${draft.plannedStartAt}-${draft.primaryVeterinarianId ?? "unassigned"}`;
@@ -4105,8 +4116,6 @@ export function ReceptionContent() {
       selectedPatientId;
 
     dispatchReceptionCalendarDragClear();
-    setWalkInDialogOpen(false);
-    setWalkInInitialPatientId(undefined);
     selectPatient(draftPatientId);
     setCalendarDraftSelection({ ...draft, id });
     setActiveDrawer({
@@ -4302,51 +4311,14 @@ export function ReceptionContent() {
         onToggleVeterinarian={toggleVeterinarian}
         onCreateWalkIn={openWalkInDialog}
         onUnifiedPatientReady={(patientId) => {
-          setActiveDrawer(null);
           selectPatient(patientId);
-          setWalkInInitialPatientId(patientId);
-          setWalkInDialogOpen(true);
+          setCalendarDraftSelection(undefined);
+          setActiveDrawer({
+            type: "reception-form",
+            id: `walk-in:${patientId}`,
+          });
         }}
       />
-      {walkInDialogOpen ? (
-        <WalkInReceptionDialog
-          currentOperatingMinutes={currentOperatingMinutes}
-          initialPatientId={walkInInitialPatientId}
-          open={walkInDialogOpen}
-          operatingDate={operatingDate}
-          patientSummaries={patientSummaries}
-          veterinarians={veterinarians}
-          workspaceId={workspaceId}
-          onOpenChange={(nextOpen) => {
-            setWalkInDialogOpen(nextOpen);
-            if (!nextOpen) {
-              setWalkInInitialPatientId(undefined);
-              setEmptySlotAffordanceSuspended(true);
-            }
-          }}
-          onCreate={(input, walkIn, selectedSummary) => {
-            applyPatientGuardianLookupItem({
-              patient: selectedSummary.patient,
-              primaryGuardian: selectedSummary.primaryGuardian,
-              searchText: selectedSummary.searchText,
-            });
-            applyWalkInCheckIn({ ...input, walkIn });
-            requestReceptionReadRetry();
-            saveChartLiveEncounterHandoff({
-              encounter: walkIn.encounter,
-              patient: selectedSummary.patient,
-              primaryGuardian: selectedSummary.primaryGuardian,
-              veterinarianName: getStaffDisplayName(
-                walkIn.encounter.primaryVeterinarianId,
-                veterinarians,
-              ),
-            });
-            setWalkInInitialPatientId(undefined);
-            setWalkInDialogOpen(false);
-            setEmptySlotAffordanceSuspended(true);
-          }}
-        />
-      ) : null}
       {lastMessageDelivery ? (
         <div
           className="border-b bg-[var(--emr-status-success-bg)] px-4 py-2 emr-text-metadata font-semibold text-[var(--emr-status-success-text)]"
@@ -4437,12 +4409,41 @@ function ReceptionFormField({
   );
 }
 
-function WalkInReceptionDialog({
+function getReceptionDrawerPatientNo(
+  activeDrawer: { type: string; id: string },
+  draftCheckIns: ReceptionDraftCheckIn[],
+  appointments: Appointment[],
+  patients: Patient[],
+  workspaceId: string,
+) {
+  if (activeDrawer.type === "reception-appointment") {
+    const appointment = appointments.find(
+      (item) => item.id === activeDrawer.id,
+    );
+
+    return appointment
+      ? (patients.find((patient) => patient.id === appointment.patientId)
+          ?.patientNo ??
+          getMockPatientBundle(appointment.patientId)?.patient.patientNo)
+      : undefined;
+  }
+
+  const encounter = getEffectiveEncounters(draftCheckIns, {
+    operatingDate: getWorkspaceOperatingDate(workspaceId),
+    workspaceId,
+  }).find((item) => item.id === activeDrawer.id);
+
+  return encounter
+    ? (patients.find((patient) => patient.id === encounter.patientId)
+        ?.patientNo ??
+        getMockPatientBundle(encounter.patientId)?.patient.patientNo)
+    : undefined;
+}
+
+function ReceptionWalkInFormDrawer({
   currentOperatingMinutes,
   initialPatientId,
   onCreate,
-  onOpenChange,
-  open,
   operatingDate,
   patientSummaries,
   veterinarians,
@@ -4455,25 +4456,18 @@ function WalkInReceptionDialog({
     walkIn: ReceptionWalkInEncounterRecord,
     selectedSummary: ReceptionPatientSummary,
   ) => void;
-  onOpenChange: (open: boolean) => void;
-  open: boolean;
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   veterinarians: Veterinarian[];
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
-  const [receptionDepartment, setReceptionDepartment] = useState(
-    defaultWalkInDepartment,
-  );
-  const [receptionDuration, setReceptionDuration] = useState(
-    defaultWalkInDuration,
-  );
-  const [receptionMemo, setReceptionMemo] = useState("");
-  const [receptionPatientId, setReceptionPatientId] = useState(
-    initialPatientId ?? "",
-  );
-  const [receptionVeterinarianId, setReceptionVeterinarianId] = useState(
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const [department, setDepartment] = useState(defaultWalkInDepartment);
+  const [duration, setDuration] = useState(defaultWalkInDuration);
+  const [memo, setMemo] = useState("");
+  const [patientId, setPatientId] = useState(initialPatientId ?? "");
+  const [veterinarianId, setVeterinarianId] = useState(
     unassignedVeterinarianValue,
   );
   const [patientLookupOpen, setPatientLookupOpen] = useState(false);
@@ -4487,15 +4481,10 @@ function WalkInReceptionDialog({
     "idle",
   );
   const [submitting, setSubmitting] = useState(false);
-  const [customPurposeTags, setCustomPurposeTags] = useState<string[]>([]);
-  const [isAddingPurposeTag, setIsAddingPurposeTag] = useState(false);
-  const [newPurposeTag, setNewPurposeTag] = useState("");
-  const [receptionPurposeTags, setReceptionPurposeTags] = useState<string[]>(
-    [],
-  );
-  const [receptionVisitPurpose, setReceptionVisitPurpose] = useState("");
+  const [visitPurpose, setVisitPurpose] = useState("");
+  const [weightKg, setWeightKg] = useState("");
   const [sendKakaoMessage, setSendKakaoMessage] = useState(true);
-  const receptionPlannedStartAt = getReceptionIsoAtMinutes(
+  const plannedStartAt = getReceptionIsoAtMinutes(
     operatingDate,
     currentOperatingMinutes,
   );
@@ -4522,7 +4511,7 @@ function WalkInReceptionDialog({
     return Array.from(uniqueSummaries.values());
   }, [lookupPatientSummaries, patientSummaries, selectedLookupSummary]);
   const selectedSummary = patientSummaryOptions.find(
-    (summary) => summary.patient.id === receptionPatientId,
+    (summary) => summary.patient.id === patientId,
   );
   const patient = selectedSummary?.patient;
   const guardian = selectedSummary?.primaryGuardian;
@@ -4532,16 +4521,15 @@ function WalkInReceptionDialog({
   const lookupMatchesSelectedPatient =
     Boolean(selectedSummary) && lookupQuery === patientOptionText;
   const shouldShowPatientLookup = patientLookupOpen && lookupActive;
-  const visitPurpose = [
-    receptionPurposeTags.join(", "),
-    receptionVisitPurpose.trim(),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const canCreate = Boolean(patient && visitPurpose);
-  const patientWeightKg = getRecentPatientWeightKg(patient);
-  const purposeChips = [...receptionPurposeChips, ...customPurposeTags];
-  const patientSearchPlaceholder = "동물명 또는 보호자명으로 검색";
+  const trimmedVisitPurpose = visitPurpose.trim();
+  const parsedWeightKg = parseWeightKgInput(weightKg);
+  const weightInvalid = Boolean(weightKg.trim()) && parsedWeightKg === undefined;
+  const effectiveVeterinarianId =
+    veterinarianId !== unassignedVeterinarianValue &&
+    veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
+      ? veterinarianId
+      : unassignedVeterinarianValue;
+  const canCreate = Boolean(patient && trimmedVisitPurpose && !weightInvalid);
   const lookupHelper = lookupMatchesSelectedPatient
     ? patientOptionText
     : lookupActive && lookupState === "loading"
@@ -4553,23 +4541,24 @@ function WalkInReceptionDialog({
             ? `DB 검색 결과 ${lookupPatientSummaries.length}건`
             : "검색 결과가 없습니다."
           : patientOptionText || "환자명, 동물 정보, 보호자명으로 검색합니다.";
-  const selectReceptionPatient = (summary: ReceptionPatientSummary) => {
-    setReceptionPatientId(summary.patient.id);
-    setSelectedLookupSummary(summary);
-    setLookupQuery(getReceptionPatientOptionLabel(summary));
-    setPatientLookupOpen(false);
-  };
-  const effectiveReceptionVeterinarianId =
-    receptionVeterinarianId !== unassignedVeterinarianValue &&
-    veterinarians.some((veterinarian) => veterinarian.id === receptionVeterinarianId)
-      ? receptionVeterinarianId
-      : unassignedVeterinarianValue;
 
   useEffect(() => {
-    if (!open) return;
+    const initialSummary = patientSummaryOptions.find(
+      (summary) => summary.patient.id === initialPatientId,
+    );
 
+    if (!initialSummary) return;
+    setPatientId(initialSummary.patient.id);
+    setSelectedLookupSummary(initialSummary);
+    setLookupQuery(getReceptionPatientOptionLabel(initialSummary));
+    setWeightKg(formatPatientWeightKgInput(initialSummary.patient.weightKg));
+  }, [initialPatientId, patientSummaryOptions]);
+
+  useEffect(() => {
     const query = lookupQuery.trim();
     if (!query) {
+      setLookupResults([]);
+      setLookupState("idle");
       return;
     }
 
@@ -4621,61 +4610,42 @@ function WalkInReceptionDialog({
       cancelled = true;
       controller.abort();
     };
-  }, [authSession?.id, authSession?.role, lookupQuery, open, workspaceId]);
+  }, [authSession?.id, lookupQuery, workspaceId]);
 
-  const close = () => onOpenChange(false);
-  const togglePurposeTag = (purpose: string) => {
-    setReceptionPurposeTags((current) =>
-      current.includes(purpose)
-        ? current.filter((item) => item !== purpose)
-        : [...current, purpose],
-    );
+  useEffect(() => {
+    setWeightKg(formatPatientWeightKgInput(patient?.weightKg));
+  }, [patient?.id, patient?.weightKg]);
+
+  const selectPatientSummary = (summary: ReceptionPatientSummary) => {
+    setPatientId(summary.patient.id);
+    setSelectedLookupSummary(summary);
+    setLookupQuery(getReceptionPatientOptionLabel(summary));
+    setWeightKg(formatPatientWeightKgInput(summary.patient.weightKg));
+    setPatientLookupOpen(false);
   };
-  const addPurposeTag = () => {
-    const purpose = newPurposeTag.trim();
-
-    if (!purpose) {
-      setIsAddingPurposeTag(false);
-      setNewPurposeTag("");
-      return;
-    }
-
-    const existingPurpose = purposeChips.find((item) => item === purpose);
-
-    if (!existingPurpose) {
-      setCustomPurposeTags((current) =>
-        current.includes(purpose) ? current : [...current, purpose],
-      );
-    }
-
-    setReceptionPurposeTags((current) =>
-      current.includes(existingPurpose ?? purpose)
-        ? current
-        : [...current, existingPurpose ?? purpose],
-    );
-    setIsAddingPurposeTag(false);
-    setNewPurposeTag("");
+  const close = () => {
+    if (!submitting) setActiveDrawer(null);
   };
   const create = async () => {
+    if (!patient || !selectedSummary || submitting) return;
+
     const selectedVeterinarianId =
-	      effectiveReceptionVeterinarianId === unassignedVeterinarianValue
-	        ? undefined
-	        : effectiveReceptionVeterinarianId;
-
-    if (!patient || submitting) return;
-
+      effectiveVeterinarianId === unassignedVeterinarianValue
+        ? undefined
+        : effectiveVeterinarianId;
     const input: WalkInReceptionInput = {
-      department: receptionDepartment,
-      durationMinutes: getDurationMinutesFromLabel(receptionDuration),
+      department,
+      durationMinutes: getDurationMinutesFromLabel(duration),
       guardianId: guardian?.id,
       guardianMobilePhone: guardian?.mobilePhone,
-      memo: receptionMemo.trim() || undefined,
+      memo: memo.trim() || undefined,
       patientId: patient.id,
       patientName: patient.name,
-      plannedStartAt: receptionPlannedStartAt,
+      plannedStartAt,
       primaryVeterinarianId: selectedVeterinarianId,
       sendKakaoMessage,
-      visitPurpose,
+      visitPurpose: trimmedVisitPurpose,
+      weightKg: parsedWeightKg,
     };
 
     setSubmitting(true);
@@ -4691,449 +4661,300 @@ function WalkInReceptionDialog({
       return;
     }
 
-    if (selectedSummary) {
-      onCreate(input, result.walkIn, selectedSummary);
-    }
+    onCreate(input, result.walkIn, selectedSummary);
+    setActiveDrawer(null);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="grid max-h-[calc(100vh-5rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[640px]"
-        data-testid="walk-in-reception-dialog"
-        showCloseButton={false}
-      >
-        <DialogHeader className="px-8 pb-4 pt-7">
-          <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0">
-              <DialogTitle className="text-[22px] font-bold leading-7 text-foreground">
-                진료 접수
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                새 진료 접수 생성 양식입니다.
-              </DialogDescription>
+    <div
+      className="flex h-[calc(100%-48px)] flex-col"
+      data-testid="walk-in-reception-dialog"
+    >
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-5 p-4">
+          <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
+            <h2 className="emr-text-body font-semibold">진료 접수</h2>
+            <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
+              환자 선택 후 당일 접수를 생성합니다.
             </div>
-            <RegistrationDialogCloseButton
-              ariaLabel="진료 접수 닫기"
-              onClick={close}
-            />
-          </div>
-        </DialogHeader>
+          </section>
 
-        <ScrollArea className="max-h-[calc(100vh-15rem)] min-h-0 overflow-hidden px-7">
-          <div className="flex flex-col gap-5 px-1 pb-6 pt-3">
-            <RegistrationFormSection separated={false} title="환자 정보">
-              <div className="grid grid-cols-[minmax(0,1fr)_160px] gap-x-7 gap-y-5">
-                <RegistrationFormField
-                  label="환자 검색"
-                  required
-                  helper={lookupHelper}
+          <RegistrationFormSection separated={false} title="환자 정보">
+            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+              <RegistrationFormField
+                label="환자 검색"
+                required
+                helper={lookupHelper}
+              >
+                <div
+                  className="relative"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setPatientLookupOpen(false);
+                    }
+                  }}
                 >
-                  <div
-                    className="relative"
-                    onBlur={(event) => {
-                      if (!event.currentTarget.contains(event.relatedTarget)) {
-                        setPatientLookupOpen(false);
+                  <CdsActionsSearchIcon
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    aria-label="환자 검색"
+                    autoComplete="off"
+                    className="h-10 bg-card pl-9 pr-9"
+                    placeholder="동물명 또는 보호자명으로 검색"
+                    value={lookupQuery}
+                    onFocus={() => setPatientLookupOpen(true)}
+                    onValueChange={(value) => {
+                      setLookupQuery(value);
+                      if (
+                        selectedLookupSummary &&
+                        value !==
+                          getReceptionPatientOptionLabel(
+                            selectedLookupSummary,
+                          )
+                      ) {
+                        setPatientId("");
+                        setSelectedLookupSummary(null);
                       }
+                      setPatientLookupOpen(true);
                     }}
-                  >
-                    <CdsActionsSearchIcon
-                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
-                      aria-hidden="true"
-                    />
-                    <Input
-                      aria-label="환자 검색"
-                      autoComplete="off"
-                      className="h-10 bg-card pl-9 pr-9"
-                      placeholder={patientSearchPlaceholder}
-                      value={lookupQuery}
-                      onFocus={() => setPatientLookupOpen(true)}
-                      onValueChange={(value) => {
-                        setLookupQuery(value);
-                        if (
-                          selectedLookupSummary &&
-                          value !==
-                            getReceptionPatientOptionLabel(
-                              selectedLookupSummary,
-                            )
-                        ) {
-                          setReceptionPatientId("");
-                          setSelectedLookupSummary(null);
-                        }
+                  />
+                  {lookupQuery ? (
+                    <button
+                      type="button"
+                      className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      aria-label="검색어 초기화"
+                      onClick={() => {
+                        setLookupQuery("");
+                        setPatientId("");
+                        setSelectedLookupSummary(null);
+                        setWeightKg("");
                         setPatientLookupOpen(true);
                       }}
-                    />
-                    {lookupQuery ? (
-                      <button
-                        type="button"
-                        className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
-                        aria-label="검색어 초기화"
-                        onClick={() => {
-                          setLookupQuery("");
-                          setReceptionPatientId("");
-                          setSelectedLookupSummary(null);
-                          setPatientLookupOpen(true);
-                        }}
-                      >
-                        <CircleCloseFillIcon
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    ) : null}
-                    {shouldShowPatientLookup ? (
-                      <div
-                        role="listbox"
-                        aria-label="검색 결과"
-                        className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
-                      >
-                        {lookupActive && lookupState === "loading" ? (
-                          <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
-                            DB 환자 검색 중입니다.
-                          </div>
-                        ) : null}
-                        {lookupActive && lookupState === "error" ? (
-                          <div className="px-2.5 py-2 emr-text-dense text-[var(--emr-status-danger-text)]">
-                            환자 검색을 불러오지 못했습니다.
-                          </div>
-                        ) : null}
-                        {lookupActive &&
-                        lookupState === "idle" &&
-                        !lookupMatchesSelectedPatient &&
-                        selectablePatientSummaries.length === 0 ? (
-                          <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
-                            검색 결과가 없습니다.
-                          </div>
-                        ) : null}
-                        {selectablePatientSummaries.map((summary) => {
-                          const selected =
-                            summary.patient.id === receptionPatientId;
-                          const optionLabel =
-                            getReceptionPatientOptionLabel(summary);
-
-                          return (
-                            <button
-                              key={summary.patient.id}
-                              type="button"
-                              role="option"
-                              aria-selected={selected}
-                              className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => selectReceptionPatient(summary)}
-                            >
-                              <span className="truncate emr-text-dense font-semibold text-foreground">
-                                {optionLabel}
-                              </span>
-                              <span className="truncate emr-text-metadata text-muted-foreground">
-                                {summary.primaryGuardian?.mobilePhone ??
-                                  "보호자 연락처 미등록"}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                </RegistrationFormField>
-
-                <RegistrationFormField label="체중">
-                  <div className="relative">
-                    <Input
-                      aria-label="체중"
-                      className="h-10 bg-card pr-9 text-muted-foreground"
-                      readOnly
-                      value={patientWeightKg}
-                    />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium leading-4 text-foreground">
-                      kg
-                    </span>
-                  </div>
-                </RegistrationFormField>
-              </div>
-
-              <RegistrationFormField
-                label="방문 목적"
-                required
-                helper="태그는 방문 목적 검색과 통계 분류에 사용하고, 상세 내용은 자유롭게 남깁니다."
-              >
-                <Textarea
-                  aria-label="방문 목적"
-                  className="min-h-[104px] resize-none bg-card"
-                  placeholder="방문 목적을 자세히 입력해주세요"
-                  value={receptionVisitPurpose}
-                  onChange={(event) =>
-                    setReceptionVisitPurpose(event.target.value)
-                  }
-                />
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {purposeChips.map((purpose) => {
-                    const selected = receptionPurposeTags.includes(purpose);
-
-                    return (
-                      <Button
-                        key={purpose}
-                        type="button"
-                        variant={selected ? "default" : "outline"}
-                        size="sm"
-                        className={cn(
-                          "h-7 rounded-full px-2.5 emr-text-metadata font-semibold",
-                          selected
-                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                            : "",
-                        )}
-                        aria-pressed={selected}
-                        onClick={() => togglePurposeTag(purpose)}
-                      >
-                        {purpose}
-                      </Button>
-                    );
-                  })}
-                  {isAddingPurposeTag ? (
-                    <Input
-                      aria-label="태그명"
-                      autoFocus
-                      className="h-8 w-[108px] rounded-full bg-card px-3 emr-text-metadata font-semibold"
-                      placeholder="태그명"
-                      value={newPurposeTag}
-                      onBlur={addPurposeTag}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          addPurposeTag();
-                        }
-                        if (event.key === "Escape") {
-                          setIsAddingPurposeTag(false);
-                          setNewPurposeTag("");
-                        }
-                      }}
-                      onValueChange={setNewPurposeTag}
-                    />
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      className="size-7 rounded-full"
-                      aria-label="태그 추가"
-                      onClick={() => setIsAddingPurposeTag(true)}
                     >
-                      <CdsActionsPlusIcon className="size-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </RegistrationFormField>
-            </RegistrationFormSection>
-
-            <RegistrationFormSection title="접수 정보">
-              <div className="grid grid-cols-2 gap-x-7 gap-y-5">
-                <RegistrationFormField
-                  label="진료과"
-                  required
-                  helper="다른 진료과로의 접수는 먼저 진료과를 변경한 후 가능합니다."
-                >
-                  <Select
-                    value={receptionDepartment}
-                    onValueChange={(value) => {
-                      if (value) setReceptionDepartment(value);
-                    }}
-                  >
-                    <SelectTrigger
-                      aria-label="진료과"
-                      size="xl"
-                      className="w-full bg-card"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="영상의학과 · 방사선종양학과">
-                          영상의학과 · 방사선종양학과
-                        </SelectItem>
-                        <SelectItem value="내과">내과</SelectItem>
-                        <SelectItem value="외과">외과</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </RegistrationFormField>
-
-                <RegistrationFormField
-                  label="담당의"
-                  helper="담당의 지정 후 시간을 설정할 수 있습니다."
-                >
-	                  <Select
-	                    value={effectiveReceptionVeterinarianId}
-                    onValueChange={(value) => {
-                      if (value) setReceptionVeterinarianId(value);
-                    }}
-                  >
-                    <SelectTrigger
-                      aria-label="담당의"
-                      size="xl"
-                      className="w-full bg-card"
-                    >
-                      <CdsActionsSearchIcon
-                        className="size-3 shrink-0 text-[var(--emr-text-secondary)]"
+                      <CircleCloseFillIcon
+                        className="size-4"
                         aria-hidden="true"
                       />
-                      <span className="min-w-0 flex-1 truncate text-left">
-	                        {getReceptionVeterinarianSelectLabel(
-	                          effectiveReceptionVeterinarianId,
-	                          veterinarians,
-	                        )}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value={unassignedVeterinarianValue}>
-                          수의사 미지정
-                        </SelectItem>
-                        {veterinarians.map((veterinarian) => (
-                          <SelectItem
-                            key={veterinarian.id}
-                            value={veterinarian.id}
-                          >
-                            {veterinarian.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </RegistrationFormField>
-              </div>
-              <div className="grid grid-cols-3 gap-x-7 gap-y-5">
-                <RegistrationFormField label="접수일">
-                  <div className="relative">
-                    <CdsFilesCalendarIcon
-                      className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--emr-text-secondary)]"
-                      aria-hidden="true"
-                    />
-                    <Input
-                      aria-label="접수일"
-                      className="h-10 bg-card pl-9"
-                      readOnly
-                      value={formatShortOperatingDate(operatingDate)}
-                    />
-                  </div>
-                </RegistrationFormField>
-
-                <RegistrationFormField label="진료시간">
-                  <div className="relative">
-                    <CdsFilesClockIcon
-                      className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <Input
-                      aria-label="진료시간"
-                      className="h-10 bg-card pl-9 text-muted-foreground disabled:bg-muted disabled:opacity-100"
-                      disabled
-                      value={getShortTime(receptionPlannedStartAt)}
-                    />
-                  </div>
-                </RegistrationFormField>
-
-                <RegistrationFormField label="예상시간" required>
-                  <Select
-                    value={receptionDuration}
-                    onValueChange={(value) => {
-                      if (value) setReceptionDuration(value);
-                    }}
-                  >
-                    <SelectTrigger
-                      aria-label="예상시간"
-                      size="xl"
-                      className="w-full bg-card"
+                    </button>
+                  ) : null}
+                  {shouldShowPatientLookup ? (
+                    <div
+                      role="listbox"
+                      aria-label="검색 결과"
+                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {receptionDurationOptions.map((duration) => (
-                          <SelectItem key={duration} value={duration}>
-                            {duration}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </RegistrationFormField>
-              </div>
-              <RegistrationFormField label="접수 메모">
-                <Textarea
-                  aria-label="접수 메모"
-                  className="min-h-[88px] resize-none bg-card"
-                  placeholder="접수 메모를 입력해주세요"
-                  value={receptionMemo}
-                  onChange={(event) => setReceptionMemo(event.target.value)}
+                      {lookupState === "loading" ? (
+                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
+                          DB 환자 검색 중입니다.
+                        </div>
+                      ) : null}
+                      {lookupState === "error" ? (
+                        <div className="px-2.5 py-2 emr-text-dense text-[var(--emr-status-danger-text)]">
+                          환자 검색을 불러오지 못했습니다.
+                        </div>
+                      ) : null}
+                      {lookupState === "idle" &&
+                      !lookupMatchesSelectedPatient &&
+                      selectablePatientSummaries.length === 0 ? (
+                        <div className="px-2.5 py-2 emr-text-dense text-muted-foreground">
+                          검색 결과가 없습니다.
+                        </div>
+                      ) : null}
+                      {selectablePatientSummaries.map((summary) => {
+                        const selected = summary.patient.id === patientId;
+                        const optionLabel =
+                          getReceptionPatientOptionLabel(summary);
+
+                        return (
+                          <button
+                            key={summary.patient.id}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectPatientSummary(summary)}
+                          >
+                            <span className="truncate emr-text-dense font-semibold text-foreground">
+                              {optionLabel}
+                            </span>
+                            <span className="truncate emr-text-metadata text-muted-foreground">
+                              {summary.primaryGuardian?.mobilePhone ??
+                                "보호자 연락처 미등록"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              </RegistrationFormField>
+
+              <RegistrationFormField label="체중">
+                <div className="relative">
+                  <Input
+                    aria-label="체중"
+                    className={cn(
+                      "h-10 bg-card pr-9",
+                      weightInvalid
+                        ? "border-[var(--emr-status-danger-border)]"
+                        : "",
+                    )}
+                    disabled={!patient}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={weightKg}
+                    onValueChange={(value) =>
+                      setWeightKg(value.replace(/[^\d.]/g, ""))
+                    }
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium leading-4 text-foreground">
+                    kg
+                  </span>
+                </div>
+              </RegistrationFormField>
+            </div>
+
+            <RegistrationFormField label="방문 목적" required>
+              <Textarea
+                aria-label="방문 목적"
+                className="min-h-[104px] resize-none bg-card"
+                placeholder="방문 목적을 자세히 입력해주세요"
+                value={visitPurpose}
+                onChange={(event) => setVisitPurpose(event.target.value)}
+              />
+            </RegistrationFormField>
+          </RegistrationFormSection>
+
+          <RegistrationFormSection title="접수 정보">
+            <section className="grid grid-cols-2 gap-3">
+              <RegistrationFormField label="진료과" required>
+                <Select
+                  value={department}
+                  onValueChange={(value) => value && setDepartment(value)}
+                >
+                  <SelectTrigger aria-label="진료과" className="w-full bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="영상의학과 · 방사선종양학과">
+                        영상의학과 · 방사선종양학과
+                      </SelectItem>
+                      <SelectItem value="내과">내과</SelectItem>
+                      <SelectItem value="외과">외과</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+              <RegistrationFormField label="담당의">
+                <Select
+                  value={effectiveVeterinarianId}
+                  onValueChange={(value) => value && setVeterinarianId(value)}
+                >
+                  <SelectTrigger aria-label="담당의" className="w-full bg-card">
+                    <span className="flex flex-1 text-left">
+                      {getReceptionVeterinarianSelectLabel(
+                        effectiveVeterinarianId,
+                        veterinarians,
+                      )}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value={unassignedVeterinarianValue}>
+                        수의사 미지정
+                      </SelectItem>
+                      {veterinarians.map((veterinarian) => (
+                        <SelectItem
+                          key={veterinarian.id}
+                          value={veterinarian.id}
+                        >
+                          {veterinarian.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+            </section>
+
+            <section className="grid grid-cols-3 gap-3">
+              <RegistrationFormField label="접수일">
+                <Input
+                  aria-label="접수일"
+                  value={formatShortOperatingDate(operatingDate)}
+                  readOnly
+                  className="h-10 bg-card"
                 />
               </RegistrationFormField>
-            </RegistrationFormSection>
-          </div>
-        </ScrollArea>
+              <RegistrationFormField label="진료시간">
+                <Input
+                  aria-label="진료시간"
+                  value={getShortTime(plannedStartAt)}
+                  readOnly
+                  className="h-10 bg-card"
+                />
+              </RegistrationFormField>
+              <RegistrationFormField label="예상시간" required>
+                <Select
+                  value={duration}
+                  onValueChange={(value) => value && setDuration(value)}
+                >
+                  <SelectTrigger
+                    aria-label="예상시간"
+                    size="xl"
+                    className="w-full bg-card"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {receptionDurationOptions.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {item}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </RegistrationFormField>
+            </section>
 
-        <DialogFooter className="relative -mx-0 -mb-0 items-center justify-between rounded-none border-t bg-[var(--emr-surface-panel)] px-8 py-4 sm:justify-between">
-          <label className="flex w-fit items-center gap-2 rounded-md border bg-card px-2.5 py-2 emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
-            <Checkbox
-              aria-label="카카오톡 발송"
-              checked={sendKakaoMessage}
-              onCheckedChange={(checked) =>
-                setSendKakaoMessage(Boolean(checked))
-              }
-            />
-            카카오톡 발송
-          </label>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-8 rounded-full px-4 emr-text-metadata font-semibold text-foreground"
-              onClick={close}
-            >
-              취소
-            </Button>
-            <Button
-              type="button"
-              className="h-8 rounded-full bg-primary px-4 emr-text-metadata font-semibold text-primary-foreground hover:bg-primary/90"
-              disabled={!canCreate || submitting}
-              onClick={create}
-            >
-              {submitting ? "생성 중" : "생성"}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <RegistrationFormField label="접수 메모">
+              <Textarea
+                aria-label="접수 메모"
+                className="min-h-24 resize-none bg-card"
+                placeholder="접수 메모를 입력해주세요"
+                value={memo}
+                onChange={(event) => setMemo(event.target.value)}
+              />
+            </RegistrationFormField>
+          </RegistrationFormSection>
+        </div>
+      </ScrollArea>
+      <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t bg-card p-4">
+        <label className="flex w-fit items-center gap-2 rounded-md border bg-card px-2.5 py-2 emr-text-metadata font-semibold text-[var(--emr-text-secondary)]">
+          <Checkbox
+            aria-label="카카오톡 발송"
+            checked={sendKakaoMessage}
+            onCheckedChange={(checked) => setSendKakaoMessage(Boolean(checked))}
+          />
+          카카오톡 발송
+        </label>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="ghost" onClick={close} disabled={submitting}>
+            취소
+          </Button>
+          <Button onClick={create} disabled={!canCreate || submitting}>
+            {submitting ? "생성 중" : "생성"}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
-}
-
-function getReceptionDrawerPatientNo(
-  activeDrawer: { type: string; id: string },
-  draftCheckIns: ReceptionDraftCheckIn[],
-  appointments: Appointment[],
-  patients: Patient[],
-  workspaceId: string,
-) {
-  if (activeDrawer.type === "reception-appointment") {
-    const appointment = appointments.find(
-      (item) => item.id === activeDrawer.id,
-    );
-
-    return appointment
-      ? (patients.find((patient) => patient.id === appointment.patientId)
-          ?.patientNo ??
-          getMockPatientBundle(appointment.patientId)?.patient.patientNo)
-      : undefined;
-  }
-
-  const encounter = getEffectiveEncounters(draftCheckIns, {
-    operatingDate: getWorkspaceOperatingDate(workspaceId),
-    workspaceId,
-  }).find((item) => item.id === activeDrawer.id);
-
-  return encounter
-    ? (patients.find((patient) => patient.id === encounter.patientId)
-        ?.patientNo ??
-        getMockPatientBundle(encounter.patientId)?.patient.patientNo)
-    : undefined;
 }
 
 function ReceptionDraftTaskDrawer({
@@ -5166,6 +4987,7 @@ function ReceptionDraftTaskDrawer({
     selection.primaryVeterinarianId ?? unassignedVeterinarianValue,
   );
   const [visitPurpose, setVisitPurpose] = useState("현장 접수");
+  const [weightKg, setWeightKg] = useState("");
   const bundle = getMockPatientBundle(selectedPatientId);
   const patient = bundle?.patient;
   const guardian = bundle?.primaryGuardian;
@@ -5185,10 +5007,15 @@ function ReceptionDraftTaskDrawer({
       ? veterinarianId
       : unassignedVeterinarianValue;
 
+  useEffect(() => {
+    setWeightKg(formatPatientWeightKgInput(patient?.weightKg));
+  }, [patient?.id, patient?.weightKg]);
+
   const create = async () => {
     if (!patient || submitting) return;
 
     const durationMinutes = getDurationMinutesFromLabel(duration);
+    const parsedWeightKg = parseWeightKgInput(weightKg);
     const input: ReceptionWalkInEncounterInput = {
       department,
       durationMinutes,
@@ -5201,6 +5028,7 @@ function ReceptionDraftTaskDrawer({
 	          ? undefined
 	          : effectiveVeterinarianId,
       visitPurpose,
+      weightKg: parsedWeightKg,
     };
 
     setSubmitting(true);
@@ -5256,7 +5084,7 @@ function ReceptionDraftTaskDrawer({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="emr-text-body font-semibold">
-                  접수 task 생성
+                  접수 생성
                 </div>
                 <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
                   {guardian?.name ?? "보호자 미지정"} 보호자 · {patient.name} ·{" "}
@@ -5329,6 +5157,24 @@ function ReceptionDraftTaskDrawer({
               </div>
             </ReceptionFormField>
           </section>
+
+          <ReceptionFormField label="체중">
+            <div className="relative">
+              <Input
+                aria-label="체중"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={weightKg}
+                className="h-9 bg-card pr-9"
+                onValueChange={(value) =>
+                  setWeightKg(value.replace(/[^\d.]/g, ""))
+                }
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium leading-4 text-foreground">
+                kg
+              </span>
+            </div>
+          </ReceptionFormField>
 
           <ReceptionFormField label="방문 목적" required>
             <Input
@@ -5415,6 +5261,13 @@ export function ReceptionDrawer() {
   const applyAppointmentCheckIn = useReceptionStore(
     (state) => state.applyAppointmentCheckIn,
   );
+  const applyWalkInCheckIn = useReceptionStore(
+    (state) => state.applyWalkInCheckIn,
+  );
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem,
+  );
+  const updatePatient = usePatientProfileStore((state) => state.updatePatient);
   const removeCancelledReceptionEncounter = useReceptionStore(
     (state) => state.cancelReceptionEncounter,
   );
@@ -5455,17 +5308,42 @@ export function ReceptionDrawer() {
     liveStaffSourceEnabled && workspaceVeterinarians.length > 0
       ? workspaceVeterinarians
       : allVeterinarians;
+  const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
+  const veterinarianStaffMembers = useMemo(
+    () =>
+      veterinarians.map((veterinarian) => ({
+        displayName: veterinarian.name,
+        id: veterinarian.id,
+      })),
+    [veterinarians],
+  );
+  const patientSummaries = useMemo(
+    () =>
+      getReceptionPatientSummaries(
+        draftCheckIns,
+        {
+          guardians,
+          patientGuardians,
+          patients,
+        },
+        { operatingDate, staffMembers: veterinarianStaffMembers, workspaceId },
+      ),
+    [
+      draftCheckIns,
+      guardians,
+      operatingDate,
+      patientGuardians,
+      patients,
+      veterinarianStaffMembers,
+      workspaceId,
+    ],
+  );
   const appointments = useMemo(
     () =>
       getTodayAppointments(draftCheckIns, [], { operatingDate, workspaceId }),
     [draftCheckIns, operatingDate, workspaceId],
   );
   useEffect(() => {
-    if (activeDrawer?.type === "reception-form") {
-      setActiveDrawer(null);
-      return;
-    }
-
     if (!activeDrawer || activeDrawer.subtitle) return;
     if (
       activeDrawer.type !== "reception-encounter" &&
@@ -5527,7 +5405,47 @@ export function ReceptionDrawer() {
   }
 
   if (activeDrawer?.type === "reception-form") {
-    return null;
+    const initialPatientId = activeDrawer.id.startsWith("walk-in:")
+      ? activeDrawer.id.slice("walk-in:".length)
+      : undefined;
+
+    return (
+      <ReceptionWalkInFormDrawer
+        currentOperatingMinutes={currentOperatingMinutes}
+        initialPatientId={initialPatientId}
+        operatingDate={operatingDate}
+        patientSummaries={patientSummaries}
+        veterinarians={veterinarians}
+        workspaceId={workspaceId}
+        onCreate={(input, walkIn, selectedSummary) => {
+          const patient =
+            input.weightKg === undefined
+              ? selectedSummary.patient
+              : { ...selectedSummary.patient, weightKg: input.weightKg };
+          applyPatientGuardianLookupItem({
+            patient,
+            primaryGuardian: selectedSummary.primaryGuardian,
+            searchText: selectedSummary.searchText,
+          });
+          if (input.weightKg !== undefined) {
+            updatePatient(selectedSummary.patient.id, {
+              weightKg: input.weightKg,
+            });
+          }
+          applyWalkInCheckIn({ ...input, walkIn });
+          requestReceptionReadRetry();
+          saveChartLiveEncounterHandoff({
+            encounter: walkIn.encounter,
+            patient,
+            primaryGuardian: selectedSummary.primaryGuardian,
+            veterinarianName: getStaffDisplayName(
+              walkIn.encounter.primaryVeterinarianId,
+              veterinarians,
+            ),
+          });
+        }}
+      />
+    );
   }
 
   if (activeDrawer?.type === "reception-draft-task" && calendarDraftSelection) {

@@ -49,9 +49,11 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
             : activeDrawer?.type === "reception-appointment"
               ? "예약 상세"
               : activeDrawer?.type === "reception-draft-task"
-                ? "접수 task 생성"
+                ? "접수 생성"
               : activeDrawer?.type === "reception-encounter"
-                ? "접수 정보"
+                ? "접수 상세"
+              : activeDrawer?.type === "reception-form"
+                ? "접수 생성"
                 : "상세 정보";
   const drawerSubtitle =
     activeDrawer?.subtitle ??
