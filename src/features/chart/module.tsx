@@ -103,6 +103,7 @@ import {
   getChartQueueItems,
   getChartQueueStatuses,
   getChartStaffName,
+  type ChartEncounterBundle,
   type ChartHistoryRow,
   type ChartOrderGroup,
 } from "@/features/chart/data";
@@ -127,6 +128,11 @@ import {
 } from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  formatOperatingShortTime,
+  formatShortOperatingDate,
+  getOperatingDateFromIso,
+} from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -147,7 +153,7 @@ import type {
   SoapNote,
 } from "@/types/emr-domain";
 
-type ChartBundle = NonNullable<ReturnType<typeof getChartEncounter>>;
+type ChartBundle = ChartEncounterBundle;
 type OrderFilter = "all" | EmrOrderType | "billing";
 type SoapSaveState = "idle" | "loading" | "saving" | "saved" | "error";
 type ChartSoapNoteRouteResponse =
@@ -372,11 +378,17 @@ const chartOrderTabs: Array<{ value: OrderFilter; label: string }> = [
   { value: "billing", label: "수납" },
 ];
 
-const getShortDateTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
+const getShortDateTime = (dateTime?: string) => {
+  if (!dateTime) return "-";
+
+  const operatingDate = getOperatingDateFromIso(dateTime);
+  if (!operatingDate) return "-";
+
+  return `${formatShortOperatingDate(operatingDate)} ${formatOperatingShortTime(dateTime)}`;
+};
 
 const getShortClockTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(11, 16) : "-";
+  formatOperatingShortTime(dateTime);
 
 const clampNumber = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -590,6 +602,7 @@ function getLiveHandoffBundle(encounterId: string) {
         encounter: handoff.encounter,
         patient: handoff.patient,
         primaryGuardian: handoff.primaryGuardian,
+        veterinarianName: handoff.veterinarianName,
       })
     : null;
 }
@@ -607,6 +620,7 @@ function getLiveQueueBundle(
         encounter: record.encounter,
         patient: record.patient,
         primaryGuardian: record.primaryGuardian,
+        veterinarianName: record.veterinarianName,
       })
     : null;
 }
@@ -630,6 +644,28 @@ function getSelectedBundle(
     getChartEncounter(selectedEncounterId) ??
     getChartEncounter(legacySalesDemoDefaultEncounterId)
   );
+}
+
+function resolveChartBundleVeterinarianName(bundle: ChartBundle) {
+  return (
+    bundle.veterinarianName ??
+    getChartStaffName(bundle.encounter.primaryVeterinarianId)
+  );
+}
+
+function getChartBundleVeterinarianName(bundle: ChartBundle) {
+  return resolveChartBundleVeterinarianName(bundle) ?? "담당 미정";
+}
+
+function getChartHistoryVeterinarianName(
+  row: ChartHistoryRow,
+  bundle: ChartBundle,
+) {
+  if (row.encounter.id === bundle.encounter.id) {
+    return resolveChartBundleVeterinarianName(bundle) ?? "미정";
+  }
+
+  return getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정";
 }
 
 function getSelectedEncounterStorageKey(workspaceId: string) {
@@ -865,9 +901,23 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
           encounter: record.encounter,
           patient: record.patient,
           primaryGuardian: record.primaryGuardian,
+          veterinarianName: record.veterinarianName,
         });
       });
       setLiveQueueState({ records: result.queue, status: "ready" });
+
+      if (
+        explicitQueryEncounterId &&
+        !result.queue.some(
+          (record) => record.encounter.id === explicitQueryEncounterId,
+        )
+      ) {
+        saveSelectedChartEncounterId(workspaceId, explicitQueryEncounterId);
+        if (selectedEncounterId !== explicitQueryEncounterId) {
+          selectEncounter(explicitQueryEncounterId);
+        }
+        return;
+      }
 
       const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
         currentEncounterId: selectedEncounterId,
@@ -919,12 +969,14 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   useEffect(() => {
     if (liveMode || items.length === 0) return;
     if (items.some((item) => item.id === selectedEncounterId)) return;
+    if (explicitQueryEncounterId) return;
     selectEncounter(
       items.find((item) => item.id === legacySalesDemoDefaultEncounterId)?.id ??
         items[0].id,
     );
   }, [
     items,
+    explicitQueryEncounterId,
     liveMode,
     selectEncounter,
     selectedEncounterId,
@@ -973,8 +1025,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
 
   if (!bundle) return null;
 
-  const veterinarianName =
-    getChartStaffName(bundle.encounter.primaryVeterinarianId) ?? "담당 미정";
+  const veterinarianName = getChartBundleVeterinarianName(bundle);
 
   return (
     <EmrPatientContextBar
@@ -1064,6 +1115,8 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
     });
   };
 
+  if (!bundle) return null;
+
   return (
     <EmrContentAsidePanel id="chart-content-aside">
       <EmrListHeader
@@ -1108,6 +1161,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
               {group.rows.map((row) => (
                 <ChartHistoryItem
                   key={row.encounter.id}
+                  bundle={bundle}
                   row={row}
                   selected={row.encounter.id === selectedEncounterId}
                   onSelect={() => selectEncounter(row.encounter.id)}
@@ -1128,10 +1182,12 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
 }
 
 function ChartHistoryItem({
+  bundle,
   onSelect,
   row,
   selected,
 }: {
+  bundle: ChartBundle;
   onSelect: () => void;
   row: ChartHistoryRow;
   selected: boolean;
@@ -1167,8 +1223,7 @@ function ChartHistoryItem({
       meta={
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate">
-            담당{" "}
-            {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}
+            담당 {getChartHistoryVeterinarianName(row, bundle)}
           </span>
           <span className="truncate">{row.encounter.encounterNo}</span>
           <span className="shrink-0">
@@ -4911,8 +4966,7 @@ function ChartInstructionInfo({
   bundle: ChartBundle;
   latestSoap?: SoapNote;
 }) {
-  const veterinarianName =
-    getChartStaffName(bundle.encounter.primaryVeterinarianId) ?? "담당 미정";
+  const veterinarianName = getChartBundleVeterinarianName(bundle);
   const infoItems: Array<{ label: string; value: ReactNode }> = [
     {
       label: "접수 일시",

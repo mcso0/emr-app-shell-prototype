@@ -56,6 +56,10 @@ type ReceptionStore = {
   applyPersistedReceptionCalendar: (records: ReceptionCalendarReadRecord[]) => void;
   applyPersistedReceptionQueue: (queue: ReceptionQueueReadRecord[]) => void;
   clearWorkspaceSessionDrafts: (workspaceId: EmrId) => void;
+  cancelReceptionEncounter: (input: {
+    encounterId: EmrId;
+    workspaceId: EmrId;
+  }) => void;
   requestReceptionReadRetry: () => void;
   setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
   setSearchQuery: (query: string) => void;
@@ -310,6 +314,22 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         (draft) =>
           draft.source !== "session" || draft.encounter.workspaceId !== workspaceId
       ),
+    })),
+  cancelReceptionEncounter: ({ encounterId, workspaceId }) =>
+    set((state) => ({
+      calendarDraftSelection:
+        state.calendarDraftSelection?.id === encounterId
+          ? undefined
+          : state.calendarDraftSelection,
+      draftCheckIns: state.draftCheckIns.filter(
+        (draft) =>
+          draft.encounter.workspaceId !== workspaceId ||
+          draft.encounter.id !== encounterId
+      ),
+      selectedEncounterId:
+        state.selectedEncounterId === encounterId
+          ? undefined
+          : state.selectedEncounterId,
     })),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   requestReceptionReadRetry: () =>
