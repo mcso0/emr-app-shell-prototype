@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEN-447 Vercel Git Integration 확인 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #dde1e7;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.95em;
+      }
+
+      .meta {
+        color: #667085;
+      }
+
+      .status {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid #cfe7d7;
+        border-radius: 999px;
+        background: #edf8f0;
+        color: #177245;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-06-08 · Linear DEN-447</p>
+        <h1>Vercel Git Integration 확인 보고서</h1>
+        <p>
+          실제 원격 설정을 변경하지 않고, Vercel Git Integration과 PR preview
+          체크가 현재 증거로 확인되는지 점검했다.
+        </p>
+      </header>
+
+      <section>
+        <h2><span class="status">확인</span>읽기 전용 점검 결과</h2>
+        <ul>
+          <li>Vercel CLI는 project Git 연결 상태를 읽는 명령을 제공하지 않고, <code>git connect/disconnect</code>만 제공한다.</li>
+          <li>현재 fixed staging target deployment JSON에는 <code>gitSource</code>나 GitHub metadata가 노출되지 않았다.</li>
+          <li>GitHub deployments API는 Vercel deployment 기록을 반환하지 않았다.</li>
+          <li>GitHub main check runs에는 GitHub Actions만 보였고 Vercel check run은 보이지 않았다.</li>
+          <li>GitHub repo hooks는 비어 있었지만 GitHub App 연동은 이 목록에 안 보일 수 있어 단정 근거로 쓰지 않았다.</li>
+          <li>Vercel Preview env 변수는 존재했고 값은 encrypted로만 표시되어 secret 값은 노출되지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>결론</h2>
+        <ul>
+          <li>현재 CLI/GitHub evidence만으로는 Vercel Git Integration 활성 상태를 증명할 수 없다.</li>
+          <li>PR preview check가 GitHub에 표시되는 상태도 확인되지 않았다.</li>
+          <li>다음 단계는 Vercel Dashboard에서 Git repo 연결, production branch, PR preview/comment/check 설정을 확인하는 승인 작업이다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 실행 후보</h2>
+        <ul>
+          <li><code>02-03 Connect or confirm Vercel Git Integration for PR previews</code></li>
+          <li>승인 후에만 Vercel Git 연결, production branch <code>main</code> 설정, PR preview 검증용 test branch/PR 생성을 진행한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외한 것</h2>
+        <ul>
+          <li>Vercel/GitHub 설정을 변경하지 않았다.</li>
+          <li>fixed staging alias를 변경하지 않았다.</li>
+          <li>production deploy/promote를 하지 않았다.</li>
+          <li>secret 생성, 저장, 회전 작업을 하지 않았다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+          <li><code>git diff --check</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

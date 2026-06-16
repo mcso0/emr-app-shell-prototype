@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-455 Billing UX State Clarity Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-455 Billing UX State Clarity Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      DEN-454에서 수납 화면이 API snapshot을 우선 반영하게 된 이후, 수납 담당자가 API loading,
+      실패, 권한 오류, 빈 응답, checkout 준비 실패를 화면에서 구분할 수 있도록 정리하는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li>invoice-line과 payment-status read 상태를 billing workspace data hook에서 추적하도록 했다.</li>
+      <li>중앙 수납 화면에 API loading, retryable failure, permission denied, empty state 알림을 추가했다.</li>
+      <li>checkout session prepare 상태를 별도로 추적하고 실패 시 재시도 버튼을 제공했다.</li>
+      <li>권한 오류는 일반 네트워크 재시도와 다르게 표시해 사용자가 원인을 구분할 수 있게 했다.</li>
+      <li>Playwright E2E에 billing API read retry, permission denial, checkout retry assertion을 추가했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      Billing selected-invoice demo path는 API 값이 우선이며, API readback 실패가 조용히 mock fallback처럼 보이지 않는다.
+      실패나 빈 응답이 있을 때 화면이 fallback context를 유지하더라도 상태 알림으로 원인을 드러낸다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/ui-demo-api-wiring-e2e.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npm run lint</code> 통과: 기존 warning 5개 유지, error 없음</li>
+      <li><code>npm run build</code> 통과</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>DB schema, migration, seed, RLS는 변경하지 않았다.</li>
+      <li>실제 PG, 결제 provider, 영수증, 환불, 정산, 회계 연동은 포함하지 않았다.</li>
+      <li>Sales Demo와 unconfigured local session fallback은 유지했다.</li>
+      <li>Billing 전체 UX 재설계나 모든 mock 제거는 별도 범위다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 순번은 Dispensing/Treatment execution UI가 seeded fulfillment work item을 visible workflow로 채택하는 작업이다.
+    </p>
+  </body>
+</html>

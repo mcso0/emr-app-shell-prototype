@@ -856,20 +856,17 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     [authSession],
   );
   const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
-  const liveMode = authSession?.role === "supabase";
-  const mockItems = useMemo(() => getChartQueueItems(), []);
+  const mockItems = useMemo(
+    () => (preparedEmptyClinic ? emptyChartQueueItems : getChartQueueItems()),
+    [preparedEmptyClinic],
+  );
   const liveItems = useMemo(
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
   const items = useMemo(
-    () =>
-      liveMode
-        ? liveItems
-        : preparedEmptyClinic
-          ? emptyChartQueueItems
-          : mockItems,
-    [liveItems, liveMode, mockItems, preparedEmptyClinic],
+    () => (liveQueueStatus === "ready" ? liveItems : mockItems),
+    [liveItems, liveQueueStatus, mockItems],
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
 
@@ -878,7 +875,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   }, [hydrateAuthSession]);
 
   useEffect(() => {
-    if (!authHydrated || !liveMode) return;
+    if (!authHydrated) return;
 
     let cancelled = false;
     setLiveQueueState({ records: [], status: "loading" });
@@ -943,7 +940,6 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     actorHeaders,
     authHydrated,
     explicitQueryEncounterId,
-    liveMode,
     selectEncounter,
     selectedEncounterId,
     setLiveQueueState,
@@ -951,7 +947,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   ]);
 
   useEffect(() => {
-    if (!liveMode || liveQueueStatus !== "ready" || liveItems.length === 0) return;
+    if (liveQueueStatus !== "ready" || liveItems.length === 0) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
     if (explicitQueryEncounterId) return;
     saveSelectedChartEncounterId(workspaceId, liveItems[0].id);
@@ -959,7 +955,6 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   }, [
     explicitQueryEncounterId,
     liveItems,
-    liveMode,
     liveQueueStatus,
     selectEncounter,
     selectedEncounterId,
@@ -1012,7 +1007,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
@@ -1044,9 +1039,35 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
       ]}
       vitalItems={getChartVitals(bundle)}
       memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "수납메모", disabled: true },
+        {
+          label: "방문목적",
+          summary:
+            bundle.encounter.visitPurpose ??
+            bundle.encounter.chiefComplaint ??
+            "방문 목적 기록 없음",
+        },
+        {
+          label: "보호자 메모",
+          locked: true,
+          summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
+          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+        },
+        {
+          label: "환자 메모",
+          summary:
+            [
+              bundle.patient.allergyNote,
+              bundle.patient.specialNote,
+              bundle.patient.handlingCautionNote,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "환자 특이 메모 없음",
+        },
+        {
+          label: "수납 메모",
+          disabled: true,
+          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+        },
       ]}
       trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
     />
@@ -1059,7 +1080,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
@@ -2778,7 +2799,7 @@ export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =

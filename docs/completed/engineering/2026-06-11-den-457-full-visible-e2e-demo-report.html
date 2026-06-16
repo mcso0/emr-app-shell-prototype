@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-457 Full Visible E2E Demo Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-457 Full Visible E2E Demo Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      접수에서 감사 로그까지 이어지는 EMR SaaS 데모 흐름을 하나의 visible Playwright scenario로 증명하는 작업이었다.
+      새 seed나 schema를 추가하지 않고, 기존 API wiring과 synthetic demo data 경계를 검증하는 범위다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>tests/ui-demo-api-wiring-e2e.spec.ts</code>에 visible day-in-clinic E2E scenario를 추가했다.</li>
+      <li>시나리오는 reception, chart queue, lab result entry, dispensing fulfillment readback, billing checkout, audit review 화면을 순서대로 방문한다.</li>
+      <li>최종 assertion에서 reception, chart, fulfillment, lab, billing, audit API 호출 ledger를 요구하도록 했다.</li>
+      <li>Billing mock route를 API-success snapshot 중심으로 정리해 visible billing 단계가 invoice/payment/checkout API state를 보여주게 했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      프로젝트에는 API request boundary를 검증하는 기존 테스트와, 사용자가 보는 화면 흐름을 검증하는 visible E2E가 함께 있다.
+      이 테스트는 mock-only 정적 화면만으로는 통과하지 못하고 주요 API boundary 호출이 모두 발생해야 통과한다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/ui-demo-api-wiring-e2e.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx playwright test tests/demo-seed-inventory-readback-contract.spec.ts --reporter=line</code> 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li><code>npm run lint</code> 통과: 기존 warning 5개 유지, error 없음</li>
+      <li><code>npm run docs:check</code> 통과</li>
+      <li><code>npm run security:secrets</code> 통과</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>DB schema, migration, seed, RLS는 변경하지 않았다.</li>
+      <li>remote/prod Supabase, production E2E, real provider integration은 포함하지 않았다.</li>
+      <li>화면 리디자인은 포함하지 않았다.</li>
+      <li>Sales Demo와 unconfigured local fallback은 유지했다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 순번은 local Supabase replay hardening이다. Docker/Supabase reset, seed, readback 실행 조건을 더 명확히 해서
+      다음 세션에서도 같은 데모 DB 상태를 재현할 수 있어야 한다.
+    </p>
+  </body>
+</html>

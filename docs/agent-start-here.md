@@ -10,6 +10,7 @@ Use this file as the compact routing guide for new chats, sub-agents, and future
 - Approval gates now focus on meaningful cost, security exposure, real data, destructive remote data operations, external communications/payments/providers, private repo/public exposure, and real external-user launch.
 - Use concise English for agent-facing plans, searches, and handoff notes. Reply to the user in Korean unless they ask otherwise.
 - Read only the smallest relevant source-doc sections needed for the task.
+- Keep token-heavy routing surfaces bounded. Use targeted search or small ranges for `docs/work/index.md`, logs, generated output, and long reference docs.
 
 ## Current Required Reading
 
@@ -50,7 +51,7 @@ The active target is Product MVP with production-level demo readiness. The proto
 
 ## How To Start Work
 
-1. Find or create the PR-sized work item in `docs/work/`.
+1. Find or create the PR-sized work item in `docs/work/`; search `docs/work/index.md` by ID, area, or keyword instead of printing the full board.
 2. Confirm the PR creation gate from `docs/README.md`.
 3. Use `docs/_meta/agent-rag-map.md` to pick the smallest task-specific source docs.
 4. Route planning or docs changes through `docs/_meta/intake-rules.md`.

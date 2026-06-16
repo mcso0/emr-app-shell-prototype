@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo DB PR 5 Billing Checkout Session Family Seed Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo DB PR 5 Billing Checkout Session Family Seed Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      UI를 바꾸지 않고 <code>clair-demo</code> local/dev seed에 billing checkout session family를 추가해,
+      결제 체크아웃과 payment allocation까지 readback으로 증명할 수 있게 만드는 작업이었다. remote Supabase,
+      production DB, 실제 병원/환자/결제 데이터는 범위에서 제외했다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>billing_checkout_sessions</code> paid row 2개를 추가했다.</li>
+      <li><code>billing_checkout_session_invoices</code> invoice snapshot row 2개를 추가했다.</li>
+      <li><code>payment_allocations</code> allocation row 2개를 기존 approved payment에 연결했다.</li>
+      <li>Nabi card checkout과 Mango cash checkout을 deterministic ID로 시드했다.</li>
+      <li>readback SQL과 focused test를 checkout seed가 baseline으로 필요하도록 갱신했다.</li>
+      <li>seed inventory 문서에서 current seed-family gap이 닫혔고, 남은 일이 UI/API adoption임을 기록했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      이제 demo DB reset 이후 <code>billing_checkout_sessions</code>,
+      <code>billing_checkout_session_invoices</code>, <code>payment_allocations</code>는 비어 있지 않아야 하며,
+      readback은 결제수단, 총액, invoice snapshot, allocation 금액 일치를 확인한다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 변경은 seed/readback/test/doc 범위이며 UI 연결은 하지 않았다.</li>
+      <li>Payment provider, receipt, refund, settlement, accounting은 포함하지 않았다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 작업은 mock/local-store 화면을 seeded DB API/server boundary로 재연결하고,
+      login부터 reception, chart, fulfillment, lab, billing checkout, audit까지 이어지는 end-to-end synthetic demo test를 만드는 것이다.
+    </p>
+  </body>
+</html>

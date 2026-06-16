@@ -48,6 +48,7 @@ type PatientProfileStore = {
   addGuardian: (input: NewGuardianInput) => { duplicateGuardianId?: EmrId; error?: string; guardianId?: EmrId };
   addPatient: (input: NewPatientInput) => { duplicateGuardianId?: EmrId; error?: string; patientId?: EmrId };
   applyPatientGuardianLookupItem: (item: ReceptionPatientGuardianLookupItem) => EmrId;
+  applyPatientGuardianLookupItems: (items: ReceptionPatientGuardianLookupItem[]) => void;
   applyPatientGuardianRegistration: (registration: ReceptionPatientGuardianRegistrationRecord) => EmrId;
   hasDuplicatePatientNameForGuardian: (guardianId: EmrId, patientName: string) => boolean;
   setPrimaryGuardian: (patientId: EmrId, guardianId: EmrId) => void;
@@ -249,6 +250,37 @@ export const usePatientProfileStore = create<PatientProfileStore>()((set, get) =
     });
 
     return item.patient.id;
+  },
+  applyPatientGuardianLookupItems: (items) => {
+    set((state) => {
+      const primaryLinks: PatientGuardian[] = items.flatMap((item) =>
+        item.primaryGuardian
+          ? [
+              {
+                id: `live-pg-${item.patient.id}-${item.primaryGuardian.id}`,
+                patientId: item.patient.id,
+                guardianId: item.primaryGuardian.id,
+                relationship: "주보호자",
+                isPrimary: true,
+                canReceiveMessages: true,
+                createdAt: item.patient.createdAt,
+              },
+            ]
+          : [],
+      );
+      const guardians = items.flatMap((item) =>
+        item.primaryGuardian ? [item.primaryGuardian] : [],
+      );
+
+      return {
+        guardians: mergeById(state.guardians, guardians),
+        patientGuardians: mergeById(state.patientGuardians, primaryLinks),
+        patients: mergeById(
+          state.patients,
+          items.map((item) => item.patient),
+        ),
+      };
+    });
   },
   applyPatientGuardianRegistration: (registration) => {
     set((state) => ({

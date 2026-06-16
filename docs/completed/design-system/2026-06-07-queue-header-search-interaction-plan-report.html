@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>대기열 헤더 검색 인터랙션 기획 및 시안</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --line: #dbe1e8;
+      --line-soft: #edf1f5;
+      --text: #151922;
+      --muted: #667085;
+      --subtle: #98a2b3;
+      --blue: #2684ff;
+      --blue-soft: #e9f2ff;
+      --green: #129564;
+      --green-soft: #e8f8f1;
+      --orange: #b86b00;
+      --orange-soft: #fff3df;
+      --danger: #d92d20;
+      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 24px 56px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 10px; font-size: 30px; line-height: 1.2; letter-spacing: 0; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 0 0 8px; font-size: 15px; }
+    p { color: var(--muted); }
+    .hero {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 22px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-soft);
+      color: #344054;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .section {
+      margin-top: 16px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+    .full { grid-column: 1 / -1; }
+    ul, ol { margin: 0; padding-left: 20px; color: var(--muted); }
+    li + li { margin-top: 7px; }
+    strong { color: var(--text); }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .table th, .table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      text-align: left;
+      vertical-align: top;
+    }
+    .table th {
+      background: var(--panel-soft);
+      color: #344054;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .table tr:last-child td { border-bottom: 0; }
+    .prototype-shell {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      min-height: 660px;
+      overflow: hidden;
+      border: 1px solid #cfd6df;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+    .side {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      border-right: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+    .side-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 54px;
+      padding: 0 14px;
+      border-bottom: 1px solid transparent;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .tabs {
+      display: inline-flex;
+      gap: 2px;
+      padding: 3px;
+      border-radius: 8px;
+      background: #f1f4f8;
+    }
+    .tab {
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      padding: 4px 8px;
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tab.active { background: #ffffff; color: #111827; box-shadow: 0 1px 2px rgba(15, 23, 42, .08); }
+    .date-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 48px;
+      padding: 0 14px;
+      color: #475467;
+      font-size: 13px;
+    }
+    .date-row button, .icon-btn, .close-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: transparent;
+      color: #667085;
+      cursor: pointer;
+    }
+    .date-row button {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+    }
+    .today {
+      margin-left: auto;
+      padding: 3px 7px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .queue-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      margin: 0 14px;
+      border-top: 1px solid transparent;
+      border-bottom: 1px solid var(--line);
+      transition: background .16s ease;
+    }
+    .queue-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+      font-size: 13px;
+      font-weight: 800;
+      color: #344054;
+    }
+    .count {
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #344054;
+      font-size: 12px;
+      text-align: center;
+      line-height: 20px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .icon-btn, .close-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    .icon-btn:hover, .close-btn:hover { background: #eef2f7; color: #111827; }
+    .search-row {
+      display: none;
+      align-items: center;
+      width: 100%;
+      gap: 8px;
+    }
+    .search-active .queue-title,
+    .search-active .header-actions { display: none; }
+    .search-active .search-row { display: flex; }
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      flex: 1;
+      height: 32px;
+      padding: 0 9px;
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(38, 132, 255, .12);
+    }
+    .search-input-wrap span { color: #667085; font-size: 14px; }
+    .search-input {
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .result-summary {
+      padding: 9px 14px 2px;
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 28px;
+    }
+    .groups {
+      flex: 1;
+      overflow: auto;
+      padding: 8px 14px 18px;
+    }
+    .group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 32px;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .task {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 9px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .task.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 1px var(--blue) inset;
+    }
+    .identity {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      color: #111827;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .badge {
+      flex: 0 0 auto;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #eef2ff;
+      color: #304189;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .muted-line {
+      min-width: 0;
+      overflow: hidden;
+      color: #667085;
+      font-size: 12px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .meta-row {
+      display: flex;
+      gap: 6px;
+      color: #667085;
+      font-size: 11px;
+    }
+    .meta-chip {
+      padding: 3px 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+      white-space: nowrap;
+    }
+    mark {
+      border-radius: 3px;
+      background: #fff1a8;
+      color: inherit;
+      padding: 0 1px;
+    }
+    .empty {
+      display: none;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px dashed #cfd6df;
+      border-radius: 10px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+    .canvas {
+      padding: 26px;
+      background:
+        linear-gradient(90deg, rgba(219,225,232,.5) 1px, transparent 1px),
+        linear-gradient(rgba(219,225,232,.5) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .detail-card {
+      min-height: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.88);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .detail-card h3 { font-size: 18px; }
+    .callout {
+      padding: 14px;
+      border: 1px solid #ffd699;
+      border-radius: 10px;
+      background: var(--orange-soft);
+      color: #7a4a00;
+      font-size: 13px;
+    }
+    .good {
+      border-color: #b7ebcf;
+      background: var(--green-soft);
+      color: #095f41;
+    }
+    .keyboard {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 24px;
+      padding: 0 7px;
+      border: 1px solid #cfd6df;
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      background: #fff;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .small { color: var(--subtle); font-size: 12px; }
+    @media (max-width: 900px) {
+      main { padding: 20px 14px 40px; }
+      .grid { grid-template-columns: 1fr; }
+      .prototype-shell { grid-template-columns: 1fr; }
+      .canvas { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div>
+        <h1>대기열 헤더 검색 인터랙션 기획 및 시안</h1>
+        <p>
+          진료/조제/검사/영상 등 사이드 대기열 헤더의 검색 아이콘을 눌렀을 때,
+          헤더가 인라인 검색 모드로 전환되고 현재 대기열 카드가 즉시 필터링되는 UX 제안서다.
+        </p>
+        <div class="meta">
+          <span class="pill">작성일 2026-06-07</span>
+          <span class="pill">대상: 사이드 대기열 헤더</span>
+          <span class="pill">산출물: 기능 기획 + 인터랙션 HTML 시안</span>
+          <span class="pill">구현 범위 아님</span>
+        </div>
+      </div>
+      <div class="callout good">
+        핵심 판단: 승욱이 말한 “노션처럼 검색 모드로 전환” 방향이 맞다. 다만 상단 모듈명/날짜/탭은 유지하고,
+        대기열 헤더 한 줄만 검색 입력 상태로 바꾸는 쪽이 업무 맥락 손실이 적다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. 권장 UX 요약</h2>
+      <ul>
+        <li><strong>검색 아이콘 클릭:</strong> 대기열 헤더의 라벨, 카운트, 정렬/필터/검색 아이콘을 숨기고 검색 input을 즉시 focus한다.</li>
+        <li><strong>오른쪽 X 버튼:</strong> 검색어를 비우고 검색 모드를 종료하며 기존 헤더 상태로 돌아간다.</li>
+        <li><strong>입력 중 필터링:</strong> 현재 선택된 상단 탭, 정렬, 상세 필터 조건을 유지한 상태에서 검색어가 매칭되는 task card만 남긴다.</li>
+        <li><strong>검색 대상:</strong> 환자명, 보호자명, 접수 유형, 오더/검사명, 방문 목적/메모 요약, 요청자, 담당자, 상태, 시간, 차트/오더 식별자를 포함한다.</li>
+        <li><strong>결과 표시:</strong> 검색 모드 아래에 “검색 결과 N건”을 보여주고, 카드 내 매칭 텍스트는 highlight한다.</li>
+        <li><strong>빈 결과:</strong> 리스트 영역에 빈 상태를 보여주고, X 또는 전체 삭제로 복귀한다.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>2. 인터랙션 시안</h2>
+      <p class="small">아래 시안에서 검색 아이콘을 누른 뒤 “코코”, “DEN”, “이수지”, “처치”, “13:13” 등을 입력해봐.</p>
+      <div class="prototype-shell" aria-label="대기열 검색 인터랙션 시안">
+        <aside class="side">
+          <div class="side-title">
+            <span>진료/차트</span>
+            <div class="tabs" aria-label="대기열 범위">
+              <button class="tab active" type="button">전체</button>
+              <button class="tab" type="button">예약</button>
+              <button class="tab" type="button">외래</button>
+            </div>
+          </div>
+          <div class="date-row">
+            <button type="button" aria-label="이전 날짜">‹</button>
+            <strong>26.05.05 (화)</strong>
+            <span class="today">오늘</span>
+            <button type="button" aria-label="다음 날짜">›</button>
+          </div>
+          <div id="queueHeader" class="queue-header">
+            <div class="queue-title">
+              <span>진료 대기열</span>
+              <span id="visibleCount" class="count">3</span>
+            </div>
+            <div class="header-actions">
+              <button class="icon-btn" type="button" aria-label="정렬">↕</button>
+              <button class="icon-btn" type="button" aria-label="필터">≡</button>
+              <button id="openSearch" class="icon-btn" type="button" aria-label="검색">⌕</button>
+            </div>
+            <div class="search-row">
+              <label class="search-input-wrap" for="queueSearch">
+                <span aria-hidden="true">⌕</span>
+                <input id="queueSearch" class="search-input" type="search" placeholder="환자, 보호자, 오더, 담당자 검색" autocomplete="off" />
+              </label>
+              <button id="closeSearch" class="close-btn" type="button" aria-label="검색 닫기">×</button>
+            </div>
+          </div>
+          <div id="resultSummary" class="result-summary"></div>
+          <div class="groups">
+            <div id="groupWaiting">
+              <div class="group-title"><span>대기중</span><span id="groupCount">3</span></div>
+              <div id="taskList"></div>
+            </div>
+            <div id="emptyState" class="empty">
+              검색 결과가 없어. 철자를 줄이거나 필터 조건을 초기화해봐.
+            </div>
+          </div>
+        </aside>
+        <section class="canvas">
+          <div class="detail-card">
+            <h3>상세 화면은 그대로 유지</h3>
+            <p>
+              검색은 사이드 대기열의 탐색 모드다. 입력 중에도 오른쪽 상세 화면은 마지막 선택 항목을 유지하고,
+              사용자가 검색 결과 카드를 선택했을 때만 상세가 바뀐다.
+            </p>
+            <div class="callout">
+              설계 포인트: 검색어 입력만으로 상세 화면이 자동 변경되면 사용자가 읽던 차트/SOAP 맥락을 잃는다.
+              따라서 결과 리스트만 갱신하고 선택 변경은 명시 클릭으로 제한한다.
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="section">
+        <h2>3. 사용자가 말한 방향에서 보강할 점</h2>
+        <ul>
+          <li><strong>검색 범위 표시:</strong> 현재 “전체/예약/외래” 탭과 필터가 적용된 결과인지 명확히 보여줘야 한다.</li>
+          <li><strong>선택 상태 유지:</strong> 검색 결과가 기존 선택 항목을 숨겨도 상세 화면은 유지하고, 카드 선택 시에만 바꾼다.</li>
+          <li><strong>빈 결과 복구:</strong> 빈 상태에서 “검색어 지우기”와 “필터 초기화” 액션이 필요하다.</li>
+          <li><strong>키보드 플로우:</strong> <kbd>Esc</kbd>로 닫기, <kbd>Enter</kbd>로 첫 결과 선택, <kbd>↑</kbd>/<kbd>↓</kbd>로 결과 이동을 지원하면 반복 업무가 빨라진다.</li>
+          <li><strong>매칭 하이라이트:</strong> 왜 이 카드가 남았는지 카드 안에서 보여줘야 신뢰감이 생긴다.</li>
+          <li><strong>검색어 유지 여부:</strong> 모듈 이동/날짜 변경 시 검색어는 초기화하고, 같은 탭 안에서 정렬/필터 변경 시에는 유지하는 쪽이 자연스럽다.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>4. 상태 정의</h2>
+        <table class="table">
+          <thead>
+            <tr><th>상태</th><th>화면</th><th>동작</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Default</td><td>라벨, 카운트, 정렬, 필터, 검색 아이콘</td><td>기존 대기열 표시</td></tr>
+            <tr><td>Search Active Empty Query</td><td>검색 input focus, X 버튼</td><td>전체 결과 유지, placeholder 표시</td></tr>
+            <tr><td>Search Active With Query</td><td>검색 결과 N건, highlight</td><td>현재 탭/필터 이후 결과에서 검색어 매칭</td></tr>
+            <tr><td>No Results</td><td>빈 상태, 검색어 지우기 안내</td><td>선택 상세는 유지</td></tr>
+            <tr><td>Exit</td><td>기존 헤더 복귀</td><td>검색어 초기화, 이전 정렬/필터 유지</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>5. 상세 기능 기획</h2>
+        <ol>
+          <li><strong>검색 진입:</strong> 검색 버튼 클릭 시 header row를 `searchActive=true`로 전환하고 input에 focus한다.</li>
+          <li><strong>검색 적용 순서:</strong> 상단 탭 필터 → 상세 필터 → 검색어 필터 → 정렬 순서로 적용한다.</li>
+          <li><strong>검색 토큰:</strong> 공백 기준 AND 검색을 기본으로 한다. 예: “코코 이수지”는 두 단어가 모두 매칭되는 카드만 표시한다.</li>
+          <li><strong>한글/영문:</strong> 대소문자는 무시한다. 초성 검색은 후속 옵션으로 둔다.</li>
+          <li><strong>선택 처리:</strong> 검색 결과 첫 항목 자동 선택은 하지 않는다. 사용자가 클릭하거나 Enter를 눌렀을 때만 선택한다.</li>
+          <li><strong>카운트:</strong> 헤더 카운트는 검색 결과 수로 바꾼다. 검색 종료 시 기존 visible count로 복귀한다.</li>
+        </ol>
+      </section>
+
+      <section class="section">
+        <h2>6. 키보드/접근성</h2>
+        <div class="keyboard">
+          <p><kbd>/</kbd> 대기열에 focus가 있을 때 검색 진입</p>
+          <p><kbd>Esc</kbd> 검색어가 있으면 비우고, 비어 있으면 검색 종료</p>
+          <p><kbd>Enter</kbd> 현재 active 결과 카드 선택</p>
+          <p><kbd>↑</kbd><kbd>↓</kbd> 결과 카드 active 이동</p>
+        </div>
+        <ul>
+          <li>검색 input label은 “대기열 검색”으로 제공한다.</li>
+          <li>결과 수 변경은 `aria-live="polite"` 영역으로 안내한다.</li>
+          <li>X 버튼은 “검색 닫기”로 읽히게 한다.</li>
+          <li>검색 진입/종료 시 focus 이동이 예측 가능해야 한다.</li>
+        </ul>
+      </section>
+
+      <section class="section full">
+        <h2>7. 구현 시 수용 기준</h2>
+        <table class="table">
+          <thead>
+            <tr><th>구분</th><th>완료 기준</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>기본 동작</td>
+              <td>검색 아이콘 클릭 시 헤더가 input + X 버튼으로 전환되고 input이 focus된다.</td>
+            </tr>
+            <tr>
+              <td>필터링</td>
+              <td>검색어 입력 시 현재 대기열 task card가 환자/보호자/오더/담당자/상태/시간 기준으로 즉시 필터링된다.</td>
+            </tr>
+            <tr>
+              <td>기존 조건 유지</td>
+              <td>상단 탭, 상세 필터, 정렬 상태는 검색 모드에서도 유지된다.</td>
+            </tr>
+            <tr>
+              <td>복귀</td>
+              <td>X 또는 Esc로 검색어를 지우고 기존 헤더로 돌아간다.</td>
+            </tr>
+            <tr>
+              <td>빈 상태</td>
+              <td>검색 결과 0건일 때 명확한 빈 상태와 복구 액션을 제공한다.</td>
+            </tr>
+            <tr>
+              <td>공통 적용</td>
+              <td>진료/조제/검사/영상 등 같은 대기열 헤더 패턴에 동일하게 적용 가능해야 한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section full">
+        <h2>8. 후속 구현 범위 제안</h2>
+        <ul>
+          <li><strong>PR 1:</strong> `EmrOrderQueueSidePanel` 검색 모드 구현. 진료/조제/플레이스홀더 공통 대기열부터 적용.</li>
+          <li><strong>PR 2:</strong> Lab/Imaging 별도 대기열의 `QueueActions`를 동일 검색 API로 정리.</li>
+          <li><strong>PR 3:</strong> 키보드 탐색, highlight, empty state를 shared side-panel search contract로 문서화.</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const tasks = [
+      {
+        patient: "로컬환자",
+        guardian: "로컬보호자",
+        type: "외래",
+        order: "DEN-56 synthetic walk-in",
+        purpose: "방문목적",
+        time: "00:30",
+        actor: "접수",
+        assignee: "미지정",
+        status: "대기중",
+        selected: false,
+      },
+      {
+        patient: "Nabi Synthetic",
+        guardian: "DEN-194 Guardian",
+        type: "외래",
+        order: "예방접종 · 12",
+        purpose: "방문목적",
+        time: "13:13",
+        actor: "이수지",
+        assignee: "미지정",
+        status: "대기중",
+        selected: true,
+      },
+      {
+        patient: "준하",
+        guardian: "이준재",
+        type: "외래",
+        order: "처치 123",
+        purpose: "방문목적",
+        time: "13:17",
+        actor: "이수지",
+        assignee: "미지정",
+        status: "대기중",
+        selected: false,
+      },
+    ];
+
+    const queueHeader = document.getElementById("queueHeader");
+    const openSearch = document.getElementById("openSearch");
+    const closeSearch = document.getElementById("closeSearch");
+    const queueSearch = document.getElementById("queueSearch");
+    const taskList = document.getElementById("taskList");
+    const visibleCount = document.getElementById("visibleCount");
+    const groupCount = document.getElementById("groupCount");
+    const resultSummary = document.getElementById("resultSummary");
+    const emptyState = document.getElementById("emptyState");
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;",
+      }[char]));
+    }
+
+    function highlight(value, tokens) {
+      let safe = escapeHtml(value);
+      tokens.forEach((token) => {
+        const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        safe = safe.replace(new RegExp(`(${escapedToken})`, "gi"), "<mark>$1</mark>");
+      });
+      return safe;
+    }
+
+    function getSearchBlob(task) {
+      return [
+        task.patient,
+        task.guardian,
+        task.type,
+        task.order,
+        task.purpose,
+        task.time,
+        task.actor,
+        task.assignee,
+        task.status,
+      ].join(" ").toLowerCase();
+    }
+
+    function render() {
+      const query = queueSearch.value.trim();
+      const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+      const filtered = tasks.filter((task) => {
+        const blob = getSearchBlob(task);
+        return tokens.every((token) => blob.includes(token));
+      });
+
+      taskList.innerHTML = filtered.map((task) => `
+        <article class="task ${task.selected ? "selected" : ""}">
+          <div class="identity">
+            <span class="badge">${highlight(task.type, tokens)}</span>
+            <span>${highlight(task.patient, tokens)} · ${highlight(task.guardian, tokens)}</span>
+          </div>
+          <div class="muted-line">${highlight(task.purpose, tokens)} ${highlight(task.order, tokens)}</div>
+          <div class="meta-row">
+            <span class="meta-chip">${highlight(task.time, tokens)} ${highlight(task.actor, tokens)} 요청</span>
+            <span class="meta-chip">담당 ${highlight(task.assignee, tokens)}</span>
+          </div>
+        </article>
+      `).join("");
+
+      visibleCount.textContent = filtered.length;
+      groupCount.textContent = filtered.length;
+      emptyState.style.display = filtered.length ? "none" : "block";
+      resultSummary.textContent = query ? `검색 결과 ${filtered.length}건` : "";
+    }
+
+    function enterSearchMode() {
+      queueHeader.classList.add("search-active");
+      queueSearch.focus();
+      render();
+    }
+
+    function exitSearchMode() {
+      queueSearch.value = "";
+      queueHeader.classList.remove("search-active");
+      openSearch.focus();
+      render();
+    }
+
+    openSearch.addEventListener("click", enterSearchMode);
+    closeSearch.addEventListener("click", exitSearchMode);
+    queueSearch.addEventListener("input", render);
+    queueSearch.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (queueSearch.value) {
+          queueSearch.value = "";
+          render();
+        } else {
+          exitSearchMode();
+        }
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

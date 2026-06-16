@@ -1,0 +1,1580 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>고객관리 및 병원관리 목록 화면 구조 통일 제안</title>
+    <style>
+      :root {
+        --app: #f6f7f9;
+        --panel: #ffffff;
+        --muted: #f3f4f6;
+        --muted-2: #eef1f4;
+        --line: #dfe3e8;
+        --line-strong: #c9d1dc;
+        --text: #17191d;
+        --sub: #69717d;
+        --soft: #8b94a1;
+        --ink: #111318;
+        --blue: #2f80ed;
+        --green: #188a51;
+        --orange: #c75f16;
+        --warning-bg: #fff6e8;
+        --success-bg: #eaf8ef;
+        --info-bg: #eaf4ff;
+        --selected: #f1f3f7;
+        --shadow: 0 1px 2px rgba(17, 24, 39, 0.08);
+        --drawer-shadow: -22px 0 42px rgba(15, 23, 42, 0.14);
+        font-family:
+          Pretendard,
+          "Apple SD Gothic Neo",
+          "Noto Sans KR",
+          Inter,
+          system-ui,
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--app);
+        color: var(--text);
+      }
+
+      body {
+        margin: 0;
+        background: var(--app);
+      }
+
+      .page {
+        max-width: 1720px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 20px;
+        align-items: stretch;
+        margin-bottom: 20px;
+      }
+
+      .brief,
+      .decision-card,
+      .section {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .brief {
+        padding: 24px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--sub);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 12px;
+        font-size: 26px;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      p {
+        color: var(--sub);
+        font-size: 14px;
+        line-height: 1.62;
+      }
+
+      .decision-card {
+        padding: 20px;
+      }
+
+      .decision-card strong {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0 10px;
+        background: var(--muted);
+        color: var(--sub);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .rule {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: #fbfcfd;
+      }
+
+      .rule b {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .rule p {
+        margin-bottom: 0;
+        font-size: 13px;
+      }
+
+      .section {
+        margin-top: 18px;
+        padding: 20px;
+      }
+
+      .comparison {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .mini {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fbfcfd;
+      }
+
+      .mini-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 14px;
+        background: var(--panel);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .mini-body {
+        padding: 14px;
+      }
+
+      .wire-canvas {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fafc;
+        padding: 12px;
+      }
+
+      .wire-top {
+        height: 32px;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .wire-content {
+        height: 180px;
+        padding: 14px;
+      }
+
+      .wire-title {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .wire-icon {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #8a93a0;
+        border-radius: 5px;
+      }
+
+      .wire-line {
+        height: 13px;
+        border-radius: 99px;
+        background: #dfe4eb;
+      }
+
+      .wire-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .wire-card .wire-toolbar {
+        height: 38px;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .wire-table {
+        height: 104px;
+        background:
+          linear-gradient(var(--muted) 0 32px, transparent 32px),
+          repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent 35px,
+            var(--line) 35px,
+            var(--line) 36px
+          );
+      }
+
+      .wire-flat {
+        border-top: 1px solid var(--line);
+        border-radius: 0;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .callout {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr);
+        gap: 10px;
+        border: 1px solid #b7d7ff;
+        border-radius: 8px;
+        padding: 12px;
+        background: var(--info-bg);
+        color: #1d4b7d;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .check {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--blue);
+        color: white;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .mock-shell {
+        position: relative;
+        height: 900px;
+        overflow: hidden;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: var(--app);
+      }
+
+      .mock-topbar {
+        display: grid;
+        grid-template-columns: 280px 1fr 220px;
+        align-items: center;
+        height: 56px;
+        border-bottom: 1px solid var(--line);
+        background: #fbfbfc;
+      }
+
+      .workspace-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        width: max-content;
+        margin-left: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 12px;
+        background: #fff;
+        font-weight: 800;
+        font-size: 14px;
+      }
+
+      .workspace-name .logo {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        background: var(--blue);
+      }
+
+      .tabbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        color: var(--sub);
+      }
+
+      .tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        height: 32px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 12px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .system-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-right: 16px;
+        color: var(--sub);
+        font-size: 13px;
+      }
+
+      .mock-layout {
+        display: grid;
+        grid-template-columns: 70px 330px minmax(0, 1fr);
+        height: calc(100% - 56px);
+      }
+
+      .rail {
+        padding: 12px 10px;
+        background: #111722;
+      }
+
+      .rail-btn {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        margin-bottom: 7px;
+        border-radius: 10px;
+        color: #8ea0bb;
+        font-size: 18px;
+      }
+
+      .rail-btn.active {
+        background: #2d3340;
+        color: #fff;
+      }
+
+      .sidepanel {
+        border-right: 1px solid var(--line);
+        background: #fff;
+        padding: 18px 18px;
+      }
+
+      .side-title {
+        margin-bottom: 28px;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .side-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 34px;
+        color: #444b55;
+        font-weight: 800;
+      }
+
+      .side-tree {
+        margin-left: 10px;
+        border-left: 1px solid var(--line);
+        padding: 6px 0 12px 14px;
+      }
+
+      .side-item {
+        display: grid;
+        grid-template-columns: 20px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        height: 42px;
+        border-radius: 8px;
+        padding: 0 10px;
+        color: #454c57;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .side-item.active {
+        background: var(--selected);
+        color: var(--ink);
+      }
+
+      .badge {
+        display: inline-flex;
+        min-width: 22px;
+        height: 22px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: var(--muted);
+        color: var(--sub);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .side-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 42px;
+        color: var(--sub);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .main {
+        min-width: 0;
+        background: var(--app);
+      }
+
+      .content {
+        display: flex;
+        min-height: 100%;
+        flex-direction: column;
+        border-radius: 12px 0 0 0;
+        background: #fff;
+      }
+
+      .content-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 68px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 20px;
+        background: #fff;
+      }
+
+      .title-pack {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 10px;
+      }
+
+      .title-icon {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        color: #5f6875;
+        font-size: 20px;
+      }
+
+      .title-pack h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        width: 380px;
+        height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0 12px;
+        color: var(--soft);
+        font-size: 14px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 0 12px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .btn.primary {
+        border-color: #111318;
+        background: #111318;
+        color: #fff;
+      }
+
+      .icon-btn {
+        width: 36px;
+        padding: 0;
+        font-size: 18px;
+      }
+
+      .tab-row {
+        display: flex;
+        min-height: 48px;
+        align-items: flex-end;
+        gap: 26px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 20px;
+        background: #fff;
+      }
+
+      .line-tab {
+        display: inline-flex;
+        align-items: center;
+        height: 47px;
+        border-bottom: 2px solid transparent;
+        color: var(--sub);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .tab-row.with-controls {
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        min-height: 58px;
+        overflow: hidden;
+      }
+
+      .tab-list {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        gap: 24px;
+        overflow: hidden;
+      }
+
+      .tab-list .line-tab {
+        flex: 0 0 auto;
+      }
+
+      .scope-summary {
+        display: inline-flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        gap: 8px;
+        color: var(--sub);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .scope-summary strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .scope-summary .dot {
+        width: 3px;
+        height: 3px;
+        border-radius: 999px;
+        background: var(--soft);
+      }
+
+      .line-tab.active {
+        border-bottom-color: var(--ink);
+        color: var(--ink);
+      }
+
+      .compact-controls {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .compact-control {
+        width: auto;
+        min-width: 38px;
+        height: 36px;
+        gap: 6px;
+        padding: 0 10px;
+      }
+
+      .compact-chip {
+        height: 36px;
+        min-width: 62px;
+        padding: 0 10px;
+        color: #303640;
+      }
+
+      .compact-density {
+        height: 36px;
+        background: #f0f1f4;
+      }
+
+      .compact-density span {
+        width: 28px;
+        height: 28px;
+      }
+
+      .select {
+        min-width: 134px;
+        justify-content: space-between;
+        color: #333943;
+      }
+
+      .density {
+        display: inline-flex;
+        gap: 3px;
+        height: 36px;
+        align-items: center;
+        border-radius: 9px;
+        background: var(--muted);
+        padding: 3px;
+      }
+
+      .density span {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        color: #242931;
+        font-size: 17px;
+      }
+
+      .density span.active {
+        background: #fff;
+        box-shadow: var(--shadow);
+      }
+
+      .table-region {
+        min-height: 0;
+        flex: 1;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .table-scroll {
+        overflow: auto;
+        height: 100%;
+      }
+
+      table {
+        width: 100%;
+        min-width: 1240px;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      th {
+        height: 44px;
+        border-bottom: 1px solid var(--line);
+        background: var(--muted);
+        color: var(--sub);
+        padding: 0 12px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      td {
+        height: 56px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 12px;
+        color: var(--ink);
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      tbody tr:hover td,
+      tbody tr.active td {
+        background: #f8fafc;
+      }
+
+      .checkbox {
+        width: 20px;
+        height: 20px;
+        border: 1px solid #d7dfe8;
+        border-radius: 5px;
+        background: #fff;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        border: 1px solid currentColor;
+        border-radius: 7px;
+        padding: 0 7px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .status.green {
+        background: var(--success-bg);
+        color: var(--green);
+      }
+
+      .status.orange {
+        background: var(--warning-bg);
+        color: var(--orange);
+      }
+
+      .status.blue {
+        background: var(--info-bg);
+        color: var(--blue);
+      }
+
+      .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 50px;
+        border-top: 1px solid var(--line);
+        padding: 0 20px;
+        background: #fff;
+        color: var(--sub);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .drawer {
+        position: absolute;
+        top: 56px;
+        right: 0;
+        bottom: 0;
+        width: 42%;
+        min-width: 620px;
+        border-left: 1px solid var(--line);
+        background: #fff;
+        box-shadow: var(--drawer-shadow);
+      }
+
+      .drawer-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 56px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 18px;
+      }
+
+      .drawer-head strong {
+        font-size: 14px;
+      }
+
+      .drawer-card {
+        margin: 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #f8f8f9;
+        padding: 18px;
+      }
+
+      .drawer-card h3 {
+        font-size: 22px;
+        margin-bottom: 4px;
+      }
+
+      .drawer-card p {
+        margin-bottom: 16px;
+        color: var(--sub);
+      }
+
+      .drawer-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .drawer-tabs {
+        display: flex;
+        gap: 24px;
+        margin: 0 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .drawer-tabs span {
+        display: inline-flex;
+        align-items: center;
+        height: 42px;
+        border-bottom: 2px solid transparent;
+        color: var(--sub);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .drawer-tabs span.active {
+        border-bottom-color: #111318;
+        color: #111318;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding: 18px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--sub);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .field div {
+        display: flex;
+        align-items: center;
+        min-height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 0 12px;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .implementation {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .table-plan {
+        width: 100%;
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .table-plan td,
+      .table-plan th {
+        height: auto;
+        padding: 11px 12px;
+        white-space: normal;
+        vertical-align: top;
+        font-size: 13px;
+      }
+
+      .table-plan th {
+        background: var(--muted);
+      }
+
+      .bulk-example {
+        position: relative;
+        min-height: 160px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .bulk-row {
+        display: grid;
+        grid-template-columns: 44px 1fr 120px 120px;
+        align-items: center;
+        min-height: 42px;
+        border-bottom: 1px solid var(--line);
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .bulk-row.selected {
+        background: var(--selected);
+      }
+
+      .bulk-check {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: #15171b;
+        color: #fff;
+        font-size: 14px;
+      }
+
+      .bulk-bar {
+        position: absolute;
+        left: 50%;
+        bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 42px;
+        transform: translateX(-50%);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        padding: 0 12px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+        white-space: nowrap;
+      }
+
+      code {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #f7f8fa;
+        padding: 2px 5px;
+        font-size: 12px;
+      }
+
+      @media (max-width: 1100px) {
+        .page {
+          padding: 16px;
+        }
+
+        .hero,
+        .comparison,
+        .grid-3,
+        .implementation {
+          grid-template-columns: 1fr;
+        }
+
+        .mock-shell {
+          height: 760px;
+        }
+
+        .mock-layout {
+          grid-template-columns: 56px 260px minmax(0, 1fr);
+        }
+
+        .drawer {
+          width: 54%;
+          min-width: 420px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="brief">
+          <p class="eyebrow">Product Design Proposal · updated 2026-06-08</p>
+          <h1>고객관리 및 병원관리 목록 화면 구조 통일 제안</h1>
+          <p>
+            고객관리의 동물, 보호자, 삭제된 보호자/동물 화면과 병원관리의 Order 관리 목록 화면은 같은 정보 구조를 써야 한다.
+            왼쪽 사이드패널에서 목록을 고르면 오른쪽 contents 영역은 항상 같은 순서로 구성한다.
+          </p>
+          <div class="pill-row" aria-label="핵심 구조">
+            <span class="pill">좌측 목록 선택</span>
+            <span class="pill">contents 헤더</span>
+            <span class="pill">선택적 탭그룹</span>
+            <span class="pill">공유 데이터 테이블</span>
+            <span class="pill">행 클릭 드로어</span>
+          </div>
+        </div>
+        <aside class="decision-card">
+          <strong>이번 제안의 결론</strong>
+          <p>
+            고객관리 동물 페이지의 테이블을 별도 카드 안에 다시 감싸는 구조를 제거한다.
+            테이블은 병원관리처럼 contents의 직접 하위 영역으로 두고, 헤더, 선택적 탭, table controls의 역할을 분리한다.
+          </p>
+          <div class="callout">
+            <span class="check">✓</span>
+            <span>구현 시 새 데이터그리드 도입 없이 기존 EMR table primitives를 재배치하는 범위가 적절하다.</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section">
+        <h2>요구사항 정리</h2>
+        <div class="grid-3">
+          <div class="rule">
+            <b>1. 선택 구조</b>
+            <p>왼쪽 사이드패널의 leaf 목록을 선택하면 해당 목록 화면이 오른쪽 contents에 열린다.</p>
+          </div>
+          <div class="rule">
+            <b>2. 콘텐츠 슬롯</b>
+            <p>contents는 헤더, 선택적 탭그룹, table controls, 데이터 테이블, 하단 상태 영역으로 정리한다.</p>
+          </div>
+          <div class="rule">
+            <b>3. 상세 진입</b>
+            <p>체크박스는 bulk action용이고, 행 클릭은 오른쪽 드로어 상세 조회, 수정, 삭제 액션으로 연결한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>현재 차이와 수정 방향</h2>
+        <div class="comparison">
+          <article class="mini">
+            <div class="mini-head">
+              <span>현재 고객관리 동물 화면</span>
+              <span class="pill">수정 필요</span>
+            </div>
+            <div class="mini-body">
+              <div class="wire-canvas">
+                <div class="wire-top"></div>
+                <div class="wire-content">
+                  <div class="wire-title">
+                    <span class="wire-icon"></span>
+                    <span class="wire-line" style="width: 110px"></span>
+                    <span class="wire-line" style="width: 28px"></span>
+                  </div>
+                  <div class="wire-card">
+                    <div class="wire-toolbar"></div>
+                    <div class="wire-table"></div>
+                  </div>
+                </div>
+              </div>
+              <p>콘텐츠 제목 아래에 테이블 카드가 한 번 더 생겨서 병원관리 목록 화면보다 깊이가 많아 보인다.</p>
+            </div>
+          </article>
+          <article class="mini">
+            <div class="mini-head">
+              <span>제안 구조</span>
+              <span class="pill">통일</span>
+            </div>
+            <div class="mini-body">
+              <div class="wire-canvas">
+                <div class="wire-top"></div>
+                <div class="wire-content" style="padding: 0">
+                  <div class="wire-title" style="height: 52px; padding: 0 14px; margin: 0; border-bottom: 1px solid var(--line)">
+                    <span class="wire-icon"></span>
+                    <span class="wire-line" style="width: 110px"></span>
+                    <span class="wire-line" style="width: 28px"></span>
+                    <span style="flex: 1"></span>
+                    <span class="wire-line" style="width: 160px"></span>
+                  </div>
+                  <div class="wire-flat">
+                    <div class="wire-toolbar"></div>
+                    <div class="wire-table"></div>
+                  </div>
+                </div>
+              </div>
+              <p>contents 내부에서 헤더와 테이블이 바로 이어져 같은 목록 화면 계열로 인식된다.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>검색/필터/밀도 컨트롤 배치 원칙</h2>
+        <div class="grid-3">
+          <div class="rule">
+            <b>헤더 오른쪽</b>
+            <p>복제, 등록, 삭제, 더보기처럼 화면 전체에 작동하는 page action만 둔다.</p>
+          </div>
+          <div class="rule">
+            <b>탭 있는 화면</b>
+            <p>왼쪽은 탭, 오른쪽은 검색, 빠른 필터, 밀도, 컬럼처럼 현재 탭의 테이블에 작동하는 control을 둔다.</p>
+          </div>
+          <div class="rule">
+            <b>탭 없는 화면</b>
+            <p>왼쪽은 작은 scope summary, 오른쪽은 compact controls를 둔다. 필터는 탭이 아니라 목록 축소 조건으로 처리한다.</p>
+          </div>
+        </div>
+        <div class="callout" style="margin-top: 14px">
+          <span class="check">✓</span>
+          <span>
+            동물의 `전체/고양이/강아지`, 보호자의 `수신/미수신`, 삭제 목록의 `동물/보호자`는 화면 전환이 아니라 같은 테이블을 좁히는 조건이므로 탭이 아닌 filter chip으로 둔다.
+          </span>
+        </div>
+        <table class="table-plan" style="margin-top: 16px">
+          <thead>
+            <tr><th>목록 화면</th><th>왼쪽 표시</th><th>오른쪽 compact controls</th><th>탭 사용 여부</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>고객관리 · 동물</td>
+              <td>전체 동물 · 5건</td>
+              <td>검색, 종, 상태, 수신, 밀도, 상세 필터, 컬럼</td>
+              <td>사용하지 않음. 종은 필터로 처리</td>
+            </tr>
+            <tr>
+              <td>고객관리 · 보호자</td>
+              <td>전체 보호자 · 5명</td>
+              <td>검색, 수신, 최근방문, 미수납, 밀도, 상세 필터, 컬럼</td>
+              <td>사용하지 않음. 보호자 속성은 필터로 처리</td>
+            </tr>
+            <tr>
+              <td>고객관리 · 삭제된 보호자/동물</td>
+              <td>삭제된 항목 · 0건</td>
+              <td>검색, 대상, 삭제일, 삭제 사유, 복구 가능, 밀도, 상세 필터, 컬럼</td>
+              <td>사용하지 않음. 동물/보호자 구분은 대상 필터로 처리</td>
+            </tr>
+            <tr>
+              <td>병원관리 · Order 하위 목록</td>
+              <td>section tab group</td>
+              <td>검색, 유형, 상태, 대상, 밀도, 상세 필터, 컬럼</td>
+              <td>실제 하위 카탈로그 전환이 있을 때만 사용</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>체크박스 선택 상태 작업 계획</h2>
+        <p>
+          조제/처치 테이블에는 이미 체크박스 선택 후 하단 bulk action bar가 뜨는 구현이 있다.
+          고객관리와 병원관리 목록도 이 패턴을 재사용하되, 각 화면의 도메인 액션만 바꾼다.
+        </p>
+        <div class="implementation">
+          <div>
+            <h3>확인한 기존 구현</h3>
+            <table class="table-plan">
+              <thead>
+                <tr><th>근거</th><th>내용</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>src/components/emr/emr-data-table.tsx</code></td>
+                  <td><code>rowSelection</code> 상태, header 전체 선택, row checkbox, selected row 배경, sticky bottom bulk action bar가 구현되어 있다.</td>
+                </tr>
+                <tr>
+                  <td><code>src/features/dispensing/module.tsx</code></td>
+                  <td><code>EmrDataTable</code>을 조제/처치 그룹 안에서 재사용하고 <code>onCompleteRows</code>로 선택 행 작업을 실행한다.</td>
+                </tr>
+                <tr>
+                  <td><code>tests/app-shell.spec.ts</code></td>
+                  <td>checkbox 선택 시 상세 drawer가 열리지 않고, <code>선택한 오더 1개</code> bar가 뜬 뒤 <code>선택 오더 완료</code> 액션으로 완료되는 회귀 테스트가 있다.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3>적용 규칙</h3>
+            <div class="bulk-example" aria-label="선택 상태 예시">
+              <div class="bulk-row"><span></span><span>환자코드</span><span>상태</span><span>작업</span></div>
+              <div class="bulk-row selected"><span class="bulk-check">✓</span><span>P-260414-0008 · 코코</span><span>예약</span><span>보기</span></div>
+              <div class="bulk-row selected"><span class="bulk-check">✓</span><span>P-260501-0003 · 콩이</span><span>수납대기</span><span>보기</span></div>
+              <div class="bulk-row"><span class="checkbox"></span><span>P-260501-0001 · 하루</span><span>진료대기</span><span>보기</span></div>
+              <div class="bulk-bar">
+                <span class="emr-text-status" style="color: var(--sub); font-weight: 800">선택한 항목 2개</span>
+                <button class="btn primary" type="button">선택 항목 작업</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <table class="table-plan" style="margin-top: 16px">
+          <thead>
+            <tr><th>화면</th><th>선택 시 bulk action 예시</th><th>주의점</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>고객관리 동물/보호자</td>
+              <td>선택 항목 내보내기, 삭제/복구, 수신 상태 변경 같은 목록성 작업</td>
+              <td>행 클릭 상세 drawer와 checkbox 선택을 분리한다. checkbox 클릭은 drawer를 열지 않는다.</td>
+            </tr>
+            <tr>
+              <td>병원관리 Order 관리</td>
+              <td>선택 Order 복제, 사용/중지 전환, 삭제 같은 catalog bulk action</td>
+              <td>복제/+ Order는 page action으로 헤더에 남기고, 선택 기반 액션은 floating bulk bar에 둔다.</td>
+            </tr>
+            <tr>
+              <td>공통</td>
+              <td>선택 개수는 floating bar에 표시하고, 하단 footer의 영문 selected copy는 추후 한글화 또는 제거한다.</td>
+              <td>완료/취소처럼 선택 불가 행은 조제/처치처럼 disabled checkbox를 유지한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="proposal-mockup">
+        <h2>수정 후 시안: 고객관리 동물</h2>
+        <p>
+          아래 시안은 고객관리 동물 목록을 병원관리 Order 목록과 같은 구조로 맞춘 모습이다.
+          테이블 자체는 별도 장식 카드가 아니라 contents의 데이터 영역이고, 상단 헤더는 화면 제목과 등록 액션만 처리한다.
+          탭이 없는 고객관리 목록은 왼쪽에 작은 scope summary를 두고, 검색, 필터, 밀도, 컬럼은 오른쪽 compact controls로 분리한다.
+        </p>
+
+        <div class="mock-shell" aria-label="수정 후 고객관리 동물 페이지 시안">
+          <header class="mock-topbar">
+            <div class="workspace-name"><span class="logo"></span> CLAiR Medium Animal Hospital</div>
+            <div class="tabbar">
+              <span>‹</span>
+              <span>›</span>
+              <span class="tab">고객관리</span>
+              <span>＋</span>
+            </div>
+            <div class="system-actions"><span>알림</span><span>도움말</span><span>AD</span></div>
+          </header>
+
+          <div class="mock-layout">
+            <nav class="rail" aria-label="main nav">
+              <div class="rail-btn">⌂</div>
+              <div class="rail-btn">⌕</div>
+              <div class="rail-btn">♢</div>
+              <div class="rail-btn">▤</div>
+              <div class="rail-btn active">♡</div>
+              <div class="rail-btn">＋</div>
+            </nav>
+
+            <aside class="sidepanel">
+              <div class="side-title">고객관리</div>
+              <div class="side-group"><span>▣ 보호자/동물 관리</span><span>⌄</span></div>
+              <div class="side-tree">
+                <div class="side-item active"><span>♙</span><span>동물</span><span class="badge">5</span></div>
+                <div class="side-item"><span>♙</span><span>보호자</span><span class="badge">5</span></div>
+                <div class="side-item"><span>♙</span><span>삭제된 보호자/동물</span><span class="badge">0</span></div>
+              </div>
+              <div class="side-placeholder"><span>▣ 스케줄 관리</span><span class="pill">후속</span></div>
+              <div class="side-placeholder"><span>▣ 발송 관리</span><span class="pill">후속</span></div>
+              <div class="side-placeholder"><span>▣ 서류 관리</span><span class="pill">후속</span></div>
+              <div class="side-placeholder"><span>▣ CS내역</span><span class="pill">후속</span></div>
+              <div class="side-placeholder"><span>▣ 진료의뢰수신</span><span class="pill">후속</span></div>
+            </aside>
+
+            <section class="main">
+              <div class="content">
+                <header class="content-header">
+                  <div class="title-pack">
+                    <span class="title-icon">♙</span>
+                    <h2>동물</h2>
+                    <span class="badge">5</span>
+                  </div>
+                  <div class="header-actions">
+                    <button class="btn primary" type="button">+ 환자/보호자 등록</button>
+                    <button class="btn icon-btn" type="button" aria-label="더보기">⋯</button>
+                  </div>
+                </header>
+
+                <div class="tab-row with-controls" aria-label="동물 목록 컨트롤">
+                  <div class="scope-summary">
+                    <strong>전체 동물</strong>
+                    <span class="dot"></span>
+                    <span>5건</span>
+                  </div>
+                  <div class="compact-controls">
+                    <button class="btn compact-control" type="button" title="검색">⌕ 검색</button>
+                    <button class="btn compact-chip" type="button">종⌄</button>
+                    <button class="btn compact-chip" type="button">상태⌄</button>
+                    <button class="btn compact-chip" type="button">수신⌄</button>
+                    <div class="density compact-density" aria-label="밀도 선택">
+                      <span>≡</span>
+                      <span class="active">☰</span>
+                      <span>☷</span>
+                    </div>
+                    <button class="btn icon-btn" type="button" title="상세 필터" aria-label="상세 필터">≡</button>
+                    <button class="btn icon-btn" type="button" title="컬럼" aria-label="컬럼">▦</button>
+                  </div>
+                </div>
+
+                <div class="table-region">
+                  <div class="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style="width: 48px"><span class="checkbox"></span></th>
+                          <th style="width: 150px">환자코드 ˄</th>
+                          <th style="width: 130px">동물명 ˄</th>
+                          <th style="width: 150px">품종</th>
+                          <th style="width: 140px">성별</th>
+                          <th style="width: 170px">나이(생년월일) ˄</th>
+                          <th style="width: 210px">상태</th>
+                          <th style="width: 150px">보호자명</th>
+                          <th style="width: 150px">전화번호</th>
+                          <th style="width: 100px">수신 여부</th>
+                          <th style="width: 110px">등록일시</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="active">
+                          <td><span class="checkbox"></span></td>
+                          <td><b>P-260414-0008</b></td>
+                          <td><b>코코</b></td>
+                          <td>코리안숏헤어</td>
+                          <td>중성화·암컷</td>
+                          <td>8세 (18-05-20)</td>
+                          <td><span class="status green">예약</span> <span class="status orange">오더진행</span> <span class="status orange">수납대기</span></td>
+                          <td>이지은</td>
+                          <td>010-3245-1188</td>
+                          <td>동의</td>
+                          <td>26.03.12</td>
+                        </tr>
+                        <tr>
+                          <td><span class="checkbox"></span></td>
+                          <td><b>P-260414-0009</b></td>
+                          <td><b>나비</b></td>
+                          <td>러시안블루</td>
+                          <td>중성화·수컷</td>
+                          <td>5세 (21-02-03)</td>
+                          <td><span class="status green">예약</span></td>
+                          <td>오세아</td>
+                          <td>010-7812-4401</td>
+                          <td>동의</td>
+                          <td>26.03.20</td>
+                        </tr>
+                        <tr>
+                          <td><span class="checkbox"></span></td>
+                          <td><b>P-260501-0001</b></td>
+                          <td><b>하루</b></td>
+                          <td>말티즈</td>
+                          <td>암컷</td>
+                          <td>3세 (23-01-12)</td>
+                          <td><span class="status green">예약</span> <span class="status blue">진료대기</span></td>
+                          <td>강서윤</td>
+                          <td>010-9012-3300</td>
+                          <td>동의</td>
+                          <td>26.04.01</td>
+                        </tr>
+                        <tr>
+                          <td><span class="checkbox"></span></td>
+                          <td><b>P-260501-0002</b></td>
+                          <td><b>두부</b></td>
+                          <td>포메라니안</td>
+                          <td>수컷</td>
+                          <td>6세 추정</td>
+                          <td><span class="status orange">수납대기</span></td>
+                          <td>강서윤, 정하린</td>
+                          <td>010-4922-8821</td>
+                          <td>동의</td>
+                          <td>26.04.02</td>
+                        </tr>
+                        <tr>
+                          <td><span class="checkbox"></span></td>
+                          <td><b>P-260501-0003</b></td>
+                          <td><b>콩이</b></td>
+                          <td>푸들</td>
+                          <td>중성화·수컷</td>
+                          <td>4세 (22-08-18)</td>
+                          <td><span class="status green">예약</span> <span class="status orange">오더진행</span> <span class="status orange">수납대기</span></td>
+                          <td>김하늘</td>
+                          <td>010-6201-7742</td>
+                          <td>동의</td>
+                          <td>26.05.01</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <footer class="table-footer">
+                  <span>선택한 항목 없음</span>
+                  <span>1-5 / 5&nbsp;&nbsp; <button class="btn">이전</button> <button class="btn">다음</button></span>
+                </footer>
+              </div>
+            </section>
+          </div>
+
+          <aside class="drawer" aria-label="row detail drawer">
+            <header class="drawer-head">
+              <strong>환자 정보 <span style="color: var(--soft); margin-left: 8px">patient-coco</span></strong>
+              <span>×</span>
+            </header>
+            <div class="drawer-card">
+              <h3>코코</h3>
+              <p>P-260414-0008 · 고양이 · 8세</p>
+              <div class="drawer-actions">
+                <button class="btn">접수</button>
+                <button class="btn">예약</button>
+                <button class="btn">차트 보러가기</button>
+                <button class="btn">카카오톡 발송</button>
+                <span style="flex: 1"></span>
+                <button class="btn">수정</button>
+              </div>
+            </div>
+            <div class="drawer-tabs">
+              <span class="active">동물 정보</span>
+              <span>CS 이력</span>
+              <span>최신내역</span>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label>환자명</label><div>코코</div></div>
+              <div class="field"><label>환자번호</label><div>P-260414-0008</div></div>
+              <div class="field"><label>종</label><div>고양이</div></div>
+              <div class="field"><label>품종</label><div>코리안숏헤어</div></div>
+              <div class="field"><label>나이</label><div>8세</div></div>
+              <div class="field"><label>성별</label><div>중성화·암컷</div></div>
+              <div class="field"><label>주보호자</label><div>이지은 · 010-3245-1188</div></div>
+              <div class="field"><label>알러지</label><div>세팔로스포린 계열 투약 후 구토 이력</div></div>
+              <div class="field" style="grid-column: 1 / -1"><label>핸들링 주의</label><div>낯선 사람에게 예민함. 채혈 시 넥카라 권장.</div></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="hospital-admin-mockup">
+        <h2>병원관리 적용 모습</h2>
+        <p>
+          병원관리는 현재 구조를 기준점으로 삼는다. 다만 고객관리와 같은 slots 이름을 부여하면,
+          임상병리 검사, 영상검사, 처방, 기타 병리 검사 같은 목록 화면을 같은 컴포넌트 계열로 유지할 수 있다.
+        </p>
+        <div class="mock-shell" style="height: 620px" aria-label="병원관리 임상병리 검사 목록 시안">
+          <header class="mock-topbar">
+            <div class="workspace-name"><span class="logo"></span> VIP 동물의료센터 청담점</div>
+            <div class="tabbar"><span>‹</span><span>›</span><span class="tab">병원관리</span><span>＋</span></div>
+            <div class="system-actions"><span>알림</span><span>도움말</span><span>AD</span></div>
+          </header>
+          <div class="mock-layout">
+            <nav class="rail">
+              <div class="rail-btn">⌂</div>
+              <div class="rail-btn">⌕</div>
+              <div class="rail-btn">▤</div>
+              <div class="rail-btn active">＋</div>
+            </nav>
+            <aside class="sidepanel">
+              <div class="side-title">병원관리</div>
+              <div class="side-placeholder"><span>⚙ 병원기본설정</span></div>
+              <div class="side-placeholder"><span>♙ 병원구성원 관리</span></div>
+              <div class="side-placeholder"><span>▧ 검사 로그</span></div>
+              <div class="side-group" style="margin-top: 16px"><span>▤ Order 관리</span><span>⌄</span></div>
+              <div class="side-tree">
+                <div class="side-item"><span></span><span>영상검사</span><span class="badge">1</span></div>
+                <div class="side-item active"><span></span><span>임상병리 검사</span><span class="badge">2</span></div>
+                <div class="side-item"><span></span><span>계통 검사</span><span class="badge">1</span></div>
+                <div class="side-item"><span></span><span>의뢰 검사</span><span class="badge">0</span></div>
+              </div>
+            </aside>
+            <section class="main">
+              <div class="content">
+                <header class="content-header">
+                  <div class="title-pack">
+                    <h2>임상병리 검사</h2>
+                    <span class="badge">2</span>
+                  </div>
+                  <div class="header-actions">
+                    <button class="btn" type="button">복제</button>
+                    <button class="btn primary" type="button">+ Order</button>
+                  </div>
+                </header>
+                <div class="tab-row with-controls">
+                  <div class="tab-list" aria-label="임상병리 검사 하위 탭">
+                    <span class="line-tab active">전체</span>
+                    <span class="line-tab">원내 혈액 검사</span>
+                    <span class="line-tab">임상 미생물 검사</span>
+                    <span class="line-tab">전해질검사/동맥혈</span>
+                    <span class="line-tab">혈액화학검사</span>
+                    <span class="line-tab">CBC검사</span>
+                    <span class="line-tab">CSF검사</span>
+                  </div>
+                  <div class="compact-controls" aria-label="현재 탭 테이블 컨트롤">
+                    <button class="btn compact-control" type="button" title="검색">⌕ 검색</button>
+                    <button class="btn compact-chip" type="button">유형⌄</button>
+                    <button class="btn compact-chip" type="button">상태⌄</button>
+                    <button class="btn compact-chip" type="button">대상⌄</button>
+                    <div class="density compact-density" aria-label="밀도 선택">
+                      <span>≡</span><span class="active">☰</span><span>☷</span>
+                    </div>
+                    <button class="btn icon-btn" type="button" title="상세 필터" aria-label="상세 필터">≡</button>
+                    <button class="btn icon-btn" type="button" title="컬럼" aria-label="컬럼">▦</button>
+                  </div>
+                </div>
+                <div class="table-region">
+                  <div class="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style="width: 48px"><span class="checkbox"></span></th>
+                          <th style="width: 90px">유형</th>
+                          <th style="width: 220px">표준 Order명 ˄</th>
+                          <th style="width: 220px">원내 Order명 ˄</th>
+                          <th style="width: 190px">청구서명 ˄</th>
+                          <th style="width: 120px">사용여부</th>
+                          <th style="width: 130px">판매금액 ˄</th>
+                          <th style="width: 110px">대상</th>
+                          <th style="width: 80px">작업</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="checkbox"></span></td>
+                          <td>검사</td>
+                          <td>혈액화학검사 17종</td>
+                          <td>원내 CBC+Chem</td>
+                          <td>혈액검사 패널</td>
+                          <td><span class="status green">사용</span></td>
+                          <td>55,000</td>
+                          <td>공통</td>
+                          <td>⋯</td>
+                        </tr>
+                        <tr>
+                          <td><span class="checkbox"></span></td>
+                          <td>검사</td>
+                          <td>전해질 검사</td>
+                          <td>Electrolyte</td>
+                          <td>전해질 검사</td>
+                          <td><span class="status green">사용</span></td>
+                          <td>22,000</td>
+                          <td>공통</td>
+                          <td>⋯</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>구현 반영 기준</h2>
+        <div class="implementation">
+          <div>
+            <h3>공통 슬롯 계약</h3>
+            <table class="table-plan">
+              <thead>
+                <tr><th>슬롯</th><th>역할</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>contentHeader</code></td><td>아이콘, 제목, 데이터 개수, 등록/복제 같은 page action, 더보기 액션</td></tr>
+                <tr><td><code>sectionTabs</code></td><td>병원관리 임상병리 하위 분류처럼 실제 하위 화면 전환이 있을 때만 노출</td></tr>
+                <tr><td><code>tableControls</code></td><td>검색, 빠른 필터, 컬럼, 밀도. 탭이 있으면 탭 오른쪽, 탭이 없으면 scope summary 오른쪽에 배치</td></tr>
+                <tr><td><code>scopeSummary</code></td><td>탭 없는 목록의 왼쪽 빈 공간을 낮은 위계로 채움. 예: 전체 동물 · 5건, 전체 보호자 · 5명, 삭제된 항목 · 0건</td></tr>
+                <tr><td><code>dataTable</code></td><td>공유 Table, header primitives, density, horizontal scroll</td></tr>
+                <tr><td><code>detailDrawer</code></td><td>행 클릭 상세, 수정, 삭제, 업무 전환 액션</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3>적용 범위와 제외 범위</h3>
+            <table class="table-plan">
+              <thead>
+                <tr><th>구분</th><th>내용</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>적용</td><td>고객관리 동물, 보호자, 삭제된 보호자/동물. 병원관리 Order 관리 계열 목록 화면.</td></tr>
+                <tr><td>유지</td><td>현재 session-only 데이터, 행 클릭 드로어, checkbox bulk selection, search/filter behavior.</td></tr>
+                <tr><td>제외</td><td>라이브 Supabase, RLS, 서버 권한, 실제 외부 발송, 데이터 스키마 변경.</td></tr>
+                <tr><td>검증</td><td>고객관리/병원관리 Playwright 스모크, 테이블 스크롤, 드로어 열림, 반응형 캡처 확인.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

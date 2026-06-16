@@ -19,7 +19,7 @@
 
 ## Work Routing
 
-- Before PR-scoped work, check `docs/work/index.md` and reuse an existing item when possible.
+- Before PR-scoped work, check `docs/work/index.md` with targeted search or bounded reads, and reuse an existing item when possible. Do not print the full work index into chat/tool context.
 - Route planning, docs, and work-management changes through `docs/_meta/intake-rules.md`.
 - Follow `docs/_meta/coding-discipline.md` for non-trivial implementation work.
 - After meaningful work, update affected source docs/work items and add a `docs/completed/` closeout when useful.
@@ -39,6 +39,12 @@
 - For shared UI or design-system work, use the project-scoped `clair_storybook` MCP server when local Storybook is running.
 - Query Storybook documentation before using design-system component props. Do not invent undocumented props or variants.
 - The local endpoint is `http://127.0.0.1:6006/mcp`; keep it local and do not publish, tunnel, or share it without explicit approval.
+
+## Token Budget Discipline
+
+- Keep startup and routing reads bounded. Prefer `rg` and small `sed` ranges over full-file output for large docs, work indexes, logs, generated files, and test output.
+- Load skills only when the user names them or the task clearly requires them. Avoid opening broad reference folders unless blocked.
+- For token-budget investigations, report high-output commands and files before making changes, then trim the recurring source of overhead.
 
 ## Core Safety
 

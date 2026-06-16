@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-453 Lab Result UX States Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-453 Lab Result UX States Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      DEN-452로 검사 결과 저장이 DB/API 경계를 타게 된 뒤, 결과 입력 화면이 loading, empty, error, retry,
+      permission-denied 상태를 사용자에게 명확히 보여주도록 정리하는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li>Result-sheet catalog 조회가 loading, empty, generic error, permission-denied 상태를 구분하도록 바꿨다.</li>
+      <li>Catalog 조회 실패 시 결과 입력 영역 안에서 <code>다시 불러오기</code> 재시도 버튼을 표시한다.</li>
+      <li>Result save API 응답을 boolean이 아니라 success, invalid, permission-denied, retryable error outcome으로 구분한다.</li>
+      <li>저장 실패가 retryable일 때 <code>재시도</code> 버튼을 표시하고, 권한 오류는 별도 문구로 보여준다.</li>
+      <li>Playwright E2E에 catalog retry, save retry, permission-denied 상태 assertion을 추가했다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      검사 결과 입력 화면이 항상 성공한다고 가정하지 않게 됐다. 포트폴리오 데모에서도 API 실패, 권한 실패, 빈 catalog를
+      구분해서 보여줄 수 있어 EMR SaaS 제품 foundation으로서 신뢰도가 올라간다.
+    </p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>src/features/lab-imaging/module.tsx</code></li>
+      <li><code>tests/ui-demo-api-wiring-e2e.spec.ts</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+      <li><code>docs/work/demo-data/DEN-453-lab-result-ux-loading-error-retry-permission-states.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/ui-demo-api-wiring-e2e.spec.ts --reporter=line</code></li>
+      <li><code>npx tsc --noEmit</code></li>
+      <li><code>npm run lint</code></li>
+      <li><code>npm run build</code></li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>새 schema, migration, seed 변경은 하지 않았다.</li>
+      <li>Billing, dispensing, treatment 화면은 이번 범위가 아니다.</li>
+      <li>실제 검사 장비, 외부 검사기관, remote/prod Supabase는 건드리지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 작업은 DEN-454 Billing De-mocking으로 넘어가 invoice/payment/checkout 화면의 mock-first 상태를 API 우선
+      구조로 줄이는 것이 자연스럽다.
+    </p>
+  </body>
+</html>

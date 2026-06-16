@@ -138,12 +138,38 @@ const getAssetSrc = (asset: string | { src?: string }) =>
 const getBillingPaymentMethodLabel = (method: PaymentMethod) =>
   paymentMethodItems.find((item) => item.value === method)?.label ?? method;
 const billingCandidateInvoiceLineIdPrefix = "invoice-line-billcand-";
+const billingApiIdleState: BillingApiRequestState = { status: "idle" };
+const billingApiLoadingState: BillingApiRequestState = { status: "loading" };
+const billingApiReadyState: BillingApiRequestState = { status: "ready" };
+const billingApiEmptyState: BillingApiRequestState = { status: "empty" };
+const billingApiErrorState: BillingApiRequestState = { status: "error" };
+const billingApiPermissionDeniedState: BillingApiRequestState = {
+  status: "permission_denied",
+};
 
 type BillingFinancialAction = "issue_invoice" | "mark_unpaid" | "mark_paid";
 type BillingPaymentFailureContext =
   | "payment_method"
   | "mark_unpaid"
   | "mark_paid";
+
+type BillingApiRequestStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "empty"
+  | "error"
+  | "permission_denied";
+
+type BillingApiRequestState = {
+  status: BillingApiRequestStatus;
+};
+
+type BillingWorkspaceApiState = {
+  invoiceLines: BillingApiRequestState;
+  paymentStatus: BillingApiRequestState;
+  retrySnapshots: () => void;
+};
 
 type BillingInvoiceCandidateSnapshot = {
   billingCandidateId: string;
@@ -665,6 +691,17 @@ async function transitionGuardianCheckoutInvoiceStatus({
   }
 }
 
+function getBillingApiFailureState(result: {
+  denialReason?: string;
+  status: number;
+}): BillingApiRequestState {
+  if (result.status === 403 || result.denialReason === "permission_missing") {
+    return billingApiPermissionDeniedState;
+  }
+
+  return billingApiErrorState;
+}
+
 const mergeInvoiceCandidateLines = (
   invoiceLines: InvoiceLine[],
   candidates: BillingInvoiceCandidateSnapshot[],
@@ -791,6 +828,11 @@ function useBillingWorkspaceData() {
     candidates: BillingInvoiceCandidateSnapshot[];
     encounterId?: string;
   }>({ candidates: [] });
+  const [invoiceLinesState, setInvoiceLinesState] =
+    useState<BillingApiRequestState>(billingApiIdleState);
+  const [paymentStatusState, setPaymentStatusState] =
+    useState<BillingApiRequestState>(billingApiIdleState);
+  const [snapshotReloadKey, setSnapshotReloadKey] = useState(0);
   const actorHeaders = useMemo(
     () => getDemoActorHeader(authSession),
     [authSession],
@@ -800,6 +842,7 @@ function useBillingWorkspaceData() {
     ? emptyBillingInvoiceLines
     : invoiceLines;
   const workspacePayments = preparedEmptyClinic ? emptyBillingPayments : payments;
+  const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
   const baseDetail =
     getBillingDetail(effectiveInvoiceId, workspaceInvoices, workspaceInvoiceLines, workspacePayments) ??
     (preparedEmptyClinic
@@ -891,14 +934,23 @@ function useBillingWorkspaceData() {
     let cancelled = false;
 
     async function loadPersistedInvoiceLines() {
+      setInvoiceLinesState(billingApiLoadingState);
       const result = await loadBillingInvoiceLines({
         actorHeaders,
         invoiceId,
         workspaceId,
       });
 
-      if (cancelled || !result.ok) return;
+      if (cancelled) return;
+      if (!result.ok) {
+        setInvoiceLinesState(getBillingApiFailureState(result));
+        return;
+      }
+
       applyInvoiceSnapshot(result.invoice, result.lines);
+      setInvoiceLinesState(
+        result.lines.length ? billingApiReadyState : billingApiEmptyState,
+      );
     }
 
     void loadPersistedInvoiceLines();
@@ -911,6 +963,7 @@ function useBillingWorkspaceData() {
     applyInvoiceSnapshot,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
+    snapshotReloadKey,
   ]);
   useEffect(() => {
     if (!baseInvoiceId || !baseInvoiceWorkspaceId) return;
@@ -919,14 +972,21 @@ function useBillingWorkspaceData() {
     let cancelled = false;
 
     async function loadPersistedPaymentStatus() {
+      setPaymentStatusState(billingApiLoadingState);
       const result = await loadBillingPaymentStatus({
         actorHeaders,
         invoiceId,
         workspaceId,
       });
 
-      if (cancelled || !result.ok) return;
+      if (cancelled) return;
+      if (!result.ok) {
+        setPaymentStatusState(getBillingApiFailureState(result));
+        return;
+      }
+
       applyPaymentStatusSnapshot(result.invoice, result.payments);
+      setPaymentStatusState(billingApiReadyState);
     }
 
     void loadPersistedPaymentStatus();
@@ -939,6 +999,7 @@ function useBillingWorkspaceData() {
     applyPaymentStatusSnapshot,
     baseInvoiceId,
     baseInvoiceWorkspaceId,
+    snapshotReloadKey,
   ]);
   const groups = useMemo(
     () =>
@@ -960,6 +1021,11 @@ function useBillingWorkspaceData() {
       : null;
 
   return {
+    apiState: {
+      invoiceLines: invoiceLinesState,
+      paymentStatus: paymentStatusState,
+      retrySnapshots,
+    },
     detail: queryEncounterId && liveCandidateDetail ? liveCandidateDetail : detail,
     groups,
     invoiceLines: effectiveInvoiceLines,
@@ -1588,7 +1654,10 @@ function BillingInstructionInfo({ detail }: { detail: BillingDetail }) {
   ];
 
   return (
-    <div className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4">
+    <div
+      data-testid="billing-instruction-info"
+      className="grid gap-0 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3 md:grid-cols-4"
+    >
       {infoItems.map(({ label, value }) => (
         <div
           key={label}
@@ -1705,15 +1774,19 @@ function BillingTitleCard({
 
 function SelectedCheckoutWorkspace({
   checkoutSession,
+  checkoutState,
   groups,
   invoiceAssignees,
   persistenceState,
+  onRetryCheckout,
   onTransitionStatus,
   onUpdateQuantity,
 }: {
   checkoutSession?: GuardianCheckoutSessionSnapshot;
+  checkoutState: BillingApiRequestState;
   groups: BillingCheckoutGroup[];
   invoiceAssignees: Record<string, string | undefined>;
+  onRetryCheckout: () => void;
   onTransitionStatus: (
     invoiceId: string,
     target: BillingInvoiceStatusTransitionTarget,
@@ -1734,7 +1807,7 @@ function SelectedCheckoutWorkspace({
   const lineCount = groups.reduce((total, group) => total + group.lines.length, 0);
 
   return (
-    <section className="rounded-lg border bg-card">
+    <section className="rounded-lg border bg-card" data-testid="billing-checkout-workspace">
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <div>
           <h2 className="emr-text-body font-semibold">선택된 checkout 작업대</h2>
@@ -1743,7 +1816,7 @@ function SelectedCheckoutWorkspace({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">
+          <Badge variant="secondary" data-testid="billing-checkout-total">
             {groups.length}건 · {lineCount}항목 · 수납 합산{" "}
             {formatAmount(displayedCheckoutTotalAmount)}
           </Badge>
@@ -1769,6 +1842,10 @@ function SelectedCheckoutWorkspace({
         실제 할인 정책, 영수증, VAT, 부분 결제 연동 없이 현재 청구 항목 수량과
         수납 진행 snapshot만 저장합니다.
       </BillingScopeNotice>
+      <BillingCheckoutStateNotice
+        checkoutState={checkoutState}
+        onRetryCheckout={onRetryCheckout}
+      />
       <div className="grid gap-3 p-4">
         {groups.length ? (
           groups.map((group) => {
@@ -2247,8 +2324,191 @@ function BillingScopeNotice({ children }: { children: ReactNode }) {
   );
 }
 
+function getBillingApiStateNotice(apiState: BillingWorkspaceApiState) {
+  const states = [apiState.invoiceLines.status, apiState.paymentStatus.status];
+
+  if (states.includes("permission_denied")) {
+    return {
+      action: null,
+      description:
+        "현재 사용자 권한으로 invoice line 또는 payment status API 응답을 볼 수 없습니다.",
+      severity: "error" as const,
+      title: "수납 API 권한이 없습니다.",
+    };
+  }
+
+  if (states.includes("error")) {
+    return {
+      action: (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="bg-card"
+          data-testid="billing-api-state-retry-button"
+          onClick={apiState.retrySnapshots}
+        >
+          재시도
+        </Button>
+      ),
+      description:
+        "기존 화면 fallback은 유지하지만, API 기반 수납 상태를 확인하려면 다시 불러와야 합니다.",
+      severity: "warning" as const,
+      title: "수납 API 응답을 불러오지 못했습니다.",
+    };
+  }
+
+  if (states.includes("loading")) {
+    return {
+      action: null,
+      description:
+        "청구 항목과 결제 상태를 API/server boundary에서 다시 읽는 중입니다.",
+      severity: "info" as const,
+      title: "수납 데이터를 불러오는 중입니다.",
+    };
+  }
+
+  if (states.includes("empty")) {
+    return {
+      action: (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="bg-card"
+          data-testid="billing-api-state-retry-button"
+          onClick={apiState.retrySnapshots}
+        >
+          다시 확인
+        </Button>
+      ),
+      description:
+        "API readback에는 청구 항목이 없어서 화면은 현재 선택된 수납 context를 유지합니다.",
+      severity: "warning" as const,
+      title: "API 청구 항목이 비어 있습니다.",
+    };
+  }
+
+  return null;
+}
+
+function BillingApiStateNotice({
+  apiState,
+}: {
+  apiState: BillingWorkspaceApiState;
+}) {
+  const notice = getBillingApiStateNotice(apiState);
+
+  if (!notice) return null;
+
+  return (
+    <EmrInlineAlert
+      severity={notice.severity}
+      title={notice.title}
+      action={notice.action}
+      testId="billing-api-state"
+    >
+      {notice.description}
+    </EmrInlineAlert>
+  );
+}
+
+function getBillingCheckoutStateNotice(
+  checkoutState: BillingApiRequestState,
+  onRetryCheckout: () => void,
+) {
+  if (checkoutState.status === "permission_denied") {
+    return {
+      action: null,
+      description:
+        "현재 사용자 권한으로 guardian checkout session을 준비할 수 없습니다.",
+      severity: "error" as const,
+      title: "Checkout 권한이 없습니다.",
+    };
+  }
+
+  if (checkoutState.status === "error") {
+    return {
+      action: (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="bg-card"
+          data-testid="billing-checkout-retry-button"
+          onClick={onRetryCheckout}
+        >
+          재시도
+        </Button>
+      ),
+      description:
+        "선택된 청구서 금액은 화면에 남아 있지만, checkout session payable amount는 다시 확인해야 합니다.",
+      severity: "warning" as const,
+      title: "Checkout session을 준비하지 못했습니다.",
+    };
+  }
+
+  if (checkoutState.status === "loading") {
+    return {
+      action: null,
+      description: "선택된 청구서로 checkout session payable amount를 계산하는 중입니다.",
+      severity: "info" as const,
+      title: "Checkout session을 준비하는 중입니다.",
+    };
+  }
+
+  if (checkoutState.status === "empty") {
+    return {
+      action: (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="bg-card"
+          data-testid="billing-checkout-retry-button"
+          onClick={onRetryCheckout}
+        >
+          다시 확인
+        </Button>
+      ),
+      description:
+        "선택된 청구서가 없어 checkout session을 만들지 않았습니다. 수납 ledger에서 청구서를 선택해 주세요.",
+      severity: "warning" as const,
+      title: "Checkout 대상이 비어 있습니다.",
+    };
+  }
+
+  return null;
+}
+
+function BillingCheckoutStateNotice({
+  checkoutState,
+  onRetryCheckout,
+}: {
+  checkoutState: BillingApiRequestState;
+  onRetryCheckout: () => void;
+}) {
+  const notice = getBillingCheckoutStateNotice(checkoutState, onRetryCheckout);
+
+  if (!notice) return null;
+
+  return (
+    <div className="px-4 pt-3">
+      <EmrInlineAlert
+        severity={notice.severity}
+        title={notice.title}
+        action={notice.action}
+        testId="billing-checkout-state"
+      >
+        {notice.description}
+      </EmrInlineAlert>
+    </div>
+  );
+}
+
 export function BillingContent({ hasRightPanel }: ShellComponentProps) {
   const {
+    apiState,
     detail,
     invoiceLines,
     invoices,
@@ -2285,6 +2545,10 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
   >("idle");
   const [checkoutSession, setCheckoutSession] =
     useState<GuardianCheckoutSessionSnapshot>();
+  const [checkoutState, setCheckoutState] =
+    useState<BillingApiRequestState>(billingApiIdleState);
+  const [checkoutReloadKey, setCheckoutReloadKey] = useState(0);
+  const retryCheckout = () => setCheckoutReloadKey((current) => current + 1);
   const checkoutGroups = useMemo(() => {
     const detailInvoiceIsOutsideStore = detail
       ? !invoices.some((invoice) => invoice.id === detail.invoice.id)
@@ -2346,12 +2610,19 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     [checkoutGroups, detail?.invoiceLines],
   );
   const checkoutWorkspaceId = checkoutGroups[0]?.invoice.workspaceId ?? detail?.invoice.workspaceId;
+  const effectiveCheckoutState =
+    !checkoutWorkspaceId || selectedInvoiceIds.length === 0
+      ? billingApiEmptyState
+      : checkoutState;
   useEffect(() => {
-    if (!checkoutWorkspaceId || selectedInvoiceIds.length === 0) return;
+    if (!checkoutWorkspaceId || selectedInvoiceIds.length === 0) {
+      return;
+    }
 
     const resolvedWorkspaceId = checkoutWorkspaceId;
     let cancelled = false;
     async function prepareSelectedCheckout() {
+      setCheckoutState(billingApiLoadingState);
       const result = await prepareGuardianCheckout({
         actorHeaders,
         invoiceIds: selectedInvoiceIds,
@@ -2360,7 +2631,14 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
       });
 
       if (cancelled) return;
-      setCheckoutSession(result.ok ? result.checkoutSession : undefined);
+      if (!result.ok) {
+        setCheckoutSession(undefined);
+        setCheckoutState(getBillingApiFailureState(result));
+        return;
+      }
+
+      setCheckoutSession(result.checkoutSession);
+      setCheckoutState(billingApiReadyState);
     }
 
     void prepareSelectedCheckout();
@@ -2368,7 +2646,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, checkoutWorkspaceId, selectedInvoiceIds]);
+  }, [actorHeaders, checkoutReloadKey, checkoutWorkspaceId, selectedInvoiceIds]);
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
 
@@ -2456,11 +2734,16 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
             detail={detail}
             hasRightPanel={Boolean(hasRightPanel)}
           />
+          <BillingApiStateNotice apiState={apiState} />
           <SelectedCheckoutWorkspace
-            checkoutSession={checkoutSession}
+            checkoutSession={
+              selectedInvoiceIds.length ? checkoutSession : undefined
+            }
+            checkoutState={effectiveCheckoutState}
             groups={checkoutGroups}
             invoiceAssignees={invoiceAssignees}
             persistenceState={linePersistenceState}
+            onRetryCheckout={retryCheckout}
             onTransitionStatus={handleTransitionInvoiceStatus}
             onUpdateQuantity={handleUpdateInvoiceLineQuantity}
           />

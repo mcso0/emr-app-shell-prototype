@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hobby/free Staging Branch Release Model 보고서</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f6f7f9;
+        color: #17181c;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 28px 72px;
+      }
+
+      section {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid #dde1e7;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 22px;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #eef1f5;
+        padding: 2px 5px;
+        font-size: 0.95em;
+      }
+
+      .meta {
+        color: #667085;
+      }
+
+      .status {
+        display: inline-block;
+        margin-right: 8px;
+        padding: 2px 8px;
+        border: 1px solid #cfe7d7;
+        border-radius: 999px;
+        background: #edf8f0;
+        color: #177245;
+        font-weight: 700;
+      }
+
+      .warn {
+        border-color: #f4d0a1;
+        background: #fff8ed;
+        color: #8a4b0a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="meta">2026-06-09 · Release & Deployment Operations</p>
+        <h1>Hobby/free Staging Branch Release Model 보고서</h1>
+        <p>
+          Hobby/free 기준으로 최종 릴리즈 구조를
+          <code>PR Preview -> staging branch fixed staging -> main Production</code>
+          으로 정리했다.
+        </p>
+      </header>
+
+      <section>
+        <h2><span class="status">결정</span>최종 구조</h2>
+        <ul>
+          <li>작업 브랜치/PR: Vercel Preview</li>
+          <li><code>staging</code> 브랜치: fixed staging</li>
+          <li><code>main</code> 브랜치: Vercel Production</li>
+          <li>GitHub required checks는 현재 private/free 조건에서 강제할 수 없으므로 merge 전 수동 확인한다.</li>
+          <li>public 포트폴리오는 나중에 별도 sanitized public repo로 분리한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Linear 조정 필요</h2>
+        <ul>
+          <li><code>02-05 Redefine Hobby/free staging branch release model</code>: 기존 main-only 계획을 supersede하고 새 구조 확정</li>
+          <li><code>02-06 Create staging branch and connect fixed staging URL</code>: 실제 staging 브랜치와 Vercel branch URL 연결, 별도 승인 필요</li>
+          <li><code>02-07 Define manual merge gate for staging and production</code>: GitHub required checks 미사용 상태의 수동 merge gate 정의</li>
+          <li><code>03-02 Define production release from staging to main</code>: production release 승인/검증/롤백 절차 정의</li>
+        </ul>
+      </section>
+
+      <section class="warn">
+        <h2>아직 하지 않은 것</h2>
+        <ul>
+          <li><code>staging</code> remote branch를 만들거나 push하지 않았다.</li>
+          <li>Vercel domain/alias를 변경하지 않았다.</li>
+          <li>fixed staging alias를 이동하지 않았다.</li>
+          <li><code>main</code>이나 production을 건드리지 않았다.</li>
+          <li>Linear connector가 <code>401 reauthentication required</code>라 실제 이슈 생성은 아직 못 했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>산출물</h2>
+        <ul>
+          <li><code>docs/engineering/operations/hobby-free-staging-branch-release-plan.md</code></li>
+          <li><code>docs/engineering/operations/fixed-staging-main-only-execution-plan.md</code> superseded 처리</li>
+          <li>release policy, automation plan, release skill, work item 업데이트</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm run docs:check</code></li>
+          <li><code>npm run security:secrets</code></li>
+          <li><code>git diff --check</code></li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

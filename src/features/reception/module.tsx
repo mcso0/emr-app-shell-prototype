@@ -656,7 +656,7 @@ async function loadReceptionCalendar({
   }
 }
 
-async function loadReceptionProfileLookup({
+async function loadReceptionPatientGuardianProfiles({
   actorId,
   workspaceId,
 }: {
@@ -673,7 +673,8 @@ async function loadReceptionProfileLookup({
           : undefined,
       },
     );
-    const body = (await response.json()) as ReceptionPatientGuardianLookupResponse;
+    const body =
+      (await response.json()) as ReceptionPatientGuardianLookupResponse;
 
     if (!response.ok || !body.ok) {
       if (!body.ok) return body;
@@ -4077,7 +4078,7 @@ export function ReceptionContent() {
       ).filter((patientId) => !knownPatientIds.has(patientId));
 
       if (liveStaffSourceEnabled && missingReadbackPatientIds.length > 0) {
-        const profileResult = await loadReceptionProfileLookup({
+        const profileResult = await loadReceptionPatientGuardianProfiles({
           actorId: authSession?.id,
           workspaceId,
         });

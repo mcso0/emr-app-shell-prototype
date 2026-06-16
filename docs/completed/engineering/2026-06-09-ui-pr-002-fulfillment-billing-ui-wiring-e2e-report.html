@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>UI PR 2 Fulfillment and Billing UI Wiring E2E Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>UI PR 2 Fulfillment and Billing UI Wiring E2E Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      Demo DB PR 5와 UI PR 1 이후, seed나 schema를 바꾸지 않고 downstream fulfillment, lab result-sheet,
+      billing checkout, audit review 화면이 API/server boundary를 더 넓게 타도록 만드는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li>
+        <code>/api/workspaces/[workspaceId]/lab-imaging/result-sheet-catalog</code> route를 추가해 seeded CBC/urinalysis
+        catalog rows를 결과 입력 화면에서 사용할 수 있게 했다.
+      </li>
+      <li>
+        <code>/api/workspaces/[workspaceId]/lab-imaging/result-entries</code> route를 추가해 local/dev 범위에서
+        결과 입력 저장이 서버 경계를 통과하도록 했다.
+      </li>
+      <li>Lab/imaging queue가 mock runtime에서도 API-only fulfillment work item을 append하도록 맞췄다.</li>
+      <li>Live lab work item의 빈 결과지 rows를 seeded lab catalog rows로 hydrate하도록 했다.</li>
+      <li>
+        Playwright E2E가 lab result-sheet 입력/저장, fulfillment status transitions, billing checkout/payment,
+        audit review UI/API boundary를 검증하도록 확장됐다.
+      </li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      seed-family gap은 여전히 0이다. UI PR 2는 downstream API adoption을 넓혔지만 모든 화면의 mock-first state를
+      제거한 것은 아니다. 특히 durable lab result value persistence와 dispensing/treatment execution screen의
+      full visible-control refactor는 후속 작업이다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>remote Supabase, production DB, migration push, seed 변경은 하지 않았다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+      <li>Lab result value 저장은 새 schema 없이 local/dev server-boundary proof로만 구현됐다.</li>
+      <li>Billing UI는 checkout/payment route를 소비하지만 기존 mock-backed store가 일부 남아 있다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/ui-demo-api-wiring-e2e.spec.ts --reporter=line</code></li>
+      <li><code>npx playwright test tests/demo-seed-inventory-readback-contract.spec.ts --reporter=line</code></li>
+      <li><code>npx tsc --noEmit</code></li>
+      <li><code>npm run lint</code></li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 작업은 lab result value의 durable DB model을 설계하거나, billing/dispensing/treatment 화면의 remaining
+      mock-first store를 API-backed state로 단계적으로 걷어내는 focused UI refactor가 적합하다.
+    </p>
+  </body>
+</html>

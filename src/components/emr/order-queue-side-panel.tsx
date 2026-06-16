@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -11,6 +11,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -26,7 +27,6 @@ import {
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +46,6 @@ type OrderQueueFilterItem = {
 };
 
 type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
-type OrderQueueDisplayDensity = "default" | "compact";
 type OrderQueueSortKey = "request" | "assignee" | "wait";
 type OrderQueueActionContext = "chart" | "order";
 
@@ -73,11 +72,6 @@ const orderQueueFilterItems = [
   { value: "treatment" as const, label: "처치" },
 ];
 
-const orderQueueDisplayDensityLabels: Record<OrderQueueDisplayDensity, string> = {
-  compact: "촘촘",
-  default: "기본",
-};
-
 const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
   assignee: "담당자순",
   request: "요청순",
@@ -85,6 +79,44 @@ const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
 };
 
 const fallbackStatusColorToken = "--emr-status-neutral-text";
+
+const normalizeQueueSearchText = (value: string) => value.toLocaleLowerCase("ko").trim();
+
+function getQueueSearchTokens(query: string) {
+  return normalizeQueueSearchText(query).split(/\s+/).filter(Boolean);
+}
+
+function matchesQueueSearch(searchText: string, query: string) {
+  const tokens = getQueueSearchTokens(query);
+  if (!tokens.length) return true;
+
+  const normalizedSearchText = normalizeQueueSearchText(searchText);
+  return tokens.every((token) => normalizedSearchText.includes(token));
+}
+
+function getOrderQueueSearchText(
+  item: OrderQueueItem,
+  statuses: OrderQueueStatusDefinition[]
+) {
+  const statusLabel = statuses.find((status) => status.id === item.statusId)?.label ?? item.statusId;
+
+  return [
+    item.patientName,
+    item.guardianName,
+    item.receptionType,
+    item.orderType,
+    item.orderTypeCategory,
+    item.orderName,
+    item.requesterName,
+    item.assigneeName,
+    item.time,
+    item.statusId,
+    statusLabel,
+    item.waitMinutes?.toString(),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 const createFallbackStatus = (statusId: string, index: number): OrderQueueStatusDefinition => ({
   id: statusId,
@@ -171,19 +203,30 @@ export function EmrOrderQueueSidePanel({
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
   const [detailFilter, setDetailFilter] = useState<OrderQueueDetailFilter>("all");
-  const [displayDensity, setDisplayDensity] = useState<OrderQueueDisplayDensity>("default");
   const [filter, setFilter] = useState<string>("all");
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<OrderQueueSortKey>("request");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
   const actionContext: OrderQueueActionContext = listLabel.includes("진료") ? "chart" : "order";
-  const visibleItems = useMemo(
+  const scopedItems = useMemo(
     () =>
       (filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter))
-        .filter((item) => matchesDetailFilter(item, detailFilter))
+        .filter((item) => matchesDetailFilter(item, detailFilter)),
+    [detailFilter, filter, getFilterValue, items]
+  );
+  const visibleItems = useMemo(
+    () =>
+      scopedItems
+        .filter((item) => matchesQueueSearch(getOrderQueueSearchText(item, resolvedStatuses), searchQuery))
         .sort((a, b) => compareOrderQueueItems(a, b, sortKey)),
-    [detailFilter, filter, getFilterValue, items, sortKey]
+    [resolvedStatuses, scopedItems, searchQuery, sortKey]
   );
   const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
+  const closeSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchActive(false);
+  }, []);
   const groupedItems = resolvedStatuses
     .map((status) => ({
       status,
@@ -224,6 +267,16 @@ export function EmrOrderQueueSidePanel({
       <EmrListHeader
         label={listLabel}
         count={visibleItems.length}
+        search={{
+          active: searchActive,
+          closeLabel: "대기열 검색 닫기",
+          inputLabel: `${listLabel} 검색`,
+          onClose: closeSearch,
+          onQueryChange: setSearchQuery,
+          placeholder: "환자, 보호자, 오더, 담당자 검색",
+          query: searchQuery,
+          resultCount: visibleItems.length,
+        }}
         headerActions={
           <>
             <OrderQueueSortMenu sortKey={sortKey} onSortKeyChange={setSortKey} />
@@ -232,18 +285,14 @@ export function EmrOrderQueueSidePanel({
               statuses={resolvedStatuses}
               onFilterChange={setDetailFilter}
             />
-            <OrderQueueDisplayMenu
-              density={displayDensity}
-              onDensityChange={setDisplayDensity}
-            />
-            <EmrListHeaderIconButton ariaLabel="검색">
+            <EmrListHeaderIconButton ariaLabel="검색" onClick={() => setSearchActive(true)}>
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
       />
       <EmrSubpanelBody>
-        {groupedItems.map(({ items: groupItems, status }) => {
+        {groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
           const collapsed = collapsedStatusIds.has(status.id);
 
           return (
@@ -252,7 +301,6 @@ export function EmrOrderQueueSidePanel({
               collapsed={collapsed}
               getTaskCardItem={getTaskCardItem}
               actionContext={actionContext}
-              density={displayDensity}
               items={groupItems}
               onSelectItem={onSelectItem}
               onToggle={() => toggleStatus(status.id)}
@@ -260,7 +308,13 @@ export function EmrOrderQueueSidePanel({
               status={status}
             />
           );
-        })}
+        }) : searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel="대기열 항목"
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
+        ) : null}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -277,17 +331,10 @@ function OrderQueueSortMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 max-w-[92px] gap-1 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] px-2 text-[11px] font-medium text-[var(--emr-text-secondary)]"
-            aria-label={`현재 정렬: ${orderQueueSortLabels[sortKey]}`}
-          />
+          <EmrListHeaderIconButton ariaLabel={`정렬: ${orderQueueSortLabels[sortKey]}`} />
         }
       >
-        <CdsUtilitiesSortIcon aria-hidden="true" className="size-3.5 shrink-0" />
-        <span className="truncate">{orderQueueSortLabels[sortKey]}</span>
+        <CdsUtilitiesSortIcon aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-36">
         <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">정렬</div>
@@ -316,13 +363,7 @@ function OrderQueueFilterMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-xs"
-            className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0"
-            aria-label={`필터: ${getDetailFilterLabel(filter, statuses)}`}
-          />
+          <EmrListHeaderIconButton ariaLabel={`필터: ${getDetailFilterLabel(filter, statuses)}`} />
         }
       >
         <CdsActionsListFilterIcon aria-hidden="true" className="size-4" />
@@ -344,43 +385,9 @@ function OrderQueueFilterMenu({
   );
 }
 
-function OrderQueueDisplayMenu({
-  density,
-  onDensityChange,
-}: {
-  density: OrderQueueDisplayDensity;
-  onDensityChange: (value: OrderQueueDisplayDensity) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-xs"
-            className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0 text-[11px] font-semibold"
-            aria-label={`표시 옵션: ${orderQueueDisplayDensityLabels[density]}`}
-          />
-        }
-      >
-        {density === "compact" ? "S" : "M"}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">표시 옵션</div>
-        <DropdownMenuRadioGroup value={density} onValueChange={(value) => onDensityChange(value as OrderQueueDisplayDensity)}>
-          <DropdownMenuRadioItem value="default">기본 밀도</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="compact">촘촘한 밀도</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 function OrderQueueGroup({
   actionContext,
   collapsed,
-  density,
   getTaskCardItem,
   items,
   onSelectItem,
@@ -391,7 +398,6 @@ function OrderQueueGroup({
   actionContext: OrderQueueActionContext;
   collapsed: boolean;
   getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
-  density: OrderQueueDisplayDensity;
   items: OrderQueueItem[];
   onSelectItem?: (itemId: string) => void;
   onToggle: () => void;
@@ -421,7 +427,6 @@ function OrderQueueGroup({
         <OrderQueueCard
           key={item.id}
           actionContext={actionContext}
-          density={density}
           item={item}
           onSelect={() => onSelectItem?.(item.id)}
           selected={selectedItemId === item.id}
@@ -434,14 +439,12 @@ function OrderQueueGroup({
 
 function OrderQueueCard({
   actionContext,
-  density,
   item,
   onSelect,
   selected,
   taskCardItem,
 }: {
   actionContext: OrderQueueActionContext;
-  density: OrderQueueDisplayDensity;
   item: OrderQueueItem;
   onSelect: () => void;
   selected: boolean;
@@ -451,7 +454,6 @@ function OrderQueueCard({
 
   return (
     <EmrTaskQueueCard
-      className={density === "compact" ? "gap-[var(--clair-spacing-2)] p-[var(--clair-spacing-6)]" : undefined}
       item={{
         ...taskCardItem,
         actionItems,
