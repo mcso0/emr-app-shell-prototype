@@ -42,6 +42,7 @@ export type ReceptionCalendarDraftSelection = {
 type ReceptionStore = {
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
   messageDeliveries: MessageDelivery[];
+  operatingDateByWorkspace: Record<EmrId, string>;
   searchQuery: string;
   selectedAppointmentId?: EmrId;
   selectedEncounterId?: EmrId;
@@ -62,6 +63,7 @@ type ReceptionStore = {
   }) => void;
   requestReceptionReadRetry: () => void;
   setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
+  setWorkspaceOperatingDate: (workspaceId: EmrId, operatingDate: string) => void;
   setSearchQuery: (query: string) => void;
   setReceptionCalendarReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
   setReceptionQueueReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
@@ -229,6 +231,7 @@ const createSessionCheckInMessage = ({
 export const useReceptionStore = create<ReceptionStore>()((set) => ({
   calendarDraftSelection: undefined,
   messageDeliveries: [],
+  operatingDateByWorkspace: {},
   searchQuery: "",
   selectedPatientId: DEFAULT_PATIENT_ID,
   draftCheckIns: [],
@@ -337,6 +340,13 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       readRetryNonce: state.readRetryNonce + 1,
     })),
   setCalendarDraftSelection: (calendarDraftSelection) => set({ calendarDraftSelection }),
+  setWorkspaceOperatingDate: (workspaceId, operatingDate) =>
+    set((state) => ({
+      operatingDateByWorkspace: {
+        ...state.operatingDateByWorkspace,
+        [workspaceId]: operatingDate,
+      },
+    })),
   setReceptionCalendarReadStatus: (calendarReadStatus, calendarReadError) =>
     set({ calendarReadError, calendarReadStatus }),
   setReceptionQueueReadStatus: (queueReadStatus, queueReadError) =>

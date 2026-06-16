@@ -163,8 +163,18 @@ export const getReceptionPatientSummaries = (
 
   return scopedPatients.map((patient) => {
     const primaryGuardian = getPrimaryGuardian(patient.id, dataset);
-    const patientAppointments = appointments.filter((appointment) => appointment.patientId === patient.id);
-    const patientEncounters = encounters.filter((encounter) => encounter.patientId === patient.id);
+    const patientAppointments = appointments.filter(
+      (appointment) =>
+        appointment.patientId === patient.id &&
+        getOperatingDateFromIso(appointment.scheduledStartAt) ===
+          resolvedScope.operatingDate,
+    );
+    const patientEncounters = encounters.filter(
+      (encounter) =>
+        encounter.patientId === patient.id &&
+        getOperatingDateFromIso(encounter.checkedInAt ?? encounter.createdAt) ===
+          resolvedScope.operatingDate,
+    );
     const activeEncounter = patientEncounters.find((encounter) =>
       ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
     );
@@ -172,6 +182,15 @@ export const getReceptionPatientSummaries = (
       ? draftCheckIns.find((draft) => draft.encounter.id === activeEncounter.id)
       : undefined;
     const latestAppointment = patientAppointments.at(-1);
+    const veterinarianName =
+      getStaffName(
+        activeEncounter?.primaryVeterinarianId,
+        scope?.staffMembers,
+      ) ??
+      getStaffName(
+        latestAppointment?.assignedVeterinarianId,
+        scope?.staffMembers,
+      );
     const searchText = [
       patient.name,
       patient.patientNo,
@@ -180,6 +199,12 @@ export const getReceptionPatientSummaries = (
       primaryGuardian?.name,
       primaryGuardian?.mobilePhone,
       primaryGuardian?.phone,
+      activeEncounter?.visitPurpose,
+      activeEncounter?.chiefComplaint,
+      activeEncounter?.receptionMemo,
+      latestAppointment?.visitPurpose,
+      latestAppointment?.symptomNote,
+      veterinarianName,
     ]
       .filter(Boolean)
       .join(" ")
@@ -192,15 +217,7 @@ export const getReceptionPatientSummaries = (
       patient,
       primaryGuardian,
       searchText,
-      veterinarianName:
-        getStaffName(
-          activeEncounter?.primaryVeterinarianId,
-          scope?.staffMembers,
-        ) ??
-        getStaffName(
-          latestAppointment?.assignedVeterinarianId,
-          scope?.staffMembers,
-        ),
+      veterinarianName,
     };
   });
 };

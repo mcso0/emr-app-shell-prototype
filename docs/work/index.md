@@ -230,6 +230,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-LIVE-PR-012       | human_review | reception            | P0       | Project 04 / DEN-65  | `docs/work/reception/RECEPTION-LIVE-PR-012-reception-persistence-regression-coverage.md`               |
 | RECEPTION-LIVE-PR-013       | human_review | reception            | P0       | Project 04 / DEN-66  | `docs/work/reception/RECEPTION-LIVE-PR-013-chart-order-billing-handoff-closeout.md`                    |
 | RECEPTION-QA-PR-001         | human_review | reception            | P0       | Reception QA / DEN-519 | `docs/work/reception/RECEPTION-QA-PR-001-db-api-fallback-boundary.md`                                |
+| RECEPTION-QA-PR-002         | human_review | reception            | P0       | Reception QA / DEN-514 | `docs/work/reception/RECEPTION-QA-PR-002-date-filter-search.md`                                      |
 | CLINICAL-BILLING-PR-001     | human_review | clinical-billing     | P0       | Project 04 / DEN-67  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-001-scope-encounter-dependency.md`                     |
 | CLINICAL-BILLING-PR-002     | human_review | clinical-billing     | P0       | Project 04 / DEN-68  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-002-schema-migration.md`                               |
 | CLINICAL-BILLING-PR-003     | human_review | clinical-billing     | P0       | Project 04 / DEN-100 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-003-chart-order-snapshot-bridge.md`                    |

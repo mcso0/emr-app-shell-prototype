@@ -17,6 +17,7 @@ import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc"
 import {
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -130,7 +131,6 @@ import {
 import {
   ReceptionEmptyState,
   ReceptionPanelStateMessage,
-  ReceptionSearchInput,
 } from "@/features/reception/reception-list-search";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import {
@@ -1758,7 +1758,7 @@ function PatientCard({
           />
         }
       />
-      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 emr-text-dense-label font-medium text-muted-foreground">
+      <div className="mt-0.5 flex h-[18px] min-w-0 items-center gap-1 pl-1 emr-text-dense-label font-medium text-muted-foreground">
         <span className="min-w-0 flex-1 truncate">{visitText}</span>
       </div>
       <div className="my-1.5 h-px w-full bg-[var(--emr-line-subtle)]" />
@@ -1824,7 +1824,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     typeof params.workspaceId === "string"
       ? params.workspaceId
       : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
-  const operatingDate = getWorkspaceOperatingDate(workspaceId);
+  const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
+  const operatingDateOverride = useReceptionStore(
+    (state) => state.operatingDateByWorkspace[workspaceId],
+  );
+  const operatingDate = operatingDateOverride ?? defaultOperatingDate;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
   const veterinarians =
@@ -1870,15 +1874,33 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     () => getReceptionSideListItems(filteredPatients, listMode),
     [filteredPatients, listMode],
   );
-  const sideListLabel =
-    receptionQueueTabItems.find((item) => item.value === listMode)?.label ??
-    "전체";
-  const sideListCount = visiblePatients.length;
+  const sideListCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        receptionQueueTabItems.map((item) => [
+          item.value,
+          getReceptionSideListItems(patientSummaries, item.value).length,
+        ]),
+      ) as Record<ReceptionSideListMode, number>,
+    [patientSummaries],
+  );
+  const sideListFilterItems = useMemo(
+    () =>
+      receptionQueueTabItems.map((item) => ({
+        ...item,
+        count: sideListCounts[item.value],
+      })),
+    [sideListCounts],
+  );
   const emptyStateCopy = getReceptionEmptyStateCopy({
     listMode,
     searchQuery,
     workspaceId,
   });
+  const closeSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1911,16 +1933,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         title={moduleLabel}
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
-        tabs={
-          <SegmentedControl
-            aria-label="접수 목록 유형"
-            className="shrink-0"
-            items={receptionQueueTabItems}
-            value={listMode}
-            variant="tabs"
-            onValueChange={setListMode}
-          />
-        }
       />
       {queueReadStatus === "loading" ? (
         <ReceptionPanelStateMessage>대기열 확인 중</ReceptionPanelStateMessage>
@@ -1967,8 +1979,26 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         </EmrInlineAlert>
       ) : null}
       <EmrListHeader
-        label={sideListLabel}
-        count={sideListCount}
+        label={
+          <SegmentedControl
+            aria-label="접수 목록 유형"
+            className="shrink-0"
+            items={sideListFilterItems}
+            value={listMode}
+            variant="tabs"
+            onValueChange={setListMode}
+          />
+        }
+        search={{
+          active: searchOpen,
+          closeLabel: "대기열 검색 닫기",
+          inputLabel: "대기열 검색",
+          onClose: closeSearch,
+          onQueryChange: setSearchQuery,
+          placeholder: "환자, 보호자, 전화번호, 방문 목적, 메모, 담당의 검색",
+          query: searchQuery,
+          resultCount: visiblePatients.length,
+        }}
         headerActions={
           <>
             <EmrListHeaderIconButton ariaLabel="정렬">
@@ -1979,23 +2009,13 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             </EmrListHeaderIconButton>
             <EmrListHeaderIconButton
               ariaLabel="검색"
-              onClick={() => setSearchOpen((current) => !current)}
+              onClick={() => setSearchOpen(true)}
             >
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
       />
-      {searchOpen || searchQuery ? (
-        <div className="px-4 pb-3">
-          <ReceptionSearchInput
-            aria-label="대기열 검색"
-            placeholder="대기열 내 환자, 보호자, 전화번호 검색"
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-        </div>
-      ) : null}
       <EmrSubpanelBody>
         {visiblePatients.length ? (
           visiblePatients.map((summary) => (
@@ -2059,6 +2079,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
               }}
             />
           ))
+        ) : searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel="접수/예약 항목"
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
         ) : (
           <ReceptionEmptyState>{emptyStateCopy}</ReceptionEmptyState>
         )}
@@ -2325,8 +2351,11 @@ function getReceptionDateControlLabels(operatingDate: string) {
   >;
 }
 
-function getReceptionDatePickerCells(operatingDate: string) {
-  const parts = parseIsoDateParts(operatingDate);
+function getReceptionMonthDatePickerCells(
+  visibleMonthDate: string,
+  selectedDate: string,
+) {
+  const parts = parseIsoDateParts(visibleMonthDate);
   const monthStart = new Date(Date.UTC(parts.year, parts.month - 1, 1));
   const firstCellDate = new Date(monthStart);
   firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
@@ -2340,7 +2369,7 @@ function getReceptionDatePickerCells(operatingDate: string) {
       key,
       day: String(cellDate.getUTCDate()),
       inMonth: cellDate.getUTCMonth() === parts.month - 1,
-      selected: key === operatingDate,
+      selected: key === selectedDate,
     };
   });
 }
@@ -2372,19 +2401,70 @@ function getReceptionMonthPickerItems(operatingDate: string) {
   });
 }
 
+function getDaysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function addMonthsToIsoDate(date: string, months: number) {
+  const parts = parseIsoDateParts(date);
+  const nextMonthIndex = parts.month - 1 + months;
+  const year = parts.year + Math.floor(nextMonthIndex / 12);
+  const monthIndex = ((nextMonthIndex % 12) + 12) % 12;
+  const day = Math.min(parts.day, getDaysInMonth(year, monthIndex + 1));
+
+  return getIsoDateFromUtcDate(new Date(Date.UTC(year, monthIndex, day)));
+}
+
+function setMonthOnIsoDate(date: string, month: number) {
+  const parts = parseIsoDateParts(date);
+  const day = Math.min(parts.day, getDaysInMonth(parts.year, month));
+
+  return getIsoDateFromUtcDate(new Date(Date.UTC(parts.year, month - 1, day)));
+}
+
+function getAdjacentReceptionDate(
+  operatingDate: string,
+  view: ReceptionCalendarView,
+  direction: -1 | 1,
+) {
+  if (view === "week") return addDaysToIsoDate(operatingDate, direction * 7);
+  if (view === "month") return addMonthsToIsoDate(operatingDate, direction);
+
+  return addDaysToIsoDate(operatingDate, direction);
+}
+
 function ReceptionScheduleDateControl({
+  onOperatingDateChange,
   operatingDate,
+  todayDate,
   view,
 }: {
+  onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
+  todayDate: string;
   view: ReceptionCalendarView;
 }) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [pickerMonthDate, setPickerMonthDate] = useState(operatingDate);
   const dateControlLabel = getReceptionDateControlLabels(operatingDate)[view];
-  const datePickerCells = getReceptionDatePickerCells(operatingDate);
+  const datePickerCells = getReceptionMonthDatePickerCells(
+    pickerMonthDate,
+    operatingDate,
+  );
   const weekPickerRows = getReceptionWeekPickerRows(operatingDate);
   const monthPickerItems = getReceptionMonthPickerItems(operatingDate);
+  const pickerMonthDateParts = parseIsoDateParts(pickerMonthDate);
   const operatingDateParts = parseIsoDateParts(operatingDate);
+  const showingToday = operatingDate === todayDate;
+
+  useEffect(() => {
+    if (!datePickerOpen) setPickerMonthDate(operatingDate);
+  }, [datePickerOpen, operatingDate]);
+
+  const selectOperatingDate = (nextOperatingDate: string) => {
+    onOperatingDateChange(nextOperatingDate);
+    setDatePickerOpen(false);
+  };
 
   return (
     <div
@@ -2396,6 +2476,11 @@ function ReceptionScheduleDateControl({
         size="icon-sm"
         className="size-7 bg-[var(--emr-surface-panel)]"
         aria-label={dateControlLabel.previousLabel}
+        onClick={() =>
+          onOperatingDateChange(
+            getAdjacentReceptionDate(operatingDate, view, -1),
+          )
+        }
       >
         <ChevronLeftIcon />
       </Button>
@@ -2404,6 +2489,11 @@ function ReceptionScheduleDateControl({
         size="icon-sm"
         className="size-7 bg-[var(--emr-surface-panel)]"
         aria-label={dateControlLabel.nextLabel}
+        onClick={() =>
+          onOperatingDateChange(
+            getAdjacentReceptionDate(operatingDate, view, 1),
+          )
+        }
       >
         <ChevronRightIcon />
       </Button>
@@ -2434,7 +2524,7 @@ function ReceptionScheduleDateControl({
             <>
               <div className="flex items-center justify-between">
                 <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                  {operatingDateParts.year}년 {operatingDateParts.month}월
+                  {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -2442,6 +2532,11 @@ function ReceptionScheduleDateControl({
                     variant="ghost"
                     size="icon-xs"
                     aria-label="이전 달"
+                    onClick={() =>
+                      setPickerMonthDate((current) =>
+                        addMonthsToIsoDate(current, -1),
+                      )
+                    }
                   >
                     <ChevronLeftIcon />
                   </Button>
@@ -2450,6 +2545,11 @@ function ReceptionScheduleDateControl({
                     variant="ghost"
                     size="icon-xs"
                     aria-label="다음 달"
+                    onClick={() =>
+                      setPickerMonthDate((current) =>
+                        addMonthsToIsoDate(current, 1),
+                      )
+                    }
                   >
                     <ChevronRightIcon />
                   </Button>
@@ -2482,7 +2582,7 @@ function ReceptionScheduleDateControl({
                         : `${cell.day}일 선택`
                     }
                     aria-pressed={cell.selected}
-                    onClick={() => setDatePickerOpen(false)}
+                    onClick={() => selectOperatingDate(cell.key)}
                   >
                     {cell.day}
                   </button>
@@ -2502,6 +2602,9 @@ function ReceptionScheduleDateControl({
                     variant="ghost"
                     size="icon-xs"
                     aria-label="이전 주 보기"
+                    onClick={() =>
+                      onOperatingDateChange(addDaysToIsoDate(operatingDate, -7))
+                    }
                   >
                     <ChevronLeftIcon />
                   </Button>
@@ -2510,6 +2613,9 @@ function ReceptionScheduleDateControl({
                     variant="ghost"
                     size="icon-xs"
                     aria-label="다음 주 보기"
+                    onClick={() =>
+                      onOperatingDateChange(addDaysToIsoDate(operatingDate, 7))
+                    }
                   >
                     <ChevronRightIcon />
                   </Button>
@@ -2532,7 +2638,7 @@ function ReceptionScheduleDateControl({
                         : `${week.label} 주 선택`
                     }
                     aria-pressed={week.selected}
-                    onClick={() => setDatePickerOpen(false)}
+                    onClick={() => selectOperatingDate(week.key)}
                   >
                     {week.label}
                   </button>
@@ -2552,6 +2658,9 @@ function ReceptionScheduleDateControl({
                     variant="ghost"
                     size="icon-xs"
                     aria-label="이전 연도"
+                    onClick={() =>
+                      onOperatingDateChange(addMonthsToIsoDate(operatingDate, -12))
+                    }
                   >
                     <ChevronLeftIcon />
                   </Button>
@@ -2560,13 +2669,17 @@ function ReceptionScheduleDateControl({
                     variant="ghost"
                     size="icon-xs"
                     aria-label="다음 연도"
+                    onClick={() =>
+                      onOperatingDateChange(addMonthsToIsoDate(operatingDate, 12))
+                    }
                   >
                     <ChevronRightIcon />
                   </Button>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1">
-                {monthPickerItems.map((month) => {
+                {monthPickerItems.map((month, index) => {
+                  const nextMonth = index + 1;
                   return (
                     <button
                       key={month.label}
@@ -2583,7 +2696,11 @@ function ReceptionScheduleDateControl({
                           : `${month.label} 월 선택`
                       }
                       aria-pressed={month.selected}
-                      onClick={() => setDatePickerOpen(false)}
+                      onClick={() =>
+                        selectOperatingDate(
+                          setMonthOnIsoDate(operatingDate, nextMonth),
+                        )
+                      }
                     >
                       {month.label}
                     </button>
@@ -2600,7 +2717,8 @@ function ReceptionScheduleDateControl({
         size="sm"
         className="h-7 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata font-medium"
         aria-label="오늘 일자로 이동"
-        onClick={() => setDatePickerOpen(false)}
+        disabled={showingToday}
+        onClick={() => selectOperatingDate(todayDate)}
       >
         오늘
       </Button>
@@ -2609,20 +2727,24 @@ function ReceptionScheduleDateControl({
 }
 
 function ScheduleToolbar({
+  onOperatingDateChange,
   operatingDate,
   onCreateWalkIn,
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
+  todayDate,
   veterinarians,
   view,
   onViewChange,
 }: {
+  onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
   onCreateWalkIn: () => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
+  todayDate: string;
   veterinarians: Veterinarian[];
   view: ReceptionCalendarView;
   onViewChange: (view: ReceptionCalendarView) => void;
@@ -2646,12 +2768,14 @@ function ScheduleToolbar({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <ReceptionScheduleDateControl
+          onOperatingDateChange={onOperatingDateChange}
           operatingDate={operatingDate}
+          todayDate={todayDate}
           view={view}
         />
         <span className="ml-2 rounded-md bg-muted px-2 py-1 emr-text-metadata font-medium leading-4 text-muted-foreground">
           영업시간{" "}
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-sky-600">
             {getBusinessHoursTimeRangeLabel()}
           </span>
         </span>
@@ -3778,6 +3902,9 @@ export function ReceptionContent() {
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
+  const setWorkspaceOperatingDate = useReceptionStore(
+    (state) => state.setWorkspaceOperatingDate,
+  );
   const setReceptionCalendarReadStatus = useReceptionStore(
     (state) => state.setReceptionCalendarReadStatus,
   );
@@ -3807,7 +3934,11 @@ export function ReceptionContent() {
     typeof params.workspaceId === "string"
       ? params.workspaceId
       : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
-  const operatingDate = getWorkspaceOperatingDate(workspaceId);
+  const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
+  const operatingDateOverride = useReceptionStore(
+    (state) => state.operatingDateByWorkspace[workspaceId],
+  );
+  const operatingDate = operatingDateOverride ?? defaultOperatingDate;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
   const veterinarians =
@@ -3942,6 +4073,10 @@ export function ReceptionContent() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);
   }
+  const handleOperatingDateChange = (nextOperatingDate: string) => {
+    clearCalendarTransientSelection();
+    setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+  };
   const handleSelectAppointment = (appointment: Appointment) => {
     clearCalendarTransientSelection();
     selectAppointment(appointment.id);
@@ -4157,10 +4292,12 @@ export function ReceptionContent() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ScheduleToolbar
+        onOperatingDateChange={handleOperatingDateChange}
         operatingDate={operatingDate}
         view={calendarView}
         onViewChange={setCalendarView}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
+        todayDate={defaultOperatingDate}
         veterinarians={veterinarians}
         onToggleVeterinarian={toggleVeterinarian}
         onCreateWalkIn={openWalkInDialog}
@@ -5308,7 +5445,11 @@ export function ReceptionDrawer() {
     typeof params.workspaceId === "string"
       ? params.workspaceId
       : (params.workspaceId?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
-  const operatingDate = getWorkspaceOperatingDate(workspaceId);
+  const operatingDateOverride = useReceptionStore(
+    (state) => state.operatingDateByWorkspace[workspaceId],
+  );
+  const operatingDate =
+    operatingDateOverride ?? getWorkspaceOperatingDate(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
   const veterinarians =
     liveStaffSourceEnabled && workspaceVeterinarians.length > 0
