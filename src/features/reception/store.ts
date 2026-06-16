@@ -14,6 +14,7 @@ import type {
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
+import type { ReceptionEncounterUpdateRecord } from "@/features/reception/encounter-update";
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
 import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
 import type { ReceptionWalkInEncounterRecord } from "@/features/reception/walk-in-encounter";
@@ -62,6 +63,7 @@ type ReceptionStore = {
     encounterId: EmrId;
     workspaceId: EmrId;
   }) => void;
+  applyEncounterUpdate: (update: ReceptionEncounterUpdateRecord) => void;
   requestReceptionReadRetry: () => void;
   setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
   setWorkspaceOperatingDate: (workspaceId: EmrId, operatingDate: string) => void;
@@ -345,6 +347,23 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         state.selectedEncounterId === encounterId
           ? undefined
           : state.selectedEncounterId,
+    })),
+  applyEncounterUpdate: (update) =>
+    set((state) => ({
+      draftCheckIns: state.draftCheckIns.map((draft) =>
+        draft.encounter.id === update.encounter.id
+          ? {
+              ...draft,
+              department: update.encounter.department,
+              durationMinutes: update.encounter.durationMinutes,
+              encounter: update.encounter,
+              memo: update.encounter.receptionMemo,
+              queueEntry: update.queueEntry ?? draft.queueEntry,
+            }
+          : draft,
+      ),
+      selectedEncounterId: update.encounter.id,
+      selectedPatientId: update.encounter.patientId,
     })),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   requestReceptionReadRetry: () =>

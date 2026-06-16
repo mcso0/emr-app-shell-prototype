@@ -4,6 +4,7 @@ export type ReceptionMutationId =
   | "appointment_create"
   | "appointment_check_in"
   | "encounter_cancel"
+  | "encounter_update"
   | "patient_guardian_registration"
   | "walk_in_encounter_create";
 
@@ -23,6 +24,10 @@ export const receptionMutationPermissionMatrix = {
   },
   encounter_cancel: {
     auditHookPoint: "reception.encounter.cancel",
+    requiredPermission: "reception:update",
+  },
+  encounter_update: {
+    auditHookPoint: "reception.encounter.update",
     requiredPermission: "reception:update",
   },
   patient_guardian_registration: {

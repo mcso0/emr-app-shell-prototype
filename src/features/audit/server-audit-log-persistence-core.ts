@@ -15,6 +15,7 @@ export const liveAuditEventTypes = [
   "reception.appointment_created",
   "reception.appointment_checked_in",
   "reception.encounter_cancelled",
+  "reception.encounter_updated",
   "reception.queue_status_changed",
   "chart.soap_saved",
   "chart.completed",

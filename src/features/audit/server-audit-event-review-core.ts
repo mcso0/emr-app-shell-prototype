@@ -176,6 +176,7 @@ const supportedReviewEventTypes = new Set<LiveAuditEventType>([
   "reception.appointment_created",
   "reception.appointment_checked_in",
   "reception.encounter_cancelled",
+  "reception.encounter_updated",
   "chart.soap_saved",
   "chart.completed",
   "order.confirmed",
