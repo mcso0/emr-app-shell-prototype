@@ -235,6 +235,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-QA-PR-003         | human_review | reception            | P0       | Reception QA / DEN-515 | `docs/work/reception/RECEPTION-QA-PR-003-create-drawer-weight.md`                                    |
 | RECEPTION-QA-PR-004         | human_review | reception            | P0       | Reception QA / DEN-516 | `docs/work/reception/RECEPTION-QA-PR-004-reservation-create-flow.md`                                 |
 | RECEPTION-QA-PR-005         | human_review | reception            | P0       | Reception QA / DEN-517 | `docs/work/reception/RECEPTION-QA-PR-005-detail-edit-drawer.md`                                      |
+| RECEPTION-QA-PR-006         | human_review | reception            | P0       | Reception QA / DEN-518 | `docs/work/reception/RECEPTION-QA-PR-006-regression-closeout.md`                                     |
 | CLINICAL-BILLING-PR-001     | human_review | clinical-billing     | P0       | Project 04 / DEN-67  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-001-scope-encounter-dependency.md`                     |
 | CLINICAL-BILLING-PR-002     | human_review | clinical-billing     | P0       | Project 04 / DEN-68  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-002-schema-migration.md`                               |
 | CLINICAL-BILLING-PR-003     | human_review | clinical-billing     | P0       | Project 04 / DEN-100 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-003-chart-order-snapshot-bridge.md`                    |

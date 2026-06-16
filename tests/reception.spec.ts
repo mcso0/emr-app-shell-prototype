@@ -12,6 +12,13 @@ async function submitAppointmentCheckInForm(page: Page) {
   await form.getByRole("button", { name: "생성" }).click();
 }
 
+function getLocalDatePrefix(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 async function mockReceptionWalkInCreate(
   page: Page,
   {
@@ -353,9 +360,8 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await page.getByTestId("appointment-card-appointment-kong-260501").click();
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await expect(
-    page.getByText("김하늘 보호자 · 콩이 · 09:28 접수"),
-  ).toBeVisible();
+  await expect(page.getByText("김하늘 보호자").first()).toBeVisible();
+  await expect(page.getByText("콩이").first()).toBeVisible();
   await expect(page.getByLabel("방문 목적")).toHaveValue(
     "반복 구토와 식욕 저하",
   );
@@ -364,12 +370,11 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await kongCard.click();
 
-  await expect(page.getByText("접수 정보")).toBeVisible();
+  await expect(page.getByText("접수 상세").first()).toBeVisible();
   await expect(page.getByText("P-260501-0003").first()).toBeVisible();
   await expect(page.getByText("접수 상세").last()).toBeVisible();
-  await expect(
-    page.getByText("김하늘 보호자 · 콩이 · 09:28 접수").last(),
-  ).toBeVisible();
+  await expect(page.getByText("김하늘 보호자").last()).toBeVisible();
+  await expect(page.getByText("콩이").last()).toBeVisible();
 });
 
 test("reception calendar options expose Excel import and export actions", async ({
@@ -639,7 +644,7 @@ test("reception cards open the reception detail drawer", async ({ page }) => {
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
   await expect(
-    page.getByText("오세아 보호자 · 나비 · 10:45 예약"),
+    page.getByText("오세아 보호자 · 010-7812-4401 · 10:45 예약"),
   ).toBeVisible();
   await expect(page.getByLabel("소요시간")).toHaveValue("15분");
   await expect(
@@ -678,8 +683,11 @@ test("reception side panel cards keep order, open reception info, and clear sele
         ),
     )
     .toEqual(initialCardOrder);
-  await expect(page.getByText("접수 정보")).toBeVisible();
-  await expect(page.getByText("접수 상세")).toBeVisible();
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
   await expect(dubuCard).toHaveAttribute("data-selected", "true");
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await expect(dubuCard).not.toHaveAttribute("data-selected", "true");
@@ -2139,6 +2147,7 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
   const workspaceId = "workspace-clair-cheongdam";
   const patientId = "49121000-0000-4000-8000-000000000001";
   const guardianId = "49120000-0000-4000-8000-000000000001";
+  const checkedInAt = `${getLocalDatePrefix()}T12:00:00+09:00`;
   let lookupRequests = 0;
   let createBody: Record<string, unknown> | undefined;
 
@@ -2245,9 +2254,9 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
               chiefComplaint: createBody.visitPurpose,
               visitPurpose: createBody.visitPurpose,
               status: "waiting",
-              checkedInAt: "2026-06-16T12:00:00+09:00",
-              createdAt: "2026-06-16T12:00:00+09:00",
-              updatedAt: "2026-06-16T12:00:00+09:00",
+              checkedInAt,
+              createdAt: checkedInAt,
+              updatedAt: checkedInAt,
             },
             queueEntry: {
               id: "queue-cheongdam-badugi",
@@ -2256,7 +2265,7 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
               queueType: "consultation",
               status: "waiting",
               priority: "normal",
-              enteredAt: "2026-06-16T12:00:00+09:00",
+              enteredAt: checkedInAt,
             },
           },
         }),
@@ -2298,11 +2307,15 @@ test("Cheongdam walk-in keeps a selected DB lookup patient when the display labe
   );
 
   await sidePanel.getByTestId(`patient-card-${patientId}`).click();
-  await expect(page.getByText("접수 상세")).toBeVisible();
-  await expect(page.getByLabel("보호자 및 동물검색")).toHaveValue(
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
+  await expect(detailDrawer.getByLabel("보호자 및 동물검색")).toHaveValue(
     /바둑이.*김청담/,
   );
-  await expect(page.getByLabel("방문 목적")).toHaveValue("첫 내원 상담");
+  await expect(detailDrawer.getByLabel("방문 목적")).toHaveValue("첫 내원 상담");
 
   await page.reload();
   await expect(sidePanel.locator('[data-testid^="patient-card-"]')).toHaveCount(
@@ -2319,6 +2332,8 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
   const guardianId = "49120000-0000-4000-8000-000000000071";
   const veterinarianId = "49110000-0000-4000-8000-000000000003";
   const encounterId = "encounter-cheongdam-readback-luna";
+  const readbackDate = getLocalDatePrefix();
+  const readbackAt = `${readbackDate}T14:15:00+09:00`;
   const persistedWalkIn = {
     encounter: {
       id: encounterId,
@@ -2333,9 +2348,9 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
       chiefComplaint: "DEN-512 refresh readback",
       visitPurpose: "DEN-512 refresh readback",
       status: "waiting",
-      checkedInAt: "2026-06-16T14:15:00+09:00",
-      createdAt: "2026-06-16T14:15:00+09:00",
-      updatedAt: "2026-06-16T14:15:00+09:00",
+      checkedInAt: readbackAt,
+      createdAt: readbackAt,
+      updatedAt: readbackAt,
     },
     queueEntry: {
       id: "queue-cheongdam-readback-luna",
@@ -2345,7 +2360,7 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
       status: "waiting",
       priority: "normal",
       sortOrder: 1,
-      enteredAt: "2026-06-16T14:15:00+09:00",
+      enteredAt: readbackAt,
     },
   };
 
@@ -2396,7 +2411,7 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
           ok: true,
           status: 200,
           workspaceId,
-          date: "2026-06-16",
+          date: readbackDate,
           records: [persistedWalkIn],
           enforcedBy: "reception-calendar-read",
         }),
@@ -2876,10 +2891,16 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   ).toContainText("10:15");
 
   await page.getByTestId("walkin-card-encounter-e2e-walkin-dubu").click();
-  await expect(page.getByText("접수 상세").last()).toBeVisible();
-  await expect(page.getByTestId("reception-encounter-cancel-open")).toBeVisible();
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
+  await expect(
+    detailDrawer.getByTestId("reception-encounter-cancel-open"),
+  ).toBeVisible();
 
-  await page.getByTestId("reception-encounter-cancel-open").click();
+  await detailDrawer.getByTestId("reception-encounter-cancel-open").click();
   await expect(page.getByRole("dialog")).toContainText("접수를 취소할까요?");
   await page.getByTestId("reception-encounter-cancel-confirm").click();
 

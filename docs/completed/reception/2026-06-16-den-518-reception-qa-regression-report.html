@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-518 접수/예약 QA 회귀 검증 리포트</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; color: #111827; margin: 40px; max-width: 960px; }
+      h1, h2 { line-height: 1.25; }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; }
+      th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+      th { background: #f3f4f6; text-align: left; }
+      code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+      .pass { color: #047857; font-weight: 700; }
+      .note { background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-518 접수/예약 QA 회귀 검증 리포트</h1>
+    <p>
+      DEN-514부터 DEN-517까지 반영된 접수/예약 개선 사항을 통합 회귀 검증했다.
+      결과적으로 날짜 이동, 대기열 검색/필터, 접수 생성, 예약 생성, 예약 접수 전환,
+      캘린더 드래그 생성, 접수 상세/수정 API 경계가 모두 자동 검증을 통과했다.
+    </p>
+
+    <h2>결론</h2>
+    <p class="pass">Human Review로 넘길 수 있는 상태다.</p>
+    <p>
+      새 기능 구현은 추가하지 않았고, 최종 UI 문구와 운영일 기준 동작에 맞춰 회귀 테스트만 안정화했다.
+      원격 Supabase, fixed staging alias, production 배포, 실제 환자/보호자 데이터는 사용하지 않았다.
+    </p>
+
+    <h2>QA-REC 001~014 결과</h2>
+    <table>
+      <thead>
+        <tr><th>항목</th><th>결과</th><th>근거</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>DB/API fallback boundary</td><td class="pass">Pass</td><td>서버 route/core/RPC/permission/audit 테스트 통과</td></tr>
+        <tr><td>날짜 이동/오늘/날짜 선택</td><td class="pass">Pass</td><td>선택 운영일 refetch 및 전체 reception spec 통과</td></tr>
+        <tr><td>대기열 검색/필터/카운트</td><td class="pass">Pass</td><td>검색, 전체/대기/예약 카운트, 필터 UI 검증 통과</td></tr>
+        <tr><td>접수 생성과 체중 readback</td><td class="pass">Pass</td><td>DB lookup 환자 선택 후 접수 생성/readback 경로 통과</td></tr>
+        <tr><td>예약 생성과 예약 접수 전환</td><td class="pass">Pass</td><td>예약 생성 UI, appointment create/check-in route 테스트 통과</td></tr>
+        <tr><td>캘린더 클릭/드래그 생성</td><td class="pass">Pass</td><td>15분 클릭, 드래그, 역방향 드래그, invalid selection 테스트 통과</td></tr>
+        <tr><td>접수 상세 드로어 정리</td><td class="pass">Pass</td><td>최종 `접수 상세` 문구와 환자/보호자 중심 요약 기준으로 검증</td></tr>
+        <tr><td>접수 상세 수정 persistence</td><td class="pass">Pass</td><td>PATCH route, RPC gateway, 권한, 감사 이벤트 테스트 통과</td></tr>
+        <tr><td>캘린더 카드/대기열 카드 상세 진입 일관성</td><td class="pass">Pass</td><td>같은 detail drawer 진입 경로를 reception spec에서 검증</td></tr>
+      </tbody>
+    </table>
+
+    <h2>수정한 회귀 테스트</h2>
+    <ul>
+      <li>수정 가능한 접수 fixture를 사용하도록 encounter update route 테스트를 보정했다.</li>
+      <li>수정 불가 encounter가 409 <code>encounter_not_editable</code>을 반환하는 검증은 유지했다.</li>
+      <li>드로어 제목이 여러 곳에 표시되는 최종 UI에 맞춰 테스트 선택자를 active drawer 범위로 좁혔다.</li>
+      <li>자정 이후에도 깨지지 않도록 Cheongdam walk-in/readback 테스트의 날짜 fixture를 현재 로컬 운영일 기준으로 변경했다.</li>
+      <li>예약/접수 상세 요약 기대값을 최종 환자/보호자 중심 UI 문구로 갱신했다.</li>
+    </ul>
+
+    <h2>검증 결과</h2>
+    <ul>
+      <li><code>npm run lint</code>: 통과, 기존 warning 5개만 남음</li>
+      <li><code>npx tsc --noEmit --pretty false --incremental false</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npx playwright test tests/reception-appointment-create-server.spec.ts tests/reception-appointment-check-in-server.spec.ts tests/reception-encounter-update-server.spec.ts tests/reception-mutation-permissions-server.spec.ts tests/live-audit-mutation-emission.spec.ts --reporter=line</code>: 47 passed</li>
+      <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/reception.spec.ts --reporter=line</code>: 49 passed</li>
+    </ul>
+
+    <h2>범위와 리스크</h2>
+    <div class="note">
+      이번 검증은 로컬 Playwright 브라우저와 서버/API 테스트를 사용했다. fixed staging alias 변경이나 production 배포는
+      DEN-518 제외 범위였으므로 수행하지 않았다. 실제 환자/보호자/병원 데이터 및 외부 발송/결제/provider side effect도 사용하지 않았다.
+    </div>
+
+    <h2>다음 단계</h2>
+    <p>
+      현재 DEN-518 기준으로 Rework 이슈는 필요하지 않다. 다음 이슈로 넘어가기 전에는 이 검증 결과를 반영해
+      후속 작업이 기존 접수/예약 API 경계와 최종 드로어 문구를 재사용하는지 확인하면 된다.
+    </p>
+  </body>
+</html>

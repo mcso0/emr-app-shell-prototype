@@ -80,20 +80,20 @@ Refine the reception detail drawer so it presents patient/guardian information f
 - `npm run lint`: passed with 5 pre-existing warnings outside DEN-517 changes
 - `git diff --check`: passed
 
-Blocked by unrelated current worktree changes:
+Follow-up verification from DEN-518 cleared the earlier rendered-test caveat:
 
-- `npx tsc --noEmit --pretty false --incremental false` fails because unrelated PRD/docs viewer changes reference missing `@/components/ui/command` and `mermaid`.
-- The full route request test and rendered UI tests are blocked by the same dev-server compile failure. The route/core/static contract remains covered in the focused test file.
+- `npx playwright test tests/reception-encounter-update-server.spec.ts tests/reception-mutation-permissions-server.spec.ts --reporter=line`: covered the route request test after the fixture was corrected to use an editable encounter.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npx playwright test tests/reception.spec.ts --reporter=line`: 49 passed, including rendered drawer and shared queue/calendar entry coverage.
 
 ## Handoff Notes
 
 - Downstream reception QA work should treat `PATCH /reception/encounters/[encounterId]` as the update boundary for editable reception detail fields.
 - Patient weight should continue to come from and write back to patient `weightKg`/`weight_kg`, not detail-only state.
 - If later issues add reservation detail editing, reuse the same patient weight and audit conventions.
-- When the unrelated PRD/docs dependency gap is resolved, rerun the route request and rendered reception drawer tests.
+- DEN-518 reran the route request and rendered reception drawer tests; future issues can use those tests as the regression baseline.
 
 ## Result
 
 Ready for Human Review.
 
-DEN-517 adds the reception detail edit boundary and aligns the visible drawer hierarchy with QA feedback. The only incomplete verification is caused by unrelated PRD/docs viewer changes already present in the worktree.
+DEN-517 adds the reception detail edit boundary and aligns the visible drawer hierarchy with QA feedback. DEN-518 follow-up verification cleared the earlier route/rendered test caveat.
