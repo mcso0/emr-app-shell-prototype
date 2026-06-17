@@ -20,6 +20,7 @@ import {
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import type { ReceptionAppointmentCreateInput } from "@/features/reception/appointment-create";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -43,6 +44,21 @@ export async function POST(request: Request, { params }: RouteContext) {
         denialReason: identity.denialReason,
         sessionStatus: identity.sessionStatus,
         sessionReason: identity.sessionReason,
+      },
+      { status: 401 },
+    );
+  }
+
+  if (
+    isPreparedEmptyClinicWorkspace(workspaceId) &&
+    identity.source !== "supabase_session"
+  ) {
+    return Response.json(
+      {
+        ok: false,
+        denialReason: "unauthenticated",
+        sessionStatus: serverSession.status,
+        sessionReason: "supabase_session_required",
       },
       { status: 401 },
     );

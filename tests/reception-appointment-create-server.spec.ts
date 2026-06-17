@@ -14,6 +14,7 @@ const validInput = {
   patientId: "patient-nabi",
   reservationMemo: "DEN-516 예약 메모",
   scheduledStartAt: "2026-05-01T13:00:00+09:00",
+  weightKg: 4.95,
 };
 
 function getUniqueBusinessStartAt() {
@@ -74,6 +75,31 @@ test("appointment create route requires an actor and preserves mock fallback", a
   });
 });
 
+test("prepared clinic appointment create route rejects demo-header fallback", async ({
+  request,
+}) => {
+  const denied = await request.post(
+    "/api/workspaces/workspace-clair-cheongdam/reception/appointments",
+    {
+      data: {
+        ...validInput,
+        patientId: "49121000-0000-4000-8000-000000000004",
+        guardianId: undefined,
+        assignedVeterinarianId: "user-cheongdam-director",
+        scheduledStartAt: "2026-06-17T10:00:00+09:00",
+      },
+      headers: { "x-clair-demo-session-user-id": "user-front-desk" },
+    },
+  );
+
+  expect(denied.status()).toBe(401);
+  await expect(denied.json()).resolves.toMatchObject({
+    ok: false,
+    denialReason: "unauthenticated",
+    sessionReason: "supabase_session_required",
+  });
+});
+
 test("appointment create core enforces reception create permission", async () => {
   const denied = await createReceptionAppointment({
     actorUserId: "user-vet",
@@ -101,6 +127,18 @@ test("appointment create core enforces reception create permission", async () =>
 });
 
 test("appointment create core validates patient, business hours, closed day, and slot conflicts", async () => {
+  const invalidWeight = await createReceptionAppointment({
+    actorUserId: "user-front-desk",
+    input: { ...validInput, weightKg: 0 },
+    workspaceId: "clair-demo",
+  });
+  expect(invalidWeight).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { weightKg: "weight_invalid" },
+  });
+
   const missingPatient = await createReceptionAppointment({
     actorUserId: "user-front-desk",
     input: { ...validInput, patientId: "patient-missing" },
@@ -148,9 +186,11 @@ test("appointment create core validates patient, business hours, closed day, and
 
 test("supabase appointment create gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
+  const rpcPayloads: unknown[] = [];
   const gateway = createSupabaseReceptionAppointmentCreateGateway({
     async rpc(functionName, args) {
       calls.push(`${functionName}:${args.p_workspace_id}:${args.p_appointment.patientId}`);
+      rpcPayloads.push(args.p_appointment);
       return {
         data: {
           id: "appointment-den516",
@@ -183,6 +223,12 @@ test("supabase appointment create gateway keeps workspace scope in the RPC write
   expect(calls).toEqual([
     "clair_create_reception_appointment:clair-demo:patient-nabi",
   ]);
+  expect(rpcPayloads).toEqual([
+    expect.objectContaining({
+      patientId: "patient-nabi",
+      weightKg: 4.95,
+    }),
+  ]);
 });
 
 test("appointment create route stays server-owned and avoids secret-shaped values", () => {
@@ -196,15 +242,22 @@ test("appointment create route stays server-owned and avoids secret-shaped value
   expect(routeSource).toContain("createSupabaseWorkspacePermissionGateway");
   expect(routeSource).toContain("permissionAdapter");
   expect(routeSource).toContain("enforceWorkspaceMutationRateLimit");
+  expect(routeSource).toContain("isPreparedEmptyClinicWorkspace");
+  expect(routeSource).toContain("supabase_session_required");
   expect(routeSource).not.toContain("SUPABASE_SERVICE_ROLE");
   expect(routeSource).not.toContain("service_role");
 });
 
 test("appointment create writer migration inserts workspace-scoped appointments and blocks conflicts", () => {
-  const migration = readFileSync(
+  const baseMigration = readFileSync(
     "supabase/migrations/20260616100000_reception_appointment_create_writer.sql",
     "utf8",
   );
+  const weightMigration = readFileSync(
+    "supabase/migrations/20260617113000_reception_appointment_create_weight_writer.sql",
+    "utf8",
+  );
+  const migration = `${baseMigration}\n${weightMigration}`;
 
   expect(migration).toContain("clair_create_reception_appointment");
   expect(migration).toContain("reception.appointment_created");
@@ -213,6 +266,8 @@ test("appointment create writer migration inserts workspace-scoped appointments 
   expect(migration).toContain("appointment_slot_unavailable");
   expect(migration).toContain("appointment_outside_business_hours");
   expect(migration).toContain("appointment_closed_day");
+  expect(migration).toContain("v_weight_kg");
+  expect(migration).toContain("weight_kg = round(v_weight_kg, 2)");
   expect(migration).toContain("insert into public.appointment_change_logs");
   expect(migration).toContain("grant execute on function public.clair_create_reception_appointment");
 });

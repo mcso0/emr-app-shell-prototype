@@ -293,6 +293,7 @@ type WalkInReceptionInput = {
   weightKg?: number;
 };
 const unassignedVeterinarianValue = "unassigned";
+const demoSessionUserIdHeaderName = "x-clair-demo-session-user-id";
 
 const dispatchReceptionCalendarDragStart = (testId: string) => {
   window.dispatchEvent(
@@ -548,7 +549,9 @@ async function submitAppointmentCreate({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
+          ...(!isPreparedEmptyClinicWorkspace(workspaceId)
+            ? { [demoSessionUserIdHeaderName]: getReceptionDemoActorId(actorRole) }
+            : {}),
         },
         body: JSON.stringify(input),
       },
@@ -895,6 +898,9 @@ function getAppointmentCreateRouteErrorMessage(
     result.denialReason === "workspace_membership_inactive"
   ) {
     return "이 workspace에서 예약을 생성할 권한이 없습니다.";
+  }
+  if (result.denialReason === "unauthenticated") {
+    return "로그인 세션을 확인하지 못했습니다. 다시 로그인 후 예약을 생성해 주세요.";
   }
 
   return "예약을 생성할 수 없습니다.";
@@ -3123,6 +3129,135 @@ function EmptyReceptionSlotButton({
   );
 }
 
+function ReceptionReservationDatePicker({
+  minDate,
+  onChange,
+  value,
+}: {
+  minDate: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pickerMonthDate, setPickerMonthDate] = useState(value);
+  const pickerMonthDateParts = parseIsoDateParts(pickerMonthDate);
+  const datePickerCells = getReceptionMonthDatePickerCells(pickerMonthDate, value);
+
+  useEffect(() => {
+    if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPickerMonthDate(value);
+    }
+  }, [open, value]);
+
+  const selectDate = (nextDate: string) => {
+    if (nextDate < minDate) return;
+    onChange(nextDate);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-between bg-card px-2.5 text-left font-normal"
+            aria-label="예약일"
+          />
+        }
+      >
+        <span>{formatShortOperatingDate(value)}</span>
+        <CdsFilesCalendarIcon aria-hidden="true" className="size-4 text-muted-foreground" />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[292px] gap-3 p-3"
+        initialFocus={false}
+      >
+        <div className="flex items-center justify-between">
+          <div className="emr-text-dense font-semibold leading-5 text-foreground">
+            {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="이전 달"
+              onClick={() =>
+                setPickerMonthDate((current) => addMonthsToIsoDate(current, -1))
+              }
+            >
+              <ChevronLeftIcon />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="다음 달"
+              onClick={() =>
+                setPickerMonthDate((current) => addMonthsToIsoDate(current, 1))
+              }
+            >
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {receptionDatePickerWeekdays.map((weekday) => (
+            <span
+              key={weekday}
+              className="h-7 emr-text-micro font-medium leading-7 text-muted-foreground"
+            >
+              {weekday}
+            </span>
+          ))}
+          {datePickerCells.map((cell) => {
+            const disabled = cell.key < minDate;
+
+            return (
+              <button
+                key={cell.key}
+                type="button"
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                  cell.inMonth ? "text-foreground" : "text-muted-foreground",
+                  cell.selected && "bg-primary text-primary-foreground hover:bg-primary/90",
+                  disabled &&
+                    "cursor-not-allowed text-[var(--emr-text-disabled)] hover:bg-transparent",
+                )}
+                aria-label={
+                  cell.selected
+                    ? `${formatKoreanOperatingDateLabel(cell.key)} 선택됨`
+                    : `${formatKoreanOperatingDateLabel(cell.key)} 선택`
+                }
+                aria-pressed={cell.selected}
+                disabled={disabled}
+                onClick={() => selectDate(cell.key)}
+              >
+                {cell.day}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="px-2"
+            onClick={() => selectDate(minDate)}
+          >
+            오늘
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 type ReceptionCalendarDraftInput = {
   durationMinutes: number;
   plannedStartAt: string;
@@ -5173,12 +5308,17 @@ function ReceptionReservationFormDrawer({
   );
   const selectedPatient = selectedSummary?.patient;
   const selectedGuardian = selectedSummary?.primaryGuardian;
+  const [weightKg, setWeightKg] = useState(
+    formatPatientWeightKgInput(selectedPatient?.weightKg),
+  );
   const filteredSummaries = patientSummaries.filter((summary) =>
     getReceptionPatientOptionLabel(summary)
       .toLowerCase()
       .includes(patientQuery.trim().toLowerCase()),
   );
   const selectedTimeOption = timeOptions.find((option) => option.minutes === timeMinutes);
+  const parsedWeightKg = parseWeightKgInput(weightKg);
+  const weightInvalid = Boolean(selectedPatient && weightKg.trim() && !parsedWeightKg);
   const closedDay = isClosedReservationDate(date);
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
@@ -5189,8 +5329,14 @@ function ReceptionReservationFormDrawer({
     Boolean(selectedPatient) &&
     Boolean(selectedTimeOption) &&
     !selectedTimeOption?.disabled &&
+    !weightInvalid &&
     !closedDay &&
     date >= todayDate;
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWeightKg(formatPatientWeightKgInput(selectedPatient?.weightKg));
+  }, [selectedPatient?.id, selectedPatient?.weightKg]);
 
   useEffect(() => {
     const firstAvailable = timeOptions.find((option) => !option.disabled);
@@ -5210,6 +5356,7 @@ function ReceptionReservationFormDrawer({
       patientId: selectedPatient.id,
       reservationMemo: memo.trim() || undefined,
       scheduledStartAt: getReceptionIsoAtMinutes(date, timeMinutes),
+      weightKg: parsedWeightKg,
     };
 
     setSubmitting(true);
@@ -5236,22 +5383,26 @@ function ReceptionReservationFormDrawer({
     >
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
-          <section className="rounded-lg border bg-[var(--emr-status-info-bg)] p-3">
-            <h2 className="emr-text-body font-semibold">예약 생성</h2>
-            <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
-              진료 시간 안에서 예약 가능한 시간을 선택합니다.
-            </div>
-          </section>
-
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
               <RegistrationFormField
                 label="환자 검색"
                 required
-                helper={
-                  selectedSummary
-                    ? getReceptionPatientOptionLabel(selectedSummary)
-                    : "환자명, 동물 정보, 보호자명으로 검색합니다."
+                actions={
+                  selectedPatient ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="환자 선택 초기화"
+                      onClick={() => {
+                        setPatientId("");
+                        setPatientQuery("");
+                      }}
+                    >
+                      <CircleCloseFillIcon aria-hidden="true" />
+                    </Button>
+                  ) : undefined
                 }
               >
                 <Select
@@ -5266,7 +5417,16 @@ function ReceptionReservationFormDrawer({
                   }}
                 >
                   <SelectTrigger aria-label="환자 검색" className="w-full bg-card">
-                    <SelectValue placeholder="환자 선택" />
+                    <span
+                      className={cn(
+                        "flex min-w-0 flex-1 truncate text-left",
+                        !selectedSummary && "text-[var(--emr-text-placeholder)]",
+                      )}
+                    >
+                      {selectedSummary
+                        ? getReceptionPatientOptionLabel(selectedSummary)
+                        : "환자 선택"}
+                    </span>
                   </SelectTrigger>
                   <SelectContent>
                     <div className="p-2">
@@ -5289,14 +5449,19 @@ function ReceptionReservationFormDrawer({
                 </Select>
               </RegistrationFormField>
 
-              <RegistrationFormField label="체중">
+              <RegistrationFormField
+                label="체중"
+                error={weightInvalid ? "체중은 0보다 큰 숫자로 입력해 주세요." : undefined}
+              >
                 <Input
                   aria-label="체중"
-                  className="h-10 bg-card text-right"
+                  className="bg-card text-right"
                   disabled={!selectedPatient}
-                  readOnly
-                  value={formatPatientWeightKgInput(selectedPatient?.weightKg)}
+                  inputMode="decimal"
                   placeholder="0.00"
+                  value={weightKg}
+                  aria-invalid={weightInvalid || undefined}
+                  onValueChange={setWeightKg}
                 />
               </RegistrationFormField>
             </div>
@@ -5305,13 +5470,10 @@ function ReceptionReservationFormDrawer({
           <RegistrationFormSection title="예약 정보">
             <section className="grid grid-cols-2 gap-3">
               <RegistrationFormField label="예약일" required>
-                <Input
-                  aria-label="예약일"
-                  className="h-10 bg-card"
-                  min={todayDate}
-                  type="date"
+                <ReceptionReservationDatePicker
+                  minDate={todayDate}
                   value={date}
-                  onChange={(event) => setDate(event.target.value)}
+                  onChange={setDate}
                 />
               </RegistrationFormField>
               <RegistrationFormField label="담당의">
@@ -5355,7 +5517,9 @@ function ReceptionReservationFormDrawer({
                   disabled={closedDay}
                 >
                   <SelectTrigger aria-label="예약시간" className="w-full bg-card">
-                    <SelectValue />
+                    <span className="flex flex-1 text-left">
+                      {selectedTimeOption?.label ?? getScheduleTimeLabelFromMinutes(timeMinutes)}
+                    </span>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -5379,7 +5543,7 @@ function ReceptionReservationFormDrawer({
                   onValueChange={(value) => value && setDuration(value)}
                 >
                   <SelectTrigger aria-label="예상시간" className="w-full bg-card">
-                    <SelectValue />
+                    <span className="flex flex-1 text-left">{duration}</span>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
