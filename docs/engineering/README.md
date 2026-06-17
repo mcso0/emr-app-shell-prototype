@@ -7,6 +7,7 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - Current status: `docs/engineering/current-status.md`
 - App shell layout contract: `docs/engineering/architecture/app-shell-layout-contract.md`
 - Mock/live boundary map: `docs/engineering/architecture/mock-live-boundary-map.md`
+- Reference project adoption plan: `docs/engineering/architecture/reference-project-adoption-plan.md`
 - API boundary integration guide: `docs/engineering/api-boundaries/api-boundary-integration-guide.md`
 - API boundary selectors: `docs/engineering/api-boundaries/api-boundary-selectors.md`
 - Data model index: `docs/engineering/data-model/README.md`
