@@ -12,7 +12,7 @@ source_docs:
   - "docs/product/roadmap/product-mvp-scope.md"
 dependencies:
   - "DEMO-DATA-PR-001"
-updated: "2026-06-16"
+updated: "2026-06-17"
 ---
 
 # Clinic Start State and Demo Operations
@@ -47,7 +47,7 @@ This is a portfolio/demo-readiness scope using synthetic data. It is not a real-
   - no active reception, appointment, encounter, fulfillment, or billing work by default
 - Define reset behavior for returning to the empty clinic baseline.
 - Ensure legacy fixtures, old log-style records, and stale dummy daily work do not appear in the default path.
-- Preserve older Sales Demo fixture behavior only behind developer/test opt-in if still needed.
+- Treat older Sales Demo fixture behavior as a cleanup target; keep it developer/test opt-in only until Cheongdam seed coverage replaces each remaining use.
 - Assess real-time day progression versus fixed review-date reset:
   - preferred: June 11 work remains available on June 12/13 via date picker or calendar views
   - fallback: fixed review date plus reset if multi-day state is too complex for this demo phase
@@ -79,6 +79,7 @@ This is a portfolio/demo-readiness scope using synthetic data. It is not a real-
 - Order categories, order catalog, order sets, patient/guardian master records, users, and roles are ready enough to support real workflow creation.
 - Screens do not show stale May 2026 work by default on a current-date review.
 - Data-source precedence is documented and implemented for touched surfaces.
+- Legacy/mock cleanup inventory exists and classifies `clair-demo`, Sales Demo, and silent fallback references before broad deletion.
 - Reset restores the empty clinic baseline.
 - The implementation decision for real-time day progression versus fixed review-date reset is recorded with rationale.
 - Focused test setup can create a bounded outpatient workflow from the empty baseline.
@@ -111,6 +112,33 @@ Stop and ask 승욱 before:
 - provider/payment/email/KakaoTalk/PACS/device integration
 
 ## Notes
+
+- 2026-06-17 cleanup-prep note:
+  - Owner direction now treats Sales Demo fallback as discardable legacy scope, not a preservation requirement.
+  - The default operating proof is `workspace-clair-cheongdam` with synthetic seed data and API/Supabase-backed behavior where implemented.
+  - Added cleanup inventory: `docs/work/demo-data/DEMO-DATA-PR-002-legacy-mock-cleanup-inventory.md`.
+  - Added representative closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-legacy-mock-cleanup-prep-report.html`.
+  - Next implementation PRs should remove or migrate legacy references in priority order: docs/test names, Cheongdam fixture guards, global entry points, workflow module fallback, then Sales Demo launcher/scenario-specific paths.
+  - Candidate 1 started by rewording Sales Demo preservation phrasing in active handoff docs and test titles so legacy coverage is explicit fixture coverage, not current product proof.
+  - Candidate 1 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-1-sales-demo-wording-cleanup-report.html`.
+  - Candidate 2 updated Home and notification runtime entrypoints so generated links stay scoped to the active workspace instead of silently using `/w/clair-demo`. Command palette was confirmed already workspace-scoped for quick actions and Cheongdam-safe for legacy fixture suppression.
+  - Candidate 2 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-2-global-entrypoint-scope-report.html`.
+  - Candidate 3 updated missing workspace fallback resolution so customer, reception, registration drawer, lab/imaging, dispensing, and billing screens default to the Cheongdam seed verification workspace instead of legacy Sales Demo when route/path context is absent.
+  - Candidate 3 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-3-cheongdam-module-fallback-guard-report.html`.
+  - Candidate 4 narrowed workflow module mock fallback so chart, lab/imaging, dispensing/treatment, and billing only use legacy fixture fallback when the active workspace is explicitly `clair-demo`.
+  - Candidate 4 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-4-workflow-module-fallback-shrink-report.html`.
+  - Candidate 5 removed the old Home Sales Demo launcher path and launcher-only scenario helpers. Direct `scenario=kong-vomit` fixture routes remain only for explicit legacy route-contract coverage until Cheongdam seed/API replacement tests can cover the same behavior.
+  - Candidate 5 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-5-sales-demo-launcher-removal-report.html`.
+  - Candidate 6 added the first Cheongdam seed/API replacement flow for legacy Kong coverage: reception, chart, lab, imaging, dispensing, and billing now have focused Playwright proof that Cheongdam API-shaped data can carry one encounter without `scenario=kong-vomit`.
+  - Candidate 6 also blocked Cheongdam reception central detail/context fallback from reading global legacy mock patient bundles such as Coco when only a Cheongdam encounter is addressed.
+  - Candidate 6 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-6-cheongdam-seed-workflow-replacement-report.html`.
+  - Candidate 7 moved the billing paid-action proof out of the legacy Kong test and into the Cheongdam seed/API replacement test. The Cheongdam flow now covers checkout preparation, 담당하기, 수납 완료 confirmation, paid readback, and paid invoice checkout exclusion without `scenario=kong-vomit`.
+  - Candidate 7 also tightened billing UI state so Cheongdam live invoice payment snapshots do not fall back to the default legacy Coco selected invoice in the central checkout workspace or right payment panel.
+  - Candidate 7 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-7-cheongdam-billing-paid-action-replacement-report.html`.
+  - Candidate 8 reduced broad Sales Demo flow reliance on fixed Kong clinical content. The legacy flow test no longer treats fixed diagnosis/order text, fixed WBC `21.4`, or fixed imaging impression text as current product proof.
+  - Candidate 8 strengthened the Cheongdam seed/API replacement test with chart patient-context and imaging patient work-item visibility so the current proof remains tied to `workspace-clair-cheongdam`.
+  - Candidate 8 closeout: `docs/completed/demo-data/2026-06-17-demo-data-pr-002-candidate-8-fixed-clinical-fixture-assertion-reduction-report.html`.
+  - Local mock mode remains local-only and should not be cited as evidence that seed-backed workflow persistence works.
 
 - 2026-06-16 DEN-507 scoped implementation note:
   - Added an admin-only `세션 초기화` control in the Cheongdam workspace topbar for `workspace-clair-cheongdam`, positioned left of the notification icon with a divider before the original topbar actions.

@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   HomeHospitalStatusSidePanel,
   HomeKanbanWorkspace,
 } from "@/features/home/components/home-kanban-workspace";
-import { DemoLauncher } from "@/features/home/demo-launcher";
 import { getHomeMockData } from "@/features/home/home.mock";
 import { mapAuthRoleToHomeRole } from "@/features/home/home.presets";
 import { useAuthClient } from "@/features/auth/auth-client";
@@ -14,17 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ShellComponentProps } from "@/types/emr";
 
 export function HomeContent({ workspaceId }: ShellComponentProps) {
-  const searchParams = useSearchParams();
   const { hydrated, session, hydrate } = useAuthClient();
-  const view = searchParams.get("view");
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
-
-  if (view === "demo") {
-    return <DemoLauncher />;
-  }
 
   if (!hydrated) {
     return <HomeLoadingState />;

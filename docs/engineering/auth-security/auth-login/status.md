@@ -1008,6 +1008,7 @@ mock auth 기반 `/login`과 app guard를 실제 Supabase Auth 구조로 전환 
 - Documented mock/local mode versus Supabase mode reader fallback behavior.
 - Verified focused sales demo fallback coverage, typecheck, combined reception + sales demo regression, secret scan, and docs check.
 - Did not add new demo scenarios, change sales copy, implement billing/chart persistence, touch remote Supabase, deploy production, or access real data.
+- Superseded on 2026-06-17 by DEMO-DATA-PR-002 cleanup direction: Cheongdam seed verification is the current operating proof, and legacy Sales Demo fallback is cleanup debt rather than preservation policy.
 
 검증 결과와 세부 결정은 `docs/completed/reception/2026-05-19-den-64-sales-demo-mock-fallback-preservation-report.html`에 남긴다.
 

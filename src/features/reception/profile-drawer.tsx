@@ -83,6 +83,7 @@ import {
   mockCsHistories,
   mockStaffUsers,
 } from "@/mocks/emr-domain";
+import { resolveWorkspaceRouteParam } from "@/lib/emr-domain/demo-workspaces";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
   CsHistoryChannel,
@@ -2672,8 +2673,7 @@ function RegistrationModeCard({
 }
 
 function getRegistrationWorkspaceId(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0] ?? "clair-demo";
-  return value ?? "clair-demo";
+  return resolveWorkspaceRouteParam(value);
 }
 
 function getReceptionRegistrationDemoActorId(role?: string) {

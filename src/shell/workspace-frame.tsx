@@ -61,7 +61,10 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
                 : "상세 정보";
   const drawerSubtitle =
     activeDrawer?.subtitle ??
-    (activeDrawer?.type === "reception-encounter" ? undefined : activeDrawer?.id);
+    (activeDrawer?.type === "reception-encounter" ||
+    activeDrawer?.type === "reception-form"
+      ? undefined
+      : activeDrawer?.id);
   const drawerWidth =
     activeDrawer?.type === "hospital-order" || CommonProfileDrawer
       ? SHELL_LAYOUT.drawer.largeWidth

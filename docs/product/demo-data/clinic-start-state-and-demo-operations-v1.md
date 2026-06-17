@@ -1,7 +1,7 @@
 ---
 title: "Clinic Start State and Demo Operations"
 status: "draft"
-updated: "2026-06-16"
+updated: "2026-06-17"
 owner: "product"
 source_request: "2026-06-11 owner intake"
 ---
@@ -43,7 +43,7 @@ The app needs explicit data modes so staff and reviewers do not confuse old fixt
 | --- | --- | --- |
 | Empty clinic seed | New clinic baseline with master data but no daily work | Preferred default demo state |
 | Scenario replay | Creates a bounded set of appointments, encounters, orders, and billing events for QA or demo script | Deferred; do not build in the first implementation pass |
-| Legacy/Sales demo fixture | Preserves older scripted demo coverage only if still needed for regression | Developer/test opt-in only, never default |
+| Legacy/Sales demo fixture | Older scripted demo coverage that can be removed once Cheongdam seed coverage replaces it | Developer/test opt-in only while cleanup is in progress, never default |
 | Local-first working state | Stores interactions created during local use | Resettable |
 | Remote staging/live | Validates remote persistence or live infrastructure | Approval-gated |
 
@@ -53,7 +53,7 @@ Old fixture records, legacy log-style records, and past dummy daily work must no
 
 As of 2026-06-12, the default prepared clinic workspace is `workspace-clair-cheongdam`. Its reception start state is scoped to the current operating date and must not merge `clair-demo` legacy appointment, encounter, queue, or fixed May 2026 fixture data.
 
-The legacy Sales Demo workspace remains `clair-demo`. It is an explicit opt-in regression/demo path and may continue to show `2026-05-01` fixture work such as the Kong/Nabi/Coco scenario records.
+The legacy Sales Demo workspace remains `clair-demo` only as a cleanup target. It is not the default demo path and is no longer a preservation requirement. Remaining `2026-05-01` fixture work such as Kong/Nabi/Coco should be removed or isolated once Cheongdam seed/API coverage replaces the specific regression value.
 
 Cheongdam reception read states now keep loading, error, retry, and empty-copy hooks separate from legacy fixture fallback. If queue or calendar reads fail, the UI should keep the prepared empty-clinic state, expose retry actions, and avoid telling reviewers that `clair-demo` local demo data is being maintained. Session-created reception drafts must carry the active workspace/date rather than defaulting to `clair-demo`.
 
@@ -186,6 +186,7 @@ The PRD/docs viewer should eventually expose scenario-level planning for epics, 
 
 ## Changelog
 
+- 2026-06-17: Updated the data-mode policy after owner direction: `workspace-clair-cheongdam` is the default seed-backed operating proof, while legacy `clair-demo` Sales Demo fixtures are cleanup candidates rather than preserved fallback requirements.
 - 2026-06-16: Added DEN-507 Cheongdam synthetic demo session reset contract and implementation boundary. Reset is admin-only, Cheongdam-only, server/API-backed for Supabase, local-only in mock mode, and preserves Cheongdam seed master/config data while deleting daily-work, billing checkout flow state, and safely identified generated registration records. Staging replay/readback confirmed the synthetic reception/chart/fulfillment/billing marker was removed and seed guardians/patients stayed at 25/25.
 - 2026-06-12: Added DEN-483 rework boundary for seeded patient/guardian usage in Cheongdam walk-in reception creation. The reception drawer now preserves a selected live lookup patient through the display-label re-search, so the generated walk-in payload keeps seeded patient and guardian IDs. Staging write-through creation remains approval-gated because it would create active daily work in the empty-clinic baseline.
 - 2026-06-12: Added DEN-468/DEN-491 implementation boundary for Cheongdam work modules and shell surfaces. Home, chart, lab, imaging, dispensing/treatment, inpatient, billing, global command search, and global notification badge/drawer now use prepared empty-clinic states for `workspace-clair-cheongdam`, while staging has synthetic master data for staff, guardians, patients, service/order catalog, pricing, and order sets with zero active daily work.

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Candidate 8 Fixed Clinical Fixture Assertion Reduction 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.3;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 0.1rem 0.3rem;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEMO-DATA-PR-002 Candidate 8 Fixed Clinical Fixture Assertion Reduction</h1>
+    <p><strong>작성일:</strong> 2026-06-17</p>
+
+    <h2>요청</h2>
+    <p>
+      남은 Sales Demo/Kong fixture coverage를 더 줄이기 위해, broad Sales Demo flow test가 고정 임상 문구를
+      현재 제품 검증처럼 주장하지 않도록 정리했다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        <code>tests/sales-demo-flow.spec.ts</code>에서 fixed Kong clinical content assertion을 제거했다:
+        chart 진단/오더 문구, lab <code>WBC 21.4</code>, imaging fixed impression 문구.
+      </li>
+      <li>
+        같은 테스트는 chart, lab, imaging, billing의 explicit <code>scenario=kong-vomit</code> route가 열리는지
+        확인하는 fixture-contract 역할만 유지한다.
+      </li>
+      <li>
+        <code>tests/cheongdam-seed-workflow-replacement.spec.ts</code>에 Cheongdam chart patient context와 imaging
+        work-item patient visibility assertion을 추가했다.
+      </li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      <code>급성 위장관염</code>, <code>WBC 21.4</code>, fixed imaging impression 같은 값은 Sales Demo fixture의
+      고정 데이터다. 이 값이 broad flow test에 남아 있으면 현재 운영 proof가 Cheongdam seed/API가 아니라 old fixture에
+      기대는 것처럼 보인다. 이번 작업은 broad flow에서 그 신호를 제거하고, Cheongdam seed/API 데이터가 각 모듈에
+      도달하는 신호를 강화했다.
+    </p>
+
+    <h2>미변경 범위</h2>
+    <ul>
+      <li><code>kong-vomit</code> scenario registry와 fixed May 2026 fixture data는 아직 삭제하지 않았다.</li>
+      <li>
+        <code>tests/chart.spec.ts</code>, <code>tests/lab-imaging.spec.ts</code>, <code>tests/app-shell.spec.ts</code>
+        같은 module-specific Kong assertions는 이번 pass에서 삭제하지 않았다.
+      </li>
+      <li>원격 Supabase mutation, staging replay, production deploy는 수행하지 않았다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>git diff --check</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code>: 통과</li>
+      <li><code>npm run lint</code>: 통과. 기존 경고 5개만 남음.</li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3120 npx playwright test tests/cheongdam-seed-workflow-replacement.spec.ts tests/sales-demo-flow.spec.ts --reporter=line --workers=1</code>:
+        4개 통과
+      </li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 pass는 module-specific Kong assertions를 다룬다. 특히 <code>tests/lab-imaging.spec.ts</code>와
+      <code>tests/chart.spec.ts</code>에 남은 fixed Kong detail checks를 Cheongdam seed/API equivalent로 나눈 뒤,
+      남는 explicit fixture checks만 유지하거나 삭제 후보로 넘긴다.
+    </p>
+  </body>
+</html>

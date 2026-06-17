@@ -67,7 +67,10 @@ import {
   type BillingInvoiceStatusTransitionTarget,
 } from "@/features/billing/store";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
-import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  isLegacySalesDemoWorkspace,
+  resolveWorkspaceRouteParam,
+} from "@/lib/emr-domain/demo-workspaces";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
@@ -816,11 +819,8 @@ function useBillingWorkspaceData() {
   const payments = useBillingStore((state) => state.payments);
   const selectedInvoiceId = useBillingStore((state) => state.selectedInvoiceId);
   const scenario = getDemoScenarioFromParams(searchParams);
-  const workspaceId =
-    typeof params.workspaceId === "string"
-      ? params.workspaceId
-      : params.workspaceId?.[0] ?? "clair-demo";
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
   const queryEncounterId = searchParams.get("encounterId") ?? scenario?.encounterId;
   const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
@@ -837,17 +837,17 @@ function useBillingWorkspaceData() {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const workspaceInvoices = preparedEmptyClinic ? emptyBillingInvoices : invoices;
-  const workspaceInvoiceLines = preparedEmptyClinic
-    ? emptyBillingInvoiceLines
-    : invoiceLines;
-  const workspacePayments = preparedEmptyClinic ? emptyBillingPayments : payments;
+  const workspaceInvoices = legacySalesDemo ? invoices : emptyBillingInvoices;
+  const workspaceInvoiceLines = legacySalesDemo
+    ? invoiceLines
+    : emptyBillingInvoiceLines;
+  const workspacePayments = legacySalesDemo ? payments : emptyBillingPayments;
   const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
   const baseDetail =
     getBillingDetail(effectiveInvoiceId, workspaceInvoices, workspaceInvoiceLines, workspacePayments) ??
-    (preparedEmptyClinic
-      ? null
-      : getBillingDetail("invoice-coco-260501", workspaceInvoices, workspaceInvoiceLines, workspacePayments));
+    (legacySalesDemo
+      ? getBillingDetail("invoice-coco-260501", workspaceInvoices, workspaceInvoiceLines, workspacePayments)
+      : null);
   const effectiveInvoiceLines =
     baseDetail && persistedCandidates.encounterId === baseDetail.encounter.id
       ? mergeInvoiceCandidateLines(
@@ -881,14 +881,14 @@ function useBillingWorkspaceData() {
       effectiveInvoiceLines,
       workspacePayments,
     ) ??
-    (preparedEmptyClinic
-      ? null
-      : getBillingDetail(
+    (legacySalesDemo
+      ? getBillingDetail(
           "invoice-coco-260501",
           effectiveInvoices,
           effectiveInvoiceLines,
           workspacePayments,
-        ));
+        )
+      : null);
   const baseEncounterId = baseDetail?.encounter.id;
   const baseEncounterWorkspaceId = baseDetail?.encounter.workspaceId;
   const baseInvoiceId = baseDetail?.invoice.id;
@@ -1038,6 +1038,52 @@ function useBillingWorkspaceData() {
 
 function getBillingBalance(detail: BillingDetail) {
   return Math.max(0, detail.invoice.totalAmount - detail.paidAmount);
+}
+
+function createCheckoutGroupFromBillingDetail(detail: BillingDetail): BillingCheckoutGroup {
+  return {
+    encounter: detail.encounter,
+    guardian: detail.guardian,
+    invoice: detail.invoice,
+    lines: detail.invoiceLines.map((line) => ({
+      line,
+      source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
+    })),
+    paidAmount: detail.paidAmount,
+    patient: detail.patient,
+    totalAmount: detail.invoiceLines.reduce(
+      (total, line) => total + line.lineTotal,
+      0,
+    ),
+  };
+}
+
+function mergeBillingDetailStoreSnapshot({
+  detail,
+  invoiceLines,
+  invoices,
+  payments,
+}: {
+  detail: BillingDetail;
+  invoiceLines: InvoiceLine[];
+  invoices: Invoice[];
+  payments: Payment[];
+}): BillingDetail {
+  const invoice = invoices.find((item) => item.id === detail.invoice.id) ?? detail.invoice;
+  const persistedLines = invoiceLines.filter((line) => line.invoiceId === invoice.id);
+  const persistedPayments = payments.filter((payment) => payment.invoiceId === invoice.id);
+  const effectiveInvoiceLines = persistedLines.length ? persistedLines : detail.invoiceLines;
+  const effectivePayments = persistedPayments.length ? persistedPayments : detail.payments;
+
+  return {
+    ...detail,
+    invoice,
+    invoiceLines: effectiveInvoiceLines,
+    lineCount: effectiveInvoiceLines.length,
+    lineSummary: getBillingFlowLabel(effectiveInvoiceLines),
+    paidAmount: getInvoicePaidAmount(invoice.id, effectivePayments),
+    payments: effectivePayments,
+  };
 }
 
 function getBillingCheckoutGroupBalance(group: BillingCheckoutGroup) {
@@ -1223,16 +1269,16 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<
     Set<BillingFilter>
   >(() => new Set());
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const groupedRows = useMemo(
     () =>
       billingQueueGroups.map((group) => ({
         ...group,
-        rows: preparedEmptyClinic
-          ? []
-          : getBillingQueueRows(invoices, invoiceLines, payments, group.value),
+        rows: legacySalesDemo
+          ? getBillingQueueRows(invoices, invoiceLines, payments, group.value)
+          : [],
       })),
-    [invoiceLines, invoices, payments, preparedEmptyClinic],
+    [invoiceLines, invoices, payments, legacySalesDemo],
   );
   const totalRowCount = groupedRows.reduce(
     (total, group) => total + group.rows.length,
@@ -1259,7 +1305,7 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
       />
-      <EmrDateNavigator dateLabel={preparedEmptyClinic ? "오늘" : "26.05.01 (금)"} todayLabel="오늘" />
+      <EmrDateNavigator dateLabel={legacySalesDemo ? "26.05.01 (금)" : "오늘"} todayLabel="오늘" />
       <EmrListHeader
         label="전체"
         count={totalRowCount}
@@ -2510,9 +2556,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
   const {
     apiState,
     detail,
-    invoiceLines,
     invoices,
-    payments,
     queryInvoiceId,
     selectedInvoiceId,
   } =
@@ -2529,6 +2573,9 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     (state) => state.applyPaymentStatusSnapshot,
   );
   const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
+  const storedInvoiceLines = useBillingStore((state) => state.invoiceLines);
+  const storedInvoices = useBillingStore((state) => state.invoices);
+  const storedPayments = useBillingStore((state) => state.payments);
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );
@@ -2549,73 +2596,57 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     useState<BillingApiRequestState>(billingApiIdleState);
   const [checkoutReloadKey, setCheckoutReloadKey] = useState(0);
   const retryCheckout = () => setCheckoutReloadKey((current) => current + 1);
+  const effectiveDetail = useMemo(
+    () =>
+      detail
+        ? mergeBillingDetailStoreSnapshot({
+            detail,
+            invoiceLines: storedInvoiceLines,
+            invoices: storedInvoices,
+            payments: storedPayments,
+          })
+        : null,
+    [detail, storedInvoiceLines, storedInvoices, storedPayments],
+  );
   const checkoutGroups = useMemo(() => {
-    const detailInvoiceIsOutsideStore = detail
-      ? !invoices.some((invoice) => invoice.id === detail.invoice.id)
+    const detailInvoiceIsOutsideStore = effectiveDetail
+      ? !storedInvoices.some((invoice) => invoice.id === effectiveDetail.invoice.id)
       : false;
-    if (detailInvoiceIsOutsideStore && detail) {
-      return [
-        {
-          encounter: detail.encounter,
-          guardian: detail.guardian,
-          invoice: detail.invoice,
-          lines: detail.invoiceLines.map((line) => ({
-            line,
-            source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
-          })),
-          paidAmount: detail.paidAmount,
-          patient: detail.patient,
-          totalAmount: detail.invoiceLines.reduce(
-            (total, line) => total + line.lineTotal,
-            0,
-          ),
-        },
-      ];
+    if (detailInvoiceIsOutsideStore && effectiveDetail) {
+      return [createCheckoutGroupFromBillingDetail(effectiveDetail)];
     }
 
     const groups = getBillingCheckoutGroups({
-      invoiceLines,
-      invoices,
-      payments,
+      invoiceLines: storedInvoiceLines,
+      invoices: storedInvoices,
+      payments: storedPayments,
       selectedInvoiceIds,
-    });
+    }).filter((group) => group.invoice.workspaceId === effectiveDetail?.invoice.workspaceId);
 
-    if (groups.length || !detail) return groups;
+    if (groups.length || !effectiveDetail) return groups;
 
-    return [
-      {
-        encounter: detail.encounter,
-        guardian: detail.guardian,
-        invoice: detail.invoice,
-        lines: detail.invoiceLines.map((line) => ({
-          line,
-          source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
-        })),
-        paidAmount: detail.paidAmount,
-        patient: detail.patient,
-        totalAmount: detail.invoiceLines.reduce(
-          (total, line) => total + line.lineTotal,
-          0,
-        ),
-      },
-    ];
-  }, [detail, invoiceLines, invoices, payments, selectedInvoiceIds]);
+    return [createCheckoutGroupFromBillingDetail(effectiveDetail)];
+  }, [effectiveDetail, selectedInvoiceIds, storedInvoiceLines, storedInvoices, storedPayments]);
+  const checkoutInvoiceIds = useMemo(
+    () => checkoutGroups.map((group) => group.invoice.id),
+    [checkoutGroups],
+  );
   const checkoutTableLines = useMemo(
     () =>
       checkoutGroups.length
         ? checkoutGroups.flatMap((group) =>
             group.lines.map((checkoutLine) => checkoutLine.line),
           )
-        : (detail?.invoiceLines ?? []),
-    [checkoutGroups, detail?.invoiceLines],
+        : (effectiveDetail?.invoiceLines ?? []),
+    [checkoutGroups, effectiveDetail?.invoiceLines],
   );
-  const checkoutWorkspaceId = checkoutGroups[0]?.invoice.workspaceId ?? detail?.invoice.workspaceId;
+  const checkoutWorkspaceId = checkoutGroups[0]?.invoice.workspaceId ?? effectiveDetail?.invoice.workspaceId;
   const effectiveCheckoutState =
-    !checkoutWorkspaceId || selectedInvoiceIds.length === 0
+    !checkoutWorkspaceId || checkoutInvoiceIds.length === 0
       ? billingApiEmptyState
       : checkoutState;
   useEffect(() => {
-    if (!checkoutWorkspaceId || selectedInvoiceIds.length === 0) {
+    if (!checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
       return;
     }
 
@@ -2625,7 +2656,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
       setCheckoutState(billingApiLoadingState);
       const result = await prepareGuardianCheckout({
         actorHeaders,
-        invoiceIds: selectedInvoiceIds,
+        invoiceIds: checkoutInvoiceIds,
         paymentMethod: "card",
         workspaceId: resolvedWorkspaceId,
       });
@@ -2646,7 +2677,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     return () => {
       cancelled = true;
     };
-  }, [actorHeaders, checkoutReloadKey, checkoutWorkspaceId, selectedInvoiceIds]);
+  }, [actorHeaders, checkoutInvoiceIds, checkoutReloadKey, checkoutWorkspaceId]);
   useEffect(() => {
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
 
@@ -2657,7 +2688,7 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     setFilter(getBillingFilterForInvoice(invoice));
   }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId, setFilter]);
 
-  if (!detail) {
+  if (!effectiveDetail) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
         수납 목록에서 청구서를 선택해 주세요.
@@ -2669,15 +2700,16 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     lineId: string,
     quantity: number,
   ) {
-    if (!detail) return;
+    if (!effectiveDetail) return;
     const safeQuantity = Math.max(1, Math.round(quantity * 1000) / 1000 || 1);
     const targetLine =
       checkoutTableLines.find((line) => line.id === lineId) ??
-      detail.invoiceLines.find((line) => line.id === lineId);
+      effectiveDetail.invoiceLines.find((line) => line.id === lineId);
     const targetInvoice =
       targetLine
-        ? invoices.find((invoice) => invoice.id === targetLine.invoiceId)
-        : detail.invoice;
+        ? storedInvoices.find((invoice) => invoice.id === targetLine.invoiceId) ??
+          invoices.find((invoice) => invoice.id === targetLine.invoiceId)
+        : effectiveDetail.invoice;
     if (!targetLine || !targetInvoice) return;
 
     updateInvoiceLineQuantity(lineId, safeQuantity);
@@ -2703,7 +2735,10 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
     invoiceId: string,
     target: BillingInvoiceStatusTransitionTarget,
   ) {
-    const targetInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+    const targetInvoice =
+      storedInvoices.find((invoice) => invoice.id === invoiceId) ??
+      invoices.find((invoice) => invoice.id === invoiceId) ??
+      (effectiveDetail?.invoice.id === invoiceId ? effectiveDetail.invoice : undefined);
     if (!targetInvoice || !invoiceAssignees[invoiceId]) return;
 
     setLinePersistenceState("saving");
@@ -2731,13 +2766,13 @@ export function BillingContent({ hasRightPanel }: ShellComponentProps) {
       <ScrollArea className="min-h-0 flex-1">
         <div className="grid gap-4 p-4">
           <BillingTitleCard
-            detail={detail}
+            detail={effectiveDetail}
             hasRightPanel={Boolean(hasRightPanel)}
           />
           <BillingApiStateNotice apiState={apiState} />
           <SelectedCheckoutWorkspace
             checkoutSession={
-              selectedInvoiceIds.length ? checkoutSession : undefined
+              checkoutInvoiceIds.length ? checkoutSession : undefined
             }
             checkoutState={effectiveCheckoutState}
             groups={checkoutGroups}
@@ -2876,20 +2911,47 @@ export function BillingRightPanel() {
   const [adjustmentReason, setAdjustmentReason] = useState("");
   const [checkoutSession, setCheckoutSession] =
     useState<GuardianCheckoutSessionSnapshot>();
+  const effectiveDetail = useMemo(
+    () =>
+      detail
+        ? mergeBillingDetailStoreSnapshot({
+            detail,
+            invoiceLines,
+            invoices,
+            payments,
+          })
+        : null,
+    [detail, invoiceLines, invoices, payments],
+  );
+  const selectedCheckoutGroups = useMemo(() => {
+    if (!effectiveDetail) return [];
+
+    return getBillingCheckoutGroups({
+      invoiceLines,
+      invoices,
+      payments,
+      selectedInvoiceIds,
+    }).filter((group) => group.invoice.workspaceId === effectiveDetail.invoice.workspaceId);
+  }, [effectiveDetail, invoiceLines, invoices, payments, selectedInvoiceIds]);
+  const summaryGroups = useMemo(() => {
+    if (selectedCheckoutGroups.length) return selectedCheckoutGroups;
+    return effectiveDetail ? [createCheckoutGroupFromBillingDetail(effectiveDetail)] : [];
+  }, [effectiveDetail, selectedCheckoutGroups]);
+  const checkoutInvoiceIds = useMemo(
+    () => summaryGroups.map((group) => group.invoice.id),
+    [summaryGroups],
+  );
   const checkoutWorkspaceId =
-    selectedInvoiceIds
-      .map((invoiceId) => invoices.find((invoice) => invoice.id === invoiceId)?.workspaceId)
-      .find((workspaceId): workspaceId is string => Boolean(workspaceId)) ??
-    detail?.invoice.workspaceId;
+    summaryGroups[0]?.invoice.workspaceId ?? effectiveDetail?.invoice.workspaceId;
   useEffect(() => {
-    if (!checkoutWorkspaceId || selectedInvoiceIds.length === 0) return;
+    if (!checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
 
     const resolvedWorkspaceId = checkoutWorkspaceId;
     let cancelled = false;
     async function prepareSelectedCheckout() {
       const result = await prepareGuardianCheckout({
         actorHeaders,
-        invoiceIds: selectedInvoiceIds,
+        invoiceIds: checkoutInvoiceIds,
         paymentMemo,
         paymentMethod,
         workspaceId: resolvedWorkspaceId,
@@ -2906,39 +2968,14 @@ export function BillingRightPanel() {
     };
   }, [
     actorHeaders,
+    checkoutInvoiceIds,
     checkoutWorkspaceId,
     paymentMemo,
     paymentMethod,
-    selectedInvoiceIds,
   ]);
 
-  if (!detail) return null;
+  if (!effectiveDetail) return null;
 
-  const selectedCheckoutGroups = getBillingCheckoutGroups({
-    invoiceLines,
-    invoices,
-    payments,
-    selectedInvoiceIds,
-  });
-  const summaryGroups = selectedCheckoutGroups.length
-    ? selectedCheckoutGroups
-    : [
-        {
-          encounter: detail.encounter,
-          guardian: detail.guardian,
-          invoice: detail.invoice,
-          lines: detail.invoiceLines.map((line) => ({
-            line,
-            source: line.orderId ? "chart_order" as const : "billing_add_on" as const,
-          })),
-          paidAmount: detail.paidAmount,
-          patient: detail.patient,
-          totalAmount: detail.invoiceLines.reduce(
-            (total, line) => total + line.lineTotal,
-            0,
-          ),
-        },
-      ];
   const payableSummaryGroups = summaryGroups.filter(
     (group) => !isCheckoutSummaryExcludedInvoice(group.invoice),
   );
@@ -2967,7 +3004,10 @@ export function BillingRightPanel() {
           invoices,
           invoiceLines,
           payments,
-        )
+        ) ??
+        (payableSummaryGroups[0].invoice.id === effectiveDetail.invoice.id
+          ? effectiveDetail
+          : null)
       : null;
   const actionBalance = actionDetail ? getBillingBalance(actionDetail) : 0;
   const actionInvoiceId = actionDetail?.invoice.id;
@@ -3211,7 +3251,7 @@ export function BillingRightPanel() {
             <SummaryLine label="영수증 금액" value="미연동" muted />
             <SummaryLine
               label="VAT 세부"
-              value={formatAmount(detail.invoice.taxAmount)}
+              value={formatAmount(effectiveDetail.invoice.taxAmount)}
               muted
             />
             <SummaryLine label="부분 결제 입력" value="미지원" muted />
@@ -3331,7 +3371,7 @@ export function BillingRightPanel() {
       <BillingFinancialPreflightDialog
         action={pendingFinancialAction}
         balance={actionBalance}
-        detail={actionDetail ?? detail}
+        detail={actionDetail ?? effectiveDetail}
         paymentMethod={paymentMethod}
         unpaidReason={unpaidReason}
         confirmationState={confirmationState}

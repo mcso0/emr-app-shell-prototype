@@ -127,7 +127,9 @@ import {
   getSpeciesLabel,
 } from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
-import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  isLegacySalesDemoWorkspace,
+} from "@/lib/emr-domain/demo-workspaces";
 import {
   formatOperatingShortTime,
   formatShortOperatingDate,
@@ -855,10 +857,10 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const mockItems = useMemo(
-    () => (preparedEmptyClinic ? emptyChartQueueItems : getChartQueueItems()),
-    [preparedEmptyClinic],
+    () => (legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems),
+    [legacySalesDemo],
   );
   const liveItems = useMemo(
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
@@ -980,7 +982,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
 
   return (
       <EmrOrderQueueSidePanel
-      dateLabel={preparedEmptyClinic ? "오늘" : "26.05.05 (화)"}
+      dateLabel={legacySalesDemo ? "26.05.05 (화)" : "오늘"}
       filterAriaLabel="진료 대기 유형 필터"
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
@@ -1012,7 +1014,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback ||
       selectedEncounterId === demoScenarioEncounterId);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
@@ -1085,7 +1087,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback ||
       selectedEncounterId === demoScenarioEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
@@ -2804,7 +2806,7 @@ export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback ||
       selectedEncounterId === demoScenarioEncounterId);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
@@ -5082,7 +5084,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   );
   const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    !isPreparedEmptyClinicWorkspace(workspaceId) &&
+    isLegacySalesDemoWorkspace(workspaceId) &&
     (allowStoreMockFallback ||
       selectedEncounterId === demoScenarioEncounterId);
   const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();

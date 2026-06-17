@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 import {
   getReceptionPatientSummaries,
   getReceptionQueueRows,
   getTodayAppointments,
 } from "../src/features/reception/data";
+import { getHomeMockData } from "../src/features/home/home.mock";
 import {
   formatKoreanOperatingDateLabel,
   getWorkspaceOperatingDate,
@@ -12,6 +14,8 @@ import {
 import {
   LEGACY_SALES_DEMO_WORKSPACE_ID,
   PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+  resolveWorkspacePathname,
+  resolveWorkspaceRouteParam,
 } from "../src/lib/emr-domain/demo-workspaces";
 import { MOCK_AUTH_STORAGE_KEY } from "../src/features/auth/mock-session";
 
@@ -31,7 +35,7 @@ test("Cheongdam prepared clinic scope does not inherit legacy daily work", () =>
   ).toEqual([]);
 });
 
-test("legacy Sales Demo scope still exposes the fixture day explicitly", () => {
+test("legacy Sales Demo scope exposes the fixture day only when addressed explicitly", () => {
   const appointments = getTodayAppointments([], [], {
     workspaceId: LEGACY_SALES_DEMO_WORKSPACE_ID,
   });
@@ -43,6 +47,80 @@ test("legacy Sales Demo scope still exposes the fixture day explicitly", () => {
     "appointment-nabi-260501"
   );
   expect(queueRows.map((row) => row.patient.name)).toContain("코코");
+});
+
+test("Home entry links stay scoped to the active workspace", () => {
+  const workspaceId = "workspace-demo-active";
+  const data = getHomeMockData("owner", workspaceId);
+  const hrefs = [
+    ...data.tasks.map((task) => task.actionHref),
+    ...data.hospitalTasks.map((task) => task.actionHref),
+    ...data.emptyLaunchers.map((launcher) => launcher.href),
+    ...data.flowSummary.map((item) => item.href),
+    ...data.roleNextActions.flatMap((hypothesis) =>
+      hypothesis.actions.map((action) => action.actionHref)
+    ),
+  ];
+
+  expect(hrefs.length).toBeGreaterThan(0);
+  expect(hrefs.some((href) => href.includes("/w/clair-demo"))).toBe(false);
+  expect(hrefs.every((href) => href.startsWith(`/w/${workspaceId}/`))).toBe(true);
+});
+
+test("missing workspace fallbacks resolve to Cheongdam seed verification scope", () => {
+  expect(resolveWorkspaceRouteParam(undefined)).toBe(PREPARED_EMPTY_CLINIC_WORKSPACE_ID);
+  expect(resolveWorkspaceRouteParam([])).toBe(PREPARED_EMPTY_CLINIC_WORKSPACE_ID);
+  expect(resolveWorkspaceRouteParam("")).toBe(PREPARED_EMPTY_CLINIC_WORKSPACE_ID);
+  expect(resolveWorkspacePathname(undefined)).toBe(PREPARED_EMPTY_CLINIC_WORKSPACE_ID);
+  expect(resolveWorkspacePathname("/")).toBe(PREPARED_EMPTY_CLINIC_WORKSPACE_ID);
+
+  expect(resolveWorkspaceRouteParam(LEGACY_SALES_DEMO_WORKSPACE_ID)).toBe(
+    LEGACY_SALES_DEMO_WORKSPACE_ID
+  );
+  expect(resolveWorkspacePathname(`/w/${LEGACY_SALES_DEMO_WORKSPACE_ID}/reception`)).toBe(
+    LEGACY_SALES_DEMO_WORKSPACE_ID
+  );
+});
+
+test("workflow module fallback fixtures are explicit Sales Demo only", () => {
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+  const labImagingModule = readFileSync("src/features/lab-imaging/module.tsx", "utf8");
+  const dispensingModule = readFileSync("src/features/dispensing/module.tsx", "utf8");
+  const billingModule = readFileSync("src/features/billing/module.tsx", "utf8");
+
+  expect(chartModule).toContain("isLegacySalesDemoWorkspace(workspaceId) &&");
+  expect(chartModule).not.toContain("!isPreparedEmptyClinicWorkspace(workspaceId) &&");
+
+  expect(labImagingModule).toContain(
+    "{ allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) }"
+  );
+  expect(labImagingModule).toContain("allowFixtureItems: legacySalesDemo");
+  expect(labImagingModule).not.toContain(
+    "{ allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) }"
+  );
+  expect(labImagingModule).not.toContain(
+    "isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getLabWorkItems()"
+  );
+  expect(labImagingModule).not.toContain(
+    "isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getImagingWorkItems()"
+  );
+
+  expect(dispensingModule).toContain(
+    "allowFixtureItems: isLegacySalesDemoWorkspace(workspaceId)"
+  );
+  expect(dispensingModule).toContain(
+    "allowLegacyFixtureFallback ? getSelectedOrderQueueItem"
+  );
+
+  expect(billingModule).toContain(
+    "const workspaceInvoices = legacySalesDemo ? invoices : emptyBillingInvoices;"
+  );
+  expect(billingModule).toContain(
+    'dateLabel={legacySalesDemo ? "26.05.01 (금)" : "오늘"}'
+  );
+  expect(billingModule).not.toContain(
+    "preparedEmptyClinic ? emptyBillingInvoices : invoices"
+  );
 });
 
 test("Cheongdam reception screen starts from current date and no visible fixture cards", async ({
@@ -235,7 +313,7 @@ test("Cheongdam admin can invoke synthetic demo session reset from workspace top
     .toBeNull();
 });
 
-test("legacy Sales Demo route keeps the fixed fixture date and cards", async ({
+test("legacy Sales Demo route exposes the fixed fixture date and cards only on its route", async ({
   page,
 }) => {
   await page.goto(`/w/${LEGACY_SALES_DEMO_WORKSPACE_ID}/reception?modulePanel=open`);

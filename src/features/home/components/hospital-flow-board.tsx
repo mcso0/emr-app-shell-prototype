@@ -5,11 +5,14 @@ import { ChevronRightIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { HomePanelCard } from "@/features/home/components/home-panel-card";
+import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "@/lib/emr-domain/demo-workspaces";
 import type { HospitalFlowItem } from "@/features/home/home.types";
 
 type HospitalFlowBoardProps = {
   items: HospitalFlowItem[];
 };
+
+const fallbackHomeHref = `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/home`;
 
 export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
   return (
@@ -34,7 +37,7 @@ export function HospitalFlowBoard({ items }: HospitalFlowBoardProps) {
             return (
               <Link
                 key={item.status}
-                href={item.actionHref ?? "/w/clair-demo/home"}
+                href={item.actionHref ?? fallbackHomeHref}
                 className={cn(
                   "group flex min-h-[126px] flex-col justify-between rounded-[var(--clair-radius-md)] border p-2.5 transition-colors hover:bg-[var(--emr-state-hover)]",
                   hasDelay

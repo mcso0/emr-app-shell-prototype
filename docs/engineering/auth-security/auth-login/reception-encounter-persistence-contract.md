@@ -201,13 +201,13 @@ Reception-specific denial reasons may include:
 | `workspace_membership_inactive` | Actor membership is not active. |
 | `permission_missing` | Actor lacks the required permission. |
 
-## Mock Fallback And Demo Preservation
+## Mock Fallback And Historical Demo Compatibility
 
-Project 03 must preserve:
+Project 03 originally kept these local compatibility paths while moving reception decisions behind server routes. As of 2026-06-17, Cheongdam seed verification is the current operating proof and DEMO-DATA-PR-002 owns legacy Sales Demo cleanup.
 
 - `NEXT_PUBLIC_AUTH_MODE=mock` local demo behavior.
 - Existing `draftCheckIns` session-only behavior until each route-backed handoff replaces it.
-- Sales demo golden path and `kong-vomit` query context.
+- Legacy Sales Demo fixture route and `kong-vomit` query context.
 - Mock patient, guardian, appointment, encounter, queue, and message fixture readability.
 
 Supabase mode must not silently fall back to browser storage when a protected live route has no valid server session.

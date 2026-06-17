@@ -40,7 +40,7 @@ Extend the post-seed UI/API adoption phase past reception/chart by proving downs
   - treatment/dispensing fulfillment route transitions
   - billing checkout UI boundary
   - hospital-admin audit review UI boundary
-- Preserve existing Sales Demo fixture fallback.
+- Leave legacy Sales Demo fixture cleanup to a later cleanup item; this historical PR only proves the downstream UI/API boundary.
 
 ## Out Of Scope
 

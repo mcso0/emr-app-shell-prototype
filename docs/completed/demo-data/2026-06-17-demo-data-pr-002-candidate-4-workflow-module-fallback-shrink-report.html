@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Candidate 4 Workflow Module Fallback Shrink 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.3;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 0.1rem 0.3rem;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEMO-DATA-PR-002 Candidate 4 Workflow Module Fallback Shrink</h1>
+    <p><strong>작성일:</strong> 2026-06-17</p>
+
+    <h2>요청</h2>
+    <p>
+      리팩터링 후보 4번인 workflow module의 <code>allowMockFallback</code> 및 fixture fallback 경로를 줄였다.
+      목적은 Cheongdam seed/API 검증이나 일반 workspace 검증이 legacy fixture 성공처럼 보이지 않게 하는 것이다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        chart의 mock bundle fallback, queue fixture, fixed fixture date label을 명시적 legacy Sales Demo workspace에서만
+        허용하도록 변경했다.
+      </li>
+      <li>
+        lab/imaging의 result/study detail fallback, queue fixture, history fixture, right-panel fixture summary를
+        <code>clair-demo</code>에서만 허용하도록 좁혔다.
+      </li>
+      <li>
+        dispensing/treatment의 queue fixture, selected fixture fallback, history fixture, 기본 order table fixture cloning을
+        explicit Sales Demo fallback으로 제한했다.
+      </li>
+      <li>
+        billing의 invoice/detail fallback, queue rows, invoice/payment store fallback, fixed May 2026 side-panel date를
+        explicit Sales Demo fallback으로 제한했다.
+      </li>
+      <li>
+        workflow modules가 다시 <code>!isPreparedEmptyClinicWorkspace(workspaceId)</code> 기준으로 broad mock fallback을
+        열지 못하도록 회귀 테스트를 추가했다.
+      </li>
+    </ul>
+
+    <h2>중요한 미변경 범위</h2>
+    <ul>
+      <li>명시적 Sales Demo launcher, fixed scenario route, <code>kong-vomit</code> helpers는 삭제하지 않았다.</li>
+      <li>server-core mock gateways와 route-contract fixture는 변경하지 않았다.</li>
+      <li>원격 Supabase mutation, staging replay, production deploy는 수행하지 않았다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>git diff --check</code>: 통과</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3113 npx playwright test tests/demo-reality-start-state.spec.ts -g "workflow module fallback fixtures|Cheongdam work modules do not render legacy active-work fixtures" --reporter=line --workers=1</code>: 통과
+      </li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3114 npx playwright test tests/lab-imaging.spec.ts -g "lab workspace renders result input|imaging workspace renders reading|Cheongdam lab workspace renders live|Cheongdam imaging workspace renders live" --reporter=line --workers=1</code>: 통과
+      </li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run lint</code>: 통과. 기존 경고만 남음.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      후보 5번에서는 explicit Sales Demo launcher, fixed May 2026 scenario route, <code>kong-vomit</code> helpers를
+      삭제하거나 Cheongdam seed/API 기준 테스트로 대체할 수 있는지 확인한다.
+    </p>
+  </body>
+</html>

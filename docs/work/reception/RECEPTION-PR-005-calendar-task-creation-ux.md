@@ -12,7 +12,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
   - "docs/design/system/component-ownership-rules.md"
 dependencies: []
-updated: "2026-06-01"
+updated: "2026-06-17"
 ---
 
 # Reception Calendar Task Creation UX
@@ -81,3 +81,15 @@ Bring the reception calendar task cards closer to the CDS V2 Figma `celanderTask
 - `npm run lint -- src/features/reception/module.tsx src/features/reception/store.ts src/features/reception/data.ts src/shell/workspace-frame.tsx tests/reception.spec.ts`
 - `npx tsc --noEmit`
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3109 npx playwright test tests/reception.spec.ts --grep "15-minute calendar click|dragged calendar range|day calendar emphasizes schedule card hierarchy|walk-in keeps selected veterinarian"`
+
+## 2026-06-17 Follow-Up
+
+- Calendar drag creation now branches by operating date:
+  - today opens the walk-in reception draft drawer;
+  - future dates open the reservation creation drawer;
+  - past dates are blocked before opening a drawer.
+- Drag-created reservation drafts reuse the existing appointment creation API/RPC path and prefill reservation date, time, duration, and veterinarian from the dragged slot.
+- Drag-created drawers no longer prefill patient/guardian from the previously selected appointment or encounter.
+- The walk-in draft drawer removes the old info box and `접수구분`, places patient search and weight in a 1:1 row, and aligns major controls to 36px height.
+- Calendar draft drawer ids must remain URL-safe. ISO strings with `:` or `+09:00` break the shell `drawer=type:id` parser and can drop reservation initial values, so draft ids now use an operating-date plus minute key.
+- Focused verification passed for today click, today drag, reverse drag, future reservation drag, and appointment create server specs. Full `tests/reception.spec.ts` still has unrelated legacy date/demo-context assumptions at the top of the file and was not used as the completion gate for this follow-up.

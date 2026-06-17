@@ -6,6 +6,7 @@ import {
   createNotificationDedupeKey,
   demoNotificationRecipientContext,
   getInitialNotificationLocalState,
+  getWorkspaceScopedNotifications,
   type GlobalNotification,
   mockGlobalNotifications,
   readNotificationLocalState,
@@ -105,6 +106,23 @@ test("notification fixtures route every source to a workspace route or explicit 
 
     expect(notification.source.route, `${notification.id} has a source route`).toBeTruthy();
     expect(notification.source.route).toMatch(/^\/w\/clair-demo\/[a-z-]+/);
+  }
+});
+
+test("notification source routes can be scoped to the active workspace", () => {
+  const workspaceId = "workspace-demo-active";
+  const notifications = getWorkspaceScopedNotifications(workspaceId);
+
+  expect(notifications).toHaveLength(mockGlobalNotifications.length);
+
+  for (const notification of notifications) {
+    if (notification.source.kind === "fallback_detail") {
+      expect(notification.source.route).toBeUndefined();
+      continue;
+    }
+
+    expect(notification.source.route).toMatch(new RegExp(`^/w/${workspaceId}/[a-z-]+`));
+    expect(notification.source.route).not.toContain("/w/clair-demo");
   }
 });
 

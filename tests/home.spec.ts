@@ -208,12 +208,12 @@ test("top workstream filter supports checkbox multi-select", async ({ page }) =>
   await expect(page.getByTestId("home-kanban-column-waiting")).toBeVisible();
 });
 
-test("sales demo launcher is preserved behind the home view query", async ({ page }) => {
+test("legacy sales demo launcher view query no longer opens the old launcher", async ({ page }) => {
   await page.goto("/w/clair-demo/home?view=demo&modulePanel=open&aside=closed");
 
-  await expect(page.getByRole("heading", { name: "콩이 구토 내원" })).toBeVisible();
-  await expect(page.getByText("김하늘 보호자 · 푸들 · 반복 구토")).toBeVisible();
-  await expect(page.getByRole("link", { name: "데모 시작" })).toBeVisible();
+  await expect(page.getByTestId("home-kanban-board")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "콩이 구토 내원" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "데모 시작" })).toHaveCount(0);
 });
 
 test("desk role lands on the same unified work-status workspace", async ({ page }) => {

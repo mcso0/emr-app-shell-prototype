@@ -7,7 +7,7 @@ import { GlobalNotificationDrawer } from "@/features/notifications/global-notifi
 import {
   applyNotificationLocalState,
   getInitialNotificationLocalState,
-  mockGlobalNotifications,
+  getWorkspaceScopedNotifications,
   readNotificationLocalState,
   resolveNotificationBadgeCount,
   type GlobalNotification,
@@ -92,9 +92,13 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
-  const workspaceNotifications = isPreparedEmptyClinicWorkspace(workspaceId)
-    ? emptyGlobalNotifications
-    : mockGlobalNotifications;
+  const workspaceNotifications = useMemo(
+    () =>
+      isPreparedEmptyClinicWorkspace(workspaceId)
+        ? emptyGlobalNotifications
+        : getWorkspaceScopedNotifications(workspaceId),
+    [workspaceId]
+  );
   const navigationSearch = useMemo(
     () =>
       getCrossModuleNavigationSearch(search, {

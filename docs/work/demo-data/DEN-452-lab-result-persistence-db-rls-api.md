@@ -47,7 +47,7 @@ Replace the UI PR 2 local/dev lab result-entry server-boundary proof with a dura
 - Result rows can link back to seeded `lab_test_items` when the UI has a catalog item id.
 - RLS policies and RPC membership checks use the active workspace membership boundary.
 - The API route checks server-side permissions before calling the DB RPC path.
-- Existing Sales Demo/mock fallback still works for unconfigured local sessions.
+- Local mock fallback remains isolated from the new DB/RLS proof; later cleanup owns legacy Sales Demo fallback migration or removal.
 - Focused tests cover schema/RLS/RPC/API/UI wiring expectations.
 
 ## Verification
@@ -65,6 +65,6 @@ Replace the UI PR 2 local/dev lab result-entry server-boundary proof with a dura
 
 ## Result
 
-DEN-452 adds the durable local/dev lab result value persistence foundation that UI PR 2 intentionally left out. The result-entry route can now save and read lab result rows through Supabase RPCs under server permission checks for authenticated sessions, while preserving the demo fallback path for mock-mode usage.
+DEN-452 adds the durable local/dev lab result value persistence foundation that UI PR 2 intentionally left out. The result-entry route can now save and read lab result rows through Supabase RPCs under server permission checks for authenticated sessions, while leaving the local mock fallback path isolated for mock-mode usage.
 
 The local Supabase replay was verified after Docker became available: pending migrations applied, `supabase db reset` replayed migrations and `supabase/seed.sql`, and a transactional RPC readback returned the saved WBC value `21.4`. The remaining work is DEN-453 lab result UX state handling, followed by billing and dispensing/treatment mock-store reduction in later issues.
