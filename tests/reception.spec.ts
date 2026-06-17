@@ -1806,7 +1806,18 @@ test("reception creates a reservation through the unified check-in menu", async 
     "**/api/workspaces/clair-demo/reception/calendar/day**",
     async (route) => {
       if (!createdAppointment) {
-        await route.continue();
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            status: 200,
+            workspaceId: "clair-demo",
+            date: "2026-05-01",
+            records: [],
+            enforcedBy: "reception-calendar-read",
+          }),
+        });
         return;
       }
 
@@ -1836,7 +1847,7 @@ test("reception creates a reservation through the unified check-in menu", async 
         guardianId: latestBody.guardianId,
         assignedVeterinarianId: latestBody.assignedVeterinarianId,
         scheduledStartAt: latestBody.scheduledStartAt,
-        scheduledEndAt: "2026-05-01T09:30:00+09:00",
+        scheduledEndAt: "2026-05-01T10:30:00+09:00",
         visitPurpose: latestBody.reservationMemo,
         symptomNote: latestBody.reservationMemo,
         status: "confirmed",
@@ -1866,12 +1877,32 @@ test("reception creates a reservation through the unified check-in menu", async 
 
   const drawer = page.getByTestId("reservation-create-drawer");
   await expect(drawer).toBeVisible();
-  await expect(drawer).toContainText("예약 생성");
+  await expect(drawer.getByText("진료 시간 안에서 예약 가능한 시간을 선택합니다.")).toHaveCount(0);
+  await expect(drawer.getByText("환자명, 동물 정보, 보호자명으로 검색합니다.")).toHaveCount(0);
+  await expect(drawer.locator('input[type="date"][aria-label="예약일"]')).toHaveCount(0);
+  await drawer.getByLabel("예약일").click();
+  await expect(page.getByText("2026년 5월")).toBeVisible();
+  await page.getByRole("button", { name: /선택됨/ }).click();
   await expect(drawer.getByLabel("체중")).toBeDisabled();
 
   await drawer.getByLabel("환자 검색").click();
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await expect(drawer.getByLabel("환자 검색")).toContainText("나비");
+  await expect(drawer.getByLabel("환자 검색")).not.toContainText("patient-nabi");
   await expect(drawer.getByLabel("체중")).toHaveValue("4.80");
+  await drawer.getByRole("button", { name: "환자 선택 초기화" }).click();
+  await expect(drawer.getByLabel("환자 검색")).toContainText("환자 선택");
+  await expect(drawer.getByLabel("체중")).toBeDisabled();
+  await drawer.getByLabel("환자 검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await drawer.getByLabel("체중").fill("4.95");
+
+  await expect(drawer.getByLabel("예약시간")).toContainText("09:00");
+  await expect(drawer.getByLabel("예약시간")).not.toContainText("540");
+  await drawer.getByLabel("예약시간").click();
+  await page.getByRole("option", { name: /^10:00$/ }).click();
+  await expect(drawer.getByLabel("예약시간")).toContainText("10:00");
+  await expect(drawer.getByLabel("예약시간")).not.toContainText("600");
 
   await drawer.getByLabel("예약 메모").fill("DEN-516 예약 생성 UI 검증");
   await drawer.getByRole("button", { name: "생성" }).click();
@@ -1881,9 +1912,10 @@ test("reception creates a reservation through the unified check-in menu", async 
     guardianId: "guardian-oh-sea",
     durationMinutes: 30,
     reservationMemo: "DEN-516 예약 생성 UI 검증",
+    weightKg: 4.95,
   });
   expect(String(latestBody?.scheduledStartAt)).toMatch(
-    /^2026-05-01T09:00:00\+09:00$/,
+    /^2026-05-01T10:00:00\+09:00$/,
   );
 
   await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();

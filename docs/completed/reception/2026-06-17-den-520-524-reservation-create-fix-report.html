@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-520~524 예약 생성 결함 수정 및 검증 보고</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f8fafc;
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+      section {
+        margin-top: 28px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+        padding: 24px;
+      }
+      h1,
+      h2 {
+        margin: 0;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      p,
+      ul {
+        margin: 12px 0 0;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      code {
+        border-radius: 5px;
+        background: #f3f4f6;
+        padding: 2px 5px;
+      }
+      .meta {
+        margin-top: 8px;
+        color: #4b5563;
+        font-size: 14px;
+      }
+      .status {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        padding: 4px 10px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .warn {
+        background: #fffbeb;
+        color: #92400e;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>예약 생성 결함 수정 및 검증 보고</h1>
+      <p class="meta">대상 이슈: DEN-520, DEN-521, DEN-522, DEN-523, DEN-524 · 작성일: 2026-06-17</p>
+      <span class="status">Human Review 준비</span>
+
+      <section>
+        <h2>요청과 현재 상태</h2>
+        <p>
+          접수/예약 화면의 예약 생성 드로어에서 발견된 UI, 선택 상태, 시간 표시, 생성 실패, mock/fallback 경계 문제를 한 브랜치에서 정리했다. 자동 검증 기준으로 예약 생성 happy path와 서버 write 경계는 통과했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>주요 변경</h2>
+        <ul>
+          <li>예약 생성 안내 인포박스와 환자 검색 helper description을 제거했다.</li>
+          <li>예약일을 native <code>input[type=date]</code>에서 프로젝트 Popover 달력 컴포넌트로 교체했다.</li>
+          <li>환자 선택 trigger가 내부 ID/UUID 대신 환자 선택명을 표시하도록 바꿨고, 선택 초기화 버튼을 추가했다.</li>
+          <li>환자 선택 후 체중 input을 수정 가능하게 만들고, 생성 payload의 <code>weightKg</code>로 연결했다.</li>
+          <li>예약시간과 예상시간 select trigger가 raw minute value 대신 <code>HH:mm</code>, <code>30분</code> label을 표시하도록 수정했다.</li>
+          <li>Cheongdam prepared workspace에서는 demo-header/mock-mode 예약 생성 fallback을 서버에서 401로 차단한다.</li>
+          <li>Supabase writer migration을 추가해 예약 생성 중 입력된 체중을 <code>patients.weight_kg</code>에 반영한다.</li>
+          <li>세션 없음 실패는 generic "예약을 생성할 수 없습니다" 대신 로그인 세션 확인 메시지로 구분한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 결과</h2>
+        <ul>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3111 npx playwright test tests/reception-appointment-create-server.spec.ts</code> 통과: 7개 테스트.</li>
+          <li><code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3110 npx playwright test tests/reception.spec.ts -g "reception creates a reservation through the unified check-in menu"</code> 통과: 1개 테스트.</li>
+          <li><code>npm run lint -- src/features/reception/module.tsx src/features/reception/appointment-create.ts src/features/reception/server-appointment-create-core.ts 'src/app/api/workspaces/[workspaceId]/reception/appointments/route.ts' tests/reception.spec.ts tests/reception-appointment-create-server.spec.ts</code> 통과.</li>
+          <li><code>git diff --check</code> 통과.</li>
+        </ul>
+        <p class="meta">
+          UI 테스트는 인포박스 부재, native date input 부재, 환자 label 표시, 선택 초기화, 체중 payload, 10:00 선택 표시와 <code>scheduledStartAt</code> 변환을 검증한다. 서버 테스트는 mock fallback 차단, RPC payload, migration writer 경계를 검증한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>남은 제약</h2>
+        <p class="warn">
+          <code>npx tsc --noEmit</code>은 이번 변경과 무관한 기존 dependency 누락 때문에 중단된다: <code>cmdk</code>, <code>mermaid</code>. 이 문제로 전체 타입체크는 완료하지 못했다.
+        </p>
+        <p>
+          실제 고정 스테이징 DB에 원격 write/readback을 수행하지는 않았다. real data 사용, destructive remote DB operation, 배포/alias 변경은 승인 게이트에 해당하므로 이번 로컬 구현 검증에서는 코드와 테스트, migration으로 경계를 고정했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>추가 이슈 판단</h2>
+        <p>
+          예약 생성 Cheongdam path와 직접 관련된 추가 결함은 현재 자동 검증 기준에서 발견되지 않았다. 다른 접수 mutation의 demo-header 사용 흔적은 확인됐지만, 예약 생성 완료 기준 밖의 별도 live-boundary 감사 범위라 이번 패키지에서는 새 이슈로 등록하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>권장 다음 단계</h2>
+        <ul>
+          <li>PR preview 또는 승인된 staging 배포 후 Cheongdam synthetic 데이터로 실제 Supabase write/readback을 확인한다.</li>
+          <li>Supabase migration 적용 여부를 배포 체크리스트에 포함한다.</li>
+          <li>별도 이슈로 전체 prepared workspace mutation의 demo-header fallback 정책을 감사할지 결정한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
