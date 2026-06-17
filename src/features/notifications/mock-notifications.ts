@@ -1,5 +1,7 @@
 "use client";
 
+import { LEGACY_SALES_DEMO_WORKSPACE_ID } from "@/lib/emr-domain/demo-workspaces";
+
 export type GlobalNotification = {
   id: string;
   event_key:
@@ -110,6 +112,7 @@ export type NotificationDedupeResult = {
 
 export const NOTIFICATION_READ_STATE_KEY = "clair.notifications.v0.read";
 export const NOTIFICATION_ARCHIVE_STATE_KEY = "clair.notifications.v0.archive";
+const legacyNotificationRoutePrefix = `/w/${LEGACY_SALES_DEMO_WORKSPACE_ID}`;
 
 export const demoNotificationRecipientContext: NotificationRecipientContext = {
   userId: "user-vet",
@@ -519,6 +522,27 @@ export const mockGlobalNotifications: GlobalNotification[] = [
     badge_count: true,
   },
 ];
+
+function scopeNotificationRoute(route: string | undefined, workspaceId: string) {
+  if (!route) return route;
+  return route.split(legacyNotificationRoutePrefix).join(`/w/${workspaceId}`);
+}
+
+export function getWorkspaceScopedNotifications(workspaceId: string): GlobalNotification[] {
+  return mockGlobalNotifications.map((notification) => {
+    const scopedRoute = scopeNotificationRoute(notification.source.route, workspaceId);
+
+    if (scopedRoute === notification.source.route) return notification;
+
+    return {
+      ...notification,
+      source: {
+        ...notification.source,
+        route: scopedRoute,
+      },
+    };
+  });
+}
 
 export function getInitialNotificationLocalState(
   notifications: GlobalNotification[]

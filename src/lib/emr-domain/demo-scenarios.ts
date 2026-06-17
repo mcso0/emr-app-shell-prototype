@@ -1,7 +1,6 @@
 import type { EmrId } from "@/types/emr-domain";
 
 export type DemoScenarioId = "kong-vomit" | "nabi-recheck" | "dubu-post-op";
-export type DemoRoleId = "owner" | "front_desk" | "vet" | "technician" | "billing";
 
 export type DemoScenario = {
   id: DemoScenarioId;
@@ -17,8 +16,6 @@ export type DemoScenario = {
   invoiceId: EmrId;
   orderIds: EmrId[];
 };
-
-export const GOLDEN_DEMO_SCENARIO_ID: DemoScenarioId = "kong-vomit";
 
 export const demoScenarios: DemoScenario[] = [
   {
@@ -64,41 +61,5 @@ export const demoScenarios: DemoScenario[] = [
 export const getDemoScenario = (scenarioId?: string | null) =>
   demoScenarios.find((scenario) => scenario.id === scenarioId);
 
-export const getGoldenDemoScenario = () => getDemoScenario(GOLDEN_DEMO_SCENARIO_ID) ?? demoScenarios[0];
-
 export const getDemoScenarioFromParams = (params: { get: (name: string) => string | null }) =>
-  getDemoScenario(params.get("scenario")) ?? getDemoScenario(params.get("demo"));
-
-export const createDemoHref = ({
-  moduleId,
-  scenarioId = GOLDEN_DEMO_SCENARIO_ID,
-  workspaceId,
-}: {
-  moduleId: string;
-  scenarioId?: DemoScenarioId;
-  workspaceId: string;
-}) => {
-  const scenario = getDemoScenario(scenarioId) ?? getGoldenDemoScenario();
-  const params = new URLSearchParams({
-    scenario: scenario.id,
-    patientId: scenario.patientId,
-    encounterId: scenario.encounterId,
-    modulePanel: "open",
-    aside: "closed",
-  });
-
-  if (moduleId === "lab" && scenario.labResultId) {
-    params.set("labResultId", scenario.labResultId);
-  }
-  if (moduleId === "imaging" && scenario.imagingStudyId) {
-    params.set("imagingStudyId", scenario.imagingStudyId);
-  }
-  if (moduleId === "billing") {
-    params.set("invoiceId", scenario.invoiceId);
-  }
-  if (moduleId === "dispensing") {
-    params.set("right", "closed");
-  }
-
-  return `/w/${workspaceId}/${moduleId}?${params.toString()}`;
-};
+  getDemoScenario(params.get("scenario"));

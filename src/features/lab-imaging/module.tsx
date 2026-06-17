@@ -97,7 +97,10 @@ import {
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
-import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  isLegacySalesDemoWorkspace,
+  resolveWorkspacePathname,
+} from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
@@ -462,10 +465,9 @@ function setCachedFulfillmentQueue(cacheKey: string, workItems: FulfillmentWorkI
 }
 
 function useWorkspaceIdFromPath() {
-  if (typeof window === "undefined") return "clair-demo";
+  if (typeof window === "undefined") return resolveWorkspacePathname();
 
-  const match = window.location.pathname.match(/^\/w\/([^/]+)/);
-  return match?.[1] ?? "clair-demo";
+  return resolveWorkspacePathname(window.location.pathname);
 }
 
 function isLiveAuthRuntime() {
@@ -1558,16 +1560,16 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("lab");
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseItems = useMemo(
-    () => (preparedEmptyClinic ? [] : getLabWorkItems()),
-    [preparedEmptyClinic],
+    () => (legacySalesDemo ? getLabWorkItems() : []),
+    [legacySalesDemo],
   );
   const items = useMemo(
     () => getLabItemsForRuntime(baseItems, fulfillmentQueue.workItems, {
-      allowFixtureItems: !preparedEmptyClinic,
+      allowFixtureItems: legacySalesDemo,
     }),
-    [baseItems, fulfillmentQueue.workItems, preparedEmptyClinic]
+    [baseItems, fulfillmentQueue.workItems, legacySalesDemo]
   );
   useEffect(() => {
     if (!items.length || items.some((item) => item.result.id === selectedLabResultId)) return;
@@ -1697,16 +1699,16 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("imaging");
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseItems = useMemo(
-    () => (preparedEmptyClinic ? [] : getImagingWorkItems()),
-    [preparedEmptyClinic],
+    () => (legacySalesDemo ? getImagingWorkItems() : []),
+    [legacySalesDemo],
   );
   const items = useMemo(
     () => getImagingItemsForRuntime(baseItems, fulfillmentQueue.workItems, {
-      allowFixtureItems: !preparedEmptyClinic,
+      allowFixtureItems: legacySalesDemo,
     }),
-    [baseItems, fulfillmentQueue.workItems, preparedEmptyClinic]
+    [baseItems, fulfillmentQueue.workItems, legacySalesDemo]
   );
   useEffect(() => {
     if (!items.length || items.some((item) => item.study.id === selectedImagingStudyId)) return;
@@ -2306,7 +2308,7 @@ function useCurrentLabDetail(workspaceId: string) {
     searchParams,
     selectedLabResultId,
     fulfillmentQueue.workItems,
-    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
+    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
   );
 }
 
@@ -2435,7 +2437,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
   const [expandedReceiptIds, setExpandedReceiptIds] = useState<Set<string> | null>(null);
   const [receiptToPaste, setReceiptToPaste] = useState<EquipmentReceipt | null>(null);
   const labWorkItems = useMemo(
-    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getLabWorkItems()),
+    () => (isLegacySalesDemoWorkspace(workspaceId) ? getLabWorkItems() : []),
     [workspaceId],
   );
   const workItemByOrderId = useMemo(() => {
@@ -2714,7 +2716,7 @@ export function LabContent({ hasRightPanel, workspaceId }: ShellComponentProps) 
     searchParams,
     selectedLabResultId,
     fulfillmentQueue.workItems,
-    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
+    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
   );
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
@@ -2969,7 +2971,7 @@ function useCurrentImagingDetail(workspaceId: string) {
     searchParams,
     selectedImagingStudyId,
     fulfillmentQueue.workItems,
-    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
+    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
   );
 }
 
@@ -3071,7 +3073,7 @@ export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
   const allItems = useMemo(
-    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getImagingWorkItems()),
+    () => (isLegacySalesDemoWorkspace(workspaceId) ? getImagingWorkItems() : []),
     [workspaceId],
   );
   const groups = detail ? getImagingHistoryGroups(detail, allItems) : [];
@@ -3281,7 +3283,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
     searchParams,
     selectedImagingStudyId,
     fulfillmentQueue.workItems,
-    { allowMockFallback: !isPreparedEmptyClinicWorkspace(workspaceId) },
+    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
   );
   const fulfillmentWorkItem = useMemo(
     () => fulfillmentQueue.workItems.find((item) => item.orderId === detail?.order?.id),
@@ -3462,11 +3464,11 @@ function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
 export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
   const { detail } = useCurrentImagingDetail(workspaceId);
   const labItems = useMemo(
-    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getLabWorkItems()),
+    () => (isLegacySalesDemoWorkspace(workspaceId) ? getLabWorkItems() : []),
     [workspaceId],
   );
   const imagingItems = useMemo(
-    () => (isPreparedEmptyClinicWorkspace(workspaceId) ? [] : getImagingWorkItems()),
+    () => (isLegacySalesDemoWorkspace(workspaceId) ? getImagingWorkItems() : []),
     [workspaceId],
   );
 

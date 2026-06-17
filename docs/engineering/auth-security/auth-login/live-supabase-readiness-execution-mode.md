@@ -1,6 +1,6 @@
 # Live Supabase Readiness and Execution Mode
 
-Updated: 2026-05-18
+Updated: 2026-06-17
 Linear: DEN-29
 
 This document fixes the execution mode for `01 Live Auth & Supabase DB/RLS Foundation` before any migration, RLS, live Supabase, or server-session implementation work begins.
@@ -22,7 +22,7 @@ This means:
 
 The current product is still a session-only frontend prototype with a Supabase provider adapter behind `useAuthClient()`. The missing product-grade pieces are live DB/API persistence, verified server session use, migrations, RLS, DB-backed permission resolution, and server enforcement.
 
-Local-first execution reduces blast radius while those boundaries are designed and tested. It also preserves the existing sales demo and mock fallback flows while the live foundation is being built.
+Local-first execution reduces blast radius while those boundaries are designed and tested. At the time of DEN-29, that meant not broadening the Supabase foundation work into demo fallback cleanup. As of 2026-06-17, Cheongdam seed verification is the current operating proof, and DEMO-DATA-PR-002 owns legacy Sales Demo fallback migration or removal.
 
 ## Current Supabase Constraints Checked
 

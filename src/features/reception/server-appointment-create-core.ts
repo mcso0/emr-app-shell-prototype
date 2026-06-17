@@ -60,6 +60,8 @@ export type ReceptionAppointmentCreateResult =
 
 const businessOpenMinutes = 9 * 60;
 const businessCloseMinutes = 19 * 60;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function createReceptionAppointment({
   actorUserId,
@@ -255,6 +257,15 @@ export function createSupabaseReceptionAppointmentCreateGateway(
 ): ReceptionAppointmentCreateGateway {
   return {
     async createAppointment({ actorUserId, input, workspaceId }) {
+      const veterinarianId = trimToUndefined(input.assignedVeterinarianId);
+      if (veterinarianId && !uuidPattern.test(veterinarianId)) {
+        return {
+          ok: false,
+          status: 409,
+          denialReason: "primary_veterinarian_unavailable",
+        };
+      }
+
       const { data, error } = await client.rpc("clair_create_reception_appointment", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,

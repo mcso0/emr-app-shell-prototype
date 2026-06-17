@@ -22,7 +22,7 @@
 - workspace guard는 `src/app/w/[workspaceId]/[module]/page.tsx`와 `src/features/auth/auth-gate.tsx`에서 확인한다.
 - role display와 logout은 `src/shell/top-menu.tsx`에서 확인한다.
 - 기준 회귀 테스트는 `tests/auth.spec.ts`에서 확인한다.
-- workspace 회귀 영향은 app shell/reception/billing/chart/lab-imaging/sales demo tests로 확인한다.
+- workspace 회귀 영향은 app shell/reception/billing/chart/lab-imaging tests로 확인한다. Legacy sales demo tests are historical fallback coverage until Cheongdam replacements fully cover the same behavior.
 
 ## 사용해야 할 스킬
 
@@ -64,7 +64,7 @@
 - `src/features/chart/**`
 - `src/features/lab-imaging/**`
 - `src/features/billing/**`
-- sales demo fixture와 golden path는 auth 회귀 보정 목적 외에는 수정하지 않는다.
+- legacy sales demo fixture와 golden path는 현재 제품 검증 기준이 아니다. auth 작업에서는 불필요하게 건드리지 말고, 제거/전환은 DEMO-DATA-PR-002 cleanup 범위에서만 진행한다.
 
 ## 완료 시 해야 할 일
 

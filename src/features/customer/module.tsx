@@ -75,8 +75,8 @@ import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawe
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import type { ReceptionPatientGuardianLookupResponse } from "@/features/reception/patient-guardian-lookup";
 import {
-  LEGACY_SALES_DEMO_WORKSPACE_ID,
   isPreparedEmptyClinicWorkspace,
+  resolveWorkspaceRouteParam,
 } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -225,9 +225,7 @@ type CustomerRowActionFeedback = {
 };
 
 function getCustomerWorkspaceId(value?: string | string[]) {
-  return typeof value === "string"
-    ? value
-    : (value?.[0] ?? LEGACY_SALES_DEMO_WORKSPACE_ID);
+  return resolveWorkspaceRouteParam(value);
 }
 
 function compareCustomerTableValues(left: CustomerTableSortValue, right: CustomerTableSortValue) {

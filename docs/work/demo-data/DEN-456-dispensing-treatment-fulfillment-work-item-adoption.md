@@ -25,7 +25,7 @@ Make the dispensing/treatment execution screen read visible queue state from `or
 ## Scope
 
 - Read both `dispensing` and `treatment` fulfillment queues from `/api/workspaces/[workspaceId]/fulfillment/work-items`.
-- Overlay the server readback onto the existing execution screen without removing Sales Demo fallback behavior.
+- Overlay the server readback onto the existing execution screen while leaving legacy fallback cleanup to DEMO-DATA-PR-002.
 - Show visible fulfillment readback for the selected work item, including queue type, server status, assignee, and order id.
 - Persist status transitions through `/api/workspaces/[workspaceId]/fulfillment/work-items/[workItemId]`.
 - Keep local execution state unchanged when server mutation fails.
@@ -37,7 +37,7 @@ Make the dispensing/treatment execution screen read visible queue state from `or
 - New seed data.
 - DB schema, migration, or RLS changes.
 - Lab result persistence or billing checkout logic.
-- Full removal of local fixture/Sales Demo fallback paths.
+- Broader local fixture and legacy Sales Demo fallback cleanup beyond this selected screen.
 - Real provider, payment, or remote Supabase validation.
 
 ## Done Criteria

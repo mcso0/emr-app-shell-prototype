@@ -49,7 +49,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
-import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import {
+  isLegacySalesDemoWorkspace,
+  resolveWorkspacePathname,
+} from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import {
@@ -115,7 +118,7 @@ type DispensingContentBodyProps = Pick<
   ShellComponentProps,
   "hasRightPanel" | "moduleId"
 > & {
-  preparedEmptyClinic: boolean;
+  allowLegacyFixtureFallback: boolean;
   selectedQueueItem: OrderQueueItem | null;
 };
 
@@ -146,10 +149,9 @@ function getQueuePatientSummary(item: OrderQueueItem | null) {
 }
 
 function getWorkspaceIdFromPath() {
-  if (typeof window === "undefined") return "clair-demo";
+  if (typeof window === "undefined") return resolveWorkspacePathname();
 
-  const match = window.location.pathname.match(/^\/w\/([^/]+)/);
-  return match?.[1] ?? "clair-demo";
+  return resolveWorkspacePathname(window.location.pathname);
 }
 
 function isLiveAuthRuntime() {
@@ -402,7 +404,7 @@ function getQueueItemsForWorkspace(
   workItems: FulfillmentWorkItem[],
 ) {
   return getQueueItemsForRuntime(workItems, {
-    allowFixtureItems: !isPreparedEmptyClinicWorkspace(workspaceId),
+    allowFixtureItems: isLegacySalesDemoWorkspace(workspaceId),
   });
 }
 
@@ -571,16 +573,16 @@ export function DispensingHeader({ moduleId, workspaceId }: ShellComponentProps)
   } =
     useLayoutStore();
   const fulfillmentQueue = useDispensingFulfillmentQueue();
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
     [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-    (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
+    (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
 
-  if (!selectedQueueItem && preparedEmptyClinic) return null;
+  if (!selectedQueueItem && !allowLegacyFixtureFallback) return null;
 
   return (
     <EmrPatientContextBar
@@ -631,16 +633,16 @@ export function DispensingContentAside({ moduleId, workspaceId }: ShellComponent
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<Set<string>>(() => new Set());
   const fulfillmentQueue = useDispensingFulfillmentQueue();
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
     [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem =
     items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-    (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
+    (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
   const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
-  const visibleHistoryGroups = preparedEmptyClinic ? [] : historyGroups;
+  const visibleHistoryGroups = allowLegacyFixtureFallback ? historyGroups : [];
   const totalHistoryCount = visibleHistoryGroups.reduce((total, group) => total + group.count, 0);
   const toggleHistoryGroup = (date: string) => {
     setCollapsedHistoryGroups((current) => {
@@ -1086,12 +1088,12 @@ export function DispensingContent({
 }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const fulfillmentQueue = useDispensingFulfillmentQueue();
-  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
+  const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const selectedQueueItem = useMemo(() => {
     const items = getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems);
     return items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
-      (preparedEmptyClinic ? null : getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]));
-  }, [fulfillmentQueue.workItems, moduleId, preparedEmptyClinic, selectedQueueItemIds, workspaceId]);
+      (allowLegacyFixtureFallback ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId]) : null);
+  }, [allowLegacyFixtureFallback, fulfillmentQueue.workItems, moduleId, selectedQueueItemIds, workspaceId]);
 
   return (
     <DispensingContentBody
@@ -1099,17 +1101,17 @@ export function DispensingContent({
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
-      preparedEmptyClinic={preparedEmptyClinic}
+      allowLegacyFixtureFallback={allowLegacyFixtureFallback}
       selectedQueueItem={selectedQueueItem}
     />
   );
 }
 
 function DispensingContentBody({
+  allowLegacyFixtureFallback,
   hasRightPanel,
   fulfillmentQueue,
   moduleId,
-  preparedEmptyClinic,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
@@ -1126,9 +1128,9 @@ function DispensingContentBody({
     [fulfillmentQueue.workItems, selectedQueueItem]
   );
   const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
-    preparedEmptyClinic
-      ? createLiveOrderTableGroups(selectedQueueItem, selectedFulfillmentWorkItem)
-      : cloneOrderTableGroups(selectedQueueItemId)
+    allowLegacyFixtureFallback
+      ? cloneOrderTableGroups(selectedQueueItemId)
+      : createLiveOrderTableGroups(selectedQueueItem, selectedFulfillmentWorkItem)
   );
   const selectedQueueStatusLabel = getQueueStatusLabel(moduleId, selectedQueueItem);
   const [orderGroupFilter, setOrderGroupFilter] = useState<OrderGroupFilter>("all");
@@ -1212,7 +1214,7 @@ function DispensingContentBody({
     );
   };
 
-  if (!selectedQueueItem && preparedEmptyClinic) {
+  if (!selectedQueueItem && !allowLegacyFixtureFallback) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
         아직 조제/처치 요청이 없습니다.

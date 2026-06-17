@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Legacy Mock Cleanup Prep Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 860px;
+        color: #172033;
+      }
+      h1, h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>청담 Seed 운영 검증 기준 정렬 및 Legacy Mock 정리 준비</h1>
+
+    <h2>요청</h2>
+    <p>
+      코드 정리와 리팩터링 전에 현재 프로젝트 목표를
+      <code>workspace-clair-cheongdam</code> 청담 seed 워크스페이스 중심으로
+      고정하고, <code>clair-demo</code>와 Sales Demo fallback을 후속 정리 대상으로
+      분류해 달라는 요청이었다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>현재 상태 문서에서 Sales Demo 보존 전제를 제거하고 청담 seed 운영 검증을 기본 목표로 명시했다.</li>
+      <li>mock/live boundary 문서를 Cheongdam prepared-clinic workspace 중심으로 갱신했다.</li>
+      <li>DEMO-DATA-PR-002 작업 항목에 legacy/mock cleanup inventory를 done criteria와 notes로 연결했다.</li>
+      <li>새 inventory 문서에 legacy reference 분류 기준, 대표 파일, cleanup priority, 삭제 전 검증 기준을 정리했다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      앞으로 기능 점검은 mock 데이터가 아니라 seed 데이터와 API/Supabase 경계가
+      실제처럼 이어지는지를 보는 방향이다. 이번 정리는 Sales Demo fallback이 그 검증을
+      가리지 않도록 후속 삭제와 리팩터링의 판단 기준을 먼저 고정한다.
+    </p>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run lint</code>: 통과, 기존 warning 5개 유지</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li>Playwright Cheongdam 묶음과 단일 reset spec은 이 환경에서 장시간 무출력으로 멈춰 중단했다.</li>
+    </ul>
+
+    <h2>범위 밖</h2>
+    <ul>
+      <li>앱 코드 삭제 또는 리팩터링은 아직 수행하지 않았다.</li>
+      <li>remote Supabase mutation, staging replay, production deploy는 수행하지 않았다.</li>
+      <li>실제 병원/환자/보호자/결제/신원 데이터는 사용하지 않았다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 PR은 inventory의 우선순위 1-3번을 기준으로 문서/테스트 이름 정리,
+      Cheongdam fixture guard 확인, 전역 진입점의 <code>/w/clair-demo</code> 기본값 제거부터
+      작게 진행하는 것이 적절하다.
+    </p>
+  </body>
+</html>

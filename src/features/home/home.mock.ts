@@ -17,6 +17,48 @@ import type {
 
 const todayLabel = "2026년 5월 9일 토요일";
 const updatedAt = "2026-05-09T09:42:00+09:00";
+const legacyHomeRoutePrefix = "/w/clair-demo";
+
+function scopeWorkspaceHref(href: string, workspaceId: string) {
+  return href.split(legacyHomeRoutePrefix).join(`/w/${workspaceId}`);
+}
+
+function scopeHomeTask(task: HomeTask, workspaceId: string): HomeTask {
+  return {
+    ...task,
+    actionHref: scopeWorkspaceHref(task.actionHref, workspaceId),
+  };
+}
+
+function scopeHomeLauncher(launcher: HomeLauncherAction, workspaceId: string): HomeLauncherAction {
+  return {
+    ...launcher,
+    href: scopeWorkspaceHref(launcher.href, workspaceId),
+  };
+}
+
+function scopeHomeFlowSummaryItem(
+  item: HomeFlowSummaryItem,
+  workspaceId: string
+): HomeFlowSummaryItem {
+  return {
+    ...item,
+    href: scopeWorkspaceHref(item.href, workspaceId),
+  };
+}
+
+function scopeHomeRoleNextAction(
+  hypothesis: HomeRoleNextActionHypothesis,
+  workspaceId: string
+): HomeRoleNextActionHypothesis {
+  return {
+    ...hypothesis,
+    actions: hypothesis.actions.map((action) => ({
+      ...action,
+      actionHref: scopeWorkspaceHref(action.actionHref, workspaceId),
+    })),
+  };
+}
 
 export const homeKanbanColumns: HomeKanbanColumn[] = [
   { id: "waiting", label: "대기", description: "대기실/지연 대응" },
@@ -715,6 +757,12 @@ function createQuickStatus(tasks: HomeTask[]): HomeQuickStatus[] {
 
 export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashboardData {
   const roleTasks = tasksByRole[role];
+  const scopedEmptyLaunchers = emptyLaunchersByRole[role].map((launcher) =>
+    scopeHomeLauncher(launcher, workspaceId)
+  );
+  const scopedFlowSummary = flowSummary.map((item) =>
+    scopeHomeFlowSummaryItem(item, workspaceId)
+  );
 
   if (isPreparedEmptyClinicWorkspace(workspaceId)) {
     return {
@@ -731,15 +779,11 @@ export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashbo
       hospitalTasks: [],
       notifications: [],
       quickStatus: createQuickStatus([]),
-      emptyLaunchers: emptyLaunchersByRole[role].map((launcher) => ({
-        ...launcher,
-        href: launcher.href.replace("/w/clair-demo", `/w/${workspaceId}`),
-      })),
-      flowSummary: flowSummary.map((item) => ({
+      emptyLaunchers: scopedEmptyLaunchers,
+      flowSummary: scopedFlowSummary.map((item) => ({
         ...item,
         count: 0,
         detail: "준비됨",
-        href: item.href.replace("/w/clair-demo", `/w/${workspaceId}`),
         overdueCount: 0,
         unassignedCount: 0,
       })),
@@ -755,13 +799,15 @@ export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashbo
     hospitalName: "CLAiR 동물병원",
     todayLabel,
     columns: homeKanbanColumns,
-    tasks: roleTasks,
-    hospitalTasks,
+    tasks: roleTasks.map((task) => scopeHomeTask(task, workspaceId)),
+    hospitalTasks: hospitalTasks.map((task) => scopeHomeTask(task, workspaceId)),
     notifications,
     quickStatus: createQuickStatus(roleTasks),
-    emptyLaunchers: emptyLaunchersByRole[role],
-    flowSummary,
-    roleNextActions,
+    emptyLaunchers: scopedEmptyLaunchers,
+    flowSummary: scopedFlowSummary,
+    roleNextActions: roleNextActions.map((hypothesis) =>
+      scopeHomeRoleNextAction(hypothesis, workspaceId)
+    ),
     updatedAt,
   };
 }

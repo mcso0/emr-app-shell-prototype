@@ -29,7 +29,7 @@ Move the billing demo path from mock-only state toward API-primary invoice, paym
 
 - Inspect remaining mock/local billing state in `src/features/billing/store.ts` and `src/features/billing/module.tsx`.
 - Let API invoice-line and payment-status snapshots update or insert billing store invoices, so route responses are not limited to preloaded mock invoice IDs.
-- Keep Sales Demo and unconfigured local fallback behavior available.
+- Leave legacy Sales Demo and unconfigured local fallback cleanup to DEMO-DATA-PR-002.
 - Add visible Playwright coverage proving the billing screen renders API-provided invoice number, payment status, line item, and checkout total.
 - Extend the route-boundary E2E to verify payment-status PATCH persists on a later GET readback.
 
@@ -47,7 +47,7 @@ Move the billing demo path from mock-only state toward API-primary invoice, paym
 - The selected billing screen can display API-provided invoice-line and payment-status snapshots.
 - Checkout workspace total can display the API-provided guardian checkout session payable amount.
 - Payment status mutation is verified by a follow-up readback in the focused synthetic E2E.
-- Documentation records that billing is API-primary for the core demo path while mock fallback remains intentionally available.
+- Documentation records that billing is API-primary for the core demo path and separates local-only fallback from seed/API verification.
 
 ## Verification
 
@@ -60,4 +60,4 @@ Move the billing demo path from mock-only state toward API-primary invoice, paym
 
 ## Result
 
-DEN-454 makes the core billing demo path API-primary for invoice-line, payment-status, and checkout-session snapshots. The screen now accepts persisted snapshots into the billing store and the focused E2E proves that API values override fixture values in the visible UI. Mock fallback remains for Sales Demo and unconfigured local sessions.
+DEN-454 makes the core billing demo path API-primary for invoice-line, payment-status, and checkout-session snapshots. The screen now accepts persisted snapshots into the billing store and the focused E2E proves that API values override fixture values in the visible UI. Legacy Sales Demo and unconfigured local fallback cleanup is owned by DEMO-DATA-PR-002.

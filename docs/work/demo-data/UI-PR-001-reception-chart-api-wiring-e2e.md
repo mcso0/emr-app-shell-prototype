@@ -39,7 +39,7 @@ Start the post-seed UI/API adoption phase for the `clair-demo` synthetic dataset
   - result-review billing handoff
   - guardian checkout/payment status
   - audit readback
-- Preserve existing mock fallback behavior for Sales Demo and unconfigured local sessions.
+- Leave legacy Sales Demo and unconfigured local fallback cleanup to a later cleanup item; this historical PR only proves the API-backed route boundary.
 
 ## Out Of Scope
 

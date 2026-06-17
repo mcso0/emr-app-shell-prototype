@@ -5,6 +5,7 @@ import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permi
 import {
   createReceptionAppointment,
   createSupabaseReceptionAppointmentCreateGateway,
+  type SupabaseReceptionAppointmentCreateRpcClient,
 } from "../src/features/reception/server-appointment-create-core";
 
 const validInput = {
@@ -100,6 +101,40 @@ test("prepared clinic appointment create route rejects demo-header fallback", as
   });
 });
 
+test("supabase appointment create gateway rejects mock veterinarian IDs before RPC write", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseReceptionAppointmentCreateGateway({
+    async rpc(functionName: string) {
+      calls.push(`rpc:${functionName}`);
+      return {
+        data: null,
+        error: {
+          message: 'invalid input syntax for type uuid: "user-vet-suji"',
+        },
+      };
+    },
+  } as SupabaseReceptionAppointmentCreateRpcClient);
+
+  const result = await gateway.createAppointment({
+    actorUserId: "49110000-0000-4000-8000-000000000001",
+    workspaceId: "workspace-clair-cheongdam",
+    input: {
+      ...validInput,
+      assignedVeterinarianId: "user-vet-suji",
+      guardianId: "49120000-0000-4000-8000-000000000004",
+      patientId: "49121000-0000-4000-8000-000000000004",
+      scheduledStartAt: "2026-06-22T10:30:00+09:00",
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "primary_veterinarian_unavailable",
+  });
+  expect(calls).not.toContain("rpc:clair_create_reception_appointment");
+});
+
 test("appointment create core enforces reception create permission", async () => {
   const denied = await createReceptionAppointment({
     actorUserId: "user-vet",
@@ -187,6 +222,10 @@ test("appointment create core validates patient, business hours, closed day, and
 test("supabase appointment create gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   const rpcPayloads: unknown[] = [];
+  const rpcInput = {
+    ...validInput,
+    assignedVeterinarianId: "00000000-0000-4000-8000-000000000002",
+  };
   const gateway = createSupabaseReceptionAppointmentCreateGateway({
     async rpc(functionName, args) {
       calls.push(`${functionName}:${args.p_workspace_id}:${args.p_appointment.patientId}`);
@@ -197,7 +236,7 @@ test("supabase appointment create gateway keeps workspace scope in the RPC write
           workspaceId: "clair-demo",
           patientId: "patient-nabi",
           guardianId: "guardian-oh-sea",
-          assignedVeterinarianId: "user-vet-doyun",
+          assignedVeterinarianId: rpcInput.assignedVeterinarianId,
           scheduledStartAt: validInput.scheduledStartAt,
           scheduledEndAt: "2026-05-01T13:30:00+09:00",
           visitPurpose: validInput.reservationMemo,
@@ -213,7 +252,7 @@ test("supabase appointment create gateway keeps workspace scope in the RPC write
 
   const result = await gateway.createAppointment({
     actorUserId: "user-front-desk",
-    input: validInput,
+    input: rpcInput,
     workspaceId: "clair-demo",
   });
 

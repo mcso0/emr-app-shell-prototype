@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Candidate 7 Cheongdam Billing Paid Action Replacement 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.3;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 0.1rem 0.3rem;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEMO-DATA-PR-002 Candidate 7 Cheongdam Billing Paid Action Replacement</h1>
+    <p><strong>작성일:</strong> 2026-06-17</p>
+
+    <h2>요청</h2>
+    <p>
+      남은 <code>tests/sales-demo-flow.spec.ts</code> 안의 legacy Kong 수납 완료 행동 검증을 현재 목표인
+      <code>workspace-clair-cheongdam</code> seed/API 검증으로 옮기고, Kong fixture는 explicit route fixture
+      availability 확인으로 축소했다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        <code>tests/cheongdam-seed-workflow-replacement.spec.ts</code>가 billing checkout preparation,
+        담당하기, 수납 완료 확인 dialog, paid-state readback, paid invoice checkout exclusion을 검증하도록 확장됐다.
+      </li>
+      <li>
+        <code>tests/sales-demo-flow.spec.ts</code>에서는 Kong billing step의 담당하기/수납 완료 클릭을 제거했다.
+        이 테스트는 이제 legacy fixture가 명시적 route로 열리는지만 확인한다.
+      </li>
+      <li>
+        <code>src/features/billing/module.tsx</code>에서 Cheongdam live invoice detail이 billing store에 저장된
+        payment snapshot을 병합해 읽도록 보강했다.
+      </li>
+      <li>
+        Billing checkout workspace와 right payment panel이 stale global <code>selectedInvoiceIds</code>에 남은
+        legacy Coco invoice 대신 active Cheongdam detail/group의 invoice ID를 사용하도록 정렬했다.
+      </li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      수납 완료는 단순 fixture 표시보다 실제 운영 검증에 더 가까운 행동이다. 이 행동을 Kong fixture에 남겨두면
+      Sales Demo가 계속 현재 제품 증거처럼 보인다. 이번 작업으로 수납 완료 proof는 청담 seed/API 흐름이 맡고,
+      Kong은 삭제 전까지 남겨 둔 fixture-contract 확인 역할로 축소됐다.
+    </p>
+
+    <h2>중요한 발견</h2>
+    <p>
+      Cheongdam live invoice가 <code>encounterId</code> 기반으로 만들어지는 동안, right payment panel과 checkout
+      workspace가 기존 store의 기본 선택값인 Coco invoice를 볼 수 있는 경계가 있었다. 이 상태에서는 수납 완료 후
+      API snapshot이 store에 들어와도 중앙 화면이 non-legacy filter 때문에 snapshot을 다시 반영하지 못할 수 있었다.
+      이번 변경은 이 경계를 active Cheongdam invoice 중심으로 좁혔다.
+    </p>
+
+    <h2>미변경 범위</h2>
+    <ul>
+      <li><code>kong-vomit</code> scenario registry와 fixed May 2026 fixture data는 아직 삭제하지 않았다.</li>
+      <li>원격 Supabase mutation, staging replay, production deploy는 수행하지 않았다.</li>
+      <li>
+        남은 Kong fixture tests는 아직 <code>test-fixture</code> coverage다. module-specific fixture assertion은
+        각각 Cheongdam seed/API equivalent가 생긴 뒤 삭제한다.
+      </li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>git diff --check</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npx tsc --noEmit --pretty false</code>: 통과</li>
+      <li><code>npm run lint</code>: 통과. 기존 경고 5개만 남음.</li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3120 npx playwright test tests/cheongdam-seed-workflow-replacement.spec.ts tests/sales-demo-flow.spec.ts --reporter=line --workers=1</code>:
+        4개 통과
+      </li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 cleanup pass는 <code>tests/sales-demo-flow.spec.ts</code>의 chart/lab/imaging fixture assertion과
+      <code>ui-demo-api-wiring-e2e</code>의 <code>clair-demo</code> API proof 중 현재 제품 증거로 남아 있는 부분을
+      청담 seed/API 기준으로 분리하는 것이다.
+    </p>
+  </body>
+</html>

@@ -85,7 +85,7 @@ npx playwright test tests/auth.spec.ts --reporter=line
 ## 건드리지 말아야 할 파일/영역
 
 - 업무 화면은 권한 enforcement 검증에 필요한 최소 변경 외에는 수정하지 않는다.
-- sales demo fixture와 golden path는 auth 회귀 보정 목적 외에는 수정하지 않는다.
+- legacy sales demo fixture와 golden path는 현재 제품 검증 기준이 아니다. 이 auth work order에서는 불필요하게 건드리지 말고, 제거/전환은 DEMO-DATA-PR-002 cleanup 범위에서만 진행한다.
 
 ## 작업 완료 시 해야 할 일
 

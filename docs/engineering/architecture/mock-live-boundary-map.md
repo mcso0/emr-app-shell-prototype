@@ -11,7 +11,7 @@ related_work:
   - DEN-179
 supersedes: []
 superseded_by: []
-last_updated: 2026-06-11
+last_updated: 2026-06-17
 ---
 
 # Mock And Live Boundary Map
@@ -46,12 +46,13 @@ CLAiR EMR can claim Product MVP workflow and local-first foundations in scoped a
 
 ## Current Demo Completion Boundary
 
-The current `clair-demo` completion project is local-first. It may claim a synthetic API-backed outpatient demo foundation for the scoped flow from reception through chart, fulfillment, lab result entry, billing checkout, and audit review. It must still keep these claims narrow:
+The current default demo-completion target is the Cheongdam prepared-clinic workspace, `workspace-clair-cheongdam`. It may claim a synthetic seed-backed operating proof only where the scoped flow uses seeded master data and local/dev/test API or Supabase boundaries from reception through chart, fulfillment, billing, reset, and review surfaces. It must still keep these claims narrow:
 
 - synthetic local/dev/test data only
 - scoped Next.js API/server boundaries, not full production service coverage
 - selected Supabase local/dev/test migrations, RLS, RPCs, and seed readback where the work item proves them
-- mock fallback preserved for Sales Demo and unconfigured local sessions
+- unconfigured local mock mode remains local-only and is not valid proof for seed-backed workflow verification
+- legacy `clair-demo` and Sales Demo fixtures are cleanup candidates, not default demo or preservation requirements
 - no remote Supabase, production deploy, real provider, real payment, or real patient data claim
 
 ## Approval-Gated Actions
