@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -11,6 +11,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -73,11 +74,6 @@ const orderQueueFilterItems = [
   { value: "treatment" as const, label: "처치" },
 ];
 
-const orderQueueDisplayDensityLabels: Record<OrderQueueDisplayDensity, string> = {
-  compact: "촘촘",
-  default: "기본",
-};
-
 const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
   assignee: "담당자순",
   request: "요청순",
@@ -85,6 +81,44 @@ const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
 };
 
 const fallbackStatusColorToken = "--emr-status-neutral-text";
+
+const normalizeQueueSearchText = (value: string) => value.toLocaleLowerCase("ko").trim();
+
+function getQueueSearchTokens(query: string) {
+  return normalizeQueueSearchText(query).split(/\s+/).filter(Boolean);
+}
+
+function matchesQueueSearch(searchText: string, query: string) {
+  const tokens = getQueueSearchTokens(query);
+  if (!tokens.length) return true;
+
+  const normalizedSearchText = normalizeQueueSearchText(searchText);
+  return tokens.every((token) => normalizedSearchText.includes(token));
+}
+
+function getOrderQueueSearchText(
+  item: OrderQueueItem,
+  statuses: OrderQueueStatusDefinition[]
+) {
+  const statusLabel = statuses.find((status) => status.id === item.statusId)?.label ?? item.statusId;
+
+  return [
+    item.patientName,
+    item.guardianName,
+    item.receptionType,
+    item.orderType,
+    item.orderTypeCategory,
+    item.orderName,
+    item.requesterName,
+    item.assigneeName,
+    item.time,
+    item.statusId,
+    statusLabel,
+    item.waitMinutes?.toString(),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 const createFallbackStatus = (statusId: string, index: number): OrderQueueStatusDefinition => ({
   id: statusId,
@@ -121,17 +155,6 @@ function getResolvedStatuses(
     .map(createFallbackStatus);
 
   return [...statuses, ...fallbackStatuses].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-function getDetailFilterLabel(
-  filter: OrderQueueDetailFilter,
-  statuses: OrderQueueStatusDefinition[]
-) {
-  if (filter === "all") return "전체 조건";
-  if (filter === "unassigned") return "담당 미정";
-
-  const statusId = filter.replace("status:", "");
-  return statuses.find((status) => status.id === statusId)?.label ?? "상태";
 }
 
 function matchesDetailFilter(item: OrderQueueItem, filter: OrderQueueDetailFilter) {
@@ -173,17 +196,29 @@ export function EmrOrderQueueSidePanel({
   const [detailFilter, setDetailFilter] = useState<OrderQueueDetailFilter>("all");
   const [displayDensity, setDisplayDensity] = useState<OrderQueueDisplayDensity>("default");
   const [filter, setFilter] = useState<string>("all");
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortKey, setSortKey] = useState<OrderQueueSortKey>("request");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
   const actionContext: OrderQueueActionContext = listLabel.includes("진료") ? "chart" : "order";
-  const visibleItems = useMemo(
+  const scopedItems = useMemo(
     () =>
       (filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter))
-        .filter((item) => matchesDetailFilter(item, detailFilter))
+        .filter((item) => matchesDetailFilter(item, detailFilter)),
+    [detailFilter, filter, getFilterValue, items]
+  );
+  const visibleItems = useMemo(
+    () =>
+      scopedItems
+        .filter((item) => matchesQueueSearch(getOrderQueueSearchText(item, resolvedStatuses), searchQuery))
         .sort((a, b) => compareOrderQueueItems(a, b, sortKey)),
-    [detailFilter, filter, getFilterValue, items, sortKey]
+    [resolvedStatuses, scopedItems, searchQuery, sortKey]
   );
   const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
+  const closeSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchActive(false);
+  }, []);
   const groupedItems = resolvedStatuses
     .map((status) => ({
       status,
@@ -224,6 +259,16 @@ export function EmrOrderQueueSidePanel({
       <EmrListHeader
         label={listLabel}
         count={visibleItems.length}
+        search={{
+          active: searchActive,
+          closeLabel: "대기열 검색 닫기",
+          inputLabel: `${listLabel} 검색`,
+          onClose: closeSearch,
+          onQueryChange: setSearchQuery,
+          placeholder: "환자, 보호자, 오더, 담당자 검색",
+          query: searchQuery,
+          resultCount: visibleItems.length,
+        }}
         headerActions={
           <>
             <OrderQueueSortMenu sortKey={sortKey} onSortKeyChange={setSortKey} />
@@ -236,14 +281,18 @@ export function EmrOrderQueueSidePanel({
               density={displayDensity}
               onDensityChange={setDisplayDensity}
             />
-            <EmrListHeaderIconButton ariaLabel="검색">
+            <EmrListHeaderIconButton
+              ariaLabel="대기열 검색 열기"
+              data-testid="order-queue-search-control"
+              onClick={() => setSearchActive(true)}
+            >
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
       />
       <EmrSubpanelBody>
-        {groupedItems.map(({ items: groupItems, status }) => {
+        {groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
           const collapsed = collapsedStatusIds.has(status.id);
 
           return (
@@ -260,7 +309,13 @@ export function EmrOrderQueueSidePanel({
               status={status}
             />
           );
-        })}
+        }) : searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel="대기열 항목"
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
+        ) : null}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -282,7 +337,9 @@ function OrderQueueSortMenu({
             variant="outline"
             size="sm"
             className="h-7 max-w-[92px] gap-1 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] px-2 text-[11px] font-medium text-[var(--emr-text-secondary)]"
-            aria-label={`현재 정렬: ${orderQueueSortLabels[sortKey]}`}
+            aria-label="대기열 정렬"
+            data-sort-key={sortKey}
+            data-testid="order-queue-sort-control"
           />
         }
       >
@@ -316,12 +373,10 @@ function OrderQueueFilterMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-xs"
-            className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0"
-            aria-label={`필터: ${getDetailFilterLabel(filter, statuses)}`}
+          <EmrListHeaderIconButton
+            ariaLabel="대기열 필터"
+            data-filter={filter}
+            data-testid="order-queue-filter-control"
           />
         }
       >
@@ -360,7 +415,9 @@ function OrderQueueDisplayMenu({
             variant="outline"
             size="icon-xs"
             className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0 text-[11px] font-semibold"
-            aria-label={`표시 옵션: ${orderQueueDisplayDensityLabels[density]}`}
+            aria-label="대기열 표시 옵션"
+            data-density={density}
+            data-testid="order-queue-density-control"
           />
         }
       >
@@ -390,8 +447,8 @@ function OrderQueueGroup({
 }: {
   actionContext: OrderQueueActionContext;
   collapsed: boolean;
-  getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   density: OrderQueueDisplayDensity;
+  getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   items: OrderQueueItem[];
   onSelectItem?: (itemId: string) => void;
   onToggle: () => void;

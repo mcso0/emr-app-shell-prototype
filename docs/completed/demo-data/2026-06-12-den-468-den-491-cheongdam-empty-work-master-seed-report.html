@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DEN-468 / DEN-491 청담 기본 업무 빈 상태 및 마스터 시드 리포트</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f7f4;
+      --paper: #ffffff;
+      --ink: #1f2933;
+      --muted: #637083;
+      --line: #d8ddd6;
+      --accent: #1f7a5b;
+      --accent-soft: #e8f4ee;
+      --warn: #8a5a00;
+      --warn-soft: #fff5d6;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+
+    header,
+    section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.25;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    code {
+      background: #f1f3f2;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f5f7f5;
+      font-weight: 650;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .ok {
+      background: var(--accent-soft);
+      border-color: #b9dccd;
+    }
+
+    .warn {
+      background: var(--warn-soft);
+      border-color: #ead28d;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #b9dccd;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 3px 10px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="meta">2026-06-12 · CLAiR EMR Demo Reality &amp; Launch Readiness</p>
+      <h1>DEN-468 / DEN-491 청담 기본 업무 빈 상태 및 마스터 시드 리포트</h1>
+      <p>
+        청담 워크스페이스를 새로 개업한 병원처럼 보이도록 정리했다. 기본 업무 화면에는 예전
+        <code>26.05.01</code> fixture 업무가 보이지 않고, 병원 운영에 필요한 보호자, 환자, 직원,
+        오더/서비스 마스터 데이터는 스테이징 DB에 합성 데이터로 준비했다.
+      </p>
+      <div>
+        <span class="badge">업무 화면 empty</span>
+        <span class="badge">마스터 데이터 seed</span>
+        <span class="badge">고정 스테이징 재배포</span>
+      </div>
+    </header>
+
+    <section class="ok">
+      <h2>사용자 관점 결과</h2>
+      <ul>
+        <li>청담 기본 화면은 더 이상 콩이/나비/코코/하루 같은 legacy daily work를 기본 노출하지 않는다.</li>
+        <li>홈, 차트, 검사, 조제/처치, 입원, 수납 축은 처음 열린 병원처럼 오늘 처리할 업무가 없는 상태로 시작한다.</li>
+        <li>전역 검색과 알림 badge/drawer도 Cheongdam 기본 경로에서는 legacy daily work를 노출하지 않는다.</li>
+        <li>접수/스케줄은 이전 DEN-469/DEN-471 및 DEN-472/DEN-473 범위와 이어져 Cheongdam 전용 empty/loading/error/retry 상태를 유지한다.</li>
+        <li>고객/병원 관리에서 사용할 수 있도록 합성 보호자, 환자, 직원, 서비스/오더 카탈로그, 오더 세트 seed를 추가했다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>구현 범위</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>영역</th>
+            <th>변경 내용</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>홈</td>
+            <td><code>workspace-clair-cheongdam</code>에서는 오늘 업무/병원 알림/flow summary가 모두 0건으로 시작한다.</td>
+          </tr>
+          <tr>
+            <td>차트</td>
+            <td>사이드패널, 헤더, 본문, 우측 패널에서 legacy mock fallback을 Cheongdam 기본 경로에서 차단했다.</td>
+          </tr>
+          <tr>
+            <td>검사</td>
+            <td>영상/임상병리 mock detail fallback을 workspace-aware하게 분리하고 Cheongdam에서는 빈 상태를 사용한다.</td>
+          </tr>
+          <tr>
+            <td>조제/처치</td>
+            <td>대기열, 환자 fallback, 처치 테이블 group을 Cheongdam에서는 빈 상태로 시작한다.</td>
+          </tr>
+          <tr>
+            <td>입원</td>
+            <td>고정 <code>2026-05-06</code> 기준 입원 fixture 대신 현재 운영일 기준 empty ward 상태를 사용한다.</td>
+          </tr>
+          <tr>
+            <td>수납</td>
+            <td>invoice, line, payment fallback을 Cheongdam에서는 빈 배열로 고정해 미수/수납 fixture가 보이지 않게 했다.</td>
+          </tr>
+          <tr>
+            <td>Shell</td>
+            <td>Cheongdam 전역 검색에서 legacy 환자/보호자/예약/진료 mock 후보를 제거하고, 전역 알림은 빈 알림 세트로 시작한다.</td>
+          </tr>
+          <tr>
+            <td>마스터 seed</td>
+            <td><code>supabase/snippets/den-468-491_cheongdam_master_seed.sql</code>에 재실행 가능한 합성 seed SQL을 추가했다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>스테이징 DB readback</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>구분</th>
+            <th>확인 값</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Workspace</td>
+            <td><code>workspace-clair-cheongdam</code> · <code>VIP동물의료센터 청담점</code> · active</td>
+          </tr>
+          <tr>
+            <td>직원/멤버십</td>
+            <td>기존 <code>admin@clair.local</code> 포함 멤버십 6건, 신규 합성 staff 5명</td>
+          </tr>
+          <tr>
+            <td>보호자/환자</td>
+            <td>보호자 25명, 환자 25마리, 보호자-환자 연결 25건, 보호자 없는 환자 0건</td>
+          </tr>
+          <tr>
+            <td>서비스/오더 마스터</td>
+            <td>service categories 4건, service items 12건, prices 12건, order catalog 12건, order sets 3건, order set items 9건</td>
+          </tr>
+          <tr>
+            <td>활성 daily work</td>
+            <td>appointments 0건, encounters 0건, waiting queue 0건, orders 0건, fulfillment work 0건, invoices 0건</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>배포 및 검증</h2>
+      <ul>
+        <li>Preview deployment: <code>emr-app-shell-prototype-g46mn77m0-mcso0s-projects.vercel.app</code></li>
+        <li>Deployment id: <code>dpl_5D4bgF7uCeu1xsQrAGQ7i6LuBmc4</code></li>
+        <li>Fixed staging alias: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+        <li><code>npx playwright test tests/demo-reality-start-state.spec.ts</code> 통과: Cheongdam 업무 화면, shell 검색, 알림 badge에서 legacy 날짜/환자명이 나오지 않는지 확인했다.</li>
+        <li><code>npm run lint -- --ignore-pattern 'lottie-ai-chart-writing/**'</code> 통과: 신규 오류 없음, 기존 경고 5건 유지.</li>
+        <li><code>npm run docs:check</code> 통과: docs/agent markdown 644개 확인.</li>
+        <li><code>npx tsc --noEmit --pretty false | rg -v '^lottie-ai-chart-writing/'</code> 결과: 변경 범위 TypeScript 출력 없음. 전체 tsc는 기존 <code>lottie-ai-chart-writing/</code> 이슈 때문에 계속 실패한다.</li>
+        <li><code>npx vercel@latest curl</code>로 고정 스테이징의 Cheongdam route가 새 배포 HTML을 반환하는 것을 확인했다.</li>
+      </ul>
+    </section>
+
+    <section class="warn">
+      <h2>브라우저 실사용 검증 제한</h2>
+      <p>
+        인앱 브라우저에서 고정 스테이징 URL을 직접 열면 Vercel Deployment Protection 로그인 화면으로 먼저 이동한다.
+        그래서 이번 턴에서는 앱 내부 로그인 후 시각 검증까지는 완료하지 못했다. 대신 배포 alias, 인증된
+        <code>vercel curl</code>, 원격 DB readback, 로컬 Playwright 회귀 테스트로 변경 내용을 검증했다.
+      </p>
+    </section>
+
+    <section>
+      <h2>남은 확인</h2>
+      <ul>
+        <li>Deployment Protection을 통과한 실제 브라우저 세션에서 <code>admin@clair.local / local-password</code>로 접속해 동일 화면을 최종 육안 확인해야 한다.</li>
+        <li>고객 관리/병원 관리 화면이 원격 마스터 seed를 실제 UI 데이터 소스로 읽는지 별도 확인이 필요하다. 이번 작업은 DB seed와 업무 화면 empty 정리에 집중했다.</li>
+        <li>reset UX와 workflow 생성 후 readback은 DEMO-DATA-PR-002 후속 범위로 남아 있다.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

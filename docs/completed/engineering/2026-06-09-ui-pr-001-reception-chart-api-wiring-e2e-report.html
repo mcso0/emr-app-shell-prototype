@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>UI PR 1 Reception and Chart API Wiring E2E Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>UI PR 1 Reception and Chart API Wiring E2E Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      Demo DB PR 5까지 완성된 <code>clair-demo</code> synthetic seed를 바탕으로, 새 seed나 schema 변경 없이
+      접수와 차트 화면이 기존 API boundary를 실제로 타기 시작하도록 만들고 end-to-end 시나리오 테스트를 추가하는 작업이었다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li>접수 화면이 기존 patient/guardian lookup route 결과를 profile store에 병합하도록 했다.</li>
+      <li>차트 side panel이 Supabase 전용 조건 없이 chart live-queue route를 호출하도록 했다.</li>
+      <li>
+        synthetic outpatient route-boundary Playwright spec을 추가해 접수, 차트 오더, fulfillment work item,
+        result-review billing, checkout/payment status, audit readback 흐름을 검증했다.
+      </li>
+      <li>current-status, demo architecture, seed inventory contract, work index를 UI/API adoption 상태에 맞게 갱신했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      seed-family gap은 Demo DB PR 5 기준으로 닫혀 있고, UI PR 1은 그 다음 단계인 API-backed adoption의 첫 단계다.
+      Sales Demo와 unconfigured local session을 위해 mock fallback은 유지했다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 변경은 local/dev/test 범위이며 remote Supabase와 production DB는 건드리지 않았다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+      <li>full browser-level visible-control workflow는 아직 전체 downstream 화면 rewiring 이후에 별도 작업이 필요하다.</li>
+      <li>payment provider, receipt, refund, settlement, accounting, provider integration은 포함하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 작업은 fulfillment, lab/imaging, dispensing/treatment, billing, audit 화면을 seeded DB API/server boundary로
+      더 넓게 연결하고, 이후 visible UI control 중심의 전체 데모 E2E를 만드는 것이다.
+    </p>
+  </body>
+</html>

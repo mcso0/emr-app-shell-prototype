@@ -1,8 +1,16 @@
 ---
+id: DESIGN-SYSTEM-CLAIR-EMR
+type: Design System
+title: "CLAiR EMR Design"
+description: "Defines the CLAiR EMR visual, interaction, density, token, and component design standards."
 version: "alpha"
 name: "CLAiR EMR"
 status: "active"
-updated: "2026-06-06"
+area: design
+doc_type: design-system
+tags: [design-system, ui, tokens, components, density]
+updated: "2026-06-08"
+last_updated: "2026-06-08"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -132,6 +140,8 @@ Shared primitives should carry the visual system:
 - `SegmentedControl`: compact filters and mode switching
 - `StatusBadge`: stable semantic state labels
 
+Patient context bars keep patient and encounter facts visible near clinical work. Secondary patient-context actions such as memo review should collapse into one labeled action with a popover when multiple memo types compete for space; do not spread several low-priority memo buttons across the bar.
+
 Tabs and density controls have a stricter UX contract:
 
 - workspace tabs are shell navigation, not filters
@@ -150,6 +160,8 @@ Interaction should be predictable and low-friction:
 - selected state must be visible without hover
 - destructive or workflow-final actions require confirmation
 - filters should keep context visible where possible
+- queue header search opens inline in place, keeps the current tab/filter/sort scope, shows a compact `검색 결과 N건` summary only while a query is active, and clears the query when closed
+- context-bar memo actions are secondary review actions; they may summarize current state or explain unavailable source screens, but they must not imply live persistence or cross-module editing unless separately scoped
 - charts, orders, and billing actions remain session-only until explicitly connected to live persistence
 
 ## Empty And Info States

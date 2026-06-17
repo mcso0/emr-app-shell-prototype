@@ -8,10 +8,13 @@ import {
   emitLiveMutationAuditEvent,
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
-import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
+import type {
+  ReceptionAppointmentCheckInInput,
+  ReceptionAppointmentCheckInRecord,
+} from "@/features/reception/appointment-check-in";
 import { getReceptionMutationPermissionContract } from "@/features/reception/reception-mutation-permissions";
-import { mockAppointments, mockEncounters } from "@/mocks/emr-domain";
-import type { Appointment, Encounter, WaitingQueueEntry } from "@/types/emr-domain";
+import { mockAppointments, mockEncounters, mockPatients } from "@/mocks/emr-domain";
+import type { Appointment, Encounter, Patient, WaitingQueueEntry } from "@/types/emr-domain";
 
 export type ReceptionAppointmentCheckInDenialReason =
   | "appointment_unavailable"
@@ -27,6 +30,7 @@ export type ReceptionAppointmentCheckInGateway = {
   checkInAppointment(input: {
     actorUserId: string;
     appointmentId: string;
+    input?: ReceptionAppointmentCheckInInput;
     workspaceId: string;
   }): Promise<ReceptionAppointmentCheckInGatewayResult>;
 };
@@ -54,6 +58,7 @@ export async function createReceptionAppointmentCheckIn({
   auditRequestId,
   appointmentId,
   gateway = createMockReceptionAppointmentCheckInGateway(),
+  input,
   permissionAdapter = createDemoReceptionAppointmentCheckInPermissionAdapter(),
   workspaceId,
 }: {
@@ -63,9 +68,11 @@ export async function createReceptionAppointmentCheckIn({
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   appointmentId: string;
   gateway?: ReceptionAppointmentCheckInGateway;
+  input?: ReceptionAppointmentCheckInInput;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<ReceptionAppointmentCheckInResult> {
+  const normalized = normalizeAppointmentCheckInInput(input);
   const permissionContract = getReceptionMutationPermissionContract("appointment_check_in");
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
@@ -84,6 +91,7 @@ export async function createReceptionAppointmentCheckIn({
   const result = await gateway.checkInAppointment({
     actorUserId: actorUserId ?? "",
     appointmentId: appointmentId.trim(),
+    input: normalized,
     workspaceId,
   });
 
@@ -134,14 +142,16 @@ export function createMockReceptionAppointmentCheckInGateway(
   dataset: {
     appointments: Appointment[];
     encounters: Encounter[];
+    patients: Patient[];
   } = {
     appointments: mockAppointments,
     encounters: mockEncounters,
+    patients: mockPatients,
   },
   now = new Date().toISOString()
 ): ReceptionAppointmentCheckInGateway {
   return {
-    async checkInAppointment({ appointmentId, workspaceId }) {
+    async checkInAppointment({ appointmentId, input, workspaceId }) {
       const appointment = dataset.appointments.find(
         (item) => item.id === appointmentId && item.workspaceId === workspaceId
       );
@@ -172,22 +182,33 @@ export function createMockReceptionAppointmentCheckInGateway(
             )
           )
         : undefined;
+      const checkedInAt = input?.checkedInAt ?? now;
+      const visitPurpose =
+        input?.visitPurpose ?? appointment.visitPurpose ?? appointment.symptomNote ?? "예약 접수";
+      const patient = dataset.patients.find(
+        (item) => item.id === appointment.patientId && item.workspaceId === workspaceId,
+      );
+      if (patient && input?.weightKg !== undefined) {
+        patient.weightKg = input.weightKg;
+      }
       const encounter: Encounter = {
         id: `encounter-appointment-${seed}`,
         workspaceId,
         patientId: appointment.patientId,
         guardianId: appointment.guardianId,
         appointmentId: appointment.id,
-        primaryVeterinarianId: appointment.assignedVeterinarianId,
+        primaryVeterinarianId: input?.primaryVeterinarianId ?? appointment.assignedVeterinarianId,
         encounterNo: `E-APPT-${seed.slice(-6).toUpperCase()}`,
         receptionType: "appointment",
-        durationMinutes,
-        chiefComplaint: appointment.visitPurpose,
-        visitPurpose: appointment.visitPurpose ?? "예약 접수",
+        department: input?.department,
+        durationMinutes: input?.durationMinutes ?? durationMinutes,
+        chiefComplaint: visitPurpose,
+        visitPurpose,
+        receptionMemo: input?.memo,
         status: "waiting",
-        checkedInAt: now,
-        createdAt: now,
-        updatedAt: now,
+        checkedInAt,
+        createdAt: checkedInAt,
+        updatedAt: checkedInAt,
       };
       const queueEntry: WaitingQueueEntry = {
         id: `queue-${encounter.id}`,
@@ -196,13 +217,13 @@ export function createMockReceptionAppointmentCheckInGateway(
         queueType: "consultation",
         status: "waiting",
         priority: "normal",
-        enteredAt: now,
+        enteredAt: checkedInAt,
       };
 
       return {
         ok: true,
         checkIn: {
-          appointment: { ...appointment, status: "checked_in", updatedAt: now },
+          appointment: { ...appointment, status: "checked_in", updatedAt: checkedInAt },
           encounter,
           queueEntry,
         },
@@ -218,6 +239,7 @@ export type SupabaseReceptionAppointmentCheckInRpcClient = {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_appointment_id: string;
+      p_check_in?: ReceptionAppointmentCheckInInput;
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -226,11 +248,12 @@ export function createSupabaseReceptionAppointmentCheckInGateway(
   client: SupabaseReceptionAppointmentCheckInRpcClient
 ): ReceptionAppointmentCheckInGateway {
   return {
-    async checkInAppointment({ actorUserId, appointmentId, workspaceId }) {
+    async checkInAppointment({ actorUserId, appointmentId, input, workspaceId }) {
       const { data, error } = await client.rpc("clair_check_in_reception_appointment", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_appointment_id: appointmentId,
+        p_check_in: input,
       });
 
       if (error) {
@@ -244,6 +267,28 @@ export function createSupabaseReceptionAppointmentCheckInGateway(
 
       return { ok: true, checkIn };
     },
+  };
+}
+
+function normalizeAppointmentCheckInInput(
+  input?: ReceptionAppointmentCheckInInput,
+): ReceptionAppointmentCheckInInput | undefined {
+  if (!input) return undefined;
+
+  return {
+    checkedInAt: trimToUndefined(input.checkedInAt),
+    department: trimToUndefined(input.department),
+    durationMinutes:
+      typeof input.durationMinutes === "number" && Number.isFinite(input.durationMinutes)
+        ? Math.round(input.durationMinutes)
+        : undefined,
+    memo: trimToUndefined(input.memo),
+    primaryVeterinarianId: trimToUndefined(input.primaryVeterinarianId),
+    visitPurpose: trimToUndefined(input.visitPurpose),
+    weightKg:
+      typeof input.weightKg === "number" && Number.isFinite(input.weightKg)
+        ? Math.round(input.weightKg * 100) / 100
+        : undefined,
   };
 }
 

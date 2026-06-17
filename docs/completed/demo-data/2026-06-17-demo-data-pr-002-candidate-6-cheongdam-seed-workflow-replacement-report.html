@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Candidate 6 Cheongdam Seed Workflow Replacement 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.3;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 0.1rem 0.3rem;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEMO-DATA-PR-002 Candidate 6 Cheongdam Seed Workflow Replacement</h1>
+    <p><strong>작성일:</strong> 2026-06-17</p>
+
+    <h2>요청</h2>
+    <p>
+      남은 <code>kong-vomit</code> fixture를 삭제하기 전에, 예전 Sales Demo flow가 맡던 검증 역할을
+      <code>workspace-clair-cheongdam</code> seed/API 기준으로 옮기는 첫 작업을 진행했다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        새 Playwright 테스트 <code>tests/cheongdam-seed-workflow-replacement.spec.ts</code>를 추가했다.
+      </li>
+      <li>
+        이 테스트는 청담 workspace에서 reception, chart, lab, imaging, dispensing, billing이 같은
+        <code>encounterId</code>와 API-shaped data로 이어지는지 확인한다.
+      </li>
+      <li>
+        테스트는 <code>scenario=kong-vomit</code> 없이 동작하며, Kong/Coco/Nabi 및 <code>26.05.01</code>
+        fixture text가 나타나지 않는지도 확인한다.
+      </li>
+      <li>
+        Cheongdam reception 중앙 상세/context fallback이 전역 legacy mock 환자 bundle 또는 cross-workspace selected mock
+        patient를 읽지 못하도록 <code>src/features/reception/module.tsx</code>를 보강했다.
+      </li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      기존 <code>kong-vomit</code> 테스트를 바로 지우면 기능 회귀를 감지하는 안전망도 같이 사라진다. 이번 작업은 그
+      안전망을 청담 seed/API 기준으로 옮기기 시작한 것이다. 이제 최소 한 개의 청담 API-backed 흐름이 예전 Sales Demo
+      launcher나 fixed May 2026 fixture 없이 여러 모듈을 통과한다.
+    </p>
+
+    <h2>중요한 미변경 범위</h2>
+    <ul>
+      <li><code>kong-vomit</code> scenario registry와 fixed May 2026 fixture data는 아직 삭제하지 않았다.</li>
+      <li>원격 Supabase mutation, staging replay, production deploy는 수행하지 않았다.</li>
+      <li>
+        아직 모든 legacy module fixture assertion이 청담 seed/API 테스트로 대체된 것은 아니다. 남은 테스트는 계속
+        <code>test-fixture</code>로 분류한다.
+      </li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>git diff --check</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li><code>npm run lint</code>: 통과. 기존 경고 5개만 남음.</li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3120 npx playwright test tests/cheongdam-seed-workflow-replacement.spec.ts --reporter=line --workers=1</code>:
+        통과
+      </li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3120 npx playwright test tests/cheongdam-seed-workflow-replacement.spec.ts tests/demo-reality-start-state.spec.ts tests/sales-demo-flow.spec.ts -g "Cheongdam seed/API workflow replaces|Cheongdam reception screen starts|Cheongdam work modules do not render|missing workspace fallbacks|legacy Kong reception fixture remains|legacy Kong scenario can be opened" --reporter=line --workers=1</code>:
+        6개 통과
+      </li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      다음 작업은 <code>tests/sales-demo-flow.spec.ts</code>와 module-specific Kong fixture assertion을 더 쪼개서,
+      청담 seed/API 테스트가 같은 역할을 맡는 부분부터 legacy assertion을 삭제하는 것이다.
+    </p>
+  </body>
+</html>

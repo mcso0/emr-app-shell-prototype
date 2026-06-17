@@ -15,12 +15,15 @@ declare
   v_patient_id uuid := nullif(p_walk_in->>'patientId', '')::uuid;
   v_guardian_id uuid := nullif(p_walk_in->>'guardianId', '')::uuid;
   v_primary_veterinarian_id uuid := nullif(p_walk_in->>'primaryVeterinarianId', '')::uuid;
+  v_planned_start_at timestamptz := nullif(p_walk_in->>'plannedStartAt', '')::timestamptz;
   v_encounter_id uuid;
   v_queue_entry_id uuid;
   v_now timestamptz := now();
-  v_encounter_no text := 'E-' || to_char(v_now, 'YYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+  v_event_time timestamptz := coalesce(v_planned_start_at, v_now);
+  v_encounter_no text := 'E-' || to_char(v_event_time at time zone 'Asia/Seoul', 'YYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
   v_duration_minutes integer := nullif(p_walk_in->>'durationMinutes', '')::integer;
   v_visit_purpose text := nullif(btrim(p_walk_in->>'visitPurpose'), '');
+  v_weight_kg numeric(6,2) := nullif(p_walk_in->>'weightKg', '')::numeric(6,2);
   v_encounter_row jsonb;
   v_queue_row jsonb;
 begin
@@ -56,6 +59,23 @@ begin
     end if;
   end if;
 
+  if v_primary_veterinarian_id is not null and not exists (
+    select 1
+    from public.user_memberships um
+    join public.users u on u.id = um.user_id
+    where um.workspace_id = p_workspace_id
+      and um.user_id = v_primary_veterinarian_id
+      and um.status = 'active'
+      and u.status = 'active'
+      and 'vet' = any(um.roles)
+  ) then
+    raise exception 'primary_veterinarian_unavailable';
+  end if;
+
+  if v_weight_kg is not null and v_weight_kg <= 0 then
+    raise exception 'invalid_weight';
+  end if;
+
   insert into public.encounters (
     workspace_id,
     patient_id,
@@ -89,10 +109,10 @@ begin
     coalesce(v_visit_purpose, '현장 접수'),
     nullif(btrim(p_walk_in->>'memo'), ''),
     'waiting',
-    v_now,
+    v_event_time,
     null,
     v_now,
-    v_now
+    v_event_time
   )
   returning id into v_encounter_id;
 
@@ -110,9 +130,18 @@ begin
     'consultation',
     'waiting',
     'normal',
-    v_now
+    v_event_time
   )
   returning id into v_queue_entry_id;
+
+  if v_weight_kg is not null then
+    update public.patients
+    set
+      weight_kg = v_weight_kg,
+      updated_at = v_event_time
+    where workspace_id = p_workspace_id
+      and id = v_patient_id;
+  end if;
 
   select jsonb_build_object(
     'id', e.id::text,

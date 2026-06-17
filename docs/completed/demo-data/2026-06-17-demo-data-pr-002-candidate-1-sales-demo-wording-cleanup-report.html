@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Candidate 1 Sales Demo 문구 정리 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.3;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 0.1rem 0.3rem;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEMO-DATA-PR-002 Candidate 1 Sales Demo 문구 정리</h1>
+    <p><strong>작성일:</strong> 2026-06-17</p>
+
+    <h2>요청</h2>
+    <p>
+      리팩터링 후보 1번인 “Sales Demo 보존 전제 남은 테스트/문구 정리”를 먼저 진행했다. 목표는
+      Sales Demo가 현재도 보존 요구사항처럼 읽히는 문구를 없애고, Cheongdam seed workspace 검증이
+      현재 운영 기준임을 더 분명히 하는 것이다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        오래된 demo-data work item의 “Sales Demo fallback을 보존한다”는 표현을 “historical scope” 또는
+        <code>DEMO-DATA-PR-002</code> cleanup debt로 바꿨다.
+      </li>
+      <li>
+        DEN-64 Sales Demo preservation 문서를 <code>superseded</code>로 표시하고, 현재 기준은
+        <code>workspace-clair-cheongdam</code> seed 검증이라고 명시했다.
+      </li>
+      <li>
+        auth briefing, work order, QA, reception persistence 문서에서 Sales Demo golden path가 현재 제품 검증
+        기준처럼 읽히는 표현을 legacy fixture coverage로 낮췄다.
+      </li>
+      <li>
+        Sales Demo 관련 Playwright 테스트 제목을 “golden path/preserved”에서 “legacy/explicit fixture path”로
+        바꿨다. 테스트 동작은 바꾸지 않았다.
+      </li>
+      <li>
+        cleanup inventory와 active work item에 Candidate 1 진행 상태를 기록했다.
+      </li>
+    </ul>
+
+    <h2>중요한 미변경 범위</h2>
+    <ul>
+      <li>runtime Sales Demo behavior, <code>/w/clair-demo</code> navigation, fixture constants는 삭제하지 않았다.</li>
+      <li>Cheongdam fixture guard, global entry point, workflow module fallback 축소는 후보 2-4번 범위로 남겼다.</li>
+      <li>local mock mode 자체는 삭제하지 않았다. 단, seed/API 검증 증거로 쓰지 않는다는 기준은 유지했다.</li>
+    </ul>
+
+    <h2>검증 기준</h2>
+    <ul>
+      <li>직접적인 “Sales Demo 보존” 문구가 남아 있는지 <code>rg</code>로 재검색한다.</li>
+      <li><code>npm run docs:check</code>를 실행한다.</li>
+      <li><code>npx tsc --noEmit</code>를 실행한다.</li>
+      <li>테스트 제목만 바꿨으므로 Playwright 전체 실행은 필수 검증이 아니다. 필요하면 후보 2-4번에서 focused UI 회귀를 실행한다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      후보 2번으로 넘어가면 Home, shell, command palette, notification의 <code>/w/clair-demo</code> 기본 진입점을
+      Cheongdam 중심으로 전환하거나 제거하는 작업을 진행한다.
+    </p>
+  </body>
+</html>

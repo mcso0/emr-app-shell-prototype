@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-DOMAIN-OUTPATIENT-WORKFLOW-STATE-MODEL
+type: Domain State Model
+title: "Outpatient Workflow State Model"
+description: "Defines how appointment, reception, encounter, chart, order, result, billing, and audit states move together."
 status: approved
 area: product
 doc_type: domain-state-model
+tags: [domain, state-model, outpatient-workflow, billing, audit]
 related_work:
   - DEN-176
   - DEN-335

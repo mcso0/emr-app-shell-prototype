@@ -2,6 +2,7 @@ import {
   HOME_ROLE_LABELS,
   HOME_ROLE_USER_NAMES,
 } from "@/features/home/home.presets";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import type {
   HomeDashboardData,
   HomeFlowSummaryItem,
@@ -16,6 +17,48 @@ import type {
 
 const todayLabel = "2026년 5월 9일 토요일";
 const updatedAt = "2026-05-09T09:42:00+09:00";
+const legacyHomeRoutePrefix = "/w/clair-demo";
+
+function scopeWorkspaceHref(href: string, workspaceId: string) {
+  return href.split(legacyHomeRoutePrefix).join(`/w/${workspaceId}`);
+}
+
+function scopeHomeTask(task: HomeTask, workspaceId: string): HomeTask {
+  return {
+    ...task,
+    actionHref: scopeWorkspaceHref(task.actionHref, workspaceId),
+  };
+}
+
+function scopeHomeLauncher(launcher: HomeLauncherAction, workspaceId: string): HomeLauncherAction {
+  return {
+    ...launcher,
+    href: scopeWorkspaceHref(launcher.href, workspaceId),
+  };
+}
+
+function scopeHomeFlowSummaryItem(
+  item: HomeFlowSummaryItem,
+  workspaceId: string
+): HomeFlowSummaryItem {
+  return {
+    ...item,
+    href: scopeWorkspaceHref(item.href, workspaceId),
+  };
+}
+
+function scopeHomeRoleNextAction(
+  hypothesis: HomeRoleNextActionHypothesis,
+  workspaceId: string
+): HomeRoleNextActionHypothesis {
+  return {
+    ...hypothesis,
+    actions: hypothesis.actions.map((action) => ({
+      ...action,
+      actionHref: scopeWorkspaceHref(action.actionHref, workspaceId),
+    })),
+  };
+}
 
 export const homeKanbanColumns: HomeKanbanColumn[] = [
   { id: "waiting", label: "대기", description: "대기실/지연 대응" },
@@ -714,8 +757,40 @@ function createQuickStatus(tasks: HomeTask[]): HomeQuickStatus[] {
 
 export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashboardData {
   const roleTasks = tasksByRole[role];
+  const scopedEmptyLaunchers = emptyLaunchersByRole[role].map((launcher) =>
+    scopeHomeLauncher(launcher, workspaceId)
+  );
+  const scopedFlowSummary = flowSummary.map((item) =>
+    scopeHomeFlowSummaryItem(item, workspaceId)
+  );
 
-  void workspaceId;
+  if (isPreparedEmptyClinicWorkspace(workspaceId)) {
+    return {
+      role,
+      roleLabel: HOME_ROLE_LABELS[role],
+      userName: HOME_ROLE_USER_NAMES[role],
+      hospitalName: "VIP동물의료센터 청담점",
+      todayLabel: new Intl.DateTimeFormat("ko-KR", {
+        dateStyle: "full",
+        timeZone: "Asia/Seoul",
+      }).format(new Date()),
+      columns: homeKanbanColumns,
+      tasks: [],
+      hospitalTasks: [],
+      notifications: [],
+      quickStatus: createQuickStatus([]),
+      emptyLaunchers: scopedEmptyLaunchers,
+      flowSummary: scopedFlowSummary.map((item) => ({
+        ...item,
+        count: 0,
+        detail: "준비됨",
+        overdueCount: 0,
+        unassignedCount: 0,
+      })),
+      roleNextActions: [],
+      updatedAt: new Date().toISOString(),
+    };
+  }
 
   return {
     role,
@@ -724,13 +799,15 @@ export function getHomeMockData(role: UserRole, workspaceId: string): HomeDashbo
     hospitalName: "CLAiR 동물병원",
     todayLabel,
     columns: homeKanbanColumns,
-    tasks: roleTasks,
-    hospitalTasks,
+    tasks: roleTasks.map((task) => scopeHomeTask(task, workspaceId)),
+    hospitalTasks: hospitalTasks.map((task) => scopeHomeTask(task, workspaceId)),
     notifications,
     quickStatus: createQuickStatus(roleTasks),
-    emptyLaunchers: emptyLaunchersByRole[role],
-    flowSummary,
-    roleNextActions,
+    emptyLaunchers: scopedEmptyLaunchers,
+    flowSummary: scopedFlowSummary,
+    roleNextActions: roleNextActions.map((hypothesis) =>
+      scopeHomeRoleNextAction(hypothesis, workspaceId)
+    ),
     updatedAt,
   };
 }

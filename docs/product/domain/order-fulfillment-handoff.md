@@ -1,8 +1,12 @@
 ---
 id: PRODUCT-DOMAIN-ORDER-FULFILLMENT-HANDOFF
+type: Domain Contract
+title: "Order Fulfillment Handoff"
+description: "Defines the product-level handoff from chart-confirmed orders to fulfillment queues and billing readiness."
 status: approved
 area: product
 doc_type: domain-contract
+tags: [domain, fulfillment, orders, billing, outpatient-workflow]
 related_work:
   - DEN-235
   - DEN-287

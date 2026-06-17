@@ -793,25 +793,46 @@ test("module side panel order type segmented control filters side orders", async
   await expect(treatmentCard).not.toHaveAttribute("data-selected", "true");
   await page.mouse.click(8, 8);
 
-  await sidePanel.getByRole("button", { name: /현재 정렬: 요청순/ }).click();
-  await expect(page.getByRole("menu", { name: "현재 정렬: 요청순" })).toContainText("대기 긴 순");
-  await page.getByRole("menuitemradio", { name: "대기 긴 순" }).click();
-  await expect(sidePanel.getByRole("button", { name: /현재 정렬: 대기 긴 순/ })).toBeVisible();
+  const sortControl = sidePanel.getByTestId("order-queue-sort-control");
+  const filterControl = sidePanel.getByTestId("order-queue-filter-control");
+  const densityControl = sidePanel.getByTestId("order-queue-density-control");
+  const searchControl = sidePanel.getByTestId("order-queue-search-control");
+
+  await expect(sortControl).toHaveAttribute("aria-label", "대기열 정렬");
+  await expect(sortControl).toHaveAttribute("data-sort-key", "request");
+  await expect(sortControl).toContainText("요청순");
+  await expect(sortControl).not.toContainText("현재 정렬");
+  await expect(filterControl).toHaveAttribute("aria-label", "대기열 필터");
+  await expect(densityControl).toHaveAttribute("aria-label", "대기열 표시 옵션");
+  await expect(densityControl).toHaveText("M");
+  await expect(searchControl).toHaveAttribute("aria-label", "대기열 검색 열기");
+  await searchControl.click();
+  await expect(sidePanel.getByLabel("전체 오더 검색")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  await sidePanel.getByRole("button", { name: /필터: 전체 조건/ }).click();
+  await sortControl.click();
+  await expect(page.getByRole("menu").filter({ hasText: "정렬" })).toContainText("대기 긴 순");
+  await page.getByRole("menuitemradio", { name: "대기 긴 순" }).click();
+  await expect(sortControl).toHaveAttribute("data-sort-key", "wait");
+  await expect(sortControl).toContainText("대기 긴 순");
+  await page.keyboard.press("Escape");
+
+  await filterControl.click();
   await page.getByRole("menuitemradio", { name: "담당 미정" }).click();
+  await expect(filterControl).toHaveAttribute("data-filter", "unassigned");
   await expect(sidePanel.getByText("소염제 세트")).toBeVisible();
   await expect(sidePanel.getByText("항생제 세트 A")).toBeHidden();
   await page.keyboard.press("Escape");
 
-  await sidePanel.getByRole("button", { name: /표시 옵션: 기본/ }).click();
+  await densityControl.click();
   await page.getByRole("menuitemradio", { name: "촘촘한 밀도" }).click();
-  await expect(sidePanel.getByRole("button", { name: /표시 옵션: 촘촘/ })).toBeVisible();
+  await expect(densityControl).toHaveAttribute("data-density", "compact");
+  await expect(densityControl).toHaveText("S");
   await page.keyboard.press("Escape");
 
-  await sidePanel.getByRole("button", { name: /필터: 담당 미정/ }).click();
+  await filterControl.click();
   await page.getByRole("menuitemradio", { name: "전체 조건" }).click();
+  await expect(filterControl).toHaveAttribute("data-filter", "all");
   await page.keyboard.press("Escape");
 
   await treatmentFilter.click();
@@ -901,6 +922,47 @@ test("orders module renders hospital admin order management instead of the place
   await expect(page.getByTestId("hospital-admin-menu-order-management")).toContainText("Order 관리");
   await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
   await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
+});
+
+test("customer table uses compact scope controls and checkbox bulk selection", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+
+  const header = page.getByTestId("customer-page-header");
+  const table = page.getByTestId("customer-patient-table");
+
+  await expect(header.getByRole("textbox", { name: "고객관리 검색" })).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "환자/보호자 등록" })).toBeVisible();
+  await expect(table).toBeVisible();
+  await expect(table).toHaveCSS("border-radius", "0px");
+  await expect(table.getByRole("textbox", { name: "고객관리 검색" })).toBeVisible();
+  await expect(table).toContainText("전체 동물");
+  await expect(table).not.toContainText("0 / 5 선택");
+
+  await page.getByRole("checkbox", { name: "코코 선택" }).click();
+  await expect(page.getByText("선택한 동물 1개")).toBeVisible();
+  await expect(page.getByText("환자 정보")).toHaveCount(0);
+
+  await page.getByTestId("customer-patient-row-patient-coco").click({ position: { x: 120, y: 20 } });
+  await expect(page.getByText("환자 정보")).toBeVisible();
+});
+
+test("hospital order table keeps tabs and compact controls in one hierarchy row", async ({ page }) => {
+  await page.goto("/w/clair-demo/orders?modulePanel=open&aside=closed");
+
+  const tabGroup = page.getByRole("group", { name: "임상병리 검사 하위 타입" });
+  const activeTab = tabGroup.getByRole("button", { name: "전체" });
+  const search = page.getByRole("textbox", { name: "오더 검색" });
+  await expect(activeTab).toBeVisible();
+  await expect(activeTab).toHaveAttribute("aria-pressed", "true");
+  await expect(search).toBeVisible();
+  await expect(page.getByRole("button", { name: "오더 필터 설정" })).toBeVisible();
+  await expect(page.getByTestId("hospital-order-table")).toBeVisible();
+
+  const activeTabBox = await activeTab.boundingBox();
+  const searchBox = await search.boundingBox();
+  expectRect(activeTabBox);
+  expectRect(searchBox);
+  expect(Math.abs(Math.round(activeTabBox.y - searchBox.y))).toBeLessThanOrEqual(8);
 });
 
 test("dispensing queue selection updates existing patient and instruction context", async ({ page }) => {

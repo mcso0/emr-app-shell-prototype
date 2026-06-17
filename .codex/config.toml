@@ -12,3 +12,19 @@ supports_websockets = true
 # --- Headroom init features ---
 codex_hooks = true
 # --- end Headroom init features ---
+
+[mcp_servers.clair_storybook]
+url = "http://127.0.0.1:6006/mcp"
+enabled = true
+required = false
+startup_timeout_sec = 10
+tool_timeout_sec = 120
+default_tools_approval_mode = "auto"
+enabled_tools = [
+  "list-all-documentation",
+  "get-documentation",
+  "get-documentation-for-story",
+  "get-storybook-story-instructions",
+  "preview-stories",
+  "run-story-tests",
+]

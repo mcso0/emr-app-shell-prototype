@@ -1,6 +1,6 @@
 # Manual Linear Operations
 
-Updated: 2026-05-18
+Updated: 2026-06-11
 
 This document is the operating rule for running this project through Linear manually, without a live Symphony daemon. It keeps the useful parts of Symphony discipline: small issues, clear scope, predictable status handoff, Korean CEO-facing reports, and safe multi-Codex coordination.
 
@@ -14,6 +14,7 @@ Reasons:
 - The representative can give short natural-language direction, and Codex should shape it into PR-sized Linear work.
 - A live Symphony daemon adds runner setup, key management, duplicate pickup risk, and workflow maintenance that are not yet worth the overhead.
 - Multiple Codex sessions can still work together safely if Linear is treated as the control plane and each session owns exactly one issue and one branch.
+- For 승욱's solo multi-Codex workflow, one session may own a coherent Linear project or work bundle with multiple issues when the branch and PR strategy is explicit.
 
 ## Current Linear Shape
 
@@ -90,6 +91,7 @@ Responsibilities:
 - Implement or coordinate implementation.
 - Attach Korean HTML reports for meaningful completed work.
 - Stop at `Human Review` unless the representative asks to commit, push, PR, or mark done.
+- Scoped synthetic/demo-data Supabase, migration/RLS, server/API, and production-demo deployment work may proceed when the active Linear issue includes it; do not treat those categories as blocked by default.
 
 Execution mode:
 
@@ -97,7 +99,7 @@ Execution mode:
 - Use direct work for small docs, narrow code changes, and high-conflict files.
 - Use sub-agents when the work naturally splits into independent roles such as codebase exploration, DB contract review, security review, UI implementation, or verification.
 - Keep one Linear issue owner and one final integrator even when sub-agents help.
-- Do not use sub-agents to bypass Linear status, branch, file ownership, security, remote Supabase, real data, or Human Review rules.
+- Do not use sub-agents to bypass Linear status, branch, file ownership, security, real-data, cost, external-publication, destructive-operation, or Human Review rules.
 
 ### Additional Codex Sessions
 
@@ -109,6 +111,19 @@ Additional Codex sessions may work in parallel only when each one has:
 - A clear status and handoff comment in Linear.
 
 They must not silently work on the same issue or same files.
+
+### Work Bundle Sessions
+
+승욱 may ask one Codex session to shape a Linear project, create several issues, and continue implementation in the same thread. This is allowed when the session states:
+
+- the project or work bundle name;
+- the included Linear issues;
+- whether the bundle uses one branch/PR or separate branches/PRs;
+- the deployment boundary for review.
+
+Work bundle sessions may share one branch/PR when the issues are tightly related and the representative has approved the grouping. They must not change fixed staging, production, or Vercel aliases as part of ordinary implementation work.
+
+Release/deployment requests must route to `release-deployment-ops` and `docs/engineering/operations/release-environment-policy.md`.
 
 ## Status Rules
 
@@ -229,13 +244,19 @@ Ask the representative before:
 - Creating a new Linear project.
 - Moving work into a different project.
 - Adding or changing milestones.
-- Changing product role/permission policy.
-- Entering live Supabase, DB migration, RLS, payment, subscription, email delivery, or production deployment scope.
+- Changing canonical product role/permission policy.
+- Any action likely to create meaningful cost.
+- Exposing or weakening secrets, credentials, auth, private repo visibility, or security boundaries.
+- Using real customer, patient, guardian, staff, payment, identity, or hospital data.
+- Performing destructive or hard-to-rollback remote data changes.
+- Sending real external email, KakaoTalk, SMS, payment, provider, accounting, PACS, device, or other external side effects.
+- Opening private repo/project assets to public access or moving the private repo to open source.
+- Launching to real external users or public customers.
 - Making broad UI direction changes.
 - Combining unrelated issues into one PR.
 - Marking an issue `Done` without an explicit request.
 
-If the work is low-risk and clearly inside an existing issue's scope, Codex may proceed without asking.
+If the work is scoped to synthetic/demo data, low-risk, and clearly inside an existing issue's scope, Codex may proceed without asking, including Supabase validation, DB migration/RLS, server/API hardening, and production-demo deployment preparation.
 
 ## Rework and Done Rules
 
@@ -278,6 +299,28 @@ Do not combine:
 - Security-sensitive implementation with unrelated UI polish.
 - DB/RLS work with frontend-only work.
 - Product scope decisions with implementation unless the issue explicitly includes both.
+
+## Release And Deployment Handoff Rules
+
+Individual issue or work-bundle sessions should normally stop at PR preview. They may create, push, and prepare a PR when asked, but they must not attach fixed staging aliases or promote production.
+
+Use `docs/engineering/operations/release-environment-policy.md` and the `$release-deployment-ops` skill when the representative asks for:
+
+- fixed staging deployment or alias changes;
+- Vercel alias inspection or correction;
+- PR preview/main staging automation;
+- production deploy or production promote;
+- env/secret deployment safety checks;
+- rollback or release closeout.
+
+Release handoff comments should include:
+
+- branch and commit SHA;
+- included Linear issues and PRs;
+- verification already run;
+- preview URL;
+- known blockers or residual risks;
+- whether fixed staging or production was intentionally not touched.
 
 ## Reporting Depth Rules
 

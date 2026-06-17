@@ -241,74 +241,79 @@ function mapLookupRows(data: unknown): ReceptionPatientGuardianLookupItem[] {
 
 function mapPatient(value: unknown): Patient | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<Patient>;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const patientNo = getString(row.patientNo) ?? getString(row.patient_no);
+  const name = getString(row.name);
+  const species = getString(row.species);
+  const sex = getString(row.sex);
+  const status = getString(row.status);
 
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.patientNo !== "string" ||
-    typeof row.name !== "string" ||
-    typeof row.species !== "string" ||
-    typeof row.sex !== "string" ||
-    typeof row.status !== "string"
-  ) {
-    return null;
-  }
+  if (!id || !workspaceId || !patientNo || !name || !species || !sex || !status) return null;
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    patientNo: row.patientNo,
-    name: row.name,
-    species: row.species as Patient["species"],
+    id,
+    workspaceId,
+    patientNo,
+    name,
+    species: species as Patient["species"],
     breed: getString(row.breed),
-    birthDate: getString(row.birthDate),
-    estimatedAgeText: getString(row.estimatedAgeText),
-    sex: row.sex as Patient["sex"],
+    birthDate: getString(row.birthDate) ?? getString(row.birth_date),
+    estimatedAgeText: getString(row.estimatedAgeText) ?? getString(row.estimated_age_text),
+    sex: sex as Patient["sex"],
     neutered: typeof row.neutered === "boolean" ? row.neutered : undefined,
-    microchipNo: getString(row.microchipNo),
-    patientRegistrationNo: getString(row.patientRegistrationNo),
-    allergyNote: getString(row.allergyNote),
-    specialNote: getString(row.specialNote),
-    handlingCautionNote: getString(row.handlingCautionNote),
+    microchipNo: getString(row.microchipNo) ?? getString(row.microchip_no),
+    patientRegistrationNo:
+      getString(row.patientRegistrationNo) ?? getString(row.patient_registration_no),
+    weightKg: getNumber(row.weightKg) ?? getNumber(row.weight_kg),
+    allergyNote: getString(row.allergyNote) ?? getString(row.allergy_note),
+    specialNote: getString(row.specialNote) ?? getString(row.special_note),
+    handlingCautionNote:
+      getString(row.handlingCautionNote) ?? getString(row.handling_caution_note),
     handlingCautionLocked:
-      typeof row.handlingCautionLocked === "boolean" ? row.handlingCautionLocked : true,
-    status: row.status as Patient["status"],
-    createdAt: getString(row.createdAt) ?? new Date(0).toISOString(),
-    updatedAt: getString(row.updatedAt) ?? new Date(0).toISOString(),
+      typeof row.handlingCautionLocked === "boolean"
+        ? row.handlingCautionLocked
+        : typeof row.handling_caution_locked === "boolean"
+          ? row.handling_caution_locked
+          : true,
+    status: status as Patient["status"],
+    createdAt: getString(row.createdAt) ?? getString(row.created_at) ?? new Date(0).toISOString(),
+    updatedAt: getString(row.updatedAt) ?? getString(row.updated_at) ?? new Date(0).toISOString(),
   };
 }
 
 function mapGuardian(value: unknown): Guardian | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const row = value as Partial<Guardian>;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const name = getString(row.name);
 
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.name !== "string"
-  ) {
-    return undefined;
-  }
+  if (!id || !workspaceId || !name) return undefined;
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    name: row.name,
-    mobilePhone: getString(row.mobilePhone),
+    id,
+    workspaceId,
+    name,
+    mobilePhone: getString(row.mobilePhone) ?? getString(row.mobile_phone),
     phone: getString(row.phone),
     email: getString(row.email),
-    birthDate: getString(row.birthDate),
+    birthDate: getString(row.birthDate) ?? getString(row.birth_date),
     address: getString(row.address),
     occupation: getString(row.occupation),
     memo: getString(row.memo),
-    createdAt: getString(row.createdAt) ?? new Date(0).toISOString(),
-    updatedAt: getString(row.updatedAt) ?? new Date(0).toISOString(),
+    createdAt: getString(row.createdAt) ?? getString(row.created_at) ?? new Date(0).toISOString(),
+    updatedAt: getString(row.updatedAt) ?? getString(row.updated_at) ?? new Date(0).toISOString(),
   };
 }
 
 function getString(value: unknown) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function createDemoReceptionLookupPermissionAdapter() {

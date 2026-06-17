@@ -171,6 +171,7 @@ export type Patient = {
   neutered?: boolean;
   microchipNo?: string;
   patientRegistrationNo?: string;
+  weightKg?: number;
   allergyNote?: string;
   specialNote?: string;
   handlingCautionNote?: string;
@@ -491,6 +492,7 @@ export type LatestWorkShortcut = {
 
 export type LabResultRow = {
   id: EmrId;
+  labTestItemId?: EmrId;
   analyteName: string;
   value?: string;
   unit?: string;

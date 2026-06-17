@@ -9,7 +9,7 @@ Start here:
 3. `docs/work/index.md` for PR-sized work tracking.
 4. The linked work item and its source documents.
 
-For product planning review, use the internal `/docs` app route as a read-only viewer over curated `docs/product/` Markdown. The legacy `/prd` route redirects there for compatibility. The repository `docs/` folder remains the source of truth. GitBook is no longer the active reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
+For human review, use the internal `/docs` app route as the read-only CLAiR Docs viewer over curated `docs/` Markdown. The legacy `/prd` route remains as a compatibility path for the original product-doc viewer. The repository `docs/` folder remains the source of truth. GitBook is no longer the active reader path; preserved GitBook files are inactive/deprecated history unless 승욱 explicitly revives that surface.
 
 ## Operating Model
 
@@ -28,6 +28,7 @@ Canonical docs are organized by purpose:
 | `product/` | PRD, feature specs, epics, product decisions, and glossary |
 | `design/` | Reference screens, UX flows, design system notes, and UI QA |
 | `engineering/` | Architecture, data model, auth/security, API boundaries, and testing |
+| `study/` | 승욱's local study archive, curriculum, diagrams, glossary, and lesson notes |
 | `work/` | PR-sized work items, status board, inbox, and templates |
 | `completed/` | Closeout documents for finished work |
 | `archive/` | Historical plans and records that are no longer active guidance |
@@ -39,8 +40,8 @@ Canonical docs are organized by purpose:
 | Surface | Current role |
 |---|---|
 | Repo `docs/` | Canonical source of truth and editing surface |
-| `/docs` app route | Internal read-only viewer for curated product Markdown |
-| `/prd` app route | Legacy compatibility route that redirects to `/docs` |
+| `/docs` app route | Internal read-only viewer for curated product, design, engineering, and study Markdown |
+| `/prd` app route | Legacy-compatible product-doc viewer path |
 | `docs/index.md` | Human and agent routing portal |
 | `docs/SUMMARY.md` | Legacy GitBook sidebar compatibility file, not active navigation |
 | GitBook | Inactive/deprecated reader path unless explicitly revived |

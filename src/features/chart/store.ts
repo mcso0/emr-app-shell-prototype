@@ -21,7 +21,7 @@ export const useChartStore = create<ChartStore>()((set) => ({
   liveQueueError: undefined,
   liveQueueRecords: [],
   liveQueueStatus: "idle",
-  selectedEncounterId: "encounter-coco-260501",
+  selectedEncounterId: "",
   selectEncounter: (selectedEncounterId) => set({ selectedEncounterId }),
   setLiveQueueState: ({ error, records, status }) =>
     set((current) => ({

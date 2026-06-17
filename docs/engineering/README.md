@@ -14,7 +14,12 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - Auth/security roadmap: `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`
 - Auth/login package index: `docs/engineering/auth-security/auth-login/README.md`
 - Persistence and data security checklist: `docs/engineering/auth-security/persistence-data-security-checklist.md`
+- Demo data architecture: `docs/engineering/demo-data-architecture-2026-06-08.md`
+- Demo seed inventory/readback contract: `docs/engineering/data-model/demo-seed-inventory-readback-contract.md`
+- API-backed demo runbook: `docs/engineering/testing/api-backed-demo-runbook.md`
 - Product MVP QA scenarios: `docs/engineering/testing/product-mvp-qa-scenario-pack.md`
+- Release environment policy: `docs/engineering/operations/release-environment-policy.md`
+- Vercel Git integration execution plan: `docs/engineering/operations/vercel-git-integration-execution-plan.md`
 - Launch readiness checklist: `docs/engineering/operations/launch-readiness-checklist.md`
 - Manual Linear operations: `docs/engineering/agent-orchestration/manual-linear-operations.md`
 
@@ -24,7 +29,7 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - `api-boundaries/`: route, repository, selector, and integration boundary contracts.
 - `data-model/`: actual schema, ERD, migration plans, RLS, indexes, and persistence contracts.
 - `auth-security/`: Supabase Auth, workspace membership, permissions, RLS, audit, and server enforcement plans.
-- `testing/`: validation strategy, QA scenarios, and regression context.
+- `testing/`: validation strategy, demo runbooks, QA scenarios, and regression context.
 - `operations/`: deployment, runtime configuration, staging, monitoring, and production-readiness guidance.
 - `agent-orchestration/`: Linear-driven Codex work routing and agent operations.
 - `decisions/`: engineering decisions and ADRs.
@@ -34,7 +39,8 @@ Engineering docs explain how CLAiR EMR is built, secured, persisted, operated, a
 - Engineering docs describe implementation contracts and verification guidance. User-facing domain requirements belong in `docs/product/domain/`.
 - Do not treat client-only permission checks, hidden UI, or mock role labels as complete security.
 - Do not claim remote Supabase staging/live validation, production deployment, RLS completeness, external integrations, or compliance/legal readiness unless scoped work verified it.
-- Remote Supabase commands, migration push, production deploy, real email, payment, and provider integration remain explicit-approval work.
+- Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work may proceed when an active Linear issue or work item includes it.
+- Explicit approval is still required before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
 - Keep completed reports in `docs/completed/`; if a closeout changes current engineering truth, update the relevant engineering source doc too.
 
 ## Adding Engineering Docs

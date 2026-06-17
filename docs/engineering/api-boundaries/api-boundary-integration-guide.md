@@ -1,12 +1,32 @@
 # API Boundary Integration Guide
 
-Updated: 2026-05-02
+Updated: 2026-06-11
 
 ## Current State
 
-The boundary exists as independent helper code and documentation. No feature module consumes it yet, and no UI screen changed.
+The app now has a mixed boundary state.
 
-The requested `docs/archive/implementation-waves/mvp-parallel-workstreams.md` file was not present on `origin/main` when this worktree was created. This guide uses `docs/engineering/current-status.md` as the source of truth.
+- The original read-model selector boundary still exists for feature-level adapter work.
+- The current `clair-demo` outpatient demo also uses direct Next.js route/API boundaries for selected local-first flows.
+- Reception/profile lookup, chart queue/order actions, fulfillment work items, lab result catalog/result entries, billing invoice/payment/checkout, and audit review have scoped route-boundary coverage.
+- Sales Demo and unconfigured local sessions still keep mock fallback behavior where explicitly scoped.
+
+Use `docs/engineering/current-status.md` as the source of truth for which modules are API-backed, local-first, mock fallback, or not complete.
+
+The requested `docs/archive/implementation-waves/mvp-parallel-workstreams.md` file was not present on `origin/main` when this worktree was created. This guide no longer treats that missing archive file as current guidance.
+
+## Connected Demo API Boundaries
+
+| Area | Current connected boundary | Verification anchor |
+| --- | --- | --- |
+| Reception / chart | Reception lookup routes and chart live queue/order actions for the selected synthetic flow | `tests/ui-demo-api-wiring-e2e.spec.ts` |
+| Lab result values | Local/dev/test Supabase RPC-backed result entry route plus seeded result-sheet catalog route | `tests/lab-result-entry-persistence-contract.spec.ts`, `tests/ui-demo-api-wiring-e2e.spec.ts` |
+| Fulfillment queues | Shared `order_fulfillment_work_items` read/update routes used by lab/imaging and dispensing/treatment | `tests/fulfillment-work-item-server.spec.ts`, `tests/dispensing-fulfillment.spec.ts` |
+| Billing | Invoice-line, payment-status, and guardian-checkout route snapshots for the selected billing demo path | `tests/billing-invoice-line-persistence-server.spec.ts`, `tests/billing-payment-status-persistence-server.spec.ts`, `tests/billing-guardian-checkout-hardening-server.spec.ts` |
+| Seed replay | `clair-demo` seed inventory/readback SQL plus safe local replay helper | `tests/demo-seed-inventory-readback-contract.spec.ts`, `npm run demo:seed:check` |
+| Permission boundary | Focused unauthenticated, insufficient-role, and cross-workspace denial coverage for connected lab/billing/fulfillment APIs | `tests/api-boundary-permission-regression.spec.ts` |
+
+For the current demo runbook, use `docs/engineering/testing/api-backed-demo-runbook.md`.
 
 ## Integration Order
 
@@ -32,6 +52,8 @@ Check-in, form edits, result entry, payment actions, and session-only relationsh
 
 When API/DB work begins, implement `EmrReadRepository` with a real data source or provide an API-backed `EmrReadSnapshot`. Keep selector tests as the contract for joined records.
 
+Current note: for the demo completion project, several flows adopted direct route/API boundaries before a full repository-wide read model replacement. Do not interpret that as approval to remove the selector boundary wholesale. Future work should still be module-scoped and should document whether it uses the repository boundary, a route boundary, or both.
+
 ## Guardrails
 
 - Do not refactor multiple feature modules in one PR.
@@ -39,6 +61,8 @@ When API/DB work begins, implement `EmrReadRepository` with a real data source o
 - Do not wire auth, audit logging, or service catalog lookup into this helper layer.
 - Do not create Next.js API routes as part of read selector adoption.
 - Do not add DB clients or migrations until the backend plan is explicit.
+- Do not claim client-only permission gating, hidden buttons, or mock role labels as security completion.
+- Do not run remote Supabase, migration push, production deploy, real email, payment provider, or external provider operations without explicit approval.
 
 ## Suggested Follow-Up PRs
 

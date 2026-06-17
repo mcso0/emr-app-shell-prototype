@@ -18,21 +18,49 @@ import {
   mockPatientGuardians,
   mockPatients,
 } from "@/mocks/emr-domain";
-import type { Encounter, Guardian, Patient, PatientGuardian, WaitingQueueEntry } from "@/types/emr-domain";
+import type {
+  Encounter,
+  Guardian,
+  Patient,
+  PatientGuardian,
+  WaitingQueueEntry,
+} from "@/types/emr-domain";
 
 export type ReceptionWalkInEncounterFieldErrors = Partial<
-  Record<"patientId" | "durationMinutes", string>
+  Record<"patientId" | "durationMinutes" | "plannedStartAt" | "weightKg", string>
 >;
+
+type SupabaseWalkInMembershipRow = {
+  id: string;
+  roles: string[] | null;
+  status: string;
+  user_id: string;
+  workspace_id: string;
+};
+
+type SupabaseWalkInUserRow = {
+  id: string;
+  status: string;
+};
+
+type SupabaseWalkInQueryBuilder<Row> = PromiseLike<{
+  data: Row[] | null;
+  error: { message?: string } | null;
+}> & {
+  eq(column: string, value: string): SupabaseWalkInQueryBuilder<Row>;
+  select(columns: string): SupabaseWalkInQueryBuilder<Row>;
+};
 
 export type ReceptionWalkInEncounterGatewayResult =
   | { ok: true; walkIn: ReceptionWalkInEncounterRecord }
   | {
       ok: false;
       status: 409;
-      denialReason:
-        | "patient_unavailable"
-        | "guardian_unavailable"
-        | "patient_guardian_link_missing";
+	      denialReason:
+	        | "patient_unavailable"
+	        | "guardian_unavailable"
+	        | "patient_guardian_link_missing"
+	        | "primary_veterinarian_unavailable";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
 
@@ -66,12 +94,17 @@ export type ReceptionWalkInEncounterResult =
   | {
       ok: false;
       status: 409;
-      denialReason:
-        | "patient_unavailable"
-        | "guardian_unavailable"
-        | "patient_guardian_link_missing";
+	      denialReason:
+	        | "patient_unavailable"
+	        | "guardian_unavailable"
+	        | "patient_guardian_link_missing"
+	        | "primary_veterinarian_unavailable";
     }
-  | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
+  | {
+      ok: false;
+      status: 500;
+      error: "db_write_failed" | "supabase_client_missing";
+    };
 
 export async function createReceptionWalkInEncounter({
   actorUserId,
@@ -104,7 +137,9 @@ export async function createReceptionWalkInEncounter({
     };
   }
 
-  const permissionContract = getReceptionMutationPermissionContract("walk_in_encounter_create");
+  const permissionContract = getReceptionMutationPermissionContract(
+    "walk_in_encounter_create",
+  );
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
@@ -175,7 +210,7 @@ export function createMockReceptionWalkInEncounterGateway(
     patientGuardians: mockPatientGuardians,
     patients: mockPatients,
   },
-  now = new Date().toISOString()
+  now = new Date().toISOString(),
 ): ReceptionWalkInEncounterGateway {
   return {
     async createWalkInEncounter({ workspaceId, input }) {
@@ -183,19 +218,27 @@ export function createMockReceptionWalkInEncounterGateway(
         (item) =>
           item.id === input.patientId &&
           item.workspaceId === workspaceId &&
-          item.status === "active"
+          item.status === "active",
       );
 
-      if (!patient) return { ok: false, status: 409, denialReason: "patient_unavailable" };
+      if (!patient)
+        return { ok: false, status: 409, denialReason: "patient_unavailable" };
 
       if (input.guardianId) {
         const guardian = dataset.guardians.find(
-          (item) => item.id === input.guardianId && item.workspaceId === workspaceId
+          (item) =>
+            item.id === input.guardianId && item.workspaceId === workspaceId,
         );
-        if (!guardian) return { ok: false, status: 409, denialReason: "guardian_unavailable" };
+        if (!guardian)
+          return {
+            ok: false,
+            status: 409,
+            denialReason: "guardian_unavailable",
+          };
 
         const linked = dataset.patientGuardians.some(
-          (link) => link.patientId === patient.id && link.guardianId === guardian.id
+          (link) =>
+            link.patientId === patient.id && link.guardianId === guardian.id,
         );
         if (!linked) {
           return {
@@ -206,8 +249,9 @@ export function createMockReceptionWalkInEncounterGateway(
         }
       }
 
-      const seed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const encounter: Encounter = {
+	      const eventTime = input.plannedStartAt ?? now;
+	      const seed = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+	      const encounter: Encounter = {
         id: `encounter-walkin-${seed}`,
         workspaceId,
         patientId: patient.id,
@@ -221,9 +265,9 @@ export function createMockReceptionWalkInEncounterGateway(
         visitPurpose: input.visitPurpose ?? "현장 접수",
         receptionMemo: input.memo,
         status: "waiting",
-        checkedInAt: now,
-        createdAt: now,
-        updatedAt: now,
+	        checkedInAt: eventTime,
+	        createdAt: now,
+	        updatedAt: now,
       };
       const queueEntry: WaitingQueueEntry = {
         id: `queue-${encounter.id}`,
@@ -232,8 +276,13 @@ export function createMockReceptionWalkInEncounterGateway(
         queueType: "consultation",
         status: "waiting",
         priority: "normal",
-        enteredAt: now,
-      };
+	        enteredAt: eventTime,
+	      };
+
+      if (input.weightKg !== undefined) {
+        patient.weightKg = input.weightKg;
+        patient.updatedAt = eventTime;
+      }
 
       return { ok: true, walkIn: { encounter, queueEntry } };
     },
@@ -241,13 +290,15 @@ export function createMockReceptionWalkInEncounterGateway(
 }
 
 export type SupabaseReceptionWalkInEncounterRpcClient = {
+  from(table: "user_memberships"): SupabaseWalkInQueryBuilder<SupabaseWalkInMembershipRow>;
+  from(table: "users"): SupabaseWalkInQueryBuilder<SupabaseWalkInUserRow>;
   rpc(
     functionName: "clair_create_reception_walk_in_encounter",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_walk_in: ReceptionWalkInEncounterInput;
-    }
+    },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_search_reception_patient_guardian_lookup",
@@ -255,29 +306,48 @@ export type SupabaseReceptionWalkInEncounterRpcClient = {
       p_workspace_id: string;
       p_query: string;
       p_limit: number;
-    }
+    },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 
 export function createSupabaseReceptionWalkInEncounterGateway(
-  client: SupabaseReceptionWalkInEncounterRpcClient
+  client: SupabaseReceptionWalkInEncounterRpcClient,
 ): ReceptionWalkInEncounterGateway {
   return {
     async createWalkInEncounter({ actorUserId, workspaceId, input }) {
-      const resolvedInput = await resolveStagingSyntheticWalkInInput({
-        client,
-        input,
-        workspaceId,
-      });
+	      const resolvedInput = await resolveStagingSyntheticWalkInInput({
+	        client,
+	        input,
+	        workspaceId,
+	      });
       if (!resolvedInput.ok) {
-        return { ok: false, status: 409, denialReason: "patient_unavailable" };
-      }
+	        return { ok: false, status: 409, denialReason: "patient_unavailable" };
+	      }
 
-      const { data, error } = await client.rpc("clair_create_reception_walk_in_encounter", {
-        p_workspace_id: workspaceId,
-        p_actor_user_id: actorUserId,
-        p_walk_in: resolvedInput.input,
-      });
+	      const veterinarianValidation = await validateSupabaseWalkInVeterinarian({
+	        client,
+	        primaryVeterinarianId: resolvedInput.input.primaryVeterinarianId,
+	        workspaceId,
+	      });
+	      if (!veterinarianValidation.ok) {
+	        if (veterinarianValidation.error === "db_read_failed") {
+	          return { ok: false, status: 500, error: "db_write_failed" };
+	        }
+	        return {
+	          ok: false,
+	          status: 409,
+	          denialReason: "primary_veterinarian_unavailable",
+	        };
+	      }
+
+	      const { data, error } = await client.rpc(
+        "clair_create_reception_walk_in_encounter",
+        {
+          p_workspace_id: workspaceId,
+          p_actor_user_id: actorUserId,
+          p_walk_in: normalizeSupabaseWalkInRpcInput(resolvedInput.input),
+        },
+      );
 
       if (error) {
         const denialReason = mapWalkInDbDenial(error.message);
@@ -301,18 +371,27 @@ async function resolveStagingSyntheticWalkInInput({
   client: SupabaseReceptionWalkInEncounterRpcClient;
   input: ReceptionWalkInEncounterInput;
   workspaceId: string;
-}): Promise<{ ok: true; input: ReceptionWalkInEncounterInput } | { ok: false }> {
+}): Promise<
+  { ok: true; input: ReceptionWalkInEncounterInput } | { ok: false }
+> {
   if (uuidPattern.test(input.patientId)) return { ok: true, input };
 
-  const inputWithDisplayName = input as ReceptionWalkInEncounterInput & { patientName?: string };
-  const lookupQuery = stagingMockPatientLookupTerms[input.patientId] ?? inputWithDisplayName.patientName;
+  const inputWithDisplayName = input as ReceptionWalkInEncounterInput & {
+    patientName?: string;
+  };
+  const lookupQuery =
+    stagingMockPatientLookupTerms[input.patientId] ??
+    inputWithDisplayName.patientName;
   if (!lookupQuery) return { ok: true, input };
 
-  const { data, error } = await client.rpc("clair_search_reception_patient_guardian_lookup", {
-    p_workspace_id: workspaceId,
-    p_query: lookupQuery,
-    p_limit: 5,
-  });
+  const { data, error } = await client.rpc(
+    "clair_search_reception_patient_guardian_lookup",
+    {
+      p_workspace_id: workspaceId,
+      p_query: lookupQuery,
+      p_limit: 5,
+    },
+  );
   if (error || !Array.isArray(data)) return { ok: false };
 
   const resolved = data
@@ -322,15 +401,20 @@ async function resolveStagingSyntheticWalkInInput({
         primaryGuardian?: { id?: unknown };
         primary_guardian?: { id?: unknown };
       };
-      const patientId = typeof value.patient?.id === "string" ? value.patient.id : undefined;
+      const patientId =
+        typeof value.patient?.id === "string" ? value.patient.id : undefined;
       const primaryGuardian = value.primaryGuardian ?? value.primary_guardian;
       const guardianId =
-        typeof primaryGuardian?.id === "string" ? primaryGuardian.id : undefined;
+        typeof primaryGuardian?.id === "string"
+          ? primaryGuardian.id
+          : undefined;
 
-      return patientId && uuidPattern.test(patientId) ? { guardianId, patientId } : null;
+      return patientId && uuidPattern.test(patientId)
+        ? { guardianId, patientId }
+        : null;
     })
     .find((row): row is { guardianId: string | undefined; patientId: string } =>
-      Boolean(row)
+      Boolean(row),
     );
 
   if (!resolved) return { ok: false };
@@ -348,27 +432,50 @@ async function resolveStagingSyntheticWalkInInput({
   };
 }
 
-function normalizeWalkInInput(input: ReceptionWalkInEncounterInput): ReceptionWalkInEncounterInput {
+function normalizeWalkInInput(
+  input: ReceptionWalkInEncounterInput,
+): ReceptionWalkInEncounterInput {
   return {
     department: trimToUndefined(input.department),
     durationMinutes:
-      typeof input.durationMinutes === "number" && Number.isFinite(input.durationMinutes)
+      typeof input.durationMinutes === "number" &&
+      Number.isFinite(input.durationMinutes)
         ? Math.round(input.durationMinutes)
         : undefined,
-    guardianId: trimToUndefined(input.guardianId),
-    memo: trimToUndefined(input.memo),
+	    guardianId: trimToUndefined(input.guardianId),
+	    memo: trimToUndefined(input.memo),
     patientId: trimToUndefined(input.patientId) ?? "",
+    plannedStartAt: trimToUndefined(input.plannedStartAt),
     primaryVeterinarianId: trimToUndefined(input.primaryVeterinarianId),
     visitPurpose: trimToUndefined(input.visitPurpose),
-  };
+    weightKg:
+      typeof input.weightKg === "number" && Number.isFinite(input.weightKg)
+        ? Math.round(input.weightKg * 100) / 100
+        : undefined,
+	  };
+}
+
+function normalizeSupabaseWalkInRpcInput(
+  input: ReceptionWalkInEncounterInput,
+): ReceptionWalkInEncounterInput {
+  return input;
 }
 
 function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
   const fieldErrors: ReceptionWalkInEncounterFieldErrors = {};
 
   if (!input.patientId) fieldErrors.patientId = "환자를 선택해 주세요.";
-  if (input.durationMinutes !== undefined && input.durationMinutes <= 0) {
-    fieldErrors.durationMinutes = "예상 진료시간을 확인해 주세요.";
+	  if (input.durationMinutes !== undefined && input.durationMinutes <= 0) {
+	    fieldErrors.durationMinutes = "예상 진료시간을 확인해 주세요.";
+	  }
+  if (
+    input.plannedStartAt !== undefined &&
+    Number.isNaN(new Date(input.plannedStartAt).getTime())
+  ) {
+    fieldErrors.plannedStartAt = "접수 예정 시간을 확인해 주세요.";
+  }
+  if (input.weightKg !== undefined && input.weightKg <= 0) {
+    fieldErrors.weightKg = "체중은 0보다 커야 합니다.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -380,20 +487,77 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
 
 function mapWalkInDbDenial(message?: string) {
   if (!message) return null;
-  if (message.includes("invalid input syntax for type uuid")) {
+  if (message.includes("patient_unavailable"))
     return "patient_unavailable" as const;
-  }
-  if (message.includes("patient_unavailable")) return "patient_unavailable" as const;
-  if (message.includes("guardian_unavailable")) return "guardian_unavailable" as const;
-  if (message.includes("patient_guardian_link_missing")) {
-    return "patient_guardian_link_missing" as const;
-  }
-  return null;
+  if (message.includes("guardian_unavailable"))
+    return "guardian_unavailable" as const;
+	  if (message.includes("patient_guardian_link_missing")) {
+	    return "patient_guardian_link_missing" as const;
+	  }
+	  if (message.includes("primary_veterinarian_unavailable")) {
+	    return "primary_veterinarian_unavailable" as const;
+	  }
+	  return null;
 }
 
-function mapWalkInRecord(value: unknown): ReceptionWalkInEncounterRecord | null {
+async function validateSupabaseWalkInVeterinarian({
+  client,
+  primaryVeterinarianId,
+  workspaceId,
+}: {
+  client: SupabaseReceptionWalkInEncounterRpcClient;
+  primaryVeterinarianId?: string;
+  workspaceId: string;
+}): Promise<
+  | { ok: true }
+  | { ok: false; error: "db_read_failed" | "primary_veterinarian_unavailable" }
+> {
+  const veterinarianId = trimToUndefined(primaryVeterinarianId);
+  if (!veterinarianId) return { ok: true };
+  if (!uuidPattern.test(veterinarianId)) {
+    return { ok: false, error: "primary_veterinarian_unavailable" };
+  }
+
+  const [{ data: membershipRows, error: membershipError }, { data: userRows, error: userError }] =
+    await Promise.all([
+      client
+        .from("user_memberships")
+        .select("id, workspace_id, user_id, roles, status")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", veterinarianId),
+      client
+        .from("users")
+        .select("id, status")
+        .eq("id", veterinarianId),
+    ]);
+
+  if (membershipError || userError) return { ok: false, error: "db_read_failed" };
+
+  const activeUser = (userRows ?? []).some(
+    (row) => row.id === veterinarianId && row.status === "active",
+  );
+  const activeVetMembership = (membershipRows ?? []).some(
+    (row) =>
+      row.workspace_id === workspaceId &&
+      row.user_id === veterinarianId &&
+      row.status === "active" &&
+      (row.roles ?? []).includes("vet"),
+  );
+
+  return activeUser && activeVetMembership
+    ? { ok: true }
+    : { ok: false, error: "primary_veterinarian_unavailable" };
+}
+
+function mapWalkInRecord(
+  value: unknown,
+): ReceptionWalkInEncounterRecord | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as { encounter?: unknown; queueEntry?: unknown; queue_entry?: unknown };
+  const row = value as {
+    encounter?: unknown;
+    queueEntry?: unknown;
+    queue_entry?: unknown;
+  };
   const encounter = mapEncounter(row.encounter);
   const queueEntry = mapQueueEntry(row.queueEntry ?? row.queue_entry);
   if (!encounter || !queueEntry) return null;
@@ -402,64 +566,75 @@ function mapWalkInRecord(value: unknown): ReceptionWalkInEncounterRecord | null 
 
 function mapEncounter(value: unknown): Encounter | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<Encounter> & { receptionType?: string; reception_type?: string };
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.patientId !== "string" ||
-    typeof row.encounterNo !== "string" ||
-    typeof row.status !== "string"
-  ) {
-    return null;
-  }
+  const row = value as Record<string, unknown>;
+  const id = trimToUndefined(row.id);
+  const workspaceId = trimToUndefined(row.workspaceId) ?? trimToUndefined(row.workspace_id);
+  const patientId = trimToUndefined(row.patientId) ?? trimToUndefined(row.patient_id);
+  const encounterNo = trimToUndefined(row.encounterNo) ?? trimToUndefined(row.encounter_no);
+  const status = trimToUndefined(row.status);
+
+  if (!id || !workspaceId || !patientId || !encounterNo || !status) return null;
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    patientId: row.patientId,
-    guardianId: trimToUndefined(row.guardianId),
-    appointmentId: trimToUndefined(row.appointmentId),
-    primaryVeterinarianId: trimToUndefined(row.primaryVeterinarianId),
-    encounterNo: row.encounterNo,
-    receptionType: (row.receptionType ?? row.reception_type) as Encounter["receptionType"],
+    id,
+    workspaceId,
+    patientId,
+    guardianId: trimToUndefined(row.guardianId) ?? trimToUndefined(row.guardian_id),
+    appointmentId: trimToUndefined(row.appointmentId) ?? trimToUndefined(row.appointment_id),
+    primaryVeterinarianId:
+      trimToUndefined(row.primaryVeterinarianId) ??
+      trimToUndefined(row.primary_veterinarian_id),
+    encounterNo,
+    receptionType: (trimToUndefined(row.receptionType) ??
+      trimToUndefined(row.reception_type)) as Encounter["receptionType"],
     department: trimToUndefined(row.department),
-    durationMinutes:
-      typeof row.durationMinutes === "number" ? row.durationMinutes : undefined,
-    chiefComplaint: trimToUndefined(row.chiefComplaint),
-    visitPurpose: trimToUndefined(row.visitPurpose),
-    receptionMemo: trimToUndefined(row.receptionMemo),
-    status: row.status as Encounter["status"],
-    checkedInAt: trimToUndefined(row.checkedInAt) ?? new Date(0).toISOString(),
-    checkedInByUserId: trimToUndefined(row.checkedInByUserId),
-    createdAt: trimToUndefined(row.createdAt) ?? new Date(0).toISOString(),
-    updatedAt: trimToUndefined(row.updatedAt) ?? new Date(0).toISOString(),
+    durationMinutes: getNumber(row.durationMinutes) ?? getNumber(row.duration_minutes),
+    chiefComplaint: trimToUndefined(row.chiefComplaint) ?? trimToUndefined(row.chief_complaint),
+    visitPurpose: trimToUndefined(row.visitPurpose) ?? trimToUndefined(row.visit_purpose),
+    receptionMemo: trimToUndefined(row.receptionMemo) ?? trimToUndefined(row.reception_memo),
+    status: status as Encounter["status"],
+    checkedInAt:
+      trimToUndefined(row.checkedInAt) ??
+      trimToUndefined(row.checked_in_at) ??
+      new Date(0).toISOString(),
+    checkedInByUserId:
+      trimToUndefined(row.checkedInByUserId) ?? trimToUndefined(row.checked_in_by_user_id),
+    createdAt:
+      trimToUndefined(row.createdAt) ??
+      trimToUndefined(row.created_at) ??
+      new Date(0).toISOString(),
+    updatedAt:
+      trimToUndefined(row.updatedAt) ??
+      trimToUndefined(row.updated_at) ??
+      new Date(0).toISOString(),
   };
 }
 
 function mapQueueEntry(value: unknown): WaitingQueueEntry | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as Partial<WaitingQueueEntry>;
-  if (
-    typeof row.id !== "string" ||
-    typeof row.workspaceId !== "string" ||
-    typeof row.encounterId !== "string" ||
-    typeof row.queueType !== "string" ||
-    typeof row.status !== "string"
-  ) {
-    return null;
-  }
+  const row = value as Record<string, unknown>;
+  const id = trimToUndefined(row.id);
+  const workspaceId = trimToUndefined(row.workspaceId) ?? trimToUndefined(row.workspace_id);
+  const encounterId = trimToUndefined(row.encounterId) ?? trimToUndefined(row.encounter_id);
+  const queueType = trimToUndefined(row.queueType) ?? trimToUndefined(row.queue_type);
+  const status = trimToUndefined(row.status);
+
+  if (!id || !workspaceId || !encounterId || !queueType || !status) return null;
 
   return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    encounterId: row.encounterId,
-    queueType: row.queueType as WaitingQueueEntry["queueType"],
-    status: row.status as WaitingQueueEntry["status"],
-    priority: row.priority ?? "normal",
-    sortOrder: typeof row.sortOrder === "number" ? row.sortOrder : undefined,
-    enteredAt: trimToUndefined(row.enteredAt) ?? new Date(0).toISOString(),
-    calledAt: trimToUndefined(row.calledAt),
-    finishedAt: trimToUndefined(row.finishedAt),
+    id,
+    workspaceId,
+    encounterId,
+    queueType: queueType as WaitingQueueEntry["queueType"],
+    status: status as WaitingQueueEntry["status"],
+    priority: (trimToUndefined(row.priority) as WaitingQueueEntry["priority"] | undefined) ?? "normal",
+    sortOrder: getNumber(row.sortOrder) ?? getNumber(row.sort_order),
+    enteredAt:
+      trimToUndefined(row.enteredAt) ??
+      trimToUndefined(row.entered_at) ??
+      new Date(0).toISOString(),
+    calledAt: trimToUndefined(row.calledAt) ?? trimToUndefined(row.called_at),
+    finishedAt: trimToUndefined(row.finishedAt) ?? trimToUndefined(row.finished_at),
   };
 }
 
@@ -467,7 +642,11 @@ function createDemoReceptionWalkInPermissionAdapter() {
   return createMockWorkspacePermissionAdapter({
     now: new Date().toISOString(),
     users: [
-      { id: "playwright-default-session", status: "active", displayName: "Playwright Admin" },
+      {
+        id: "playwright-default-session",
+        status: "active",
+        displayName: "Playwright Admin",
+      },
       { id: "user-admin", status: "active", displayName: "송민재" },
       { id: "user-front-desk", status: "active", displayName: "최유나" },
       { id: "user-vet", status: "active", displayName: "이수지" },
@@ -505,8 +684,12 @@ function createDemoReceptionWalkInPermissionAdapter() {
   });
 }
 
-function trimToUndefined(value?: string) {
+function trimToUndefined(value?: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 const uuidPattern =

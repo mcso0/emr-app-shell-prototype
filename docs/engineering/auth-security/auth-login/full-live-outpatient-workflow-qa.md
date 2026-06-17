@@ -1,7 +1,7 @@
 ---
 title: "Full Live Outpatient Workflow QA"
 status: "human_review"
-updated: "2026-05-20"
+updated: "2026-06-17"
 source:
   - "DEN-89"
   - "docs/work/audit-security/AUDIT-SECURITY-PR-008-full-live-outpatient-workflow-qa.md"
@@ -20,7 +20,9 @@ Result: **Green for local-first pilot review, with follow-ups**.
 
 Workflow health score: **92 / 100**
 
-No blocker was found in the reviewed local-first workflow. The core app shell, auth entry, reception reload paths, chart reload paths, order/billing persistence checkpoints, and sales demo golden path passed their focused Playwright suites.
+No blocker was found in the reviewed local-first workflow. The core app shell, auth entry, reception reload paths, chart reload paths, order/billing persistence checkpoints, and legacy Sales Demo fixture path passed their focused Playwright suites.
+
+2026-06-17 note: this QA record is historical. Current operating proof is Cheongdam seed workspace verification under DEMO-DATA-PR-002, not Sales Demo preservation.
 
 The score is not 100 because this is not remote/live Supabase validation, and the test run surfaced non-blocking console warnings that should be cleaned up before a broader demo or long-running QA session.
 
@@ -33,7 +35,7 @@ In scope:
 - Chart SOAP and completion reload checkpoints.
 - Order confirmation and billing candidate reload checkpoints.
 - Billing invoice/payment workflow and reload checkpoints.
-- Sales demo golden path from home through reception, chart, lab, imaging, dispensing, and billing.
+- Legacy Sales Demo fixture path from home through reception, chart, lab, imaging, dispensing, and billing.
 - Failure/empty/error-state coverage already present in relevant suites.
 
 Out of scope:
@@ -59,7 +61,7 @@ Assumptions:
 | Chart reload path | Pass | `tests/chart.spec.ts` checks SOAP manual save reload, chart completion reload, Kong scenario continuity, queue selection, history selection, and chart UX stability. |
 | Order and billing persistence path | Pass | `tests/outpatient-persistence-regression.spec.ts` checks SOAP save/readback, order confirmation/readback, invoice candidate sync/readback, and payment completion/readback. |
 | Billing screen workflow | Pass | `tests/billing.spec.ts` checks waiting invoice rendering, queue switching, Kong invoice query, completion state, and payment actions. |
-| Sales demo golden path | Pass | `tests/sales-demo-flow.spec.ts` checks home launcher through reception, chart, lab, imaging, dispensing, and billing while preserving scenario query context. |
+| Legacy Sales Demo fixture path | Pass | `tests/sales-demo-flow.spec.ts` checks the explicit fixture route through reception, chart, lab, imaging, dispensing, and billing while keeping scenario query context visible. |
 
 ## Blocker List
 
@@ -71,7 +73,7 @@ Specifically, this run did not find:
 - chart/order/billing state break between modules;
 - billing total mismatch in the covered workflow;
 - login/workspace routing failure in the covered mock session mode;
-- sales demo golden path break.
+- legacy Sales Demo fixture path break.
 
 ## Follow-Up List
 

@@ -337,6 +337,7 @@ function mapLegacyPatientProfile(patient: Patient): CustomerPatientProfile {
     microchipNo: patient.microchipNo,
     microchipType: patient.microchipNo ? "internal" : "none",
     patientRegistrationNo: patient.patientRegistrationNo,
+    weightKg: patient.weightKg,
     allergyNote: patient.allergyNote,
     specialNote: patient.specialNote,
     handlingCautionNote: patient.handlingCautionNote,

@@ -13,10 +13,28 @@ import type { AppIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type EmrStatusBadgeProps = {
+/**
+ * Props for the shared EMR workflow status badge.
+ */
+export type EmrStatusBadgeProps = {
+  /**
+   * Supported Korean workflow label. Known labels map to stable semantic tones
+   * and icons; unknown labels fall back to a neutral compatibility tone.
+   */
   label: string;
+  /**
+   * Additional classes for layout composition. Do not use this to invent new
+   * status colors.
+   */
   className?: string;
+  /**
+   * Whether to render the status icon marker. Use `none` only in very dense
+   * tables or repeated cells where the column already explains the status role.
+   */
   marker?: "icon" | "none";
+  /**
+   * Optional test hook for feature-level regression coverage.
+   */
   testId?: string;
 };
 
@@ -68,6 +86,15 @@ const statusIcon: Record<string, AppIcon> = {
   취소: CdsActionsXCircleIcon,
 };
 
+/**
+ * Shared EMR badge for a limited set of workflow status labels.
+ *
+ * Use this component for supported order, fulfillment, and queue-like statuses.
+ * Keep feature-specific status taxonomies local until a shared tone resolver
+ * contract is defined.
+ *
+ * @summary shared EMR workflow status badge
+ */
 export function EmrStatusBadge({
   className,
   label,

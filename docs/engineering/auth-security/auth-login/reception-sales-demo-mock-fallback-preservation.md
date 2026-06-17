@@ -1,23 +1,27 @@
 ---
-title: "Reception Sales Demo And Mock Fallback Preservation"
-status: "human_review"
-updated: "2026-05-19"
+title: "Reception Legacy Sales Demo And Mock Fallback Transition Note"
+status: "superseded"
+updated: "2026-06-17"
 source:
   - "DEN-64"
   - "docs/work/reception/RECEPTION-LIVE-PR-011-sales-demo-mock-fallback-preservation.md"
+superseded_by:
+  - "docs/work/demo-data/DEMO-DATA-PR-002-legacy-mock-cleanup-inventory.md"
 ---
 
-# Reception Sales Demo And Mock Fallback Preservation
+# Reception Legacy Sales Demo And Mock Fallback Transition Note
 
 Linear: DEN-64
 
 ## Summary
 
-DEN-64 preserves the `kong-vomit` sales demo and local mock fallback while Project 03 adds server-owned reception persistence boundaries.
+DEN-64 originally kept the `kong-vomit` sales demo and local mock fallback while Project 03 added server-owned reception persistence boundaries.
+
+This is now historical context, not current preservation policy. As of 2026-06-17, Cheongdam seed workspace verification (`workspace-clair-cheongdam`) is the default operating proof, and DEMO-DATA-PR-002 owns legacy Sales Demo fallback migration or removal.
 
 The reception queue and day calendar readers intentionally return an empty persisted overlay in mock fallback mode. That means existing mock fixtures remain the visible demo source unless a successful server response returns real persisted-shaped rows.
 
-## Preserved Demo Paths
+## Historical Demo Paths
 
 - Home sales demo launcher to reception.
 - Reception `kong-vomit` query context with `patient-kong` and `encounter-kong-260501`.

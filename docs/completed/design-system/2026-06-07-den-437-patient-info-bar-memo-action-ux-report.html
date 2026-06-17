@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-437 환자정보바 메모 action UX 완료 보고</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f8fa;
+        color: #1f2933;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 28px;
+      }
+      section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 1px solid #d8dee8;
+        border-radius: 12px;
+        background: #ffffff;
+      }
+      h1,
+      h2 {
+        margin: 0;
+        line-height: 1.25;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 18px;
+      }
+      p {
+        margin: 10px 0 0;
+      }
+      ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 6px;
+        background: #eef2f7;
+        padding: 2px 6px;
+      }
+      .meta {
+        margin-top: 8px;
+        color: #5c6675;
+        font-size: 14px;
+      }
+      .status {
+        display: inline-block;
+        margin-top: 16px;
+        border: 1px solid #b8d5c2;
+        border-radius: 999px;
+        background: #eef8f1;
+        padding: 4px 10px;
+        color: #23653d;
+        font-size: 13px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-437 환자정보바 메모 action UX 완료 보고</h1>
+      <p class="meta">Linear project: 공통 UX/UI 기준 정리 및 화면 적용 · 작성일: 2026-06-07</p>
+      <span class="status">Human Review 준비</span>
+
+      <section>
+        <h2>요청과 결정</h2>
+        <p>
+          환자정보바에 여러 메모 버튼이 나란히 표시되던 구조를 정리했다. 메모는 primary action이 아니라 환자 맥락을
+          보조로 확인하는 secondary context action으로 정의하고, 하나의 <code>메모</code> 버튼에서 방문목적, 보호자 메모,
+          환자 메모, 수납 메모 상태를 확인하도록 바꿨다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li><code>EmrPatientContextBar</code>의 메모 영역을 단일 버튼과 popover 구조로 변경했다.</li>
+          <li>메모 버튼은 E1 action affordance를 유지하고, popover는 기존 EMR floating surface를 재사용한다.</li>
+          <li>Chart, Lab, Imaging 헤더는 기존 mock/local-first 데이터에서 가능한 메모 요약을 표시한다.</li>
+          <li>Dispensing/Treatment 헤더는 현재 큐 스냅샷에 없는 메모를 명확한 disabled 설명으로 표시한다.</li>
+          <li>수납 메모는 수납 화면 소유로 남겨, 환자정보바에서 live persistence나 cross-module edit을 암시하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <ul>
+          <li><code>src/components/emr/patient-context-bar.tsx</code></li>
+          <li><code>src/features/chart/module.tsx</code></li>
+          <li><code>src/features/dispensing/module.tsx</code></li>
+          <li><code>src/features/lab-imaging/module.tsx</code></li>
+          <li><code>docs/design/system/DESIGN.md</code></li>
+          <li><code>docs/work/design-system/DESIGN-SYSTEM-PR-048-patient-info-bar-memo-action-ux.md</code></li>
+          <li><code>docs/work/index.md</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npm ci</code> 성공. npm audit 기준 moderate 취약점 4건은 이번 범위 밖으로 남겼다.</li>
+          <li><code>npm run lint</code> 통과. 기존 경고 5건은 남아 있다.</li>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li>환자정보바 <code>메모</code> popover는 focused browser check로 확인했다.</li>
+          <li>Evidence screenshot: <code>docs/completed/design-system/2026-06-07-den-437-patient-info-bar-memo-action-ux.png</code></li>
+          <li>Fixed staging 배포 완료: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+          <li>배포된 Preview: <code>https://emr-app-shell-prototype-2mwdn0d6r-mcso0s-projects.vercel.app</code></li>
+          <li>Deployment ID: <code>dpl_5yfzRNHuu7Np4k73gG8hBWdGuf47</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>제외와 후속</h2>
+        <ul>
+          <li>메모 데이터 모델, live DB persistence, Supabase 검증, RLS, server enforcement는 건드리지 않았다.</li>
+          <li>SOAP 섹션 구조 정리는 DEN-438로 남겨둔다.</li>
+          <li>공통 UX/UI 프로젝트 QA와 closeout은 DEN-439에서 진행한다.</li>
+          <li>임상병리 장비수신내역 버튼 이동은 이 프로젝트 범위 밖 별도 쓰레드 작업이다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

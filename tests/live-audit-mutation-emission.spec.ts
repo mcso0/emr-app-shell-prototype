@@ -7,6 +7,7 @@ import { completeChart } from "../src/features/chart/server-chart-completion-cor
 import { saveChartOrderAction } from "../src/features/chart/server-order-action-persistence-core";
 import { saveChartSoapNote } from "../src/features/chart/server-soap-note-persistence-core";
 import { createReceptionAppointmentCheckIn } from "../src/features/reception/server-appointment-check-in-core";
+import { createReceptionAppointment } from "../src/features/reception/server-appointment-create-core";
 import { createReceptionWalkInEncounter } from "../src/features/reception/server-walk-in-encounter-core";
 
 const workspaceId = "clair-demo";
@@ -41,6 +42,23 @@ test("critical workspace mutation cores emit safe live audit summaries after suc
     auditRequestId: "req-den-85-checkin",
   });
   expect(checkIn.ok).toBe(true);
+
+  const appointment = await createReceptionAppointment({
+    actorUserId: "user-front-desk",
+    workspaceId,
+    auditGateway,
+    auditNow: now,
+    auditRequestId: "req-den-516-appointment",
+    input: {
+      assignedVeterinarianId: "user-vet-doyun",
+      durationMinutes: 30,
+      guardianId: "guardian-oh-sea",
+      patientId: "patient-nabi",
+      reservationMemo: "safe audit appointment create",
+      scheduledStartAt: "2026-05-01T13:30:00+09:00",
+    },
+  });
+  expect(appointment.ok).toBe(true);
 
   const soap = await saveChartSoapNote({
     actorUserId: "user-vet",
@@ -101,6 +119,7 @@ test("critical workspace mutation cores emit safe live audit summaries after suc
     expect.arrayContaining([
       "reception.walk_in_created",
       "reception.appointment_checked_in",
+      "reception.appointment_created",
       "chart.soap_saved",
       "chart.completed",
       "order.confirmed",
@@ -130,6 +149,7 @@ test("live mutation routes wire Supabase writes to the audit append gateway", ()
     "src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/roles/route.ts",
     "src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/status/route.ts",
     "src/app/api/workspaces/[workspaceId]/reception/walk-in-encounters/route.ts",
+    "src/app/api/workspaces/[workspaceId]/reception/appointments/route.ts",
     "src/app/api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in/route.ts",
     "src/app/api/workspaces/[workspaceId]/chart/soap-notes/route.ts",
     "src/app/api/workspaces/[workspaceId]/chart/completion/route.ts",

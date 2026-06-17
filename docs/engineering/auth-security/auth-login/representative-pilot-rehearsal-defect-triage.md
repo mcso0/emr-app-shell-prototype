@@ -1,7 +1,7 @@
 ---
 title: "Representative Pilot Rehearsal And Defect Triage"
 status: "human_review"
-updated: "2026-05-20"
+updated: "2026-06-17"
 source:
   - "DEN-91"
   - "docs/work/audit-security/AUDIT-SECURITY-PR-010-representative-pilot-rehearsal-defect-triage.md"
@@ -21,6 +21,8 @@ Result: **Representative local-first pilot rehearsal can proceed, with follow-up
 No local-first walkthrough blocker was found. The flow can be explained from home entry through reception, chart, order fan-out, billing, payment state, audit/readiness caveats, and known Post-MVP limits without requiring real patient data, remote Supabase, production deploy, or provider integrations.
 
 This is not a remote/live pilot approval. The remote/live decision still needs human review of the DEN-88 audit completeness gap, clinical/billing RLS validation gate, and representative follow-up acceptance.
+
+2026-06-17 cleanup note: this DEN-91 report is historical evidence for the old Kong Sales Demo rehearsal. The current operating proof is the Cheongdam seed workspace; the old Home demo launcher has been removed, and legacy Kong coverage should be opened only through explicit fixture routes while it remains under cleanup.
 
 ## Scope And Assumptions
 
@@ -42,7 +44,7 @@ Out of scope:
 
 Assumptions:
 
-- The presenter uses `/w/clair-demo/home?view=demo&modulePanel=open&aside=closed`.
+- Historical assumption: the presenter used the old Home demo launcher. As of 2026-06-17, that launcher is removed and this report should not be used as the current Cheongdam seed verification script.
 - The presenter names the scenario as synthetic workflow data, not clinical guidance.
 - Human Review can accept or reprioritize follow-up items before a real stakeholder pilot.
 

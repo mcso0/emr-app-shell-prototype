@@ -103,6 +103,7 @@ import {
   getChartQueueItems,
   getChartQueueStatuses,
   getChartStaffName,
+  type ChartEncounterBundle,
   type ChartHistoryRow,
   type ChartOrderGroup,
 } from "@/features/chart/data";
@@ -126,6 +127,14 @@ import {
   getSpeciesLabel,
 } from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
+import {
+  isLegacySalesDemoWorkspace,
+} from "@/lib/emr-domain/demo-workspaces";
+import {
+  formatOperatingShortTime,
+  formatShortOperatingDate,
+  getOperatingDateFromIso,
+} from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -146,7 +155,7 @@ import type {
   SoapNote,
 } from "@/types/emr-domain";
 
-type ChartBundle = NonNullable<ReturnType<typeof getChartEncounter>>;
+type ChartBundle = ChartEncounterBundle;
 type OrderFilter = "all" | EmrOrderType | "billing";
 type SoapSaveState = "idle" | "loading" | "saving" | "saved" | "error";
 type ChartSoapNoteRouteResponse =
@@ -313,12 +322,17 @@ const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
 const CHART_RESIZER_HEIGHT_PX = 16;
 const CHART_RESIZER_STEP_PERCENT = 5;
+const chartSelectedEncounterStoragePrefix =
+  "clair-emr:chart-selected-encounter:v1";
+const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const chartQueueFilterItems = [
   { value: "all", label: "전체" },
   { value: "appointment", label: "예약" },
   { value: "walk-in", label: "외래" },
 ];
+
+const emptyChartQueueItems: OrderQueueItem[] = [];
 
 const orderTypeMeta: Record<EmrOrderType, { handoff: string; label: string }> =
   {
@@ -366,11 +380,17 @@ const chartOrderTabs: Array<{ value: OrderFilter; label: string }> = [
   { value: "billing", label: "수납" },
 ];
 
-const getShortDateTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(2, 16).replace("T", " ") : "-";
+const getShortDateTime = (dateTime?: string) => {
+  if (!dateTime) return "-";
+
+  const operatingDate = getOperatingDateFromIso(dateTime);
+  if (!operatingDate) return "-";
+
+  return `${formatShortOperatingDate(operatingDate)} ${formatOperatingShortTime(dateTime)}`;
+};
 
 const getShortClockTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(11, 16) : "-";
+  formatOperatingShortTime(dateTime);
 
 const clampNumber = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -584,6 +604,7 @@ function getLiveHandoffBundle(encounterId: string) {
         encounter: handoff.encounter,
         patient: handoff.patient,
         primaryGuardian: handoff.primaryGuardian,
+        veterinarianName: handoff.veterinarianName,
       })
     : null;
 }
@@ -601,6 +622,7 @@ function getLiveQueueBundle(
         encounter: record.encounter,
         patient: record.patient,
         primaryGuardian: record.primaryGuardian,
+        veterinarianName: record.veterinarianName,
       })
     : null;
 }
@@ -618,9 +640,108 @@ function getSelectedBundle(
 
   if (options.allowMockFallback === false) return null;
 
+  if (!selectedEncounterId) return getChartEncounter(legacySalesDemoDefaultEncounterId);
+
   return (
     getChartEncounter(selectedEncounterId) ??
-    getChartEncounter("encounter-coco-260501")
+    getChartEncounter(legacySalesDemoDefaultEncounterId)
+  );
+}
+
+function resolveChartBundleVeterinarianName(bundle: ChartBundle) {
+  return (
+    bundle.veterinarianName ??
+    getChartStaffName(bundle.encounter.primaryVeterinarianId)
+  );
+}
+
+function getChartBundleVeterinarianName(bundle: ChartBundle) {
+  return resolveChartBundleVeterinarianName(bundle) ?? "담당 미정";
+}
+
+function getChartHistoryVeterinarianName(
+  row: ChartHistoryRow,
+  bundle: ChartBundle,
+) {
+  if (row.encounter.id === bundle.encounter.id) {
+    return resolveChartBundleVeterinarianName(bundle) ?? "미정";
+  }
+
+  return getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정";
+}
+
+function getSelectedEncounterStorageKey(workspaceId: string) {
+  return `${chartSelectedEncounterStoragePrefix}:${workspaceId}`;
+}
+
+function readStoredSelectedChartEncounterId(workspaceId: string) {
+  if (typeof window === "undefined") return null;
+
+  const value = window.sessionStorage.getItem(
+    getSelectedEncounterStorageKey(workspaceId),
+  );
+  return value && value.trim() ? value : null;
+}
+
+function saveSelectedChartEncounterId(workspaceId: string, encounterId: string) {
+  if (typeof window === "undefined" || !encounterId) return;
+
+  window.sessionStorage.setItem(
+    getSelectedEncounterStorageKey(workspaceId),
+    encounterId,
+  );
+}
+
+function chooseRecoverableLiveEncounterId({
+  currentEncounterId,
+  explicitEncounterId,
+  records,
+  workspaceId,
+}: {
+  currentEncounterId: string;
+  explicitEncounterId: string | null;
+  records: ChartLiveQueueRecord[];
+  workspaceId: string;
+}) {
+  const liveEncounterIds = new Set(
+    records.map((record) => record.encounter.id),
+  );
+  if (explicitEncounterId && liveEncounterIds.has(explicitEncounterId)) {
+    return explicitEncounterId;
+  }
+  if (currentEncounterId && liveEncounterIds.has(currentEncounterId)) {
+    return currentEncounterId;
+  }
+
+  const storedEncounterId = readStoredSelectedChartEncounterId(workspaceId);
+  if (storedEncounterId && liveEncounterIds.has(storedEncounterId)) {
+    return storedEncounterId;
+  }
+
+  return records[0]?.encounter.id ?? null;
+}
+
+function getChartHistoryRowsForBundle(bundle: ChartBundle): ChartHistoryRow[] {
+  const rows = getChartHistoryRows(bundle.patient.id);
+
+  if (rows.some((row) => row.encounter.id === bundle.encounter.id)) {
+    return rows;
+  }
+
+  const currentRow: ChartHistoryRow = {
+    diagnoses: bundle.diagnoses.filter(
+      (diagnosis) => diagnosis.encounterId === bundle.encounter.id,
+    ),
+    encounter: bundle.encounter,
+    soapNote: bundle.soapNotes.find(
+      (soapNote) => soapNote.encounterId === bundle.encounter.id,
+    ),
+  };
+
+  return [currentRow, ...rows].sort((a, b) =>
+    (b.encounter.checkedInAt ?? b.encounter.createdAt).localeCompare(
+      a.encounter.checkedInAt ?? a.encounter.createdAt,
+    ),
   );
 }
 
@@ -711,6 +832,13 @@ function useExplicitChartEncounterId() {
   return searchParams.get("encounterId") ?? scenario?.encounterId ?? null;
 }
 
+function useDemoScenarioChartEncounterId() {
+  const searchParams = useSearchParams();
+  const scenario = getDemoScenarioFromParams(searchParams);
+
+  return scenario?.encounterId ?? null;
+}
+
 export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
@@ -729,13 +857,20 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const liveMode = authSession?.role === "supabase";
-  const mockItems = useMemo(() => getChartQueueItems(), []);
+  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const mockItems = useMemo(
+    () => (legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems),
+    [legacySalesDemo],
+  );
   const liveItems = useMemo(
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
-  const items = liveMode ? liveItems : mockItems;
+  const liveMode = liveQueueStatus === "ready";
+  const items = useMemo(
+    () => (liveMode ? liveItems : mockItems),
+    [liveItems, liveMode, mockItems],
+  );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
 
   useEffect(() => {
@@ -743,7 +878,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   }, [hydrateAuthSession]);
 
   useEffect(() => {
-    if (!authHydrated || !liveMode) return;
+    if (!authHydrated) return;
 
     let cancelled = false;
     setLiveQueueState({ records: [], status: "loading" });
@@ -766,16 +901,36 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
           encounter: record.encounter,
           patient: record.patient,
           primaryGuardian: record.primaryGuardian,
+          veterinarianName: record.veterinarianName,
         });
       });
       setLiveQueueState({ records: result.queue, status: "ready" });
 
       if (
-        !explicitQueryEncounterId &&
-        result.queue.length > 0 &&
-        !result.queue.some((record) => record.encounter.id === selectedEncounterId)
+        explicitQueryEncounterId &&
+        !result.queue.some(
+          (record) => record.encounter.id === explicitQueryEncounterId,
+        )
       ) {
-        selectEncounter(result.queue[0].encounter.id);
+        saveSelectedChartEncounterId(workspaceId, explicitQueryEncounterId);
+        if (selectedEncounterId !== explicitQueryEncounterId) {
+          selectEncounter(explicitQueryEncounterId);
+        }
+        return;
+      }
+
+      const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
+        currentEncounterId: selectedEncounterId,
+        explicitEncounterId: explicitQueryEncounterId,
+        records: result.queue,
+        workspaceId,
+      });
+
+      if (nextSelectedEncounterId) {
+        saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId);
+        if (selectedEncounterId !== nextSelectedEncounterId) {
+          selectEncounter(nextSelectedEncounterId);
+        }
       }
     }
 
@@ -788,7 +943,6 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     actorHeaders,
     authHydrated,
     explicitQueryEncounterId,
-    liveMode,
     selectEncounter,
     selectedEncounterId,
     setLiveQueueState,
@@ -796,22 +950,39 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   ]);
 
   useEffect(() => {
-    if (!liveMode || liveQueueStatus !== "ready" || liveItems.length === 0) return;
+    if (liveQueueStatus !== "ready" || liveItems.length === 0) return;
     if (liveItems.some((item) => item.id === selectedEncounterId)) return;
     if (explicitQueryEncounterId) return;
+    saveSelectedChartEncounterId(workspaceId, liveItems[0].id);
     selectEncounter(liveItems[0].id);
   }, [
     explicitQueryEncounterId,
     liveItems,
-    liveMode,
     liveQueueStatus,
+    selectEncounter,
+    selectedEncounterId,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (liveMode || items.length === 0) return;
+    if (items.some((item) => item.id === selectedEncounterId)) return;
+    if (explicitQueryEncounterId) return;
+    selectEncounter(
+      items.find((item) => item.id === legacySalesDemoDefaultEncounterId)?.id ??
+        items[0].id,
+    );
+  }, [
+    items,
+    explicitQueryEncounterId,
+    liveMode,
     selectEncounter,
     selectedEncounterId,
   ]);
 
   return (
       <EmrOrderQueueSidePanel
-      dateLabel="26.05.05 (화)"
+      dateLabel={legacySalesDemo ? "26.05.05 (화)" : "오늘"}
       filterAriaLabel="진료 대기 유형 필터"
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
@@ -825,6 +996,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
       title="진료/차트"
       onCollapse={() => setModulePanelOpen(false)}
       onSelectItem={(itemId) => {
+        if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
         selectEncounter(itemId);
         setSelectedQueueItem("treatment", itemId);
       }}
@@ -832,25 +1004,26 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
   );
 }
 
-export function ChartHeader() {
+export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
 
   if (!bundle) return null;
 
-  const veterinarianName =
-    getChartStaffName(bundle.encounter.primaryVeterinarianId) ?? "담당 미정";
+  const veterinarianName = getChartBundleVeterinarianName(bundle);
 
   return (
     <EmrPatientContextBar
@@ -869,26 +1042,54 @@ export function ChartHeader() {
       ]}
       vitalItems={getChartVitals(bundle)}
       memoActions={[
-        { label: "방문목적" },
-        { label: "보호자메모", locked: true },
-        { label: "수납메모", disabled: true },
+        {
+          label: "방문목적",
+          summary:
+            bundle.encounter.visitPurpose ??
+            bundle.encounter.chiefComplaint ??
+            "방문 목적 기록 없음",
+        },
+        {
+          label: "보호자 메모",
+          locked: true,
+          summary: bundle.primaryGuardian?.memo ?? "보호자 메모 없음",
+          unavailableReason: "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
+        },
+        {
+          label: "환자 메모",
+          summary:
+            [
+              bundle.patient.allergyNote,
+              bundle.patient.specialNote,
+              bundle.patient.handlingCautionNote,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "환자 특이 메모 없음",
+        },
+        {
+          label: "수납 메모",
+          disabled: true,
+          unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
+        },
       ]}
       trailingItems={[{ label: "담당 수의사", value: veterinarianName }]}
     />
   );
 }
 
-export function ChartContentAside() {
+export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
@@ -900,7 +1101,7 @@ export function ChartContentAside() {
     allowMockFallback,
   });
   const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
+    () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
     [bundle],
   );
   const historyGroups = useMemo(
@@ -937,6 +1138,8 @@ export function ChartContentAside() {
       return next;
     });
   };
+
+  if (!bundle) return null;
 
   return (
     <EmrContentAsidePanel id="chart-content-aside">
@@ -982,6 +1185,7 @@ export function ChartContentAside() {
               {group.rows.map((row) => (
                 <ChartHistoryItem
                   key={row.encounter.id}
+                  bundle={bundle}
                   row={row}
                   selected={row.encounter.id === selectedEncounterId}
                   onSelect={() => selectEncounter(row.encounter.id)}
@@ -1002,10 +1206,12 @@ export function ChartContentAside() {
 }
 
 function ChartHistoryItem({
+  bundle,
   onSelect,
   row,
   selected,
 }: {
+  bundle: ChartBundle;
   onSelect: () => void;
   row: ChartHistoryRow;
   selected: boolean;
@@ -1041,8 +1247,7 @@ function ChartHistoryItem({
       meta={
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate">
-            담당{" "}
-            {getChartStaffName(row.encounter.primaryVeterinarianId) ?? "미정"}
+            담당 {getChartHistoryVeterinarianName(row, bundle)}
           </span>
           <span className="truncate">{row.encounter.encounterNo}</span>
           <span className="shrink-0">
@@ -2591,23 +2796,25 @@ function AssessmentHistory({
   );
 }
 
-function ChartRightPanel() {
+export function ChartRightPanel({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const allowStoreMockFallback = useChartStore(
-    (state) => state.liveQueueStatus === "idle",
+    (state) => state.liveQueueStatus !== "ready",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
   const historyRows = useMemo(
-    () => (bundle ? getChartHistoryRows(bundle.patient.id) : []),
+    () => (bundle ? getChartHistoryRowsForBundle(bundle) : []),
     [bundle],
   );
 
@@ -4783,8 +4990,7 @@ function ChartInstructionInfo({
   bundle: ChartBundle;
   latestSoap?: SoapNote;
 }) {
-  const veterinarianName =
-    getChartStaffName(bundle.encounter.primaryVeterinarianId) ?? "담당 미정";
+  const veterinarianName = getChartBundleVeterinarianName(bundle);
   const infoItems: Array<{ label: string; value: ReactNode }> = [
     {
       label: "접수 일시",
@@ -4866,7 +5072,7 @@ function EmptyChartState() {
   );
 }
 
-export function ChartContent() {
+export function ChartContent({ workspaceId }: ShellComponentProps) {
   useScenarioEncounterSync();
 
   const selectedEncounterId = useChartStore(
@@ -4876,9 +5082,11 @@ export function ChartContent() {
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
-  const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const demoScenarioEncounterId = useDemoScenarioChartEncounterId();
   const allowMockFallback =
-    allowStoreMockFallback || selectedEncounterId === explicitQueryEncounterId;
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    (allowStoreMockFallback ||
+      selectedEncounterId === demoScenarioEncounterId);
   const { contentAsideOpen, setContentAsideOpen } = useLayoutStore();
   const {
     hydrated: authHydrated,
@@ -5511,5 +5719,3 @@ export function ChartContent() {
     </div>
   );
 }
-
-export { ChartRightPanel };

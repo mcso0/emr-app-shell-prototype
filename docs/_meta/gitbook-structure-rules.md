@@ -14,17 +14,16 @@ last_updated: 2026-06-11
 
 # GitBook Structure Rules
 
-> Inactive/deprecated: GitBook is no longer the active reader path. Preserve this document for history and for a future explicit GitBook revival only. The active reader model is repo `docs/` as source of truth plus the internal `/docs` product-doc viewer.
+> Inactive/deprecated: GitBook is no longer the active reader path. Preserve this document for history and for a future explicit GitBook revival only. The active reader model is repo `docs/` as source of truth plus the internal `/prd` product-doc viewer.
 
-Use these rules only if 승욱 explicitly revives GitBook navigation or asks to inspect the historical GitBook setup. For current reader changes, update `docs/index.md`, relevant area READMEs, and the `/docs` viewer registry instead.
+Use these rules only if 승욱 explicitly revives GitBook navigation or asks to inspect the historical GitBook setup. For current reader changes, update `docs/index.md`, relevant area READMEs, and the `/prd` viewer registry instead.
 
 ## Roles
 
 | Surface | Role |
 | --- | --- |
 | `docs/` | Canonical source of truth for product, design, engineering, work, and completion records. |
-| `/docs` app route | Active internal read-only product-doc viewer over curated `docs/product/` Markdown. |
-| `/prd` app route | Legacy compatibility route that redirects to `/docs`. |
+| `/prd` app route | Active internal read-only product-doc viewer over curated `docs/product/` Markdown. |
 | GitBook | Inactive/deprecated readable portal history. Do not edit GitBook copies as source. |
 | `docs/SUMMARY.md` | Legacy GitBook sidebar compatibility map, not active navigation. |
 | `docs/index.md` | Human-facing docs portal entry point. |

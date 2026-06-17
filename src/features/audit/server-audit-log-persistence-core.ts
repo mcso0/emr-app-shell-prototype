@@ -12,7 +12,10 @@ export const liveAuditEventTypes = [
   "user.profile_updated",
   "reception.patient_guardian_registered",
   "reception.walk_in_created",
+  "reception.appointment_created",
   "reception.appointment_checked_in",
+  "reception.encounter_cancelled",
+  "reception.encounter_updated",
   "reception.queue_status_changed",
   "chart.soap_saved",
   "chart.completed",
@@ -40,6 +43,7 @@ export type LiveAuditTargetType =
   | "user_profile"
   | "patient"
   | "guardian"
+  | "appointment"
   | "encounter"
   | "waiting_queue_entry"
   | "soap_note"

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-452 Lab Result Persistence Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-452 Lab Result Persistence Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      UI PR 2에서 서버 경계만 통과하던 lab result entry 저장을 local/dev/test Supabase DB에 영구 저장되는
+      구조로 확장하는 작업이었다. 실제 병원 데이터나 remote/prod Supabase는 범위 밖으로 유지했다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>lab_result_entries</code>, <code>lab_result_entry_rows</code> 테이블을 추가하는 migration을 작성했다.</li>
+      <li>두 테이블에 workspace membership 기반 RLS policy와 authenticated 권한 grant를 추가했다.</li>
+      <li>
+        <code>clair_save_lab_result_entry</code>, <code>clair_get_lab_result_entry</code> RPC를 추가해 encounter,
+        lab order, lab fulfillment work item 범위를 검증한 뒤 저장/조회하도록 했다.
+      </li>
+      <li>
+        기존 result-entry API route가 authenticated Supabase session에서는 RPC 경로를 사용하고, demo-header mock
+        mode에서는 기존 fallback을 유지하도록 바꿨다.
+      </li>
+      <li>Lab/imaging UI가 seeded lab test item id를 결과 row payload에 포함하도록 연결했다.</li>
+      <li>저장 후 readback을 검증하는 focused Playwright contract와 synthetic route-boundary E2E를 보강했다.</li>
+    </ul>
+
+    <h2>왜 중요한가</h2>
+    <p>
+      이제 CBC/UA 같은 검사 결과 값이 단순 화면 상태가 아니라 workspace-scoped DB 모델과 서버 권한 경계를 지나 저장될 수
+      있다. EMR SaaS 데모에서 “오더 → 업무 큐 → 결과 입력 → 저장/조회” 흐름의 백엔드 foundation이 더 명확해졌다.
+    </p>
+
+    <h2>현재 상태</h2>
+    <p>
+      DEN-452는 local/dev/test foundation이다. 원격 Supabase, production DB, 실제 검사 장비/외부 검사기관 연동,
+      실제 병원/환자 데이터 사용은 하지 않았다. Sales Demo와 unconfigured local session을 위한 mock fallback은 유지했다.
+    </p>
+
+    <h2>변경 파일</h2>
+    <ul>
+      <li><code>supabase/migrations/20260609112000_lab_result_entry_persistence.sql</code></li>
+      <li><code>src/app/api/workspaces/[workspaceId]/lab-imaging/result-entries/route.ts</code></li>
+      <li><code>src/features/lab-imaging/module.tsx</code></li>
+      <li><code>src/types/emr-domain.ts</code></li>
+      <li><code>tests/lab-result-entry-persistence-contract.spec.ts</code></li>
+      <li><code>tests/ui-demo-api-wiring-e2e.spec.ts</code></li>
+      <li><code>docs/engineering/current-status.md</code></li>
+      <li><code>docs/engineering/data-model/demo-seed-inventory-readback-contract.md</code></li>
+      <li><code>docs/work/demo-data/DEN-452-lab-result-persistence-db-rls-api.md</code></li>
+      <li><code>docs/work/index.md</code></li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/lab-result-entry-persistence-contract.spec.ts --reporter=line</code></li>
+      <li><code>npx playwright test tests/ui-demo-api-wiring-e2e.spec.ts --reporter=line</code></li>
+      <li><code>npx tsc --noEmit</code></li>
+      <li><code>npm run lint</code></li>
+      <li><code>npm run build</code></li>
+      <li><code>npm run docs:check</code></li>
+      <li><code>npm run security:secrets</code></li>
+      <li><code>npx supabase migration up --local</code></li>
+      <li><code>npx supabase db reset</code></li>
+      <li>Local DB transaction 안에서 <code>clair_save_lab_result_entry</code> 저장 후 <code>clair_get_lab_result_entry</code> readback으로 WBC 값 <code>21.4</code> 확인</li>
+    </ul>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>Local Supabase replay/readback은 완료됐다. Remote Supabase와 production DB는 건드리지 않았다.</li>
+      <li>Billing과 dispensing/treatment 화면의 남은 mock-first store 제거는 후속 이슈 범위다.</li>
+      <li>Provider/device integration, receipt/refund/settlement/accounting, production deploy는 포함하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      다음 이슈는 DEN-453 lab result UX 상태 처리이며, 이후 billing API 우선 구조와 dispensing/treatment execution 화면의
+      mock-store 축소를 진행하는 순서가 적합하다.
+    </p>
+  </body>
+</html>

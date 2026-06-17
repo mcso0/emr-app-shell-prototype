@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-516 Reception Reservation Create Flow Report</title>
+  </head>
+  <body>
+    <main>
+      <h1>DEN-516 Reception Reservation Create Flow Report</h1>
+      <p>
+        DEN-516 replaced the reservation placeholder with a real drawer-based
+        reservation create path and added a reservation-to-reception check-in
+        form backed by server permission checks, appointment writer validation,
+        audit emission, and focused UI regression coverage.
+      </p>
+      <h2>What Changed</h2>
+      <ul>
+        <li><code>+ 접수/예약 &gt; 예약하기</code> opens a reservation creation drawer.</li>
+        <li>Reservation creation posts to <code>/api/workspaces/[workspaceId]/reception/appointments</code>.</li>
+        <li><code>public.clair_create_reception_appointment(...)</code> validates workspace scope, patient/guardian, veterinarian, business hours, closed day, and occupied slots.</li>
+        <li>Created reservations are applied to reception state and opened in the reservation detail drawer.</li>
+        <li>Reservation detail now uses <code>접수하기</code> to open a prefilled check-in form before creating the waiting encounter.</li>
+        <li>The check-in API can receive form payloads for patient weight, visit purpose, department, veterinarian, duration, memo, and checked-in time.</li>
+        <li><code>public.clair_check_in_reception_appointment(..., jsonb)</code> updates the linked encounter and patient weight through the DB boundary.</li>
+        <li>Audit support now includes <code>reception.appointment_created</code> for helper, review filter, UI labels, and DB event-type constraint.</li>
+      </ul>
+      <h2>Verification</h2>
+      <ul>
+        <li>36 server/API/permission/audit tests passed.</li>
+        <li>7 focused reception UI tests passed, including reservation creation and reservation check-in form paths.</li>
+        <li><code>npx tsc --noEmit --pretty false --incremental false</code> passed.</li>
+        <li><code>npm run lint</code> passed with 5 pre-existing warnings outside DEN-516 changes.</li>
+        <li><code>npm run docs:check</code> passed for 714 docs/agent markdown files.</li>
+        <li><code>git diff --check</code> passed.</li>
+      </ul>
+      <h2>Downstream Note</h2>
+      <p>
+        Calendar drag creation and detail edit work should reuse the appointment
+        writer, check-in payload boundary, and audit event. They should not
+        introduce separate local-only reservation creation or conversion state.
+      </p>
+      <p>Status: Ready for Human Review.</p>
+    </main>
+  </body>
+</html>

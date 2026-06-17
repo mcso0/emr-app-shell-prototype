@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-05-23
+Updated: 2026-06-17
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -9,7 +9,7 @@ This is the short startup status for new Codex sessions and human review. It sho
 - Current target: Product MVP.
 - The app is a veterinary EMR SaaS prototype with outpatient workflows from reception through billing.
 - The product has moved beyond a pure static demo: many auth, workspace, local-first DB/RLS, persistence, audit, billing, and customer-management foundations have been implemented in local-first form.
-- Remote Supabase staging/live validation, production deployment, real customer data, real provider integrations, payment provider confirmation, and final compliance/legal review are not complete.
+- Remote Supabase validation, production-demo deployment, DB/API hardening, migration/RLS work, and server-side enforcement may now be scoped for synthetic/demo data under active Linear/work items. Real customer data, real provider/payment side effects, and final compliance/legal review are not complete.
 - Client-only permission gating is not complete security. Treat server/API/DB/RLS enforcement as the required security boundary.
 - Use concise English for agent-facing plans and handoff notes. Keep user-facing result reviews in Korean unless requested otherwise.
 
@@ -23,7 +23,7 @@ The MVP direction is to keep the connected outpatient workflow visible while rep
 - role and permission based UX backed by server-side enforcement boundaries
 - workspace-scoped data access
 - reception, chart, order, billing, customer, hospital-admin, and audit workflows moving from session-only mock toward local-first persistence
-- Sales Demo golden path preserved as regression coverage and representative fixture
+- Cheongdam seed workspace (`workspace-clair-cheongdam`) used as the default synthetic operating proof, with legacy Sales Demo paths treated as cleanup candidates rather than preservation requirements
 
 ## Current Product State
 
@@ -32,18 +32,20 @@ The app currently has usable prototype screens for:
 | Area | Current state |
 | --- | --- |
 | Home | Operational dashboard and work-status view with session-only mock data |
-| Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, and local-first encounter path foundations |
+| Reception and appointment | Reception queue, walk-in intake, patient/guardian registration, local-first encounter path foundations, and first-pass API-backed queue/calendar/profile hydration through existing reception routes |
 | Customer management | Guardian/patient profile, relationship management, and soft delete/restore persistence boundaries |
-| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, and local-first persistence checkpoints |
-| Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route, while full live result/provider persistence remains outside current completion claims |
-| Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, while full live dispensing/treatment execution persistence remains outside current completion claims |
-| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, fulfillment completion candidate sync, and amount-integrity regression foundations |
+| Chart | SOAP, diagnosis/search, order draft/confirmation, fulfillment sync handoff, downstream fulfillment lifecycle readback, local-first persistence checkpoints, and first-pass live queue API adoption in the chart side panel |
+| Lab and imaging | Workspace screens exist; DEN-238 connects queue status context and status mutation to the shared fulfillment route. UI PR 2 adds lab result-sheet catalog read adoption for live lab work items and a local/dev result-entry server boundary. DEN-452 adds local/dev/test DB tables, RLS policies, RPCs, and API wiring for durable lab result value persistence. DEN-453 distinguishes catalog loading/empty/error/permission states and save retry/permission states in the visible lab result UI. Provider integrations and remote Supabase replay remain outside current completion claims |
+| Dispensing/treatment | Workspace screen exists; DEN-239 connects queue status context and status mutation to the shared fulfillment route, and UI PR 2 covers treatment/dispensing route-boundary status transitions. DEN-456 adds visible execution-screen readback from `order_fulfillment_work_items`, server-backed status mutation, permission/failure states, and focused UI regression coverage. Cheongdam cleanup work should prevent legacy fixture fallback from hiding seed/API readback gaps |
+| Billing | Invoice candidate, invoice line edit, billing confirmation, payment state, guardian checkout, fulfillment completion candidate sync, and amount-integrity regression foundations. UI PR 2 covers checkout route consumption in visible billing UI. DEN-454 makes the selected billing demo path API-primary for invoice-line, payment-status, and checkout-session snapshots, and DEN-455 adds visible loading, permission, retryable failure, empty, and checkout retry states while mock fallback remains |
 | Inpatient | Session-only ward board and detail surface |
 | Hospital admin | Order catalog persistence foundation and membership/invitation management surfaces |
 | Audit | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface |
 | Auth/workspace | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, and local DB/RLS foundations |
 
-Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Remote Supabase staging replay remains gated by explicit approval.
+Project 08 `Clinical Order Fulfillment Handoff Persistence` is ready for representative Human Review after DEN-235 through DEN-242. It verifies the local-first chart-confirmed order handoff through downstream fulfillment queues, lifecycle readback, and billing candidate readback. Its original remote staging replay was approval-gated at closeout; the current operating policy now allows scoped synthetic/demo remote validation under an active work item unless it triggers the cost/security/real-data/destructive-operation gates below.
+
+Demo DB PR 1 through PR 5 closed the earlier seed-family gaps for the `clair-demo` synthetic local/dev dataset, and later Cheongdam work introduced `workspace-clair-cheongdam` as the default prepared-clinic seed workspace. UI PR 1 starts the API-backed adoption phase by hydrating reception patient/guardian profiles from the reception lookup route, loading the chart queue through the chart live-queue route, and adding a focused synthetic E2E route-boundary test that covers reception, chart order confirmation, fulfillment work-item completion, result-review billing, checkout/payment status, and audit readback. UI PR 2 extends downstream adoption by connecting live lab fulfillment work items to the seeded lab result-sheet catalog, adding a local/dev lab result-entry server boundary, covering treatment/dispensing fulfillment transitions at the route boundary, and exercising billing checkout plus audit review in visible UI E2E. DEN-452 replaces the lab result-entry proof with local/dev/test Supabase persistence tables, RLS, RPC save/readback, and server-permission-checked API wiring. DEN-453 adds visible lab result API state handling for catalog retry, save retry, and permission-denied outcomes. DEN-454 makes billing invoice-line, payment-status, and checkout-session snapshots API-primary in the visible selected-invoice demo path and verifies payment-status readback after mutation. DEN-455 adds visible billing API loading, empty, retryable failure, permission-denied, and checkout retry states. DEN-456 makes the dispensing/treatment execution screen show fulfillment work-item readback, server status transitions, permission denial, and mutation failure states instead of silently relying on local queue state. DEN-457 adds a visible day-in-clinic Playwright demo that walks reception, chart queue, lab result entry, dispensing fulfillment readback, billing checkout, and audit review surfaces with explicit API-call assertions. DEN-458 adds a local Supabase replay helper and docs that separate Docker/Supabase/psql environment gaps from actual seed/readback regressions. DEN-459 adds focused API boundary regression coverage for lab result entry, fulfillment, and billing denial paths, and keeps client-only gating explicitly outside the security-complete claim. DEN-460 synchronizes the engineering docs and adds an API-backed demo runbook so new sessions can interpret current mock/live/API boundaries and verification results without relying on old handoff context. DEN-461 closes out the earlier demo readiness report and remaining-gap inventory. DEMO-DATA-PR-002 now treats legacy Sales Demo fallback as removable technical debt while keeping unconfigured local mock mode local-only and non-authoritative for seed-backed workflow verification.
 
 The latest detailed change history before this split is in [MVP Current Status History](current-status-history.md).
 
@@ -51,21 +53,22 @@ The latest detailed change history before this split is in [MVP Current Status H
 
 Do not claim these as done without a scoped work item and verification evidence:
 
-- remote Supabase staging/live project validation
-- production deploy and production monitoring
+- remote Supabase validation
+- production-demo deploy and production monitoring
 - real hospital/customer data import or storage
 - final clinical/business domain RLS replay for every live table
 - payment provider, receipt, refund, accounting, or settlement integrations
 - real email, KakaoTalk, PACS, device, Excel, or external provider integrations
 - legal/compliance certification
-- full lab/imaging/dispensing live persistence
+- full lab/imaging/dispensing durable live persistence across every screen and complete mock-store removal
 - final launch-readiness signoff
 
 ## Guardrails
 
 - Do not treat client-only permission checks, hidden buttons, or mock role labels as complete security.
-- Do not run remote Supabase commands, migration push, production deploy, real email, payment, or provider integration without explicit approval from 승욱.
-- Keep mock fallback and Sales Demo paths working unless a work item explicitly scopes their removal.
+- Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work is allowed when the active Linear issue or work item includes it.
+- Stop for explicit approval before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
+- Do not let mock fallback or legacy Sales Demo paths silently mask Cheongdam seed/API failures; legacy Sales Demo removal is now explicitly scoped through DEMO-DATA-PR-002.
 - Use synthetic demo data only. Do not introduce real patient, guardian, hospital, payment, or identity data.
 - For Next.js application code, read the relevant guide in `node_modules/next/dist/docs/` before coding.
 - For docs, planning, and Linear work, use `docs/_meta/agent-rag-map.md` to choose the smallest source-doc set.
@@ -77,7 +80,9 @@ Use the active work item for exact verification commands. Recent relevant verifi
 - `npm run docs:check` for docs path/reference changes
 - `npm run lint`, `npx tsc --noEmit`, and `npm run build` for implementation changes
 - focused Playwright specs for touched workflows
+- `tests/ui-demo-api-wiring-e2e.spec.ts` for current reception/chart/downstream API wiring and synthetic outpatient route-boundary proof
 - `tests/fulfillment-handoff-replay.spec.ts` for chart confirmation through downstream fulfillment, lifecycle, and billing readback
+- `docs/engineering/testing/api-backed-demo-runbook.md` for the current command set and failure interpretation for the synthetic API-backed demo
 - focused server/API regression specs for auth, workspace, billing, customer, audit, and persistence boundaries
 - secret scans and migration/static checks when auth, DB, RLS, or env handling changes
 
@@ -131,5 +136,7 @@ For product/live-MVP work outside this docs project, review the current Linear p
 - Engineering docs: [Engineering README](README.md)
 - Auth transition roadmap: [MVP Auth Transition Roadmap](auth-security/mvp-auth-transition-roadmap.md)
 - Auth/login package index: [Auth Login README](auth-security/auth-login/README.md)
+- API-backed demo runbook: [API-Backed Demo Runbook](testing/api-backed-demo-runbook.md)
+- Demo completion readiness report: [DEN-461 Demo Readiness Closeout](../completed/engineering/2026-06-11-den-461-demo-readiness-closeout-report.html)
 - Testing gap analysis: [MVP Gap Analysis](testing/mvp-gap-analysis.md)
 - Work index: [Work Index](../work/index.md)

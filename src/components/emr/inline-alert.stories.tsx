@@ -1,0 +1,162 @@
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+
+import { Button } from "@/components/ui/button";
+
+import { EmrInlineAlert } from "./inline-alert";
+
+const meta = {
+  title: "Design System/EMR/EmrInlineAlert",
+  component: EmrInlineAlert,
+  tags: ["autodocs"],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Use EmrInlineAlert for persistent workflow feedback such as read failures, degraded live/demo boundaries, permission blockers, preflight warnings, and in-context success. Do not use it for transient toast-only feedback or field-level validation.",
+      },
+    },
+  },
+  argTypes: {
+    severity: {
+      control: "radio",
+      options: ["error", "warning", "info", "success"],
+      description:
+        "Controls default role, icon, and semantic tone. Error and warning default to alert; info and success default to status.",
+    },
+    title: {
+      control: "text",
+      description: "Concise impact-oriented title. It must make the alert meaning clear without color alone.",
+    },
+    children: {
+      control: "text",
+      description: "Short contextual body copy. Use synthetic product-like data only.",
+    },
+    role: {
+      control: "select",
+      options: [undefined, "alert", "status"],
+      description: "Override only when the consuming workflow has a specific accessibility need.",
+    },
+    icon: {
+      table: {
+        disable: true,
+      },
+    },
+    action: {
+      table: {
+        disable: true,
+      },
+    },
+    secondaryAction: {
+      table: {
+        disable: true,
+      },
+    },
+    testId: {
+      control: "text",
+      description: "Optional test hook for feature-level regression tests.",
+    },
+  },
+  args: {
+    children: "현재 화면은 마지막 로컬 데모 상태를 보여주고 있어.",
+    severity: "warning",
+    title: "서버 대기열을 불러오지 못했어",
+  },
+} satisfies Meta<typeof EmrInlineAlert>;
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Default warning alert for a degraded workflow state. Use it near the affected panel, not in global chrome.",
+      },
+    },
+  },
+};
+export const Severities: Story = {
+  render: () => (
+    <div className="grid max-w-3xl gap-3">
+      <EmrInlineAlert
+        severity="error"
+        title="저장하지 못했어"
+      >
+        입력 내용은 화면에 남아 있어. 다시 시도하거나 지원 로그를 확인해.
+      </EmrInlineAlert>
+      <EmrInlineAlert
+        severity="warning"
+        title="실시간 상태가 지연되고 있어"
+      >
+        현재 목록은 마지막으로 확인된 로컬 상태 기준이야.
+      </EmrInlineAlert>
+      <EmrInlineAlert
+        severity="info"
+        title="데모 데이터 모드"
+      >
+        이 화면은 제품 흐름 검토를 위한 합성 데이터만 사용해.
+      </EmrInlineAlert>
+      <EmrInlineAlert
+        severity="success"
+        title="임시 저장됐어"
+      >
+        같은 화면에서 저장 상태를 다시 확인할 수 있어.
+      </EmrInlineAlert>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Severity changes role, icon, and token tone. Copy and available actions must still explain the state without relying on color alone.",
+      },
+    },
+  },
+};
+
+export const WithRecoveryActions: Story = {
+  render: () => (
+    <EmrInlineAlert
+      severity="warning"
+      title="검사 대기열 동기화가 지연되고 있어"
+      action={<Button size="sm">다시 시도</Button>}
+      secondaryAction={
+        <Button
+          size="sm"
+          variant="outline"
+        >
+          로컬 데모로 보기
+        </Button>
+      }
+    >
+      현재 화면은 마지막 로컬 데모 상태를 보여주고 있어.
+    </EmrInlineAlert>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Use action slots for recovery paths. The feature owns callbacks, retry logic, logging, and permission checks.",
+      },
+    },
+  },
+};
+
+export const WithoutIcon: Story = {
+  args: {
+    icon: false,
+    severity: "info",
+    title: "읽기 전용 검토 상태",
+    children: "이 문맥에서는 주변 헤더가 상태 의미를 이미 설명하고 있어.",
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Hide the icon only when the surrounding layout already makes the alert role clear. Do not remove meaning from title or body copy.",
+      },
+    },
+  },
+};

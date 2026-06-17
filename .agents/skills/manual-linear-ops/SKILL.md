@@ -13,9 +13,12 @@ Use this repo's manual Linear workflow as a lightweight Symphony replacement. Ke
 - Ask 승욱 before creating a new project, moving work between projects, adding or changing milestones, or choosing new project vs existing project.
 - Use Linear milestones for multi-issue projects when work has clear phases, quality gates, or review checkpoints; keep one-off issues milestone-free unless grouping improves execution.
 - Default to one Linear issue, one Codex owner, one branch, and one PR.
+- In 승욱's solo multi-Codex workflow, one thread may own a coherent Linear project or work bundle with multiple issues when the branch/PR strategy is stated up front.
+- Individual work threads must stop at PR preview for deployment review; route fixed staging, production, Vercel alias, or promote requests through `$release-deployment-ops`.
 - Stop meaningful issue work at `Human Review`; move to `Done` only when 승욱 explicitly accepts or asks.
 - Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo, link, or wording fixes.
-- Do not enter live Supabase, DB migration, RLS, payment or subscription, email delivery, production deploy, or role and permission policy changes without explicit approval.
+- Scoped synthetic/demo-data Supabase, DB migration, RLS, server/API, and production-demo deployment work may proceed when the active Linear issue includes it.
+- Ask 승욱 before meaningful cost, secret/security exposure, private repo/public exposure, real data use, destructive remote data changes, real external communications/payments/providers, real customer launch, or canonical role/permission policy changes.
 - If an approval-gated action is the better or necessary path for the active issue, do not choose a weaker workaround just to avoid the gate. Stop, explain the required gated operation, and ask 승욱 for explicit approval before continuing.
 
 ## Required Workflow
@@ -59,6 +62,7 @@ Read `docs/engineering/agent-orchestration/manual-linear-operations.md` before:
 - coordinating multiple Codex sessions
 - handling `Rework`, `Done`, or ambiguous status transitions
 - grouping multiple issues into one PR
+- planning fixed staging, production, or release handoff with Linear work
 - changing priority when product tradeoffs matter
 - entering security, DB, RLS, payment, email, deployment, or role-policy scope
 

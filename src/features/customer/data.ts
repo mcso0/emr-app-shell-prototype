@@ -122,12 +122,16 @@ export const getCustomerPatientRows = ({
   guardians,
   patientGuardians,
   patients,
+  workspaceId,
 }: {
   guardians: Guardian[];
   patientGuardians: PatientGuardian[];
   patients: Patient[];
+  workspaceId?: string;
 }): CustomerPatientRow[] =>
-  patients.map((patient) => {
+  patients
+    .filter((patient) => !workspaceId || patient.workspaceId === workspaceId)
+    .map((patient) => {
     const linkedGuardians = getPatientGuardians(patient.id, guardians, patientGuardians);
     const primaryGuardian = getPrimaryGuardian(patient.id, guardians, patientGuardians);
     const primaryLink = patientGuardians.find(
@@ -190,12 +194,16 @@ export const getCustomerGuardianRows = ({
   guardians,
   patientGuardians,
   patients,
+  workspaceId,
 }: {
   guardians: Guardian[];
   patientGuardians: PatientGuardian[];
   patients: Patient[];
+  workspaceId?: string;
 }): CustomerGuardianRow[] =>
-  guardians.map((guardian) => {
+  guardians
+    .filter((guardian) => !workspaceId || guardian.workspaceId === workspaceId)
+    .map((guardian) => {
     const linkedPatients = getGuardianPatients(guardian.id, patients, patientGuardians);
     const patientIds = new Set(linkedPatients.map((patient) => patient.id));
     const recentCs = getRecentGuardianCs(guardian.id, patientIds);

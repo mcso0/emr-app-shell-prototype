@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo DB PR 4 Lab Result-Sheet Catalog Seed Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo DB PR 4 Lab Result-Sheet Catalog Seed Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      UI를 바꾸지 않고 <code>clair-demo</code> local/dev seed에 CBC와 urinalysis 결과지 카탈로그 foundation을
+      추가하는 작업이었다. remote Supabase, production DB, 실제 병원/환자 데이터는 범위에서 제외했다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>supabase/seed.sql</code>에 Hematology와 Urinalysis category row 2개를 추가했다.</li>
+      <li>CBC result item 4개와 urinalysis result item 4개를 추가했다.</li>
+      <li>기존 <code>den194-catalog-cbc</code>와 <code>den194-catalog-urinalysis</code> catalog row에 result item link 8개를 연결했다.</li>
+      <li>readback SQL과 focused test를 lab result-sheet seed가 baseline으로 필요하도록 갱신했다.</li>
+      <li>seed inventory 문서에서 해결된 lab gap과 남은 billing checkout gap을 분리했다.</li>
+    </ul>
+
+    <h2>현재 상태</h2>
+    <p>
+      이제 demo DB reset 이후 <code>lab_test_categories</code>, <code>lab_test_items</code>,
+      <code>order_catalog_lab_test_item_links</code>는 비어 있지 않아야 하며, readback은 CBC와 urinalysis별
+      result-sheet link 개수를 확인한다. 남은 seed gap은 optional billing checkout session family다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 변경은 seed/readback/test/doc 범위이며 UI 연결은 하지 않았다.</li>
+      <li>실제 lab result values, reference ranges, device/PACS/provider integration은 포함하지 않았다.</li>
+      <li>Billing checkout session seed는 다음 PR 범위로 남겼다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      Demo DB PR 5는 optional billing checkout session family를 추가할지 검토하는 것이 좋다.
+      다만 결제 provider, 영수증, 환불, 정산, 회계 처리는 demo seed 범위 밖으로 유지해야 한다.
+    </p>
+  </body>
+</html>

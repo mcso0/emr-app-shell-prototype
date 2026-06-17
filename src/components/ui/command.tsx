@@ -22,7 +22,10 @@ function CommandInput({ className, ...props }: React.ComponentProps<typeof Comma
         <SearchIcon aria-hidden="true" className="size-4 shrink-0 opacity-50" />
         <CommandPrimitive.Input
           data-slot="command-input"
-          className={cn("w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50", className)}
+          className={cn(
+            "w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+            className
+          )}
           {...props}
         />
       </div>

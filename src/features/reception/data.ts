@@ -1,4 +1,13 @@
 import {
+  LEGACY_FIXTURE_OPERATING_DATE,
+  getOperatingDateFromIso,
+  getWorkspaceOperatingDate,
+} from "@/lib/emr-domain/demo-date";
+import {
+  LEGACY_SALES_DEMO_WORKSPACE_ID,
+  isLegacySalesDemoWorkspace,
+} from "@/lib/emr-domain/demo-workspaces";
+import {
   getMockPatientBundle,
   mockAppointments,
   mockEncounters,
@@ -55,7 +64,16 @@ export type ReceptionProfileDataset = {
   patients: Patient[];
 };
 
-const TODAY_PREFIX = "2026-05-01";
+export type ReceptionDataScope = {
+  operatingDate?: string;
+  staffMembers?: Array<{ displayName: string; id: string }>;
+  workspaceId?: string;
+};
+
+const defaultReceptionDataScope = {
+  operatingDate: LEGACY_FIXTURE_OPERATING_DATE,
+  workspaceId: LEGACY_SALES_DEMO_WORKSPACE_ID,
+};
 
 const defaultProfileDataset: ReceptionProfileDataset = {
   guardians: mockGuardians,
@@ -76,8 +94,25 @@ const getPrimaryGuardian = (
     : getMockPatientBundle(patientId)?.primaryGuardian;
 };
 
-const getStaffName = (userId?: EmrId) =>
-  userId ? mockStaffUsers.find((user) => user.id === userId)?.name : undefined;
+const getStaffName = (userId?: EmrId, staffMembers?: ReceptionDataScope["staffMembers"]) =>
+  userId
+    ? (staffMembers?.find((user) => user.id === userId)?.displayName ??
+      mockStaffUsers.find((user) => user.id === userId)?.name)
+    : undefined;
+
+const resolveReceptionDataScope = (scope?: ReceptionDataScope) => {
+  const workspaceId = scope?.workspaceId ?? defaultReceptionDataScope.workspaceId;
+
+  return {
+    includeLegacyFixtures: isLegacySalesDemoWorkspace(workspaceId),
+    operatingDate:
+      scope?.operatingDate ??
+      (isLegacySalesDemoWorkspace(workspaceId)
+        ? defaultReceptionDataScope.operatingDate
+        : getWorkspaceOperatingDate(workspaceId)),
+    workspaceId,
+  };
+};
 
 export const getPatientDisplayAge = (patient: Patient) => {
   if (patient.estimatedAgeText) return patient.estimatedAgeText;
@@ -112,16 +147,34 @@ export const getSpeciesLabel = (patient: Patient) => {
 
 export const getReceptionPatientSummaries = (
   draftCheckIns: ReceptionDraftCheckIn[],
-  dataset: ReceptionProfileDataset = defaultProfileDataset
+  dataset: ReceptionProfileDataset = defaultProfileDataset,
+  scope?: ReceptionDataScope
 ): ReceptionPatientSummary[] => {
-  const draftEncounters = draftCheckIns.map((draft) => draft.encounter);
-  const encounters = [...draftEncounters, ...mockEncounters];
-  const appointments = getEffectiveAppointments(draftCheckIns);
+  const resolvedScope = resolveReceptionDataScope(scope);
+  const scopedPatients = dataset.patients.filter(
+    (patient) => patient.workspaceId === resolvedScope.workspaceId
+  );
+  const draftEncounters = draftCheckIns
+    .map((draft) => draft.encounter)
+    .filter((encounter) => encounter.workspaceId === resolvedScope.workspaceId);
+  const fixtureEncounters = resolvedScope.includeLegacyFixtures ? mockEncounters : [];
+  const encounters = [...draftEncounters, ...fixtureEncounters];
+  const appointments = getEffectiveAppointments(draftCheckIns, [], resolvedScope);
 
-  return dataset.patients.map((patient) => {
+  return scopedPatients.map((patient) => {
     const primaryGuardian = getPrimaryGuardian(patient.id, dataset);
-    const patientAppointments = appointments.filter((appointment) => appointment.patientId === patient.id);
-    const patientEncounters = encounters.filter((encounter) => encounter.patientId === patient.id);
+    const patientAppointments = appointments.filter(
+      (appointment) =>
+        appointment.patientId === patient.id &&
+        getOperatingDateFromIso(appointment.scheduledStartAt) ===
+          resolvedScope.operatingDate,
+    );
+    const patientEncounters = encounters.filter(
+      (encounter) =>
+        encounter.patientId === patient.id &&
+        getOperatingDateFromIso(encounter.checkedInAt ?? encounter.createdAt) ===
+          resolvedScope.operatingDate,
+    );
     const activeEncounter = patientEncounters.find((encounter) =>
       ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
     );
@@ -129,6 +182,15 @@ export const getReceptionPatientSummaries = (
       ? draftCheckIns.find((draft) => draft.encounter.id === activeEncounter.id)
       : undefined;
     const latestAppointment = patientAppointments.at(-1);
+    const veterinarianName =
+      getStaffName(
+        activeEncounter?.primaryVeterinarianId,
+        scope?.staffMembers,
+      ) ??
+      getStaffName(
+        latestAppointment?.assignedVeterinarianId,
+        scope?.staffMembers,
+      );
     const searchText = [
       patient.name,
       patient.patientNo,
@@ -137,6 +199,12 @@ export const getReceptionPatientSummaries = (
       primaryGuardian?.name,
       primaryGuardian?.mobilePhone,
       primaryGuardian?.phone,
+      activeEncounter?.visitPurpose,
+      activeEncounter?.chiefComplaint,
+      activeEncounter?.receptionMemo,
+      latestAppointment?.visitPurpose,
+      latestAppointment?.symptomNote,
+      veterinarianName,
     ]
       .filter(Boolean)
       .join(" ")
@@ -149,9 +217,7 @@ export const getReceptionPatientSummaries = (
       patient,
       primaryGuardian,
       searchText,
-      veterinarianName:
-        getStaffName(activeEncounter?.primaryVeterinarianId) ??
-        getStaffName(latestAppointment?.assignedVeterinarianId),
+      veterinarianName,
     };
   });
 };
@@ -169,17 +235,21 @@ export const getFilteredReceptionPatients = (
 
 export const getEffectiveAppointments = (
   draftCheckIns: ReceptionDraftCheckIn[],
-  persistedAppointments: Appointment[] = []
+  persistedAppointments: Appointment[] = [],
+  scope?: ReceptionDataScope
 ): Appointment[] => {
+  const resolvedScope = resolveReceptionDataScope(scope);
   const checkedInAppointmentIds = new Set(
     draftCheckIns.flatMap((draft) => (draft.appointmentId ? [draft.appointmentId] : []))
   );
-  const persistedAppointmentIds = new Set(persistedAppointments.map((appointment) => appointment.id));
+  const fixtureAppointments = resolvedScope.includeLegacyFixtures ? mockAppointments : [];
   const appointments = [
-    ...mockAppointments.map((appointment) =>
+    ...fixtureAppointments.map((appointment) =>
       persistedAppointments.find((item) => item.id === appointment.id) ?? appointment
     ),
-    ...persistedAppointments.filter((appointment) => !mockAppointments.some((item) => item.id === appointment.id)),
+    ...persistedAppointments.filter(
+      (appointment) => !fixtureAppointments.some((item) => item.id === appointment.id)
+    ),
   ];
 
   return appointments.map((appointment) =>
@@ -191,30 +261,46 @@ export const getEffectiveAppointments = (
             ?.encounter.updatedAt ?? appointment.updatedAt,
         }
       : appointment
-  ).filter((appointment) => appointment.workspaceId === "clair-demo" || persistedAppointmentIds.has(appointment.id));
+  ).filter((appointment) => appointment.workspaceId === resolvedScope.workspaceId);
 };
 
 export const getTodayAppointments = (
   draftCheckIns: ReceptionDraftCheckIn[],
-  persistedAppointments: Appointment[] = []
+  persistedAppointments: Appointment[] = [],
+  scope?: ReceptionDataScope
 ) =>
-  getEffectiveAppointments(draftCheckIns, persistedAppointments).filter((appointment) =>
-    appointment.scheduledStartAt.startsWith(TODAY_PREFIX)
+  getEffectiveAppointments(draftCheckIns, persistedAppointments, scope).filter((appointment) =>
+    getOperatingDateFromIso(appointment.scheduledStartAt) ===
+    resolveReceptionDataScope(scope).operatingDate
   );
 
-export const getEffectiveEncounters = (draftCheckIns: ReceptionDraftCheckIn[]) => [
-  ...mockEncounters,
-  ...draftCheckIns.map((draft) => draft.encounter),
-];
+export const getEffectiveEncounters = (
+  draftCheckIns: ReceptionDraftCheckIn[],
+  scope?: ReceptionDataScope
+) => {
+  const resolvedScope = resolveReceptionDataScope(scope);
+  const fixtureEncounters = resolvedScope.includeLegacyFixtures ? mockEncounters : [];
+
+  return [
+    ...fixtureEncounters,
+    ...draftCheckIns.map((draft) => draft.encounter),
+  ].filter((encounter) => encounter.workspaceId === resolvedScope.workspaceId);
+};
 
 export const getReceptionQueueRows = (
-  draftCheckIns: ReceptionDraftCheckIn[]
+  draftCheckIns: ReceptionDraftCheckIn[],
+  scope?: ReceptionDataScope
 ): ReceptionQueueRow[] => {
-  const encounters = getEffectiveEncounters(draftCheckIns);
+  const resolvedScope = resolveReceptionDataScope(scope);
+  const encounters = getEffectiveEncounters(draftCheckIns, resolvedScope);
   const queueEntries = [
-    ...mockWaitingQueueEntries,
+    ...(resolvedScope.includeLegacyFixtures ? mockWaitingQueueEntries : []),
     ...draftCheckIns.map((draft) => draft.queueEntry),
-  ].filter((entry) => entry.queueType === "consultation" || entry.queueType === "billing");
+  ].filter(
+    (entry) =>
+      entry.workspaceId === resolvedScope.workspaceId &&
+      (entry.queueType === "consultation" || entry.queueType === "billing")
+  );
 
   const rows = queueEntries.reduce<ReceptionQueueRow[]>((accumulator, queueEntry) => {
       const encounter = encounters.find((item) => item.id === queueEntry.encounterId);
@@ -229,7 +315,10 @@ export const getReceptionQueueRows = (
         patient,
         primaryGuardian: getPrimaryGuardian(patient.id),
         queueEntry,
-        veterinarianName: getStaffName(encounter.primaryVeterinarianId),
+        veterinarianName: getStaffName(
+          encounter.primaryVeterinarianId,
+          scope?.staffMembers,
+        ),
       });
 
       return accumulator;

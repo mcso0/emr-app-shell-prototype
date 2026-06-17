@@ -26,9 +26,10 @@ import {
   validatePersonalProfileInput,
   type PersonalProfileFieldErrors,
 } from "@/features/auth/personal-profile-session";
+import { DEFAULT_PREPARED_EMPTY_CLINIC_RECEPTION_HREF } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 
-const defaultReturnHref = "/w/clair-demo/reception?modulePanel=open&aside=closed";
+const defaultReturnHref = DEFAULT_PREPARED_EMPTY_CLINIC_RECEPTION_HREF;
 const profileShellClassName =
   "mx-auto grid w-full max-w-[1120px] gap-6 lg:grid-cols-[minmax(0,0.78fr)_minmax(440px,1fr)]";
 const profileNoticeClassNames = {

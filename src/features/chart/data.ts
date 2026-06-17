@@ -39,7 +39,9 @@ export type ChartOrderGroup = {
   orders: EmrOrder[];
 };
 
-export type ChartEncounterBundle = NonNullable<ReturnType<typeof getMockEncounterBundle>>;
+export type ChartEncounterBundle = NonNullable<ReturnType<typeof getMockEncounterBundle>> & {
+  veterinarianName?: string;
+};
 
 const chartQueueStatuses: OrderQueueStatusDefinition[] = [
   {
@@ -118,13 +120,16 @@ export const createChartEncounterBundleFromLiveHandoff = ({
   encounter,
   patient,
   primaryGuardian,
+  veterinarianName,
 }: {
   encounter: Encounter;
   patient: Patient;
   primaryGuardian?: Guardian;
+  veterinarianName?: string;
 }): ChartEncounterBundle => ({
   encounter,
   patient,
+  veterinarianName,
   guardians: primaryGuardian ? [primaryGuardian] : [],
   primaryGuardian,
   appointment: undefined,

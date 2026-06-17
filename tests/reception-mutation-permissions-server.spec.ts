@@ -6,6 +6,8 @@ import {
   receptionMutationPermissionMatrix,
 } from "../src/features/reception/reception-mutation-permissions";
 import { createReceptionAppointmentCheckIn } from "../src/features/reception/server-appointment-check-in-core";
+import { cancelReceptionEncounter } from "../src/features/reception/server-encounter-cancel-core";
+import { createReceptionEncounterUpdate } from "../src/features/reception/server-encounter-update-core";
 import { registerReceptionPatientGuardian } from "../src/features/reception/server-patient-guardian-registration-core";
 import { createReceptionWalkInEncounter } from "../src/features/reception/server-walk-in-encounter-core";
 
@@ -129,17 +131,19 @@ const deniedPermissionCases = [
 ] as const;
 
 test("DEN-61 reception mutation permission matrix keeps all mutation writes on reception create", () => {
-  expect(Object.keys(receptionMutationPermissionMatrix).sort()).toEqual([
-    "appointment_check_in",
-    "patient_guardian_registration",
-    "walk_in_encounter_create",
-  ]);
+  expect(receptionMutationPermissionMatrix).toMatchObject({
+    appointment_create: { requiredPermission: "reception:create" },
+    appointment_check_in: { requiredPermission: "reception:create" },
+    encounter_cancel: { requiredPermission: "reception:update" },
+    encounter_update: { requiredPermission: "reception:update" },
+    patient_guardian_registration: { requiredPermission: "reception:create" },
+    walk_in_encounter_create: { requiredPermission: "reception:create" },
+  });
 
   for (const mutationId of Object.keys(receptionMutationPermissionMatrix) as Array<
     keyof typeof receptionMutationPermissionMatrix
   >) {
     const contract = getReceptionMutationPermissionContract(mutationId);
-    expect(contract.requiredPermission).toBe("reception:create");
     expect(contract.auditHookPoint).toMatch(/^reception\./);
   }
 });
@@ -189,6 +193,37 @@ for (const permissionCase of deniedPermissionCases) {
       denialReason: permissionCase.denialReason,
     });
   });
+
+  test(`DEN-510 encounter cancel denies ${permissionCase.name}`, async () => {
+    const result = await cancelReceptionEncounter({
+      actorUserId: permissionCase.actorUserId,
+      encounterId: "encounter-coco-260501",
+      workspaceId,
+      permissionAdapter: permissionCase.adapter,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: permissionCase.status,
+      denialReason: permissionCase.denialReason,
+    });
+  });
+
+  test(`DEN-517 encounter update denies ${permissionCase.name}`, async () => {
+    const result = await createReceptionEncounterUpdate({
+      actorUserId: permissionCase.actorUserId,
+      encounterId: "encounter-coco-260501",
+      workspaceId,
+      input: { durationMinutes: 30, visitPurpose: "구토 재진" },
+      permissionAdapter: permissionCase.adapter,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: permissionCase.status,
+      denialReason: permissionCase.denialReason,
+    });
+  });
 }
 
 test("DEN-61 front desk mutation permission still allows existing mock fallback writes", async () => {
@@ -215,4 +250,12 @@ test("DEN-61 front desk mutation permission still allows existing mock fallback 
     permissionAdapter: activeFrontDeskPermissionAdapter,
   });
   expect(appointmentCheckIn.ok).toBe(true);
+
+  const cancel = await cancelReceptionEncounter({
+    actorUserId: "user-front-desk",
+    encounterId: "encounter-haru-260430",
+    workspaceId,
+    permissionAdapter: activeFrontDeskPermissionAdapter,
+  });
+  expect(cancel.ok).toBe(true);
 });

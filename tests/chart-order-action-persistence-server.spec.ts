@@ -427,6 +427,84 @@ test("order action core freezes active catalog snapshots at confirmation and ign
   });
 });
 
+test("confirmed catalog order exposes stable order id, state, and snapshot for fulfillment handoff", async () => {
+  const actionGateway = createMockChartOrderActionGateway(
+    undefined,
+    () => "2026-06-14T10:00:00.000Z",
+  );
+  const catalogOrderId = "catalog-individual-std-ord-lab-cbc-baso-den-494";
+
+  const confirmed = await saveChartOrderAction({
+    actorUserId: "user-vet",
+    catalogGateway: createMockOrderCatalogGateway(
+      undefined,
+      "2026-06-14T09:59:00.000Z",
+    ),
+    gateway: actionGateway,
+    input: {
+      action: "confirm",
+      catalogSelections: [
+        {
+          billingDisplayName: "tampered client billing name",
+          orderId: catalogOrderId,
+          patientName: "DEN-494 Synthetic Patient",
+          quantity: 3,
+          rowType: "individual",
+          sourcePresetId: "std-ord-lab-cbc-baso",
+        },
+      ],
+      encounterId,
+      orderIds: [catalogOrderId],
+    },
+    workspaceId,
+  });
+
+  expect(confirmed).toMatchObject({ ok: true, status: 200 });
+  expect(confirmed.ok ? confirmed.orderActions : []).toEqual([
+    expect.objectContaining({
+      appliedSnapshot: expect.objectContaining({
+        billingName: "CBC 검사 BASO",
+        destinationModule: "lab",
+        lineTotalSnapshot: 36000,
+        orderType: "lab",
+        patientName: "DEN-494 Synthetic Patient",
+        priceKrw: 12000,
+        quantity: 3,
+        sourcePresetId: "std-ord-lab-cbc-baso",
+        standardOrderName: "[CBC 검사] #BASO",
+        taskRequired: true,
+      }),
+      billingCandidateStatus: "not_requested",
+      confirmedAt: "2026-06-14T10:00:00.000Z",
+      confirmedByUserId: "user-vet",
+      encounterId,
+      orderConfirmationStatus: "confirmed",
+      orderId: catalogOrderId,
+      status: "confirmed",
+      updatedAt: "2026-06-14T10:00:00.000Z",
+    }),
+  ]);
+  expect(confirmed.ok ? confirmed.fulfillmentWorkItems : undefined).toEqual([
+    expect.objectContaining({
+      encounterId,
+      orderId: catalogOrderId,
+      queueType: "lab",
+      sourceSnapshot: expect.objectContaining({
+        detail: expect.objectContaining({
+          billingName: "CBC 검사 BASO",
+          lineTotalSnapshot: 36000,
+          quantity: 3,
+          unitPriceSnapshot: 12000,
+        }),
+        orderDisplayName: "[CBC 검사] #BASO",
+        patientName: "DEN-494 Synthetic Patient",
+        serviceItemId: "std-ord-lab-cbc-baso",
+      }),
+      status: "requested",
+    }),
+  ]);
+});
+
 test("order action core rejects paused and set catalog selections before confirmation snapshot", async () => {
   const paused = await saveChartOrderAction({
     actorUserId: "user-vet",

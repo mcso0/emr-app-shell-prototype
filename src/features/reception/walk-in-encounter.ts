@@ -6,8 +6,10 @@ export type ReceptionWalkInEncounterInput = {
   guardianId?: string;
   memo?: string;
   patientId: string;
+  plannedStartAt?: string;
   primaryVeterinarianId?: string;
   visitPurpose?: string;
+  weightKg?: number;
 };
 
 export type ReceptionWalkInEncounterRecord = {
@@ -34,7 +36,8 @@ export type ReceptionWalkInEncounterResponse =
         | "workspace_membership_inactive"
         | "permission_missing"
         | "patient_unavailable"
-        | "guardian_unavailable"
-        | "patient_guardian_link_missing";
+            | "guardian_unavailable"
+            | "patient_guardian_link_missing"
+            | "primary_veterinarian_unavailable";
       fieldErrors?: Record<string, string>;
     };

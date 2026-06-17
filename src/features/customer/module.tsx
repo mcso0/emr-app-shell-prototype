@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -68,9 +69,15 @@ import {
   type CustomerPatientRow,
   type CustomerWorkBadge,
 } from "@/features/customer/data";
+import { useMockAuthStore } from "@/features/auth/session-store";
 import { useCustomerStore, type CustomerListMode } from "@/features/customer/store";
 import { NewUnifiedRegistrationButton } from "@/features/reception/profile-drawer";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
+import type { ReceptionPatientGuardianLookupResponse } from "@/features/reception/patient-guardian-lookup";
+import {
+  isPreparedEmptyClinicWorkspace,
+  resolveWorkspaceRouteParam,
+} from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type {
@@ -216,6 +223,10 @@ type CustomerRowActionFeedback = {
   body: ReactNode;
   title: string;
 };
+
+function getCustomerWorkspaceId(value?: string | string[]) {
+  return resolveWorkspaceRouteParam(value);
+}
 
 function compareCustomerTableValues(left: CustomerTableSortValue, right: CustomerTableSortValue) {
   const leftEmpty = left === null || left === undefined || left === "";
@@ -364,6 +375,8 @@ function CustomerDataTable<TRow extends { id: string }>({
   title,
   testId,
 }: CustomerDataTableProps<TRow>) {
+  const query = useCustomerStore((state) => state.query);
+  const setQuery = useCustomerStore((state) => state.setQuery);
   const [rowSelection, setRowSelection] = useState<Set<string>>(() => new Set());
   const [rowActionFeedback, setRowActionFeedback] = useState<CustomerRowActionFeedback | null>(null);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
@@ -403,7 +416,8 @@ function CustomerDataTable<TRow extends { id: string }>({
   const selectedCount = visibleRowSelection.size;
   const allRowsSelected = visibleRows.length > 0 && visibleRows.every((row) => visibleRowSelection.has(row.id));
   const someRowsSelected = visibleRows.some((row) => visibleRowSelection.has(row.id)) && !allRowsSelected;
-  const visibleCountLabel = activeFilterCount > 0 ? `${visibleRows.length}/${rows.length}` : countLabel;
+  const visibleCountLabel = activeFilterCount > 0 ? `${visibleRows.length}/${rows.length}건` : `${countLabel}건`;
+  const scopeLabel = query || activeFilterCount > 0 ? `표시 ${title}` : `전체 ${title}`;
   const emptyMessage =
     rows.length > 0 && visibleRows.length === 0
       ? `조건에 맞는 ${title} 정보가 없습니다.`
@@ -435,6 +449,7 @@ function CustomerDataTable<TRow extends { id: string }>({
       return next;
     });
   };
+  const clearSelection = () => setRowSelection(new Set());
   const handleSort = (key: string) => {
     setSortState((current) => {
       if (current?.key !== key) return { direction: "asc", key };
@@ -460,16 +475,19 @@ function CustomerDataTable<TRow extends { id: string }>({
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card shadow-sm" data-testid={testId}>
-      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b bg-card px-4 py-3">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-card" data-testid={testId}>
+      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="text-[18px] font-semibold">{title}</h2>
+          <span className="emr-text-body font-semibold">{scopeLabel}</span>
           <Badge variant="secondary">{visibleCountLabel}</Badge>
-          <span className="emr-text-metadata font-medium text-muted-foreground">
-            {selectedCount} / {visibleRows.length} 선택
-          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <CustomerSearchInput
+            value={query}
+            onValueChange={setQuery}
+            className="w-[260px] sm:w-[300px]"
+            placeholder={`${title} 검색`}
+          />
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
           {filterFields.length > 0 ? (
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
@@ -480,7 +498,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                     variant={activeFilterCount > 0 ? "secondary" : "outline"}
                     size="sm"
                     className={cn(
-                      "bg-card",
+                      "h-8 bg-card px-2",
                       activeFilterCount > 0 &&
                         "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)] text-[var(--emr-text-primary)]"
                     )}
@@ -493,7 +511,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                 }
               >
                 <CdsActionsListFilterIcon aria-hidden="true" className="size-3.5" />
-                Filter{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
+                필터{activeFilterCount > 0 ? ` ${activeFilterCount}` : ""}
               </PopoverTrigger>
               <PopoverContent
                 align="end"
@@ -517,11 +535,11 @@ function CustomerDataTable<TRow extends { id: string }>({
               className={buttonVariants({
                 variant: "outline",
                 size: "sm",
-                className: "bg-card",
+                className: "h-8 bg-card px-2",
               })}
+              aria-label={`${title} 컬럼 표시 설정`}
             >
               <MenuIcon data-icon="inline-start" />
-              컬럼
               <ChevronDownIcon data-icon="inline-end" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -581,23 +599,14 @@ function CustomerDataTable<TRow extends { id: string }>({
               <span
                 data-row-interactive="true"
                 className="inline-flex size-6 items-center justify-center"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleAllRows();
-                }}
-                onKeyDown={(event) => {
-                  event.stopPropagation();
-
-                  if (event.key === " " || event.key === "Enter") {
-                    event.preventDefault();
-                    toggleAllRows();
-                  }
-                }}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
               >
                 <EmrTableCheckbox
                   aria-label={`${title} 전체 선택`}
                   checked={allRowsSelected}
                   indeterminate={someRowsSelected}
+                  onCheckedChange={toggleAllRows}
                 />
               </span>
             </EmrTableHeaderCell>
@@ -655,22 +664,13 @@ function CustomerDataTable<TRow extends { id: string }>({
                     <span
                       data-row-interactive="true"
                       className="inline-flex size-6 items-center justify-center"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleRow(row.id);
-                      }}
-                      onKeyDown={(event) => {
-                        event.stopPropagation();
-
-                        if (event.key === " " || event.key === "Enter") {
-                          event.preventDefault();
-                          toggleRow(row.id);
-                        }
-                      }}
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
                     >
                       <EmrTableCheckbox
                         aria-label={`${rowLabel} 선택`}
                         checked={selected}
+                        onCheckedChange={() => toggleRow(row.id)}
                       />
                     </span>
                   </TableCell>
@@ -699,9 +699,7 @@ function CustomerDataTable<TRow extends { id: string }>({
         </TableBody>
       </Table>
       <div className="flex h-11 items-center justify-between border-t px-4 emr-text-metadata font-medium text-muted-foreground">
-        <span>
-          {selectedCount} of {visibleRows.length} row(s) selected.
-        </span>
+        <span>총 {visibleRows.length}건</span>
         <div className="flex items-center gap-2">
           <span>
             {visibleRows.length ? `1-${visibleRows.length}` : "0"} / {visibleRows.length}
@@ -714,11 +712,25 @@ function CustomerDataTable<TRow extends { id: string }>({
           </Button>
         </div>
       </div>
+      {selectedCount > 0 ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+          <div className="pointer-events-auto flex h-10 items-center gap-3 rounded-lg border bg-card px-3 shadow-lg">
+            <span className="emr-text-metadata font-medium text-muted-foreground">
+              선택한 {title} {selectedCount}개
+            </span>
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              선택 해제
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const setListMode = useCustomerStore((state) => state.setListMode);
   const guardians = usePatientProfileStore((state) => state.guardians);
@@ -727,12 +739,24 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["master"]));
   const patientCount = useMemo(
-    () => getCustomerPatientRows({ guardians, patientGuardians, patients }).length,
-    [guardians, patientGuardians, patients]
+    () =>
+      getCustomerPatientRows({
+        guardians,
+        patientGuardians,
+        patients,
+        workspaceId,
+      }).length,
+    [guardians, patientGuardians, patients, workspaceId]
   );
   const guardianCount = useMemo(
-    () => getCustomerGuardianRows({ guardians, patientGuardians, patients }).length,
-    [guardians, patientGuardians, patients]
+    () =>
+      getCustomerGuardianRows({
+        guardians,
+        patientGuardians,
+        patients,
+        workspaceId,
+      }).length,
+    [guardians, patientGuardians, patients, workspaceId]
   );
   const customerCounts: Record<CustomerListMode, number> = {
     deleted: 0,
@@ -802,19 +826,23 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
 function CustomerSearchInput({
   value,
   onValueChange,
+  className,
+  placeholder = "동물명, 보호자명, 전화번호, 환자코드 검색",
 }: {
+  className?: string;
+  placeholder?: string;
   value: string;
   onValueChange: (value: string) => void;
 }) {
   return (
-    <div className="relative w-[320px] max-w-full min-w-0">
+    <div className={cn("relative w-[320px] max-w-full min-w-0", className)}>
       <CdsActionsSearchIcon
         className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
       <Input
         aria-label="고객관리 검색"
-        placeholder="동물명, 보호자명, 전화번호, 환자코드 검색"
+        placeholder={placeholder}
         value={value}
         className={cn("h-9 pl-8", value ? "pr-8" : "pr-3")}
         onValueChange={onValueChange}
@@ -842,8 +870,6 @@ function CustomerToolbar({
   listMode: CustomerListMode;
   patientCount: number;
 }) {
-  const query = useCustomerStore((state) => state.query);
-  const setQuery = useCustomerStore((state) => state.setQuery);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const activeCount = listMode === "patient" ? patientCount : listMode === "guardian" ? guardianCount : 0;
   const activeLabel =
@@ -867,10 +893,7 @@ function CustomerToolbar({
           </Badge>
         }
         actions={
-          <>
-            <CustomerSearchInput value={query} onValueChange={setQuery} />
-            <NewUnifiedRegistrationButton onPatientReady={(patientId) => setActiveDrawer({ type: "patient", id: patientId })} />
-          </>
+          <NewUnifiedRegistrationButton onPatientReady={(patientId) => setActiveDrawer({ type: "patient", id: patientId })} />
         }
       />
       <span className="sr-only">
@@ -880,11 +903,32 @@ function CustomerToolbar({
   );
 }
 
-function EmptyDeletedState() {
+function DeletedCustomerContent() {
+  const query = useCustomerStore((state) => state.query);
+  const setQuery = useCustomerStore((state) => state.setQuery);
+
   return (
-    <div className="flex min-h-[360px] flex-col items-center justify-center rounded-md border border-dashed bg-card text-center">
-      <div className="text-[15px] font-semibold">삭제된 보호자/동물이 없습니다.</div>
-      <div className="mt-1 emr-text-dense text-muted-foreground">삭제 이력이 없습니다.</div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card">
+      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="emr-text-body font-semibold">
+            {query ? "표시 삭제 항목" : "전체 삭제 항목"}
+          </span>
+          <Badge variant="secondary">0건</Badge>
+        </div>
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <CustomerSearchInput
+            value={query}
+            onValueChange={setQuery}
+            className="w-[260px] sm:w-[300px]"
+            placeholder="삭제 항목 검색"
+          />
+        </div>
+      </div>
+      <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center border-b bg-card text-center">
+        <div className="text-[15px] font-semibold">삭제된 보호자/동물이 없습니다.</div>
+        <div className="mt-1 emr-text-dense text-muted-foreground">삭제 이력이 없습니다.</div>
+      </div>
     </div>
   );
 }
@@ -1113,18 +1157,66 @@ function GuardianTable({ rows }: { rows: CustomerGuardianRow[] }) {
 }
 
 export function CustomerContent() {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const query = useCustomerStore((state) => state.query);
+  const authSession = useMockAuthStore((state) => state.session);
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem,
+  );
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const patients = usePatientProfileStore((state) => state.patients);
+  useEffect(() => {
+    if (!isPreparedEmptyClinicWorkspace(workspaceId)) return;
+
+    let cancelled = false;
+
+    async function loadSeededCustomerProfiles() {
+      try {
+        const headers = authSession?.id
+          ? { "x-clair-demo-session-user-id": authSession.id }
+          : undefined;
+        const response = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?query=`,
+          {
+            cache: "no-store",
+            headers,
+          },
+        );
+        const result =
+          (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+        if (cancelled || !response.ok || !result.ok) return;
+
+        result.patients.forEach((item) => applyPatientGuardianLookupItem(item));
+      } catch {
+        // Keep the workspace-filtered empty state if live customer seed read fails.
+      }
+    }
+
+    void loadSeededCustomerProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPatientGuardianLookupItem, authSession?.id, workspaceId]);
   const patientRows = useMemo(
-    () => filterCustomerRows(getCustomerPatientRows({ guardians, patientGuardians, patients }), query),
-    [guardians, patientGuardians, patients, query]
+    () =>
+      filterCustomerRows(
+        getCustomerPatientRows({ guardians, patientGuardians, patients, workspaceId }),
+        query,
+      ),
+    [guardians, patientGuardians, patients, query, workspaceId]
   );
   const guardianRows = useMemo(
-    () => filterCustomerRows(getCustomerGuardianRows({ guardians, patientGuardians, patients }), query),
-    [guardians, patientGuardians, patients, query]
+    () =>
+      filterCustomerRows(
+        getCustomerGuardianRows({ guardians, patientGuardians, patients, workspaceId }),
+        query,
+      ),
+    [guardians, patientGuardians, patients, query, workspaceId]
   );
 
   return (
@@ -1135,10 +1227,10 @@ export function CustomerContent() {
         guardianCount={guardianRows.length}
       />
       <ScrollArea className="min-h-0 flex-1">
-        <div className="p-4">
+        <div className="flex min-h-full flex-col">
           {listMode === "patient" ? <PatientTable rows={patientRows} /> : null}
           {listMode === "guardian" ? <GuardianTable rows={guardianRows} /> : null}
-          {listMode === "deleted" ? <EmptyDeletedState /> : null}
+          {listMode === "deleted" ? <DeletedCustomerContent /> : null}
         </div>
       </ScrollArea>
     </div>

@@ -1,6 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
+import {
+  CdsActionsSearchIcon,
+  CdsActionsXIcon,
+} from "@/components/cds-icons/actions-and-controls";
 import {
   CalendarIcon,
   ChevronDownIcon,
@@ -11,6 +15,7 @@ import { CollapseGnbIcon } from "@/components/gnb-icons";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +52,19 @@ type EmrListHeaderProps = {
   headerActions?: ReactNode;
   leadingAction?: ReactNode;
   leadingIcon?: ReactNode;
+  search?: EmrListHeaderSearchProps;
   topDividerVisible?: boolean;
+};
+
+type EmrListHeaderSearchProps = {
+  active: boolean;
+  query: string;
+  resultCount: number;
+  closeLabel?: string;
+  inputLabel?: string;
+  onClose: () => void;
+  onQueryChange: (value: string) => void;
+  placeholder?: string;
 };
 
 type EmrListGroupProps = {
@@ -182,28 +199,81 @@ export function EmrListHeader({
   headerActions,
   leadingAction,
   leadingIcon,
+  search,
   topDividerVisible = false,
 }: EmrListHeaderProps) {
+  const searchQuery = search?.query ?? "";
+  const searchActive = search?.active ?? false;
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Escape" || !search) return;
+
+    event.preventDefault();
+
+    if (search.query) {
+      search.onQueryChange("");
+      return;
+    }
+
+    search.onClose();
+  };
+
   return (
-    <div
-      className={cn(
-        "mx-4 flex h-10 shrink-0 items-center border-y border-[var(--emr-line-hairline)]",
-        !topDividerVisible && "border-t-transparent",
-        className
-      )}
-    >
-      <div className="emr-text-section flex min-w-0 flex-1 items-center gap-1.5 font-medium text-[var(--emr-text-secondary)]">
-        {leadingAction}
-        {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
-        <span className="truncate">{label}</span>
-        {count !== undefined ? (
-          <Badge variant="secondary" className="emr-text-metadata h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 font-medium text-[var(--emr-text-primary)]">
-            {count}
-          </Badge>
-        ) : null}
+    <>
+      <div
+        className={cn(
+          "mx-4 flex h-10 shrink-0 items-center border-y border-[var(--emr-line-hairline)]",
+          !topDividerVisible && "border-t-transparent",
+          className
+        )}
+      >
+        {searchActive && search ? (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <div className="relative min-w-0 flex-1">
+              <CdsActionsSearchIcon
+                aria-hidden="true"
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-tertiary)]"
+              />
+              <Input
+                autoFocus
+                aria-label={search.inputLabel ?? "대기열 검색"}
+                className="h-8 rounded-[var(--clair-radius-md)] border-[var(--emr-state-selected-border)] bg-card pl-8 pr-2 font-semibold shadow-[0_0_0_3px_rgba(37,99,235,0.12)]"
+                placeholder={search.placeholder ?? "대기열 검색"}
+                type="search"
+                value={searchQuery}
+                onChange={(event) => search.onQueryChange(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+              />
+            </div>
+            <EmrListHeaderIconButton ariaLabel={search.closeLabel ?? "검색 닫기"} onClick={search.onClose}>
+              <CdsActionsXIcon className="size-4" />
+            </EmrListHeaderIconButton>
+          </div>
+        ) : (
+          <>
+            <div className="emr-text-section flex min-w-0 flex-1 items-center gap-1.5 font-medium text-[var(--emr-text-secondary)]">
+              {leadingAction}
+              {leadingIcon ? <span className="flex size-4 shrink-0 items-center justify-center">{leadingIcon}</span> : null}
+              {typeof label === "string" ? (
+                <span className="truncate">{label}</span>
+              ) : (
+                <div className="min-w-0">{label}</div>
+              )}
+              {count !== undefined ? (
+                <Badge variant="secondary" className="emr-text-metadata h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] px-1 font-medium text-[var(--emr-text-primary)]">
+                  {count}
+                </Badge>
+              ) : null}
+            </div>
+            {headerActions ? <div className="flex shrink-0 items-start gap-1.5">{headerActions}</div> : null}
+          </>
+        )}
       </div>
-      {headerActions ? <div className="flex shrink-0 items-start gap-1.5">{headerActions}</div> : null}
-    </div>
+      {searchActive && searchQuery.trim() ? (
+        <div className="emr-text-metadata mx-4 flex min-h-7 shrink-0 items-center border-b border-[var(--emr-line-hairline)] text-[var(--emr-text-tertiary)]">
+          검색 결과 {search?.resultCount ?? 0}건
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -211,17 +281,46 @@ export function EmrListHeaderIconButton({
   ariaLabel,
   children,
   iconSize = "sm",
-  onClick,
+  ...props
 }: {
   ariaLabel: string;
-  children: ReactNode;
+  children?: ReactNode;
   iconSize?: "sm" | "md";
-  onClick?: () => void;
-}) {
+} & Omit<ComponentProps<typeof EmrIconButton>, "aria-label" | "children" | "iconSize">) {
   return (
-    <EmrIconButton aria-label={ariaLabel} iconSize={iconSize} onClick={onClick}>
+    <EmrIconButton aria-label={ariaLabel} iconSize={iconSize} {...props}>
       {children}
     </EmrIconButton>
+  );
+}
+
+export function EmrListSearchEmptyState({
+  objectLabel = "대기열 항목",
+  onClear,
+  query,
+}: {
+  objectLabel?: string;
+  onClear: () => void;
+  query: string;
+}) {
+  return (
+    <div className="mx-1 mt-3 rounded-[var(--clair-radius-md)] border border-dashed border-[var(--emr-line-strong)] bg-[var(--emr-surface-panel)] px-3 py-4 text-center">
+      <div className="emr-text-section font-semibold text-[var(--emr-text-secondary)]">
+        검색 결과가 없어
+      </div>
+      <p className="emr-text-metadata mt-1 text-[var(--emr-text-tertiary)]">
+        {`'${query.trim()}'에 맞는 ${objectLabel}이 없어.`}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="xs"
+        className="mt-3 bg-card"
+        onClick={onClear}
+      >
+        검색어 지우기
+      </Button>
+    </div>
   );
 }
 

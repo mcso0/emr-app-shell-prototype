@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-472/DEN-473 Cheongdam 상태 UX 안정화 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #1f2937;
+      }
+      h1, h2 {
+        color: #111827;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th, td {
+        border: 1px solid #d1d5db;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f9fafb;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-472/DEN-473 Cheongdam 상태 UX 안정화 보고서</h1>
+
+    <h2>요청</h2>
+    <p>
+      Cheongdam 기본 접수 화면에서 서버 read가 로딩 또는 실패하는 동안
+      <code>clair-demo</code>의 과거 업무가 잠깐 보이거나, 빈 병원 상태가 오류처럼
+      보이지 않도록 정리한다. 업무 없음, 로딩, 오류, 재시도 상태를 구분하되
+      Sales Demo fixture는 보존한다.
+    </p>
+
+    <h2>변경 요약</h2>
+    <ul>
+      <li>Cheongdam reception queue/calendar read 실패 시 "기존 데모 업무는 표시하지 않고 준비된 빈 병원 상태를 유지"한다는 copy hook을 연결했다.</li>
+      <li>대기열/캘린더 read error alert에 재시도 버튼을 유지하면서, Cheongdam에서는 legacy local demo fallback 안내가 나오지 않게 했다.</li>
+      <li>빈 목록 copy를 검색 없음과 active daily work 없음으로 분리했다.</li>
+      <li>Reception session draft 생성이 현재 workspace/date를 사용하도록 고쳐 Cheongdam에서 만든 로컬 접수가 <code>clair-demo</code> workspace로 저장되지 않게 했다.</li>
+      <li>Drawer의 legacy encounter fallback은 <code>clair-demo</code>일 때만 섞이도록 좁혔다.</li>
+    </ul>
+
+    <h2>주요 파일</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>파일</th>
+          <th>내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>src/features/reception/module.tsx</code></td>
+          <td>Cheongdam loading/error/retry/empty copy hook, workspace-scoped drawer fallback, read failure message 분리</td>
+        </tr>
+        <tr>
+          <td><code>src/features/reception/store.ts</code></td>
+          <td>session draft encounter, queue, message delivery 생성 시 active workspace/date 사용</td>
+        </tr>
+        <tr>
+          <td><code>tests/demo-reality-start-state.spec.ts</code></td>
+          <td>Cheongdam read error 상태에서 retry hook과 빈 병원 유지, legacy fixture 미노출 회귀 테스트 추가</td>
+        </tr>
+        <tr>
+          <td><code>docs/product/demo-data/clinic-start-state-and-demo-operations-v1.md</code></td>
+          <td>DEN-472/DEN-473 구현 경계와 Cheongdam state hook 원칙 기록</td>
+        </tr>
+        <tr>
+          <td><code>docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md</code></td>
+          <td>DEMO-DATA-PR-002 scoped implementation note 추가</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/demo-reality-start-state.spec.ts</code>: 5개 통과</li>
+      <li><code>npx playwright test tests/sales-demo-flow.spec.ts</code>: 3개 통과</li>
+      <li><code>npm run lint -- --ignore-pattern 'lottie-ai-chart-writing/**'</code>: 에러 없음, 기존 warning 5개</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li>변경 파일 범위 TypeScript check: <code>npx tsc --noEmit --pretty false</code> 출력에서 reception/demo-date/demo-workspaces/auth/home/api 및 해당 테스트 경로 관련 에러 없음</li>
+      <li>Vercel preview 배포: <code>https://emr-app-shell-prototype-dqu65f0yq-mcso0s-projects.vercel.app</code>, deployment <code>dpl_3dBh3YugRiXAF5ozH5ac6eesMK29</code>, status <code>Ready</code>, target <code>preview</code></li>
+      <li>고정 staging alias 갱신: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code>가 새 preview deployment를 가리키도록 변경했다.</li>
+      <li><code>vercel curl</code> 인증 컨텍스트에서 고정 staging app route는 <code>200</code>을 반환했다.</li>
+    </ul>
+
+    <h2>검증 제한</h2>
+    <ul>
+      <li>전체 <code>npx tsc --noEmit</code>와 <code>npm run build</code>는 기존 미추적 <code>lottie-ai-chart-writing/</code> 및 stale <code>.next</code> type reference 영향이 있어 이번 범위에서는 filtered TypeScript check로 확인했다.</li>
+      <li>이번 배포의 고정 staging/preview alias는 Vercel Deployment Protection이 적용되어 unauthenticated browser/curl에서는 <code>401</code> Vercel login으로 이동한다. 보호 설정을 변경하거나 공개 우회 링크를 만들지 않았기 때문에 in-app browser 본문 검증은 Vercel 인증 세션 뒤에서만 가능하다.</li>
+      <li>이번 작업은 Cheongdam reception read state에 초점을 맞췄다. Shell search, tabs, notifications의 broader cleanup은 DEN-491로 남아 있다.</li>
+      <li>Supabase remote mutation, real customer data, provider/payment/email side effect는 수행하지 않았다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      DEN-491에서 shell search, tabs, notifications가 Cheongdam empty clinic mode를
+      같은 방식으로 따르는지 검증하고 정리한다. 이후 DEN-468에서 chart, billing,
+      lab/imaging, dispensing/treatment의 active daily work leakage를 이어서 확인한다.
+    </p>
+  </body>
+</html>

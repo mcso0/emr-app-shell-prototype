@@ -1,6 +1,11 @@
 "use client";
 
 import { create } from "zustand";
+import {
+  LEGACY_FIXTURE_OPERATING_NOW,
+  getWorkspaceOperatingNow,
+} from "@/lib/emr-domain/demo-date";
+import { LEGACY_SALES_DEMO_WORKSPACE_ID } from "@/lib/emr-domain/demo-workspaces";
 import type {
   Appointment,
   EmrId,
@@ -9,6 +14,7 @@ import type {
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
+import type { ReceptionEncounterUpdateRecord } from "@/features/reception/encounter-update";
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
 import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
 import type { ReceptionWalkInEncounterRecord } from "@/features/reception/walk-in-encounter";
@@ -37,6 +43,7 @@ export type ReceptionCalendarDraftSelection = {
 type ReceptionStore = {
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
   messageDeliveries: MessageDelivery[];
+  operatingDateByWorkspace: Record<EmrId, string>;
   searchQuery: string;
   selectedAppointmentId?: EmrId;
   selectedEncounterId?: EmrId;
@@ -48,10 +55,18 @@ type ReceptionStore = {
   queueReadError?: string;
   queueReadStatus: ReceptionQueueReadStatus;
   readRetryNonce: number;
+  applyAppointmentCreate: (appointment: Appointment) => void;
   applyPersistedReceptionCalendar: (records: ReceptionCalendarReadRecord[]) => void;
   applyPersistedReceptionQueue: (queue: ReceptionQueueReadRecord[]) => void;
+  clearWorkspaceSessionDrafts: (workspaceId: EmrId) => void;
+  cancelReceptionEncounter: (input: {
+    encounterId: EmrId;
+    workspaceId: EmrId;
+  }) => void;
+  applyEncounterUpdate: (update: ReceptionEncounterUpdateRecord) => void;
   requestReceptionReadRetry: () => void;
   setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
+  setWorkspaceOperatingDate: (workspaceId: EmrId, operatingDate: string) => void;
   setSearchQuery: (query: string) => void;
   setReceptionCalendarReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
   setReceptionQueueReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
@@ -75,6 +90,7 @@ type ReceptionStore = {
     guardianMobilePhone?: string;
     patientName?: string;
     visitPurpose?: string;
+    workspaceId?: EmrId;
   }) => void;
   applyWalkInCheckIn: (input: {
     department?: string;
@@ -91,34 +107,60 @@ type ReceptionStore = {
   }) => void;
 };
 
-const WORKSPACE_ID = "clair-demo";
 const DEFAULT_PATIENT_ID = "patient-coco";
-const DEFAULT_NOW = "2026-05-01T10:45:00+09:00";
+const DEFAULT_NOW = LEGACY_FIXTURE_OPERATING_NOW;
+const activeReceptionEncounterStatuses = new Set<Encounter["status"]>([
+  "waiting",
+  "in_consultation",
+  "ordered",
+  "ready_for_billing",
+]);
+const activeReceptionQueueStatuses = new Set<WaitingQueueEntry["status"]>([
+  "waiting",
+  "called",
+  "in_progress",
+]);
+
+const isActiveReceptionQueueWork = ({
+  encounter,
+  queueEntry,
+}: {
+  encounter: Encounter;
+  queueEntry: WaitingQueueEntry;
+}) =>
+  activeReceptionEncounterStatuses.has(encounter.status) &&
+  activeReceptionQueueStatuses.has(queueEntry.status);
 
 const createDraftEncounter = ({
   appointmentId,
+  eventTime,
   guardianId,
   index,
   patientId,
   primaryVeterinarianId,
   visitPurpose,
   plannedStartAt,
+  workspaceId,
 }: {
   appointmentId?: EmrId;
+  eventTime?: string;
   guardianId?: EmrId;
   index: number;
   patientId: EmrId;
   primaryVeterinarianId?: EmrId;
   visitPurpose?: string;
   plannedStartAt?: string;
+  workspaceId?: EmrId;
 }): Encounter => {
   const suffix = String(index + 10).padStart(4, "0");
   const id = appointmentId ? `draft-encounter-${appointmentId}` : `draft-encounter-walkin-${patientId}`;
-  const eventTime = plannedStartAt ?? DEFAULT_NOW;
+  const resolvedWorkspaceId = workspaceId ?? LEGACY_SALES_DEMO_WORKSPACE_ID;
+  const resolvedEventTime =
+    eventTime ?? plannedStartAt ?? getWorkspaceOperatingNow(resolvedWorkspaceId);
 
   return {
     id,
-    workspaceId: WORKSPACE_ID,
+    workspaceId: resolvedWorkspaceId,
     patientId,
     guardianId,
     appointmentId,
@@ -127,46 +169,54 @@ const createDraftEncounter = ({
     chiefComplaint: visitPurpose,
     visitPurpose: visitPurpose ?? "현장 접수",
     status: "waiting",
-    checkedInAt: eventTime,
-    createdAt: eventTime,
-    updatedAt: eventTime,
+    checkedInAt: resolvedEventTime,
+    createdAt: resolvedEventTime,
+    updatedAt: resolvedEventTime,
   };
 };
 
 const createDraftQueueEntry = ({
+  enteredAt,
   encounterId,
   index,
+  workspaceId,
 }: {
+  enteredAt?: string;
   encounterId: EmrId;
   index: number;
+  workspaceId?: EmrId;
 }): WaitingQueueEntry => ({
   id: `draft-queue-${encounterId}`,
-  workspaceId: WORKSPACE_ID,
+  workspaceId: workspaceId ?? LEGACY_SALES_DEMO_WORKSPACE_ID,
   encounterId,
   queueType: "consultation",
   status: "waiting",
   priority: "normal",
   sortOrder: index + 10,
-  enteredAt: DEFAULT_NOW,
+  enteredAt: enteredAt ?? DEFAULT_NOW,
 });
 
 const createSessionCheckInMessage = ({
+  createdAt,
   encounterId,
   guardianId,
   guardianMobilePhone,
   index,
   patientId,
   patientName,
+  workspaceId,
 }: {
+  createdAt?: string;
   encounterId: EmrId;
   guardianId?: EmrId;
   guardianMobilePhone?: string;
   index: number;
   patientId: EmrId;
   patientName?: string;
+  workspaceId?: EmrId;
 }): MessageDelivery => ({
   id: `session-message-checkin-${encounterId}-${index}`,
-  workspaceId: WORKSPACE_ID,
+  workspaceId: workspaceId ?? LEGACY_SALES_DEMO_WORKSPACE_ID,
   templateId: "template-checkin",
   guardianId,
   patientId,
@@ -177,13 +227,14 @@ const createSessionCheckInMessage = ({
   status: "sent",
   providerMessageId: `session-alimtalk-${index}`,
   retryCount: 0,
-  sentAt: DEFAULT_NOW,
-  createdAt: DEFAULT_NOW,
+  sentAt: createdAt ?? DEFAULT_NOW,
+  createdAt: createdAt ?? DEFAULT_NOW,
 });
 
 export const useReceptionStore = create<ReceptionStore>()((set) => ({
   calendarDraftSelection: undefined,
   messageDeliveries: [],
+  operatingDateByWorkspace: {},
   searchQuery: "",
   selectedPatientId: DEFAULT_PATIENT_ID,
   draftCheckIns: [],
@@ -191,6 +242,17 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
   calendarReadStatus: "idle",
   queueReadStatus: "idle",
   readRetryNonce: 0,
+  applyAppointmentCreate: (appointment) =>
+    set((state) => ({
+      persistedCalendarAppointments: [
+        appointment,
+        ...state.persistedCalendarAppointments.filter(
+          (item) => item.id !== appointment.id,
+        ),
+      ],
+      selectedAppointmentId: appointment.id,
+      selectedPatientId: appointment.patientId,
+    })),
   applyPersistedReceptionCalendar: (records) =>
     set((state) => {
       const persistedCalendarAppointments = records.flatMap((record) =>
@@ -205,6 +267,10 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
           (record) =>
             record.encounter &&
             record.queueEntry &&
+            isActiveReceptionQueueWork({
+              encounter: record.encounter,
+              queueEntry: record.queueEntry,
+            }) &&
             !existingEncounterIds.has(record.encounter.id)
         )
         .map((record) => {
@@ -236,7 +302,11 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       );
       const existingEncounterIds = new Set(nonPersistedDrafts.map((draft) => draft.encounter.id));
       const persistedDrafts: ReceptionDraftCheckIn[] = queue
-        .filter((record) => !existingEncounterIds.has(record.encounter.id))
+        .filter(
+          (record) =>
+            isActiveReceptionQueueWork(record) &&
+            !existingEncounterIds.has(record.encounter.id)
+        )
         .map((record) => ({
           appointmentId: record.encounter.appointmentId,
           department: record.encounter.department,
@@ -254,12 +324,60 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         queueReadStatus: "ready",
       };
     }),
+  clearWorkspaceSessionDrafts: (workspaceId) =>
+    set((state) => ({
+      calendarDraftSelection: undefined,
+      draftCheckIns: state.draftCheckIns.filter(
+        (draft) =>
+          draft.source !== "session" || draft.encounter.workspaceId !== workspaceId
+      ),
+    })),
+  cancelReceptionEncounter: ({ encounterId, workspaceId }) =>
+    set((state) => ({
+      calendarDraftSelection:
+        state.calendarDraftSelection?.id === encounterId
+          ? undefined
+          : state.calendarDraftSelection,
+      draftCheckIns: state.draftCheckIns.filter(
+        (draft) =>
+          draft.encounter.workspaceId !== workspaceId ||
+          draft.encounter.id !== encounterId
+      ),
+      selectedEncounterId:
+        state.selectedEncounterId === encounterId
+          ? undefined
+          : state.selectedEncounterId,
+    })),
+  applyEncounterUpdate: (update) =>
+    set((state) => ({
+      draftCheckIns: state.draftCheckIns.map((draft) =>
+        draft.encounter.id === update.encounter.id
+          ? {
+              ...draft,
+              department: update.encounter.department,
+              durationMinutes: update.encounter.durationMinutes,
+              encounter: update.encounter,
+              memo: update.encounter.receptionMemo,
+              queueEntry: update.queueEntry ?? draft.queueEntry,
+            }
+          : draft,
+      ),
+      selectedEncounterId: update.encounter.id,
+      selectedPatientId: update.encounter.patientId,
+    })),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   requestReceptionReadRetry: () =>
     set((state) => ({
       readRetryNonce: state.readRetryNonce + 1,
     })),
   setCalendarDraftSelection: (calendarDraftSelection) => set({ calendarDraftSelection }),
+  setWorkspaceOperatingDate: (workspaceId, operatingDate) =>
+    set((state) => ({
+      operatingDateByWorkspace: {
+        ...state.operatingDateByWorkspace,
+        [workspaceId]: operatingDate,
+      },
+    })),
   setReceptionCalendarReadStatus: (calendarReadStatus, calendarReadError) =>
     set({ calendarReadError, calendarReadStatus }),
   setReceptionQueueReadStatus: (queueReadStatus, queueReadError) =>
@@ -289,13 +407,21 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       const index = state.draftCheckIns.length;
       const encounter = createDraftEncounter({
         appointmentId: appointment.id,
+        eventTime: appointment.scheduledStartAt,
         guardianId: appointment.guardianId,
         index,
         patientId: appointment.patientId,
+        plannedStartAt: appointment.scheduledStartAt,
         primaryVeterinarianId: appointment.assignedVeterinarianId,
         visitPurpose: appointment.visitPurpose,
+        workspaceId: appointment.workspaceId,
       });
-      const queueEntry = createDraftQueueEntry({ encounterId: encounter.id, index });
+      const queueEntry = createDraftQueueEntry({
+        encounterId: encounter.id,
+        enteredAt: encounter.checkedInAt,
+        index,
+        workspaceId: appointment.workspaceId,
+      });
 
       return {
         draftCheckIns: [
@@ -366,6 +492,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
     primaryVeterinarianId,
     sendKakaoMessage,
     visitPurpose,
+    workspaceId,
   }) =>
     set((state) => {
       const existingDraft = state.draftCheckIns.find(
@@ -380,23 +507,35 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       }
 
       const index = state.draftCheckIns.length;
+      const resolvedWorkspaceId = workspaceId ?? LEGACY_SALES_DEMO_WORKSPACE_ID;
+      const eventTime =
+        plannedStartAt ?? getWorkspaceOperatingNow(resolvedWorkspaceId);
       const encounter = createDraftEncounter({
+        eventTime,
         guardianId,
         index,
         patientId,
         plannedStartAt,
         primaryVeterinarianId,
         visitPurpose,
+        workspaceId: resolvedWorkspaceId,
       });
-      const queueEntry = createDraftQueueEntry({ encounterId: encounter.id, index });
+      const queueEntry = createDraftQueueEntry({
+        encounterId: encounter.id,
+        enteredAt: eventTime,
+        index,
+        workspaceId: resolvedWorkspaceId,
+      });
       const messageDelivery = sendKakaoMessage
         ? createSessionCheckInMessage({
+            createdAt: eventTime,
             encounterId: encounter.id,
             guardianId,
             guardianMobilePhone,
             index: state.messageDeliveries.length,
             patientId,
             patientName,
+            workspaceId: resolvedWorkspaceId,
           })
         : undefined;
 
@@ -447,12 +586,14 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
 
       const messageDelivery = sendKakaoMessage
         ? createSessionCheckInMessage({
+            createdAt: walkIn.encounter.checkedInAt ?? walkIn.encounter.createdAt,
             encounterId: walkIn.encounter.id,
             guardianId,
             guardianMobilePhone,
             index: state.messageDeliveries.length,
             patientId,
             patientName,
+            workspaceId: walkIn.encounter.workspaceId,
           })
         : undefined;
 

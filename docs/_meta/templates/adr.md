@@ -1,8 +1,12 @@
 ---
 id:
+type: Architecture Decision
+title: "ADR: <Title>"
+description: "Records the technical context, decision, consequences, and verification for <architecture choice>."
 status: approved
 area: engineering
 doc_type: adr
+tags: []
 related_work: []
 supersedes: []
 superseded_by: []
@@ -26,4 +30,3 @@ What architecture or engineering approach is chosen.
 ## Verification
 
 - 
-

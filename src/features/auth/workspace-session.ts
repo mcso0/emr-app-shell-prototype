@@ -1,4 +1,10 @@
 import type { MockSessionStorageMode } from "@/features/auth/mock-session";
+import {
+  LEGACY_SALES_DEMO_WORKSPACE_DISPLAY_NAME,
+  LEGACY_SALES_DEMO_WORKSPACE_ID,
+  PREPARED_EMPTY_CLINIC_WORKSPACE_DISPLAY_NAME,
+  PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+} from "@/lib/emr-domain/demo-workspaces";
 
 export type SessionWorkspaceSubscriptionStatus = "trialing" | "active" | "none";
 export type SessionWorkspaceRole = "hospital_admin" | "vet" | "technician" | "front_desk";
@@ -118,8 +124,8 @@ export type WorkspaceCreatorSession = {
 type StorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
 
 export const SESSION_WORKSPACES_STORAGE_KEY = "clair.sessionWorkspaces.v1";
-export const DEMO_WORKSPACE_ID = "clair-demo";
-export const DEMO_WORKSPACE_DISPLAY_NAME = "VIP 동물의료센터 청담점";
+export const DEMO_WORKSPACE_ID = LEGACY_SALES_DEMO_WORKSPACE_ID;
+export const DEMO_WORKSPACE_DISPLAY_NAME = LEGACY_SALES_DEMO_WORKSPACE_DISPLAY_NAME;
 export const SESSION_WORKSPACE_ROLES: Array<{
   id: SessionWorkspaceRole;
   label: string;
@@ -562,6 +568,9 @@ export function getSessionWorkspaceDisplayName(
   localStorageLike?: StorageLike
 ) {
   if (workspaceId === DEMO_WORKSPACE_ID) return DEMO_WORKSPACE_DISPLAY_NAME;
+  if (workspaceId === PREPARED_EMPTY_CLINIC_WORKSPACE_ID) {
+    return PREPARED_EMPTY_CLINIC_WORKSPACE_DISPLAY_NAME;
+  }
 
   const state = readSessionWorkspacesState(sessionStorageLike, localStorageLike);
   return state?.workspaces.find((workspace) => workspace.id === workspaceId)?.displayName ?? workspaceId;
@@ -573,6 +582,7 @@ export function resolveSessionWorkspaceAccess(
   userSessionId: string | null | undefined
 ): SessionWorkspaceAccessStatus {
   if (workspaceId === DEMO_WORKSPACE_ID) return "active";
+  if (workspaceId === PREPARED_EMPTY_CLINIC_WORKSPACE_ID) return "active";
   if (!state) return "unknown";
   if (!userSessionId) return "missing";
   if (!state.workspaces.some((workspace) => workspace.id === workspaceId)) return "missing";

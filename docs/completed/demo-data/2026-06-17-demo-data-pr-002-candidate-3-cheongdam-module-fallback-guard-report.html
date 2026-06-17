@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEMO-DATA-PR-002 Candidate 3 Cheongdam Module Fallback Guard 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+        margin: 40px auto;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.3;
+      }
+      code {
+        background: #f2f4f7;
+        border-radius: 4px;
+        padding: 0.1rem 0.3rem;
+      }
+      ul {
+        padding-left: 1.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEMO-DATA-PR-002 Candidate 3 Cheongdam Module Fallback Guard</h1>
+    <p><strong>작성일:</strong> 2026-06-17</p>
+
+    <h2>요청</h2>
+    <p>
+      리팩터링 후보 3번인 Cheongdam 화면에서 legacy fixture가 조용히 섞이는 fallback 차단 작업을 진행했다.
+      이번 범위는 mock 전체 삭제가 아니라, workspace context가 누락될 때 legacy Sales Demo로 복구되는 기본값을
+      Cheongdam seed 검증 기준으로 바꾸는 데 한정했다.
+    </p>
+
+    <h2>변경 내용</h2>
+    <ul>
+      <li>
+        <code>src/lib/emr-domain/demo-workspaces.ts</code>에 workspace route/path resolver를 추가했다. 기본 fallback은
+        <code>workspace-clair-cheongdam</code>이며, <code>clair-demo</code>는 명시적으로 들어온 경우에만 유지된다.
+      </li>
+      <li>
+        customer, reception, registration drawer, lab/imaging, dispensing, billing 화면에서 누락된 workspace 값을
+        직접 <code>clair-demo</code>로 보정하던 코드를 공통 resolver로 교체했다.
+      </li>
+      <li>
+        missing workspace fallback이 Cheongdam seed verification scope로 해석되고, explicit legacy route는 그대로 유지되는
+        회귀 테스트를 추가했다.
+      </li>
+    </ul>
+
+    <h2>중요한 미변경 범위</h2>
+    <ul>
+      <li>server-core mock gateways와 route-contract fixture는 변경하지 않았다.</li>
+      <li>명시적 Sales Demo launcher와 fixed May 2026 scenario route는 삭제하지 않았다.</li>
+      <li>workflow module의 broad <code>allowMockFallback</code> 축소는 후보 4번 범위로 남겼다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit</code>: 통과</li>
+      <li><code>npm run docs:check</code>: 통과</li>
+      <li><code>npm run lint</code>: 통과. 기존 경고만 남음.</li>
+      <li>
+        <code>PLAYWRIGHT_BASE_URL=http://127.0.0.1:3112 npx playwright test tests/demo-reality-start-state.spec.ts -g "missing workspace fallbacks|Cheongdam work modules do not render legacy active-work fixtures" --reporter=line --workers=1</code>: 통과
+      </li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      후보 4번에서는 workflow module의 <code>allowMockFallback</code> 경로를 Cheongdam seed/API 검증 기준으로 더 좁히고,
+      API 실패가 local mock 성공처럼 보이지 않도록 각 module의 loading/error/empty 상태를 점검한다.
+    </p>
+  </body>
+</html>

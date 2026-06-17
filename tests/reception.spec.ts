@@ -1,5 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function openWalkInReceptionForm(page: Page) {
+  await page.getByTestId("schedule-check-in-button").click();
+  await page.getByRole("menuitem", { name: "접수하기" }).click();
+}
+
+async function submitAppointmentCheckInForm(page: Page) {
+  await page.getByRole("button", { name: "접수하기" }).last().click();
+  const form = page.getByTestId("appointment-check-in-form-drawer").last();
+  await expect(form).toBeVisible();
+  await form.getByRole("button", { name: "생성" }).click();
+}
+
+function getLocalDatePrefix(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 async function mockReceptionWalkInCreate(
   page: Page,
   {
@@ -101,6 +120,9 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "26.05.01 (금) 날짜 선택",
       "오늘 일자로 이동",
     ]);
+  await expect(
+    dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+  ).toBeDisabled();
   await dateControl
     .getByRole("button", { name: "26.05.01 (금) 날짜 선택" })
     .click();
@@ -108,7 +130,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await page.keyboard.press("Escape");
   await calendarViewTabs.getByRole("button", { name: "주" }).click();
   await expect(
-    page.getByRole("button", { name: "26.04.27 - 26.05.03 주 선택" }),
+    page.getByRole("button", { name: "26.04.26 - 26.05.02 주 선택" }),
   ).toBeVisible();
   await expect
     .poll(() =>
@@ -121,15 +143,14 @@ test("reception renders the first-path workspace instead of the placeholder", as
     .toEqual([
       "이전 주",
       "다음 주",
-      "26.04.27 - 26.05.03 주 선택",
+      "26.04.26 - 26.05.02 주 선택",
       "오늘 일자로 이동",
     ]);
   await dateControl
-    .getByRole("button", { name: "26.04.27 - 26.05.03 주 선택" })
+    .getByRole("button", { name: "26.04.26 - 26.05.02 주 선택" })
     .click();
-  await expect(page.getByText("2026년 4월 - 5월")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "26.04.27 - 26.05.03 선택됨" }),
+    page.getByRole("button", { name: "26.04.26 - 26.05.02 선택됨" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await calendarViewTabs.getByRole("button", { name: "월" }).click();
@@ -146,7 +167,6 @@ test("reception renders the first-path workspace instead of the placeholder", as
     )
     .toEqual(["이전 월", "다음 월", "26.05 월 선택", "오늘 일자로 이동"]);
   await dateControl.getByRole("button", { name: "26.05 월 선택" }).click();
-  await expect(page.getByText("2026년", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "26.05 선택됨" }),
   ).toBeVisible();
@@ -203,8 +223,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
           buttons.map((button) => button.textContent?.trim()),
         ),
     )
-    .toEqual(["전체", "대기", "예약"]);
-  await expect(sidePanel.getByText("대기", { exact: true })).toHaveCount(2);
+    .toEqual(["전체 5", "대기 3", "예약 1"]);
   await expect
     .poll(() =>
       sidePanel
@@ -217,15 +236,14 @@ test("reception renders the first-path workspace instead of the placeholder", as
       "patient-card-patient-kong",
       "patient-card-patient-dubu",
       "patient-card-patient-coco",
-      "patient-card-patient-haru",
     ]);
-  await expect(sidePanel.getByText("112분 대기")).toHaveClass(
-    /text-destructive/,
+  await expect(sidePanel.getByText("77분 대기")).toHaveClass(
+    /emr-status-warning-text/,
   );
   await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toHaveCount(
     0,
   );
-  await sideTabs.getByRole("button", { name: "예약", exact: true }).click();
+  await sideTabs.getByRole("button", { name: /예약/ }).click();
   await expect(sidePanel.getByText("예약 작업")).toHaveCount(0);
   await expect(
     sidePanel.getByTestId("patient-card-patient-nabi"),
@@ -237,14 +255,16 @@ test("reception renders the first-path workspace instead of the placeholder", as
     0,
   );
   await expect(
-    sidePanel.getByRole("textbox", { name: "대기열 검색" }),
+    sidePanel.getByRole("searchbox", { name: "대기열 검색" }),
   ).toHaveCount(0);
   await sidePanel.getByRole("button", { name: "검색" }).click();
   await expect(
-    sidePanel.getByRole("textbox", { name: "대기열 검색" }),
+    sidePanel.getByRole("searchbox", { name: "대기열 검색" }),
   ).toBeVisible();
   await expect(
-    sidePanel.getByPlaceholder("대기열 내 환자, 보호자, 전화번호 검색"),
+    sidePanel.getByPlaceholder(
+      "환자, 보호자, 전화번호, 방문 목적, 메모, 담당의 검색",
+    ),
   ).toBeVisible();
   await expect(page.getByText("환자 상세")).toHaveCount(0);
   await expect(page.getByText("진료 대기열")).toHaveCount(0);
@@ -255,6 +275,62 @@ test("reception renders the first-path workspace instead of the placeholder", as
   );
 });
 
+test("reception date controls refetch the selected operating date", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception");
+
+  const dateControl = page.getByTestId("reception-date-control");
+  await expect(
+    dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+  ).toBeDisabled();
+
+  const nextDayRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-02"),
+  );
+  await dateControl.getByRole("button", { name: "다음 날짜" }).click();
+  await nextDayRead;
+  await expect(
+    page.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+  ).toBeVisible();
+  await expect(
+    dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+  ).toBeEnabled();
+  await expect(
+    page.getByTestId("appointment-card-appointment-coco-260501"),
+  ).toHaveCount(0);
+
+  await dateControl
+    .getByRole("button", { name: "26.05.02 (토) 날짜 선택" })
+    .click();
+  const pickedDayRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-08"),
+  );
+  await page.getByRole("button", { name: "8일 선택", exact: true }).click();
+  await pickedDayRead;
+  await expect(
+    page.getByRole("button", { name: "26.05.08 (금) 날짜 선택" }),
+  ).toBeVisible();
+
+  const todayRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-01"),
+  );
+  await dateControl.getByRole("button", { name: "오늘 일자로 이동" }).click();
+  await todayRead;
+  await expect(
+    page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
+  ).toBeVisible();
+  await expect(
+    dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
+  ).toBeDisabled();
+});
+
 test("reception prioritizes the Kong vomit demo context from query params", async ({
   page,
 }) => {
@@ -262,7 +338,10 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
     "/w/clair-demo/reception?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501",
   );
 
-  const sidePanel = page.locator("aside").first();
+  const sidePanel = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수/예약" })
+    .first();
   const kongCard = sidePanel.getByTestId("patient-card-patient-kong");
 
   await expect(
@@ -281,9 +360,8 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await page.getByTestId("appointment-card-appointment-kong-260501").click();
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await expect(
-    page.getByText("김하늘 보호자 · 콩이 · 09:28 접수"),
-  ).toBeVisible();
+  await expect(page.getByText("김하늘 보호자").first()).toBeVisible();
+  await expect(page.getByText("콩이").first()).toBeVisible();
   await expect(page.getByLabel("방문 목적")).toHaveValue(
     "반복 구토와 식욕 저하",
   );
@@ -292,12 +370,11 @@ test("reception prioritizes the Kong vomit demo context from query params", asyn
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await kongCard.click();
 
-  await expect(page.getByText("접수 정보")).toBeVisible();
+  await expect(page.getByText("접수 상세").first()).toBeVisible();
   await expect(page.getByText("P-260501-0003").first()).toBeVisible();
   await expect(page.getByText("접수 상세").last()).toBeVisible();
-  await expect(
-    page.getByText("김하늘 보호자 · 콩이 · 09:28 접수").last(),
-  ).toBeVisible();
+  await expect(page.getByText("김하늘 보호자").last()).toBeVisible();
+  await expect(page.getByText("콩이").last()).toBeVisible();
 });
 
 test("reception calendar options expose Excel import and export actions", async ({
@@ -567,11 +644,11 @@ test("reception cards open the reception detail drawer", async ({ page }) => {
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
   await expect(
-    page.getByText("오세아 보호자 · 나비 · 10:45 예약"),
+    page.getByText("오세아 보호자 · 010-7812-4401 · 10:45 예약"),
   ).toBeVisible();
   await expect(page.getByLabel("소요시간")).toHaveValue("15분");
   await expect(
-    page.getByRole("button", { name: "접수 처리" }).last(),
+    page.getByRole("button", { name: "접수하기" }).last(),
   ).toBeVisible();
 });
 
@@ -585,7 +662,6 @@ test("reception side panel cards keep order, open reception info, and clear sele
     "patient-card-patient-kong",
     "patient-card-patient-dubu",
     "patient-card-patient-coco",
-    "patient-card-patient-haru",
   ];
   await expect
     .poll(() =>
@@ -607,8 +683,11 @@ test("reception side panel cards keep order, open reception info, and clear sele
         ),
     )
     .toEqual(initialCardOrder);
-  await expect(page.getByText("접수 정보")).toBeVisible();
-  await expect(page.getByText("접수 상세")).toBeVisible();
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
   await expect(dubuCard).toHaveAttribute("data-selected", "true");
   await page.getByRole("button", { name: "상세 닫기" }).click();
   await expect(dubuCard).not.toHaveAttribute("data-selected", "true");
@@ -691,13 +770,15 @@ test("patient guardian registration creates a new guardian and patient after con
   await page.getByRole("button", { name: "다음" }).click();
   await expect(page.getByText("보호자명은 필수입니다.")).toBeVisible();
   await page.getByLabel("보호자명").fill("김새봄");
-  await page.getByLabel("보호자 생년월일").fill("1993-1213-123");
+  await page.getByLabel("보호자 생년월일").fill("19931340");
+  await expect(page.getByLabel("보호자 생년월일")).toHaveValue("1993-13-40");
   await page.getByLabel("보호자 휴대전화").fill("010-2222-3333");
   await page.getByRole("button", { name: "다음" }).click();
   await expect(
     page.getByText("생년월일은 YYYY-MM-DD 형식의 실제 날짜로 입력해 주세요."),
   ).toBeVisible();
-  await page.getByLabel("보호자 생년월일").fill("1993-11-23");
+  await page.getByLabel("보호자 생년월일").fill("19931123");
+  await expect(page.getByLabel("보호자 생년월일")).toHaveValue("1993-11-23");
   await page.getByRole("button", { name: "다음" }).click();
   await expect(
     page.getByText("개인정보 수집 동의가 필요합니다."),
@@ -723,6 +804,8 @@ test("patient guardian registration creates a new guardian and patient after con
   await page.getByLabel("품종").fill("푸");
   await page.getByRole("option", { name: "푸들" }).click();
   await page.getByLabel("나이 년").fill("2");
+  await expect(page.getByLabel("나이 년").locator("..")).toContainText("년");
+  await expect(page.getByLabel("나이 개월").locator("..")).toContainText("개월");
   await expect(page.getByText("개인정보 동의")).toHaveCount(0);
   await page.getByRole("button", { name: "다음" }).click();
 
@@ -761,7 +844,7 @@ test("server-backed patient guardian registration sends minimal reception payloa
               name: "김새봄",
               mobilePhone: "010-2222-3333",
               createdAt: "2026-05-19T00:00:00.000Z",
-              updatedAt: "2026-05-19T00:00:00.000Z",
+              updatedAt: "2026-05-01T10:50:00+09:00",
             },
             patient: {
               id: "patient-live-saerom",
@@ -776,7 +859,7 @@ test("server-backed patient guardian registration sends minimal reception payloa
               handlingCautionLocked: true,
               status: "active",
               createdAt: "2026-05-19T00:00:00.000Z",
-              updatedAt: "2026-05-19T00:00:00.000Z",
+              updatedAt: "2026-05-01T10:50:00+09:00",
             },
             patientGuardian: {
               id: "pg-live-saerom",
@@ -926,7 +1009,7 @@ test("reception dialogs align 40px inputs and select triggers", async ({
   expect(registrationControlHeights).toEqual([40, 40, 40, 40]);
 
   await page.goto("/w/clair-demo/reception");
-  await page.getByTestId("schedule-check-in-button").click();
+  await openWalkInReceptionForm(page);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await expect(
     walkInForm.getByRole("heading", { name: "진료 접수" }),
@@ -947,6 +1030,37 @@ test("reception dialogs align 40px inputs and select triggers", async ({
     expect(height).toBeGreaterThanOrEqual(38);
     expect(height).toBeLessThanOrEqual(40);
   }
+});
+
+test("walk-in reception drawer removes helper chrome and keeps focused placeholders", async ({
+  page,
+}) => {
+  await page.goto("/w/workspace-clair-cheongdam/reception?modulePanel=open");
+
+  await openWalkInReceptionForm(page);
+
+  const drawer = page.getByTestId("workspace-drawer");
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await expect(drawer).toBeVisible();
+  await expect(walkInForm).toBeVisible();
+  await expect(drawer.getByText("walk-in", { exact: true })).toHaveCount(0);
+  await expect(walkInForm.getByText("진료 접수")).toHaveCount(0);
+  await expect(
+    walkInForm.getByText("환자 선택 후 당일 접수를 생성합니다."),
+  ).toHaveCount(0);
+  await expect(
+    walkInForm.getByText("환자명, 동물 정보, 보호자명으로 검색합니다."),
+  ).toHaveCount(0);
+  await expect(walkInForm.getByLabel("방문 목적")).toHaveAttribute(
+    "placeholder",
+    "방문목적을 입력해주세요",
+  );
+
+  const kakaoButton = walkInForm.getByRole("button", {
+    name: "카카오톡 발송",
+  });
+  await expect(kakaoButton).toBeVisible();
+  await expect(kakaoButton).toHaveClass(/border-transparent/);
 });
 
 test("patient guardian registration blocks duplicate microchips and warns duplicate patient names", async ({
@@ -1047,9 +1161,12 @@ test("reception side panel searches by patient and guardian context", async ({
 }) => {
   await page.goto("/w/clair-demo/reception");
 
-  const sidePanel = page.locator("aside").first();
+  const sidePanel = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수/예약" })
+    .first();
   await sidePanel.getByRole("button", { name: "검색" }).click();
-  await sidePanel.getByRole("textbox", { name: "대기열 검색" }).fill("코코");
+  await sidePanel.getByRole("searchbox", { name: "대기열 검색" }).fill("코코");
 
   await expect(
     sidePanel.getByTestId("patient-card-patient-coco"),
@@ -1058,10 +1175,10 @@ test("reception side panel searches by patient and guardian context", async ({
     sidePanel.getByTestId("patient-card-patient-coco"),
   ).toContainText("이지은");
   await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toBeHidden();
-  await sidePanel.getByRole("button", { name: "검색어 초기화" }).click();
+  await sidePanel.getByRole("button", { name: "대기열 검색 닫기" }).click();
   await expect(
-    sidePanel.getByRole("textbox", { name: "대기열 검색" }),
-  ).toHaveValue("");
+    sidePanel.getByRole("searchbox", { name: "대기열 검색" }),
+  ).toHaveCount(0);
   await expect(
     sidePanel.getByTestId("patient-card-patient-kong"),
   ).toBeVisible();
@@ -1129,9 +1246,9 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               visitPurpose: "DEN-62 persisted queue read",
               receptionMemo: "서버 대기열 read boundary",
               status: "waiting",
-              checkedInAt: "2026-05-19T00:00:00.000Z",
-              createdAt: "2026-05-19T00:00:00.000Z",
-              updatedAt: "2026-05-19T00:00:00.000Z",
+              checkedInAt: "2026-05-01T09:25:00+09:00",
+              createdAt: "2026-05-01T09:25:00+09:00",
+              updatedAt: "2026-05-01T09:25:00+09:00",
             },
             queueEntry: {
               id: "queue-live-queue-coco",
@@ -1141,7 +1258,7 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               status: "waiting",
               priority: "normal",
               sortOrder: 1,
-              enteredAt: "2026-05-19T00:00:00.000Z",
+              enteredAt: "2026-05-01T09:25:00+09:00",
             },
           },
         ],
@@ -1269,6 +1386,64 @@ test("reception persisted reads deny cross-workspace demo actors", async ({
 test("reception check-in converts a confirmed appointment into a waiting encounter", async ({
   page,
 }) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/appointments/appointment-nabi-260501/check-in",
+    async (route) => {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId: "clair-demo",
+          checkIn: {
+            appointment: {
+              id: "appointment-nabi-260501",
+              workspaceId: "clair-demo",
+              patientId: "patient-nabi",
+              guardianId: "guardian-oh-sea",
+              assignedVeterinarianId: "user-vet-doyun",
+              scheduledStartAt: "2026-05-01T10:45:00+09:00",
+              scheduledEndAt: "2026-05-01T11:00:00+09:00",
+              visitPurpose: "피부 재진",
+              status: "checked_in",
+              createdByUserId: "user-desk-yuna",
+              createdAt: "2026-04-30T11:10:00+09:00",
+              updatedAt: "2026-05-01T10:50:00+09:00",
+            },
+            encounter: {
+              id: "encounter-live-appointment-nabi",
+              workspaceId: "clair-demo",
+              patientId: "patient-nabi",
+              guardianId: "guardian-oh-sea",
+              appointmentId: "appointment-nabi-260501",
+              primaryVeterinarianId: "user-vet-doyun",
+              encounterNo: "E-LIVE-0002",
+              receptionType: "appointment",
+              durationMinutes: 20,
+              chiefComplaint: "피부 재진",
+              visitPurpose: "피부 재진",
+              status: "waiting",
+              checkedInAt: "2026-05-01T10:50:00+09:00",
+              createdAt: "2026-05-01T10:50:00+09:00",
+              updatedAt: "2026-05-01T10:50:00+09:00",
+            },
+            queueEntry: {
+              id: "queue-live-appointment-nabi",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-live-appointment-nabi",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              enteredAt: "2026-05-01T10:50:00+09:00",
+            },
+          },
+          enforcedBy: "reception-appointment-check-in",
+        }),
+      });
+    },
+  );
+
   await page.goto("/w/clair-demo/reception");
 
   const nabiAppointment = page.getByTestId(
@@ -1278,7 +1453,7 @@ test("reception check-in converts a confirmed appointment into a waiting encount
   await expect(nabiAppointment).not.toContainText("예약확정");
 
   await nabiAppointment.click();
-  await page.getByRole("button", { name: "접수 처리" }).last().click();
+  await submitAppointmentCheckInForm(page);
 
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
@@ -1300,6 +1475,11 @@ test("server-backed appointment check-in sends the appointment transition reques
     async (route) => {
       requested = true;
       expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toMatchObject({
+        durationMinutes: 15,
+        visitPurpose: "피부 재진",
+        weightKg: 4.8,
+      });
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -1335,9 +1515,9 @@ test("server-backed appointment check-in sends the appointment transition reques
               chiefComplaint: "피부 재진",
               visitPurpose: "피부 재진",
               status: "waiting",
-              checkedInAt: "2026-05-19T00:00:00.000Z",
-              createdAt: "2026-05-19T00:00:00.000Z",
-              updatedAt: "2026-05-19T00:00:00.000Z",
+              checkedInAt: "2026-05-01T10:50:00+09:00",
+              createdAt: "2026-05-01T10:50:00+09:00",
+              updatedAt: "2026-05-01T10:50:00+09:00",
             },
             queueEntry: {
               id: "queue-live-appointment-nabi",
@@ -1346,7 +1526,7 @@ test("server-backed appointment check-in sends the appointment transition reques
               queueType: "consultation",
               status: "waiting",
               priority: "normal",
-              enteredAt: "2026-05-19T00:00:00.000Z",
+              enteredAt: "2026-05-01T10:50:00+09:00",
             },
           },
           enforcedBy: "reception-appointment-check-in",
@@ -1361,7 +1541,7 @@ test("server-backed appointment check-in sends the appointment transition reques
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await page.getByRole("button", { name: "접수 처리" }).last().click();
+  await submitAppointmentCheckInForm(page);
 
   expect(requested).toBe(true);
   await expect(nabiAppointment).toContainText("예약");
@@ -1479,7 +1659,7 @@ test("appointment check-in persistence regression reloads from queue and calenda
     "appointment-card-appointment-nabi-260501",
   );
   await nabiAppointment.click();
-  await page.getByRole("button", { name: "접수 처리" }).last().click();
+  await submitAppointmentCheckInForm(page);
   await expect(nabiAppointment).toContainText("예약");
   await expect(nabiAppointment).not.toContainText("접수완료");
 
@@ -1594,29 +1774,31 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
 
   const sidePanel = page.locator("aside").first();
   await sidePanel.getByTestId("patient-card-patient-dubu").click();
-  await expect(page.getByText("접수 정보")).toBeVisible();
+  await expect(page.getByTestId("workspace-drawer")).toContainText("접수 상세");
   await page.getByRole("button", { name: "상세 닫기" }).click();
-  await page.getByTestId("schedule-check-in-button").click();
-  await expect(page).not.toHaveURL(/drawer=/);
+  await openWalkInReceptionForm(page);
+  await expect(page).toHaveURL(/drawer=reception-form/);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await expect(
     walkInForm.getByRole("heading", { name: "진료 접수" }),
   ).toBeVisible();
+  await expect(walkInForm.getByLabel("체중")).toBeDisabled();
   await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
     "placeholder",
     "동물명 또는 보호자명으로 검색",
   );
   await expect(walkInForm.getByText("두부 · 정하린")).toHaveCount(0);
   await walkInForm.getByLabel("환자 검색").click();
+  await walkInForm.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
+  await expect(walkInForm.getByLabel("체중")).toBeEnabled();
+  await expect(walkInForm.getByLabel("체중")).toHaveValue("8.40");
+  await walkInForm.getByLabel("체중").fill("8.65");
   await expect(walkInForm.getByLabel("방문 목적")).toBeVisible();
-  await walkInForm.getByRole("button", { name: "태그 추가" }).click();
-  await walkInForm.getByLabel("태그명").fill("재활");
-  await walkInForm.getByLabel("태그명").press("Enter");
   await expect(
-    walkInForm.getByRole("button", { name: "재활" }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await walkInForm.getByLabel("방문 목적").fill("보행 재검 및 통증 상담");
+    walkInForm.getByRole("button", { name: "태그 추가" }),
+  ).toHaveCount(0);
+  await walkInForm.getByLabel("방문 목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
@@ -1645,69 +1827,964 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   ).toHaveClass(/emr-line-strong/);
 });
 
-test("server-backed walk-in encounter sends minimal reception payload", async ({
+test("reception creates a reservation through the unified check-in menu", async ({
   page,
 }) => {
-  let capturedBody: Record<string, unknown> | null = null;
+  let createdAppointment: Record<string, unknown> | null = null;
+  let latestBody: Record<string, unknown> | undefined;
 
   await page.route(
-    "**/api/workspaces/clair-demo/reception/walk-in-encounters",
+    "**/api/workspaces/clair-demo/reception/calendar/day**",
     async (route) => {
-      capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      if (!createdAppointment) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            status: 200,
+            workspaceId: "clair-demo",
+            date: "2026-05-01",
+            records: [],
+            enforcedBy: "reception-calendar-read",
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "clair-demo",
+          date: "2026-05-01",
+          records: [{ appointment: createdAppointment }],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/appointments",
+    async (route) => {
+      latestBody = route.request().postDataJSON() as Record<string, unknown>;
+      createdAppointment = {
+        id: "appointment-den516-ui",
+        workspaceId: "clair-demo",
+        patientId: latestBody.patientId,
+        guardianId: latestBody.guardianId,
+        assignedVeterinarianId: latestBody.assignedVeterinarianId,
+        scheduledStartAt: latestBody.scheduledStartAt,
+        scheduledEndAt: "2026-05-01T10:30:00+09:00",
+        visitPurpose: latestBody.reservationMemo,
+        symptomNote: latestBody.reservationMemo,
+        status: "confirmed",
+        createdByUserId: "user-front-desk",
+        createdAt: "2026-05-01T08:55:00+09:00",
+        updatedAt: "2026-05-01T08:55:00+09:00",
+      };
+
       await route.fulfill({
         status: 201,
         contentType: "application/json",
         body: JSON.stringify({
           ok: true,
+          status: 201,
           workspaceId: "clair-demo",
-          walkIn: {
-            encounter: {
-              id: "encounter-live-walkin-dubu",
-              workspaceId: "clair-demo",
-              patientId: "patient-dubu",
-              guardianId: "guardian-jung-harin",
-              primaryVeterinarianId: "user-vet-doyun",
-              encounterNo: "E-LIVE-0001",
-              receptionType: "walk_in",
-              department: "재활",
-              durationMinutes: 30,
-              chiefComplaint: "보행 재검 및 통증 상담",
-              visitPurpose: "보행 재검 및 통증 상담",
-              receptionMemo: "보호자가 계단 보행을 걱정함",
-              status: "waiting",
-              checkedInAt: "2026-05-19T00:00:00.000Z",
-              createdAt: "2026-05-19T00:00:00.000Z",
-              updatedAt: "2026-05-19T00:00:00.000Z",
-            },
-            queueEntry: {
-              id: "queue-live-walkin-dubu",
-              workspaceId: "clair-demo",
-              encounterId: "encounter-live-walkin-dubu",
-              queueType: "consultation",
-              status: "waiting",
-              priority: "normal",
-              enteredAt: "2026-05-19T00:00:00.000Z",
-            },
-          },
-          enforcedBy: "reception-walk-in-encounter",
+          appointment: createdAppointment,
+          enforcedBy: "reception-appointment-create",
         }),
       });
     },
   );
 
   await page.goto("/w/clair-demo/reception");
+
   await page.getByTestId("schedule-check-in-button").click();
+  await page.getByRole("menuitem", { name: "예약하기" }).click();
+
+  const drawer = page.getByTestId("reservation-create-drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText("진료 시간 안에서 예약 가능한 시간을 선택합니다.")).toHaveCount(0);
+  await expect(drawer.getByText("환자명, 동물 정보, 보호자명으로 검색합니다.")).toHaveCount(0);
+  await expect(drawer.locator('input[type="date"][aria-label="예약일"]')).toHaveCount(0);
+  await drawer.getByLabel("예약일").click();
+  await expect(page.getByText("2026년 5월")).toBeVisible();
+  await page.getByRole("button", { name: /선택됨/ }).click();
+  await expect(drawer.getByLabel("체중")).toBeDisabled();
+
+  await drawer.getByLabel("환자 검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await expect(drawer.getByLabel("환자 검색")).toContainText("나비");
+  await expect(drawer.getByLabel("환자 검색")).not.toContainText("patient-nabi");
+  await expect(drawer.getByLabel("체중")).toHaveValue("4.80");
+  await drawer.getByRole("button", { name: "환자 선택 초기화" }).click();
+  await expect(drawer.getByLabel("환자 검색")).toContainText("환자 선택");
+  await expect(drawer.getByLabel("체중")).toBeDisabled();
+  await drawer.getByLabel("환자 검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await drawer.getByLabel("체중").fill("4.95");
+
+  await expect(drawer.getByLabel("예약시간")).toContainText("09:00");
+  await expect(drawer.getByLabel("예약시간")).not.toContainText("540");
+  await drawer.getByLabel("예약시간").click();
+  await page.getByRole("option", { name: /^10:00$/ }).click();
+  await expect(drawer.getByLabel("예약시간")).toContainText("10:00");
+  await expect(drawer.getByLabel("예약시간")).not.toContainText("600");
+
+  await drawer.getByLabel("예약 메모").fill("DEN-516 예약 생성 UI 검증");
+  await drawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => latestBody).toMatchObject({
+    patientId: "patient-nabi",
+    guardianId: "guardian-oh-sea",
+    durationMinutes: 30,
+    reservationMemo: "DEN-516 예약 생성 UI 검증",
+    weightKg: 4.95,
+  });
+  expect(String(latestBody?.scheduledStartAt)).toMatch(
+    /^2026-05-01T10:00:00\+09:00$/,
+  );
+
+  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  const detailDrawer = page.getByTestId("workspace-drawer").last();
+  await expect(detailDrawer).toContainText("예약 상세");
+  await expect(detailDrawer).toContainText(
+    "DEN-516 예약 생성 UI 검증",
+  );
+
+  const reservationCard = page
+    .locator('[data-testid^="appointment-card-"]')
+    .filter({ hasText: "DEN-516 예약 생성 UI 검증" });
+  await expect(reservationCard).toBeVisible();
+});
+
+test("Cheongdam empty reception still renders the calendar workspace", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  await expect(page.getByTestId("schedule-toolbar")).toBeVisible();
+  await expect(page.getByTestId("reception-calendar-frame")).toBeVisible();
+  await expect(page.getByTestId("schedule-check-in-button")).toBeVisible();
+  await expect(page.getByText("영업시간 09:00-19:00")).toBeVisible();
+  await expect(page.getByText("환자를 선택해 주세요.")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
+});
+
+test("Cheongdam empty reception ignores stale completed calendar queue records", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [
+            {
+              appointment: null,
+              encounter: {
+                id: "encounter-cheongdam-stale-calendar",
+                workspaceId,
+                patientId: "patient-cheongdam-stale-calendar",
+                guardianId: "guardian-cheongdam-stale-calendar",
+                encounterNo: "E-260613-STALE",
+                receptionType: "walk_in",
+                department: "영상의학과 · 방사선종양학과",
+                durationMinutes: 30,
+                chiefComplaint: "구토/설사 · n",
+                visitPurpose: "구토/설사 · n",
+                status: "completed",
+                checkedInAt: "2026-06-13T13:40:00+09:00",
+                createdAt: "2026-06-13T13:40:00+09:00",
+                updatedAt: "2026-06-13T14:10:00+09:00",
+              },
+              queueEntry: {
+                id: "queue-cheongdam-stale-calendar",
+                workspaceId,
+                encounterId: "encounter-cheongdam-stale-calendar",
+                queueType: "consultation",
+                status: "done",
+                priority: "normal",
+                sortOrder: 1,
+                enteredAt: "2026-06-13T13:40:00+09:00",
+                finishedAt: "2026-06-13T14:10:00+09:00",
+              },
+            },
+          ],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  await expect(page.getByTestId("schedule-toolbar")).toBeVisible();
+  await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
+  await expect(page.getByText("환자 미지정 · 구토/설사 · n")).toHaveCount(0);
+});
+
+test("Cheongdam day calendar ignores active queue records from a previous operating date", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [
+            {
+              encounter: {
+                id: "encounter-cheongdam-previous-day-active",
+                workspaceId,
+                patientId: "49121000-0000-4000-8000-000000000015",
+                guardianId: "49120000-0000-4000-8000-000000000015",
+                encounterNo: "E-260612-PREV",
+                receptionType: "walk_in",
+                department: "영상의학과 · 방사선종양학과",
+                durationMinutes: 30,
+                chiefComplaint: "구토/설사 · n",
+                visitPurpose: "구토/설사 · n",
+                status: "ordered",
+                checkedInAt: "2026-06-12T13:40:00+09:00",
+                createdAt: "2026-06-12T13:40:00+09:00",
+                updatedAt: "2026-06-12T13:40:00+09:00",
+              },
+              queueEntry: {
+                id: "queue-cheongdam-previous-day-active",
+                workspaceId,
+                encounterId: "encounter-cheongdam-previous-day-active",
+                queueType: "consultation",
+                status: "waiting",
+                priority: "normal",
+                sortOrder: 1,
+                enteredAt: "2026-06-12T13:40:00+09:00",
+              },
+            },
+          ],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  await expect(page.getByTestId("schedule-toolbar")).toBeVisible();
+  await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
+  await expect(page.getByText("환자 미지정 · 구토/설사 · n")).toHaveCount(0);
+});
+
+test("Cheongdam walk-in dialog does not offer legacy fixture patients before DB lookup", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+  await openWalkInReceptionForm(page);
 
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await walkInForm.getByLabel("환자 검색").click();
+
+  await expect(page.getByRole("option", { name: /나비.*오세아/ })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("option", { name: /콩이|코코|하루/ }),
+  ).toHaveCount(0);
+});
+
+test("Cheongdam walk-in keeps a selected DB lookup patient when the display label re-search is empty", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const patientId = "49121000-0000-4000-8000-000000000001";
+  const guardianId = "49120000-0000-4000-8000-000000000001";
+  const checkedInAt = `${getLocalDatePrefix()}T12:00:00+09:00`;
+  let lookupRequests = 0;
+  let createBody: Record<string, unknown> | undefined;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      lookupRequests += 1;
+      const query =
+        new URL(route.request().url()).searchParams.get("query") ?? "";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "reception-patient-guardian-lookup",
+          patients:
+            query === "바둑"
+              ? [
+                  {
+                    patient: {
+                      id: patientId,
+                      workspaceId,
+                      patientNo: "CD-P-0001",
+                      name: "바둑이",
+                      species: "dog",
+                      breed: "말티즈",
+                      birthDate: "2021-03-12",
+                      sex: "male",
+                      neutered: true,
+                      handlingCautionLocked: true,
+                      status: "active",
+                      createdAt: "2026-06-12T00:00:00.000Z",
+                      updatedAt: "2026-06-12T00:00:00.000Z",
+                    },
+                    primaryGuardian: {
+                      id: guardianId,
+                      workspaceId,
+                      name: "김청담",
+                      mobilePhone: "010-4912-0001",
+                      createdAt: "2026-06-12T00:00:00.000Z",
+                      updatedAt: "2026-06-12T00:00:00.000Z",
+                    },
+                    searchText: "바둑이 말티즈 김청담 010-4912-0001",
+                  },
+                ]
+              : [],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/walk-in-encounters`,
+    async (route) => {
+      createBody = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId,
+          enforcedBy: "reception-walk-in-encounter",
+          walkIn: {
+            encounter: {
+              id: "encounter-cheongdam-badugi",
+              workspaceId,
+              patientId,
+              guardianId,
+              encounterNo: "E-260612-BADUGI",
+              receptionType: "walk_in",
+              department: "내과",
+              durationMinutes: 30,
+              chiefComplaint: createBody.visitPurpose,
+              visitPurpose: createBody.visitPurpose,
+              status: "waiting",
+              checkedInAt,
+              createdAt: checkedInAt,
+              updatedAt: checkedInAt,
+            },
+            queueEntry: {
+              id: "queue-cheongdam-badugi",
+              workspaceId,
+              encounterId: "encounter-cheongdam-badugi",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              enteredAt: checkedInAt,
+            },
+          },
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+  await openWalkInReceptionForm(page);
+
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await walkInForm.getByLabel("환자 검색").fill("바둑");
+  await page.getByRole("option", { name: /바둑이.*김청담/ }).click();
+  await expect(walkInForm.getByText("검색 결과가 없습니다.")).toHaveCount(0);
+  await expect.poll(() => lookupRequests).toBeGreaterThanOrEqual(2);
+
+  await walkInForm.getByLabel("방문 목적").fill("첫 내원 상담");
+  await walkInForm.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => createBody?.patientId).toBe(patientId);
+  expect(createBody).toMatchObject({
+    guardianId,
+    patientId,
+    patientName: "바둑이",
+    visitPurpose: "첫 내원 상담",
+  });
+  await expect(page.getByTestId("walk-in-reception-dialog")).toHaveCount(0);
+
+  const sidePanel = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수/예약" })
+    .first();
+  await expect(
+    sidePanel.getByTestId(`patient-card-${patientId}`),
+  ).toContainText("첫 내원 상담");
+  await sidePanel.getByRole("button", { name: /전체/ }).click();
+  await expect(sidePanel.locator('[data-testid^="patient-card-"]')).toHaveCount(
+    1,
+  );
+
+  await sidePanel.getByTestId(`patient-card-${patientId}`).click();
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
+  await expect(detailDrawer.getByLabel("보호자 및 동물검색")).toHaveValue(
+    /바둑이.*김청담/,
+  );
+  await expect(detailDrawer.getByLabel("방문 목적")).toHaveValue("첫 내원 상담");
+
+  await page.reload();
+  await expect(sidePanel.locator('[data-testid^="patient-card-"]')).toHaveCount(
+    0,
+  );
+  await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
+});
+
+test("Cheongdam reception readback hydrates live patient profiles after refresh", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const patientId = "49121000-0000-4000-8000-000000000071";
+  const guardianId = "49120000-0000-4000-8000-000000000071";
+  const veterinarianId = "49110000-0000-4000-8000-000000000003";
+  const encounterId = "encounter-cheongdam-readback-luna";
+  const readbackDate = getLocalDatePrefix();
+  const readbackAt = `${readbackDate}T14:15:00+09:00`;
+  const persistedWalkIn = {
+    encounter: {
+      id: encounterId,
+      workspaceId,
+      patientId,
+      guardianId,
+      primaryVeterinarianId: veterinarianId,
+      encounterNo: "E-260616-LUNA",
+      receptionType: "walk_in",
+      department: "내과",
+      durationMinutes: 30,
+      chiefComplaint: "DEN-512 refresh readback",
+      visitPurpose: "DEN-512 refresh readback",
+      status: "waiting",
+      checkedInAt: readbackAt,
+      createdAt: readbackAt,
+      updatedAt: readbackAt,
+    },
+    queueEntry: {
+      id: "queue-cheongdam-readback-luna",
+      workspaceId,
+      encounterId,
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      sortOrder: 1,
+      enteredAt: readbackAt,
+    },
+  };
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: veterinarianId,
+              displayName: "청담 원장",
+              initial: "청",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [persistedWalkIn],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          date: readbackDate,
+          records: [persistedWalkIn],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      const query =
+        new URL(route.request().url()).searchParams.get("query") ?? "";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "reception-patient-guardian-lookup",
+          patients:
+            query === ""
+              ? [
+                  {
+                    patient: {
+                      id: patientId,
+                      workspaceId,
+                      patientNo: "CD-P-071",
+                      name: "루나",
+                      species: "cat",
+                      breed: "Korean Shorthair",
+                      sex: "female",
+                      neutered: true,
+                      handlingCautionLocked: true,
+                      status: "active",
+                      createdAt: "2026-06-16T00:00:00+09:00",
+                      updatedAt: "2026-06-16T00:00:00+09:00",
+                    },
+                    primaryGuardian: {
+                      id: guardianId,
+                      workspaceId,
+                      name: "박지유",
+                      mobilePhone: "010-7100-0071",
+                      createdAt: "2026-06-16T00:00:00+09:00",
+                      updatedAt: "2026-06-16T00:00:00+09:00",
+                    },
+                    searchText: "루나 박지유 010-7100-0071",
+                  },
+                ]
+              : [],
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  const sidePanel = page.locator("aside").first();
+  const patientCard = sidePanel.getByTestId(`patient-card-${patientId}`);
+  await expect(patientCard).toContainText("루나");
+  await expect(patientCard).toContainText("박지유");
+  await expect(patientCard).toContainText("DEN-512 refresh readback");
+  await expect(patientCard).toContainText("청담 원장");
+  await expect(page.getByTestId(`walkin-card-${encounterId}`)).toContainText(
+    "루나",
+  );
+  await expect(page.getByTestId(`walkin-card-${encounterId}`)).toContainText(
+    "14:15",
+  );
+
+  await page.reload();
+
+  await expect(patientCard).toContainText("루나");
+  await expect(patientCard).toContainText("청담 원장");
+  await expect(page.getByTestId(`walkin-card-${encounterId}`)).toContainText(
+    "DEN-512 refresh readback",
+  );
+});
+
+test("Cheongdam walk-in create failure does not say the selected DB patient is missing", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const patientId = "49121000-0000-4000-8000-000000000023";
+  const guardianId = "49120000-0000-4000-8000-000000000023";
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      const query =
+        new URL(route.request().url()).searchParams.get("query") ?? "";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "reception-patient-guardian-lookup",
+          patients:
+            query === "토리"
+              ? [
+                  {
+                    patient: {
+                      id: patientId,
+                      workspaceId,
+                      patientNo: "CD-P-023",
+                      name: "토리",
+                      species: "dog",
+                      breed: "Mixed small dog",
+                      birthDate: "2014-05-20",
+                      sex: "male",
+                      neutered: true,
+                      handlingCautionLocked: true,
+                      status: "active",
+                      createdAt: "2026-06-12T00:00:00.000Z",
+                      updatedAt: "2026-06-12T00:00:00.000Z",
+                    },
+                    primaryGuardian: {
+                      id: guardianId,
+                      workspaceId,
+                      name: "심도겸",
+                      mobilePhone: "010-4912-0023",
+                      createdAt: "2026-06-12T00:00:00.000Z",
+                      updatedAt: "2026-06-12T00:00:00.000Z",
+                    },
+                    searchText: "토리 Mixed small dog 심도겸 010-4912-0023",
+                  },
+                ]
+              : [],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/walk-in-encounters`,
+    async (route) => {
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 409,
+          denialReason: "patient_unavailable",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+  await openWalkInReceptionForm(page);
+
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await walkInForm.getByLabel("환자 검색").fill("토리");
+  await page.getByRole("option", { name: /토리.*심도겸/ }).click();
+  await walkInForm.getByLabel("방문 목적").fill("구토");
+  await walkInForm.getByRole("button", { name: "생성" }).click();
+
+  await expect(page.getByText("접수를 생성할 수 없습니다.")).toBeVisible();
+  await expect(page.getByText("접수할 환자를 찾을 수 없습니다.")).toHaveCount(
+    0,
+  );
+});
+
+test("server-backed walk-in encounter sends minimal reception payload", async ({
+  page,
+}) => {
+  let capturedBody: Record<string, unknown> | null = null;
+  let createdWalkIn:
+    | {
+        encounter: Record<string, unknown>;
+        queueEntry: Record<string, unknown>;
+      }
+    | null = null;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/walk-in-encounters",
+    async (route) => {
+      capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      const checkedInAt =
+        typeof capturedBody.plannedStartAt === "string"
+          ? capturedBody.plannedStartAt
+          : "2026-05-01T10:45:00+09:00";
+      createdWalkIn = {
+        encounter: {
+          id: "encounter-live-walkin-dubu",
+          workspaceId: "clair-demo",
+          patientId: "patient-dubu",
+          guardianId: "guardian-jung-harin",
+          primaryVeterinarianId: "user-vet-doyun",
+          encounterNo: "E-LIVE-0001",
+          receptionType: "walk_in",
+          department: "재활",
+          durationMinutes: 30,
+          chiefComplaint: capturedBody.visitPurpose ?? "현장 접수",
+          visitPurpose: capturedBody.visitPurpose ?? "현장 접수",
+          receptionMemo: "보호자가 계단 보행을 걱정함",
+          status: "waiting",
+          checkedInAt,
+          createdAt: checkedInAt,
+          updatedAt: checkedInAt,
+        },
+        queueEntry: {
+          id: "queue-live-walkin-dubu",
+          workspaceId: "clair-demo",
+          encounterId: "encounter-live-walkin-dubu",
+          queueType: "consultation",
+          status: "waiting",
+          priority: "normal",
+          enteredAt: checkedInAt,
+        },
+      };
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          workspaceId: "clair-demo",
+          walkIn: createdWalkIn,
+          enforcedBy: "reception-walk-in-encounter",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/live-queue",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: createdWalkIn
+            ? [
+                {
+                  ...createdWalkIn,
+                  patient: {
+                    id: "patient-dubu",
+                    workspaceId: "clair-demo",
+                    patientNo: "P-260501-003",
+                    name: "두부",
+                    species: "dog",
+                    breed: "비숑",
+                    estimatedAgeText: "4세",
+                    sex: "male",
+                    handlingCautionLocked: true,
+                    status: "active",
+                    createdAt: "2026-05-01T00:00:00+09:00",
+                    updatedAt: "2026-05-01T00:00:00+09:00",
+                  },
+                  primaryGuardian: {
+                    id: "guardian-jung-harin",
+                    workspaceId: "clair-demo",
+                    name: "정하린",
+                    mobilePhone: "010-4922-8821",
+                    createdAt: "2026-05-01T00:00:00+09:00",
+                    updatedAt: "2026-05-01T00:00:00+09:00",
+                  },
+                  veterinarianName: "김도윤",
+                },
+              ]
+            : [],
+          enforcedBy: "chart-live-queue-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+
+  const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await walkInForm.getByLabel("환자 검색").click();
+  await walkInForm.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
-  await walkInForm.getByLabel("방문 목적").fill("보행 재검 및 통증 상담");
-  await walkInForm.getByRole("button", { name: "태그 추가" }).click();
-  await walkInForm.getByLabel("태그명").fill("재활");
-  await walkInForm.getByLabel("태그명").press("Enter");
+  await expect(walkInForm.getByLabel("체중")).toHaveValue("8.40");
+  await walkInForm.getByLabel("체중").fill("8.65");
+  await walkInForm.getByLabel("방문 목적").fill("재활 · 보행 재검 및 통증 상담");
   await walkInForm.getByLabel("담당의").click();
   await page.getByRole("option", { name: "김도윤" }).click();
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
+  await expect(walkInForm.getByLabel("진료시간")).toHaveValue("10:45");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
   expect(capturedBody).toMatchObject({
@@ -1717,7 +2794,9 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
     department: "영상의학과 · 방사선종양학과",
     durationMinutes: 30,
     visitPurpose: "재활 · 보행 재검 및 통증 상담",
+    weightKg: 8.65,
     memo: "보호자가 계단 보행을 걱정함",
+    plannedStartAt: "2026-05-01T10:45:00+09:00",
   });
   const dubuCard = page.getByTestId("patient-card-patient-dubu");
   await expect(dubuCard).toContainText("두부");
@@ -1755,9 +2834,9 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
       visitPurpose: "DEN-65 reload walk-in",
       receptionMemo: "reload verification",
       status: "waiting",
-      checkedInAt: "2026-05-01T10:15:00+09:00",
-      createdAt: "2026-05-01T10:15:00+09:00",
-      updatedAt: "2026-05-01T10:15:00+09:00",
+      checkedInAt: "2026-05-01T01:15:00.000Z",
+      createdAt: "2026-05-01T01:15:00.000Z",
+      updatedAt: "2026-05-01T01:15:00.000Z",
     },
     queueEntry: {
       id: "queue-e2e-walkin-dubu",
@@ -1767,10 +2846,11 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
       status: "waiting",
       priority: "normal",
       sortOrder: 1,
-      enteredAt: "2026-05-01T10:15:00+09:00",
+      enteredAt: "2026-05-01T01:15:00.000Z",
     },
   };
   let walkInCreated = false;
+  let walkInCancelled = false;
 
   await page.route(
     "**/api/workspaces/clair-demo/reception/walk-in-encounters",
@@ -1795,7 +2875,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
       body: JSON.stringify({
         ok: true,
         status: 200,
-        queue: walkInCreated ? [persistedWalkIn] : [],
+        queue: walkInCreated && !walkInCancelled ? [persistedWalkIn] : [],
         enforcedBy: "reception-queue-read",
       }),
     });
@@ -1809,17 +2889,39 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
         status: 200,
         workspaceId: "clair-demo",
         date: "2026-05-01",
-        records: walkInCreated ? [persistedWalkIn] : [],
+        records: walkInCreated && !walkInCancelled ? [persistedWalkIn] : [],
         enforcedBy: "reception-calendar-read",
       }),
     });
   });
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/encounters/encounter-e2e-walkin-dubu/cancel",
+    async (route) => {
+      walkInCancelled = true;
+      expect(route.request().method()).toBe("POST");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "clair-demo",
+          cancellation: {
+            encounter: { ...persistedWalkIn.encounter, status: "cancelled" },
+            queueEntry: { ...persistedWalkIn.queueEntry, status: "cancelled" },
+          },
+          enforcedBy: "reception-encounter-cancel",
+        }),
+      });
+    },
+  );
 
   await page.goto("/w/clair-demo/reception");
-  await page.getByTestId("schedule-check-in-button").click();
+  await openWalkInReceptionForm(page);
 
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await walkInForm.getByLabel("환자 검색").click();
+  await walkInForm.getByLabel("환자 검색").fill("두부");
   await page.getByRole("option", { name: /두부.*정하린/ }).click();
   await walkInForm.getByLabel("방문 목적").fill("DEN-65 reload walk-in");
   await walkInForm.getByLabel("담당의").click();
@@ -1829,6 +2931,12 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("DEN-65 reload walk-in");
+  await expect(
+    page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
+  ).toContainText("10:45");
+  await expect(
+    page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
+  ).toContainText("김도윤");
 
   await page.reload();
 
@@ -1841,6 +2949,27 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("DEN-65 reload walk-in");
+  await expect(
+    page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
+  ).toContainText("10:15");
+
+  await page.getByTestId("walkin-card-encounter-e2e-walkin-dubu").click();
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
+  await expect(
+    detailDrawer.getByTestId("reception-encounter-cancel-open"),
+  ).toBeVisible();
+
+  await detailDrawer.getByTestId("reception-encounter-cancel-open").click();
+  await expect(page.getByRole("dialog")).toContainText("접수를 취소할까요?");
+  await page.getByTestId("reception-encounter-cancel-confirm").click();
+
+  await expect(
+    page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
+  ).toHaveCount(0);
 });
 
 test("reception walk-in dialog uses DB-backed patient lookup states", async ({
@@ -1912,11 +3041,15 @@ test("reception walk-in dialog uses DB-backed patient lookup states", async ({
   );
 
   await page.goto("/w/clair-demo/reception");
-  await page.getByTestId("schedule-check-in-button").click();
+  await openWalkInReceptionForm(page);
 
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
+  await walkInForm.getByLabel("환자 검색").click();
+  await expect(page.getByRole("listbox", { name: "검색 결과" })).toHaveCount(0);
+  await walkInForm.getByLabel("환자 검색").fill("루");
+  await expect(page.getByRole("listbox", { name: "검색 결과" })).toBeVisible();
   await walkInForm.getByLabel("환자 검색").fill("루나");
-  await expect(walkInForm.getByText("DB 검색 결과 1건")).toBeVisible();
+  await expect(page.getByRole("option", { name: /루나.*박지유/ })).toBeVisible();
   await page.getByRole("option", { name: /루나.*박지유/ }).click();
   await expect(walkInForm.getByLabel("환자 검색")).toHaveValue(/루나/);
 
@@ -1932,6 +3065,353 @@ test("reception walk-in dialog uses DB-backed patient lookup states", async ({
     page
       .getByRole("listbox", { name: "검색 결과" })
       .getByText("환자 검색을 불러오지 못했습니다."),
+  ).toBeVisible();
+});
+
+test("reservation create drawer uses DB-backed patient lookup states", async ({
+  page,
+}) => {
+  const lookupQueries: string[] = [];
+
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/patient-guardian-lookup?query=*",
+    async (route) => {
+      const query = new URL(route.request().url()).searchParams.get("query") ?? "";
+      lookupQueries.push(query);
+
+      if (query === "오류") {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "db_read_failed" }),
+        });
+        return;
+      }
+
+      if (query === "없는") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            patients: [],
+            enforcedBy: "reception-patient-guardian-lookup",
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          patients: [
+            {
+              patient: {
+                id: "49121000-0000-4000-8000-000000000004",
+                workspaceId: "workspace-clair-cheongdam",
+                patientNo: "CD-P-0004",
+                name: "초코",
+                species: "dog",
+                breed: "Pomeranian",
+                sex: "male",
+                neutered: true,
+                birthDate: "2017-06-01",
+                weightKg: 4.2,
+                handlingCautionLocked: false,
+                status: "active",
+                createdAt: "2026-06-01T00:00:00.000Z",
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+              primaryGuardian: {
+                id: "49120000-0000-4000-8000-000000000004",
+                workspaceId: "workspace-clair-cheongdam",
+                name: "최도현",
+                mobilePhone: "010-4911-0004",
+                createdAt: "2026-06-01T00:00:00.000Z",
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+            },
+          ],
+          enforcedBy: "reception-patient-guardian-lookup",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/workspace-clair-cheongdam/reception?modulePanel=open&drawer=reception-reservation-form%3Anew",
+  );
+
+  const reservationDrawer = page.getByTestId("reservation-create-drawer");
+  await expect(reservationDrawer).toBeVisible();
+
+  await reservationDrawer.getByLabel("환자 검색").click();
+  await page.getByLabel("예약 환자 검색어").fill("초코");
+  await expect(
+    page.getByRole("option", { name: /초코.*최도현/ }),
+  ).toBeVisible();
+  await expect.poll(() => lookupQueries.includes("초코")).toBe(true);
+  await page.getByRole("option", { name: /초코.*최도현/ }).click();
+  await expect(reservationDrawer.getByLabel("환자 검색")).toContainText("초코");
+
+  await reservationDrawer.getByLabel("환자 검색").click();
+  await page.getByLabel("예약 환자 검색어").fill("없는");
+  await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
+
+  await page.getByLabel("예약 환자 검색어").fill("오류");
+  await expect(
+    page.getByText("환자 검색을 불러오지 못했습니다."),
+  ).toBeVisible();
+});
+
+test("Cheongdam reservation create omits mock veterinarian fallback when staff lookup fails", async ({
+  page,
+}) => {
+  let appointmentCreateCount = 0;
+  let latestAppointmentBody: Record<string, unknown> | undefined;
+
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/staff?role=vet",
+    async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "db_read_failed" }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/calendar/day**",
+    async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "workspace-clair-cheongdam",
+          date,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/queue",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "workspace-clair-cheongdam",
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/patient-guardian-lookup?query=*",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          patients: [
+            {
+              patient: {
+                id: "49121000-0000-4000-8000-000000000004",
+                workspaceId: "workspace-clair-cheongdam",
+                patientNo: "CD-P-0004",
+                name: "초코",
+                species: "dog",
+                breed: "Pomeranian",
+                sex: "male",
+                neutered: true,
+                birthDate: "2017-06-01",
+                weightKg: 4.2,
+                handlingCautionLocked: false,
+                status: "active",
+                createdAt: "2026-06-01T00:00:00.000Z",
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+              primaryGuardian: {
+                id: "49120000-0000-4000-8000-000000000004",
+                workspaceId: "workspace-clair-cheongdam",
+                name: "최도현",
+                mobilePhone: "010-4911-0004",
+                createdAt: "2026-06-01T00:00:00.000Z",
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+            },
+          ],
+          enforcedBy: "reception-patient-guardian-lookup",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/appointments",
+    async (route) => {
+      appointmentCreateCount += 1;
+      latestAppointmentBody = route.request().postDataJSON() as Record<
+        string,
+        unknown
+      >;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId: "workspace-clair-cheongdam",
+          appointment: {
+            id: "appointment-cheongdam-no-mock-vet",
+            workspaceId: "workspace-clair-cheongdam",
+            patientId: latestAppointmentBody.patientId,
+            guardianId: latestAppointmentBody.guardianId,
+            scheduledStartAt: latestAppointmentBody.scheduledStartAt,
+            scheduledEndAt: "2026-06-17T09:30:00+09:00",
+            visitPurpose: latestAppointmentBody.reservationMemo,
+            symptomNote: latestAppointmentBody.reservationMemo,
+            status: "confirmed",
+            createdByUserId: "49110000-0000-4000-8000-000000000001",
+            createdAt: "2026-06-17T09:00:00+09:00",
+            updatedAt: "2026-06-17T09:00:00+09:00",
+          },
+          enforcedBy: "reception-appointment-create",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/workspace-clair-cheongdam/reception?modulePanel=open&drawer=reception-reservation-form%3Anew",
+  );
+
+  const reservationDrawer = page.getByTestId("reservation-create-drawer");
+  await expect(reservationDrawer).toBeVisible();
+  await expect(reservationDrawer.getByLabel("담당의")).toContainText(
+    "수의사 미지정",
+  );
+  await reservationDrawer.getByLabel("환자 검색").click();
+  await page.getByLabel("예약 환자 검색어").fill("초코");
+  await page.getByRole("option", { name: /초코.*최도현/ }).click();
+  await reservationDrawer.getByLabel("예약 메모").fill("mock 담당의 회귀");
+  await reservationDrawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => appointmentCreateCount).toBe(1);
+  expect(latestAppointmentBody).toBeDefined();
+  expect(latestAppointmentBody).not.toHaveProperty("assignedVeterinarianId");
+  expect(latestAppointmentBody).toMatchObject({
+    guardianId: "49120000-0000-4000-8000-000000000004",
+    patientId: "49121000-0000-4000-8000-000000000004",
+    reservationMemo: "mock 담당의 회귀",
+  });
+});
+
+test("reception draft task drawer uses DB-backed patient lookup states", async ({
+  page,
+}) => {
+  const lookupQueries: string[] = [];
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/patient-guardian-lookup?query=*",
+    async (route) => {
+      const query = new URL(route.request().url()).searchParams.get("query") ?? "";
+      lookupQueries.push(query);
+
+      if (query === "오류") {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: false, error: "db_read_failed" }),
+        });
+        return;
+      }
+
+      if (query === "없는") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: true,
+            patients: [],
+            enforcedBy: "reception-patient-guardian-lookup",
+          }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          patients: [
+            {
+              patient: {
+                id: "patient-live-luna-draft",
+                workspaceId: "clair-demo",
+                patientNo: "P-LIVE-DRAFT",
+                name: "루나",
+                species: "cat",
+                breed: "Korean Shorthair",
+                sex: "female",
+                neutered: true,
+                weightKg: 3.1,
+                handlingCautionLocked: false,
+                status: "active",
+                createdAt: "2026-05-19T00:00:00.000Z",
+                updatedAt: "2026-05-19T00:00:00.000Z",
+              },
+              primaryGuardian: {
+                id: "guardian-live-jiyu-draft",
+                workspaceId: "clair-demo",
+                name: "박지유",
+                mobilePhone: "010-2222-3333",
+                createdAt: "2026-05-19T00:00:00.000Z",
+                updatedAt: "2026-05-19T00:00:00.000Z",
+              },
+            },
+          ],
+          enforcedBy: "reception-patient-guardian-lookup",
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.getByTestId("day-empty-slot-14-user-vet-suji").click();
+
+  const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
+  await expect(draftDrawer).toBeVisible();
+
+  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await page.getByLabel("접수 환자 검색어").fill("루나");
+  await expect(
+    page.getByRole("option", { name: /루나.*박지유/ }),
+  ).toBeVisible();
+  await expect.poll(() => lookupQueries.includes("루나")).toBe(true);
+  await page.getByRole("option", { name: /루나.*박지유/ }).click();
+  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
+    "루나",
+  );
+
+  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await page.getByLabel("접수 환자 검색어").fill("없는");
+  await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
+
+  await page.getByLabel("접수 환자 검색어").fill("오류");
+  await expect(
+    page.getByText("환자 검색을 불러오지 못했습니다."),
   ).toBeVisible();
 });
 
@@ -1995,15 +3475,50 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
 
   const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
   await expect(draftDrawer).toBeVisible();
-  await expect(draftDrawer.getByText("접수 task 생성")).toBeVisible();
-  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toHaveValue(
-    /나비/,
+  await expect(draftDrawer.getByText("접수구분")).toHaveCount(0);
+  await expect(
+    draftDrawer.getByText("진료 시간 안에서 예약 가능한 시간을 선택합니다."),
+  ).toHaveCount(0);
+  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
+    "보호자/동물 선택",
   );
+  await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeDisabled();
   await expect(draftDrawer.getByLabel("담당의")).toContainText("이수지");
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:15");
   await expect(draftDrawer.getByLabel("소요시간")).toContainText("15분");
+  const draftControlMetrics = await draftDrawer.evaluate((drawer) => {
+    const getControl = (label: string) =>
+      drawer.querySelector(`[aria-label="${label}"]`);
+    const patient = getControl("보호자 및 동물검색")?.getBoundingClientRect();
+    const weight = getControl("체중")?.getBoundingClientRect();
+    const visitPurpose = getControl("방문 목적")?.getBoundingClientRect();
+    const memo = getControl("접수/예약 메모")?.getBoundingClientRect();
+
+    return {
+      controlHeights: [
+        "보호자 및 동물검색",
+        "체중",
+        "담당의",
+        "진료시작시간",
+        "소요시간",
+      ].map((label) =>
+        Math.round(getControl(label)?.getBoundingClientRect().height ?? 0),
+      ),
+      patientWeightWidthDelta:
+        patient && weight ? Math.abs(patient.width - weight.width) : null,
+      visitMemoHeightDelta:
+        visitPurpose && memo ? Math.abs(visitPurpose.height - memo.height) : null,
+    };
+  });
+  expect(draftControlMetrics.controlHeights).toEqual([36, 36, 36, 36, 36]);
+  expect(draftControlMetrics.patientWeightWidthDelta).not.toBeNull();
+  expect(draftControlMetrics.patientWeightWidthDelta ?? 999).toBeLessThanOrEqual(
+    1,
+  );
+  expect(draftControlMetrics.visitMemoHeightDelta).not.toBeNull();
+  expect(draftControlMetrics.visitMemoHeightDelta ?? 999).toBeLessThanOrEqual(1);
   const calendarDraftCard = page.locator(
-    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:15"]',
+    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m855"]',
   );
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:15 - 14:30");
@@ -2035,6 +3550,12 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
       .filter({ hasText: "14:15" }),
   ).toHaveCount(0);
 
+  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await expect(draftDrawer.getByLabel("보호자 및 동물검색")).toContainText(
+    "나비",
+  );
+  await expect(draftDrawer.getByRole("button", { name: "생성" })).toBeEnabled();
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).toMatchObject({
@@ -2086,10 +3607,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
 test("reception keeps only one active calendar selection preview", async ({
   page,
 }) => {
-  await page.goto(
-    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
-  );
-  await expect(page.getByText("예약 상세").first()).toBeVisible();
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
 
   const firstSlot = page.getByTestId("day-empty-slot-14-user-vet-suji");
   const secondSlot = page.getByTestId("day-empty-slot-15-user-vet-suji");
@@ -2202,7 +3720,7 @@ test("reception clears the draft schedule card on cancel or another selection", 
     "day-empty-slot-14-user-vet-suji-slot-1415",
   );
   const calendarDraftCard = page.locator(
-    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:15"]',
+    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m855"]',
   );
 
   await quarterSlot.click();
@@ -2250,7 +3768,7 @@ test("reception clears the draft schedule card on cancel or another selection", 
 
   await page.getByTestId("day-empty-slot-15-user-vet-suji-slot-1500").click();
   const replacementDraftCard = page.locator(
-    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T15:00"]',
+    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m900"]',
   );
   draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("15:00");
@@ -2661,11 +4179,13 @@ test("reception creates a draft task from a dragged calendar range", async ({
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
   await expect(draftDrawer.getByLabel("소요시간")).toContainText("150분");
   const calendarDraftCard = page.locator(
-    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:00"]',
+    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m840"]',
   );
   await expect(calendarDraftCard).toBeVisible();
   await expect(calendarDraftCard).toContainText("14:00 - 16:30");
 
+  await draftDrawer.getByLabel("보호자 및 동물검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await draftDrawer.getByRole("button", { name: "생성" }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).toMatchObject({
@@ -2683,6 +4203,195 @@ test("reception creates a draft task from a dragged calendar range", async ({
   await expect(draftCard).toBeVisible();
   await expect(draftCard).toContainText("14:00");
   await expect(draftCard).toContainText("150분");
+});
+
+test("reception creates a future dragged calendar range as a reservation", async ({
+  page,
+}) => {
+  let appointmentCreateCount = 0;
+  let walkInCreateCount = 0;
+  let createdAppointment: Record<string, unknown> | null = null;
+  let latestAppointmentBody: Record<string, unknown> | undefined;
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/calendar/day**",
+    async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "clair-demo",
+          date,
+          records: createdAppointment ? [{ appointment: createdAppointment }] : [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/walk-in-encounters",
+    async (route) => {
+      walkInCreateCount += 1;
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, message: "walk-in must not be used" }),
+      });
+    },
+  );
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/appointments",
+    async (route) => {
+      appointmentCreateCount += 1;
+      latestAppointmentBody = route.request().postDataJSON() as Record<
+        string,
+        unknown
+      >;
+      createdAppointment = {
+        id: "appointment-future-drag-den516",
+        workspaceId: "clair-demo",
+        patientId: latestAppointmentBody.patientId,
+        guardianId: latestAppointmentBody.guardianId,
+        assignedVeterinarianId: latestAppointmentBody.assignedVeterinarianId,
+        scheduledStartAt: latestAppointmentBody.scheduledStartAt,
+        scheduledEndAt: "2026-05-02T12:00:00+09:00",
+        visitPurpose: latestAppointmentBody.reservationMemo,
+        symptomNote: latestAppointmentBody.reservationMemo,
+        status: "confirmed",
+        createdByUserId: "user-front-desk",
+        createdAt: "2026-05-01T12:00:00+09:00",
+        updatedAt: "2026-05-01T12:00:00+09:00",
+      };
+
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId: "clair-demo",
+          appointment: createdAppointment,
+          enforcedBy: "reception-appointment-create",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+  await page
+    .getByTestId("reception-date-control")
+    .getByRole("button", { name: "다음 날짜" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+  ).toBeVisible();
+
+  const emptySlot = page.getByTestId("day-empty-slot-10-user-vet-suji");
+  await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    slot.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: rect.left + 16,
+        clientY: rect.top + 2,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+  });
+  await page.waitForTimeout(50);
+  const dragEndPoint = await emptySlot.evaluate((slot) => {
+    const rect = slot.getBoundingClientRect();
+    const endPoint = { x: rect.left + 16, y: rect.top + rect.height * 2 };
+    slot.dispatchEvent(
+      new PointerEvent("pointermove", {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: endPoint.x,
+        clientY: endPoint.y,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+    return endPoint;
+  });
+  await emptySlot.evaluate((slot, point) => {
+    slot.dispatchEvent(
+      new PointerEvent("pointerup", {
+        bubbles: true,
+        button: 0,
+        buttons: 0,
+        clientX: point.x,
+        clientY: point.y,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+  }, dragEndPoint);
+
+  const reservationDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "예약 생성" })
+    .filter({ hasText: "26.05.02 · 10:00" })
+    .getByTestId("reservation-create-drawer");
+  await expect(reservationDrawer).toBeVisible();
+  await expect(reservationDrawer.getByText("접수 생성")).toHaveCount(0);
+  await expect(page.getByText("접수를 생성할 수 없습니다.")).toHaveCount(0);
+  await expect(reservationDrawer.getByLabel("예약일")).toContainText("26.05.02");
+  await expect(reservationDrawer.getByLabel("예약시간")).toContainText("10:00");
+  const durationText =
+    (await reservationDrawer.getByLabel("예상시간").textContent()) ?? "";
+  const expectedDurationMinutes = Number(durationText.match(/\d+/)?.[0]);
+  expect(expectedDurationMinutes).toBeGreaterThan(30);
+  await expect(reservationDrawer.getByLabel("담당의")).toContainText("이수지");
+  await expect(reservationDrawer.getByLabel("환자 검색")).toContainText(
+    "환자 선택",
+  );
+  await expect(
+    reservationDrawer.getByRole("button", { name: "생성" }),
+  ).toBeDisabled();
+
+  await reservationDrawer.getByLabel("환자 검색").waitFor({ state: "visible" });
+  await page.waitForTimeout(300);
+  await reservationDrawer.getByLabel("환자 검색").click();
+  await page.getByRole("option", { name: /나비.*오세아/ }).click();
+  await reservationDrawer.getByLabel("체중").fill("4.95");
+  await reservationDrawer.getByLabel("예약 메모").fill("미래 드래그 예약 생성");
+  await reservationDrawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => appointmentCreateCount).toBe(1);
+  expect(walkInCreateCount).toBe(0);
+  expect(latestAppointmentBody).toMatchObject({
+    assignedVeterinarianId: "user-vet-suji",
+    durationMinutes: expectedDurationMinutes,
+    guardianId: "guardian-oh-sea",
+    patientId: "patient-nabi",
+    reservationMemo: "미래 드래그 예약 생성",
+    weightKg: 4.95,
+  });
+  expect(String(latestAppointmentBody?.scheduledStartAt)).toBe(
+    "2026-05-02T10:00:00+09:00",
+  );
+  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(
+    page
+      .locator('[data-testid^="appointment-card-"]')
+      .filter({ hasText: "미래 드래그 예약 생성" }),
+  ).toBeVisible();
 });
 
 test("reception normalizes a reverse dragged calendar range", async ({
@@ -2745,7 +4454,7 @@ test("reception normalizes a reverse dragged calendar range", async ({
 
   const draftDrawer = page.getByTestId("reception-draft-task-drawer").last();
   const calendarDraftCard = page.locator(
-    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01T14:00"]',
+    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m840"]',
   );
   await expect(draftDrawer).toBeVisible();
   await expect(draftDrawer.getByLabel("진료시작시간")).toHaveValue("14:00");
@@ -2759,18 +4468,14 @@ test("reception walk-in keeps selected veterinarian and form details", async ({
 }) => {
   await page.goto("/w/clair-demo/reception");
 
-  const sidePanel = page.locator("aside").first();
-  await sidePanel.getByTestId("patient-card-patient-haru").click();
-  await expect(page.getByText("접수 정보")).toBeVisible();
-
-  await page.getByRole("button", { name: "상세 닫기" }).click();
-  await page.getByTestId("schedule-check-in-button").click();
+  await openWalkInReceptionForm(page);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
   await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
     "placeholder",
     "동물명 또는 보호자명으로 검색",
   );
   await walkInForm.getByLabel("환자 검색").click();
+  await walkInForm.getByLabel("환자 검색").fill("하루");
   await page.getByRole("option", { name: /하루.*강서윤/ }).click();
   await walkInForm.getByLabel("방문 목적").fill("예방접종 전 건강 확인");
   await walkInForm

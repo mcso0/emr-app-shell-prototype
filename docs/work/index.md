@@ -14,8 +14,8 @@ DEN-255 review on 2026-05-24 confirmed the large status counts are intentional, 
 
 | Status         | Count | How to read it                                                                                                          |
 | -------------- | ----: | ----------------------------------------------------------------------------------------------------------------------- |
-| `done`         |    48 | Completed historical work items already closed in this repo board.                                                      |
-| `human_review` |   109 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
+| `done`         |    49 | Completed historical work items already closed in this repo board.                                                      |
+| `human_review` |   108 | Completed or handed-off work waiting for representative review, project-level acceptance, or explicit status migration. |
 
 Large `human_review` groups:
 
@@ -41,9 +41,12 @@ For actual next work, start from the active Linear project and issue, then use t
 | DOCS-PR-004                 | done         | docs-restructure     | P0       | PR 4                 | `docs/work/docs-restructure/DOCS-PR-004-engineering-design-migration.md`                               |
 | DOCS-PR-005                 | done         | docs-restructure     | P1       | PR 5                 | `docs/work/docs-restructure/DOCS-PR-005-archive-and-link-checking.md`                                  |
 | DOCS-PR-006                 | done         | docs-restructure     | P0       | PR 6                 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md`                                |
-| PRD-VIEWER-PR-001           | human_review | product              | P0       | CLAiR Docs viewer PR 1 | `docs/work/product/PRD-VIEWER-PR-001-product-docs-readonly-viewer.md`                                  |
+| PRD-VIEWER-PR-001           | human_review | product              | P0       | PRD viewer PR 1      | `docs/work/product/PRD-VIEWER-PR-001-product-docs-readonly-viewer.md`                                  |
+| CLAIR-DOCS-PR-001           | human_review | product              | P1       | CLAiR Docs Study Center v1 | `docs/work/product/CLAIR-DOCS-PR-001-study-center.md`                                            |
 | SYMPHONY-PR-001             | done         | agent-orchestration  | P1       | PR 1                 | `docs/work/agent-orchestration/SYMPHONY-PR-001-orchestration-foundation.md`                            |
 | SYMPHONY-PR-002             | done         | agent-orchestration  | P1       | PR 2                 | `docs/work/agent-orchestration/SYMPHONY-PR-002-linear-pilot-kit.md`                                    |
+| RELEASE-OPS-PR-001          | done         | agent-orchestration  | P0       | Project Release & Deployment Operations / DEN-443-DEN-451 | `docs/work/agent-orchestration/RELEASE-OPS-PR-001-release-deployment-policy-skill.md` |
+| RELEASE-OPS-PR-002          | human_review | agent-orchestration  | P0       | User request / fixed staging queue controls and alias automation | `docs/work/agent-orchestration/RELEASE-OPS-PR-002-fixed-staging-queue-controls-alias-automation.md` |
 | OWNER-OS-PR-001             | done         | agent-orchestration  | P0       | Project CLAiR Owner OS Implementation / DEN-420 | `docs/work/agent-orchestration/OWNER-OS-PR-001-implementation-scope-contract.md`              |
 | OWNER-OS-PR-002             | done         | agent-orchestration  | P0       | Project CLAiR Owner OS Implementation / DEN-421 | `docs/work/agent-orchestration/OWNER-OS-PR-002-router-skill.md`                              |
 | OWNER-OS-PR-003             | done         | agent-orchestration  | P0       | Project CLAiR Owner OS Implementation / DEN-422 | `docs/work/agent-orchestration/OWNER-OS-PR-003-work-packet-template-validator.md`             |
@@ -101,6 +104,31 @@ For actual next work, start from the active Linear project and issue, then use t
 | DESIGN-SYSTEM-PR-045        | human_review | design-system        | P1       | Project common UX/UI / DEN-434 | `docs/work/design-system/DESIGN-SYSTEM-PR-045-empty-info-state-contract.md`                   |
 | DESIGN-SYSTEM-PR-046        | human_review | design-system        | P0       | DEN-435              | `docs/work/design-system/DESIGN-SYSTEM-PR-046-tab-table-density-contract.md`                           |
 | DESIGN-SYSTEM-PR-047        | human_review | design-system        | P0       | DEN-436              | `docs/work/design-system/DESIGN-SYSTEM-PR-047-queue-filter-sort-task-action-ux.md`                     |
+| DESIGN-SYSTEM-PR-048        | done         | design-system        | P1       | DEN-437              | `docs/work/design-system/DESIGN-SYSTEM-PR-048-patient-info-bar-memo-action-ux.md`                      |
+| DESIGN-SYSTEM-PR-049        | human_review | design-system        | P1       | DEN-441              | `docs/work/design-system/DESIGN-SYSTEM-PR-049-queue-header-inline-search-ux.md`                        |
+| DESIGN-SYSTEM-PR-050        | human_review | design-system        | P0       | DEN-442              | `docs/work/design-system/DESIGN-SYSTEM-PR-050-customer-hospital-table-content-layout.md`               |
+| DESIGN-SYSTEM-PR-048        | human_review | design-system        | P1       | User request / Storybook foundation | `docs/work/design-system/DESIGN-SYSTEM-PR-048-storybook-foundation.md`                      |
+| DESIGN-SYSTEM-PR-049        | human_review | design-system        | P1       | User request / Storybook first UI primitive stories | `docs/work/design-system/DESIGN-SYSTEM-PR-049-storybook-first-ui-stories.md`      |
+| DESIGN-SYSTEM-PR-050        | human_review | design-system        | P1       | User request / Storybook EMR component stories | `docs/work/design-system/DESIGN-SYSTEM-PR-050-storybook-emr-component-stories.md` |
+| DESIGN-SYSTEM-PR-051        | human_review | design-system        | P1       | User request / Storybook MCP local endpoint | `docs/work/design-system/DESIGN-SYSTEM-PR-051-storybook-mcp-local-endpoint.md`    |
+| DESIGN-SYSTEM-PR-052        | human_review | design-system        | P1       | User request / Storybook MCP documentation quality | `docs/work/design-system/DESIGN-SYSTEM-PR-052-storybook-mcp-doc-quality.md` |
+| DESIGN-SYSTEM-PR-053        | human_review | design-system        | P1       | User request / Storybook project-scoped MCP client | `docs/work/design-system/DESIGN-SYSTEM-PR-053-storybook-project-mcp-client.md` |
+| DESIGN-SYSTEM-PR-054        | human_review | design-system        | P1       | User request / Storybook MCP dogfood pass | `docs/work/design-system/DESIGN-SYSTEM-PR-054-storybook-mcp-dogfood-pass.md` |
+| DESIGN-SYSTEM-PR-055        | human_review | design-system        | P1       | User request / Storybook form-feedback primitive stories | `docs/work/design-system/DESIGN-SYSTEM-PR-055-storybook-form-feedback-primitives.md` |
+| DESIGN-SYSTEM-PR-056        | human_review | design-system        | P1       | User request / Storybook interaction test policy | `docs/work/design-system/DESIGN-SYSTEM-PR-056-storybook-interaction-test-policy.md` |
+| DESIGN-SYSTEM-PR-057        | human_review | design-system        | P1       | User request / Storybook table-queue pattern entry | `docs/work/design-system/DESIGN-SYSTEM-PR-057-storybook-table-queue-patterns.md` |
+| DESIGN-SYSTEM-PR-058        | human_review | design-system        | P1       | User request / Design System README Storybook summary | `docs/work/design-system/DESIGN-SYSTEM-PR-058-design-system-readme-storybook-summary.md` |
+| DESIGN-SYSTEM-PR-059        | human_review | design-system        | P1       | User request / Storybook UI primitive third batch | `docs/work/design-system/DESIGN-SYSTEM-PR-059-storybook-ui-primitives-third-batch.md` |
+| DESIGN-SYSTEM-PR-060        | human_review | design-system        | P1       | User request / Storybook dialog-popover primitive stories | `docs/work/design-system/DESIGN-SYSTEM-PR-060-storybook-dialog-popover-primitives.md` |
+| DESIGN-SYSTEM-PR-061        | human_review | design-system        | P1       | User request / Storybook table-queue pattern second pass | `docs/work/design-system/DESIGN-SYSTEM-PR-061-storybook-table-queue-patterns-second-pass.md` |
+| DESIGN-SYSTEM-PR-062        | human_review | design-system        | P1       | User request / Storybook Vitest optimizer stability | `docs/work/design-system/DESIGN-SYSTEM-PR-062-storybook-vitest-optimizer-stability.md` |
+| DESIGN-SYSTEM-PR-063        | human_review | design-system        | P1       | User request / Storybook dropdown-sheet primitive stories | `docs/work/design-system/DESIGN-SYSTEM-PR-063-storybook-dropdown-sheet-primitives.md` |
+| DESIGN-SYSTEM-PR-064        | human_review | design-system        | P1       | User request / Storybook empty-info-feedback patterns | `docs/work/design-system/DESIGN-SYSTEM-PR-064-storybook-empty-info-feedback-patterns.md` |
+| DESIGN-SYSTEM-PR-065        | human_review | design-system        | P1       | User request / Storybook UI primitive fourth batch | `docs/work/design-system/DESIGN-SYSTEM-PR-065-storybook-ui-primitives-fourth-batch.md` |
+| DESIGN-SYSTEM-PR-066        | human_review | design-system        | P1       | User request / Storybook table-separator-inputotp primitives | `docs/work/design-system/DESIGN-SYSTEM-PR-066-storybook-table-separator-inputotp-primitives.md` |
+| DESIGN-SYSTEM-PR-067        | human_review | design-system        | P1       | User request / Storybook EMR shell-action primitives | `docs/work/design-system/DESIGN-SYSTEM-PR-067-storybook-emr-shell-action-primitives.md` |
+| DESIGN-SYSTEM-PR-068        | human_review | design-system        | P1       | User request / Storybook EMR table controls | `docs/work/design-system/DESIGN-SYSTEM-PR-068-storybook-emr-table-controls.md` |
+| DESIGN-SYSTEM-PR-069        | human_review | design-system        | P1       | User request / Storybook EMR side-panel primitives | `docs/work/design-system/DESIGN-SYSTEM-PR-069-storybook-emr-side-panel-primitives.md` |
 | HOME-PR-001                 | done         | home                 | P1       | PR 1                 | `docs/work/home/HOME-PR-001-role-command-home-foundation.md`                                           |
 | HOME-PR-002                 | done         | home                 | P1       | PR 2                 | `docs/work/home/HOME-PR-002-home-work-entry-v1.md`                                                     |
 | HOME-PR-003                 | done         | home                 | P1       | PR 3                 | `docs/work/home/HOME-PR-003-home-kanban-workspace.md`                                                  |
@@ -202,6 +230,12 @@ For actual next work, start from the active Linear project and issue, then use t
 | RECEPTION-LIVE-PR-011       | human_review | reception            | P0       | Project 03 / DEN-64  | `docs/work/reception/RECEPTION-LIVE-PR-011-sales-demo-mock-fallback-preservation.md`                   |
 | RECEPTION-LIVE-PR-012       | human_review | reception            | P0       | Project 04 / DEN-65  | `docs/work/reception/RECEPTION-LIVE-PR-012-reception-persistence-regression-coverage.md`               |
 | RECEPTION-LIVE-PR-013       | human_review | reception            | P0       | Project 04 / DEN-66  | `docs/work/reception/RECEPTION-LIVE-PR-013-chart-order-billing-handoff-closeout.md`                    |
+| RECEPTION-QA-PR-001         | human_review | reception            | P0       | Reception QA / DEN-519 | `docs/work/reception/RECEPTION-QA-PR-001-db-api-fallback-boundary.md`                                |
+| RECEPTION-QA-PR-002         | human_review | reception            | P0       | Reception QA / DEN-514 | `docs/work/reception/RECEPTION-QA-PR-002-date-filter-search.md`                                      |
+| RECEPTION-QA-PR-003         | human_review | reception            | P0       | Reception QA / DEN-515 | `docs/work/reception/RECEPTION-QA-PR-003-create-drawer-weight.md`                                    |
+| RECEPTION-QA-PR-004         | human_review | reception            | P0       | Reception QA / DEN-516 | `docs/work/reception/RECEPTION-QA-PR-004-reservation-create-flow.md`                                 |
+| RECEPTION-QA-PR-005         | human_review | reception            | P0       | Reception QA / DEN-517 | `docs/work/reception/RECEPTION-QA-PR-005-detail-edit-drawer.md`                                      |
+| RECEPTION-QA-PR-006         | human_review | reception            | P0       | Reception QA / DEN-518 | `docs/work/reception/RECEPTION-QA-PR-006-regression-closeout.md`                                     |
 | CLINICAL-BILLING-PR-001     | human_review | clinical-billing     | P0       | Project 04 / DEN-67  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-001-scope-encounter-dependency.md`                     |
 | CLINICAL-BILLING-PR-002     | human_review | clinical-billing     | P0       | Project 04 / DEN-68  | `docs/work/clinical-billing/CLINICAL-BILLING-PR-002-schema-migration.md`                               |
 | CLINICAL-BILLING-PR-003     | human_review | clinical-billing     | P0       | Project 04 / DEN-100 | `docs/work/clinical-billing/CLINICAL-BILLING-PR-003-chart-order-snapshot-bridge.md`                    |
@@ -227,6 +261,24 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-FULFILLMENT-PR-007 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-241 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-007-handoff-replay-regression.md`              |
 | CLINICAL-FULFILLMENT-PR-008 | human_review | clinical-fulfillment | P0       | Project 08 / DEN-242 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-008-project-closeout-staging-readiness.md`     |
 | DEMO-DATA-PR-001            | human_review | demo-data            | P0       | Project 04 / DEN-99  | `docs/work/demo-data/DEMO-DATA-PR-001-portfolio-virtual-hospital-dataset-foundation.md`                |
+| DEMO-DATA-PR-002            | ready        | demo-data            | P0       | TBD                  | `docs/work/demo-data/DEMO-DATA-PR-002-clinic-start-state-demo-operations.md`                           |
+| DEMO-DB-PR-001              | human_review | demo-data            | P0       | Demo DB PR 1         | `docs/work/demo-data/DEMO-DB-PR-001-seed-inventory-readback-contract.md`                               |
+| DEMO-DB-PR-002              | human_review | demo-data            | P0       | Demo DB PR 2         | `docs/work/demo-data/DEMO-DB-PR-002-order-catalog-set-seed-foundation.md`                              |
+| DEMO-DB-PR-003              | human_review | demo-data            | P0       | Demo DB PR 3         | `docs/work/demo-data/DEMO-DB-PR-003-fulfillment-work-item-seed-foundation.md`                          |
+| DEMO-DB-PR-004              | human_review | demo-data            | P0       | Demo DB PR 4         | `docs/work/demo-data/DEMO-DB-PR-004-lab-result-sheet-catalog-seed-foundation.md`                       |
+| DEMO-DB-PR-005              | human_review | demo-data            | P0       | Demo DB PR 5         | `docs/work/demo-data/DEMO-DB-PR-005-billing-checkout-session-family-seed-foundation.md`                |
+| UI-PR-001                   | human_review | demo-data            | P0       | UI PR 1              | `docs/work/demo-data/UI-PR-001-reception-chart-api-wiring-e2e.md`                                      |
+| UI-PR-002                   | human_review | demo-data            | P0       | UI PR 2              | `docs/work/demo-data/UI-PR-002-fulfillment-billing-ui-wiring-e2e.md`                                   |
+| DEN-452                     | human_review | demo-data            | P0       | Linear DEN-452       | `docs/work/demo-data/DEN-452-lab-result-persistence-db-rls-api.md`                                     |
+| DEN-453                     | human_review | demo-data            | P0       | Linear DEN-453       | `docs/work/demo-data/DEN-453-lab-result-ux-loading-error-retry-permission-states.md`                   |
+| DEN-454                     | human_review | demo-data            | P0       | Linear DEN-454       | `docs/work/demo-data/DEN-454-billing-api-primary-invoice-payment-checkout-state.md`                    |
+| DEN-455                     | human_review | demo-data            | P0       | Linear DEN-455       | `docs/work/demo-data/DEN-455-billing-ux-loading-failure-retry-payment-state-clarity.md`                |
+| DEN-456                     | human_review | demo-data            | P0       | Linear DEN-456       | `docs/work/demo-data/DEN-456-dispensing-treatment-fulfillment-work-item-adoption.md`                   |
+| DEN-457                     | human_review | demo-data            | P0       | Linear DEN-457       | `docs/work/demo-data/DEN-457-full-visible-e2e-demo-reception-to-audit.md`                              |
+| DEN-458                     | human_review | demo-data            | P0       | Linear DEN-458       | `docs/work/demo-data/DEN-458-local-supabase-replay-hardening.md`                                       |
+| DEN-459                     | human_review | demo-data            | P0       | Linear DEN-459       | `docs/work/demo-data/DEN-459-permission-rls-api-boundary-test-coverage.md`                             |
+| DEN-460                     | human_review | demo-data            | P0       | Linear DEN-460       | `docs/work/demo-data/DEN-460-engineering-docs-sync-current-status-api-contracts-demo-runbook.md`        |
+| DEN-461                     | human_review | demo-data            | P0       | Linear DEN-461       | `docs/work/demo-data/DEN-461-project-closeout-demo-readiness-remaining-gaps.md`                        |
 | CUSTOMER-LIVE-PR-001        | human_review | customer             | P0       | Project 06 / DEN-101 | `docs/work/customer/CUSTOMER-LIVE-PR-001-customer-management-persistence-scope.md`                     |
 | CUSTOMER-LIVE-PR-002        | human_review | customer             | P0       | Project 06 / DEN-102 | `docs/work/customer/CUSTOMER-LIVE-PR-002-customer-schema-delta-plan.md`                                |
 | CUSTOMER-LIVE-PR-003        | human_review | customer             | P0       | Project 06 / DEN-105 | `docs/work/customer/CUSTOMER-LIVE-PR-003-customer-schema-migration.md`                                 |

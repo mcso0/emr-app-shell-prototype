@@ -6,6 +6,7 @@ import {
   getDefaultPrdDoc,
   getPrdDocBySlug,
   prdDocRegistry,
+  type ClairDocsArea,
   type PrdDocEntry,
 } from "./registry";
 
@@ -21,7 +22,12 @@ export interface LoadedPrdDoc {
   toc: PrdTocItem[];
 }
 
-const productDocsRoot = path.join(process.cwd(), "docs", "product");
+const allowedDocsRoots = [
+  path.join(process.cwd(), "docs", "product"),
+  path.join(process.cwd(), "docs", "design"),
+  path.join(process.cwd(), "docs", "engineering"),
+  path.join(process.cwd(), "docs", "study"),
+];
 
 export function slugifyHeading(text: string): string {
   const slug = text
@@ -69,18 +75,18 @@ export function extractToc(markdown: string): PrdTocItem[] {
 }
 
 function resolveSafeSourcePath(entry: PrdDocEntry) {
-  const productRelativePath = entry.sourcePath.replace(/^docs\/product\//, "");
-  const fullPath = path.resolve(productDocsRoot, productRelativePath);
+  const fullPath = path.resolve(process.cwd(), entry.sourcePath);
+  const isAllowedPath = allowedDocsRoots.some((root) => fullPath === root || fullPath.startsWith(`${root}${path.sep}`));
 
-  if (!fullPath.startsWith(productDocsRoot)) {
-    throw new Error(`CLAiR Docs registry entry points outside docs/product: ${entry.sourcePath}`);
+  if (!isAllowedPath) {
+    throw new Error(`CLAiR Docs registry entry points outside allowed docs roots: ${entry.sourcePath}`);
   }
 
   return fullPath;
 }
 
-export const loadPrdDoc = cache(async (slug: string | undefined): Promise<LoadedPrdDoc | null> => {
-  const entry = getPrdDocBySlug(slug) ?? (slug ? undefined : getDefaultPrdDoc());
+export const loadPrdDoc = cache(async (slug: string | undefined, area?: ClairDocsArea): Promise<LoadedPrdDoc | null> => {
+  const entry = getPrdDocBySlug(slug) ?? (slug ? undefined : getDefaultPrdDoc(area));
 
   if (!entry) return null;
 
@@ -94,8 +100,8 @@ export const loadPrdDoc = cache(async (slug: string | undefined): Promise<Loaded
   };
 });
 
-export function getResolvedPrdSlug(slug: string | undefined): string {
-  return getPrdDocBySlug(slug)?.slug ?? (slug ? slug : defaultPrdDocSlug);
+export function getResolvedPrdSlug(slug: string | undefined, area?: ClairDocsArea): string {
+  return getPrdDocBySlug(slug)?.slug ?? (slug ? slug : area ? getDefaultPrdDoc(area).slug : defaultPrdDocSlug);
 }
 
 export function findDocSlugBySourcePath(sourcePath: string): string | undefined {

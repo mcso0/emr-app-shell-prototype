@@ -3,32 +3,31 @@ id: "PRD-VIEWER-PR-001"
 status: "human_review"
 area: "product"
 priority: "P0"
-target_pr: "CLAiR Docs viewer PR 1"
+target_pr: "PRD viewer PR 1"
 source_docs:
   - "docs/product/README.md"
   - "docs/product/prd/clair-emr-saas-prd.md"
   - "docs/_meta/agent-rag-map.md"
   - "docs/_meta/intake-rules.md"
 dependencies: []
-updated: "2026-06-12"
+updated: "2026-06-11"
 ---
 
-# CLAiR Docs Read-Only Product Viewer
+# Product Docs Read-Only PRD Viewer
 
 ## Goal
 
-Create an internal CLAiR Docs read-only viewer that renders canonical `docs/product` Markdown without creating duplicate product documentation.
+Create an internal `/prd` read-only viewer that renders canonical `docs/product` Markdown without creating duplicate product documentation.
 
 ## Scope
 
-- Add `/docs` as the canonical standalone Next.js App Router page outside the workspace shell.
-- Keep `/prd` as a compatibility route that redirects to `/docs`.
+- Add `/prd` as a standalone Next.js App Router page outside the workspace shell.
 - Render only a curated registry of product Markdown files from `docs/product`.
 - Keep Markdown source only under `docs/`; do not copy docs into `site/`, `public/`, CMS, or a generated duplicate store.
 - Treat `/Users/iseung-ug/Documents/clair-prd` as UX reference only; do not import its document content.
 - Mark GitBook as no longer the active reader path while preserving existing GitBook files as inactive/deprecated history.
 - Add epic and user-story operating templates without bulk-writing epics or stories.
-- Add focused Playwright coverage for the `/docs` viewer and `/prd` compatibility route.
+- Add focused Playwright coverage for the `/prd` viewer.
 
 ## Out Of Scope
 
@@ -41,22 +40,20 @@ Create an internal CLAiR Docs read-only viewer that renders canonical `docs/prod
 
 ## Done When
 
-- `/docs` shows the default PRD from `docs/product/prd/clair-emr-saas-prd.md`.
-- `/prd` redirects to `/docs` while preserving the `doc` query value.
-- Users can switch among registered product docs without leaving CLAiR Docs.
+- `/prd` shows the default PRD from `docs/product/prd/clair-emr-saas-prd.md`.
+- Users can switch among registered product docs without leaving `/prd`.
 - The page shows the source Markdown path and keeps invalid `doc` values inside a safe empty state.
-- Product docs README, docs portal, and agent RAG guidance identify `/docs` as the active internal reader and GitBook as inactive/deprecated.
-- Epic, feature spec, and user-story templates exist and their README files explain how to use them.
-- Search results show document type plus concise source context without auto-exposing every Markdown file.
+- Product docs README, docs portal, and agent RAG guidance identify `/prd` as the active internal reader and GitBook as inactive/deprecated.
+- Epic and user-story templates exist and their README files explain how to use them.
 - Verification passes for docs links and the focused viewer test.
 
 ## Verification
 
-- `npm run docs:check` passed on 2026-06-12.
-- `npm run lint` passed on 2026-06-12 with pre-existing warnings only.
-- `npx tsc --noEmit` passed on 2026-06-12.
-- `npm run build` passed on 2026-06-12.
-- `npx playwright test tests/prd-viewer.spec.ts` passed on 2026-06-12.
+- `npm run docs:check` passed on 2026-06-11.
+- `npx playwright test tests/prd-viewer.spec.ts` passed on 2026-06-11.
+- `npm run lint` passed with pre-existing warnings only.
+- `npx tsc --noEmit` passed after regenerating current Next build types.
+- `npm run build` passed.
 
 ## Handoff Notes
 
@@ -64,11 +61,3 @@ Create an internal CLAiR Docs read-only viewer that renders canonical `docs/prod
 - Keep the implementation server-first: read Markdown from local files on the server and pass only registry metadata to client components.
 - If viewer scope expands into security, DB/RLS, launch, operations, or completed reports, require a separate reader-boundary review.
 - Closeout: `docs/completed/product/2026-06-11-prd-viewer-readonly-closeout.md`.
-
-## Follow-Up Scope Added 2026-06-12
-
-- Rename the reader surface to CLAiR Docs.
-- Add `/docs` as the canonical route and retain `/prd` as redirect-only compatibility.
-- Extend the explicit registry with document type, description, and tags for command search.
-- Strengthen product planning document placement rules for PRD, epic, feature, user story, decision, and domain docs.
-- Preserve Vercel Deployment Protection for previews; do not change public access or production deployment policy in this work.

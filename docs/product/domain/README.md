@@ -1,3 +1,15 @@
+---
+id: PRODUCT-DOMAIN-README
+type: Area Index
+title: "Product Domain Docs"
+description: "Indexes product-language domain concepts, data requirements, and workflow rules before engineering schema work."
+status: active
+area: product
+doc_type: area-index
+tags: [product-domain, data-requirements, workflow-rules]
+last_updated: 2026-06-16
+---
+
 # Product Domain Docs
 
 Domain docs describe business concepts and data requirements in product language.
@@ -14,6 +26,7 @@ Actual schema, ERD, RLS, indexes, migrations, and persistence details belong in 
 ## Current Domain Sources
 
 - `workspace-auth-permissions.md`: workspace creation, membership, canonical roles, multi-role permission behavior, and personal profile authorization boundaries.
+- `workspace-hospital-profile.md`: workspace-owned hospital identity, contact, business, brand, operating-hour, and deferred referral settings requirements.
 - `outpatient-workflow-state-model.md`: outpatient appointment, encounter, queue, chart, order, result, billing, and audit state transitions.
 - `emr-domain-entity-map.md`: product-level relationships between workspace, patient, guardian, encounter, order, invoice, payment, and audit.
 - `workspace-order-catalog-platform.md`: workspace-scoped order catalog platform policy for CLAiR presets, hospital customization, chart snapshots, routing, billing gates, and CSV template scope.

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Demo DB PR 1 Seed Inventory Readback Report</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px;
+        max-width: 920px;
+        color: #172033;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      code {
+        background: #f4f6f8;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo DB PR 1 Seed Inventory Readback Report</h1>
+
+    <h2>요청</h2>
+    <p>
+      <code>clair-demo</code> synthetic seed가 어떤 EMR 데모 workflow를 증명하는지 정리하고,
+      local/dev Supabase에서 읽어 확인할 수 있는 readback contract를 추가하는 작업이었다. UI 변경,
+      remote Supabase, production DB, 실제 병원/환자 데이터는 범위에서 제외했다.
+    </p>
+
+    <h2>변경</h2>
+    <ul>
+      <li><code>docs/engineering/data-model/demo-seed-inventory-readback-contract.md</code>를 추가해 seed coverage와 gap을 문서화했다.</li>
+      <li><code>supabase/snippets/demo_seed_inventory_readback.sql</code>을 추가해 read-only JSON readback을 제공했다.</li>
+      <li><code>tests/demo-seed-inventory-readback-contract.spec.ts</code>를 추가해 문서, SQL, 현재 seed gap 주장이 어긋나지 않게 했다.</li>
+      <li>Engineering README, data-model README, work index에 새 계약 문서와 work item을 연결했다.</li>
+    </ul>
+
+    <h2>현재 판단</h2>
+    <p>
+      이 프로젝트는 단순 프론트엔드 mock만 있는 상태는 아니다. Supabase 기반 auth, workspace,
+      membership, reception, chart, order, billing, audit foundation과 synthetic seed가 일부 구축되어 있다.
+      다만 hospital-admin order catalog, order set, lab result-sheet catalog, precomputed fulfillment work item
+      seed는 아직 gap으로 남아 있어 완전한 seeded demo DB 상태는 아니다.
+    </p>
+
+    <h2>리스크와 제외 범위</h2>
+    <ul>
+      <li>이번 PR은 <code>supabase/seed.sql</code>을 확장하지 않았다. gap은 의도적으로 기록만 했다.</li>
+      <li>readback SQL은 local/dev/test DB 전용이다. remote/staging/production replay에는 별도 승인이 필요하다.</li>
+      <li>실제 병원, 보호자, 환자, 결제, 의료 데이터는 사용하지 않았다.</li>
+    </ul>
+
+    <h2>다음 추천</h2>
+    <p>
+      Demo DB PR 2는 UI rewiring 전에 <code>order_catalog_items</code>, <code>order_sets</code>,
+      <code>order_set_items</code>의 작은 deterministic seed를 추가하는 것이 좋다. 그래야 병원관리 Order 관리와
+      차트 order search가 같은 demo DB 계약을 바라볼 수 있다.
+    </p>
+  </body>
+</html>

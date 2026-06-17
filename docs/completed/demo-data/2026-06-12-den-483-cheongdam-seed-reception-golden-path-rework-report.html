@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEN-483 Cheongdam Seed Reception Golden Path Rework Report</title>
+    <style>
+      body {
+        color: #1f2933;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 0 auto;
+        max-width: 920px;
+        padding: 40px 28px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+
+      h2 {
+        border-top: 1px solid #d8dee4;
+        font-size: 20px;
+        margin-top: 32px;
+        padding-top: 20px;
+      }
+
+      code {
+        background: #eef2f6;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+
+      table {
+        border-collapse: collapse;
+        margin: 16px 0;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border: 1px solid #d8dee4;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f6f8fa;
+      }
+
+      .meta {
+        color: #57606a;
+        margin-top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DEN-483 Cheongdam Seed Reception Golden Path Rework Report</h1>
+    <p class="meta">작성일: 2026-06-12 KST · 대상: <code>workspace-clair-cheongdam</code></p>
+
+    <h2>비개발자 요약</h2>
+    <p>
+      청담 워크스페이스는 이제 기본 화면이 빈 병원처럼 시작하면서도, 미리 심어둔
+      보호자/환자 데이터를 접수 생성에 실제로 사용할 수 있게 고쳤다. 문제는 접수
+      drawer에서 DB 검색 결과를 선택한 직후, 화면에 표시되는 긴 라벨로 다시 검색이
+      실행되면서 선택한 환자/보호자 값이 사라지는 흐름이었다.
+    </p>
+    <p>
+      이번 수정은 선택된 DB 검색 결과를 사용자가 직접 지우거나 다른 검색어로 바꾸기
+      전까지 유지한다. 그래서 접수 생성 payload에 seeded <code>patientId</code>와
+      <code>guardianId</code>가 들어가고, "고객이 없다"는 식의 생성 실패를 막는다.
+    </p>
+    <p>
+      추가 확인 중 청담 접수 drawer의 빈 검색 상태에 기존 <code>clair-demo</code> fixture
+      환자인 나비/오세아가 선택 후보로 섞이는 경로도 발견했다. 해당 후보는 청담 DB에 없는
+      환자라서 생성 시 <code>patient_unavailable</code>로 실패했다. 환자 summary를
+      workspace 기준으로 필터링해 청담에서는 청담 seed 또는 live lookup 결과만 선택되게
+      correction을 적용했다.
+    </p>
+    <p>
+      이후 고객관리 화면에서도 같은 계열의 문제가 확인됐다. 고객관리는 아직 mock profile
+      store의 legacy 환자 목록을 사용하고 있어서 <code>patient-coco</code>,
+      <code>P-260414-0008</code>, 코코/나비 같은 환자를 청담 환자처럼 표시했다. 청담 고객관리
+      목록은 workspace 기준으로 local state를 필터링하고, live seeded patient/guardian lookup을
+      읽어 목록을 채우도록 correction을 추가했다.
+    </p>
+    <p>
+      추가 사용자 검증에서 접수 생성 자체는 성공했지만, 생성된 ticket이 접수 전체 탭,
+      접수 상세 drawer, 진료/차트 대기열, 차트 이력에 일관되게 연결되지 않는 문제가
+      남아 있었다. 이번 correction은 seed 마스터 환자 목록과 오늘 업무 대기열을 분리하고,
+      live 생성 encounter를 접수 상세와 차트 화면이 같은 기준으로 읽도록 연결했다.
+    </p>
+    <p>
+      후속 검증에서 접수 기본 화면이 "환자를 선택해 주세요" 상태로 캘린더 본문을 가리는
+      회귀가 확인됐다. Cheongdam 빈 시작 상태에서는 선택 환자가 없어도 접수 캘린더와
+      진료 접수 버튼이 보여야 하므로, 본문 전체를 막던 selected patient guard를 제거했다.
+    </p>
+
+    <h2>수정 범위</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>영역</th>
+          <th>결과</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>접수 drawer 환자 검색</td>
+          <td>선택된 live lookup 환자/보호자 summary를 별도 상태로 보존하고, workspace가 다른 legacy fixture 환자를 후보에서 제외한다.</td>
+        </tr>
+        <tr>
+          <td>고객관리 환자/보호자 목록</td>
+          <td>Cheongdam에서는 legacy mock 환자 대신 live seeded DB lookup 결과를 목록에 반영한다.</td>
+        </tr>
+        <tr>
+          <td>접수 생성 payload</td>
+          <td>선택한 seeded 환자의 <code>patientId</code>, <code>guardianId</code>, 환자명, 방문 목적이 유지된다.</td>
+        </tr>
+        <tr>
+          <td>차트 대기열 계약</td>
+          <td>Cheongdam prepared-empty workspace에서도 Supabase live queue 결과는 숨기지 않고 표시한다.</td>
+        </tr>
+        <tr>
+          <td>접수 전체 탭</td>
+          <td>Seed 환자 25명을 업무 카드로 표시하지 않고, active 접수 또는 예약이 있는 항목만 대기열에 표시한다.</td>
+        </tr>
+        <tr>
+          <td>접수 캘린더 기본 화면</td>
+          <td>선택된 환자가 없어도 캘린더 workspace, 영업시간, 진료 접수 버튼을 렌더링한다.</td>
+        </tr>
+        <tr>
+          <td>접수 상세 drawer</td>
+          <td>방금 생성한 live 접수의 환자/보호자/방문 목적을 mock bundle이 아니라 live profile/handoff에서 읽는다.</td>
+        </tr>
+        <tr>
+          <td>차트 이력</td>
+          <td>Mock 이력만 조회하지 않고 현재 live encounter를 차트 이력 목록에 포함한다.</td>
+        </tr>
+        <tr>
+          <td>오더 카탈로그 계약</td>
+          <td>차트 오더 검색은 병원관리 workspace order catalog를 읽고, 확정 시 catalog snapshot을 사용한다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam walk-in keeps|server-backed walk-in encounter|creates a walk-in waiting row"</code> - 통과</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam walk-in keeps"</code> - 통과, 생성 후 전체 탭 1건 및 접수 상세 drawer 값 확인</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam empty reception still renders|Cheongdam walk-in keeps"</code> - 통과</li>
+      <li><code>npx playwright test tests/chart-live-queue-server.spec.ts -g "Cheongdam prepared-empty"</code> - 통과</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam walk-in dialog does not offer legacy|Cheongdam walk-in keeps"</code> - 통과</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam empty reception still renders|Cheongdam walk-in keeps"</code> - 통과, Cheongdam 대기열 0 상태에서 calendar walk-in card 0건 확인</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam empty reception"</code> - 통과, 완료된 calendar queue record가 대기열 0 화면에 미지정 카드로 재표시되지 않음 확인</li>
+      <li><code>npx playwright test tests/reception.spec.ts -g "Cheongdam empty reception|previous operating date"</code> - 통과, 이전 운영일 active queue record가 오늘 캘린더에 표시되지 않음 확인</li>
+      <li><code>npx playwright test tests/customer.spec.ts -g "Cheongdam customer workspace"</code> - 통과</li>
+      <li><code>npx playwright test tests/chart-live-queue-server.spec.ts tests/reception-queue-read-server.spec.ts</code> - 통과</li>
+      <li><code>npx playwright test tests/hospital-admin-order-catalog-server.spec.ts tests/chart-order-action-persistence-server.spec.ts</code> - 통과</li>
+      <li><code>npm run docs:check</code> - 통과</li>
+      <li><code>npm run lint -- --ignore-pattern 'lottie-ai-chart-writing/**'</code> - 통과, 기존 warning 5개 유지</li>
+      <li><code>npx tsc --noEmit --pretty false 2&gt;&amp;1 | rg -v '^lottie-ai-chart-writing/'</code> - 앱 변경 관련 출력 없음</li>
+    </ul>
+
+    <h2>Staging 배포</h2>
+    <ul>
+      <li>새 배포 ID: <code>dpl_4KzrLxkU1nrCFvBBFmeUgAVE4Dzv</code></li>
+      <li>Correction 배포 ID: <code>dpl_7DyU7zToCSr7oFdGDjJmeFPrHRwS</code></li>
+      <li>Customer correction 배포 ID: <code>dpl_3XmF66JESQmMGcYnnMVB9rpf4wPd</code></li>
+      <li>Queue/detail/chart correction 배포 ID: <code>dpl_6Nv8MzaVLeDBBYkcd22U8zR3yNiX</code></li>
+      <li>Reception calendar restore hotfix 배포 ID: <code>dpl_8fH6hwM6YJvzzuQVJ4mNs6gGnrHP</code></li>
+      <li>Stale session draft cleanup hotfix 배포 ID: <code>dpl_GR6tTp3FeB6wMy6Ti1WixKA758kE</code></li>
+      <li>Stale completed calendar queue filter hotfix 배포 ID: <code>dpl_8qbhDUwASa3hF9MHxUbSjdihoSFQ</code></li>
+      <li>Operating-date calendar guard + staging reset 배포 ID: <code>dpl_E5chMHPh2MXxbaAYgTGfs15DSjxZ</code></li>
+      <li>Preview URL: <code>https://emr-app-shell-prototype-mxw1gjuei-mcso0s-projects.vercel.app</code></li>
+      <li>Correction Preview URL: <code>https://emr-app-shell-prototype-oqo0qtr55-mcso0s-projects.vercel.app</code></li>
+      <li>Customer correction Preview URL: <code>https://emr-app-shell-prototype-ig50v58es-mcso0s-projects.vercel.app</code></li>
+      <li>Queue/detail/chart correction Preview URL: <code>https://emr-app-shell-prototype-q2vf8u3z0-mcso0s-projects.vercel.app</code></li>
+      <li>Reception calendar restore hotfix Preview URL: <code>https://emr-app-shell-prototype-i2zftsbhe-mcso0s-projects.vercel.app</code></li>
+      <li>Stale session draft cleanup Preview URL: <code>https://emr-app-shell-prototype-fflmqfbc8-mcso0s-projects.vercel.app</code></li>
+      <li>Stale completed calendar queue filter Preview URL: <code>https://emr-app-shell-prototype-behfarwnn-mcso0s-projects.vercel.app</code></li>
+      <li>Operating-date calendar guard Preview URL: <code>https://emr-app-shell-prototype-onexhkenz-mcso0s-projects.vercel.app</code></li>
+      <li>고정 staging URL: <code>https://emr-app-shell-prototype-staging-mcso0s-projects.vercel.app</code></li>
+      <li><code>vercel inspect</code>에서 새 배포 <code>Ready</code> 확인</li>
+      <li><code>vercel curl</code>로 보호된 Cheongdam reception route HTML 응답 확인</li>
+      <li>in-app browser 직접 클릭 검증은 Vercel SSO/passkey 보호 화면으로 리다이렉트되어 수행하지 못했다.</li>
+    </ul>
+
+    <h2>추가 핫픽스: 대기열 0인데 캘린더 미지정 카드가 남는 문제</h2>
+    <p>
+      원인은 서버 대기열이 아니라 브라우저 session draft였다. Cheongdam 대기열 서버 읽기 결과가
+      0건이어도, 이전 접수 시도에서 만들어진 임시 draft가 캘린더 쪽에만 남아 미지정 카드처럼
+      렌더링될 수 있었다. 이제 Cheongdam prepared-empty queue read가 성공하면 같은 workspace의
+      session draft와 임시 calendar selection을 비우고, 캘린더에 전달하는 draft 목록도 현재
+      workspace 기준으로만 제한한다.
+    </p>
+    <p>
+      추가 확인 결과, server calendar reader가 완료된 encounter/queue entry를 반환할 때도
+      클라이언트 병합 로직이 `queueEntry` 존재 여부만 보고 walk-in card를 만들 수 있었다.
+      이제 calendar record는 encounter가 `waiting`, `in_consultation`, `ordered`,
+      `ready_for_billing` 중 하나이고 queue entry가 `waiting`, `called`, `in_progress`
+      중 하나일 때만 캘린더 업무 카드로 병합한다. 완료/취소된 기록은 이력 데이터로 남더라도
+      Cheongdam의 오늘 접수 캘린더에는 active work처럼 표시하지 않는다.
+    </p>
+    <p>
+      승욱 확인 후 Supabase staging을 readback한 결과, `workspace-clair-cheongdam`에
+      `E-260612-18EDFA` active encounter/queue 1건이 남아 있었다. 승인된 범위 안에서 해당
+      encounter와 queue entry만 `cancelled` 처리했고, 이후 readback으로 active encounter 0,
+      active queue 0, active appointment 0을 확인했다. 또한 day/week calendar는 queue-derived
+      walk-in card를 현재 operating date 기준으로 한 번 더 필터링하도록 보강했다.
+    </p>
+
+    <h2>원격 데이터 상태</h2>
+    <p>
+      이번 패스에서는 원격 staging DB에 새 접수/차트/오더 업무 데이터를 생성하지 않았다.
+      Cheongdam 기본 상태가 "새로 개업한 병원처럼 active daily work가 없는 상태"여야 하기
+      때문이다. 실제 staging에서 write-through golden path를 검증하려면, 생성할 테스트
+      encounter/order 범위와 검증 후 삭제 또는 reset SQL 범위를 먼저 승인받아야 한다.
+    </p>
+
+    <h2>남은 작업</h2>
+    <ul>
+      <li>DID 또는 대기실 호출 화면: 수의사가 호출하면 보호자에게 보여줄 호출 상태가 필요하다.</li>
+      <li>리셋: 접수/차트/오더 테스트 후 청담 workspace를 빈 daily-work 상태로 되돌리는 승인된 reset 경로가 필요하다.</li>
+      <li>역할별 계정 검증: 데스크, 수의사, 테크니션, 병원 관리자, 원장 계정별 주요 권한 smoke test가 필요하다.</li>
+      <li>진단명 catalog: 현재 차트 진단 UI는 하드코딩 catalog를 쓰므로, seeded DB catalog API/화면 연결은 후속 작업이다.</li>
+      <li>전체 golden path: 접수 생성 이후 차트 작성, 오더 확정, 검사/처치/수납 queue readback까지 staging write-through로 확인해야 한다.</li>
+    </ul>
+  </body>
+</html>

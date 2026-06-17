@@ -28,6 +28,7 @@ import {
   mockWaitingQueueEntries,
 } from "@/mocks/emr-domain";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
+import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import type { AppIcon } from "@/components/icons";
 import type { Appointment, Encounter, EmrId, Guardian, Patient } from "@/types/emr-domain";
@@ -318,6 +319,7 @@ function buildEncounterItem(workspaceId: string, encounter: Encounter): CommandI
 
 function buildCommandSections(workspaceId: string, query: string, filter: CommandFilter): CommandSection[] {
   const normalizedQuery = normalizeText(query);
+  const preparedEmptyClinic = isPreparedEmptyClinicWorkspace(workspaceId);
   const matchesFilter = (item: CommandItem) => {
     if (filter === "all") return true;
     const filterKeywords = item.filterKeywords?.[filter] ?? [];
@@ -344,18 +346,26 @@ function buildCommandSections(workspaceId: string, query: string, filter: Comman
       vet: action.moduleId === "treatment" ? [...action.keywords, action.title, action.subtitle] : [],
     },
   }));
-  const patientItems = mockPatients.map((patient) => buildPatientItem(workspaceId, patient));
-  const guardianItems = mockGuardians.map((guardian) => buildGuardianItem(workspaceId, guardian));
-  const appointmentItems = mockAppointments
-    .filter((appointment) => appointment.scheduledStartAt.startsWith("2026-05-01"))
-    .map((appointment) => buildAppointmentItem(workspaceId, appointment))
-    .filter((item): item is CommandItem => Boolean(item));
-  const activeEncounterItems = mockEncounters
-    .filter((encounter) =>
-      ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
-    )
-    .map((encounter) => buildEncounterItem(workspaceId, encounter))
-    .filter((item): item is CommandItem => Boolean(item));
+  const patientItems = preparedEmptyClinic
+    ? []
+    : mockPatients.map((patient) => buildPatientItem(workspaceId, patient));
+  const guardianItems = preparedEmptyClinic
+    ? []
+    : mockGuardians.map((guardian) => buildGuardianItem(workspaceId, guardian));
+  const appointmentItems = preparedEmptyClinic
+    ? []
+    : mockAppointments
+        .filter((appointment) => appointment.scheduledStartAt.startsWith("2026-05-01"))
+        .map((appointment) => buildAppointmentItem(workspaceId, appointment))
+        .filter((item): item is CommandItem => Boolean(item));
+  const activeEncounterItems = preparedEmptyClinic
+    ? []
+    : mockEncounters
+        .filter((encounter) =>
+          ["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(encounter.status)
+        )
+        .map((encounter) => buildEncounterItem(workspaceId, encounter))
+        .filter((item): item is CommandItem => Boolean(item));
   const sections: CommandSection[] = [
     { id: "actions", title: "빠른 실행", items: limitItems(quickActions, 5) },
     {

@@ -1,5 +1,15 @@
 import type { Appointment, Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 
+export type ReceptionAppointmentCheckInInput = {
+  checkedInAt?: string;
+  department?: string;
+  durationMinutes?: number;
+  memo?: string;
+  primaryVeterinarianId?: string;
+  visitPurpose?: string;
+  weightKg?: number;
+};
+
 export type ReceptionAppointmentCheckInRecord = {
   appointment: Appointment;
   encounter: Encounter;

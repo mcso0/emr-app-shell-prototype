@@ -338,7 +338,7 @@ export function HomeKanbanWorkspace({ data }: HomeKanbanWorkspaceProps) {
           </div>
         </div>
 
-        <div className="grid min-w-0 gap-2 rounded-[var(--clair-radius-md)] border border-[var(--emr-line-hairline)] bg-card px-3 py-3">
+        <div className="grid min-w-0 gap-2 border-b border-[var(--emr-line-hairline)] bg-card py-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SegmentedControl
               value={activeOperationMode}

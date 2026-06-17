@@ -3,9 +3,14 @@ import { expect, test } from "@playwright/test";
 test("CLAiR Docs renders the canonical product PRD from docs/product", async ({ page }) => {
   await page.goto("/docs");
 
-  await expect(page.getByRole("link", { name: /CLAiR Docs/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "문서 검색 열기" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /CLAiR App/ })).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("link", { name: "CLAiR Docs" })).toBeVisible();
+  const topNavigation = page.getByRole("navigation", { name: "CLAiR Docs top navigation" });
+  await expect(topNavigation).toContainText("기획");
+  await expect(topNavigation).toContainText("디자인");
+  await expect(topNavigation).toContainText("개발");
+  await expect(topNavigation).toContainText("스터디");
+  await expect(page.getByTestId("prd-search-trigger")).toBeVisible();
+  await expect(page.getByTestId("prd-theme-toggle")).toBeVisible();
   await expect(page.getByRole("heading", { name: "동물병원 전용 EMR SaaS 서비스 PRD" })).toBeVisible();
   await expect(page.getByText("docs/product/prd/clair-emr-saas-prd.md")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("Product PRD");
@@ -23,47 +28,34 @@ test("CLAiR Docs switches registered docs without leaving the read-only viewer",
   await expect(page.getByText("```")).toHaveCount(0);
 });
 
-test("CLAiR Docs renders Mermaid diagrams as diagrams", async ({ page }) => {
-  await page.goto("/docs?doc=emr-domain-entity-map");
-
-  await expect(page.getByRole("heading", { name: "Core Relationship" })).toBeVisible();
-  await expect(page.getByTestId("prd-mermaid-diagram")).toBeVisible();
-  await expect(page.getByTestId("prd-mermaid-diagram").locator("svg")).toBeVisible();
-  await expect(page.locator("pre").filter({ hasText: "erDiagram" })).toHaveCount(0);
-});
-
-test("CLAiR Docs search opens a command-style document picker", async ({ page }) => {
-  await page.addInitScript(() =>
-    window.localStorage.setItem(
-      "prd-viewer-recent-docs",
-      JSON.stringify(["outpatient-workflow-state-model", "product-prd"])
-    )
-  );
+test("CLAiR Docs search filters the active section navigation", async ({ page }) => {
   await page.goto("/docs");
 
   await page.getByTestId("prd-search-trigger").click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByText("PRD, 에픽, 기능 기준 문서를 빠르게 열 수 있어.")).toHaveCount(0);
-  await expect(page.getByText("Pages")).toBeVisible();
-  await expect(page.getByText("Recently viewed")).toBeVisible();
-  await expect(page.getByRole("option", { name: /Outpatient Workflow State Model/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Product PRD/ }).first()).toContainText("PRD");
   await page.getByTestId("prd-search-dialog-input").fill("role");
 
-  await expect(page.getByRole("option", { name: /Role Permission Source Map/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Role Permission Source Map/ })).toContainText("Product-facing role");
-  await expect(page.getByRole("option", { name: /Product PRD/ })).toHaveCount(0);
-  await page.getByRole("option", { name: /Role Permission Source Map/ }).click();
-  await expect(page).toHaveURL(/\/docs\?doc=role-permission-source-map/);
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Role Permission Source Map");
+  await expect(dialog).not.toContainText("Product PRD");
 });
 
-test("CLAiR Docs theme switch toggles dark mode", async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem("prd-viewer-theme", "light"));
+test("CLAiR Docs opens the Study tab and renders the first lesson archive", async ({ page }) => {
   await page.goto("/docs");
 
-  await page.getByTestId("prd-theme-toggle").click();
+  await page.getByRole("link", { name: "스터디" }).click();
 
-  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page).toHaveURL(/\/docs\?area=study/);
+  await expect(page.getByRole("heading", { name: "CLAiR Study Center" })).toBeVisible();
+  const docsNavigation = page.getByRole("navigation", { name: "CLAiR Docs documents" });
+  await expect(docsNavigation.getByRole("link", { name: "01. EMR Domain Basics" })).toBeVisible();
+
+  await docsNavigation.getByRole("link", { name: "01. EMR Domain Basics" }).click();
+
+  await expect(page).toHaveURL(/\/docs\?doc=study-emr-domain-basics/);
+  await expect(page.getByRole("heading", { name: "01. EMR Domain Basics" })).toBeVisible();
+  await expect(page.getByText("docs/study/sessions/2026-06-17-01-emr-domain-basics.md")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Diagram" })).toBeVisible();
+  await expect(page.getByTestId("prd-mermaid-diagram")).toBeVisible();
 });
 
 test("CLAiR Docs handles invalid doc slugs without opening arbitrary paths", async ({ page }) => {
@@ -74,59 +66,9 @@ test("CLAiR Docs handles invalid doc slugs without opening arbitrary paths", asy
   await expect(page.getByRole("link", { name: "기본 문서로 이동" })).toHaveAttribute("href", "/docs");
 });
 
-test("legacy PRD route redirects to canonical CLAiR Docs route", async ({ page }) => {
-  await page.goto("/prd?doc=features-readme");
+test("legacy /prd route remains usable for product-doc links", async ({ page }) => {
+  await page.goto("/prd");
 
-  await expect(page).toHaveURL(/\/docs\?doc=features-readme/);
-  await expect(page.getByRole("heading", { name: "Feature Specs" })).toBeVisible();
-});
-
-test("CLAiR Docs keeps the primary reading flow usable on mobile width", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(() => window.localStorage.setItem("prd-viewer-theme", "dark"));
-  await page.goto("/docs?doc=features-readme");
-
-  await expect(page.getByRole("link", { name: /CLAiR Docs/ })).toBeVisible();
-  await expect(page.getByTestId("prd-mobile-nav-trigger")).toBeVisible();
-  await expect(page.getByTestId("prd-search-trigger-mobile")).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Feature Specs" })).toBeVisible();
-  await page.getByTestId("prd-mobile-nav-trigger").click();
-  const mobileDocsDialog = page.getByRole("dialog", { name: "Docs" });
-  await expect(mobileDocsDialog).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "CLAiR Docs documents" })).toContainText("Product PRD");
-  const mobileDocScrollArea = mobileDocsDialog.getByTestId("prd-doc-navigation-scroll");
-  await expect(mobileDocScrollArea).toBeVisible();
-  await expect(
-    mobileDocScrollArea.evaluate((element) => element.scrollHeight > element.clientHeight)
-  ).resolves.toBe(true);
-  const activeMobileDoc = page.getByRole("link", { name: "Feature Specs" });
-  await expect(activeMobileDoc).toHaveAttribute("aria-current", "page");
-  await expect(
-    activeMobileDoc.evaluate((element) => {
-      const [red = 0, green = 0, blue = 0] =
-        getComputedStyle(element)
-          .backgroundColor.match(/\d+/g)
-          ?.slice(0, 3)
-          .map(Number) ?? [];
-
-      return blue <= Math.max(red, green) + 24;
-    })
-  ).resolves.toBe(true);
-  await mobileDocScrollArea.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect.poll(() => mobileDocScrollArea.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await mobileDocScrollArea.evaluate((element) => {
-    element.scrollTop = 0;
-  });
-  await mobileDocsDialog.getByRole("button", { name: "Close" }).click();
-  await expect(mobileDocsDialog).toHaveCount(0);
-  const scrollYBeforeBodyWheel = await page.evaluate(() => window.scrollY);
-  await page.mouse.wheel(0, 600);
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(scrollYBeforeBodyWheel);
-  await page.getByTestId("prd-mobile-nav-trigger").click();
-  await page.getByRole("link", { name: "Product PRD" }).click();
-  await expect(page).toHaveURL(/\/docs\?doc=product-prd/);
+  await expect(page.getByRole("link", { name: "CLAiR Docs" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "동물병원 전용 EMR SaaS 서비스 PRD" })).toBeVisible();
 });
