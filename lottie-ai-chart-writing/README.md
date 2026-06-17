@@ -20,7 +20,7 @@
   </tr>
 </table>
 
-## Quick Start 
+## Quick Start
 Install the skill:
 ```bash
 npx skills add diffusionstudio/lottie

@@ -53,7 +53,6 @@ export const Default: Story = {
     },
   },
 };
-
 export const SupportedStatuses: Story = {
   render: () => (
     <div className="flex flex-wrap items-center gap-2">
@@ -102,4 +101,3 @@ export const UnknownLabelFallback: Story = {
     },
   },
 };
-

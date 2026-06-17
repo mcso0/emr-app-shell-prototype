@@ -77,7 +77,6 @@ export const Default: Story = {
     },
   },
 };
-
 export const Severities: Story = {
   render: () => (
     <div className="grid max-w-3xl gap-3">
@@ -161,4 +160,3 @@ export const WithoutIcon: Story = {
     },
   },
 };
-

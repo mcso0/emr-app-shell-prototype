@@ -51,4 +51,3 @@ Extend the first Storybook catalog from generic UI primitives into the next stab
 Ready for Human Review.
 
 Recommended next step: evaluate Storybook MCP / AI addon setup after reviewing whether these six stories are clear enough for agent reuse.
-

@@ -53,4 +53,3 @@ Improve the MCP-readable Storybook documentation quality for the six existing de
 Ready for Human Review.
 
 Recommended next step: connect a project-scoped MCP client only after reviewing the manifest output for whether the prop descriptions are clear enough for agent-assisted UI work.
-

@@ -1,6 +1,6 @@
 # Login Invite Onboarding Spec
 
-Status: draft  
+Status: draft
 Updated: 2026-06-12
 
 This document defines the product target for CLAiR EMR login, first hospital admin onboarding, and staff invite onboarding. It should be read with [Workspace Auth and Permission Domain](../../domain/workspace-auth-permissions.md), [Workspace Hospital Profile](../../domain/workspace-hospital-profile.md), and [Auth Login And Onboarding Current State](../../current-state/auth-login-onboarding-current-state.md).
