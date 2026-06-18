@@ -31,6 +31,7 @@ const encounter: Encounter = {
   primaryVeterinarianId: "user-vet-suji",
   encounterNo: "E-DEN63-0001",
   receptionType: "walk_in",
+  durationMinutes: 30,
   chiefComplaint: "DEN-63 persisted walk-in",
   visitPurpose: "DEN-63 persisted walk-in",
   status: "waiting",
@@ -158,9 +159,22 @@ test("supabase reception calendar gateway maps rows and keeps workspace date sco
     ok: true,
     records: [
       {
-        appointment: { id: "appointment-db-coco", workspaceId: "clair-demo" },
-        encounter: { id: "encounter-db-walkin-coco", workspaceId: "clair-demo" },
-        queueEntry: { id: "queue-db-walkin-coco", workspaceId: "clair-demo" },
+        appointment: {
+          id: "appointment-db-coco",
+          scheduledEndAt: "2026-05-01T09:30:00+09:00",
+          workspaceId: "clair-demo",
+        },
+        encounter: {
+          checkedInAt: "2026-05-01T10:15:00+09:00",
+          durationMinutes: 30,
+          id: "encounter-db-walkin-coco",
+          workspaceId: "clair-demo",
+        },
+        queueEntry: {
+          enteredAt: "2026-05-01T10:15:00+09:00",
+          id: "queue-db-walkin-coco",
+          workspaceId: "clair-demo",
+        },
       },
     ],
   });
@@ -236,6 +250,7 @@ test("supabase reception calendar gateway accepts snake_case walk-in rows with e
       {
         encounter: {
           id: "encounter-calendar-live-luna",
+          durationMinutes: 30,
           patientId: "patient-live-luna",
           primaryVeterinarianId: "user-vet-suji",
           checkedInAt: "2026-05-01T14:15:00+09:00",
@@ -282,6 +297,10 @@ test("reception day calendar reader migration keeps appointment and walk-in rows
   expect(migrationSource).toContain("a.workspace_id = p_workspace_id");
   expect(migrationSource).toContain("e.workspace_id = p_workspace_id");
   expect(migrationSource).toContain("e.appointment_id is null");
+  expect(migrationSource).toContain("'scheduledEndAt', a.scheduled_end_at");
+  expect(migrationSource).toContain("'durationMinutes', e.duration_minutes");
+  expect(migrationSource).toContain("'checkedInAt', e.checked_in_at");
+  expect(migrationSource).toContain("'enteredAt', q.entered_at");
   expect(migrationSource).toContain(
     "grant execute on function public.clair_list_reception_day_calendar"
   );

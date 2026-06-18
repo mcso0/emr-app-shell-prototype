@@ -88,6 +88,10 @@ import {
   type ReceptionPatientSummary,
 } from "@/features/reception/data";
 import {
+  getCalendarTimeRangeLayout,
+  type CalendarTimeRangeLayout,
+} from "@/features/reception/calendar-time-layout";
+import {
   GuardianProfileDrawer,
   RegistrationFormField,
   RegistrationFormSection,
@@ -1261,9 +1265,6 @@ const getShortDate = (dateTime?: string) => {
   return operatingDate ? formatShortOperatingDate(operatingDate) : "-";
 };
 
-const getAppointmentHour = (appointment: Appointment) =>
-  Math.floor((getMinutesInDayFromDateTime(appointment.scheduledStartAt) ?? 0) / 60);
-
 const getScheduleHourLabel = (hour: number) =>
   `${String(hour).padStart(2, "0")}:00`;
 
@@ -1290,9 +1291,6 @@ const isDraftOnOperatingDate = (
   draft: ReceptionDraftCheckIn,
   operatingDate: string,
 ) => getOperatingDateFromIso(getDraftScheduleStartAt(draft)) === operatingDate;
-
-const getDraftScheduleHour = (draft: ReceptionDraftCheckIn) =>
-  Math.floor((getOperatingMinutesFromIso(getDraftScheduleStartAt(draft)) ?? 0) / 60);
 
 const getDraftDurationLabel = (draft: ReceptionDraftCheckIn) =>
   draft.durationMinutes ? `${draft.durationMinutes}분` : defaultWalkInDuration;
@@ -1416,6 +1414,29 @@ const getDraftScheduleBlock = (
     startMinutes,
     veterinarianId: draft.encounter.primaryVeterinarianId,
   };
+};
+
+const getScheduleCardLayout = (
+  block?: ReceptionCalendarScheduleBlock,
+): CalendarTimeRangeLayout | undefined => {
+  const scheduleStartMinutes = dayScheduleStartHour * 60;
+  const scheduleEndMinutes = dayScheduleEndHour * 60;
+
+  if (
+    !block ||
+    block.endMinutes <= scheduleStartMinutes ||
+    block.startMinutes >= scheduleEndMinutes
+  ) {
+    return undefined;
+  }
+
+  return getCalendarTimeRangeLayout({
+    endMinutes: Math.min(block.endMinutes, scheduleEndMinutes),
+    hourRowHeight: dayScheduleHourRowHeight,
+    minDurationMinutes: scheduleSlotMinutes,
+    scheduleStartMinutes,
+    startMinutes: Math.max(block.startMinutes, scheduleStartMinutes),
+  });
 };
 
 const getReceptionCalendarSelectionMessage = (
@@ -1817,6 +1838,7 @@ type CalendarTaskCardProps = {
   className?: string;
   description?: string;
   disabled?: boolean;
+  fillHeight?: boolean;
   onClick: () => void;
   onPointerDown?: () => void;
   patientLabel: string;
@@ -1837,6 +1859,7 @@ function CalendarTaskCard({
   className,
   description,
   disabled,
+  fillHeight,
   onClick,
   onPointerDown,
   patientLabel,
@@ -1857,12 +1880,12 @@ function CalendarTaskCard({
       aria-label={ariaLabel}
       aria-pressed={selected}
       className={cn(
-        "relative z-10 flex min-w-0 flex-1 items-start overflow-hidden rounded-[8px] border p-[8px] text-left font-['Pretendard'] outline-none transition-colors",
-        compact
-          ? "h-[36px] flex-row items-center gap-[8px]"
-          : "flex-col gap-[4px]",
-        type === "default" && "h-[80px]",
-        noShow && "h-[60px]",
+        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[8px] border p-[8px] text-left font-['Pretendard'] outline-none transition-colors",
+        fillHeight ? "h-full w-full flex-none" : "flex-1",
+        compact ? "flex-row items-center gap-[8px]" : "flex-col gap-[4px]",
+        !fillHeight && compact && "h-[36px]",
+        !fillHeight && type === "default" && "h-[80px]",
+        !fillHeight && noShow && "h-[60px]",
         noShow
           ? "border-[#feb2b2] bg-[rgba(229,62,62,0.06)] text-[#e53e3e] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
           : selected
@@ -2537,6 +2560,7 @@ function getReceptionSideListItems(
 }
 
 function ScheduleAppointmentCard({
+  fillHeight,
   appointment,
   onClearCalendarTransientSelection,
   onSelect,
@@ -2544,6 +2568,7 @@ function ScheduleAppointmentCard({
   veterinarians = allVeterinarians,
 }: {
   appointment: Appointment;
+  fillHeight?: boolean;
   onClearCalendarTransientSelection: () => void;
   onSelect: () => void;
   selected: boolean;
@@ -2571,6 +2596,7 @@ function ScheduleAppointmentCard({
       badgeType={noShow ? "노쇼" : "예약"}
       description={cardType === "default" ? description : undefined}
       disabled={appointment.status !== "confirmed" && !checkedIn}
+      fillHeight={fillHeight}
       onPointerDown={onClearCalendarTransientSelection}
       onClick={onSelect}
       patientLabel={patientLabel}
@@ -2589,11 +2615,13 @@ function ScheduleAppointmentCard({
 
 function ScheduleWalkInQueueCard({
   draft,
+  fillHeight,
   onClearCalendarTransientSelection,
   onSelectEncounter,
   veterinarians = allVeterinarians,
 }: {
   draft: ReceptionDraftCheckIn;
+  fillHeight?: boolean;
   onClearCalendarTransientSelection: () => void;
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   veterinarians?: Veterinarian[];
@@ -2634,6 +2662,7 @@ function ScheduleWalkInQueueCard({
       description={`${getShortTime(scheduledStartAt)} · ${durationLabel} · ${getGuardianDisplay(guardian)} · ${
         draft.department ?? defaultWalkInDepartment
       }${draft.memo ? ` · ${draft.memo}` : ""}${veterinarianName ? ` · ${veterinarianName}` : ""}`}
+      fillHeight={fillHeight}
       onPointerDown={onClearCalendarTransientSelection}
       onClick={() => onSelectEncounter(draft)}
       patientLabel={patientLabel}
@@ -2644,6 +2673,23 @@ function ScheduleWalkInQueueCard({
       testId={`walkin-card-${draft.encounter.id}`}
       type="default"
     />
+  );
+}
+
+function PositionedScheduleCard({
+  children,
+  layout,
+}: {
+  children: ReactNode;
+  layout: CalendarTimeRangeLayout;
+}) {
+  return (
+    <div
+      className="pointer-events-auto absolute left-1 right-2 z-20 min-w-0"
+      style={{ height: layout.height, top: layout.top }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -3947,99 +3993,115 @@ function DayScheduleBoard({
         </div>
         <div className="relative z-10 col-span-full col-start-2 min-w-0">
           <div
-            className="pointer-events-none absolute -left-1 right-0 z-10 flex items-center"
+            className="pointer-events-none absolute -left-1 right-0 z-30 flex items-center"
             style={{ top: currentTimeOffset }}
           >
             <span className="size-2 rounded-full bg-destructive" />
             <span className="h-px flex-1 bg-[var(--emr-status-danger-border)]" />
           </div>
-          {dayScheduleHours.map((hour) => {
-            return (
-              <div
-                key={hour}
-                data-testid={`day-hour-row-${hour}`}
-                className="grid border-b"
-                style={{
-                  gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
-                  height: dayScheduleHourRowHeight,
-                }}
-              >
-                {selectedVeterinarians.map((veterinarian) => {
-                  const hourAppointments = appointments.filter(
+          {dayScheduleHours.map((hour) => (
+            <div
+              key={hour}
+              data-testid={`day-hour-row-${hour}`}
+              className="grid border-b"
+              style={{
+                gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
+                height: dayScheduleHourRowHeight,
+              }}
+            >
+              {selectedVeterinarians.map((veterinarian) => (
+                <div
+                  key={`${hour}-${veterinarian.id}`}
+                  className="relative h-full min-h-0 min-w-0 overflow-visible border-r last:border-r-0"
+                >
+                  <CalendarQuarterHourLines />
+                  <ScheduleSelectionCell
+                    affordanceSuspended={emptySlotAffordanceSuspended}
+                    calendarDraftSelection={calendarDraftSelection}
+                    appointments={appointments}
+                    draftCheckIns={draftCheckIns}
+                    hour={hour}
+                    operatingDate={operatingDate}
+                    onAffordancePointerMove={
+                      onEmptySlotAffordancePointerMove
+                    }
+                    testId={`day-empty-slot-${hour}-${veterinarian.id}`}
+                    veterinarian={veterinarian}
+                    onCreateDraft={onCreateCalendarDraft}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-20 grid"
+            style={{
+              gridTemplateColumns: `repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`,
+              height: dayScheduleHeight,
+            }}
+          >
+            {selectedVeterinarians.map((veterinarian) => (
+              <div key={`day-overlay-${veterinarian.id}`} className="relative min-w-0">
+                {appointments
+                  .filter(
                     (appointment) =>
-                      appointment.assignedVeterinarianId === veterinarian.id &&
-                      getAppointmentHour(appointment) === hour,
-                  );
-                  const hourWalkIns = walkInDrafts.filter(
-                    (draft) =>
-                      draft.encounter.primaryVeterinarianId ===
-                        veterinarian.id && getDraftScheduleHour(draft) === hour,
-                  );
-                  const hasScheduleCards = Boolean(
-                    hourAppointments.length || hourWalkIns.length,
-                  );
+                      appointment.assignedVeterinarianId === veterinarian.id,
+                  )
+                  .map((appointment) => {
+                    const layout = getScheduleCardLayout(
+                      getAppointmentScheduleBlock(appointment),
+                    );
+                    if (!layout) return null;
 
-                  return (
-                    <div
-                      key={`${hour}-${veterinarian.id}`}
-                      className={cn(
-                        "relative flex h-full min-h-0 min-w-0 gap-2 border-r last:border-r-0",
-                        hasScheduleCards
-                          ? "overflow-hidden pr-2"
-                          : "overflow-visible",
-                      )}
-                    >
-                      <CalendarQuarterHourLines />
-                      {hasScheduleCards ? (
-                        <>
-                          {hourAppointments.map((appointment) => (
-                            <ScheduleAppointmentCard
-                              key={appointment.id}
-                              appointment={appointment}
-                              veterinarians={selectedVeterinarians}
-                              onClearCalendarTransientSelection={
-                                onClearCalendarTransientSelection
-                              }
-                              selected={
-                                appointment.id === selectedAppointmentId
-                              }
-                              onSelect={() => onSelectAppointment(appointment)}
-                            />
-                          ))}
-                          {hourWalkIns.map((draft) => (
-                            <ScheduleWalkInQueueCard
-                              key={draft.encounter.id}
-                              draft={draft}
-                              veterinarians={selectedVeterinarians}
-                              onClearCalendarTransientSelection={
-                                onClearCalendarTransientSelection
-                              }
-                              onSelectEncounter={onSelectEncounter}
-                            />
-                          ))}
-                        </>
-                      ) : (
-                        <ScheduleSelectionCell
-                          affordanceSuspended={emptySlotAffordanceSuspended}
-                          calendarDraftSelection={calendarDraftSelection}
-                          appointments={appointments}
-                          draftCheckIns={draftCheckIns}
-                          hour={hour}
-                          operatingDate={operatingDate}
-                          onAffordancePointerMove={
-                            onEmptySlotAffordancePointerMove
+                    return (
+                      <PositionedScheduleCard
+                        key={`day-positioned-${appointment.id}`}
+                        layout={layout}
+                      >
+                        <ScheduleAppointmentCard
+                          fillHeight
+                          appointment={appointment}
+                          veterinarians={selectedVeterinarians}
+                          onClearCalendarTransientSelection={
+                            onClearCalendarTransientSelection
                           }
-                          testId={`day-empty-slot-${hour}-${veterinarian.id}`}
-                          veterinarian={veterinarian}
-                          onCreateDraft={onCreateCalendarDraft}
+                          selected={appointment.id === selectedAppointmentId}
+                          onSelect={() => onSelectAppointment(appointment)}
                         />
-                      )}
-                    </div>
-                  );
-                })}
+                      </PositionedScheduleCard>
+                    );
+                  })}
+                {walkInDrafts
+                  .filter(
+                    (draft) =>
+                      draft.encounter.primaryVeterinarianId === veterinarian.id,
+                  )
+                  .map((draft) => {
+                    const layout = getScheduleCardLayout(
+                      getDraftScheduleBlock(draft),
+                    );
+                    if (!layout) return null;
+
+                    return (
+                      <PositionedScheduleCard
+                        key={`day-positioned-${draft.encounter.id}`}
+                        layout={layout}
+                      >
+                        <ScheduleWalkInQueueCard
+                          fillHeight
+                          draft={draft}
+                          veterinarians={selectedVeterinarians}
+                          onClearCalendarTransientSelection={
+                            onClearCalendarTransientSelection
+                          }
+                          onSelectEncounter={onSelectEncounter}
+                        />
+                      </PositionedScheduleCard>
+                    );
+                  })}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -4138,6 +4200,7 @@ function WeekScheduleBoard({
         {dayScheduleHours.map((hour) => (
           <div
             key={`week-hour-${hour}`}
+            data-testid={`week-hour-row-${hour}`}
             className="grid border-b last:border-b-0"
             style={{
               gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))",
@@ -4150,71 +4213,98 @@ function WeekScheduleBoard({
               </span>
             </div>
             {weekDays.map((day) => {
-              const dayAppointments = day.active
-                ? appointments
-                : appointments.slice(0, 1);
-              const hourAppointments = dayAppointments.filter(
-                (appointment) => getAppointmentHour(appointment) === hour,
-              );
-              const hourWalkIns = day.active
-                ? walkInDrafts.filter(
-                    (draft) => getDraftScheduleHour(draft) === hour,
-                  )
-                : [];
-              const hasScheduleCards = Boolean(
-                hourAppointments.length || hourWalkIns.length,
-              );
-
               return (
                 <div
                   key={`week-${day.day}-${hour}`}
                   className={cn(
-                    "relative flex h-full min-h-0 min-w-0 gap-2 overflow-hidden border-r last:border-r-0",
-                    hasScheduleCards && "pr-2",
+                    "relative h-full min-h-0 min-w-0 overflow-hidden border-r last:border-r-0",
                     day.active && "bg-[var(--emr-status-info-bg)]/40",
                     !isBusinessHourRow(hour) && "bg-muted/70",
                   )}
                 >
                   <CalendarQuarterHourLines />
-                  {hourAppointments.map((appointment) => (
-                    <ScheduleAppointmentCard
-                      key={`${day.day}-${hour}-${appointment.id}`}
-                      appointment={appointment}
-                      veterinarians={veterinarians}
-                      onClearCalendarTransientSelection={
-                        onClearCalendarTransientSelection
-                      }
-                      selected={Boolean(
-                        day.active && appointment.id === selectedAppointmentId,
-                      )}
-                      onSelect={() => onSelectAppointment(appointment)}
-                    />
-                  ))}
-                  {hourWalkIns.map((draft) => (
-                    <ScheduleWalkInQueueCard
-                      key={`${day.day}-${hour}-${draft.encounter.id}`}
-                      draft={draft}
-                      veterinarians={veterinarians}
-                      onClearCalendarTransientSelection={
-                        onClearCalendarTransientSelection
-                      }
-                      onSelectEncounter={onSelectEncounter}
-                    />
-                  ))}
-                  {hasScheduleCards ? null : (
-                    <EmptyReceptionSlotButton
-                      affordanceSuspended={emptySlotAffordanceSuspended}
-                      ariaLabel={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
-                      onAffordancePointerMove={onEmptySlotAffordancePointerMove}
-                      testId={`week-empty-slot-${day.day}-${hour}`}
-                      onCreateWalkIn={onCreateWalkIn}
-                    />
-                  )}
+                  <EmptyReceptionSlotButton
+                    affordanceSuspended={emptySlotAffordanceSuspended}
+                    ariaLabel={`${day.label} ${getScheduleHourLabel(hour)} 빈 시간 접수 생성`}
+                    onAffordancePointerMove={onEmptySlotAffordancePointerMove}
+                    testId={`week-empty-slot-${day.day}-${hour}`}
+                    onCreateWalkIn={onCreateWalkIn}
+                  />
                 </div>
               );
             })}
           </div>
         ))}
+        <div
+          className="pointer-events-none absolute right-0 top-0 z-20 grid"
+          style={{
+            gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+            height: weekScheduleHeight,
+            left: 56,
+          }}
+        >
+          {weekDays.map((day) => {
+            const dayAppointments = day.active
+              ? appointments
+              : appointments.slice(0, 1);
+            const dayWalkIns = day.active ? walkInDrafts : [];
+
+            return (
+              <div key={`week-overlay-${day.day}`} className="relative min-w-0">
+                {dayAppointments.map((appointment) => {
+                  const layout = getScheduleCardLayout(
+                    getAppointmentScheduleBlock(appointment),
+                  );
+                  if (!layout) return null;
+
+                  return (
+                    <PositionedScheduleCard
+                      key={`week-positioned-${day.day}-${appointment.id}`}
+                      layout={layout}
+                    >
+                      <ScheduleAppointmentCard
+                        fillHeight
+                        appointment={appointment}
+                        veterinarians={veterinarians}
+                        onClearCalendarTransientSelection={
+                          onClearCalendarTransientSelection
+                        }
+                        selected={Boolean(
+                          day.active &&
+                            appointment.id === selectedAppointmentId,
+                        )}
+                        onSelect={() => onSelectAppointment(appointment)}
+                      />
+                    </PositionedScheduleCard>
+                  );
+                })}
+                {dayWalkIns.map((draft) => {
+                  const layout = getScheduleCardLayout(
+                    getDraftScheduleBlock(draft),
+                  );
+                  if (!layout) return null;
+
+                  return (
+                    <PositionedScheduleCard
+                      key={`week-positioned-${day.day}-${draft.encounter.id}`}
+                      layout={layout}
+                    >
+                      <ScheduleWalkInQueueCard
+                        fillHeight
+                        draft={draft}
+                        veterinarians={veterinarians}
+                        onClearCalendarTransientSelection={
+                          onClearCalendarTransientSelection
+                        }
+                        onSelectEncounter={onSelectEncounter}
+                      />
+                    </PositionedScheduleCard>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
         <div
           className="grid"
           style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}

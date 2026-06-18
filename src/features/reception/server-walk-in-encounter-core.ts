@@ -18,6 +18,10 @@ import {
   mockPatientGuardians,
   mockPatients,
 } from "@/mocks/emr-domain";
+import {
+  isReceptionDurationMinutesValid,
+  receptionDurationValidationMessage,
+} from "@/features/reception/reception-duration";
 import type {
   Encounter,
   Guardian,
@@ -465,9 +469,9 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
   const fieldErrors: ReceptionWalkInEncounterFieldErrors = {};
 
   if (!input.patientId) fieldErrors.patientId = "환자를 선택해 주세요.";
-	  if (input.durationMinutes !== undefined && input.durationMinutes <= 0) {
-	    fieldErrors.durationMinutes = "예상 진료시간을 확인해 주세요.";
-	  }
+  if (!isReceptionDurationMinutesValid(input.durationMinutes)) {
+    fieldErrors.durationMinutes = receptionDurationValidationMessage;
+  }
   if (
     input.plannedStartAt !== undefined &&
     Number.isNaN(new Date(input.plannedStartAt).getTime())

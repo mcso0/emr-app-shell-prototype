@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>접수/예약 캘린더 소요시간 반영 개선 결과 보고</title>
+    <style>
+      body {
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 860px;
+        padding: 0 24px;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2 {
+        border-top: 1px solid #e5e7eb;
+        font-size: 18px;
+        margin-top: 28px;
+        padding-top: 20px;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>접수/예약 캘린더 소요시간 반영 개선 결과 보고</h1>
+    <p>
+      접수 생성 및 수정 시 설정한 시작 시각과 소요시간이 day/week 캘린더 카드
+      위치와 높이에 반영되도록 개선했다. 예를 들어 <code>15:13 + 30분</code>
+      접수는 캘린더에서도 <code>15:13-15:43</code> 범위로 표시된다.
+    </p>
+
+    <h2>요청 사항</h2>
+    <ul>
+      <li>15분 단위 grid line은 안내선으로 유지한다.</li>
+      <li>시작 시각은 현재시각 기반이므로 15분 단위로 스냅하지 않는다.</li>
+      <li>접수/예약 큐와 day/week 캘린더가 동일한 시작 시각과 소요시간을 사용한다.</li>
+      <li>프론트, API, DB/RPC 계약을 함께 확인한다.</li>
+    </ul>
+
+    <h2>변경 사항</h2>
+    <ul>
+      <li>
+        day/week 캘린더 카드를 hour-row flex 배치에서 time-axis absolute 배치로
+        전환했다.
+      </li>
+      <li>
+        <code>startMinutes</code>와 <code>durationMinutes</code> 기반으로 카드
+        <code>top</code>/<code>height</code>를 계산하는 순수 헬퍼를 추가했다.
+      </li>
+      <li>
+        walk-in 생성 및 encounter 수정 서버 경로에서 <code>durationMinutes</code>가
+        양수 15분 단위인지 검증하도록 고정했다.
+      </li>
+      <li>
+        기존 DB/RPC 스키마는 변경하지 않고, <code>duration_minutes</code>,
+        <code>checked_in_at</code>, <code>entered_at</code>,
+        <code>scheduled_end_at</code> 필드 계약을 테스트로 보강했다.
+      </li>
+    </ul>
+
+    <h2>주요 변경 파일</h2>
+    <ul>
+      <li><code>src/features/reception/module.tsx</code></li>
+      <li><code>src/features/reception/calendar-time-layout.ts</code></li>
+      <li><code>src/features/reception/reception-duration.ts</code></li>
+      <li><code>src/features/reception/server-walk-in-encounter-core.ts</code></li>
+      <li><code>src/features/reception/server-encounter-update-core.ts</code></li>
+      <li><code>tests/reception.spec.ts</code></li>
+      <li><code>tests/reception-*-server.spec.ts</code></li>
+    </ul>
+
+    <h2>검증 결과</h2>
+    <ul>
+      <li>서버/API/DB 계약 focused Playwright spec 20개 통과</li>
+      <li>day/week 캘린더 및 드래그 회귀 focused Playwright spec 4개 통과</li>
+      <li><code>npx tsc --noEmit</code> 통과</li>
+      <li>
+        <code>npm run --silent lint</code> 통과. 기존 warning 5개는 이번 작업 범위
+        밖이라 유지했다.
+      </li>
+    </ul>
+
+    <h2>범위 밖</h2>
+    <ul>
+      <li>겹치는 일정 자동 분할 레이아웃은 이번 변경에 포함하지 않았다.</li>
+      <li>DB 스키마 migration은 추가하지 않았다.</li>
+      <li>기존 dirty 파일 <code>.codex/config.toml</code>은 건드리지 않았다.</li>
+    </ul>
+
+    <h2>다음 단계</h2>
+    <p>
+      실제 스테이징 데이터로 15분 단위가 아닌 현재시각 접수 생성, 접수 수정 후
+      readback, week view 전환까지 한 번 더 수동 확인하면 된다.
+    </p>
+  </body>
+</html>
