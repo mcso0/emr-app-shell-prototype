@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>외부 도구 활용 계획 요약 보고서</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.62;
+        margin: 40px;
+        max-width: 960px;
+        color: #182234;
+      }
+      h1,
+      h2 {
+        line-height: 1.25;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      h2 {
+        margin-top: 34px;
+        border-bottom: 1px solid #d9e1ec;
+        padding-bottom: 6px;
+      }
+      .meta,
+      .note {
+        color: #5b6678;
+      }
+      .decision {
+        background: #f4f8ff;
+        border: 1px solid #cfe0ff;
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        border: 1px solid #d8dee8;
+        padding: 9px 11px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f7f9fb;
+      }
+      a {
+        color: #1b5fc1;
+      }
+      code {
+        background: #f3f5f7;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      ul,
+      ol {
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>외부 도구 활용 계획 요약 보고서</h1>
+    <p class="meta">
+      기준 문서:
+      <code>docs/engineering/architecture/reference-project-adoption-plan.md</code><br />
+      작성일: 2026-06-18
+    </p>
+
+    <section class="decision">
+      <h2>결론</h2>
+      <p>
+        CLAiR EMR은 새 SaaS 보일러플레이트로 다시 만들면 안 된다.
+        이미 Next.js, Supabase, API 경계, seed 데이터, 주요 EMR 화면이 있다.
+      </p>
+      <p>
+        가장 빠른 길은 기존 구조를 유지하면서 외부 도구를 “참고하거나 일부만 연결”하는 것이다.
+        목표는 실제 병원 운영이 아니라, <strong>DB seed 기반 데모를 안정적으로 보여주는 것</strong>이다.
+      </p>
+    </section>
+
+    <h2>우선순위</h2>
+    <ol>
+      <li>Supabase 로그인, 워크스페이스, 권한 경계를 먼저 안정화한다.</li>
+      <li>seed 데이터를 API로 읽는 화면을 늘린다.</li>
+      <li>스케줄, 태스크, 결제는 기존 EMR 흐름을 기준으로 정리한다.</li>
+      <li>외부 결제, 이메일, 채팅, 분석은 데모가 안정된 뒤 연결한다.</li>
+    </ol>
+
+    <h2>기능별 활용안</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>기능</th>
+          <th>활용할 외부 도구</th>
+          <th>권장 방향</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>로그인 / 세션</td>
+          <td>Supabase, NextBase 참고</td>
+          <td>Supabase를 유지한다. Clerk/Auth.js로 교체하지 않는다.</td>
+        </tr>
+        <tr>
+          <td>멀티테넌시 / 워크스페이스</td>
+          <td>Supabase RLS, SaaS starter 구조 참고</td>
+          <td>워크스페이스, 멤버십, 권한은 CLAiR 내부 데이터로 관리한다.</td>
+        </tr>
+        <tr>
+          <td>스케줄</td>
+          <td>Cal.com / Cal.diy 참고</td>
+          <td>통째 도입하지 않는다. 기준은 “진료 접수-대기-차트-결제” 흐름과 직접 연결되는지다. Cal.com은 외부 예약/가용시간에는 좋지만, CLAiR 내부 진료 상태의 기준 시스템은 아니다.</td>
+        </tr>
+        <tr>
+          <td>태스크 관리</td>
+          <td>Trigger.dev 후보</td>
+          <td>지금 데모에는 필수 아님. 나중에 예약 알림, 실패 재시도, 정기 작업이 반복되면 검토한다. 진료 태스크 기준은 기존 <code>order_fulfillment_work_items</code>다.</td>
+        </tr>
+        <tr>
+          <td>결제</td>
+          <td>Toss Payments, PortOne, Stripe 참고</td>
+          <td>구현 계획만 잡는다. DB seed demo에는 실제 결제를 달지 않는다. 한국 결제 후보는 Toss 또는 PortOne이고, Stripe는 흐름 참고용이다.</td>
+        </tr>
+        <tr>
+          <td>고객 CRM</td>
+          <td>HubSpot / Attio 후보</td>
+          <td>현재 단계는 HubSpot 우선. 이유는 무료 시작, 비개발자 사용성, 영업 파이프라인 관리가 쉽기 때문이다. Attio는 나중에 API/맞춤 데이터 모델이 중요해질 때 재검토한다.</td>
+        </tr>
+        <tr>
+          <td>유저 소통 / 메신저</td>
+          <td>Stream Chat, Novu, Resend 후보</td>
+          <td>데모에는 실제 채팅을 달지 않는다. Slack처럼 빠른 채팅이 필요해지면 Stream Chat을 1순위로 검토한다. Novu는 알림, Resend는 이메일용이다.</td>
+        </tr>
+        <tr>
+          <td>분석 / 온보딩</td>
+          <td>Driver.js 우선</td>
+          <td>Driver.js로 간다. 무료 오픈소스라 비용 부담이 낮다. 제품 분석이 필요해질 때만 PostHog/Mixpanel을 별도로 검토한다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>주석 반영 결정 기준</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>결정</th>
+          <th>근거</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>스케줄</td>
+          <td>Cal.com은 참고만 한다.</td>
+          <td>CLAiR 예약은 진료 접수, 대기열, 차트, 결제와 연결된다. Cal.com은 외부 예약, 가용시간, 시간대 처리에 강하다. 그래서 예약 충돌, 시간대, booking 상태만 참고한다.</td>
+        </tr>
+        <tr>
+          <td>Trigger.dev</td>
+          <td>지금은 도입하지 않는다.</td>
+          <td>현재 DB seed demo에는 백그라운드 작업 플랫폼이 필수는 아니다. 단, “예약 알림”, “실패한 provider 재시도”, “정기 seed reset”, “webhook 후처리”가 생기면 도입 기준을 충족한다.</td>
+        </tr>
+        <tr>
+          <td>결제</td>
+          <td>계획만 만든다.</td>
+          <td>데모에는 실제 Toss/PortOne 기능을 붙이지 않는다. 지금 필요한 것은 provider-neutral 결제 설계다. 실제 결제는 승인된 별도 작업으로 분리한다.</td>
+        </tr>
+        <tr>
+          <td>CRM</td>
+          <td>HubSpot 우선.</td>
+          <td>지금 필요한 외부 CRM은 환자 관리가 아니라 병원 영업 관리다. 비개발자 사용성, 무료 시작, 학습 자료 기준으로 HubSpot이 더 적합하다. Attio는 커스텀 API 연동이 중요해질 때 후보가 된다.</td>
+        </tr>
+        <tr>
+          <td>메신저</td>
+          <td>나중에 Stream Chat 우선 검토.</td>
+          <td>“코멘트”는 환자/진료/태스크에 붙는 내부 메모를 뜻한다. Slack형 실시간 채팅이 필요하면 React UI가 준비된 Stream Chat이 빠르다. 단, 의료/결제 정보가 오갈 수 있어 데모에는 아직 붙이지 않는다.</td>
+        </tr>
+        <tr>
+          <td>온보딩</td>
+          <td>Driver.js로 결정.</td>
+          <td>무료 MIT 오픈소스이고, 화면 안내 tour를 빠르게 만들 수 있다. 비용이 거의 없어서 현재 단계에 맞다. 고급 분석/사용자 세그먼트가 필요해질 때만 유료 분석 도구를 검토한다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>지금 바로 하지 말 것</h2>
+    <ul>
+      <li>SaaS 보일러플레이트로 프로젝트를 갈아엎지 않는다.</li>
+      <li>OpenVPM처럼 라이선스 위험이 있는 프로젝트 코드를 복사하지 않는다.</li>
+      <li>Cal.com을 내부 진료 스케줄 엔진으로 통째 도입하지 않는다.</li>
+      <li>Stripe를 한국 결제 기본안으로 잡지 않는다.</li>
+      <li>실제 결제, 이메일, 카카오, SMS, 채팅, 분석 연동은 승인 전까지 하지 않는다.</li>
+    </ul>
+
+    <h2>추천 실행 순서</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>순서</th>
+          <th>목표</th>
+          <th>이유</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Supabase seed 로그인 재현</td>
+          <td>데모의 출발점이 흔들리면 이후 기능도 불안정하다.</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>API read-state 정리</td>
+          <td>화면마다 로딩, 실패, 재시도 처리가 달라지는 문제를 줄인다.</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>스케줄 / 접수 안정화</td>
+          <td>외래 데모의 첫 흐름이다.</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>태스크 / 처치 / 검사 queue 안정화</td>
+          <td>진료 후속 업무가 seed 데이터와 맞아야 한다.</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>결제 adapter 설계</td>
+          <td>실제 결제 연결은 하지 않는다. Toss/PortOne을 붙일 수 있는 내부 설계만 준비한다.</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Driver.js 온보딩 tour</td>
+          <td>비용 부담이 낮고, 데모 설명 효과가 크다. 실제 환자/결제 데이터와 무관하다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>한 줄 판단</h2>
+    <p>
+      외부 도구는 “대체재”가 아니라 “속도를 내는 부품”으로 써야 한다.
+      지금은 Supabase 기반 seed 데모를 먼저 안정화하고, 실제 외부 서비스 연결은 그다음 단계로 미루는 것이 안전하다.
+    </p>
+
+    <h2>참고한 기준</h2>
+    <ul>
+      <li><a href="https://cal.com/embed">Cal.com Embed</a>: 외부 예약 화면을 앱 안에 넣는 용도.</li>
+      <li><a href="https://cal.com/docs/api-reference/v2/schedules/create-a-schedule">Cal.com Schedule API</a>: 가용시간과 시간대 모델 참고.</li>
+      <li><a href="https://trigger.dev/docs/introduction">Trigger.dev</a>: 백그라운드 작업, 재시도, 모니터링이 필요할 때 후보.</li>
+      <li><a href="https://www.hubspot.com/pricing/crm">HubSpot Free CRM</a>: 무료 CRM 시작 가능.</li>
+      <li><a href="https://attio.com/pricing">Attio Pricing</a>: 무료 3 seat 시작, API 중심 CRM 후보.</li>
+      <li><a href="https://getstream.io/chat/sdk/react/">Stream Chat React SDK</a>: Slack형 채팅 UI를 빠르게 만들 때 후보.</li>
+      <li><a href="https://driverjs.com/">Driver.js</a>: 무료 MIT 오픈소스 온보딩 tour 후보.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <p class="note">
+      이 보고서는 원본 계획 문서를 비개발자용으로 요약한 것이다.
+      새 코드, DB, 결제, 이메일, 외부 provider 설정은 추가하지 않았다.
+    </p>
+  </body>
+</html>
