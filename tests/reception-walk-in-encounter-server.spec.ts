@@ -51,6 +51,8 @@ test("walk-in encounter route requires an actor and preserves mock fallback", as
       encounter: {
         id: string;
         appointmentId?: string;
+        checkedInAt?: string;
+        durationMinutes?: number;
         patientId: string;
         guardianId?: string;
         receptionType?: string;
@@ -58,6 +60,7 @@ test("walk-in encounter route requires an actor and preserves mock fallback", as
       };
       queueEntry: {
         encounterId: string;
+        enteredAt?: string;
         queueType: string;
         status: string;
       };
@@ -71,6 +74,7 @@ test("walk-in encounter route requires an actor and preserves mock fallback", as
 	      expect(body.walkIn.encounter).toMatchObject({
 	        patientId: "patient-coco",
 	        guardianId: "guardian-lee-jieun",
+	        durationMinutes: 30,
 	        status: "waiting",
 	        checkedInAt: "2026-05-19T11:15:00+09:00",
 	      });
@@ -81,6 +85,22 @@ test("walk-in encounter route requires an actor and preserves mock fallback", as
 	    status: "waiting",
 	    enteredAt: "2026-05-19T11:15:00+09:00",
 	  });
+
+  const invalidDuration = await request.post(
+    "/api/workspaces/clair-demo/reception/walk-in-encounters",
+    {
+      data: { ...validWalkInInput, durationMinutes: 22 },
+      headers: { "x-clair-demo-session-user-id": "user-front-desk" },
+    },
+  );
+  expect(invalidDuration.status()).toBe(400);
+  await expectJson(invalidDuration, {
+    ok: false,
+    error: "invalid_input",
+    fieldErrors: {
+      durationMinutes: "예상 진료시간은 15분 단위로 설정해 주세요.",
+    },
+  });
 });
 
 test("walk-in encounter core enforces reception create permission", async () => {
@@ -133,10 +153,32 @@ test("walk-in encounter core validates patient and guardian workspace context", 
   });
 });
 
+test("walk-in encounter core validates duration as a positive 15 minute step", async () => {
+  const invalidDuration = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: { ...validWalkInInput, durationMinutes: 22 },
+  });
+
+  expect(invalidDuration).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: {
+      durationMinutes: "예상 진료시간은 15분 단위로 설정해 주세요.",
+    },
+  });
+});
+
 test("supabase walk-in encounter gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   let createPayload:
-    | { plannedStartAt?: string; primaryVeterinarianId?: string; weightKg?: number }
+    | {
+        durationMinutes?: number;
+        plannedStartAt?: string;
+        primaryVeterinarianId?: string;
+        weightKg?: number;
+      }
     | undefined;
   const gateway = createSupabaseReceptionWalkInEncounterGateway({
     from(tableName: string) {
@@ -177,7 +219,13 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
       }
 
       const createArgs = args as {
-        p_walk_in: { patientId: string; primaryVeterinarianId?: string; weightKg?: number };
+        p_walk_in: {
+          durationMinutes?: number;
+          patientId: string;
+          plannedStartAt?: string;
+          primaryVeterinarianId?: string;
+          weightKg?: number;
+        };
         p_workspace_id: string;
       };
       createPayload = createArgs.p_walk_in;
@@ -232,6 +280,7 @@ test("supabase walk-in encounter gateway keeps workspace scope in the RPC write"
   expect(createPayload?.primaryVeterinarianId).toBe(
     "49110000-0000-4000-8000-000000000003",
   );
+  expect(createPayload?.durationMinutes).toBe(30);
   expect(createPayload?.plannedStartAt).toBe("2026-05-19T11:15:00+09:00");
   expect(createPayload?.weightKg).toBe(4.35);
   expect(result).toMatchObject({

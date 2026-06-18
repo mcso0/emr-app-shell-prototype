@@ -128,6 +128,21 @@ test("encounter update core validates editable state and weight", async () => {
     status: 400,
     error: "invalid_input",
   });
+
+  const invalidDuration = await createReceptionEncounterUpdate({
+    actorUserId: "user-front-desk",
+    encounterId,
+    input: { ...validInput, durationMinutes: 22 },
+    workspaceId: "clair-demo",
+  });
+  expect(invalidDuration).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: {
+      durationMinutes: "예상 진료시간은 15분 단위로 설정해 주세요.",
+    },
+  });
 });
 
 test("supabase encounter update gateway keeps workspace scope in the RPC write", async () => {
@@ -226,6 +241,9 @@ test("encounter update writer migration updates encounter and patient weight", (
   expect(migration).toContain("private.clair_is_active_workspace_member");
   expect(migration).toContain("update public.encounters");
   expect(migration).toContain("update public.patients");
+  expect(migration).toContain("duration_minutes");
+  expect(migration).toContain("checked_in_at");
+  expect(migration).toContain("entered_at");
   expect(migration).toContain("weight_kg");
   expect(migration).toContain("reception.encounter_updated");
   expect(migration).toContain("grant execute on function public.clair_update_reception_encounter");

@@ -18,6 +18,10 @@ import {
   mockPatients,
   mockWaitingQueueEntries,
 } from "@/mocks/emr-domain";
+import {
+  isReceptionDurationMinutesValid,
+  receptionDurationValidationMessage,
+} from "@/features/reception/reception-duration";
 import type { Encounter, Patient, WaitingQueueEntry } from "@/types/emr-domain";
 
 export type ReceptionEncounterUpdateDenial =
@@ -309,8 +313,8 @@ function normalizeEncounterUpdateInput(
 function validateEncounterUpdateInput(input: ReceptionEncounterUpdateInput) {
   const fieldErrors: ReceptionEncounterUpdateFieldErrors = {};
 
-  if (input.durationMinutes !== undefined && input.durationMinutes <= 0) {
-    fieldErrors.durationMinutes = "예상 진료시간을 확인해 주세요.";
+  if (!isReceptionDurationMinutesValid(input.durationMinutes)) {
+    fieldErrors.durationMinutes = receptionDurationValidationMessage;
   }
   if (input.weightKg !== undefined && input.weightKg <= 0) {
     fieldErrors.weightKg = "체중은 0보다 커야 합니다.";

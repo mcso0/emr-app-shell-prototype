@@ -474,10 +474,9 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   expect(Math.abs(kongCardInsets.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(kongCardInsets.top)).toBeLessThanOrEqual(1);
-  expect(kongCardInsets.height).toBe(36);
-  expect(kongCardInsets.width).toBeGreaterThanOrEqual(170);
-  expect(kongCardInsets.right).toBeGreaterThanOrEqual(7);
-  expect(kongCardInsets.right).toBeLessThanOrEqual(9);
+  expect(kongCardInsets.height).toBe(56);
+  expect(kongCardInsets.width).toBeGreaterThanOrEqual(160);
+  expect(Math.abs(kongCardInsets.right)).toBeLessThanOrEqual(1);
 
   const timeAxisAlignment = await calendar.evaluate((calendarElement) => {
     const timeAxis = calendarElement.querySelector(
@@ -553,7 +552,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   );
   await expect(nabiPurposeChip).toContainText("외래");
   await expect(nabiPurposeChip).toHaveCSS("white-space", "nowrap");
-  await expect(nabiAppointment).toHaveCSS("height", "80px");
+  await expect(nabiAppointment).toHaveCSS("height", "28px");
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;
     if (!parent) return null;
@@ -569,9 +568,8 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   if (!nabiCardInsets)
     throw new Error("Expected Nabi schedule card inset data");
-  expect(nabiCardInsets.width).toBeGreaterThanOrEqual(170);
-  expect(nabiCardInsets.right).toBeGreaterThanOrEqual(7);
-  expect(nabiCardInsets.right).toBeLessThanOrEqual(9);
+  expect(nabiCardInsets.width).toBeGreaterThanOrEqual(160);
+  expect(Math.abs(nabiCardInsets.right)).toBeLessThanOrEqual(1);
 });
 
 test("reception month calendar fills the available calendar height", async ({
@@ -1354,6 +1352,150 @@ test("server-backed reception day calendar read hydrates appointments and walk-i
   await expect(
     page.getByTestId("walkin-card-encounter-den63-walkin-nabi"),
   ).toContainText("DEN-63 persisted walk-in");
+});
+
+test("reception day and week calendars place walk-in cards by actual start minute and duration", async ({
+  page,
+}) => {
+  await page.route("**/reception/calendar/day**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        workspaceId: "clair-demo",
+        date,
+        records: [
+          {
+            encounter: {
+              id: "encounter-time-axis-minutes",
+              workspaceId: "clair-demo",
+              patientId: "patient-coco",
+              guardianId: "guardian-lee-jieun",
+              primaryVeterinarianId: "user-vet-suji",
+              encounterNo: "E-TIME-001",
+              receptionType: "walk_in",
+              durationMinutes: 30,
+              chiefComplaint: "15:13 실제 시간 배치",
+              visitPurpose: "15:13 실제 시간 배치",
+              status: "waiting",
+              checkedInAt: "2026-05-01T15:13:00+09:00",
+              createdAt: "2026-05-01T15:13:00+09:00",
+              updatedAt: "2026-05-01T15:13:00+09:00",
+            },
+            queueEntry: {
+              id: "queue-time-axis-minutes",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-time-axis-minutes",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sortOrder: 1,
+              enteredAt: "2026-05-01T15:13:00+09:00",
+            },
+          },
+          {
+            encounter: {
+              id: "encounter-time-axis-long",
+              workspaceId: "clair-demo",
+              patientId: "patient-nabi",
+              guardianId: "guardian-oh-sea",
+              primaryVeterinarianId: "user-vet-suji",
+              encounterNo: "E-TIME-002",
+              receptionType: "walk_in",
+              durationMinutes: 90,
+              chiefComplaint: "90분 실제 시간 배치",
+              visitPurpose: "90분 실제 시간 배치",
+              status: "waiting",
+              checkedInAt: "2026-05-01T16:00:00+09:00",
+              createdAt: "2026-05-01T16:00:00+09:00",
+              updatedAt: "2026-05-01T16:00:00+09:00",
+            },
+            queueEntry: {
+              id: "queue-time-axis-long",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-time-axis-long",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sortOrder: 2,
+              enteredAt: "2026-05-01T16:00:00+09:00",
+            },
+          },
+        ],
+        enforcedBy: "reception-calendar-read",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception");
+
+  const shortCard = page.getByTestId("walkin-card-encounter-time-axis-minutes");
+  const longCard = page.getByTestId("walkin-card-encounter-time-axis-long");
+  await expect(shortCard).toContainText("15:13");
+  await expect(shortCard).toContainText("30분");
+  await expect(longCard).toContainText("90분");
+
+  const dayMetrics = await shortCard.evaluate((card) => {
+    const row = document.querySelector('[data-testid="day-hour-row-15"]');
+    const longCard = document.querySelector(
+      '[data-testid="walkin-card-encounter-time-axis-long"]',
+    );
+    if (!row || !longCard) return null;
+
+    const cardBox = card.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    const longBox = longCard.getBoundingClientRect();
+
+    return {
+      height: Math.round(cardBox.height * 100) / 100,
+      longHeight: Math.round(longBox.height * 100) / 100,
+      top: Math.round((cardBox.top - rowBox.top) * 100) / 100,
+    };
+  });
+
+  if (!dayMetrics) throw new Error("Expected day card metrics");
+  expect(dayMetrics.top).toBeGreaterThan(22);
+  expect(dayMetrics.top).toBeLessThan(27);
+  expect(dayMetrics.height).toBeGreaterThan(54);
+  expect(dayMetrics.height).toBeLessThan(58);
+  expect(dayMetrics.longHeight).toBeGreaterThan(dayMetrics.height * 2.8);
+
+  await shortCard.click();
+  await expect(page.getByTestId("workspace-drawer")).toContainText(
+    "15:13 실제 시간 배치",
+  );
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+
+  await page.getByRole("group", { name: "접수 캘린더 보기" }).getByRole(
+    "button",
+    { name: "주" },
+  ).click();
+
+  const weekShortCard = page.getByTestId(
+    "walkin-card-encounter-time-axis-minutes",
+  );
+  await expect(weekShortCard).toContainText("15:13");
+  const weekMetrics = await weekShortCard.evaluate((card) => {
+    const row = document.querySelector('[data-testid="week-hour-row-15"]');
+    if (!row) return null;
+
+    const cardBox = card.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+
+    return {
+      height: Math.round(cardBox.height * 100) / 100,
+      top: Math.round((cardBox.top - rowBox.top) * 100) / 100,
+    };
+  });
+
+  if (!weekMetrics) throw new Error("Expected week card metrics");
+  expect(weekMetrics.top).toBeGreaterThan(22);
+  expect(weekMetrics.top).toBeLessThan(27);
+  expect(weekMetrics.height).toBeGreaterThan(54);
+  expect(weekMetrics.height).toBeLessThan(58);
 });
 
 test("reception persisted reads deny cross-workspace demo actors", async ({
