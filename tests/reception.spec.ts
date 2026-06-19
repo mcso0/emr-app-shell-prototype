@@ -1220,6 +1220,9 @@ test("server-backed reception queue read hydrates the side panel from persisted 
   await page.route("**/reception/queue**", async (route) => {
     requested = true;
     expect(route.request().method()).toBe("GET");
+    const requestedDate =
+      new URL(route.request().url()).searchParams.get("date") ?? "2026-05-01";
+    const requestedStartedAt = `${requestedDate}T09:25:00+09:00`;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -1242,9 +1245,9 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               visitPurpose: "DEN-62 persisted queue read",
               receptionMemo: "서버 대기열 read boundary",
               status: "waiting",
-              checkedInAt: "2026-05-01T09:25:00+09:00",
-              createdAt: "2026-05-01T09:25:00+09:00",
-              updatedAt: "2026-05-01T09:25:00+09:00",
+              checkedInAt: requestedStartedAt,
+              createdAt: requestedStartedAt,
+              updatedAt: requestedStartedAt,
             },
             queueEntry: {
               id: "queue-live-queue-coco",
@@ -1254,7 +1257,7 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               status: "waiting",
               priority: "normal",
               sortOrder: 1,
-              enteredAt: "2026-05-01T09:25:00+09:00",
+              enteredAt: requestedStartedAt,
             },
           },
         ],
@@ -2990,21 +2993,30 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
       enteredAt: "2026-05-01T01:15:00.000Z",
     },
   };
-  const cancelledPersistedWalkIn = {
-    ...persistedWalkIn,
-    encounter: {
-      ...persistedWalkIn.encounter,
-      status: "cancelled",
-      updatedAt: "2026-05-01T01:30:00.000Z",
-    },
-    queueEntry: {
-      ...persistedWalkIn.queueEntry,
-      status: "cancelled",
-      finishedAt: "2026-05-01T01:30:00.000Z",
-    },
-  };
   let walkInCreated = false;
   let walkInCancelled = false;
+  let selectedReadDate = "2026-05-01";
+  const getPersistedWalkInReadback = () => {
+    const startedAt = `${selectedReadDate}T01:15:00.000Z`;
+    const finishedAt = `${selectedReadDate}T01:30:00.000Z`;
+
+    return {
+      ...persistedWalkIn,
+      encounter: {
+        ...persistedWalkIn.encounter,
+        status: walkInCancelled ? "cancelled" : "waiting",
+        checkedInAt: startedAt,
+        createdAt: startedAt,
+        updatedAt: walkInCancelled ? finishedAt : startedAt,
+      },
+      queueEntry: {
+        ...persistedWalkIn.queueEntry,
+        status: walkInCancelled ? "cancelled" : "waiting",
+        enteredAt: startedAt,
+        ...(walkInCancelled ? { finishedAt } : {}),
+      },
+    };
+  };
 
   await page.route(
     "**/api/workspaces/clair-demo/reception/walk-in-encounters",
@@ -3016,27 +3028,29 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
         body: JSON.stringify({
           ok: true,
           workspaceId: "clair-demo",
-          walkIn: persistedWalkIn,
+          walkIn: getPersistedWalkInReadback(),
           enforcedBy: "reception-walk-in-encounter",
         }),
       });
     },
   );
   await page.route("**/reception/queue**", async (route) => {
+    selectedReadDate =
+      new URL(route.request().url()).searchParams.get("date") ?? selectedReadDate;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
         status: 200,
-        queue: walkInCreated
-          ? [walkInCancelled ? cancelledPersistedWalkIn : persistedWalkIn]
-          : [],
+        queue: walkInCreated ? [getPersistedWalkInReadback()] : [],
         enforcedBy: "reception-queue-read",
       }),
     });
   });
   await page.route("**/reception/calendar/day**", async (route) => {
+    selectedReadDate =
+      new URL(route.request().url()).searchParams.get("date") ?? selectedReadDate;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -3044,8 +3058,8 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
         ok: true,
         status: 200,
         workspaceId: "clair-demo",
-        date: "2026-05-01",
-        records: walkInCreated && !walkInCancelled ? [persistedWalkIn] : [],
+        date: selectedReadDate,
+        records: walkInCreated && !walkInCancelled ? [getPersistedWalkInReadback()] : [],
         enforcedBy: "reception-calendar-read",
       }),
     });
@@ -3063,8 +3077,8 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
           status: 200,
           workspaceId: "clair-demo",
           cancellation: {
-            encounter: cancelledPersistedWalkIn.encounter,
-            queueEntry: cancelledPersistedWalkIn.queueEntry,
+            encounter: getPersistedWalkInReadback().encounter,
+            queueEntry: getPersistedWalkInReadback().queueEntry,
           },
           enforcedBy: "reception-encounter-cancel",
         }),
