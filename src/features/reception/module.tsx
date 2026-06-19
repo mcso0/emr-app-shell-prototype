@@ -30,6 +30,11 @@ import {
   EmrSidePanelTypeBadge,
   emrSidePanelCardActionButtonClassName,
 } from "@/components/emr/side-panel-card";
+import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
+import {
+  EmrTaskQueueCard,
+  type EmrTaskQueueCardItem,
+} from "@/components/emr/task-queue-card";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import {
   ChevronLeftIcon,
@@ -83,6 +88,7 @@ import {
   getFilteredReceptionPatients,
   getGuardianDisplay,
   getReceptionPatientSummaries,
+  getReceptionQueueRows,
   getTodayAppointments,
   type ReceptionDraftCheckIn,
   type ReceptionPatientSummary,
@@ -110,6 +116,9 @@ import type {
   ReceptionAppointmentCreateResponse,
 } from "@/features/reception/appointment-create";
 import type {
+  ReceptionAppointmentRestoreResponse,
+} from "@/features/reception/appointment-restore";
+import type {
   ReceptionPatientGuardianLookupItem,
   ReceptionPatientGuardianLookupResponse,
 } from "@/features/reception/patient-guardian-lookup";
@@ -124,6 +133,9 @@ import type {
 import type {
   ReceptionEncounterCancelResponse,
 } from "@/features/reception/encounter-cancel";
+import type {
+  ReceptionEncounterRestoreResponse,
+} from "@/features/reception/encounter-restore";
 import type {
   ReceptionEncounterUpdateInput,
   ReceptionEncounterUpdateResponse,
@@ -219,7 +231,7 @@ const calendarViewItems = [
 ];
 const receptionQueueTabItems = [
   { value: "all" as const, label: "전체" },
-  { value: "reception" as const, label: "대기" },
+  { value: "reception" as const, label: "외래" },
   { value: "appointment" as const, label: "예약" },
 ];
 const dayScheduleStartHour = 8;
@@ -654,7 +666,17 @@ const getReadbackPatientIds = (records: ReceptionReadbackProfileRecord[]) =>
   Array.from(
     new Set(
       records
-        .map((record) => record.patient?.id ?? record.encounter?.patientId)
+        .map((record) => {
+          if (record.patient?.id) return record.patient.id;
+          if ("encounter" in record && record.encounter) {
+            return record.encounter.patientId;
+          }
+          if ("appointment" in record && record.appointment) {
+            return record.appointment.patientId;
+          }
+
+          return undefined;
+        })
         .filter((value): value is string => Boolean(value)),
     ),
   );
@@ -815,6 +837,70 @@ async function submitReceptionEncounterCancel({
   }
 }
 
+async function submitReceptionEncounterRestore({
+  actorRole,
+  encounterId,
+  workspaceId,
+}: {
+  actorRole?: string;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ReceptionEncounterRestoreResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/encounters/${encodeURIComponent(encounterId)}/restore`,
+      {
+        method: "POST",
+        headers: {
+          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
+        },
+      },
+    );
+    const body = (await response.json()) as ReceptionEncounterRestoreResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function submitReceptionAppointmentRestore({
+  actorRole,
+  appointmentId,
+  workspaceId,
+}: {
+  actorRole?: string;
+  appointmentId: string;
+  workspaceId: string;
+}): Promise<ReceptionAppointmentRestoreResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/appointments/${encodeURIComponent(appointmentId)}/restore`,
+      {
+        method: "POST",
+        headers: {
+          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
+        },
+      },
+    );
+    const body = (await response.json()) as ReceptionAppointmentRestoreResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
 async function submitReceptionEncounterUpdate({
   actorRole,
   encounterId,
@@ -853,14 +939,16 @@ async function submitReceptionEncounterUpdate({
 
 async function loadReceptionQueue({
   actorId,
+  date,
   workspaceId,
 }: {
   actorId?: string;
+  date: string;
   workspaceId: string;
 }): Promise<ReceptionQueueReadResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/queue`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/queue?date=${encodeURIComponent(date)}`,
       {
         cache: "no-store",
         headers: actorId
@@ -1107,6 +1195,47 @@ function getEncounterCancelRouteErrorMessage(
   }
 
   return "접수 취소에 실패했습니다.";
+}
+
+function getReceptionRestoreFailureMessage(
+  result: Extract<
+    ReceptionAppointmentRestoreResponse | ReceptionEncounterRestoreResponse,
+    { ok: false }
+  >,
+) {
+  if (result.error === "rate_limited")
+    return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (
+    result.denialReason === "encounter_unavailable" ||
+    result.denialReason === "appointment_unavailable"
+  ) {
+    return "복구할 접수/예약 정보를 찾을 수 없습니다.";
+  }
+  if (
+    result.denialReason === "encounter_already_active" ||
+    result.denialReason === "appointment_already_active"
+  ) {
+    return "이미 복구된 접수/예약입니다.";
+  }
+  if (
+    result.denialReason === "encounter_not_restorable" ||
+    result.denialReason === "appointment_not_restorable"
+  ) {
+    return "현재 상태에서는 복구할 수 없습니다.";
+  }
+  if (result.denialReason === "appointment_active_encounter_exists") {
+    return "이미 연결된 활성 접수가 있어 예약을 복구할 수 없습니다.";
+  }
+  if (
+    result.denialReason === "permission_missing" ||
+    result.denialReason === "inactive_user" ||
+    result.denialReason === "workspace_membership_missing" ||
+    result.denialReason === "workspace_membership_inactive"
+  ) {
+    return "이 workspace에서 접수/예약을 복구할 권한이 없습니다.";
+  }
+
+  return "접수/예약 복구에 실패했습니다.";
 }
 
 function getEncounterUpdateRouteErrorMessage(
@@ -2189,10 +2318,17 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const queueReadError = useReceptionStore((state) => state.queueReadError);
   const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
-  const [listMode, setListMode] = useState<ReceptionSideListMode>("reception");
+  const persistedCalendarAppointments = useReceptionStore(
+    (state) => state.persistedCalendarAppointments,
+  );
+  const [listMode, setListMode] = useState<ReceptionSideListMode>("all");
   const [searchOpen, setSearchOpen] = useState(false);
   const [cardActionFeedback, setCardActionFeedback] =
     useState<ReceptionCardActionFeedback | null>(null);
+  const [collapsedQueueGroups, setCollapsedQueueGroups] = useState<
+    Record<ReceptionQueueSideStatusGroup, boolean>
+  >({ cancelled: false, waiting: false });
+  const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
   >([]);
@@ -2264,19 +2400,65 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     () => getFilteredReceptionPatients(patientSummaries, searchQuery),
     [patientSummaries, searchQuery],
   );
-  const visiblePatients = useMemo(
-    () => getReceptionSideListItems(filteredPatients, listMode),
-    [filteredPatients, listMode],
+  const queueAppointments = useMemo(
+    () =>
+      getTodayAppointments(draftCheckIns, persistedCalendarAppointments, {
+        operatingDate,
+        workspaceId,
+      }),
+    [draftCheckIns, operatingDate, persistedCalendarAppointments, workspaceId],
+  );
+  const queueRows = useMemo(
+    () =>
+      getReceptionQueueRows(draftCheckIns, {
+        operatingDate,
+        staffMembers: veterinarianStaffMembers,
+        workspaceId,
+      }),
+    [draftCheckIns, operatingDate, veterinarianStaffMembers, workspaceId],
+  );
+  const queueItems = useMemo(
+    () =>
+      getReceptionQueueSideItems({
+        appointments: queueAppointments,
+        guardians,
+        patientGuardians,
+        patients,
+        queueRows,
+        staffMembers: veterinarianStaffMembers,
+        workspaceId,
+      }),
+    [
+      guardians,
+      patientGuardians,
+      patients,
+      queueAppointments,
+      queueRows,
+      veterinarianStaffMembers,
+      workspaceId,
+    ],
+  );
+  const filteredQueueItems = useMemo(
+    () => getFilteredReceptionQueueSideItems(queueItems, searchQuery),
+    [queueItems, searchQuery],
+  );
+  const visibleQueueItems = useMemo(
+    () => getReceptionSideQueueItems(filteredQueueItems, listMode),
+    [filteredQueueItems, listMode],
+  );
+  const visibleQueueGroups = useMemo(
+    () => getReceptionSideQueueGroups(visibleQueueItems),
+    [visibleQueueItems],
   );
   const sideListCounts = useMemo(
     () =>
       Object.fromEntries(
         receptionQueueTabItems.map((item) => [
           item.value,
-          getReceptionSideListItems(patientSummaries, item.value).length,
+          getReceptionSideQueueItems(queueItems, item.value).length,
         ]),
       ) as Record<ReceptionSideListMode, number>,
-    [patientSummaries],
+    [queueItems],
   );
   const sideListFilterItems = useMemo(
     () =>
@@ -2295,6 +2477,55 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     setSearchQuery("");
     setSearchOpen(false);
   }, [setSearchQuery]);
+  const toggleQueueGroup = useCallback((group: ReceptionQueueSideStatusGroup) => {
+    setCollapsedQueueGroups((current) => ({
+      ...current,
+      [group]: !current[group],
+    }));
+  }, []);
+  const handleRestoreQueueItem = useCallback(
+    async (item: ReceptionQueueSideItem) => {
+      if (item.statusGroup !== "cancelled" || pendingRestoreId) return;
+      if (isReceptionQueueSideItemPast(item, operatingDate, currentOperatingMinutes)) {
+        const confirmed = window.confirm(
+          "원래 시간이 이미 지났어. 그래도 이 접수/예약을 원래 시간대에 복구할까?",
+        );
+        if (!confirmed) return;
+      }
+
+      setPendingRestoreId(item.id);
+      const result = item.appointment
+        ? await submitReceptionAppointmentRestore({
+            actorRole: authSession?.role,
+            appointmentId: item.appointment.id,
+            workspaceId,
+          })
+        : item.encounter
+          ? await submitReceptionEncounterRestore({
+              actorRole: authSession?.role,
+              encounterId: item.encounter.id,
+              workspaceId,
+            })
+          : ({ ok: false, status: 500, error: "db_write_failed" } as const);
+      setPendingRestoreId(null);
+
+      if (result.ok) {
+        toast.success("복구가 완료되었습니다.");
+        requestReceptionReadRetry();
+        return;
+      }
+
+      toast.error(getReceptionRestoreFailureMessage(result));
+    },
+    [
+      authSession?.role,
+      currentOperatingMinutes,
+      operatingDate,
+      pendingRestoreId,
+      requestReceptionReadRetry,
+      workspaceId,
+    ],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -2391,7 +2622,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           onQueryChange: setSearchQuery,
           placeholder: "환자, 보호자, 전화번호, 방문 목적, 메모, 담당의 검색",
           query: searchQuery,
-          resultCount: visiblePatients.length,
+          resultCount: visibleQueueItems.length,
         }}
         headerActions={
           <>
@@ -2411,66 +2642,69 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       <EmrSubpanelBody>
-        {visiblePatients.length ? (
-          visiblePatients.map((summary) => (
-            <PatientCard
-              key={summary.patient.id}
-              currentOperatingMinutes={currentOperatingMinutes}
-              summary={summary}
-              selected={isReceptionSideCardSelected(
-                summary,
-                activeDrawer,
-                querySelectedPatientId,
-              )}
-              onOpenChart={(targetSummary) => {
-                const encounter = targetSummary.activeEncounter;
-                if (!encounter) return;
-
-                saveChartLiveEncounterHandoff({
-                  encounter,
-                  patient: targetSummary.patient,
-                  primaryGuardian: targetSummary.primaryGuardian,
-                  veterinarianName: targetSummary.veterinarianName,
-                });
-                selectEncounter(encounter.id);
-                setActiveDrawer(null);
-                router.push(
-                  buildChartRoute({
-                    encounterId: encounter.id,
-                    patientId: targetSummary.patient.id,
-                    workspaceId,
-                  }),
-                );
-              }}
-              onUnavailableAction={setCardActionFeedback}
-              onSelect={() => {
-                selectPatient(summary.patient.id);
-                if (summary.activeEncounter) {
-                  selectEncounter(summary.activeEncounter.id);
-                  setActiveDrawer({
-                    type: "reception-encounter",
-                    id: summary.activeEncounter.id,
-                    subtitle: summary.patient.patientNo,
+        {visibleQueueGroups.length ? (
+          visibleQueueGroups.map((group) => (
+            <ReceptionQueueSideGroup
+              key={group.statusGroup}
+              collapsed={collapsedQueueGroups[group.statusGroup]}
+              group={group}
+              pendingRestoreId={pendingRestoreId}
+              selectedItemId={getReceptionSideSelectedQueueItemId(activeDrawer)}
+              onOpenChart={(item) => {
+                if (!item.encounter) {
+                  setCardActionFeedback({
+                    title: "먼저 접수를 생성해야 해",
+                    body: `${item.patient.name}은 아직 진행 중인 encounter가 없어서 차트로 넘길 live 접수 id가 없어.`,
                   });
                   return;
                 }
 
-                if (summary.latestAppointment) {
-                  selectAppointment(summary.latestAppointment.id);
+                saveChartLiveEncounterHandoff({
+                  encounter: item.encounter,
+                  patient: item.patient,
+                  primaryGuardian: item.primaryGuardian,
+                  veterinarianName: item.veterinarianName,
+                });
+                selectEncounter(item.encounter.id);
+                setActiveDrawer(null);
+                router.push(
+                  buildChartRoute({
+                    encounterId: item.encounter.id,
+                    patientId: item.patient.id,
+                    workspaceId,
+                  }),
+                );
+              }}
+              onRestore={handleRestoreQueueItem}
+              onSelect={(item) => {
+                selectPatient(item.patient.id);
+                if (item.encounter) {
+                  selectEncounter(item.encounter.id);
+                  setActiveDrawer({
+                    type: "reception-encounter",
+                    id: item.encounter.id,
+                    subtitle: item.patient.patientNo,
+                  });
+                  return;
+                }
+
+                if (item.appointment) {
+                  selectAppointment(item.appointment.id);
                   setActiveDrawer({
                     type: "reception-appointment",
-                    id: summary.latestAppointment.id,
-                    subtitle: summary.patient.patientNo,
+                    id: item.appointment.id,
+                    subtitle: item.patient.patientNo,
                   });
                   return;
                 }
 
                 setActiveDrawer({
                   type: "reception-patient",
-                  id: summary.patient.id,
-                  subtitle: summary.patient.patientNo,
+                  id: item.patient.id,
+                  subtitle: item.patient.patientNo,
                 });
               }}
+              onToggle={() => toggleQueueGroup(group.statusGroup)}
             />
           ))
         ) : searchQuery.trim() ? (
@@ -2485,6 +2719,421 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
+}
+
+type ReceptionQueueSideStatusGroup = "waiting" | "cancelled";
+
+type ReceptionQueueSideItem = {
+  appointment?: Appointment;
+  encounter?: Encounter;
+  id: string;
+  kind: "encounter" | "appointment";
+  patient: Patient;
+  primaryGuardian?: Guardian;
+  queueKind: "appointment" | "reception";
+  searchText: string;
+  sortAt: string;
+  statusGroup: ReceptionQueueSideStatusGroup;
+  taskCardItem: EmrTaskQueueCardItem;
+  veterinarianName?: string;
+};
+
+type ReceptionQueueSideGroup = {
+  items: ReceptionQueueSideItem[];
+  label: string;
+  statusGroup: ReceptionQueueSideStatusGroup;
+};
+
+function ReceptionQueueSideGroup({
+  collapsed,
+  group,
+  onOpenChart,
+  onRestore,
+  onSelect,
+  onToggle,
+  pendingRestoreId,
+  selectedItemId,
+}: {
+  collapsed: boolean;
+  group: ReceptionQueueSideGroup;
+  onOpenChart: (item: ReceptionQueueSideItem) => void;
+  onRestore: (item: ReceptionQueueSideItem) => void;
+  onSelect: (item: ReceptionQueueSideItem) => void;
+  onToggle: () => void;
+  pendingRestoreId: string | null;
+  selectedItemId?: string;
+}) {
+  const colorToken =
+    group.statusGroup === "cancelled"
+      ? "--emr-status-danger-bg"
+      : "--emr-status-info-bg";
+
+  return (
+    <EmrSidePanelCollapsibleGroup
+      collapsed={collapsed}
+      count={group.items.length}
+      countBadgeColorToken={colorToken}
+      dataTestId={`reception-queue-status-${group.statusGroup}`}
+      indicatorColorToken={colorToken}
+      indicatorVisible={false}
+      label={group.label}
+      onToggle={onToggle}
+    >
+      {group.items.map((item) => {
+        const actionItems = getReceptionQueueSideActionItems({
+          item,
+          onOpenChart,
+          onRestore,
+          onSelect,
+          pendingRestoreId,
+        });
+
+        return (
+          <EmrTaskQueueCard
+            key={item.id}
+            item={{ ...item.taskCardItem, actionItems }}
+            selected={selectedItemId === item.id}
+            onSelect={() => onSelect(item)}
+          />
+        );
+      })}
+    </EmrSidePanelCollapsibleGroup>
+  );
+}
+
+function getReceptionQueueSideActionItems({
+  item,
+  onOpenChart,
+  onRestore,
+  onSelect,
+  pendingRestoreId,
+}: {
+  item: ReceptionQueueSideItem;
+  onOpenChart: (item: ReceptionQueueSideItem) => void;
+  onRestore: (item: ReceptionQueueSideItem) => void;
+  onSelect: (item: ReceptionQueueSideItem) => void;
+  pendingRestoreId: string | null;
+}) {
+  const items = [
+    {
+      key: "open",
+      label: item.kind === "appointment" ? "예약 상세 보기" : "접수 상세 보기",
+      description: "현재 drawer 열기",
+      onSelect: () => onSelect(item),
+      testId: `reception-queue-action-open-${item.id}`,
+    },
+  ];
+
+  if (item.encounter && item.statusGroup !== "cancelled") {
+    items.push({
+      key: "chart",
+      label: "차트 보러가기",
+      description: "진료/차트 탭에서 열기",
+      onSelect: () => onOpenChart(item),
+      testId: `reception-queue-action-chart-${item.id}`,
+    });
+  }
+
+  if (item.statusGroup === "cancelled") {
+    items.push({
+      key: "restore",
+      label: pendingRestoreId === item.id ? "복구 중" : "복구하기",
+      description: "취소 상태를 되돌리기",
+      onSelect: () => onRestore(item),
+      testId: `reception-queue-action-restore-${item.id}`,
+    });
+  }
+
+  return items;
+}
+
+function getReceptionQueueSideItems({
+  appointments,
+  guardians,
+  patientGuardians,
+  patients,
+  queueRows,
+  staffMembers,
+  workspaceId,
+}: {
+  appointments: Appointment[];
+  guardians: Guardian[];
+  patientGuardians: PatientGuardian[];
+  patients: Patient[];
+  queueRows: ReturnType<typeof getReceptionQueueRows>;
+  staffMembers: Array<{ displayName: string; id: string }>;
+  workspaceId: string;
+}) {
+  const draftItems = queueRows
+    .filter((row) => row.encounter.workspaceId === workspaceId)
+    .flatMap((row): ReceptionQueueSideItem[] => {
+      const patient =
+        patients.find((item) => item.id === row.encounter.patientId) ?? row.patient;
+      if (!patient) return [];
+
+      const primaryGuardian = getReceptionQueuePrimaryGuardian({
+        guardianId: row.encounter.guardianId,
+        guardians,
+        patientGuardians,
+        patientId: patient.id,
+      }) ?? row.primaryGuardian;
+      const queueKind = row.encounter.appointmentId ? "appointment" : "reception";
+      const statusGroup = isCancelledReceptionQueueRow(row)
+        ? "cancelled"
+        : "waiting";
+      const veterinarianName =
+        row.veterinarianName ??
+        getStaffDisplayName(row.encounter.primaryVeterinarianId) ??
+        staffMembers.find((item) => item.id === row.encounter.primaryVeterinarianId)
+          ?.displayName;
+      const visitText =
+        row.encounter.chiefComplaint ??
+        row.encounter.visitPurpose ??
+        "접수 내원 목적";
+      const sortAt = row.encounter.checkedInAt ?? row.queueEntry.enteredAt;
+
+      return [
+        {
+          encounter: row.encounter,
+          id: `encounter-${row.encounter.id}`,
+          kind: "encounter",
+          patient,
+          primaryGuardian,
+          queueKind,
+          searchText: getReceptionQueueSideSearchText({
+            guardian: primaryGuardian,
+            patient,
+            veterinarianName,
+            visitText,
+          }),
+          sortAt,
+          statusGroup,
+          taskCardItem: {
+            actionAriaLabel: `${patient.name} 카드 작업`,
+            actionTestId: `reception-card-action-${row.encounter.id}`,
+            assigneeName: veterinarianName,
+            eventKind: statusGroup === "cancelled" ? "cancel" : "request",
+            eventText:
+              statusGroup === "cancelled"
+                ? `${getShortTime(row.queueEntry.finishedAt ?? sortAt)} 취소`
+                : `${getShortTime(sortAt)} 접수`,
+            eventTime: getShortTime(sortAt),
+            eventActorName: "접수",
+            guardianName: primaryGuardian?.name ?? "보호자 미지정",
+            patientName: patient.name,
+            receptionType: queueKind === "appointment" ? "예약" : "외래",
+            secondLineBadgeLabel: getReceptionQueueSideStatusLabel(statusGroup),
+            secondLineText: visitText,
+            testId: `patient-card-${patient.id}`,
+          },
+          veterinarianName,
+        },
+      ];
+    });
+  const checkedInAppointmentIds = new Set(
+    draftItems.flatMap((item) => item.appointment?.id ?? item.encounter?.appointmentId ?? []),
+  );
+  const appointmentItems = appointments
+    .filter((appointment) => !checkedInAppointmentIds.has(appointment.id))
+    .flatMap((appointment): ReceptionQueueSideItem[] => {
+      const patient = patients.find((item) => item.id === appointment.patientId);
+      if (!patient) return [];
+
+      const primaryGuardian = getReceptionQueuePrimaryGuardian({
+        guardianId: appointment.guardianId,
+        guardians,
+        patientGuardians,
+        patientId: patient.id,
+      });
+      const statusGroup =
+        appointment.status === "cancelled" ? "cancelled" : "waiting";
+      const veterinarianName =
+        getStaffDisplayName(appointment.assignedVeterinarianId) ??
+        staffMembers.find((item) => item.id === appointment.assignedVeterinarianId)
+          ?.displayName;
+      const visitText =
+        appointment.symptomNote ?? appointment.visitPurpose ?? "예약 내원 목적";
+
+      return [
+        {
+          appointment,
+          id: `appointment-${appointment.id}`,
+          kind: "appointment",
+          patient,
+          primaryGuardian,
+          queueKind: "appointment",
+          searchText: getReceptionQueueSideSearchText({
+            guardian: primaryGuardian,
+            patient,
+            veterinarianName,
+            visitText,
+          }),
+          sortAt: appointment.scheduledStartAt,
+          statusGroup,
+          taskCardItem: {
+            actionAriaLabel: `${patient.name} 카드 작업`,
+            actionTestId: `reception-card-action-${appointment.id}`,
+            assigneeName: veterinarianName,
+            eventKind: statusGroup === "cancelled" ? "cancel" : "request",
+            eventText:
+              statusGroup === "cancelled"
+                ? `${getShortTime(appointment.updatedAt)} 취소`
+                : `${getShortTime(appointment.scheduledStartAt)} 예약`,
+            eventTime: getShortTime(appointment.scheduledStartAt),
+            eventActorName: "예약",
+            guardianName: primaryGuardian?.name ?? "보호자 미지정",
+            patientName: patient.name,
+            receptionType: "예약",
+            secondLineBadgeLabel: getReceptionQueueSideStatusLabel(statusGroup),
+            secondLineText: `${visitText} · ${getAppointmentDurationLabel(appointment)}`,
+            testId: `appointment-queue-card-${appointment.id}`,
+          },
+          veterinarianName,
+        },
+      ];
+    });
+
+  return [...draftItems, ...appointmentItems].sort(
+    (a, b) =>
+      getReceptionQueueSideStatusOrder(a.statusGroup) -
+        getReceptionQueueSideStatusOrder(b.statusGroup) ||
+      new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime(),
+  );
+}
+
+function getReceptionSideQueueItems(
+  items: ReceptionQueueSideItem[],
+  mode: ReceptionSideListMode,
+) {
+  if (mode === "reception") {
+    return items.filter((item) => item.queueKind === "reception");
+  }
+
+  if (mode === "appointment") {
+    return items.filter((item) => item.queueKind === "appointment");
+  }
+
+  return items;
+}
+
+function getReceptionSideQueueGroups(items: ReceptionQueueSideItem[]) {
+  return (["waiting", "cancelled"] as const).flatMap((statusGroup) => {
+    const groupItems = items.filter((item) => item.statusGroup === statusGroup);
+    if (!groupItems.length) return [];
+
+    return [
+      {
+        items: groupItems,
+        label: getReceptionQueueSideStatusLabel(statusGroup),
+        statusGroup,
+      },
+    ];
+  });
+}
+
+function getFilteredReceptionQueueSideItems(
+  items: ReceptionQueueSideItem[],
+  query: string,
+) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return items;
+
+  return items.filter((item) => item.searchText.includes(normalizedQuery));
+}
+
+function getReceptionQueueSideStatusLabel(statusGroup: ReceptionQueueSideStatusGroup) {
+  return statusGroup === "cancelled" ? "취소" : "대기";
+}
+
+function getReceptionQueueSideStatusOrder(statusGroup: ReceptionQueueSideStatusGroup) {
+  return statusGroup === "waiting" ? 0 : 1;
+}
+
+function isCancelledReceptionQueueDraft(draft: ReceptionDraftCheckIn) {
+  return draft.encounter.status === "cancelled" || draft.queueEntry.status === "cancelled";
+}
+
+function isCancelledReceptionQueueRow(row: ReturnType<typeof getReceptionQueueRows>[number]) {
+  return row.encounter.status === "cancelled" || row.queueEntry.status === "cancelled";
+}
+
+function isReceptionDraftCalendarActive(draft: ReceptionDraftCheckIn) {
+  return (
+    draft.encounter.status !== "cancelled" &&
+    draft.queueEntry.status !== "cancelled" &&
+    draft.queueEntry.status !== "done"
+  );
+}
+
+function getReceptionQueuePrimaryGuardian({
+  guardianId,
+  guardians,
+  patientGuardians,
+  patientId,
+}: {
+  guardianId?: string;
+  guardians: Guardian[];
+  patientGuardians: PatientGuardian[];
+  patientId: string;
+}) {
+  const resolvedGuardianId =
+    guardianId ??
+    patientGuardians.find((link) => link.patientId === patientId && link.isPrimary)
+      ?.guardianId;
+
+  return resolvedGuardianId
+    ? guardians.find((guardian) => guardian.id === resolvedGuardianId)
+    : undefined;
+}
+
+function getReceptionQueueSideSearchText({
+  guardian,
+  patient,
+  veterinarianName,
+  visitText,
+}: {
+  guardian?: Guardian;
+  patient: Patient;
+  veterinarianName?: string;
+  visitText: string;
+}) {
+  return [
+    patient.name,
+    patient.patientNo,
+    patient.breed,
+    guardian?.name,
+    guardian?.mobilePhone,
+    guardian?.phone,
+    veterinarianName,
+    visitText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getReceptionSideSelectedQueueItemId(
+  activeDrawer: { type: string; id: string } | null,
+) {
+  if (!activeDrawer) return undefined;
+  if (activeDrawer.type === "reception-encounter") return `encounter-${activeDrawer.id}`;
+  if (activeDrawer.type === "reception-appointment") return `appointment-${activeDrawer.id}`;
+  return undefined;
+}
+
+function isReceptionQueueSideItemPast(
+  item: ReceptionQueueSideItem,
+  operatingDate: string,
+  currentOperatingMinutes: number,
+) {
+  const itemDate = getOperatingDateFromIso(item.sortAt);
+  const itemMinutes = getOperatingMinutesFromIso(item.sortAt);
+
+  if (!itemDate || itemMinutes === undefined) return false;
+  if (itemDate < operatingDate) return true;
+  if (itemDate > operatingDate) return false;
+
+  return itemMinutes < currentOperatingMinutes;
 }
 
 function isReceptionSideCardSelected(
@@ -4560,10 +5209,14 @@ export function ReceptionContent() {
       ),
     [draftCheckIns, workspaceId],
   );
+  const calendarDraftCheckIns = useMemo(
+    () => workspaceDraftCheckIns.filter(isReceptionDraftCalendarActive),
+    [workspaceDraftCheckIns],
+  );
   const appointments = useMemo(
     () =>
       getTodayAppointments(
-        workspaceDraftCheckIns,
+        calendarDraftCheckIns,
         persistedCalendarAppointments,
         {
           operatingDate,
@@ -4571,9 +5224,9 @@ export function ReceptionContent() {
         },
       ),
     [
+      calendarDraftCheckIns,
       operatingDate,
       persistedCalendarAppointments,
-      workspaceDraftCheckIns,
       workspaceId,
     ],
   );
@@ -4588,6 +5241,7 @@ export function ReceptionContent() {
     () =>
       appointments.filter(
         (appointment) =>
+          appointment.status !== "cancelled" &&
           appointment.assignedVeterinarianId &&
 	          effectiveSelectedVeterinarianIds.includes(
 	            appointment.assignedVeterinarianId,
@@ -4778,6 +5432,7 @@ export function ReceptionContent() {
         }),
         loadReceptionQueue({
           actorId: authSession?.id,
+          date: operatingDate,
           workspaceId,
         }),
       ]);
@@ -4947,7 +5602,7 @@ export function ReceptionContent() {
         currentOperatingMinutes={currentOperatingMinutes}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
         appointments={visibleAppointments}
-        draftCheckIns={workspaceDraftCheckIns}
+        draftCheckIns={calendarDraftCheckIns}
         operatingDate={operatingDate}
         onClearCalendarDraft={clearCalendarDraft}
         onClearCalendarTransientSelection={clearCalendarTransientSelection}
@@ -6972,7 +7627,7 @@ export function ReceptionDrawer() {
     requestReceptionReadRetry();
     setCancelConfirmOpen(false);
     setActiveDrawer(null);
-    toast.success("접수를 취소했습니다.");
+    toast.success("접수 취소가 완료되었습니다.");
   };
   const handleSaveSelectedEncounter = async () => {
     if (!selectedEncounter || !patient || editSubmitting) return;
@@ -7421,7 +8076,7 @@ export function ReceptionDrawer() {
           <DialogHeader>
             <DialogTitle>접수를 취소할까요?</DialogTitle>
             <DialogDescription>
-              취소하면 접수 캘린더와 진료 대기열에서 이 접수가 사라집니다.
+              취소하면 접수 캘린더에서는 사라지고 대기열에는 취소 상태로 남습니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

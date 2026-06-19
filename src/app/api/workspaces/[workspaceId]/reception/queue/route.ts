@@ -13,6 +13,7 @@ import {
   readReceptionQueue,
   type SupabaseReceptionQueueReadRpcClient,
 } from "@/features/reception/server-reception-queue-read";
+import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -23,6 +24,8 @@ type RouteContext = {
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { workspaceId } = await params;
+  const url = new URL(request.url);
+  const date = url.searchParams.get("date") ?? getWorkspaceOperatingDate(workspaceId);
   const serverSession = await readServerSession();
   const identity = resolveRoleUpdateActorIdentity({
     serverSession,
@@ -53,6 +56,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     : undefined;
   const result = await readReceptionQueue({
     actorUserId: identity.actorUserId,
+    date,
     permissionAdapter,
     workspaceId,
     gateway: client

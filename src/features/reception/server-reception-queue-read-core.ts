@@ -6,10 +6,17 @@ import {
 } from "@/features/auth/permission-resolver";
 import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
 import { mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
-import type { Encounter, Guardian, Patient, WaitingQueueEntry } from "@/types/emr-domain";
+import type {
+  Appointment,
+  Encounter,
+  Guardian,
+  Patient,
+  WaitingQueueEntry,
+} from "@/types/emr-domain";
 
 export type ReceptionQueueReadGateway = {
   listReceptionQueue(input: {
+    date: string;
     workspaceId: string;
   }): Promise<
     | { ok: true; queue: ReceptionQueueReadRecord[] }
@@ -37,11 +44,13 @@ export type ReceptionQueueReadResult =
 
 export async function readReceptionQueue({
   actorUserId,
+  date,
   gateway = createMockReceptionQueueReadGateway({ queue: [] }),
   permissionAdapter = createDemoReceptionQueueReadPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  date: string;
   gateway?: ReceptionQueueReadGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
@@ -60,7 +69,7 @@ export async function readReceptionQueue({
     };
   }
 
-  const result = await gateway.listReceptionQueue({ workspaceId });
+  const result = await gateway.listReceptionQueue({ date, workspaceId });
 
   if (!result.ok) return { ok: false, status: 500, error: result.error };
 
@@ -74,6 +83,7 @@ export async function readReceptionQueue({
 
 export function createMockReceptionQueueReadGateway(
   dataset: {
+    appointments?: Appointment[];
     encounters?: Encounter[];
     queue?: ReceptionQueueReadRecord[];
     waitingQueueEntries?: WaitingQueueEntry[];
@@ -83,32 +93,76 @@ export function createMockReceptionQueueReadGateway(
   }
 ): ReceptionQueueReadGateway {
   return {
-    async listReceptionQueue({ workspaceId }) {
+    async listReceptionQueue({ date, workspaceId }) {
       if (dataset.queue) {
         return {
           ok: true,
-          queue: dataset.queue.filter((record) => record.encounter.workspaceId === workspaceId),
+          queue: dataset.queue.filter(
+            (record) =>
+              getReceptionQueueRecordWorkspaceId(record) === workspaceId &&
+              isReceptionQueueRecordOnDate(record, date),
+          ),
         };
       }
 
+      const appointments = dataset.appointments ?? [];
       const encounters = dataset.encounters ?? [];
       const waitingQueueEntries = dataset.waitingQueueEntries ?? [];
+      const encounterRecords = waitingQueueEntries.reduce<ReceptionQueueReadRecord[]>(
+        (records, queueEntry) => {
+          if (
+            queueEntry.workspaceId !== workspaceId ||
+            !isIsoOnOperatingDate(queueEntry.enteredAt, date) ||
+            (queueEntry.queueType !== "consultation" && queueEntry.queueType !== "billing")
+          ) {
+            return records;
+          }
+
+          const encounter = encounters.find(
+            (item) => item.id === queueEntry.encounterId && item.workspaceId === workspaceId,
+          );
+          if (!encounter) return records;
+          const appointment = encounter.appointmentId
+            ? appointments.find(
+                (item) =>
+                  item.id === encounter.appointmentId && item.workspaceId === workspaceId,
+              )
+            : undefined;
+
+          records.push({
+            kind: "encounter_queue" as const,
+            encounter,
+            ...(appointment ? { appointment } : {}),
+            queueEntry,
+          });
+          return records;
+        },
+        [],
+      );
+
+      const checkedInAppointmentIds = new Set(
+        encounterRecords.flatMap((record) =>
+          record.kind === "encounter_queue" && record.encounter.appointmentId
+            ? [record.encounter.appointmentId]
+            : [],
+        ),
+      );
+      const appointmentRecords: ReceptionQueueReadRecord[] = appointments
+        .filter(
+          (appointment) =>
+            appointment.workspaceId === workspaceId &&
+            isIsoOnOperatingDate(appointment.scheduledStartAt, date) &&
+            !checkedInAppointmentIds.has(appointment.id) &&
+            (appointment.status === "confirmed" || appointment.status === "cancelled"),
+        )
+        .map((appointment) => ({
+          kind: "appointment" as const,
+          appointment,
+        }));
 
       return {
         ok: true,
-        queue: waitingQueueEntries
-          .filter(
-            (entry) =>
-              entry.workspaceId === workspaceId &&
-              (entry.queueType === "consultation" || entry.queueType === "billing")
-          )
-          .map((queueEntry) => {
-            const encounter = encounters.find(
-              (item) => item.id === queueEntry.encounterId && item.workspaceId === workspaceId
-            );
-            return encounter ? { encounter, queueEntry } : null;
-          })
-          .filter((record): record is ReceptionQueueReadRecord => Boolean(record)),
+        queue: [...encounterRecords, ...appointmentRecords],
       };
     },
   };
@@ -119,6 +173,7 @@ export type SupabaseReceptionQueueReadRpcClient = {
     functionName: "clair_list_reception_queue",
     args: {
       p_workspace_id: string;
+      p_day: string;
       p_limit: number;
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
@@ -128,9 +183,10 @@ export function createSupabaseReceptionQueueReadGateway(
   client: SupabaseReceptionQueueReadRpcClient
 ): ReceptionQueueReadGateway {
   return {
-    async listReceptionQueue({ workspaceId }) {
+    async listReceptionQueue({ date, workspaceId }) {
       const { data, error } = await client.rpc("clair_list_reception_queue", {
         p_workspace_id: workspaceId,
+        p_day: date,
         p_limit: 100,
       });
 
@@ -181,21 +237,38 @@ function mapQueueRows(data: unknown): ReceptionQueueReadRecord[] {
     .map((row): ReceptionQueueReadRecord | null => {
       const value = row as {
         encounter?: unknown;
+        appointment?: unknown;
+        kind?: unknown;
         patient?: unknown;
         primaryGuardian?: unknown;
         primary_guardian?: unknown;
         queueEntry?: unknown;
         queue_entry?: unknown;
       };
+      const kind = getString(value.kind);
       const encounter = mapEncounter(value.encounter);
+      const appointment = mapAppointment(value.appointment);
       const patient = mapPatient(value.patient);
       const primaryGuardian = mapGuardian(value.primaryGuardian ?? value.primary_guardian);
       const queueEntry = mapQueueEntry(value.queueEntry ?? value.queue_entry);
 
+      if (kind === "appointment") {
+        if (!appointment) return null;
+
+        return {
+          kind: "appointment",
+          appointment,
+          ...(patient ? { patient } : {}),
+          ...(primaryGuardian ? { primaryGuardian } : {}),
+        };
+      }
+
       if (!encounter || !queueEntry) return null;
 
       return {
+        kind: "encounter_queue",
         encounter,
+        ...(appointment ? { appointment } : {}),
         ...(patient ? { patient } : {}),
         ...(primaryGuardian ? { primaryGuardian } : {}),
         queueEntry,
@@ -276,6 +349,39 @@ function mapQueueEntry(value: unknown): WaitingQueueEntry | null {
   };
 }
 
+function mapAppointment(value: unknown): Appointment | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  const id = getString(row.id);
+  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
+  const patientId = getString(row.patientId) ?? getString(row.patient_id);
+  const scheduledStartAt = getString(row.scheduledStartAt) ?? getString(row.scheduled_start_at);
+  const status = getString(row.status);
+  const createdAt = getString(row.createdAt) ?? getString(row.created_at);
+  const updatedAt = getString(row.updatedAt) ?? getString(row.updated_at);
+
+  if (!id || !workspaceId || !patientId || !scheduledStartAt || !status || !createdAt || !updatedAt) {
+    return undefined;
+  }
+
+  return {
+    id,
+    workspaceId,
+    patientId,
+    guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
+    assignedVeterinarianId:
+      getString(row.assignedVeterinarianId) ?? getString(row.assigned_veterinarian_id),
+    scheduledStartAt,
+    scheduledEndAt: getString(row.scheduledEndAt) ?? getString(row.scheduled_end_at),
+    visitPurpose: getString(row.visitPurpose) ?? getString(row.visit_purpose),
+    symptomNote: getString(row.symptomNote) ?? getString(row.symptom_note),
+    status: status as Appointment["status"],
+    createdByUserId: getString(row.createdByUserId) ?? getString(row.created_by_user_id),
+    createdAt,
+    updatedAt,
+  };
+}
+
 function mapPatient(value: unknown): Patient | undefined {
   if (!value || typeof value !== "object") return undefined;
   const row = value as Record<string, unknown>;
@@ -353,4 +459,33 @@ function getNumber(value: unknown) {
 
 function getString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getReceptionQueueRecordWorkspaceId(record: ReceptionQueueReadRecord) {
+  return record.kind === "appointment"
+    ? record.appointment.workspaceId
+    : record.encounter.workspaceId;
+}
+
+function isReceptionQueueRecordOnDate(record: ReceptionQueueReadRecord, date: string) {
+  if (record.kind === "appointment") {
+    return isIsoOnOperatingDate(record.appointment.scheduledStartAt, date);
+  }
+
+  return isIsoOnOperatingDate(record.queueEntry.enteredAt, date);
+}
+
+function isIsoOnOperatingDate(value: string | undefined, date: string) {
+  if (!value) return false;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+
+  return (
+    new Intl.DateTimeFormat("en-CA", {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+    }).format(parsed) === date
+  );
 }

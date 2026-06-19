@@ -7,7 +7,7 @@ import {
   createSupabaseReceptionQueueReadGateway,
   readReceptionQueue,
 } from "../src/features/reception/server-reception-queue-read-core";
-import type { Encounter, WaitingQueueEntry } from "../src/types/emr-domain";
+import type { Appointment, Encounter, WaitingQueueEntry } from "../src/types/emr-domain";
 
 const encounter: Encounter = {
   id: "encounter-db-walkin-coco",
@@ -37,6 +37,39 @@ const queueEntry: WaitingQueueEntry = {
   priority: "normal",
   sortOrder: 1,
   enteredAt: "2026-05-19T00:00:00.000Z",
+};
+
+const cancelledEncounter: Encounter = {
+  ...encounter,
+  id: "encounter-db-cancelled-coco",
+  encounterNo: "E-DB-CANCELLED",
+  status: "cancelled",
+  checkedInAt: "2026-05-19T01:30:00.000Z",
+  createdAt: "2026-05-19T01:30:00.000Z",
+  updatedAt: "2026-05-19T01:40:00.000Z",
+};
+
+const cancelledQueueEntry: WaitingQueueEntry = {
+  ...queueEntry,
+  id: "queue-db-cancelled-coco",
+  encounterId: cancelledEncounter.id,
+  status: "cancelled",
+  enteredAt: "2026-05-19T01:30:00.000Z",
+  finishedAt: "2026-05-19T01:40:00.000Z",
+};
+
+const appointment: Appointment = {
+  id: "appointment-db-luna",
+  workspaceId: "clair-demo",
+  patientId: "patient-luna",
+  guardianId: "guardian-park-jiyu",
+  assignedVeterinarianId: "staff-vet-lee",
+  scheduledStartAt: "2026-05-19T02:00:00.000Z",
+  scheduledEndAt: "2026-05-19T02:30:00.000Z",
+  visitPurpose: "예방 접종",
+  status: "confirmed",
+  createdAt: "2026-05-18T08:00:00.000Z",
+  updatedAt: "2026-05-18T08:00:00.000Z",
 };
 
 test("reception queue read route requires an actor and preserves mock fallback", async ({
@@ -74,8 +107,9 @@ test("reception queue read core enforces active workspace membership and recepti
       ],
     }),
     gateway: createMockReceptionQueueReadGateway({
-      queue: [{ encounter, queueEntry }],
+      queue: [{ kind: "encounter_queue", encounter, queueEntry }],
     }),
+    date: "2026-05-19",
   });
 
   expect(missingMembership).toMatchObject({
@@ -107,8 +141,9 @@ test("reception queue read core enforces active workspace membership and recepti
       ],
     }),
     gateway: createMockReceptionQueueReadGateway({
-      queue: [{ encounter, queueEntry }],
+      queue: [{ kind: "encounter_queue", encounter, queueEntry }],
     }),
+    date: "2026-05-19",
   });
 
   expect(noReceptionView).toMatchObject({
@@ -118,25 +153,29 @@ test("reception queue read core enforces active workspace membership and recepti
   });
 });
 
-test("supabase reception queue gateway maps rows and keeps workspace scope in the RPC read", async () => {
+test("supabase reception queue gateway maps rows and keeps workspace/date scope in the RPC read", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseReceptionQueueReadGateway({
     async rpc(functionName, args) {
-      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_limit}`);
+      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_day}:${args.p_limit}`);
       return {
-        data: [{ encounter, queueEntry }],
+        data: [{ kind: "encounter_queue", encounter, queueEntry }],
         error: null,
       };
     },
   });
 
-  const result = await gateway.listReceptionQueue({ workspaceId: "clair-demo" });
+  const result = await gateway.listReceptionQueue({
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+  });
 
-  expect(calls).toEqual(["clair_list_reception_queue:clair-demo:100"]);
+  expect(calls).toEqual(["clair_list_reception_queue:clair-demo:2026-05-19:100"]);
   expect(result).toMatchObject({
     ok: true,
     queue: [
       {
+        kind: "encounter_queue",
         encounter: { id: "encounter-db-walkin-coco", workspaceId: "clair-demo" },
         queueEntry: { id: "queue-db-walkin-coco", workspaceId: "clair-demo" },
       },
@@ -166,6 +205,7 @@ test("supabase reception queue gateway accepts snake_case readback rows with emb
               created_at: "2026-05-19T11:15:00+09:00",
               updated_at: "2026-05-19T11:15:00+09:00",
             },
+            kind: "encounter_queue",
             patient: {
               id: "patient-live-luna",
               workspace_id: "clair-demo",
@@ -203,12 +243,16 @@ test("supabase reception queue gateway accepts snake_case readback rows with emb
     },
   });
 
-  const result = await gateway.listReceptionQueue({ workspaceId: "clair-demo" });
+  const result = await gateway.listReceptionQueue({
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+  });
 
   expect(result).toMatchObject({
     ok: true,
     queue: [
       {
+        kind: "encounter_queue",
         encounter: {
           id: "encounter-db-walkin-live",
           patientId: "patient-live-luna",
@@ -221,6 +265,66 @@ test("supabase reception queue gateway accepts snake_case readback rows with emb
           id: "queue-db-walkin-live",
           enteredAt: "2026-05-19T11:15:00+09:00",
         },
+      },
+    ],
+  });
+});
+
+test("reception queue read includes cancelled encounter queue rows for the selected date", async () => {
+  const result = await readReceptionQueue({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({
+      queue: [
+        { kind: "encounter_queue", encounter, queueEntry },
+        {
+          kind: "encounter_queue",
+          encounter: cancelledEncounter,
+          queueEntry: cancelledQueueEntry,
+        },
+      ],
+    }),
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    queue: [
+      {
+        encounter: { id: encounter.id, status: "waiting" },
+        queueEntry: { status: "waiting" },
+      },
+      {
+        encounter: { id: cancelledEncounter.id, status: "cancelled" },
+        queueEntry: { status: "cancelled", finishedAt: "2026-05-19T01:40:00.000Z" },
+      },
+    ],
+  });
+});
+
+test("reception queue read keeps appointment-only rows separate from walk-in encounters", async () => {
+  const result = await readReceptionQueue({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({
+      queue: [
+        { kind: "encounter_queue", encounter, queueEntry },
+        { kind: "appointment", appointment },
+      ],
+    }),
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    queue: [
+      {
+        kind: "encounter_queue",
+        encounter: { id: encounter.id },
+      },
+      {
+        kind: "appointment",
+        appointment: { id: appointment.id, status: "confirmed" },
       },
     ],
   });
@@ -246,14 +350,18 @@ test("reception queue read route stays server-owned and avoids secret-shaped val
 
 test("reception queue reader migration keeps queue rows workspace-scoped", () => {
   const migrationSource = readFileSync(
-    "supabase/migrations/20260519140000_reception_queue_reader.sql",
+    "supabase/migrations/20260618120000_reception_queue_date_status_reader.sql",
     "utf8"
   );
 
   expect(migrationSource).toContain("create or replace function public.clair_list_reception_queue");
   expect(migrationSource).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
+  expect(migrationSource).toContain("p_day date");
+  expect(migrationSource).toContain("kind");
   expect(migrationSource).toContain("q.workspace_id = p_workspace_id");
   expect(migrationSource).toContain("q.queue_type in ('consultation', 'billing')");
+  expect(migrationSource).toContain("q.status in ('waiting', 'called', 'in_progress', 'cancelled')");
+  expect(migrationSource).toContain("a.status in ('confirmed', 'cancelled')");
   expect(migrationSource).toContain("grant execute on function public.clair_list_reception_queue");
   expect(migrationSource).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
 });
