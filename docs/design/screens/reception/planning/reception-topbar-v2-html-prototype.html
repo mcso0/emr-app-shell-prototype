@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR Reception Topbar V2 Prototype</title>
+    <style>
+      :root {
+        --app-bg: #eef1f4;
+        --surface-app: #fafafa;
+        --surface-panel: #ffffff;
+        --surface-muted: #f7f7f8;
+        --line: rgba(17, 24, 39, 0.1);
+        --line-strong: rgba(17, 24, 39, 0.16);
+        --text: #111318;
+        --text-secondary: #5f6368;
+        --text-muted: #9aa0a6;
+        --nav-bg: #151821;
+        --nav-icon: #8090aa;
+        --radius-control: 8px;
+        --radius-panel: 12px;
+        --shadow-e1: 0 1px 2px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.05);
+        --shadow-e2: 0 10px 28px rgba(15, 23, 42, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: var(--app-bg);
+        color: var(--text);
+        font-family:
+          "Pretendard Variable",
+          Pretendard,
+          "Apple SD Gothic Neo",
+          "Noto Sans KR",
+          system-ui,
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .viewport {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 8px;
+      }
+
+      .app-frame {
+        width: min(100%, 1920px);
+        min-width: 1180px;
+        height: min(1084px, calc(100dvh - 16px));
+        min-height: 760px;
+        display: grid;
+        grid-template-columns: 377px minmax(0, 1fr);
+        overflow: hidden;
+        border: 1px solid #d8dee6;
+        border-radius: 6px;
+        background: var(--surface-app);
+        box-shadow: var(--shadow-e2);
+      }
+
+      .left-section,
+      .right-section {
+        position: relative;
+        min-width: 0;
+        background: var(--surface-app);
+      }
+
+      .top-left {
+        height: 50px;
+        padding: 10px 5px 8px 10px;
+        display: grid;
+        grid-template-columns: 190px 1fr 68px;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .workspace-button {
+        height: 32px;
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-control);
+        background: var(--surface-panel);
+        padding: 0 9px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: var(--shadow-e1);
+      }
+
+      .workspace-logo {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border-radius: 7px;
+        background: #2f8cff;
+      }
+
+      .workspace-logo svg {
+        width: 14px;
+        height: 14px;
+        color: #fff;
+      }
+
+      .workspace-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .icon-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .icon-button {
+        width: 32px;
+        height: 32px;
+        display: inline-grid;
+        place-items: center;
+        border: 0;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-muted);
+      }
+
+      .icon-button:hover {
+        background: rgba(17, 24, 39, 0.05);
+        color: var(--text);
+      }
+
+      .icon-button svg {
+        width: 18px;
+        height: 18px;
+        stroke-width: 2;
+      }
+
+      .top-right {
+        height: 50px;
+        padding: 10px 10px 8px 5px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .page-tabs {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .page-tab {
+        width: 148px;
+        height: 32px;
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-control);
+        background: transparent;
+        padding: 0 8px;
+        color: var(--text-muted);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .page-tab.is-active {
+        border-color: var(--line);
+        background: var(--surface-panel);
+        color: #303236;
+        box-shadow: var(--shadow-e1);
+      }
+
+      .page-tab svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+      }
+
+      .page-tab span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .profile-button {
+        width: 48px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface-panel);
+        color: var(--text-secondary);
+        box-shadow: var(--shadow-e1);
+      }
+
+      .avatar {
+        width: 24px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        border-radius: 50%;
+        color: var(--text);
+        background: #f4f5f6;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .content-left {
+        height: calc(100% - 50px);
+        padding: 10px;
+        display: grid;
+        grid-template-columns: 56px minmax(0, 296px);
+        gap: 10px;
+      }
+
+      .nav-rail {
+        border-radius: 12px;
+        background: var(--nav-bg);
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .nav-dot {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        color: var(--nav-icon);
+      }
+
+      .nav-dot.is-active {
+        color: #f9fafb;
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      .nav-separator {
+        width: 24px;
+        height: 1px;
+        background: rgba(128, 144, 170, 0.32);
+      }
+
+      .subpanel {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #f9f9fa;
+      }
+
+      .subpanel-title {
+        height: 50px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .subpanel-lines {
+        display: grid;
+        gap: 10px;
+        padding: 12px 16px;
+      }
+
+      .skeleton-line {
+        height: 32px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+      }
+
+      .content-right {
+        height: calc(100% - 50px);
+        padding: 10px 10px 10px 5px;
+      }
+
+      .calendar-shell {
+        height: 100%;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-panel);
+      }
+
+      .calendar-toolbar {
+        height: 66px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .calendar-title-group {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .calendar-title {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .muted-pill {
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 8px;
+        background: var(--surface-muted);
+        padding: 0 12px;
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .calendar-placeholder {
+        height: calc(100% - 66px);
+        display: grid;
+        grid-template-columns: 56px repeat(4, minmax(180px, 1fr));
+      }
+
+      .lane {
+        border-right: 1px solid var(--line);
+        background:
+          linear-gradient(var(--surface-muted) 0 112px, transparent 112px),
+          repeating-linear-gradient(to bottom, transparent 0 71px, rgba(17, 24, 39, 0.06) 72px);
+      }
+
+      .time-lane {
+        background:
+          linear-gradient(var(--surface-muted) 0 112px, transparent 112px),
+          repeating-linear-gradient(to bottom, transparent 0 71px, rgba(17, 24, 39, 0.06) 72px);
+      }
+
+      @media (max-width: 1280px) {
+        .viewport {
+          place-items: start;
+          overflow: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="viewport">
+      <section class="app-frame" aria-label="CLAiR EMR topbar prototype">
+        <div class="left-section">
+          <header class="top-left" aria-label="워크스페이스와 탭 이동">
+            <button class="workspace-button" type="button">
+              <span class="workspace-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3 20 7.6v8.8L12 21l-8-4.6V7.6L12 3Z" fill="currentColor" opacity=".95" />
+                  <path d="m8 12 4-2.3 4 2.3-4 2.3L8 12Z" fill="#2f8cff" />
+                </svg>
+              </span>
+              <span class="workspace-label">VIP 동물의료센터 청담</span>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <span aria-hidden="true"></span>
+            <div class="icon-row" aria-label="탭 히스토리">
+              <button class="icon-button" type="button" aria-label="뒤로">
+                <svg viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+              <button class="icon-button" type="button" aria-label="앞으로">
+                <svg viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+            </div>
+          </header>
+          <div class="content-left" aria-hidden="true">
+            <nav class="nav-rail">
+              <span class="nav-dot is-active">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 10.5 12 4l8 6.5V20H4v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
+              </span>
+              <span class="nav-dot">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" /><path d="m16.5 16.5 3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+              </span>
+              <span class="nav-dot">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 1 1 12 0v4l2 3H4l2-3V9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /><path d="M10 20h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+              </span>
+              <span class="nav-separator"></span>
+            </nav>
+            <aside class="subpanel">
+              <div class="subpanel-title">접수/예약</div>
+              <div class="subpanel-lines">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="right-section">
+          <header class="top-right" aria-label="업무 탭과 전역 액션">
+            <nav class="page-tabs" aria-label="열린 업무 탭">
+              <button class="page-tab" type="button">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5 12 4l8 6.5V20H4v-9.5Z" stroke="currentColor" stroke-linejoin="round" /></svg>
+                <span>원내현황</span>
+              </button>
+              <button class="page-tab is-active" type="button" aria-current="page">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 3v4M17 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <span>접수/예약</span>
+              </button>
+              <button class="page-tab" type="button">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M10 3v6l-5 8a3 3 0 0 0 2.6 4h8.8A3 3 0 0 0 19 17l-5-8V3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /><path d="M8.5 14h7" stroke="currentColor" stroke-linecap="round" /></svg>
+                <span>임상병리검사</span>
+              </button>
+              <button class="page-tab" type="button">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4V6Z" stroke="currentColor" stroke-linejoin="round" /><path d="m8 14 2.5-3 2 2.2L15 10l3 4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <span>영상검사</span>
+              </button>
+              <button class="icon-button" type="button" aria-label="새 업무 탭">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-linecap="round" /></svg>
+              </button>
+            </nav>
+            <div class="top-actions" aria-label="전역 액션">
+              <button class="icon-button" type="button" aria-label="도움말">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" /><path d="M9.8 9.2a2.3 2.3 0 0 1 4.4 1c0 1.7-2.2 2-2.2 3.4" stroke="currentColor" stroke-linecap="round" /><path d="M12 17h.01" stroke="currentColor" stroke-linecap="round" /></svg>
+              </button>
+              <button class="icon-button" type="button" aria-label="알림">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 1 1 12 0v4l2 3H4l2-3V9Z" stroke="currentColor" stroke-linejoin="round" /><path d="M10 20h4" stroke="currentColor" stroke-linecap="round" /></svg>
+              </button>
+              <button class="icon-button" type="button" aria-label="설정">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" stroke="currentColor" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7.3 7.3 0 0 0-2-1.2L14.2 3h-4.4l-.3 2.6a7.3 7.3 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.4-1a7.3 7.3 0 0 0 2 1.2l.3 2.6h4.4l.3-2.6a7.3 7.3 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z" stroke="currentColor" stroke-linejoin="round" /></svg>
+              </button>
+              <button class="profile-button" type="button" aria-label="CN 프로필 메뉴">
+                <span class="avatar">CN</span>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </header>
+          <div class="content-right" aria-hidden="true">
+            <section class="calendar-shell">
+              <div class="calendar-toolbar">
+                <div class="calendar-title-group">
+                  <button class="icon-button" type="button" aria-label="이전 날짜">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  </button>
+                  <button class="icon-button" type="button" aria-label="다음 날짜">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  </button>
+                  <div class="calendar-title">26.05.01(금)</div>
+                  <span class="muted-pill">오늘</span>
+                  <span class="muted-pill">영업시간 09:00-18:00</span>
+                </div>
+                <span class="muted-pill">일&nbsp;&nbsp;주&nbsp;&nbsp;월</span>
+              </div>
+              <div class="calendar-placeholder">
+                <div class="time-lane"></div>
+                <div class="lane"></div>
+                <div class="lane"></div>
+                <div class="lane"></div>
+                <div class="lane"></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -97,8 +97,10 @@ test("reception renders the first-path workspace instead of the placeholder", as
 
   const sidePanel = page.locator("aside").first();
 
+  await expect(sidePanel).toHaveCSS("background-color", "rgb(249, 249, 249)");
   await expect(page.getByText("접수 워크스페이스")).toHaveCount(0);
   await expect(page.getByText("예약 3건")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "신규 동물/보호자" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
   ).toBeVisible();
@@ -185,7 +187,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
       const box = await page.getByTestId("schedule-toolbar").boundingBox();
       return Math.round(box?.height ?? 0);
     })
-    .toBe(48);
+    .toBe(64);
   const calendarFrameAlignment = await page
     .getByTestId("reception-calendar-frame")
     .evaluate((frameElement) => {
@@ -418,6 +420,9 @@ test("reception week calendar shows a time axis and today's current-time marker"
   await expect(calendar.getByTestId("week-current-time-indicator")).toHaveCount(
     1,
   );
+  await expect(calendar.getByTestId("week-current-time-label")).toHaveText(
+    "10:45",
+  );
 });
 
 test("reception day calendar emphasizes schedule card hierarchy and current line", async ({
@@ -430,7 +435,9 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     "appointment-card-appointment-kong-260501",
   );
 
-  await expect(calendar.getByText("현재 11:20")).toHaveCount(0);
+  await expect(calendar.getByTestId("day-current-time-label")).toHaveText(
+    "10:45",
+  );
   await expect(
     calendar
       .getByTestId("day-hour-row-10")
@@ -440,12 +447,12 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   ).toHaveCount(3);
   await expect(
     kongAppointment.getByTestId("appointment-purpose-appointment-kong-260501"),
-  ).toContainText("구토 및 복부");
+  ).toContainText("콩이 · 김하늘");
   await expect(
     kongAppointment.getByTestId("appointment-accent-appointment-kong-260501"),
   ).toHaveClass(/emr-status-info-text/);
   await expect(kongAppointment).toContainText("콩이");
-  await expect(kongAppointment).toContainText("구토 및 복부");
+  await expect(kongAppointment).toContainText("09:30-10:00");
   await expect
     .poll(() =>
       kongAppointment.evaluate((card) => getComputedStyle(card).boxShadow),
@@ -545,11 +552,11 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   const nabiAppointment = page.getByTestId(
     "appointment-card-appointment-nabi-260501",
   );
-  const nabiPurposeChip = nabiAppointment.getByTestId(
-    "appointment-purpose-chip-appointment-nabi-260501",
-  );
-  await expect(nabiPurposeChip).toContainText("외래");
-  await expect(nabiPurposeChip).toHaveCSS("white-space", "nowrap");
+  await expect(
+    nabiAppointment.getByTestId("appointment-purpose-appointment-nabi-260501"),
+  ).toContainText("나비 · 오세아");
+  await expect(nabiAppointment).toContainText("10:45-11:00");
+  await expect(nabiAppointment).toContainText("피부 재진");
   await expect(nabiAppointment).toHaveCSS("height", "28px");
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;
@@ -658,6 +665,8 @@ test("reception side panel cards keep order, open reception info, and clear sele
     "patient-card-patient-kong",
     "patient-card-patient-dubu",
     "patient-card-patient-coco",
+    "patient-card-patient-nabi",
+    "patient-card-patient-haru",
   ];
   await expect
     .poll(() =>
@@ -749,10 +758,10 @@ test("patient guardian registration creates a new guardian and patient after con
     page.getByRole("button", { name: "신규 접수/등록", exact: true }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "환자/보호자 등록", exact: true }),
+    page.getByRole("button", { name: "신규 동물/보호자", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
   await expect(page.getByRole("heading", { name: "신규 등록" })).toBeVisible();
   await expect(page.getByText("환자/보호자 모두 신규 등록")).toBeVisible();
@@ -885,7 +894,7 @@ test("server-backed patient guardian registration sends minimal reception payloa
 
   await page.goto("/w/clair-demo/reception");
   await page
-    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByLabel("보호자명").fill("김새봄");
@@ -929,7 +938,7 @@ test("patient guardian registration links an existing guardian to a new patient"
   await page.goto("/w/clair-demo/reception");
 
   await page
-    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
   await page.getByText("기존 보호자에 신규 환자 등록").click();
   await page.getByRole("button", { name: "다음" }).click();
@@ -983,7 +992,7 @@ test("reception dialogs align 40px inputs and select triggers", async ({
   await page.goto("/w/clair-demo/reception");
 
   await page
-    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
   await page.getByText("기존 보호자에 신규 환자 등록").click();
   await page.getByRole("button", { name: "다음" }).click();
@@ -1065,7 +1074,7 @@ test("patient guardian registration blocks duplicate microchips and warns duplic
   await page.goto("/w/clair-demo/reception");
 
   await page
-    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
   await page.getByText("기존 보호자에 신규 환자 등록").click();
   await page.getByRole("button", { name: "다음" }).click();
@@ -1094,7 +1103,7 @@ test("patient guardian registration asks before leaving dirty drafts", async ({
   await page.goto("/w/clair-demo/reception");
 
   await page
-    .getByRole("button", { name: "환자/보호자 등록", exact: true })
+    .getByRole("button", { name: "신규 동물/보호자", exact: true })
     .click();
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByLabel("보호자명").fill("임시보호자");
@@ -1816,7 +1825,10 @@ test("appointment check-in persistence regression reloads from queue and calenda
   ).not.toContainText("접수완료");
   await expect(
     page.getByTestId("appointment-card-appointment-nabi-260501"),
-  ).toContainText("DEN-65 reload appointment");
+  ).toHaveAttribute(
+    "aria-label",
+    /DEN-65 reload appointment/,
+  );
   await expect(page.getByTestId("patient-card-patient-nabi")).toContainText(
     "DEN-65 reload appointment",
   );
@@ -1960,11 +1972,8 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await expect(walkInCalendarCard).toContainText("재활");
   await expect(walkInCalendarCard).toContainText("보행 재검 및 통증 상담");
   await expect(
-    walkInCalendarCard.locator('[data-testid^="walkin-purpose-chip-"]'),
-  ).toContainText("외래");
-  await expect(
     walkInCalendarCard.locator('[data-testid^="walkin-purpose-encounter-"]'),
-  ).toContainText("보행 재검 및 통증 상담");
+  ).toContainText("두부 · 정하린");
   await expect(
     walkInCalendarCard.locator('[data-testid^="walkin-accent-"]'),
   ).toHaveClass(/emr-line-strong/);
@@ -3750,8 +3759,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
     .filter({ hasText: "나비" })
     .filter({ hasText: "14:15" });
   await expect(draftCard).toBeVisible();
-  await expect(draftCard).toContainText("14:15");
-  await expect(draftCard).toContainText("15분");
+  await expect(draftCard).toContainText("14:15-14:30");
   await expect
     .poll(() => draftCard.evaluate((card) => getComputedStyle(card).boxShadow))
     .toContain("rgba(0, 0, 0, 0.05) 0px 1px 2px 0px");
@@ -3777,10 +3785,9 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
 
   expect(Math.abs(draftCardInsets.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(draftCardInsets.top)).toBeLessThanOrEqual(1);
-  expect(draftCardInsets.height).toBe(80);
-  expect(draftCardInsets.width).toBeGreaterThanOrEqual(170);
-  expect(draftCardInsets.right).toBeGreaterThanOrEqual(7);
-  expect(draftCardInsets.right).toBeLessThanOrEqual(9);
+  expect(draftCardInsets.height).toBe(28);
+  expect(draftCardInsets.width).toBeGreaterThanOrEqual(160);
+  expect(Math.abs(draftCardInsets.right)).toBeLessThanOrEqual(1);
 });
 
 test("reception keeps only one active calendar selection preview", async ({
@@ -4411,8 +4418,7 @@ test("reception creates a draft task from a dragged calendar range", async ({
     .filter({ hasText: "나비" })
     .filter({ hasText: "14:00" });
   await expect(draftCard).toBeVisible();
-  await expect(draftCard).toContainText("14:00");
-  await expect(draftCard).toContainText("150분");
+  await expect(draftCard).toContainText("14:00-16:30");
 });
 
 test("reception creates a future dragged calendar range as a reservation", async ({
