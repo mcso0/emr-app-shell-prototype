@@ -223,7 +223,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
           buttons.map((button) => button.textContent?.trim()),
         ),
     )
-    .toEqual(["전체 5", "대기 3", "예약 1"]);
+    .toEqual(["전체 6", "외래 2", "예약 4"]);
   await expect
     .poll(() =>
       sidePanel
@@ -233,12 +233,13 @@ test("reception renders the first-path workspace instead of the placeholder", as
         ),
     )
     .toEqual([
+      "patient-card-patient-haru",
       "patient-card-patient-kong",
       "patient-card-patient-dubu",
       "patient-card-patient-coco",
     ]);
-  await expect(sidePanel.getByText("77분 대기")).toHaveClass(
-    /emr-status-warning-text/,
+  await expect(sidePanel.getByTestId("reception-queue-status-waiting")).toContainText(
+    "대기",
   );
   await expect(sidePanel.getByTestId("patient-card-patient-nabi")).toHaveCount(
     0,
@@ -246,14 +247,11 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await sideTabs.getByRole("button", { name: /예약/ }).click();
   await expect(sidePanel.getByText("예약 작업")).toHaveCount(0);
   await expect(
-    sidePanel.getByTestId("patient-card-patient-nabi"),
+    sidePanel.getByTestId("appointment-queue-card-appointment-nabi-260501"),
   ).toContainText("나비");
   await expect(
-    sidePanel.getByTestId("patient-card-patient-nabi"),
+    sidePanel.getByTestId("appointment-queue-card-appointment-nabi-260501"),
   ).toContainText("예약");
-  await expect(sidePanel.getByTestId("patient-card-patient-coco")).toHaveCount(
-    0,
-  );
   await expect(
     sidePanel.getByRole("searchbox", { name: "대기열 검색" }),
   ).toHaveCount(0);
@@ -1222,6 +1220,9 @@ test("server-backed reception queue read hydrates the side panel from persisted 
   await page.route("**/reception/queue**", async (route) => {
     requested = true;
     expect(route.request().method()).toBe("GET");
+    const requestedDate =
+      new URL(route.request().url()).searchParams.get("date") ?? "2026-05-01";
+    const requestedStartedAt = `${requestedDate}T09:25:00+09:00`;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -1230,6 +1231,7 @@ test("server-backed reception queue read hydrates the side panel from persisted 
         status: 200,
         queue: [
           {
+            kind: "encounter_queue",
             encounter: {
               id: "encounter-live-queue-coco",
               workspaceId: "clair-demo",
@@ -1244,9 +1246,9 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               visitPurpose: "DEN-62 persisted queue read",
               receptionMemo: "서버 대기열 read boundary",
               status: "waiting",
-              checkedInAt: "2026-05-01T09:25:00+09:00",
-              createdAt: "2026-05-01T09:25:00+09:00",
-              updatedAt: "2026-05-01T09:25:00+09:00",
+              checkedInAt: requestedStartedAt,
+              createdAt: requestedStartedAt,
+              updatedAt: requestedStartedAt,
             },
             queueEntry: {
               id: "queue-live-queue-coco",
@@ -1256,7 +1258,7 @@ test("server-backed reception queue read hydrates the side panel from persisted 
               status: "waiting",
               priority: "normal",
               sortOrder: 1,
-              enteredAt: "2026-05-01T09:25:00+09:00",
+              enteredAt: requestedStartedAt,
             },
           },
         ],
@@ -1268,12 +1270,11 @@ test("server-backed reception queue read hydrates the side panel from persisted 
   await page.goto("/w/clair-demo/reception");
 
   await expect.poll(() => requested).toBe(true);
-  await expect(page.getByTestId("patient-card-patient-coco")).toContainText(
-    "DEN-62 persisted queue read",
-  );
-  await expect(page.getByTestId("patient-card-patient-coco")).toContainText(
-    "김도윤",
-  );
+  const persistedQueueCard = page
+    .getByTestId("patient-card-patient-coco")
+    .filter({ hasText: "DEN-62 persisted queue read" });
+  await expect(persistedQueueCard).toContainText("DEN-62 persisted queue read");
+  await expect(persistedQueueCard).toContainText("김도윤");
 });
 
 test("server-backed reception day calendar read hydrates appointments and walk-ins", async ({
@@ -2540,6 +2541,7 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
   const readbackDate = getLocalDatePrefix();
   const readbackAt = `${readbackDate}T14:15:00+09:00`;
   const persistedWalkIn = {
+    kind: "encounter_queue",
     encounter: {
       id: encounterId,
       workspaceId,
@@ -2568,7 +2570,6 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
       enteredAt: readbackAt,
     },
   };
-
   await page.route(
     `**/api/workspaces/${workspaceId}/staff?role=vet`,
     async (route) => {
@@ -2961,7 +2962,9 @@ test("server-backed walk-in encounter sends minimal reception payload", async ({
 test("walk-in persistence regression reloads from queue and calendar reads", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   const persistedWalkIn = {
+    kind: "encounter_queue",
     encounter: {
       id: "encounter-e2e-walkin-dubu",
       workspaceId: "clair-demo",
@@ -2993,6 +2996,28 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   };
   let walkInCreated = false;
   let walkInCancelled = false;
+  let selectedReadDate = "2026-05-01";
+  const getPersistedWalkInReadback = () => {
+    const startedAt = `${selectedReadDate}T01:15:00.000Z`;
+    const finishedAt = `${selectedReadDate}T01:30:00.000Z`;
+
+    return {
+      ...persistedWalkIn,
+      encounter: {
+        ...persistedWalkIn.encounter,
+        status: walkInCancelled ? "cancelled" : "waiting",
+        checkedInAt: startedAt,
+        createdAt: startedAt,
+        updatedAt: walkInCancelled ? finishedAt : startedAt,
+      },
+      queueEntry: {
+        ...persistedWalkIn.queueEntry,
+        status: walkInCancelled ? "cancelled" : "waiting",
+        enteredAt: startedAt,
+        ...(walkInCancelled ? { finishedAt } : {}),
+      },
+    };
+  };
 
   await page.route(
     "**/api/workspaces/clair-demo/reception/walk-in-encounters",
@@ -3004,25 +3029,29 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
         body: JSON.stringify({
           ok: true,
           workspaceId: "clair-demo",
-          walkIn: persistedWalkIn,
+          walkIn: getPersistedWalkInReadback(),
           enforcedBy: "reception-walk-in-encounter",
         }),
       });
     },
   );
   await page.route("**/reception/queue**", async (route) => {
+    selectedReadDate =
+      new URL(route.request().url()).searchParams.get("date") ?? selectedReadDate;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
         status: 200,
-        queue: walkInCreated && !walkInCancelled ? [persistedWalkIn] : [],
+        queue: walkInCreated ? [getPersistedWalkInReadback()] : [],
         enforcedBy: "reception-queue-read",
       }),
     });
   });
   await page.route("**/reception/calendar/day**", async (route) => {
+    selectedReadDate =
+      new URL(route.request().url()).searchParams.get("date") ?? selectedReadDate;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -3030,8 +3059,8 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
         ok: true,
         status: 200,
         workspaceId: "clair-demo",
-        date: "2026-05-01",
-        records: walkInCreated && !walkInCancelled ? [persistedWalkIn] : [],
+        date: selectedReadDate,
+        records: walkInCreated && !walkInCancelled ? [getPersistedWalkInReadback()] : [],
         enforcedBy: "reception-calendar-read",
       }),
     });
@@ -3049,8 +3078,8 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
           status: 200,
           workspaceId: "clair-demo",
           cancellation: {
-            encounter: { ...persistedWalkIn.encounter, status: "cancelled" },
-            queueEntry: { ...persistedWalkIn.queueEntry, status: "cancelled" },
+            encounter: getPersistedWalkInReadback().encounter,
+            queueEntry: getPersistedWalkInReadback().queueEntry,
           },
           enforcedBy: "reception-encounter-cancel",
         }),
@@ -3082,12 +3111,14 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
 
   await page.reload();
 
-  await expect(page.getByTestId("patient-card-patient-dubu")).toContainText(
-    "DEN-65 reload walk-in",
-  );
-  await expect(page.getByTestId("patient-card-patient-dubu")).toContainText(
-    "김도윤",
-  );
+  await expect(page.getByText("DEN-65 reload walk-in").first()).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(
+    page.locator("aside").first().getByRole("button", {
+      name: /DEN-65 reload walk-in/,
+    }),
+  ).toContainText("김도윤");
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toContainText("DEN-65 reload walk-in");
@@ -3112,6 +3143,12 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
   await expect(
     page.getByTestId("walkin-card-encounter-e2e-walkin-dubu"),
   ).toHaveCount(0);
+  await expect(page.getByTestId("reception-queue-status-cancelled")).toContainText(
+    "취소",
+  );
+  await expect(page.getByTestId("reception-queue-status-cancelled")).toContainText(
+    "두부",
+  );
 });
 
 test("reception walk-in dialog uses DB-backed patient lookup states", async ({

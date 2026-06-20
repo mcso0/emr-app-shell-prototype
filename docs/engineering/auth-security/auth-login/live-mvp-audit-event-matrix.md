@@ -1,7 +1,7 @@
 ---
 title: "Live MVP Audit Event Matrix"
 status: "human_review"
-updated: "2026-05-20"
+updated: "2026-06-18"
 source:
   - "DEN-83"
   - "docs/work/audit-security/AUDIT-SECURITY-PR-002-live-mvp-audit-event-matrix.md"
@@ -63,6 +63,8 @@ Every persisted audit event should use this stable envelope:
 | `reception.patient_guardian_registered` | Patient/guardian registration route succeeds. | `patient` or `guardian` | patient id, guardian id, registration branch, duplicate-check decision. | Raw resident numbers, unmasked phone if not required, consent signature image. |
 | `reception.walk_in_created` | Walk-in encounter route succeeds. | `encounter` | encounter id, patient id, guardian id, veterinarian id, initial status. | Free-form private notes beyond safe summary. |
 | `reception.appointment_checked_in` | Appointment check-in creates/links encounter. | `encounter` | appointment id, encounter id, previous appointment status, next status. | Message provider payloads. |
+| `reception.appointment_restored` | Cancelled appointment is restored. | `appointment` | appointment id, previous status, next status, scheduled time. | Message provider payloads. |
+| `reception.encounter_restored` | Cancelled reception encounter is restored to the queue. | `encounter` | encounter id, queue id, previous status, next status. | Internal scheduling debug data. |
 | `reception.queue_status_changed` | Queue placement/status changes in a future route. | `waiting_queue_entry` | queue id, encounter id, previous status, next status. | Internal scheduling debug data. |
 
 ### Chart And Diagnosis

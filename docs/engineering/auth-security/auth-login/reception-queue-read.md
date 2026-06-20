@@ -8,12 +8,12 @@ related_work:
   - "docs/work/reception/RECEPTION-LIVE-PR-009-reception-queue-read.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-19
+last_updated: 2026-06-18
 ---
 
 # Reception Queue Read
 
-Updated: 2026-05-19
+Updated: 2026-06-18
 Linear: DEN-62
 Project: `03 Reception & Encounter Persistence`
 
@@ -21,13 +21,13 @@ Project: `03 Reception & Encounter Persistence`
 
 DEN-62 adds the first persisted read boundary for the reception queue and side panel.
 
-The new route reads workspace-scoped waiting queue rows plus linked encounters and can hydrate the reception side panel state from a server response. Mock demo fixtures remain the fallback for local demo mode.
+The route reads workspace/date-scoped reception queue rows plus linked encounters and appointment-only rows. It now includes cancelled queue/appointment rows for the side-panel restore workflow while the calendar reader continues to exclude cancelled rows.
 
 ## Boundary
 
 Route:
 
-- `GET /api/workspaces/[workspaceId]/reception/queue`
+- `GET /api/workspaces/[workspaceId]/reception/queue?date=YYYY-MM-DD`
 
 Server modules:
 
@@ -48,25 +48,26 @@ The route follows the Project 02/03 read pattern:
 
 Migration:
 
-- `supabase/migrations/20260519140000_reception_queue_reader.sql`
+- `supabase/migrations/20260618120000_reception_queue_date_status_reader.sql`
 
 Function:
 
-- `public.clair_list_reception_queue(p_workspace_id, p_limit)`
+- `public.clair_list_reception_queue(p_workspace_id, p_day, p_limit)`
 
 The reader:
 
 - requires `private.clair_is_active_workspace_member(p_workspace_id)`
-- reads `waiting_queue_entries` joined to `encounters`
-- filters to consultation/billing queue rows and active operational encounter states
-- orders waiting rows first, then `sort_order`, then `entered_at`
+- reads `waiting_queue_entries` joined to `encounters`, plus appointment-only rows
+- filters queue rows to consultation/billing and includes active plus cancelled queue states
+- returns appointment-only `confirmed` and `cancelled` rows for the selected operating date
+- orders active rows before cancelled rows, then by event time
 - returns camelCase JSON for the Next.js route adapter
 
 ## UI Connection
 
-`ReceptionContent` loads the queue route and calls `applyPersistedReceptionQueue(...)` on success.
+`ReceptionContent` loads the queue route with the selected operating date and calls `applyPersistedReceptionQueue(...)` on success.
 
-The reception store keeps persisted queue rows separate from session-created rows through a `source` tag, replaces the previous persisted overlay on reload, and preserves local session/mock behavior. The side panel exposes compact loading/error states while the route is being read.
+The reception store keeps persisted queue rows separate from session-created rows through a `source` tag, replaces the previous persisted overlay on reload, and preserves local session/mock behavior. Calendar-visible active items and side-panel-visible queue items are filtered separately so cancelled rows disappear from calendar lanes but remain in the queue under a cancelled group.
 
 ## Out Of Scope
 

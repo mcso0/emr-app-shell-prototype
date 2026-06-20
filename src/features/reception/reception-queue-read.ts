@@ -1,11 +1,30 @@
-import type { Encounter, Guardian, Patient, WaitingQueueEntry } from "@/types/emr-domain";
+import type {
+  Appointment,
+  Encounter,
+  Guardian,
+  Patient,
+  WaitingQueueEntry,
+} from "@/types/emr-domain";
 
-export type ReceptionQueueReadRecord = {
+export type ReceptionEncounterQueueReadRecord = {
+  kind: "encounter_queue";
   encounter: Encounter;
+  appointment?: Appointment;
   patient?: Patient;
   primaryGuardian?: Guardian;
   queueEntry: WaitingQueueEntry;
 };
+
+export type ReceptionAppointmentQueueReadRecord = {
+  kind: "appointment";
+  appointment: Appointment;
+  patient?: Patient;
+  primaryGuardian?: Guardian;
+};
+
+export type ReceptionQueueReadRecord =
+  | ReceptionEncounterQueueReadRecord
+  | ReceptionAppointmentQueueReadRecord;
 
 export type ReceptionQueueReadResponse =
   | {

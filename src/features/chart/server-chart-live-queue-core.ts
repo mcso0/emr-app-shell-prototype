@@ -10,6 +10,8 @@ import {
   createSupabaseReceptionQueueReadGateway,
   type SupabaseReceptionQueueReadRpcClient,
 } from "@/features/reception/server-reception-queue-read-core";
+import type { ReceptionEncounterQueueReadRecord } from "@/features/reception/reception-queue-read";
+import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import type { Guardian, Patient } from "@/types/emr-domain";
 
 export type ChartLiveQueueGateway = {
@@ -119,12 +121,16 @@ export function createSupabaseChartLiveQueueGateway(
 
   return {
     async listChartQueue({ workspaceId }) {
-      const queueResult = await receptionQueueGateway.listReceptionQueue({ workspaceId });
+      const queueResult = await receptionQueueGateway.listReceptionQueue({
+        date: getWorkspaceOperatingDate(workspaceId),
+        workspaceId,
+      });
       if (!queueResult.ok) return queueResult;
 
       const consultationRecords = queueResult.queue
         .filter(
-          (record) =>
+          (record): record is ReceptionEncounterQueueReadRecord =>
+            record.kind === "encounter_queue" &&
             record.queueEntry.queueType === "consultation" &&
             record.queueEntry.status !== "done" &&
             activeEncounterStatuses.has(record.encounter.status),

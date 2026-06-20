@@ -131,6 +131,25 @@ const isActiveReceptionQueueWork = ({
   activeReceptionEncounterStatuses.has(encounter.status) &&
   activeReceptionQueueStatuses.has(queueEntry.status);
 
+const visibleReceptionEncounterStatuses = new Set<Encounter["status"]>([
+  ...activeReceptionEncounterStatuses,
+  "cancelled",
+]);
+const visibleReceptionQueueStatuses = new Set<WaitingQueueEntry["status"]>([
+  ...activeReceptionQueueStatuses,
+  "cancelled",
+]);
+
+const isVisibleReceptionQueueWork = ({
+  encounter,
+  queueEntry,
+}: {
+  encounter: Encounter;
+  queueEntry: WaitingQueueEntry;
+}) =>
+  visibleReceptionEncounterStatuses.has(encounter.status) &&
+  visibleReceptionQueueStatuses.has(queueEntry.status);
+
 const createDraftEncounter = ({
   appointmentId,
   eventTime,
@@ -301,12 +320,18 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         (draft) => draft.source !== "persisted_queue"
       );
       const existingEncounterIds = new Set(nonPersistedDrafts.map((draft) => draft.encounter.id));
+      const persistedQueueAppointments = queue.flatMap((record) => {
+        if (record.kind === "appointment") return [record.appointment];
+        return record.appointment ? [record.appointment] : [];
+      });
       const persistedDrafts: ReceptionDraftCheckIn[] = queue
         .filter(
           (record) =>
-            isActiveReceptionQueueWork(record) &&
+            record.kind === "encounter_queue" &&
+            isVisibleReceptionQueueWork(record) &&
             !existingEncounterIds.has(record.encounter.id)
         )
+        .filter((record) => record.kind === "encounter_queue")
         .map((record) => ({
           appointmentId: record.encounter.appointmentId,
           department: record.encounter.department,
@@ -320,6 +345,13 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
 
       return {
         draftCheckIns: [...nonPersistedDrafts, ...persistedDrafts],
+        persistedCalendarAppointments: [
+          ...persistedQueueAppointments,
+          ...state.persistedCalendarAppointments.filter(
+            (appointment) =>
+              !persistedQueueAppointments.some((item) => item.id === appointment.id),
+          ),
+        ],
         queueReadError: undefined,
         queueReadStatus: "ready",
       };
@@ -333,21 +365,38 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       ),
     })),
   cancelReceptionEncounter: ({ encounterId, workspaceId }) =>
-    set((state) => ({
-      calendarDraftSelection:
-        state.calendarDraftSelection?.id === encounterId
-          ? undefined
-          : state.calendarDraftSelection,
-      draftCheckIns: state.draftCheckIns.filter(
-        (draft) =>
-          draft.encounter.workspaceId !== workspaceId ||
-          draft.encounter.id !== encounterId
-      ),
-      selectedEncounterId:
-        state.selectedEncounterId === encounterId
-          ? undefined
-          : state.selectedEncounterId,
-    })),
+    set((state) => {
+      const now = getWorkspaceOperatingNow(workspaceId);
+
+      return {
+        calendarDraftSelection:
+          state.calendarDraftSelection?.id === encounterId
+            ? undefined
+            : state.calendarDraftSelection,
+        draftCheckIns: state.draftCheckIns.map((draft) =>
+          draft.encounter.workspaceId === workspaceId &&
+          draft.encounter.id === encounterId
+            ? {
+                ...draft,
+                encounter: {
+                  ...draft.encounter,
+                  status: "cancelled",
+                  updatedAt: now,
+                },
+                queueEntry: {
+                  ...draft.queueEntry,
+                  status: "cancelled",
+                  finishedAt: now,
+                },
+              }
+            : draft,
+        ),
+        selectedEncounterId:
+          state.selectedEncounterId === encounterId
+            ? undefined
+            : state.selectedEncounterId,
+      };
+    }),
   applyEncounterUpdate: (update) =>
     set((state) => ({
       draftCheckIns: state.draftCheckIns.map((draft) =>
