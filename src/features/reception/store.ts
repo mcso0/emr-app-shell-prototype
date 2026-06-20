@@ -10,7 +10,9 @@ import type {
   Appointment,
   EmrId,
   Encounter,
+  Guardian,
   MessageDelivery,
+  Patient,
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
@@ -25,7 +27,9 @@ type ReceptionDraftCheckIn = {
   durationMinutes?: number;
   encounter: Encounter;
   memo?: string;
+  patient?: Patient;
   plannedStartAt?: string;
+  primaryGuardian?: Guardian;
   queueEntry: WaitingQueueEntry;
   receptionType?: "appointment" | "walk_in";
   source?: "persisted_calendar" | "persisted_queue" | "session";
@@ -301,6 +305,8 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
             durationMinutes: encounter.durationMinutes,
             encounter,
             memo: encounter.receptionMemo,
+            patient: record.patient,
+            primaryGuardian: record.primaryGuardian,
             queueEntry,
             receptionType: encounter.receptionType ?? (encounter.appointmentId ? "appointment" : "walk_in"),
             source: "persisted_calendar",
@@ -338,6 +344,8 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
           durationMinutes: record.encounter.durationMinutes,
           encounter: record.encounter,
           memo: record.encounter.receptionMemo,
+          patient: record.patient,
+          primaryGuardian: record.primaryGuardian,
           queueEntry: record.queueEntry,
           receptionType: record.encounter.receptionType ?? (record.encounter.appointmentId ? "appointment" : "walk_in"),
           source: "persisted_queue",

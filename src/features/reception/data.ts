@@ -34,7 +34,9 @@ export type ReceptionDraftCheckIn = {
   durationMinutes?: number;
   encounter: Encounter;
   memo?: string;
+  patient?: Patient;
   plannedStartAt?: IsoDateTime;
+  primaryGuardian?: Guardian;
   queueEntry: WaitingQueueEntry;
   receptionType?: "appointment" | "walk_in";
   source?: "persisted_calendar" | "persisted_queue" | "session";
@@ -66,6 +68,7 @@ export type ReceptionProfileDataset = {
 
 export type ReceptionDataScope = {
   operatingDate?: string;
+  profileDataset?: ReceptionProfileDataset;
   staffMembers?: Array<{ displayName: string; id: string }>;
   workspaceId?: string;
 };
@@ -292,6 +295,7 @@ export const getReceptionQueueRows = (
   scope?: ReceptionDataScope
 ): ReceptionQueueRow[] => {
   const resolvedScope = resolveReceptionDataScope(scope);
+  const profileDataset = scope?.profileDataset ?? defaultProfileDataset;
   const encounters = getEffectiveEncounters(draftCheckIns, resolvedScope);
   const queueEntries = [
     ...(resolvedScope.includeLegacyFixtures ? mockWaitingQueueEntries : []),
@@ -304,8 +308,13 @@ export const getReceptionQueueRows = (
 
   const rows = queueEntries.reduce<ReceptionQueueRow[]>((accumulator, queueEntry) => {
       const encounter = encounters.find((item) => item.id === queueEntry.encounterId);
+      const draft = draftCheckIns.find(
+        (item) => item.encounter.id === queueEntry.encounterId
+      );
       const patient = encounter
-        ? mockPatients.find((item) => item.id === encounter.patientId)
+        ? (draft?.patient ??
+          profileDataset.patients.find((item) => item.id === encounter.patientId) ??
+          mockPatients.find((item) => item.id === encounter.patientId))
         : undefined;
 
       if (!encounter || !patient) return accumulator;
@@ -313,7 +322,8 @@ export const getReceptionQueueRows = (
       accumulator.push({
         encounter,
         patient,
-        primaryGuardian: getPrimaryGuardian(patient.id),
+        primaryGuardian:
+          draft?.primaryGuardian ?? getPrimaryGuardian(patient.id, profileDataset),
         queueEntry,
         veterinarianName: getStaffName(
           encounter.primaryVeterinarianId,

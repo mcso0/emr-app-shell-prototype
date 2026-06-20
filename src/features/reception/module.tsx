@@ -2412,10 +2412,19 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     () =>
       getReceptionQueueRows(draftCheckIns, {
         operatingDate,
+        profileDataset: { guardians, patientGuardians, patients },
         staffMembers: veterinarianStaffMembers,
         workspaceId,
       }),
-    [draftCheckIns, operatingDate, veterinarianStaffMembers, workspaceId],
+    [
+      draftCheckIns,
+      guardians,
+      operatingDate,
+      patientGuardians,
+      patients,
+      veterinarianStaffMembers,
+      workspaceId,
+    ],
   );
   const queueItems = useMemo(
     () =>
