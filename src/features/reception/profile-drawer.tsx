@@ -2872,8 +2872,10 @@ function getRegistrationRouteErrorMessage(
 }
 
 function PatientGuardianRegistrationButton({
+  label = "환자/보호자 등록",
   onPatientReady,
 }: {
+  label?: string;
   onPatientReady: (patientId: EmrId) => void;
 }) {
   const applyPatientGuardianRegistration = usePatientProfileStore(
@@ -3186,14 +3188,14 @@ function PatientGuardianRegistrationButton({
   return (
     <>
       <Button
-        aria-label="환자/보호자 등록"
+        aria-label={label}
         variant="outline"
         size="sm"
         className="bg-card px-3 font-semibold"
         onClick={() => setOpen(true)}
       >
         <CdsActionsPlusIcon data-icon="inline-start" />
-        환자/보호자 등록
+        {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpenSafely}>
         <DialogContent
