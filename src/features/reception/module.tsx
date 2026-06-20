@@ -5368,6 +5368,24 @@ export function ReceptionContent() {
   };
 
   useEffect(() => {
+    if (!calendarDraftSelection) return;
+
+    const activeCalendarDraftDrawer =
+      activeDrawer &&
+      (activeDrawer.type === "reception-draft-task" ||
+        activeDrawer.type === "reception-reservation-form") &&
+      activeDrawer.id === calendarDraftSelection.id;
+
+    if (!activeCalendarDraftDrawer) {
+      setCalendarDraftSelection(undefined);
+    }
+  }, [
+    activeDrawer,
+    calendarDraftSelection,
+    setCalendarDraftSelection,
+  ]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadStaff() {
