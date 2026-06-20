@@ -41,6 +41,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | DOCS-PR-004                 | done         | docs-restructure     | P0       | PR 4                 | `docs/work/docs-restructure/DOCS-PR-004-engineering-design-migration.md`                               |
 | DOCS-PR-005                 | done         | docs-restructure     | P1       | PR 5                 | `docs/work/docs-restructure/DOCS-PR-005-archive-and-link-checking.md`                                  |
 | DOCS-PR-006                 | done         | docs-restructure     | P0       | PR 6                 | `docs/work/docs-restructure/DOCS-PR-006-agent-first-docs-operations.md`                                |
+| ENGINEERING-ARCH-PR-001     | human_review | engineering          | P1       | User request / system architecture overview | `docs/work/engineering/ENGINEERING-ARCH-PR-001-system-architecture-overview.md`              |
 | PRD-VIEWER-PR-001           | human_review | product              | P0       | PRD viewer PR 1      | `docs/work/product/PRD-VIEWER-PR-001-product-docs-readonly-viewer.md`                                  |
 | CLAIR-DOCS-PR-001           | human_review | product              | P1       | CLAiR Docs Study Center v1 | `docs/work/product/CLAIR-DOCS-PR-001-study-center.md`                                            |
 | SYMPHONY-PR-001             | done         | agent-orchestration  | P1       | PR 1                 | `docs/work/agent-orchestration/SYMPHONY-PR-001-orchestration-foundation.md`                            |
