@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시스템 아키텍처 문서 보강 결과</title>
+  </head>
+  <body>
+    <main>
+      <h1>시스템 아키텍처 문서 보강 결과</h1>
+      <p>
+        기존 문서를 조사한 결과, CLAiR EMR의 아키텍처 정보는 앱 셸, mock/live 경계,
+        API 경계, 데이터 모델, 인증/보안 문서에 나뉘어 있었지만 처음 읽는 사람을 위한
+        단일 시스템 아키텍처 개요 문서는 없었습니다.
+      </p>
+      <h2>변경 내용</h2>
+      <ul>
+        <li><code>docs/engineering/architecture/system-architecture-overview.md</code>를 추가했습니다.</li>
+        <li>엔지니어링 README, docs 포털, agent RAG map에서 새 overview로 진입할 수 있게 했습니다.</li>
+        <li>내부 <code>/docs</code> 뷰어의 개발 영역 registry에도 새 문서를 등록했습니다.</li>
+        <li>작업 추적용 <code>ENGINEERING-ARCH-PR-001</code> work item을 추가했습니다.</li>
+      </ul>
+      <h2>중요한 경계</h2>
+      <ul>
+        <li>이번 작업은 문서와 docs-reader registry에만 한정했습니다. 제품 앱 동작, DB, RLS, 배포, 외부 연동은 변경하지 않았습니다.</li>
+        <li>새 overview는 세부 계약을 대체하지 않고 현재 source-of-truth 문서로 연결하는 허브입니다.</li>
+        <li>remote Supabase, production/live, 실데이터, 결제, 이메일, provider 연동 완료 주장은 하지 않았습니다.</li>
+      </ul>
+      <h2>검증</h2>
+      <ul>
+        <li><code>npm run docs:check</code> 통과</li>
+        <li><code>npm run security:secrets</code> 통과</li>
+        <li><code>npx tsc --noEmit</code> 통과</li>
+        <li><code>npm run lint</code> 통과: 기존 경고 5개는 이번 범위 밖입니다.</li>
+        <li><code>npx playwright test tests/prd-viewer.spec.ts --reporter=line --timeout=90000</code> 통과</li>
+        <li><code>npm run build</code> 통과: 기존 docs reader 동적 파일 읽기 경로 관련 Turbopack NFT trace warning이 있습니다.</li>
+        <li>로컬 <code>/docs?area=development&amp;doc=system-architecture-overview</code> 응답 200 및 새 문서 렌더링을 확인했습니다.</li>
+      </ul>
+      <h2>다음 단계</h2>
+      <p>
+        이후 아키텍처 변경 PR은 이 overview에서 출발해 mock/live, API boundary, data model,
+        auth/security 중 실제로 영향을 받는 세부 계약만 갱신하면 됩니다.
+      </p>
+    </main>
+  </body>
+</html>
