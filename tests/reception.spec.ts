@@ -1231,6 +1231,7 @@ test("server-backed reception queue read hydrates the side panel from persisted 
         status: 200,
         queue: [
           {
+            kind: "encounter_queue",
             encounter: {
               id: "encounter-live-queue-coco",
               workspaceId: "clair-demo",
@@ -1269,12 +1270,11 @@ test("server-backed reception queue read hydrates the side panel from persisted 
   await page.goto("/w/clair-demo/reception");
 
   await expect.poll(() => requested).toBe(true);
-  await expect(page.getByTestId("patient-card-patient-coco")).toContainText(
-    "DEN-62 persisted queue read",
-  );
-  await expect(page.getByTestId("patient-card-patient-coco")).toContainText(
-    "김도윤",
-  );
+  const persistedQueueCard = page
+    .getByTestId("patient-card-patient-coco")
+    .filter({ hasText: "DEN-62 persisted queue read" });
+  await expect(persistedQueueCard).toContainText("DEN-62 persisted queue read");
+  await expect(persistedQueueCard).toContainText("김도윤");
 });
 
 test("server-backed reception day calendar read hydrates appointments and walk-ins", async ({
@@ -2964,6 +2964,7 @@ test("walk-in persistence regression reloads from queue and calendar reads", asy
 }) => {
   test.setTimeout(60_000);
   const persistedWalkIn = {
+    kind: "encounter_queue",
     encounter: {
       id: "encounter-e2e-walkin-dubu",
       workspaceId: "clair-demo",
