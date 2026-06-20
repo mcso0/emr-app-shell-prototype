@@ -3970,6 +3970,37 @@ test("reception clears the draft schedule card on cancel or another selection", 
   await expect(replacementDraftCard).toHaveCount(0);
 });
 
+test("reception clears the draft schedule card when the draft drawer shell closes", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?modulePanel=open&drawer=reception-appointment%3Aappointment-nabi-260501",
+  );
+  await expect(page.getByText("예약 상세").first()).toBeVisible();
+
+  const quarterSlot = page.getByTestId(
+    "day-empty-slot-14-user-vet-suji-slot-1415",
+  );
+  const calendarDraftCard = page.locator(
+    '[data-testid^="calendar-draft-card-calendar-draft-2026-05-01m855"]',
+  );
+
+  await quarterSlot.click();
+  await expect(
+    page.getByTestId("reception-draft-task-drawer").last(),
+  ).toBeVisible();
+  await expect(calendarDraftCard).toBeVisible();
+
+  await page
+    .getByTestId("workspace-drawer")
+    .last()
+    .getByRole("button", { name: "상세 닫기" })
+    .click();
+
+  await expect(page).not.toHaveURL(/drawer=reception-draft-task/);
+  await expect(calendarDraftCard).toHaveCount(0);
+});
+
 test("reception clears an active drag preview immediately when selecting an existing schedule", async ({
   page,
 }) => {

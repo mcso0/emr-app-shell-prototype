@@ -90,6 +90,12 @@ Validate the integrated reception QA flow after DEN-514 through DEN-517, confirm
 - The validation used local Playwright browser execution against the current branch and API route interceptions/route tests. This avoids real data and external side effects while still covering visible readback and server-owned boundaries.
 - No Rework issue is required from this pass.
 
+2026-06-20 production follow-up:
+
+- Replayed the missing queue date reader and restore/audit SQL against the linked synthetic production-demo Supabase project after explicit approval.
+- Verified the remote function catalog exposes `clair_list_reception_queue(text,date,integer)` and the restore RPCs, and that `audit_events_event_type_check` includes reception cancel/create/restore event types.
+- Added a focused UI regression so closing the calendar draft drawer from the shared drawer shell clears the draft schedule card instead of leaving an uncreated calendar card behind.
+
 ## Result
 
 Ready for Human Review.
