@@ -5,6 +5,7 @@ import {
   getReceptionPatientSummaries,
   getReceptionQueueRows,
   getTodayAppointments,
+  type ReceptionDraftCheckIn,
 } from "../src/features/reception/data";
 import { getHomeMockData } from "../src/features/home/home.mock";
 import {
@@ -33,6 +34,84 @@ test("Cheongdam prepared clinic scope does not inherit legacy daily work", () =>
       (summary) => summary.activeEncounter || summary.latestAppointment
     )
   ).toEqual([]);
+});
+
+test("Cheongdam queue rows keep persisted patient profiles from queue readback", () => {
+  const checkedInAt = "2026-06-20T10:00:00+09:00";
+  const patient = {
+    id: "patient-cheongdam-queue-proof",
+    patientNo: "CD-PROOF-001",
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+    name: "초코",
+    species: "dog",
+    sex: "male",
+    handlingCautionLocked: true,
+    status: "active",
+    createdAt: checkedInAt,
+    updatedAt: checkedInAt,
+  } as const;
+  const primaryGuardian = {
+    id: "guardian-cheongdam-queue-proof",
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+    name: "최도현",
+    mobilePhone: "010-4911-0004",
+    createdAt: checkedInAt,
+    updatedAt: checkedInAt,
+  } as const;
+  const draft: ReceptionDraftCheckIn = {
+    department: "영상의학과",
+    durationMinutes: 180,
+    encounter: {
+      id: "encounter-cheongdam-queue-proof",
+      workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+      patientId: "patient-cheongdam-queue-proof",
+      guardianId: "guardian-cheongdam-queue-proof",
+      primaryVeterinarianId: "49110000-0000-4000-8000-000000000001",
+      encounterNo: "CD-PROOF-001",
+      receptionType: "walk_in",
+      department: "영상의학과",
+      durationMinutes: 180,
+      visitPurpose: "현장 접수",
+      status: "waiting",
+      checkedInAt,
+      createdAt: checkedInAt,
+      updatedAt: checkedInAt,
+    },
+    queueEntry: {
+      id: "queue-cheongdam-queue-proof",
+      workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+      encounterId: "encounter-cheongdam-queue-proof",
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      enteredAt: checkedInAt,
+    },
+    receptionType: "walk_in",
+    source: "persisted_queue",
+  };
+
+  const queueRows = getReceptionQueueRows([draft], {
+    operatingDate: "2026-06-20",
+    profileDataset: {
+      guardians: [primaryGuardian],
+      patientGuardians: [
+        {
+          id: "patient-guardian-cheongdam-queue-proof",
+          patientId: patient.id,
+          guardianId: primaryGuardian.id,
+          isPrimary: true,
+          canReceiveMessages: true,
+          createdAt: checkedInAt,
+        },
+      ],
+      patients: [patient],
+    },
+    workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+  });
+
+  expect(queueRows).toHaveLength(1);
+  expect(queueRows[0]?.patient.name).toBe("초코");
+  expect(queueRows[0]?.primaryGuardian?.name).toBe("최도현");
 });
 
 test("legacy Sales Demo scope exposes the fixture day only when addressed explicitly", () => {
