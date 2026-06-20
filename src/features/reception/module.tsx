@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -79,9 +86,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   getAppointmentPatient,
+  getAppointmentGuardian,
   getEffectiveEncounters,
   getFilteredReceptionPatients,
-  getGuardianDisplay,
   getReceptionPatientSummaries,
   getTodayAppointments,
   type ReceptionDraftCheckIn,
@@ -215,7 +222,7 @@ const calendarViewItems = [
 ];
 const receptionQueueTabItems = [
   { value: "all" as const, label: "전체" },
-  { value: "reception" as const, label: "대기" },
+  { value: "reception" as const, label: "외래" },
   { value: "appointment" as const, label: "예약" },
 ];
 const dayScheduleStartHour = 8;
@@ -250,6 +257,7 @@ const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
 type ReceptionCalendarView = (typeof calendarViewItems)[number]["value"];
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
+type CalendarTaskBadgeType = "예약" | "외래" | "노쇼";
 type Veterinarian = {
   department?: string;
   id: string;
@@ -365,16 +373,16 @@ function VeterinarianLaneHeader({
   return (
     <div
       className={cn(
-        "flex h-12 min-w-0 items-center gap-2 rounded-md border px-2.5 text-primary-foreground shadow-sm",
+        "flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-3 rounded-[var(--emr-calendar-lane-header-radius)] border px-3 text-primary-foreground shadow-[var(--clair-shadow-xs)]",
         veterinarianHeaderToneClasses[
           toneIndex % veterinarianHeaderToneClasses.length
         ],
       )}
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[var(--emr-text-inverse)] bg-[var(--emr-state-hover)] text-[10px] font-semibold leading-none text-primary-foreground">
+      <span className="flex size-[var(--emr-calendar-lane-avatar-size)] shrink-0 items-center justify-center rounded-[10px] border border-[var(--emr-text-inverse)] bg-[var(--emr-surface-panel)] text-[16px] font-bold leading-none text-[var(--emr-text-primary)] shadow-[var(--clair-shadow-xs)]">
         {veterinarian.initial}
       </span>
-      <span className="min-w-0 truncate emr-text-dense font-semibold">
+      <span className="min-w-0 truncate text-[15px] font-semibold leading-5 [letter-spacing:0]">
         {veterinarian.name}
       </span>
     </div>
@@ -1182,11 +1190,11 @@ function getReceptionEmptyStateCopy({
   if (searchQuery.trim()) return "검색 결과가 없습니다.";
   if (isPreparedEmptyClinicWorkspace(workspaceId)) {
     if (listMode === "appointment") return "오늘 예정된 예약이 아직 없습니다.";
-    if (listMode === "reception") return "아직 접수 대기 업무가 없습니다.";
+    if (listMode === "reception") return "아직 외래 접수 업무가 없습니다.";
     return "아직 오늘 접수/예약 업무가 없습니다.";
   }
   if (listMode === "appointment") return "예약 목록이 비어 있습니다.";
-  if (listMode === "reception") return "대기열이 비어 있습니다.";
+  if (listMode === "reception") return "외래 목록이 비어 있습니다.";
   return "목록이 비어 있습니다.";
 }
 
@@ -1274,6 +1282,30 @@ const getScheduleTimeLabelFromMinutes = (minutes: number) => {
   return `${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 };
 
+const getScheduleTimeRangeLabelFromIso = ({
+  durationMinutes = scheduleSlotMinutes,
+  endAt,
+  startAt,
+}: {
+  durationMinutes?: number;
+  endAt?: string;
+  startAt?: string;
+}) => {
+  const startMinutes = getOperatingMinutesFromIso(startAt);
+
+  if (startMinutes === undefined) return "시간 미정";
+
+  const endMinutes =
+    getOperatingMinutesFromIso(endAt) ?? startMinutes + durationMinutes;
+
+  return `${getScheduleTimeLabelFromMinutes(startMinutes)}-${getScheduleTimeLabelFromMinutes(
+    endMinutes,
+  )}`;
+};
+
+const getCurrentOperatingTimeLabel = (currentOperatingMinutes: number) =>
+  getScheduleTimeLabelFromMinutes(clampScheduleMinutes(currentOperatingMinutes));
+
 const getReceptionIsoAtMinutes = (date: string, minutes: number) =>
   getOperatingIsoAtMinutes(date, minutes);
 
@@ -1293,9 +1325,6 @@ const isDraftOnOperatingDate = (
 
 const getDraftScheduleHour = (draft: ReceptionDraftCheckIn) =>
   Math.floor((getOperatingMinutesFromIso(getDraftScheduleStartAt(draft)) ?? 0) / 60);
-
-const getDraftDurationLabel = (draft: ReceptionDraftCheckIn) =>
-  draft.durationMinutes ? `${draft.durationMinutes}분` : defaultWalkInDuration;
 
 const clampScheduleMinutes = (minutes: number) =>
   Math.min(
@@ -1740,50 +1769,37 @@ const getReceptionVisitReason = ({
   patientSpecialNote ??
   "내원 목적 확인";
 
-function getVisitPurposeVisual(visitText?: string) {
-  const normalized = visitText ?? "";
+const calendarTaskBadgeToneClasses: Record<CalendarTaskBadgeType, string> = {
+  예약:
+    "border-transparent bg-[var(--emr-calendar-task-badge-reservation-bg)] text-[var(--emr-calendar-task-badge-reservation-text)]",
+  외래:
+    "border-[var(--emr-calendar-task-badge-outpatient-border)] bg-[var(--emr-calendar-task-badge-outpatient-bg)] text-[var(--emr-calendar-task-badge-outpatient-text)]",
+  노쇼:
+    "border-[var(--emr-calendar-task-badge-noshow-border)] bg-[var(--emr-calendar-task-badge-noshow-bg)] text-[var(--emr-calendar-task-badge-noshow-text)]",
+};
 
-  if (normalized.includes("예방접종")) {
-    return { label: "예방접종" };
-  }
-
-  if (normalized.includes("구토") || normalized.includes("식욕")) {
-    return { label: "구토/식욕" };
-  }
-
-  if (normalized.includes("피부")) {
-    return { label: "피부" };
-  }
-
-  if (normalized.includes("수술")) {
-    return { label: "수술" };
-  }
-
-  return { label: "진료" };
-}
+const calendarTaskCardToneClasses: Record<CalendarTaskBadgeType, string> = {
+  예약:
+    "border-[var(--emr-calendar-task-reservation-border)] bg-[var(--emr-calendar-task-reservation-bg)] text-[var(--emr-calendar-task-reservation-text)] hover:bg-[var(--emr-calendar-task-reservation-hover-bg)]",
+  외래:
+    "border-[var(--emr-calendar-task-outpatient-border)] bg-[var(--emr-calendar-task-outpatient-bg)] text-[var(--emr-calendar-task-outpatient-text)] hover:bg-[var(--emr-calendar-task-outpatient-hover-bg)]",
+  노쇼:
+    "border-[var(--emr-calendar-task-noshow-border)] bg-[var(--emr-calendar-task-noshow-bg)] text-[var(--emr-calendar-task-noshow-text)]",
+};
 
 function CalendarTaskBadge({
   testId,
   type = "예약",
 }: {
   testId?: string;
-  type?: "예약" | "외래" | "노쇼";
+  type?: CalendarTaskBadgeType;
 }) {
-  const outpatient = type === "외래";
-  const noShow = type === "노쇼";
-
   return (
     <span
       data-testid={testId}
       className={cn(
-        "inline-flex h-5 min-w-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] px-[6px] py-[2px] font-['Pretendard'] text-[12px] font-medium leading-4 tracking-[0.3px]",
-        noShow &&
-          "border border-[#feb2b2] bg-gradient-to-b from-[rgba(245,101,101,0)] to-[rgba(245,101,101,0.1)] text-[#e53e3e]",
-        outpatient &&
-          "border border-[#90cdf4] bg-gradient-to-b from-[rgba(66,153,225,0)] to-[rgba(66,153,225,0.1)] text-[#2b6cb0]",
-        !outpatient &&
-          !noShow &&
-          "border border-transparent bg-gradient-to-b from-[#2989e4] to-[#3182ce] text-white",
+        "inline-flex h-5 min-w-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] border px-[6px] py-[2px] font-['Pretendard'] text-[12px] font-medium leading-4 [letter-spacing:0]",
+        calendarTaskBadgeToneClasses[type],
       )}
     >
       {type}
@@ -1809,23 +1825,57 @@ function CalendarQuarterHourLines() {
   );
 }
 
+function CalendarCurrentTimeIndicator({
+  className,
+  currentOperatingMinutes,
+  labelTestId,
+  style,
+  testId,
+}: {
+  className?: string;
+  currentOperatingMinutes: number;
+  labelTestId: string;
+  style?: CSSProperties;
+  testId: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        "pointer-events-none absolute z-20 flex items-center",
+        className,
+      )}
+      style={style}
+    >
+      <span
+        data-testid={labelTestId}
+        className="flex h-5 shrink-0 items-center rounded-full bg-[var(--emr-calendar-current-time)] px-2 text-[12px] font-semibold leading-4 text-white shadow-[var(--clair-shadow-xs)] [letter-spacing:0]"
+      >
+        {getCurrentOperatingTimeLabel(currentOperatingMinutes)}
+      </span>
+      <span className="size-2 shrink-0 rounded-full bg-[var(--emr-calendar-current-time)]" />
+      <span className="h-px flex-1 bg-[var(--emr-calendar-current-time)]" />
+    </div>
+  );
+}
+
 type CalendarTaskCardProps = {
   accentClassName?: string;
   accentTestId?: string;
   ariaLabel: string;
-  badgeType: "예약" | "외래" | "노쇼";
+  badgeType: CalendarTaskBadgeType;
   className?: string;
   description?: string;
   disabled?: boolean;
+  guardianLabel?: string;
   onClick: () => void;
   onPointerDown?: () => void;
   patientLabel: string;
   purposeLabel: string;
   purposeTestId?: string;
-  secondaryBadgeLabel?: string;
-  secondaryBadgeTestId?: string;
   selected?: boolean;
   testId: string;
+  timeLabel?: string;
   type?: "default" | "compact" | "noShow";
 };
 
@@ -1837,19 +1887,22 @@ function CalendarTaskCard({
   className,
   description,
   disabled,
+  guardianLabel,
   onClick,
   onPointerDown,
   patientLabel,
   purposeLabel,
   purposeTestId,
-  secondaryBadgeLabel,
-  secondaryBadgeTestId,
   selected,
   testId,
+  timeLabel,
   type = "default",
 }: CalendarTaskCardProps) {
   const noShow = type === "noShow";
   const compact = type === "compact";
+  const identityLabel = guardianLabel
+    ? `${patientLabel} · ${guardianLabel}`
+    : `${patientLabel} · ${purposeLabel}`;
 
   return (
     <button
@@ -1857,19 +1910,16 @@ function CalendarTaskCard({
       aria-label={ariaLabel}
       aria-pressed={selected}
       className={cn(
-        "relative z-10 flex min-w-0 flex-1 items-start overflow-hidden rounded-[8px] border p-[8px] text-left font-['Pretendard'] outline-none transition-colors",
+        "relative z-10 flex min-w-0 flex-1 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-colors",
         compact
           ? "h-[36px] flex-row items-center gap-[8px]"
-          : "flex-col gap-[4px]",
+          : "flex-col gap-[6px]",
         type === "default" && "h-[80px]",
         noShow && "h-[60px]",
-        noShow
-          ? "border-[#feb2b2] bg-[rgba(229,62,62,0.06)] text-[#e53e3e] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
-          : selected
-            ? "border-[#63b3ed] bg-[rgba(66,153,225,0.16)] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
-            : "border-[#63b3ed] bg-[rgba(66,153,225,0.08)] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]",
-        !noShow && "hover:bg-[rgba(66,153,225,0.16)]",
-        "focus-visible:border-[3px] focus-visible:border-[rgba(0,0,0,0.24)] focus-visible:bg-[rgba(66,153,225,0.08)] focus-visible:shadow-none",
+        calendarTaskCardToneClasses[badgeType],
+        selected &&
+          "border-[var(--emr-line-selected)] bg-[var(--emr-calendar-task-reservation-hover-bg)]",
+        "focus-visible:border-[3px] focus-visible:border-[var(--emr-topbar-tab-active-close)] focus-visible:shadow-none",
         disabled && "opacity-50",
         className,
       )}
@@ -1881,7 +1931,11 @@ function CalendarTaskCard({
         data-testid={accentTestId ?? `${testId}-accent`}
         className={cn(
           "sr-only",
-          noShow ? "text-[#e53e3e]" : "text-[#2b6cb0]",
+          noShow
+            ? "text-[var(--emr-calendar-task-noshow-text)]"
+            : badgeType === "외래"
+              ? "text-[var(--emr-calendar-task-outpatient-text)]"
+              : "text-[var(--emr-calendar-task-reservation-text)]",
           accentClassName,
         )}
         aria-hidden="true"
@@ -1891,31 +1945,34 @@ function CalendarTaskCard({
           <CalendarTaskBadge type={badgeType} />
           <span
             data-testid={purposeTestId}
-            className="flex min-w-0 items-center gap-[4px] text-[14px] font-medium leading-5 tracking-[0.196px]"
+            className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
           >
-            <span className="truncate">{patientLabel}</span>
-            <span className="shrink-0">·</span>
-            <span className="truncate">{purposeLabel}</span>
+            {identityLabel}
           </span>
+          {timeLabel ? (
+            <span className="shrink-0 text-[12px] font-semibold leading-4 [letter-spacing:0] opacity-80">
+              {timeLabel}
+            </span>
+          ) : null}
         </>
       ) : (
         <>
-          <span className="flex w-full min-w-0 items-center gap-[6px] overflow-hidden">
+          <span className="flex w-full min-w-0 items-center gap-[8px] overflow-hidden">
             <CalendarTaskBadge type={badgeType} />
-            {!noShow && secondaryBadgeLabel ? (
-              <CalendarTaskBadge testId={secondaryBadgeTestId} type="외래" />
+            <span
+              data-testid={purposeTestId}
+              className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
+            >
+              {identityLabel}
+            </span>
+            {timeLabel ? (
+              <span className="shrink-0 text-[12px] font-semibold leading-4 [letter-spacing:0] opacity-80">
+                {timeLabel}
+              </span>
             ) : null}
           </span>
-          <span
-            data-testid={purposeTestId}
-            className="flex w-full min-w-0 items-start gap-[4px] text-[14px] font-medium leading-5 tracking-[0.196px]"
-          >
-            <span className="truncate">{patientLabel}</span>
-            <span className="shrink-0">·</span>
-            <span className="truncate">{purposeLabel}</span>
-          </span>
           {!noShow && description ? (
-            <span className="w-full truncate text-[12px] font-normal leading-4 tracking-[0.3px]">
+            <span className="w-full truncate text-[12px] font-medium leading-4 [letter-spacing:0] opacity-90">
               {description}
             </span>
           ) : null}
@@ -2166,7 +2223,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const queueReadError = useReceptionStore((state) => state.queueReadError);
   const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
-  const [listMode, setListMode] = useState<ReceptionSideListMode>("reception");
+  const [listMode, setListMode] = useState<ReceptionSideListMode>("all");
   const [searchOpen, setSearchOpen] = useState(false);
   const [cardActionFeedback, setCardActionFeedback] =
     useState<ReceptionCardActionFeedback | null>(null);
@@ -2250,10 +2307,10 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       Object.fromEntries(
         receptionQueueTabItems.map((item) => [
           item.value,
-          getReceptionSideListItems(patientSummaries, item.value).length,
+          getReceptionSideListItems(filteredPatients, item.value).length,
         ]),
       ) as Record<ReceptionSideListMode, number>,
-    [patientSummaries],
+    [filteredPatients],
   );
   const sideListFilterItems = useMemo(
     () =>
@@ -2515,17 +2572,13 @@ function getReceptionSideListItems(
 ) {
   if (mode === "reception") {
     return sortReceptionSideListItems(
-      summaries.filter((summary) => Boolean(summary.activeEncounter)),
+      summaries.filter(isReceptionOutpatientSideListItem),
     );
   }
 
   if (mode === "appointment") {
     return sortReceptionSideListItems(
-      summaries.filter(
-        (summary) =>
-          !summary.activeEncounter &&
-          summary.latestAppointment?.status === "confirmed",
-      ),
+      summaries.filter(isReceptionReservationSideListItem),
     );
   }
 
@@ -2534,6 +2587,23 @@ function getReceptionSideListItems(
       (summary) => summary.activeEncounter || summary.latestAppointment,
     ),
   );
+}
+
+function isReceptionOutpatientSideListItem(summary: ReceptionPatientSummary) {
+  return Boolean(summary.activeEncounter);
+}
+
+function isReceptionReservationSideListItem(summary: ReceptionPatientSummary) {
+  const appointmentStatus = summary.latestAppointment?.status;
+  const hasCalendarReservation =
+    appointmentStatus === "confirmed" ||
+    appointmentStatus === "checked_in" ||
+    appointmentStatus === "no_show";
+  const hasAppointmentOriginReception =
+    summary.activeDraftCheckIn?.receptionType === "appointment" ||
+    Boolean(summary.activeEncounter?.appointmentId);
+
+  return hasCalendarReservation || hasAppointmentOriginReception;
 }
 
 function ScheduleAppointmentCard({
@@ -2550,15 +2620,19 @@ function ScheduleAppointmentCard({
   veterinarians?: Veterinarian[];
 }) {
   const patient = getAppointmentPatient(appointment);
+  const guardian = getAppointmentGuardian(appointment);
   const visitPurpose = appointment.visitPurpose ?? "내원";
   const visitDetail = appointment.symptomNote ?? visitPurpose;
-  const visitVisual = getVisitPurposeVisual(visitDetail);
   const noShow =
     appointment.status === "no_show" || appointment.status === "cancelled";
   const checkedIn = appointment.status === "checked_in";
   const cardType = noShow ? "noShow" : checkedIn ? "compact" : "default";
   const patientLabel = patient?.name ?? "환자 미지정";
-  const description = `${getShortTime(appointment.scheduledStartAt)} · ${getAppointmentDurationLabel(appointment)} · ${visitDetail}`;
+  const guardianLabel = guardian?.name ?? "보호자 미지정";
+  const timeLabel = getScheduleTimeRangeLabelFromIso({
+    endAt: appointment.scheduledEndAt,
+    startAt: appointment.scheduledStartAt,
+  });
 
   return (
     <CalendarTaskCard
@@ -2569,19 +2643,17 @@ function ScheduleAppointmentCard({
       accentTestId={`appointment-accent-${appointment.id}`}
       ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType={noShow ? "노쇼" : "예약"}
-      description={cardType === "default" ? description : undefined}
+      description={cardType === "default" ? visitDetail : undefined}
       disabled={appointment.status !== "confirmed" && !checkedIn}
+      guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
       onClick={onSelect}
       patientLabel={patientLabel}
       purposeLabel={visitPurpose}
       purposeTestId={`appointment-purpose-${appointment.id}`}
-      secondaryBadgeLabel={
-        cardType === "default" ? visitVisual.label : undefined
-      }
-      secondaryBadgeTestId={`appointment-purpose-chip-${appointment.id}`}
       selected={selected}
       testId={`appointment-card-${appointment.id}`}
+      timeLabel={timeLabel}
       type={cardType}
     />
   );
@@ -2616,11 +2688,23 @@ function ScheduleWalkInQueueCard({
     draft.encounter.primaryVeterinarianId,
     veterinarians,
   );
-  const durationLabel = getDraftDurationLabel(draft);
   const visitPurpose = draft.encounter.chiefComplaint ?? "현장 접수";
-  const visitVisual = getVisitPurposeVisual(visitPurpose);
   const scheduledStartAt = getDraftScheduleStartAt(draft);
   const patientLabel = patient?.name ?? "환자 미지정";
+  const guardianLabel = guardian?.name ?? "보호자 미지정";
+  const timeLabel = getScheduleTimeRangeLabelFromIso({
+    durationMinutes:
+      draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration),
+    startAt: scheduledStartAt,
+  });
+  const description = [
+    visitPurpose,
+    draft.department ?? defaultWalkInDepartment,
+    draft.memo,
+    veterinarianName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <CalendarTaskCard
@@ -2631,17 +2715,15 @@ function ScheduleWalkInQueueCard({
       accentTestId={`walkin-accent-${draft.encounter.id}`}
       ariaLabel={`${getReceptionEncounterStatusLabel(draft.encounter.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType="외래"
-      description={`${getShortTime(scheduledStartAt)} · ${durationLabel} · ${getGuardianDisplay(guardian)} · ${
-        draft.department ?? defaultWalkInDepartment
-      }${draft.memo ? ` · ${draft.memo}` : ""}${veterinarianName ? ` · ${veterinarianName}` : ""}`}
+      description={description}
+      guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
       onClick={() => onSelectEncounter(draft)}
       patientLabel={patientLabel}
       purposeLabel={visitPurpose}
       purposeTestId={`walkin-purpose-${draft.encounter.id}`}
-      secondaryBadgeLabel={visitVisual.label}
-      secondaryBadgeTestId={`walkin-purpose-chip-${draft.encounter.id}`}
       testId={`walkin-card-${draft.encounter.id}`}
+      timeLabel={timeLabel}
       type="default"
     />
   );
@@ -2840,13 +2922,13 @@ function ReceptionScheduleDateControl({
 
   return (
     <div
-      className="flex h-7 shrink-0 items-center gap-1"
+      className="flex h-10 shrink-0 items-center gap-2"
       data-testid="reception-date-control"
     >
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-7 bg-[var(--emr-surface-panel)]"
+        className="size-8 bg-[var(--emr-surface-panel)]"
         aria-label={dateControlLabel.previousLabel}
         onClick={() =>
           onOperatingDateChange(
@@ -2859,7 +2941,7 @@ function ReceptionScheduleDateControl({
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-7 bg-[var(--emr-surface-panel)]"
+        className="size-8 bg-[var(--emr-surface-panel)]"
         aria-label={dateControlLabel.nextLabel}
         onClick={() =>
           onOperatingDateChange(
@@ -2876,15 +2958,11 @@ function ReceptionScheduleDateControl({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 justify-start px-2 emr-text-dense font-medium text-foreground"
+              className="h-10 justify-start px-3 text-[24px] font-bold leading-8 text-[var(--emr-text-primary)] [letter-spacing:0]"
               aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
             />
           }
         >
-          <CdsFilesCalendarIcon
-            className="size-3.5 text-muted-foreground"
-            aria-hidden="true"
-          />
           <span>{dateControlLabel.dateLabel}</span>
         </PopoverTrigger>
         <PopoverContent
@@ -3087,7 +3165,7 @@ function ReceptionScheduleDateControl({
         type="button"
         variant="outline"
         size="sm"
-        className="h-7 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata font-medium"
+        className="h-8 bg-[var(--emr-surface-panel)] px-3 emr-text-body font-semibold"
         aria-label="오늘 일자로 이동"
         disabled={showingToday}
         onClick={() => selectOperatingDate(todayDate)}
@@ -3137,31 +3215,31 @@ function ScheduleToolbar({
 
   return (
     <div
-      className="flex h-12 shrink-0 flex-nowrap items-center justify-between gap-3 overflow-hidden border-b bg-card px-4"
+      className="flex h-[var(--emr-calendar-toolbar-height)] shrink-0 flex-nowrap items-center justify-between gap-4 overflow-hidden border-b bg-card px-[var(--emr-calendar-toolbar-padding-x)]"
       data-testid="schedule-toolbar"
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <ReceptionScheduleDateControl
           onOperatingDateChange={onOperatingDateChange}
           operatingDate={operatingDate}
           todayDate={todayDate}
           view={view}
         />
-        <span className="ml-2 rounded-md bg-muted px-2 py-1 emr-text-metadata font-medium leading-4 text-muted-foreground">
+        <span className="rounded-md bg-[var(--emr-surface-muted)] px-2.5 py-1.5 emr-text-metadata font-medium leading-4 text-[var(--emr-text-secondary)]">
           영업시간{" "}
-          <span className="font-semibold text-sky-600">
+          <span className="font-semibold text-[var(--emr-text-link)]">
             {getBusinessHoursTimeRangeLabel()}
           </span>
         </span>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger
             className={buttonVariants({
               variant: "outline",
               size: "sm",
               className:
-                "min-w-[124px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-foreground",
+                "h-8 min-w-[148px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-foreground",
             })}
           >
             <CdsActionsSearchIcon data-icon="inline-start" />
@@ -3206,13 +3284,16 @@ function ScheduleToolbar({
           aria-hidden="true"
           className="h-4 w-px shrink-0 bg-[var(--emr-line-default)]"
         />
-        <NewUnifiedRegistrationButton onPatientReady={onUnifiedPatientReady} />
+        <NewUnifiedRegistrationButton
+          label="신규 동물/보호자"
+          onPatientReady={onUnifiedPatientReady}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             data-testid="schedule-check-in-button"
             className={buttonVariants({
               size: "sm",
-              className: "px-3 font-semibold",
+              className: "h-8 px-3 font-semibold",
             })}
           >
             <CdsActionsPlusIcon data-icon="inline-start" />
@@ -3237,7 +3318,11 @@ function ScheduleToolbar({
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label="더보기"
-            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            className={buttonVariants({
+              variant: "ghost",
+              size: "icon-sm",
+              className: "h-8",
+            })}
           >
             <CdsFilesMoreHorizontalIcon />
           </DropdownMenuTrigger>
@@ -3455,7 +3540,7 @@ function ScheduleDraftSelectionCard({
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 z-20 rounded-[8px] border border-[#63b3ed] bg-[rgba(66,153,225,0.08)] px-[8px] py-[6px] font-['Pretendard'] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+      className="pointer-events-none absolute inset-x-0 z-20 rounded-[var(--emr-calendar-task-radius)] border border-[var(--emr-calendar-task-reservation-border)] bg-[var(--emr-calendar-task-reservation-bg)] px-[8px] py-[6px] font-['Pretendard'] text-[var(--emr-calendar-task-reservation-text)] shadow-[var(--emr-calendar-task-shadow)]"
       data-testid={`calendar-draft-card-${selection.id}`}
       style={{
         height: selectionHeight,
@@ -3675,7 +3760,7 @@ function ScheduleSelectionCell({
       selectionEnd !== undefined &&
       selectionValidation?.valid !== false ? (
         <div
-          className="pointer-events-none absolute inset-x-0 z-20 rounded-[8px] border border-[#63b3ed] bg-[rgba(66,153,225,0.16)] px-[8px] py-[6px] font-['Pretendard'] text-[#2b6cb0] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+          className="pointer-events-none absolute inset-x-0 z-20 rounded-[var(--emr-calendar-task-radius)] border border-[var(--emr-calendar-task-reservation-border)] bg-[var(--emr-calendar-task-reservation-hover-bg)] px-[8px] py-[6px] font-['Pretendard'] text-[var(--emr-calendar-task-reservation-text)] shadow-[var(--emr-calendar-task-shadow)]"
           data-testid={`${testId}-selection-preview`}
           style={{
             height: selectionHeight,
@@ -3848,38 +3933,17 @@ function DayScheduleBoard({
         style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
       >
         <div className="border-r" />
-        {selectedVeterinarians.map((veterinarian) => {
-          const laneAppointments = appointments.filter(
-            (appointment) =>
-              appointment.assignedVeterinarianId === veterinarian.id,
-          );
-
-          return (
-            <div key={veterinarian.id} className="border-r p-2 last:border-r-0">
-              <VeterinarianLaneHeader
-                toneIndex={getVeterinarianToneIndex(
-                  veterinarian,
-                  selectedVeterinarians,
-                )}
-                veterinarian={veterinarian}
-              />
-              <div className="mt-1 flex flex-col gap-1">
-                {laneAppointments.slice(0, 2).map((appointment) => (
-                  <button
-                    key={`all-day-${veterinarian.id}-${appointment.id}`}
-                    type="button"
-                    className="truncate rounded border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] px-2 py-0.5 text-left emr-text-micro font-medium text-primary"
-                    onPointerDown={onClearCalendarTransientSelection}
-                    onClick={() => onSelectAppointment(appointment)}
-                  >
-                    예약 {getAppointmentPatient(appointment)?.name ?? "환자"} ·{" "}
-                    {appointment.visitPurpose ?? "내원"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        {selectedVeterinarians.map((veterinarian) => (
+          <div key={veterinarian.id} className="border-r p-2 last:border-r-0">
+            <VeterinarianLaneHeader
+              toneIndex={getVeterinarianToneIndex(
+                veterinarian,
+                selectedVeterinarians,
+              )}
+              veterinarian={veterinarian}
+            />
+          </div>
+        ))}
       </div>
       {unassignedWalkIns.length ? (
         <div className="flex gap-2 border-b bg-muted/70 p-2">
@@ -3946,13 +4010,13 @@ function DayScheduleBoard({
           })}
         </div>
         <div className="relative z-10 col-span-full col-start-2 min-w-0">
-          <div
-            className="pointer-events-none absolute -left-1 right-0 z-10 flex items-center"
+          <CalendarCurrentTimeIndicator
+            className="-left-[52px] right-0"
+            currentOperatingMinutes={currentOperatingMinutes}
+            labelTestId="day-current-time-label"
             style={{ top: currentTimeOffset }}
-          >
-            <span className="size-2 rounded-full bg-destructive" />
-            <span className="h-px flex-1 bg-[var(--emr-status-danger-border)]" />
-          </div>
+            testId="day-current-time-indicator"
+          />
           {dayScheduleHours.map((hour) => {
             return (
               <div
@@ -4121,18 +4185,16 @@ function WeekScheduleBoard({
         style={{ minHeight: weekScheduleHeight }}
       >
         {activeDayIndex >= 0 ? (
-          <div
-            data-testid="week-current-time-indicator"
-            className="pointer-events-none absolute z-20 flex items-center"
+          <CalendarCurrentTimeIndicator
+            currentOperatingMinutes={currentOperatingMinutes}
+            labelTestId="week-current-time-label"
             style={{
-              left: `calc(56px + ${dayColumnWidth} * ${activeDayIndex})`,
+              left: `calc(56px + ${dayColumnWidth} * ${activeDayIndex} - 52px)`,
               top: currentTimeOffset,
-              width: dayColumnWidth,
+              width: `calc(${dayColumnWidth} + 52px)`,
             }}
-          >
-            <span className="size-2 rounded-full bg-destructive" />
-            <span className="h-px flex-1 bg-[var(--emr-status-danger-border)]" />
-          </div>
+            testId="week-current-time-indicator"
+          />
         ) : null}
 
         {dayScheduleHours.map((hour) => (
@@ -4452,17 +4514,17 @@ export function ReceptionContent() {
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
-	  const veterinarianIds = useMemo(
-	    () => veterinarians.map((veterinarian) => veterinarian.id),
-	    [veterinarians],
-	  );
-	  const effectiveSelectedVeterinarianIds = useMemo(() => {
-	    const selectedIds = selectedVeterinarianIds.filter((id) =>
-	      veterinarianIds.includes(id),
-	    );
+  const veterinarianIds = useMemo(
+    () => veterinarians.map((veterinarian) => veterinarian.id),
+    [veterinarians],
+  );
+  const effectiveSelectedVeterinarianIds = useMemo(() => {
+    const selectedIds = selectedVeterinarianIds.filter((id) =>
+      veterinarianIds.includes(id),
+    );
 
-	    return selectedIds.length > 0 ? selectedIds : veterinarianIds;
-	  }, [selectedVeterinarianIds, veterinarianIds]);
+    return selectedIds.length > 0 ? selectedIds : veterinarianIds;
+  }, [selectedVeterinarianIds, veterinarianIds]);
   const workspaceDraftCheckIns = useMemo(
     () =>
       draftCheckIns.filter(
@@ -4487,24 +4549,24 @@ export function ReceptionContent() {
       workspaceId,
     ],
   );
-	  const selectedVeterinarians = useMemo(
-	    () =>
-		      veterinarians.filter((veterinarian) =>
-		        effectiveSelectedVeterinarianIds.includes(veterinarian.id),
-		      ),
-		    [effectiveSelectedVeterinarianIds, veterinarians],
-		  );
+  const selectedVeterinarians = useMemo(
+    () =>
+      veterinarians.filter((veterinarian) =>
+        effectiveSelectedVeterinarianIds.includes(veterinarian.id),
+      ),
+    [effectiveSelectedVeterinarianIds, veterinarians],
+  );
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
         (appointment) =>
           appointment.assignedVeterinarianId &&
-	          effectiveSelectedVeterinarianIds.includes(
-	            appointment.assignedVeterinarianId,
-	          ),
-	      ),
-	    [appointments, effectiveSelectedVeterinarianIds],
-	  );
+          effectiveSelectedVeterinarianIds.includes(
+            appointment.assignedVeterinarianId,
+          ),
+      ),
+    [appointments, effectiveSelectedVeterinarianIds],
+  );
   const selectedBundle = isLegacySalesDemoWorkspace(workspaceId)
     ? getMockPatientBundle(selectedPatientId)
     : undefined;
@@ -4532,23 +4594,23 @@ export function ReceptionContent() {
     patientSpecialNote: selectedPatient?.specialNote,
   });
   const lastMessageDelivery = messageDeliveries.at(-1);
-	  const toggleVeterinarian = (veterinarianId: string) => {
-	    setSelectedVeterinarianIds((current) => {
-	      const currentInWorkspace = current.filter((id) =>
-	        veterinarianIds.includes(id),
-	      );
-	      const baseSelection =
-	        currentInWorkspace.length > 0 ? currentInWorkspace : veterinarianIds;
+  const toggleVeterinarian = (veterinarianId: string) => {
+    setSelectedVeterinarianIds((current) => {
+      const currentInWorkspace = current.filter((id) =>
+        veterinarianIds.includes(id),
+      );
+      const baseSelection =
+        currentInWorkspace.length > 0 ? currentInWorkspace : veterinarianIds;
 
-	      if (baseSelection.includes(veterinarianId)) {
-	        return baseSelection.length > 1
-	          ? baseSelection.filter((id) => id !== veterinarianId)
-	          : baseSelection;
-	      }
+      if (baseSelection.includes(veterinarianId)) {
+        return baseSelection.length > 1
+          ? baseSelection.filter((id) => id !== veterinarianId)
+          : baseSelection;
+      }
 
-	      return [...baseSelection, veterinarianId];
-	    });
-	  };
+      return [...baseSelection, veterinarianId];
+    });
+  };
   function clearCalendarTransientSelection() {
     dispatchReceptionCalendarDragClear();
     setCalendarDraftSelection(undefined);

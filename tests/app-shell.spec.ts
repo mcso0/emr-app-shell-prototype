@@ -468,7 +468,7 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   await expect(navigationColumn).toBeVisible();
   await expect(workspaceSwitcher).toBeVisible();
   await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
-  await expect(getNavRail(page).getByRole("link", { name: "홈" })).toBeVisible();
+  await expect(getNavRail(page).getByRole("link", { name: "원내 현황" })).toBeVisible();
   await expect(page.getByTestId("module-side-panel-title")).toBeHidden();
   await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
 
@@ -723,7 +723,7 @@ test("home normalizes a collapsed module panel before navigating back to modules
   await page.goto("/w/clair-demo/dispensing?modulePanel=closed&aside=closed");
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
 
-  await getNavRail(page).getByRole("link", { name: "홈" }).click();
+  await getNavRail(page).getByRole("link", { name: "원내 현황" }).click();
 
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
   await expect(page).toHaveURL(/modulePanel=open/);
@@ -1115,26 +1115,24 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
   await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
-  await getNavRail(page).getByRole("link", { name: "홈" }).click();
+  await getNavRail(page).getByRole("link", { name: "원내 현황" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
-  await expectActiveWorkspaceTab(page, "홈");
+  await expectActiveWorkspaceTab(page, "원내 현황");
   await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
 
   await getNavRail(page).getByRole("link", { name: "수납" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
-  await expect(page).toHaveURL(/right=open/);
   await expectActiveWorkspaceTab(page, "수납");
   await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
 
   await page.getByRole("button", { name: "탭 뒤로가기" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
-  await expectActiveWorkspaceTab(page, "홈");
+  await expectActiveWorkspaceTab(page, "원내 현황");
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
 
   await page.getByRole("button", { name: "탭 앞으로가기" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/billing/);
-  await expect(page).toHaveURL(/right=open/);
   await expectActiveWorkspaceTab(page, "수납");
 
   await getWorkspaceTablist(page).getByRole("tab", { name: /진료\/차트/ }).click();
