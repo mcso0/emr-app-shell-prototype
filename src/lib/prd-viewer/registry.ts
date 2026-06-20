@@ -1040,6 +1040,18 @@ export const prdDocRegistry = [
     tags: ["status", "mvp"],
   }),
   defineDoc({
+    slug: "system-architecture-overview",
+    title: "System Architecture Overview",
+    area: "development",
+    group: "Domain",
+    section: "아키텍처",
+    order: 5,
+    docType: "Architecture",
+    sourcePath: "docs/engineering/architecture/system-architecture-overview.md",
+    description: "System architecture map and source-of-truth routing overview.",
+    tags: ["architecture", "system", "api", "supabase"],
+  }),
+  defineDoc({
     slug: "app-shell-layout-contract",
     title: "App Shell Layout Contract",
     area: "development",
