@@ -425,6 +425,45 @@ test("reception week calendar shows a time axis and today's current-time marker"
   );
 });
 
+test("reception week calendar initially centers the current-time marker", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 640 });
+  await page.goto("/w/clair-demo/reception");
+
+  await page.getByRole("button", { name: "주" }).click();
+
+  const currentTimeDistanceFromCenter = async () =>
+    page.getByTestId("week-current-time-indicator").evaluate((indicator) => {
+      const viewport = indicator.closest<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      );
+
+      if (!viewport) return Number.POSITIVE_INFINITY;
+
+      const viewportBox = viewport.getBoundingClientRect();
+      const indicatorBox = indicator.getBoundingClientRect();
+      const indicatorLineCenter = indicatorBox.top + indicator.clientHeight / 2;
+
+      return Math.abs(
+        indicatorLineCenter - (viewportBox.top + viewportBox.height / 2),
+      );
+    });
+  await expect.poll(currentTimeDistanceFromCenter).toBeLessThanOrEqual(24);
+
+  const scrollTop = await page
+    .getByTestId("week-current-time-indicator")
+    .evaluate((indicator) => {
+      const viewport = indicator.closest<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      );
+
+      return viewport?.scrollTop ?? 0;
+    });
+
+  expect(scrollTop).toBeGreaterThan(20);
+});
+
 test("reception day calendar emphasizes schedule card hierarchy and current line", async ({
   page,
 }) => {
@@ -575,6 +614,43 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     throw new Error("Expected Nabi schedule card inset data");
   expect(nabiCardInsets.width).toBeGreaterThanOrEqual(160);
   expect(Math.abs(nabiCardInsets.right)).toBeLessThanOrEqual(1);
+});
+
+test("reception day calendar initially centers the current-time marker", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 640 });
+  await page.goto("/w/clair-demo/reception");
+
+  const currentTimeDistanceFromCenter = async () =>
+    page.getByTestId("day-current-time-indicator").evaluate((indicator) => {
+      const viewport = indicator.closest<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      );
+
+      if (!viewport) return Number.POSITIVE_INFINITY;
+
+      const viewportBox = viewport.getBoundingClientRect();
+      const indicatorBox = indicator.getBoundingClientRect();
+      const indicatorLineCenter = indicatorBox.top + indicator.clientHeight / 2;
+
+      return Math.abs(
+        indicatorLineCenter - (viewportBox.top + viewportBox.height / 2),
+      );
+    });
+  await expect.poll(currentTimeDistanceFromCenter).toBeLessThanOrEqual(24);
+
+  const scrollTop = await page
+    .getByTestId("day-current-time-indicator")
+    .evaluate((indicator) => {
+      const viewport = indicator.closest<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      );
+
+      return viewport?.scrollTop ?? 0;
+    });
+
+  expect(scrollTop).toBeGreaterThan(20);
 });
 
 test("reception month calendar fills the available calendar height", async ({
