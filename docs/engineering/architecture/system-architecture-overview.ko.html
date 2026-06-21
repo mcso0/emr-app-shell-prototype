@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CLAiR EMR 시스템 아키텍처 개요</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172026;
+        --muted: #52616d;
+        --line: #d9e0e6;
+        --bg: #f7f9fb;
+        --panel: #ffffff;
+        --panel-soft: #eef5f7;
+        --accent: #0f766e;
+        --accent-strong: #0b5f59;
+        --warn: #9a5b05;
+        --warn-bg: #fff7e6;
+        --ok-bg: #eaf7f1;
+        --code-bg: #edf1f4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.62;
+      }
+
+      a {
+        color: var(--accent-strong);
+        text-decoration-color: rgba(15, 118, 110, 0.35);
+        text-underline-offset: 0.16em;
+      }
+
+      code {
+        border-radius: 5px;
+        background: var(--code-bg);
+        padding: 0.1rem 0.32rem;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          "Liberation Mono",
+          monospace;
+        font-size: 0.92em;
+      }
+
+      .page {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 40px 22px 64px;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #ffffff 0%, #f2f7f8 100%);
+        padding: 34px;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--accent-strong);
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+        line-height: 1.24;
+      }
+
+      h1 {
+        max-width: 760px;
+        font-size: clamp(2rem, 5vw, 3.35rem);
+      }
+
+      h2 {
+        margin-top: 42px;
+        font-size: clamp(1.42rem, 3vw, 2rem);
+      }
+
+      h3 {
+        font-size: 1.08rem;
+      }
+
+      .lead {
+        max-width: 820px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 1.08rem;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        padding: 7px 12px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      .card p,
+      .callout p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .callout {
+        margin-top: 20px;
+        background: var(--warn-bg);
+        border-color: #f0d394;
+      }
+
+      .callout strong {
+        color: var(--warn);
+      }
+
+      .ok {
+        background: var(--ok-bg);
+        border-color: #b9ddce;
+      }
+
+      .ok strong {
+        color: var(--accent-strong);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 13px 15px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--panel-soft);
+        color: #20303a;
+        font-size: 0.9rem;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 1.2rem;
+      }
+
+      li + li {
+        margin-top: 0.42rem;
+      }
+
+      .flow {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .flow-row {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(116px, 1fr));
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .flow-node {
+        min-height: 72px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 12px;
+        font-weight: 700;
+      }
+
+      .flow-node span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-weight: 500;
+      }
+
+      .section-note {
+        max-width: 860px;
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .footer {
+        margin-top: 42px;
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+        color: var(--muted);
+        font-size: 0.93rem;
+      }
+
+      @media (max-width: 860px) {
+        .page {
+          padding: 22px 14px 44px;
+        }
+
+        .hero {
+          padding: 24px;
+        }
+
+        .grid,
+        .grid.two,
+        .flow-row {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          min-width: 680px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Engineering Architecture Companion</p>
+        <h1>CLAiR EMR 시스템 아키텍처 개요</h1>
+        <p class="lead">
+          이 문서는 영어 원문
+          <a href="./system-architecture-overview.md">System Architecture Overview</a>를
+          한국어로 풀어쓴 HTML companion입니다. 처음 보는 사람이 “이 앱이 어떤 층으로
+          나뉘고, 어디까지가 검증된 경계인지” 빠르게 판단하는 데 초점을 맞췄습니다.
+        </p>
+        <div class="meta" aria-label="문서 메타데이터">
+          <span class="pill">기준일: 2026-06-20</span>
+          <span class="pill">범위: 문서 번역/가독화</span>
+          <span class="pill">원문: Markdown source of truth</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="summary">
+        <h2 id="summary">한눈에 보는 현재 구조</h2>
+        <p class="section-note">
+          CLAiR EMR은 동물병원 외래 흐름을 중심으로 만든 Next.js App Router 기반 EMR SaaS
+          프로토타입입니다. 화면은 workspace shell과 feature module로 나뉘고, 일부 핵심
+          흐름은 Next.js API route, server core, Supabase local/dev/test 경계를 통해 검증되고
+          있습니다. 아직 production/live, 원격 Supabase 검증 완료, 외부 provider 연동 완료,
+          실데이터 준비 완료 상태는 아닙니다.
+        </p>
+        <div class="grid">
+          <article class="card">
+            <h3>앱 프레임</h3>
+            <p>
+              <code>src/app/</code>, <code>src/shell/</code>, <code>src/modules/registry.ts</code>가
+              workspace 진입, 탭, 패널, 모듈 슬롯을 구성합니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>기능 모듈</h3>
+            <p>
+              접수, 차트, 검사, 처치/조제, 수납, 고객관리, 병원관리 등은
+              <code>src/features/*</code> 아래에서 UI와 상태를 소유합니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>서버 경계</h3>
+            <p>
+              선택된 경로는 API route, server core, permission resolver, mock/Supabase gateway로
+              나뉘어 서버 권한과 persistence 경계를 분리합니다.
+            </p>
+          </article>
+        </div>
+        <div class="callout">
+          <strong>중요한 해석 기준:</strong>
+          화면에서 버튼을 숨기거나 mock role을 쓰는 것은 보안 완료가 아닙니다. 보안, 권한,
+          workspace isolation, billing amount, clinical state transition은 server/API/DB/RLS
+          경계에서 검증되어야 합니다.
+        </div>
+      </section>
+
+      <section aria-labelledby="runtime">
+        <h2 id="runtime">런타임과 주요 앵커</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>층</th>
+                <th>현재 기준</th>
+                <th>주요 경로</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Web framework</td>
+                <td>Next.js 16 App Router</td>
+                <td><code>src/app/</code></td>
+              </tr>
+              <tr>
+                <td>UI runtime</td>
+                <td>React 19, Tailwind/shadcn 계열 primitives, Storybook 10</td>
+                <td><code>src/features/*</code>, <code>src/stories/</code></td>
+              </tr>
+              <tr>
+                <td>Workspace shell</td>
+                <td>workspace별 module 화면, navigation, panel/drawer composition</td>
+                <td><code>src/app/w/[workspaceId]/[module]/page.tsx</code>, <code>src/shell/</code></td>
+              </tr>
+              <tr>
+                <td>Server/API boundary</td>
+                <td>Next.js API route와 feature server core 중심의 typed response 경계</td>
+                <td><code>src/app/api/workspaces/[workspaceId]/**/route.ts</code></td>
+              </tr>
+              <tr>
+                <td>Auth/session/permission</td>
+                <td>Supabase/server-session foundation과 permission resolver 경계</td>
+                <td><code>src/features/auth/*</code>, <code>src/lib/supabase/*</code></td>
+              </tr>
+              <tr>
+                <td>Data persistence</td>
+                <td>local/dev/test Supabase migration, seed, RPC, gateway 기반 검증</td>
+                <td><code>supabase/</code>, <code>src/features/*/*-core.ts</code></td>
+              </tr>
+              <tr>
+                <td>Verification</td>
+                <td>docs check, secret scan, lint/type/build, Playwright route/E2E spec</td>
+                <td><code>tests/*.spec.ts</code>, <code>package.json</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="layers">
+        <h2 id="layers">코드 레이어 맵</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>App routes</h3>
+            <p>
+              공개 페이지, workspace entry, docs viewer, auth page, API route를 정의합니다.
+              위치는 <code>src/app/</code>입니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Workspace shell</h3>
+            <p>
+              navigation, module slot, top menu, workspace tab, panel/drawer 상태와 화면
+              프레임을 담당합니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Module registry</h3>
+            <p>
+              module ID를 label, icon, side panel, content, drawer, optional panel로 연결합니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Feature UI and state</h3>
+            <p>
+              접수, 차트, 수납, 검사, 처치/조제, 고객관리 등 화면별 UI 상태와 route consumer를
+              관리합니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Server feature cores</h3>
+            <p>
+              route-safe operation, typed result, permission check, mock gateway, Supabase adapter를
+              묶는 서버 측 핵심입니다.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Shared domain helpers</h3>
+            <p>
+              demo workspace ID, status label, audit helper, service catalog helper, read-model
+              selector 같은 공통 도메인 유틸리티를 둡니다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="flows">
+        <h2 id="flows">두 가지 핵심 흐름</h2>
+        <p class="section-note">
+          아래 흐름은 Mermaid 원문을 HTML에서 바로 읽기 쉽게 재구성한 것입니다.
+        </p>
+        <h3>Workspace shell flow</h3>
+        <div class="flow" aria-label="Workspace shell flow">
+          <div class="flow-row">
+            <div class="flow-node">Route<span>/w/[workspaceId]/[module]</span></div>
+            <div class="flow-node">AuthGate<span>진입 권한 확인</span></div>
+            <div class="flow-node">AppShell<span>앱 프레임</span></div>
+            <div class="flow-node">Registry<span>모듈 매핑</span></div>
+            <div class="flow-node">ShellMain<span>주 화면 슬롯</span></div>
+            <div class="flow-node">Feature Module<span>모듈별 화면</span></div>
+          </div>
+        </div>
+        <div class="callout ok">
+          <strong>읽는 법:</strong>
+          shell은 레이아웃과 navigation 구조입니다. 실제 security boundary는 server/API/DB/RLS에서
+          증명되어야 합니다.
+        </div>
+
+        <h3 style="margin-top: 28px">Server boundary flow</h3>
+        <div class="flow" aria-label="Server boundary flow">
+          <div class="flow-row">
+            <div class="flow-node">Feature UI<span>사용자 화면</span></div>
+            <div class="flow-node">API Route<span>Next.js route</span></div>
+            <div class="flow-node">Session<span>server session</span></div>
+            <div class="flow-node">Server Core<span>업무 규칙</span></div>
+            <div class="flow-node">Permission<span>권한 판정</span></div>
+            <div class="flow-node">Gateway<span>mock 또는 Supabase</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="modules">
+        <h2 id="modules">제품 모듈별 현재 경계</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>모듈/영역</th>
+                <th>현재 아키텍처 자세</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Home</td>
+                <td>운영 dashboard와 work-status surface가 있으며, session/mock data 기반이 남아 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Reception and appointment</td>
+                <td>queue, calendar, lookup, registration, walk-in, appointment route foundation이 local-first 범위에서 검증됩니다.</td>
+              </tr>
+              <tr>
+                <td>Chart and orders</td>
+                <td>SOAP, diagnosis, order draft/action/lifecycle/completion, live queue, handoff route가 선택된 경로에서 존재합니다.</td>
+              </tr>
+              <tr>
+                <td>Lab, imaging, dispensing, treatment</td>
+                <td>fulfillment work item route, lab result catalog/result-entry, dispensing/treatment readback 경계가 일부 검증되어 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Billing</td>
+                <td>invoice candidate, invoice line, payment status, guardian checkout server boundary가 선택된 demo path에 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Customer management</td>
+                <td>guardian/patient profile, relationship, archive/restore server boundary가 scoped path에 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Hospital admin</td>
+                <td>order catalog와 workspace-admin persistence foundation이 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Auth, workspace, permissions</td>
+                <td>Supabase/server-session foundation, workspace membership, role management, permission resolver boundary가 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Audit</td>
+                <td>audit schema, append helper, mutation emission hook, review surface foundation이 있습니다.</td>
+              </tr>
+              <tr>
+                <td>Inpatient</td>
+                <td>workspace surface는 있으나 아직 주로 session/mock oriented 상태입니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="sources">
+        <h2 id="sources">상황별로 읽을 원문</h2>
+        <p class="section-note">
+          이 HTML은 읽기용 companion입니다. 실제 기준 문서는 아래 source-of-truth 문서들입니다.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>필요한 판단</th>
+                <th>읽을 문서</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>현재 MVP 범위, 상태, 다음 작업</td>
+                <td><a href="../current-status.md">MVP Current Status</a></td>
+              </tr>
+              <tr>
+                <td>제품 운영 모델</td>
+                <td><a href="../../product/service/clair-emr-saas-operating-map.md">CLAiR EMR SaaS Operating Map</a></td>
+              </tr>
+              <tr>
+                <td>app shell slot/layout 계약</td>
+                <td><a href="./app-shell-layout-contract.md">App Shell Layout Contract</a></td>
+              </tr>
+              <tr>
+                <td>mock/local-first/remote/production 주장 경계</td>
+                <td><a href="./mock-live-boundary-map.md">Mock And Live Boundary Map</a></td>
+              </tr>
+              <tr>
+                <td>API boundary와 route/repository 구분</td>
+                <td><a href="../api-boundaries/api-boundary-integration-guide.md">API Boundary Integration Guide</a></td>
+              </tr>
+              <tr>
+                <td>schema, migration, RLS, persistence index</td>
+                <td><a href="../data-model/README.md">Data Model</a></td>
+              </tr>
+              <tr>
+                <td>auth/live-MVP 전환</td>
+                <td><a href="../auth-security/mvp-auth-transition-roadmap.md">MVP Auth Transition Roadmap</a></td>
+              </tr>
+              <tr>
+                <td>API-backed synthetic demo 검증</td>
+                <td><a href="../testing/api-backed-demo-runbook.md">API-Backed Demo Runbook</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="guardrails">
+        <h2 id="guardrails">이 문서만으로 주장하면 안 되는 것</h2>
+        <ul>
+          <li>client-only permission gate, hidden action, mock role label을 보안 완료로 보지 않습니다.</li>
+          <li>local-first 또는 docs-only 근거만으로 remote Supabase, production deployment, provider integration, payment integration, real email, compliance readiness를 주장하지 않습니다.</li>
+          <li>Next.js, Supabase, feature module, route/API, design-system 방향을 별도 architecture decision 없이 starter kit로 대체하지 않습니다.</li>
+          <li>synthetic/demo data와 실제 환자, 보호자, 병원, 결제, identity, clinical data는 분리해야 합니다.</li>
+          <li>Next.js application code를 바꾸는 새 작업은 관련 <code>node_modules/next/dist/docs/</code> 가이드를 먼저 읽어야 합니다.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="checklist">
+        <h2 id="checklist">아키텍처 관련 작업 전 체크리스트</h2>
+        <div class="grid two">
+          <article class="card">
+            <h3>1. 경계 선언</h3>
+            <p>mock/session-only, local-first, remote staging, production/live 중 어느 범위인지 먼저 말합니다.</p>
+          </article>
+          <article class="card">
+            <h3>2. 영향 범위 명명</h3>
+            <p>module, route, server core, gateway, migration/RLS, test scope를 구체적으로 적습니다.</p>
+          </article>
+          <article class="card">
+            <h3>3. source doc 연결</h3>
+            <p>계약을 복붙하지 말고 실제 source-of-truth 문서로 링크합니다.</p>
+          </article>
+          <article class="card">
+            <h3>4. 서버 권한 보존</h3>
+            <p>permission, workspace isolation, billing amount, clinical state, audit evidence는 서버 기준으로 검증합니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <p class="footer">
+        원문 source-of-truth:
+        <a href="./system-architecture-overview.md">docs/engineering/architecture/system-architecture-overview.md</a>.
+        이 HTML은 읽기 편의를 위한 한국어 companion이며, canonical architecture contract를 대체하지 않습니다.
+      </p>
+    </main>
+  </body>
+</html>

@@ -18,6 +18,8 @@ last_updated: 2026-06-20
 
 This document is the first engineering architecture map for CLAiR EMR. It does not replace the more specific contracts linked below. Use it to orient new agents and reviewers before reading deeper product, data, API, auth, security, or testing docs.
 
+Korean reader companion: [CLAiR EMR System Architecture Overview KO HTML](./system-architecture-overview.ko.html).
+
 ## Current System Shape
 
 CLAiR EMR is a Next.js App Router veterinary EMR SaaS prototype organized around one workspace-scoped outpatient workflow. The app combines a client-rendered workspace shell, feature modules, Next.js API routes, server-side feature cores, Supabase local/dev/test persistence boundaries, and explicit mock fallback for unconfigured local demo paths.
