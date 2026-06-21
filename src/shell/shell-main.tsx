@@ -55,6 +55,7 @@ export function ShellMain({
       className="grid h-full min-h-0 grid-cols-[56px_minmax(0,1fr)] transition-[grid-template-columns] md:grid-cols-[var(--clair-shell-main-columns)]"
       style={{
         "--clair-shell-main-columns": `${navigationColumnWidth}px minmax(0, 1fr)`,
+        "--clair-shell-gap": `${SHELL_LAYOUT.shell.gap}px`,
         gap: SHELL_LAYOUT.shell.gap,
         padding: SHELL_LAYOUT.shell.bodyPadding,
         transitionDuration: reduceMotion ? "0ms" : "160ms",
