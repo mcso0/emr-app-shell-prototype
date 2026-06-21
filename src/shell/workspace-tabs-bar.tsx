@@ -372,11 +372,6 @@ export function WorkspaceTabsBar({
           </Button>
         </div>
 
-        <div
-          data-testid="workspace-topbar-divider"
-          className="h-[var(--emr-topbar-divider-height)] w-[var(--emr-topbar-divider-width)] shrink-0 bg-[var(--emr-topbar-divider)]"
-        />
-
         <WorkspaceChromeTabs
           activeTabId={activeTabId}
           tabs={chromeTabs}
