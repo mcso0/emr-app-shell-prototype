@@ -207,9 +207,14 @@
   --emr-sidepanel-task-card-action-border: var(--clair-color-atomic-neutral-200);
   --emr-calendar-toolbar-height: var(--clair-spacing-64);
   --emr-calendar-toolbar-padding-x: var(--clair-spacing-16);
-  --emr-calendar-lane-header-height: 56px;
+  --emr-calendar-lane-header-cell-height: var(--clair-spacing-64);
+  --emr-calendar-lane-header-cell-padding: var(--clair-spacing-8);
+  --emr-calendar-lane-header-height: var(--clair-spacing-48);
   --emr-calendar-lane-header-radius: var(--clair-radius-atomic-12);
-  --emr-calendar-lane-avatar-size: var(--clair-control-height-xl);
+  --emr-calendar-lane-header-padding: var(--clair-spacing-8);
+  --emr-calendar-lane-header-gap: var(--clair-spacing-8);
+  --emr-calendar-lane-avatar-size: var(--clair-spacing-32);
+  --emr-calendar-lane-avatar-radius: var(--clair-radius-atomic-16);
   --emr-calendar-task-radius: var(--clair-radius-atomic-8);
   --emr-calendar-task-shadow: var(--clair-shadow-xs);
   --emr-calendar-task-outpatient-bg: color-mix(in srgb, var(--clair-color-atomic-forest-green-400) 8%, transparent);

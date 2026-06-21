@@ -210,16 +210,16 @@ const allVeterinarians = mockStaffUsers.filter(
 }));
 const defaultVeterinarian = allVeterinarians[0];
 const veterinarianHeaderToneClasses = [
-  "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-text)]",
-  "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-text)]",
-  "border-[var(--emr-state-selected-border)] bg-[var(--emr-line-selected)]",
-  "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-text)]",
-  "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-text)]",
-  "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-text)]",
-  "border-[var(--emr-status-info-border)] bg-[var(--emr-text-link)]",
-  "border-[var(--emr-line-strong)] bg-[var(--emr-text-secondary)]",
-  "border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-text)]",
-  "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-text)]",
+  "border-[var(--clair-color-atomic-blue-500)] bg-[var(--clair-color-atomic-blue-500)]",
+  "border-[var(--clair-color-atomic-forest-green-500)] bg-[var(--clair-color-atomic-forest-green-500)]",
+  "border-[var(--clair-color-atomic-sky-500)] bg-[var(--clair-color-atomic-sky-500)]",
+  "border-[var(--clair-color-atomic-orange-500)] bg-[var(--clair-color-atomic-orange-500)]",
+  "border-[var(--clair-color-atomic-green-500)] bg-[var(--clair-color-atomic-green-500)]",
+  "border-[var(--clair-color-atomic-red-500)] bg-[var(--clair-color-atomic-red-500)]",
+  "border-[var(--clair-color-atomic-teal-500)] bg-[var(--clair-color-atomic-teal-500)]",
+  "border-[var(--clair-color-atomic-neutral-500)] bg-[var(--clair-color-atomic-neutral-500)]",
+  "border-[var(--clair-color-atomic-purple-500)] bg-[var(--clair-color-atomic-purple-500)]",
+  "border-[var(--clair-color-atomic-red-500)] bg-[var(--clair-color-atomic-red-500)]",
 ];
 const veterinarianAccentToneClasses = [
   "bg-[var(--emr-status-info-text)]",
@@ -390,14 +390,18 @@ function VeterinarianLaneHeader({
 }) {
   return (
     <div
+      data-testid="veterinarian-lane-header"
       className={cn(
-        "flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-3 rounded-[var(--emr-calendar-lane-header-radius)] border px-3 text-primary-foreground shadow-[var(--clair-shadow-xs)]",
+        "flex h-[var(--emr-calendar-lane-header-height)] min-w-0 items-center gap-[var(--emr-calendar-lane-header-gap)] rounded-[var(--emr-calendar-lane-header-radius)] border p-[var(--emr-calendar-lane-header-padding)] text-primary-foreground",
         veterinarianHeaderToneClasses[
           toneIndex % veterinarianHeaderToneClasses.length
         ],
       )}
     >
-      <span className="flex size-[var(--emr-calendar-lane-avatar-size)] shrink-0 items-center justify-center rounded-[10px] border border-[var(--emr-text-inverse)] bg-[var(--emr-surface-panel)] text-[16px] font-bold leading-none text-[var(--emr-text-primary)] shadow-[var(--clair-shadow-xs)]">
+      <span
+        data-testid="veterinarian-lane-avatar"
+        className="flex size-[var(--emr-calendar-lane-avatar-size)] shrink-0 items-center justify-center rounded-[var(--emr-calendar-lane-avatar-radius)] border border-[var(--emr-text-inverse)] bg-[var(--emr-surface-panel)] text-[16px] font-bold leading-none text-[var(--emr-text-primary)] shadow-[var(--clair-shadow-xs)]"
+      >
         {veterinarian.initial}
       </span>
       <span className="min-w-0 truncate text-[15px] font-semibold leading-5 [letter-spacing:0]">
@@ -4643,9 +4647,13 @@ function DayScheduleBoard({
         className="sticky top-0 z-30 grid border-b bg-card shadow-xs"
         style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
       >
-        <div className="border-r" />
+        <div className="h-[var(--emr-calendar-lane-header-cell-height)] border-r" />
         {selectedVeterinarians.map((veterinarian) => (
-          <div key={veterinarian.id} className="border-r p-2 last:border-r-0">
+          <div
+            key={veterinarian.id}
+            data-testid="veterinarian-lane-header-cell"
+            className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
+          >
             <VeterinarianLaneHeader
               toneIndex={getVeterinarianToneIndex(
                 veterinarian,
