@@ -1295,7 +1295,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       workspaceTabsBar.evaluate((header) => {
         const left = header.firstElementChild as HTMLElement | null;
         const right = header.lastElementChild as HTMLElement | null;
-        const divider = left?.children[2] as HTMLElement | undefined;
+        const divider = header.querySelector("[data-testid='workspace-topbar-divider']") as HTMLElement | null;
         return {
           headerGap: getComputedStyle(header).columnGap,
           leftGap: left ? getComputedStyle(left).columnGap : null,
@@ -1314,6 +1314,25 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       leftGap: "8px",
       rightGap: "10px",
     });
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const topbar = document.querySelector("[data-testid='workspace-tabs-bar']") as HTMLElement | null;
+        const leadingSlot = document.querySelector("[data-testid='workspace-topbar-leading-slot']") as HTMLElement | null;
+        const historyControls = document.querySelector("[data-testid='workspace-history-controls']") as HTMLElement | null;
+        if (!topbar || !leadingSlot || !historyControls) return null;
+        return {
+          leadingShift: Math.round(topbar.getBoundingClientRect().x - leadingSlot.getBoundingClientRect().x),
+          historyGap: getComputedStyle(historyControls).columnGap,
+          state: topbar.dataset.modulePanel,
+        };
+      }),
+    )
+    .toEqual({
+      historyGap: "8px",
+      leadingShift: 48,
+      state: "open",
+    });
   await expect(backButton).toBeDisabled();
   await expect(forwardButton).toBeDisabled();
 });
@@ -1331,11 +1350,37 @@ test("workspace tab close button keeps tab hover surface unified", async ({ page
   const tabButton = tabContainer.getByRole("tab").first();
 
   await expect(tabButton).toHaveCSS("padding-right", "0px");
+  await expect(tabContainer).toHaveCSS("min-width", "148px");
   await expect(closeButton).toHaveCSS("width", "16px");
   await expect(closeButton).toHaveCSS("height", "16px");
+  await expect(closeButton).toHaveCSS("opacity", "0");
+  await tabContainer.hover();
+  await expect(closeButton).toHaveCSS("opacity", "1");
   await closeButton.hover();
   await expect(tabContainer).toHaveCSS("background-color", hoverColor);
   await expect(closeButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+});
+
+test("workspace topbar keeps collapsed panel history controls in the legacy slot", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto("/w/clair-demo/dispensing?modulePanel=closed&aside=closed");
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const topbar = document.querySelector("[data-testid='workspace-tabs-bar']") as HTMLElement | null;
+        const leadingSlot = document.querySelector("[data-testid='workspace-topbar-leading-slot']") as HTMLElement | null;
+        if (!topbar || !leadingSlot) return null;
+        return {
+          leadingShift: Math.round(topbar.getBoundingClientRect().x - leadingSlot.getBoundingClientRect().x),
+          state: topbar.dataset.modulePanel,
+        };
+      }),
+    )
+    .toEqual({
+      leadingShift: 0,
+      state: "closed",
+    });
 });
 
 test("PWA manifest exposes install shell metadata", async ({ request, page }) => {
