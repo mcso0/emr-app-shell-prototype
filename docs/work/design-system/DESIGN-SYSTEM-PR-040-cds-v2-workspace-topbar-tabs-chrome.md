@@ -54,3 +54,8 @@ Align the workspace topbar and page tab chrome with the CDS V2 topbar component 
 - Anchor workspace history controls to the expanded navigation column boundary when `modulePanel=open`; the controls' right edge must not cross the 362px left-region axis.
 - Keep the collapsed `modulePanel=closed` history controls in the legacy topbar slot.
 - Keep workspace tab and divider layout in the right workspace section, so multiple tabs do not inherit the history-control offset.
+
+## Follow-up Rework 2026-06-21: Remove Leading Divider
+
+- Remove the leading divider before workspace tabs after the history controls moved into the expanded left-region boundary.
+- Keep open/closed tab-history geometry coverage focused on the history boundary and tablist start position.

@@ -1295,21 +1295,16 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       workspaceTabsBar.evaluate((header) => {
         const left = header.firstElementChild as HTMLElement | null;
         const right = header.lastElementChild as HTMLElement | null;
-        const divider = header.querySelector("[data-testid='workspace-topbar-divider']") as HTMLElement | null;
         return {
           headerGap: getComputedStyle(header).columnGap,
           leftGap: left ? getComputedStyle(left).columnGap : null,
           rightGap: right ? getComputedStyle(right).columnGap : null,
-          dividerBg: divider ? getComputedStyle(divider).backgroundColor : null,
-          dividerHeight: divider ? Math.round(divider.getBoundingClientRect().height) : null,
-          dividerWidth: divider ? Math.round(divider.getBoundingClientRect().width) : null,
+          dividerCount: header.querySelectorAll("[data-testid='workspace-topbar-divider']").length,
         };
       }),
     )
     .toEqual({
-      dividerBg: "rgba(0, 0, 0, 0.08)",
-      dividerHeight: 16,
-      dividerWidth: 1,
+      dividerCount: 0,
       headerGap: "16px",
       leftGap: "8px",
       rightGap: "10px",
@@ -1321,30 +1316,30 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
         const topbar = document.querySelector("[data-testid='workspace-tabs-bar']") as HTMLElement | null;
         const leadingSlot = document.querySelector("[data-testid='workspace-topbar-leading-slot']") as HTMLElement | null;
         const historyControls = document.querySelector("[data-testid='workspace-history-controls']") as HTMLElement | null;
-        const divider = document.querySelector("[data-testid='workspace-topbar-divider']") as HTMLElement | null;
-        if (!navigationColumn || !topbar || !leadingSlot || !historyControls || !divider) return null;
+        const tablist = document.querySelector("[role='tablist'][aria-label='열린 업무 탭']") as HTMLElement | null;
+        if (!navigationColumn || !topbar || !leadingSlot || !historyControls || !tablist) return null;
         const navigationRect = navigationColumn.getBoundingClientRect();
         const topbarRect = topbar.getBoundingClientRect();
         const leadingRect = leadingSlot.getBoundingClientRect();
         const historyRect = historyControls.getBoundingClientRect();
-        const dividerRect = divider.getBoundingClientRect();
+        const tablistRect = tablist.getBoundingClientRect();
         return {
-          dividerLeftDelta: Math.round(dividerRect.x - navigationRect.right),
           historyGap: getComputedStyle(historyControls).columnGap,
           historyRightDelta: Math.round(historyRect.right - navigationRect.right),
           leadingShift: Math.round(topbarRect.x - leadingRect.x),
           navigationWidth: Math.round(navigationRect.width),
+          tablistLeftDelta: Math.round(tablistRect.x - topbarRect.x),
           topbarGap: Math.round(topbarRect.x - navigationRect.right),
           state: topbar.dataset.modulePanel,
         };
       }),
     )
     .toEqual({
-      dividerLeftDelta: 10,
       historyGap: "8px",
       historyRightDelta: 0,
       leadingShift: 0,
       navigationWidth: 362,
+      tablistLeftDelta: 0,
       topbarGap: 10,
       state: "open",
     });
