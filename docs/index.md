@@ -30,6 +30,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | --- | --- |
 | Product target and status | [MVP Current Status](engineering/current-status.md) |
 | System architecture overview | [System Architecture Overview](engineering/architecture/system-architecture-overview.md) |
+| System architecture overview KO HTML | [CLAiR EMR System Architecture Overview](engineering/architecture/system-architecture-overview.ko.html) |
 | Product operating map | [SaaS Operating Map](product/service/clair-emr-saas-operating-map.md) |
 | Product MVP scope | [Product MVP Scope](product/roadmap/product-mvp-scope.md) |
 | Global notification center v0 | [Global Notification Center v0 Contract](product/features/notifications/global-notification-center-v0-contract.md) |

@@ -66,5 +66,6 @@ Create a canonical first-read engineering architecture overview that helps human
 
 - Subagent research found distributed architecture contracts but no single canonical system architecture overview.
 - The overview is a routing map, not a replacement for detailed contracts.
+- Korean reader companion: `docs/engineering/architecture/system-architecture-overview.ko.html`.
 - Keep future architecture edits source-backed and avoid expanding this overview into a duplicate status document.
 - Closeout: `docs/completed/engineering/2026-06-20-system-architecture-overview-report.html`.
