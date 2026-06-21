@@ -339,13 +339,16 @@ export function WorkspaceTabsBar({
       <div
         data-testid="workspace-topbar-leading-slot"
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-item-gap)] transition-transform duration-[var(--emr-topbar-motion-duration)] motion-reduce:transition-none",
-          modulePanelOpen && "md:-translate-x-[var(--emr-topbar-open-leading-shift)]",
+          "relative flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-item-gap)]",
         )}
       >
         <div
           data-testid="workspace-history-controls"
-          className="flex shrink-0 items-center gap-[var(--emr-topbar-item-gap)]"
+          className={cn(
+            "flex shrink-0 items-center gap-[var(--emr-topbar-item-gap)]",
+            modulePanelOpen &&
+              "md:absolute md:left-[calc(-1*var(--emr-topbar-open-history-shift))] md:top-0"
+          )}
         >
           <Button
             variant="ghost"

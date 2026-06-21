@@ -1317,20 +1317,35 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   await expect
     .poll(() =>
       page.evaluate(() => {
+        const navigationColumn = document.querySelector("[data-testid='shell-navigation-column']") as HTMLElement | null;
         const topbar = document.querySelector("[data-testid='workspace-tabs-bar']") as HTMLElement | null;
         const leadingSlot = document.querySelector("[data-testid='workspace-topbar-leading-slot']") as HTMLElement | null;
         const historyControls = document.querySelector("[data-testid='workspace-history-controls']") as HTMLElement | null;
-        if (!topbar || !leadingSlot || !historyControls) return null;
+        const divider = document.querySelector("[data-testid='workspace-topbar-divider']") as HTMLElement | null;
+        if (!navigationColumn || !topbar || !leadingSlot || !historyControls || !divider) return null;
+        const navigationRect = navigationColumn.getBoundingClientRect();
+        const topbarRect = topbar.getBoundingClientRect();
+        const leadingRect = leadingSlot.getBoundingClientRect();
+        const historyRect = historyControls.getBoundingClientRect();
+        const dividerRect = divider.getBoundingClientRect();
         return {
-          leadingShift: Math.round(topbar.getBoundingClientRect().x - leadingSlot.getBoundingClientRect().x),
+          dividerLeftDelta: Math.round(dividerRect.x - navigationRect.right),
           historyGap: getComputedStyle(historyControls).columnGap,
+          historyRightDelta: Math.round(historyRect.right - navigationRect.right),
+          leadingShift: Math.round(topbarRect.x - leadingRect.x),
+          navigationWidth: Math.round(navigationRect.width),
+          topbarGap: Math.round(topbarRect.x - navigationRect.right),
           state: topbar.dataset.modulePanel,
         };
       }),
     )
     .toEqual({
+      dividerLeftDelta: 10,
       historyGap: "8px",
-      leadingShift: 48,
+      historyRightDelta: 0,
+      leadingShift: 0,
+      navigationWidth: 362,
+      topbarGap: 10,
       state: "open",
     });
   await expect(backButton).toBeDisabled();
@@ -1370,14 +1385,20 @@ test("workspace topbar keeps collapsed panel history controls in the legacy slot
       page.evaluate(() => {
         const topbar = document.querySelector("[data-testid='workspace-tabs-bar']") as HTMLElement | null;
         const leadingSlot = document.querySelector("[data-testid='workspace-topbar-leading-slot']") as HTMLElement | null;
-        if (!topbar || !leadingSlot) return null;
+        const historyControls = document.querySelector("[data-testid='workspace-history-controls']") as HTMLElement | null;
+        if (!topbar || !leadingSlot || !historyControls) return null;
+        const topbarRect = topbar.getBoundingClientRect();
+        const leadingRect = leadingSlot.getBoundingClientRect();
+        const historyRect = historyControls.getBoundingClientRect();
         return {
-          leadingShift: Math.round(topbar.getBoundingClientRect().x - leadingSlot.getBoundingClientRect().x),
+          historyLeftDelta: Math.round(historyRect.x - topbarRect.x),
+          leadingShift: Math.round(topbarRect.x - leadingRect.x),
           state: topbar.dataset.modulePanel,
         };
       }),
     )
     .toEqual({
+      historyLeftDelta: 0,
       leadingShift: 0,
       state: "closed",
     });

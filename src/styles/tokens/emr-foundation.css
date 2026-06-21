@@ -102,7 +102,12 @@
   --emr-topbar-item-gap: var(--clair-spacing-8);
   --emr-topbar-action-gap: var(--clair-spacing-10);
   --emr-topbar-motion-duration: 160ms;
-  --emr-topbar-open-leading-shift: calc(var(--emr-topbar-control-size) + var(--emr-topbar-section-gap));
+  --emr-topbar-open-history-shift: calc(
+    var(--emr-topbar-control-size) +
+      var(--emr-topbar-control-size) +
+      var(--emr-topbar-item-gap) +
+      var(--clair-shell-gap, var(--clair-spacing-10))
+  );
   --emr-topbar-divider-width: 1px;
   --emr-topbar-divider-height: var(--clair-spacing-16);
   --emr-topbar-divider: var(--clair-color-atomic-black-alpha-8);
