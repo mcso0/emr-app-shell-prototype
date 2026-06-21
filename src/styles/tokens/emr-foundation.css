@@ -101,6 +101,8 @@
   --emr-topbar-section-gap: var(--clair-spacing-16);
   --emr-topbar-item-gap: var(--clair-spacing-8);
   --emr-topbar-action-gap: var(--clair-spacing-10);
+  --emr-topbar-motion-duration: 160ms;
+  --emr-topbar-open-leading-shift: calc(var(--emr-topbar-control-size) + var(--emr-topbar-section-gap));
   --emr-topbar-divider-width: 1px;
   --emr-topbar-divider-height: var(--clair-spacing-16);
   --emr-topbar-divider: var(--clair-color-atomic-black-alpha-8);
@@ -115,6 +117,7 @@
   --emr-topbar-tab-padding-y: var(--clair-spacing-6);
   --emr-topbar-tab-label-padding-x: var(--clair-spacing-2);
   --emr-topbar-tab-radius: var(--clair-radius-atomic-8);
+  --emr-topbar-tab-min-width: 148px;
   --emr-topbar-tab-max-width: 230px;
   --emr-topbar-tab-bg: transparent;
   --emr-topbar-tab-hover-bg: var(--clair-color-atomic-black-alpha-6);
@@ -228,7 +231,19 @@
   --emr-calendar-task-badge-noshow-bg: color-mix(in srgb, var(--clair-color-atomic-red-400) 8%, transparent);
   --emr-calendar-task-badge-noshow-border: var(--clair-color-atomic-red-300);
   --emr-calendar-task-badge-noshow-text: var(--clair-color-atomic-red-600);
-  --emr-calendar-current-time: var(--emr-status-danger-text);
+  --emr-calendar-current-time: var(--clair-color-atomic-red-500);
+  --emr-calendar-current-time-label-width: 36px;
+  --emr-calendar-current-time-label-height: var(--clair-spacing-16);
+  --emr-calendar-current-time-label-radius: var(--clair-radius-atomic-6);
+  --emr-calendar-current-time-label-padding-y: var(--clair-border-width-atomic-1);
+  --emr-calendar-current-time-label-padding-x: var(--clair-border-width-atomic-4);
+  --emr-calendar-current-time-gap: var(--clair-border-width-atomic-2);
+  --emr-calendar-current-time-dot-size: var(--clair-spacing-8);
+  --emr-calendar-current-time-leading-width: calc(
+    var(--emr-calendar-current-time-label-width) +
+      var(--emr-calendar-current-time-gap) +
+      var(--emr-calendar-current-time-dot-size)
+  );
   --emr-context-bar-min-height: 50px;
   --emr-context-bar-padding-x: var(--clair-spacing-16);
   --emr-context-bar-padding-y: var(--clair-spacing-12);

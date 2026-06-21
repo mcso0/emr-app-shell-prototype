@@ -25,11 +25,12 @@ type WorkspaceChromeTabsProps = {
   onNewTab: () => void;
 };
 
-const WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME = "max-w-[var(--emr-topbar-tab-max-width)]";
+const WORKSPACE_TAB_WIDTH_CLASS_NAME =
+  "min-w-[var(--emr-topbar-tab-min-width)] max-w-[var(--emr-topbar-tab-max-width)]";
 const workspaceTabButtonClassName =
-  "h-[var(--emr-topbar-control-size)] min-w-0 justify-start gap-0 truncate rounded-[var(--emr-topbar-tab-radius)] border-transparent bg-transparent py-[var(--emr-topbar-tab-padding-y)] pl-[var(--emr-topbar-tab-padding-x)] pr-[var(--emr-topbar-tab-padding-right)] text-left [font-size:var(--emr-type-size-body)] font-medium ![letter-spacing:var(--emr-type-tracking-section)] [line-height:var(--emr-type-leading-body)] shadow-none hover:bg-transparent";
+  "h-[var(--emr-topbar-control-size)] min-w-0 flex-1 justify-start gap-0 truncate rounded-[var(--emr-topbar-tab-radius)] border-transparent bg-transparent py-[var(--emr-topbar-tab-padding-y)] pl-[var(--emr-topbar-tab-padding-x)] pr-[var(--emr-topbar-tab-padding-right)] text-left [font-size:var(--emr-type-size-body)] font-medium ![letter-spacing:var(--emr-type-tracking-section)] [line-height:var(--emr-type-leading-body)] shadow-none hover:bg-transparent";
 const workspaceTabCloseClassName =
-  "mr-[var(--emr-topbar-tab-padding-x)] flex size-[var(--emr-topbar-tab-close-size)] shrink-0 items-center justify-center rounded-full bg-transparent p-0 text-[var(--emr-topbar-tab-close)] opacity-100 transition-none hover:bg-transparent hover:text-[var(--emr-topbar-tab-active-close)]";
+  "mr-[var(--emr-topbar-tab-padding-x)] flex size-[var(--emr-topbar-tab-close-size)] shrink-0 items-center justify-center rounded-full bg-transparent p-0 text-[var(--emr-topbar-tab-close)] opacity-0 transition-opacity duration-[var(--emr-topbar-motion-duration)] pointer-events-none hover:bg-transparent hover:text-[var(--emr-topbar-tab-active-close)] group-hover/workspace-tab:pointer-events-auto group-hover/workspace-tab:opacity-100 group-focus-within/workspace-tab:pointer-events-auto group-focus-within/workspace-tab:opacity-100 motion-reduce:transition-none";
 const workspaceTabIconFrameClassName =
   "flex size-[var(--clair-spacing-16)] shrink-0 items-center justify-center text-[var(--emr-topbar-tab-icon)]";
 const workspaceTabTooltipClassName =
@@ -65,7 +66,7 @@ export function WorkspaceChromeTabs({
             role="presentation"
             className={cn(
               "group/workspace-tab relative flex h-[var(--emr-topbar-control-size)] min-w-0 items-center gap-[var(--emr-topbar-tab-inner-gap)] rounded-[var(--emr-topbar-tab-radius)] border transition-colors",
-              WORKSPACE_TAB_MAX_WIDTH_CLASS_NAME,
+              WORKSPACE_TAB_WIDTH_CLASS_NAME,
               active
                 ? "border-[var(--emr-topbar-tab-active-border)] bg-[var(--emr-topbar-tab-active-bg)] shadow-[var(--emr-topbar-tab-active-shadow)]"
                 : "border-transparent bg-[var(--emr-topbar-tab-bg)] hover:border-transparent hover:bg-[var(--emr-topbar-tab-hover-bg)]",

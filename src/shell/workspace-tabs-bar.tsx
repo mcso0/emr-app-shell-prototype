@@ -271,6 +271,7 @@ export function WorkspaceTabsBar({
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const selectedReceptionEncounterId = useReceptionStore((state) => state.selectedEncounterId);
   const selectedReceptionPatientId = useReceptionStore((state) => state.selectedPatientId);
+  const modulePanelOpen = useLayoutStore((state) => state.modulePanelOpen);
   const { hydrated, session, hydrate, signOut } = useAuthClient();
   const personalProfile = hydrated && session ? readBrowserPersonalProfile(session) : null;
   const roleLabel = hydrated && session ? session.roleLabel : "Guest";
@@ -332,31 +333,46 @@ export function WorkspaceTabsBar({
   return (
     <header
       data-testid="workspace-tabs-bar"
+      data-module-panel={modulePanelOpen ? "open" : "closed"}
       className="relative z-20 flex h-[var(--emr-topbar-control-size)] items-center gap-[var(--emr-topbar-section-gap)] bg-[var(--emr-surface-app)]"
     >
-      <div className="flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-item-gap)]">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="탭 뒤로가기"
-          disabled={!canGoBack}
-          onClick={onBack}
-          className={historyButtonClassName}
+      <div
+        data-testid="workspace-topbar-leading-slot"
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-item-gap)] transition-transform duration-[var(--emr-topbar-motion-duration)] motion-reduce:transition-none",
+          modulePanelOpen && "md:-translate-x-[var(--emr-topbar-open-leading-shift)]",
+        )}
+      >
+        <div
+          data-testid="workspace-history-controls"
+          className="flex shrink-0 items-center gap-[var(--emr-topbar-item-gap)]"
         >
-          <ChevronLeftIcon className="size-4" aria-hidden="true" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="탭 앞으로가기"
-          disabled={!canGoForward}
-          onClick={onForward}
-          className={historyButtonClassName}
-        >
-          <ChevronRightIcon className="size-4" aria-hidden="true" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="탭 뒤로가기"
+            disabled={!canGoBack}
+            onClick={onBack}
+            className={historyButtonClassName}
+          >
+            <ChevronLeftIcon className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="탭 앞으로가기"
+            disabled={!canGoForward}
+            onClick={onForward}
+            className={historyButtonClassName}
+          >
+            <ChevronRightIcon className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
 
-        <div className="h-[var(--emr-topbar-divider-height)] w-[var(--emr-topbar-divider-width)] shrink-0 bg-[var(--emr-topbar-divider)]" />
+        <div
+          data-testid="workspace-topbar-divider"
+          className="h-[var(--emr-topbar-divider-height)] w-[var(--emr-topbar-divider-width)] shrink-0 bg-[var(--emr-topbar-divider)]"
+        />
 
         <WorkspaceChromeTabs
           activeTabId={activeTabId}

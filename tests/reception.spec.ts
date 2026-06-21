@@ -435,9 +435,43 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     "appointment-card-appointment-kong-260501",
   );
 
-  await expect(calendar.getByTestId("day-current-time-label")).toHaveText(
-    "10:45",
-  );
+  const currentTimeLabel = calendar.getByTestId("day-current-time-label");
+  await expect(currentTimeLabel).toHaveText("10:45");
+  await expect
+    .poll(() =>
+      currentTimeLabel.evaluate((label) => {
+        const style = getComputedStyle(label);
+        const box = label.getBoundingClientRect();
+
+        return {
+          backgroundColor: style.backgroundColor,
+          borderRadius: style.borderRadius,
+          height: Math.round(box.height),
+          paddingBottom: style.paddingBottom,
+          paddingLeft: style.paddingLeft,
+          paddingRight: style.paddingRight,
+          paddingTop: style.paddingTop,
+          width: Math.round(box.width),
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(229, 62, 62)",
+      borderRadius: "6px",
+      height: 16,
+      paddingBottom: "1px",
+      paddingLeft: "4px",
+      paddingRight: "4px",
+      paddingTop: "1px",
+      width: 36,
+    });
+  await expect
+    .poll(() =>
+      calendar
+        .getByTestId("day-current-time-indicator-line")
+        .evaluate((line) => getComputedStyle(line).paddingLeft),
+    )
+    .toBe("2px");
   await expect(
     calendar
       .getByTestId("day-hour-row-10")

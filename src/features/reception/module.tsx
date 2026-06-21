@@ -1999,12 +1999,17 @@ function CalendarCurrentTimeIndicator({
     >
       <span
         data-testid={labelTestId}
-        className="flex h-5 shrink-0 items-center rounded-full bg-[var(--emr-calendar-current-time)] px-2 text-[12px] font-semibold leading-4 text-white shadow-[var(--clair-shadow-xs)] [letter-spacing:0]"
+        className="flex h-[var(--emr-calendar-current-time-label-height)] w-[var(--emr-calendar-current-time-label-width)] shrink-0 items-center justify-center gap-0 rounded-[var(--emr-calendar-current-time-label-radius)] bg-[var(--emr-calendar-current-time)] px-[var(--emr-calendar-current-time-label-padding-x)] py-[var(--emr-calendar-current-time-label-padding-y)] text-center text-[12px] font-semibold leading-4 text-white [letter-spacing:0]"
       >
         {getCurrentOperatingTimeLabel(currentOperatingMinutes)}
       </span>
-      <span className="size-2 shrink-0 rounded-full bg-[var(--emr-calendar-current-time)]" />
-      <span className="h-px flex-1 bg-[var(--emr-calendar-current-time)]" />
+      <span
+        data-testid={`${testId}-line`}
+        className="flex min-w-0 flex-1 items-center pl-[var(--emr-calendar-current-time-gap)]"
+      >
+        <span className="size-[var(--emr-calendar-current-time-dot-size)] shrink-0 rounded-full bg-[var(--emr-calendar-current-time)]" />
+        <span className="h-px flex-1 bg-[var(--emr-calendar-current-time)]" />
+      </span>
     </div>
   );
 }
@@ -4715,10 +4720,13 @@ function DayScheduleBoard({
         </div>
         <div className="relative z-10 col-span-full col-start-2 min-w-0">
           <CalendarCurrentTimeIndicator
-            className="-left-[52px] right-0"
             currentOperatingMinutes={currentOperatingMinutes}
             labelTestId="day-current-time-label"
-            style={{ top: currentTimeOffset }}
+            style={{
+              left: "calc(-1 * var(--emr-calendar-current-time-leading-width))",
+              right: 0,
+              top: currentTimeOffset,
+            }}
             testId="day-current-time-indicator"
           />
           {dayScheduleHours.map((hour) => (
@@ -4909,9 +4917,9 @@ function WeekScheduleBoard({
             currentOperatingMinutes={currentOperatingMinutes}
             labelTestId="week-current-time-label"
             style={{
-              left: `calc(56px + ${dayColumnWidth} * ${activeDayIndex} - 52px)`,
+              left: `calc(56px + ${dayColumnWidth} * ${activeDayIndex} - var(--emr-calendar-current-time-leading-width))`,
               top: currentTimeOffset,
-              width: `calc(${dayColumnWidth} + 52px)`,
+              width: `calc(${dayColumnWidth} + var(--emr-calendar-current-time-leading-width))`,
             }}
             testId="week-current-time-indicator"
           />
