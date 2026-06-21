@@ -470,9 +470,83 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   await page.goto("/w/clair-demo/reception");
 
   const calendar = page.getByTestId("reception-day-calendar");
+  const laneHeaderCell = calendar
+    .getByTestId("veterinarian-lane-header-cell")
+    .first();
+  const laneHeader = calendar.getByTestId("veterinarian-lane-header").first();
+  const laneAvatar = laneHeader.getByTestId("veterinarian-lane-avatar");
   const kongAppointment = page.getByTestId(
     "appointment-card-appointment-kong-260501",
   );
+
+  await expect
+    .poll(() =>
+      laneHeaderCell.evaluate((cell) => {
+        const style = getComputedStyle(cell);
+        const box = cell.getBoundingClientRect();
+
+        return {
+          height: Math.round(box.height),
+          paddingBottom: style.paddingBottom,
+          paddingLeft: style.paddingLeft,
+          paddingRight: style.paddingRight,
+          paddingTop: style.paddingTop,
+        };
+      }),
+    )
+    .toEqual({
+      height: 64,
+      paddingBottom: "8px",
+      paddingLeft: "8px",
+      paddingRight: "8px",
+      paddingTop: "8px",
+    });
+  await expect
+    .poll(() =>
+      laneHeader.evaluate((header) => {
+        const style = getComputedStyle(header);
+        const box = header.getBoundingClientRect();
+
+        return {
+          backgroundColor: style.backgroundColor,
+          borderRadius: style.borderRadius,
+          columnGap: style.columnGap,
+          height: Math.round(box.height),
+          paddingBottom: style.paddingBottom,
+          paddingLeft: style.paddingLeft,
+          paddingRight: style.paddingRight,
+          paddingTop: style.paddingTop,
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(49, 130, 206)",
+      borderRadius: "12px",
+      columnGap: "8px",
+      height: 48,
+      paddingBottom: "8px",
+      paddingLeft: "8px",
+      paddingRight: "8px",
+      paddingTop: "8px",
+    });
+  await expect
+    .poll(() =>
+      laneAvatar.evaluate((avatar) => {
+        const style = getComputedStyle(avatar);
+        const box = avatar.getBoundingClientRect();
+
+        return {
+          borderRadius: style.borderRadius,
+          height: Math.round(box.height),
+          width: Math.round(box.width),
+        };
+      }),
+    )
+    .toEqual({
+      borderRadius: "16px",
+      height: 32,
+      width: 32,
+    });
 
   const currentTimeLabel = calendar.getByTestId("day-current-time-label");
   await expect(currentTimeLabel).toHaveText("10:45");

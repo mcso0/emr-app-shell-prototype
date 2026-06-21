@@ -47,3 +47,4 @@ Align the workspace topbar and page tab chrome with the CDS V2 topbar component 
 - Keep tab close buttons mounted for stable layout, but reveal them only on tab hover or keyboard focus.
 - Add focused Playwright coverage for the open/closed history slot, 148px tab width, and hover-only close affordance.
 - Browser review follow-up: align the reception calendar current-time timeline label to the CDS V2 red/500, 36px by 16px pill, 6px radius, 1px/4px padding, and 2px label-to-line gap while preserving the existing calendar component.
+- Browser review follow-up: restore the missed reception calendar lane header spec: 64px outer cell with 8px padding, 48px inner header with 12px radius and 8px padding, 32px by 32px avatar with 16px radius, and 500-level lane colors.
