@@ -23,6 +23,7 @@ updated: "2026-06-18"
 - Cancelled rows remain visible in the reception side queue under a cancelled group.
 - Side queue tabs are `전체`, `외래`, `예약`.
 - Cancelled encounter and appointment rows can be restored through server-owned routes.
+- Day/week calendar initial entry centers the current-time marker after initial layout settles, without overriding later user scroll.
 
 ## Changed Contracts
 
@@ -39,4 +40,6 @@ updated: "2026-06-18"
 - `npx playwright test tests/reception-queue-read-server.spec.ts tests/reception-encounter-restore-server.spec.ts tests/reception-appointment-restore-server.spec.ts tests/reception-mutation-permissions-server.spec.ts --reporter=line`: 53 passed
 - `npx playwright test tests/reception.spec.ts -g "reception renders the first-path workspace" --reporter=line`: passed
 - `npx playwright test tests/reception.spec.ts -g "walk-in persistence regression reloads from queue and calendar reads" --reporter=line`: passed
+- `npx playwright test tests/reception.spec.ts -g "initially centers the current-time marker" --reporter=line`: 2 passed
+- Manual local Playwright coordinate check at 1440x640: day/week current-time marker distance from viewport center 0.5px
 - `npm run lint`: passed with existing warnings

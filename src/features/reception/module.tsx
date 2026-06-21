@@ -4,8 +4,10 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -5115,14 +5117,152 @@ function ReceptionScheduleBoard({
   selectedVeterinarians: Veterinarian[];
   view: ReceptionCalendarView;
 }) {
+  const calendarFrameRef = useRef<HTMLElement | null>(null);
+  const centeredCalendarScrollKeyRef = useRef<string | null>(null);
+  const calendarInitialScrollLockTimerRef = useRef<number | null>(null);
+  const userScrolledCalendarKeyRef = useRef<string | null>(null);
+
+  const calendarInitialScrollKey = `${operatingDate}:${view}`;
+  const markCalendarUserScrolled = useCallback(() => {
+    userScrolledCalendarKeyRef.current = calendarInitialScrollKey;
+    centeredCalendarScrollKeyRef.current = calendarInitialScrollKey;
+
+    if (calendarInitialScrollLockTimerRef.current !== null) {
+      window.clearTimeout(calendarInitialScrollLockTimerRef.current);
+      calendarInitialScrollLockTimerRef.current = null;
+    }
+  }, [calendarInitialScrollKey]);
+  const markCalendarUserScrolledByKeyboard = useCallback(
+    (event: KeyboardEvent<HTMLElement>) => {
+      if (
+        [
+          "ArrowDown",
+          "ArrowUp",
+          "End",
+          "Home",
+          "PageDown",
+          "PageUp",
+          " ",
+        ].includes(event.key)
+      ) {
+        markCalendarUserScrolled();
+      }
+    },
+    [markCalendarUserScrolled],
+  );
+
+  useEffect(() => {
+    if (view === "month") return;
+
+    if (
+      centeredCalendarScrollKeyRef.current === calendarInitialScrollKey ||
+      userScrolledCalendarKeyRef.current === calendarInitialScrollKey
+    ) {
+      return;
+    }
+
+    const frame = calendarFrameRef.current;
+    if (!frame) return;
+
+    const animationFrameIds: number[] = [];
+    const timeoutIds: number[] = [];
+    let viewportResizeObserver: ResizeObserver | null = null;
+    const requestAnimationFrameForInitialScroll = (
+      callback: FrameRequestCallback,
+    ) => {
+      const animationFrameId = window.requestAnimationFrame(callback);
+      animationFrameIds.push(animationFrameId);
+    };
+    const scheduleInitialScrollLock = () => {
+      if (calendarInitialScrollLockTimerRef.current !== null) {
+        window.clearTimeout(calendarInitialScrollLockTimerRef.current);
+      }
+      calendarInitialScrollLockTimerRef.current = window.setTimeout(() => {
+        centeredCalendarScrollKeyRef.current = calendarInitialScrollKey;
+        calendarInitialScrollLockTimerRef.current = null;
+        viewportResizeObserver?.disconnect();
+        viewportResizeObserver = null;
+      }, 600);
+    };
+    const centerCurrentTimeIndicator = () => {
+      if (
+        centeredCalendarScrollKeyRef.current === calendarInitialScrollKey ||
+        userScrolledCalendarKeyRef.current === calendarInitialScrollKey
+      ) {
+        return;
+      }
+
+      const viewport = frame.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]',
+      );
+      const currentTimeIndicator = frame.querySelector<HTMLElement>(
+        view === "week"
+          ? '[data-testid="week-current-time-indicator"]'
+          : '[data-testid="day-current-time-indicator"]',
+      );
+
+      if (!viewport || !currentTimeIndicator) return;
+
+      const viewportBox = viewport.getBoundingClientRect();
+      const indicatorBox = currentTimeIndicator.getBoundingClientRect();
+      const indicatorLineCenter =
+        indicatorBox.top + currentTimeIndicator.clientHeight / 2;
+      const centeredScrollTop =
+        viewport.scrollTop +
+        indicatorLineCenter -
+        viewportBox.top -
+        viewport.clientHeight / 2;
+      const maxScrollTop = viewport.scrollHeight - viewport.clientHeight;
+
+      viewport.scrollTop = Math.max(
+        0,
+        Math.min(centeredScrollTop, maxScrollTop),
+      );
+
+      if (!viewportResizeObserver && "ResizeObserver" in window) {
+        viewportResizeObserver = new ResizeObserver(() => {
+          centerCurrentTimeIndicator();
+        });
+        viewportResizeObserver.observe(viewport);
+      }
+      scheduleInitialScrollLock();
+    };
+
+    requestAnimationFrameForInitialScroll(() => {
+      requestAnimationFrameForInitialScroll(centerCurrentTimeIndicator);
+    });
+    timeoutIds.push(
+      window.setTimeout(centerCurrentTimeIndicator, 150),
+      window.setTimeout(centerCurrentTimeIndicator, 400),
+    );
+
+    return () => {
+      animationFrameIds.forEach((animationFrameId) => {
+        window.cancelAnimationFrame(animationFrameId);
+      });
+      timeoutIds.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      viewportResizeObserver?.disconnect();
+      if (calendarInitialScrollLockTimerRef.current !== null) {
+        window.clearTimeout(calendarInitialScrollLockTimerRef.current);
+        calendarInitialScrollLockTimerRef.current = null;
+      }
+    };
+  }, [calendarInitialScrollKey, currentOperatingMinutes, view]);
+
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden">
       <section
+        ref={calendarFrameRef}
         className="min-h-0 min-w-0 overflow-hidden bg-card"
         data-testid="reception-calendar-frame"
+        onKeyDownCapture={markCalendarUserScrolledByKeyboard}
         onPointerDown={() => {
           if (calendarDraftSelection) onClearCalendarDraft();
         }}
+        onTouchMoveCapture={markCalendarUserScrolled}
+        onWheelCapture={markCalendarUserScrolled}
       >
         <ScrollArea className="h-full">
           {view === "day" ? (
