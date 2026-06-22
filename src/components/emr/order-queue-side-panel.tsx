@@ -27,7 +27,6 @@ import {
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +46,6 @@ type OrderQueueFilterItem = {
 };
 
 type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
-type OrderQueueDisplayDensity = "default" | "compact";
 type OrderQueueSortKey = "request" | "assignee" | "wait";
 type OrderQueueActionContext = "chart" | "order";
 
@@ -194,7 +192,6 @@ export function EmrOrderQueueSidePanel({
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
   const [detailFilter, setDetailFilter] = useState<OrderQueueDetailFilter>("all");
-  const [displayDensity, setDisplayDensity] = useState<OrderQueueDisplayDensity>("default");
   const [filter, setFilter] = useState<string>("all");
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -277,10 +274,6 @@ export function EmrOrderQueueSidePanel({
               statuses={resolvedStatuses}
               onFilterChange={setDetailFilter}
             />
-            <OrderQueueDisplayMenu
-              density={displayDensity}
-              onDensityChange={setDisplayDensity}
-            />
             <EmrListHeaderIconButton
               ariaLabel="대기열 검색 열기"
               data-testid="order-queue-search-control"
@@ -301,7 +294,6 @@ export function EmrOrderQueueSidePanel({
               collapsed={collapsed}
               getTaskCardItem={getTaskCardItem}
               actionContext={actionContext}
-              density={displayDensity}
               items={groupItems}
               onSelectItem={onSelectItem}
               onToggle={() => toggleStatus(status.id)}
@@ -332,19 +324,14 @@ function OrderQueueSortMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 max-w-[92px] gap-1 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] px-2 text-[11px] font-medium text-[var(--emr-text-secondary)]"
-            aria-label="대기열 정렬"
+          <EmrListHeaderIconButton
+            ariaLabel={`대기열 정렬: ${orderQueueSortLabels[sortKey]}`}
             data-sort-key={sortKey}
             data-testid="order-queue-sort-control"
           />
         }
       >
-        <CdsUtilitiesSortIcon aria-hidden="true" className="size-3.5 shrink-0" />
-        <span className="truncate">{orderQueueSortLabels[sortKey]}</span>
+        <CdsUtilitiesSortIcon aria-hidden="true" className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-36">
         <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">정렬</div>
@@ -399,45 +386,9 @@ function OrderQueueFilterMenu({
   );
 }
 
-function OrderQueueDisplayMenu({
-  density,
-  onDensityChange,
-}: {
-  density: OrderQueueDisplayDensity;
-  onDensityChange: (value: OrderQueueDisplayDensity) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-xs"
-            className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] p-0 text-[11px] font-semibold"
-            aria-label="대기열 표시 옵션"
-            data-density={density}
-            data-testid="order-queue-density-control"
-          />
-        }
-      >
-        {density === "compact" ? "S" : "M"}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">표시 옵션</div>
-        <DropdownMenuRadioGroup value={density} onValueChange={(value) => onDensityChange(value as OrderQueueDisplayDensity)}>
-          <DropdownMenuRadioItem value="default">기본 밀도</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="compact">촘촘한 밀도</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 function OrderQueueGroup({
   actionContext,
   collapsed,
-  density,
   getTaskCardItem,
   items,
   onSelectItem,
@@ -447,7 +398,6 @@ function OrderQueueGroup({
 }: {
   actionContext: OrderQueueActionContext;
   collapsed: boolean;
-  density: OrderQueueDisplayDensity;
   getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   items: OrderQueueItem[];
   onSelectItem?: (itemId: string) => void;
@@ -478,7 +428,6 @@ function OrderQueueGroup({
         <OrderQueueCard
           key={item.id}
           actionContext={actionContext}
-          density={density}
           item={item}
           onSelect={() => onSelectItem?.(item.id)}
           selected={selectedItemId === item.id}
@@ -491,14 +440,12 @@ function OrderQueueGroup({
 
 function OrderQueueCard({
   actionContext,
-  density,
   item,
   onSelect,
   selected,
   taskCardItem,
 }: {
   actionContext: OrderQueueActionContext;
-  density: OrderQueueDisplayDensity;
   item: OrderQueueItem;
   onSelect: () => void;
   selected: boolean;
@@ -508,7 +455,6 @@ function OrderQueueCard({
 
   return (
     <EmrTaskQueueCard
-      className={density === "compact" ? "gap-[var(--clair-spacing-2)] p-[var(--clair-spacing-6)]" : undefined}
       item={{
         ...taskCardItem,
         actionItems,
