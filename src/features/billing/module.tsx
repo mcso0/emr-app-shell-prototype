@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import guardianPersonIcon from "@/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg";
@@ -23,6 +23,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -1221,6 +1222,40 @@ function getBillingQueueEventKind(row: BillingQueueRow): EmrTaskQueueEventKind {
   return row.invoice.status === "voided" ? "cancel" : "request";
 }
 
+const normalizeBillingQueueSearchText = (value: string) =>
+  value.toLocaleLowerCase("ko").trim();
+
+function getBillingQueueSearchTokens(query: string) {
+  return normalizeBillingQueueSearchText(query).split(/\s+/).filter(Boolean);
+}
+
+function matchesBillingQueueSearch(searchText: string, query: string) {
+  const tokens = getBillingQueueSearchTokens(query);
+  if (!tokens.length) return true;
+
+  const normalizedSearchText = normalizeBillingQueueSearchText(searchText);
+  return tokens.every((token) => normalizedSearchText.includes(token));
+}
+
+function getBillingQueueSearchText(row: BillingQueueRow, assigneeName?: string) {
+  return [
+    row.invoice.invoiceNo,
+    row.invoice.status,
+    row.invoice.paymentState,
+    row.invoice.totalAmount.toString(),
+    formatAmount(row.invoice.totalAmount),
+    row.guardian?.name,
+    row.patient?.name,
+    getBillingReceptionTypeLabel(row),
+    row.lineCount.toString(),
+    row.lineSummary,
+    row.requestedByName,
+    assigneeName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function QueueItem({
   assigneeName,
   onSelect,
@@ -1269,8 +1304,10 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<
     Set<BillingFilter>
   >(() => new Set());
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
-  const groupedRows = useMemo(
+  const baseGroupedRows = useMemo(
     () =>
       billingQueueGroups.map((group) => ({
         ...group,
@@ -1280,10 +1317,27 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
       })),
     [invoiceLines, invoices, payments, legacySalesDemo],
   );
+  const groupedRows = useMemo(
+    () =>
+      baseGroupedRows.map((group) => ({
+        ...group,
+        rows: group.rows.filter((row) =>
+          matchesBillingQueueSearch(
+            getBillingQueueSearchText(row, invoiceAssignees[row.invoice.id]),
+            searchQuery,
+          ),
+        ),
+      })),
+    [baseGroupedRows, invoiceAssignees, searchQuery],
+  );
   const totalRowCount = groupedRows.reduce(
     (total, group) => total + group.rows.length,
     0,
   );
+  const closeSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchActive(false);
+  }, []);
   const toggleGroup = (groupId: BillingFilter) => {
     setCollapsedGroupIds((current) => {
       const next = new Set(current);
@@ -1309,22 +1363,48 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
       <EmrListHeader
         label="전체"
         count={totalRowCount}
+        search={{
+          active: searchActive,
+          closeLabel: "수납 대기열 검색 닫기",
+          inputLabel: "수납 대기열 검색",
+          onClose: closeSearch,
+          onQueryChange: setSearchQuery,
+          placeholder: "보호자, 환자, 청구번호, 항목, 담당자 검색",
+          query: searchQuery,
+          resultCount: totalRowCount,
+        }}
         headerActions={
           <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
+            <EmrListHeaderIconButton
+              ariaLabel="정렬"
+              data-testid="billing-queue-sort-control"
+            >
               <CdsUtilitiesSortIcon className="size-4" />
             </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="필터">
+            <EmrListHeaderIconButton
+              ariaLabel="필터"
+              data-testid="billing-queue-filter-control"
+            >
               <CdsActionsListFilterIcon className="size-4" />
             </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="검색">
+            <EmrListHeaderIconButton
+              ariaLabel="검색"
+              data-testid="billing-queue-search-control"
+              onClick={() => setSearchActive(true)}
+            >
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
       />
       <EmrSubpanelBody>
-        {groupedRows.map((group) => (
+        {totalRowCount === 0 && searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel="수납 대기열 항목"
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
+        ) : groupedRows.map((group) => (
           <BillingQueueGroup
             key={group.value}
             collapsed={collapsedGroupIds.has(group.value)}
