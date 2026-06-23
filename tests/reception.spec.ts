@@ -728,11 +728,11 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 640 });
-  await page.route("**/reception/calendar/day**", async (route) => {
-    const date =
-      new URL(route.request().url()).searchParams.get("date") ??
-      "2026-05-01";
-    const checkedInAt = `${date}T14:30:00+09:00`;
+  let calendarRequested = false;
+  await page.route("**/api/workspaces/clair-demo/reception/calendar/day?**", async (route) => {
+    calendarRequested = true;
+    const date = new URL(route.request().url()).searchParams.get("date");
+    const checkedInAt = "2026-05-01T14:30:00+09:00";
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -748,7 +748,9 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
               workspaceId: "clair-demo",
               patientId: "patient-coco",
               guardianId: "guardian-lee-jieun",
+              primaryVeterinarianId: null,
               encounterNo: "E-STICKY-001",
+              department: "내과",
               receptionType: "walk_in",
               durationMinutes: 60,
               chiefComplaint: "현장 접수",
@@ -776,6 +778,7 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
   });
 
   await page.goto("/w/clair-demo/reception");
+  await expect.poll(() => calendarRequested).toBe(true);
 
   const calendar = page.getByTestId("reception-day-calendar");
   const unassignedCard = calendar
@@ -793,19 +796,34 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
     const badge = card.querySelector("span:not([aria-hidden])");
     const cardStyle = getComputedStyle(card);
     const badgeStyle = badge ? getComputedStyle(badge) : null;
+    const resolveColor = (
+      property: "backgroundColor" | "borderTopColor" | "color",
+      value: string,
+    ) => {
+      const probe = document.createElement("span");
+      probe.style[property] = value;
+      document.body.append(probe);
+      const resolved = getComputedStyle(probe)[property];
+      probe.remove();
+      return resolved;
+    };
 
     return {
       badgeBackground: badgeStyle?.backgroundColor,
       badgeColor: badgeStyle?.color,
       borderColor: cardStyle.borderTopColor,
       backgroundColor: cardStyle.backgroundColor,
+      expectedBadgeBackground: resolveColor("backgroundColor", "var(--card)"),
+      expectedBadgeColor: resolveColor("color", "var(--muted-foreground)"),
+      expectedBorderColor: resolveColor("borderTopColor", "var(--border)"),
+      expectedCardBackground: resolveColor("backgroundColor", "var(--muted)"),
     };
   });
 
-  expect(cardTone.backgroundColor).toBe("rgb(245, 245, 245)");
-  expect(cardTone.borderColor).toBe("rgb(229, 231, 235)");
-  expect(cardTone.badgeBackground).toBe("rgb(255, 255, 255)");
-  expect(cardTone.badgeColor).toBe("rgb(82, 82, 82)");
+  expect(cardTone.backgroundColor).toBe(cardTone.expectedCardBackground);
+  expect(cardTone.borderColor).toBe(cardTone.expectedBorderColor);
+  expect(cardTone.badgeBackground).toBe(cardTone.expectedBadgeBackground);
+  expect(cardTone.badgeColor).toBe(cardTone.expectedBadgeColor);
 
   const stickyMetrics = await unassignedCard.evaluate(async (card) => {
     const unassignedRow =

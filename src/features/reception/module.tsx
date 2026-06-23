@@ -2021,9 +2021,11 @@ const calendarTaskCardToneClasses: Record<CalendarTaskBadgeType, string> = {
 };
 
 function CalendarTaskBadge({
+  tone = "default",
   testId,
   type = "예약",
 }: {
+  tone?: "default" | "neutral";
   testId?: string;
   type?: CalendarTaskBadgeType;
 }) {
@@ -2032,7 +2034,9 @@ function CalendarTaskBadge({
       data-testid={testId}
       className={cn(
         "inline-flex h-5 min-w-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] border px-[6px] py-[2px] font-['Pretendard'] text-[12px] font-medium leading-4 [letter-spacing:0]",
-        calendarTaskBadgeToneClasses[type],
+        tone === "neutral"
+          ? "border-border bg-card text-muted-foreground"
+          : calendarTaskBadgeToneClasses[type],
       )}
     >
       {type}
@@ -2115,6 +2119,7 @@ type CalendarTaskCardProps = {
   selected?: boolean;
   testId: string;
   timeLabel?: string;
+  tone?: "default" | "neutral";
   type?: "default" | "compact" | "noShow";
 };
 
@@ -2136,10 +2141,12 @@ function CalendarTaskCard({
   selected,
   testId,
   timeLabel,
+  tone = "default",
   type = "default",
 }: CalendarTaskCardProps) {
   const noShow = type === "noShow";
   const compact = type === "compact";
+  const neutral = tone === "neutral";
   const identityLabel = guardianLabel
     ? `${patientLabel} · ${guardianLabel}`
     : `${patientLabel} · ${purposeLabel}`;
@@ -2156,7 +2163,9 @@ function CalendarTaskCard({
         !fillHeight && compact && "h-[36px]",
         !fillHeight && type === "default" && "h-[80px]",
         !fillHeight && noShow && "h-[60px]",
-        calendarTaskCardToneClasses[badgeType],
+        neutral
+          ? "border-border bg-muted text-foreground hover:bg-muted/80"
+          : calendarTaskCardToneClasses[badgeType],
         selected &&
           "border-[var(--emr-line-selected)] bg-[var(--emr-calendar-task-reservation-hover-bg)]",
         "focus-visible:border-[3px] focus-visible:border-[var(--emr-topbar-tab-active-close)] focus-visible:shadow-none",
@@ -2173,7 +2182,9 @@ function CalendarTaskCard({
           "sr-only",
           noShow
             ? "text-[var(--emr-calendar-task-noshow-text)]"
-            : badgeType === "외래"
+            : neutral
+              ? "text-muted-foreground"
+              : badgeType === "외래"
               ? "text-[var(--emr-calendar-task-outpatient-text)]"
               : "text-[var(--emr-calendar-task-reservation-text)]",
           accentClassName,
@@ -2182,7 +2193,7 @@ function CalendarTaskCard({
       />
       {compact ? (
         <>
-          <CalendarTaskBadge type={badgeType} />
+          <CalendarTaskBadge tone={tone} type={badgeType} />
           <span
             data-testid={purposeTestId}
             className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
@@ -2198,7 +2209,7 @@ function CalendarTaskCard({
       ) : (
         <>
           <span className="flex w-full min-w-0 items-center gap-[8px] overflow-hidden">
-            <CalendarTaskBadge type={badgeType} />
+            <CalendarTaskBadge tone={tone} type={badgeType} />
             <span
               data-testid={purposeTestId}
               className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
@@ -3420,12 +3431,14 @@ function ScheduleAppointmentCard({
 }
 
 function ScheduleWalkInQueueCard({
+  displayMode = "default",
   draft,
   fillHeight,
   onClearCalendarTransientSelection,
   onSelectEncounter,
   veterinarians = allVeterinarians,
 }: {
+  displayMode?: "default" | "unassignedCompact";
   draft: ReceptionDraftCheckIn;
   fillHeight?: boolean;
   onClearCalendarTransientSelection: () => void;
@@ -3467,6 +3480,7 @@ function ScheduleWalkInQueueCard({
   ]
     .filter(Boolean)
     .join(" · ");
+  const unassignedCompact = displayMode === "unassignedCompact";
 
   return (
     <CalendarTaskCard
@@ -3477,7 +3491,10 @@ function ScheduleWalkInQueueCard({
       accentTestId={`walkin-accent-${draft.encounter.id}`}
       ariaLabel={`${getReceptionEncounterStatusLabel(draft.encounter.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType="외래"
-      description={description}
+      className={
+        unassignedCompact ? "w-[min(360px,100%)] !flex-none" : undefined
+      }
+      description={unassignedCompact ? undefined : description}
       fillHeight={fillHeight}
       guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
@@ -3487,7 +3504,8 @@ function ScheduleWalkInQueueCard({
       purposeTestId={`walkin-purpose-${draft.encounter.id}`}
       testId={`walkin-card-${draft.encounter.id}`}
       timeLabel={timeLabel}
-      type="default"
+      tone={unassignedCompact ? "neutral" : "default"}
+      type={unassignedCompact ? "compact" : "default"}
     />
   );
 }
@@ -4720,7 +4738,7 @@ function DayScheduleBoard({
       data-testid="reception-day-calendar"
     >
       <div
-        className="sticky top-0 z-30 grid border-b bg-card shadow-xs"
+        className="sticky top-0 z-40 grid border-b bg-card shadow-xs"
         style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
       >
         <div className="h-[var(--emr-calendar-lane-header-cell-height)] border-r" />
@@ -4741,14 +4759,22 @@ function DayScheduleBoard({
         ))}
       </div>
       {unassignedWalkIns.length ? (
-        <div className="flex gap-2 border-b bg-muted/70 p-2">
-          <div className="flex w-14 shrink-0 items-center justify-center emr-text-micro font-medium text-muted-foreground">
+        <div
+          className="sticky top-[var(--emr-calendar-lane-header-cell-height)] z-30 grid border-b bg-card/95 shadow-xs backdrop-blur"
+          data-testid="unassigned-walkin-row"
+          style={{ gridTemplateColumns: scheduleGridTemplateColumns }}
+        >
+          <div className="flex h-12 items-center justify-center border-r bg-muted/70 emr-text-micro font-medium text-muted-foreground">
             미지정
           </div>
-          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+          <div
+            className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1.5"
+            style={{ gridColumn: "2 / -1" }}
+          >
             {unassignedWalkIns.map((draft) => (
               <ScheduleWalkInQueueCard
                 key={draft.encounter.id}
+                displayMode="unassignedCompact"
                 draft={draft}
                 veterinarians={selectedVeterinarians}
                 onClearCalendarTransientSelection={
