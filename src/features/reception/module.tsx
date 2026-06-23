@@ -243,8 +243,8 @@ const receptionQueueTabItems = [
   { value: "reception" as const, label: "외래" },
   { value: "appointment" as const, label: "예약" },
 ];
-const dayScheduleStartHour = 8;
-const dayScheduleEndHour = 20;
+const dayScheduleStartHour = 0;
+const dayScheduleEndHour = 24;
 const dayBusinessOpenHour = 9;
 const dayBusinessCloseHour = 19;
 const dayScheduleHourRowHeight = 112;
