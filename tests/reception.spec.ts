@@ -211,8 +211,8 @@ test("reception renders the first-path workspace instead of the placeholder", as
 
   expect(calendarFrameAlignment.leftGap).toBeLessThanOrEqual(1);
   expect(calendarFrameAlignment.rightGap).toBeLessThanOrEqual(1);
-  await expect(page.getByText("08:00")).toBeVisible();
-  await expect(page.getByText("20:00")).toBeVisible();
+  await expect(page.getByText("00:00")).toBeVisible();
+  await expect(page.getByText("24:00")).toBeVisible();
   await expect(page.getByText("reception workspace")).toHaveCount(0);
   const sideTabs = sidePanel.getByRole("group", { name: "접수 목록 유형" });
   await expect(sideTabs).toBeVisible();
@@ -414,8 +414,8 @@ test("reception week calendar shows a time axis and today's current-time marker"
 
   const calendar = page.getByTestId("reception-week-calendar");
   await expect(calendar).toBeVisible();
-  await expect(calendar.getByText("08:00")).toBeVisible();
-  await expect(calendar.getByText("20:00")).toBeVisible();
+  await expect(calendar.getByText("00:00")).toBeVisible();
+  await expect(calendar.getByText("24:00")).toBeVisible();
   await expect(calendar.getByText("01", { exact: true })).toBeVisible();
   await expect(calendar.getByTestId("week-current-time-indicator")).toHaveCount(
     1,
@@ -637,7 +637,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     const alignedHours = [9, 10, 11, 12];
     const firstTimeLabel = Array.from(
       timeAxis?.querySelectorAll("div") ?? [],
-    ).find((element) => element.textContent?.trim() === "08:00");
+    ).find((element) => element.textContent?.trim() === "00:00");
 
     if (!timeAxis || !firstTimeLabel) return null;
 
