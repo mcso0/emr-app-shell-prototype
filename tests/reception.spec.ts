@@ -724,6 +724,112 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   expect(Math.abs(nabiCardInsets.right)).toBeLessThanOrEqual(1);
 });
 
+test("reception day calendar lays out overlapping same-veterinarian cards side by side", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/calendar/day?*",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          status: 200,
+          workspaceId: "clair-demo",
+          date: "2026-05-01",
+          records: [
+            {
+              appointment: {
+                id: "appointment-kong-260501",
+                workspaceId: "clair-demo",
+                patientId: "patient-kong",
+                guardianId: "guardian-kim-haneul",
+                assignedVeterinarianId: "user-vet-suji",
+                scheduledStartAt: "2026-05-01T09:30:00+09:00",
+                scheduledEndAt: "2026-05-01T10:30:00+09:00",
+                visitPurpose: "구토 및 복부 불편",
+                symptomNote: "전날 밤부터 구토 3회, 아침 사료 거부",
+                status: "checked_in",
+                createdByUserId: "user-desk-yuna",
+                createdAt: "2026-05-01T09:12:00+09:00",
+                updatedAt: "2026-05-01T09:28:00+09:00",
+              },
+            },
+            {
+              appointment: {
+                id: "appointment-coco-260501",
+                workspaceId: "clair-demo",
+                patientId: "patient-coco",
+                guardianId: "guardian-lee-jieun",
+                assignedVeterinarianId: "user-vet-suji",
+                scheduledStartAt: "2026-05-01T09:45:00+09:00",
+                scheduledEndAt: "2026-05-01T10:15:00+09:00",
+                visitPurpose: "구토 및 식욕저하",
+                symptomNote: "전날 밤부터 구토 2회",
+                status: "checked_in",
+                createdByUserId: "user-desk-yuna",
+                createdAt: "2026-04-30T17:20:00+09:00",
+                updatedAt: "2026-05-01T09:50:00+09:00",
+              },
+            },
+          ],
+          enforcedBy: "reception-calendar-read",
+        },
+        status: 200,
+      });
+    },
+  );
+  await page.goto("/w/clair-demo/reception");
+
+  const calendar = page.getByTestId("reception-day-calendar");
+  const kongCard = calendar.getByTestId(
+    "appointment-card-appointment-kong-260501",
+  );
+  const cocoCard = calendar.getByTestId(
+    "appointment-card-appointment-coco-260501",
+  );
+  await expect(kongCard).toBeVisible();
+  await expect(cocoCard).toBeVisible();
+  await expect(kongCard).toContainText("09:30-10:30");
+  await expect(cocoCard).toContainText("09:45-10:15");
+
+  const frames = await Promise.all(
+    [kongCard, cocoCard].map((card) =>
+      card.evaluate((element) => {
+        const frame = element.parentElement;
+        if (!frame) return null;
+        const frameBox = frame.getBoundingClientRect();
+        const laneBox = frame.parentElement?.getBoundingClientRect();
+
+        return {
+          columnCount: frame.dataset.overlapColumnCount,
+          columnIndex: frame.dataset.overlapColumnIndex,
+          laneWidth: laneBox?.width ?? 0,
+          left: frameBox.left,
+          width: frameBox.width,
+        };
+      }),
+    ),
+  );
+
+  const [kongFrame, cocoFrame] = frames;
+  if (!kongFrame || !cocoFrame) {
+    throw new Error("Expected overlapping appointment frames");
+  }
+
+  expect(kongFrame.columnCount).toBe("2");
+  expect(kongFrame.columnIndex).toBe("0");
+  expect(cocoFrame.columnCount).toBe("2");
+  expect(cocoFrame.columnIndex).toBe("1");
+  expect(Math.round(kongFrame.width)).toBeLessThan(
+    Math.round(kongFrame.laneWidth * 0.6),
+  );
+  expect(Math.round(cocoFrame.width)).toBeLessThan(
+    Math.round(cocoFrame.laneWidth * 0.6),
+  );
+  expect(cocoFrame.left).toBeGreaterThan(kongFrame.left + kongFrame.width);
+});
+
 test("reception day calendar initially centers the current-time marker", async ({
   page,
 }) => {
