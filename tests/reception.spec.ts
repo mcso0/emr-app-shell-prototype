@@ -543,7 +543,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
       }),
     )
     .toEqual({
-      borderRadius: "16px",
+      borderRadius: "8px",
       height: 32,
       width: 32,
     });
