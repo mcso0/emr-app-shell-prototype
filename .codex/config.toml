@@ -1,17 +1,8 @@
-# --- Headroom init provider ---
-model_provider = "headroom"
-openai_base_url = "http://127.0.0.1:8787/v1"
-
-[model_providers.headroom]
-name = "Headroom init proxy"
-base_url = "http://127.0.0.1:8787/v1"
-supports_websockets = true
-# --- end Headroom init provider ---
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
+plan_mode_reasoning_effort = "xhigh"
 
 [features]
-# --- Headroom init features ---
-codex_hooks = true
-# --- end Headroom init features ---
 
 [mcp_servers.clair_storybook]
 url = "http://127.0.0.1:6006/mcp"
@@ -28,3 +19,9 @@ enabled_tools = [
   "preview-stories",
   "run-story-tests",
 ]
+
+# Managed by LazyCodex: multi_agent_v2 is re-disabled on every Codex session start
+# because enabling it fails every turn with HTTP 400 (openai/codex#26753).
+# Opt out: LAZYCODEX_CONFIG_MIGRATION_DISABLED=1 (or OMO_CODEX_CONFIG_MIGRATION_DISABLED=1).
+[features.multi_agent_v2]
+enabled = false
