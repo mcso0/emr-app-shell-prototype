@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
+  CdsActionsRefreshCwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
@@ -3699,12 +3700,16 @@ function getAdjacentReceptionDate(
 }
 
 function ReceptionScheduleDateControl({
+  isRefreshing,
   onOperatingDateChange,
+  onRefresh,
   operatingDate,
   todayDate,
   view,
 }: {
+  isRefreshing?: boolean;
   onOperatingDateChange: (operatingDate: string) => void;
+  onRefresh?: () => void;
   operatingDate: string;
   todayDate: string;
   view: ReceptionCalendarView;
@@ -3734,9 +3739,21 @@ function ReceptionScheduleDateControl({
 
   return (
     <div
-      className="flex h-10 shrink-0 items-center gap-2"
+      className="flex h-10 shrink-0 items-center gap-1"
       data-testid="reception-date-control"
     >
+      {onRefresh ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="size-8"
+          aria-label="접수/예약 새로고침"
+          disabled={isRefreshing}
+          onClick={onRefresh}
+        >
+          <CdsActionsRefreshCwIcon />
+        </Button>
+      ) : null}
       <Button
         variant="outline"
         size="icon-sm"
@@ -3989,10 +4006,12 @@ function ReceptionScheduleDateControl({
 }
 
 function ScheduleToolbar({
+  isRefreshing,
   onOperatingDateChange,
   operatingDate,
   onCreateReservation,
   onCreateWalkIn,
+  onRefresh,
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
@@ -4001,10 +4020,12 @@ function ScheduleToolbar({
   view,
   onViewChange,
 }: {
+  isRefreshing?: boolean;
   onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
   onCreateReservation: () => void;
   onCreateWalkIn: () => void;
+  onRefresh?: () => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
@@ -4032,7 +4053,9 @@ function ScheduleToolbar({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <ReceptionScheduleDateControl
+          isRefreshing={isRefreshing}
           onOperatingDateChange={onOperatingDateChange}
+          onRefresh={onRefresh}
           operatingDate={operatingDate}
           todayDate={todayDate}
           view={view}
@@ -5528,6 +5551,8 @@ export function ReceptionContent() {
   const queryPatientId = searchParams.get("patientId") ?? scenario?.patientId;
   const queryEncounterId =
     searchParams.get("encounterId") ?? scenario?.encounterId;
+  const [manualReceptionRefreshing, setManualReceptionRefreshing] =
+    useState(false);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
   const operatingDateOverride = useReceptionStore(
@@ -5849,6 +5874,8 @@ export function ReceptionContent() {
       } else {
         applyPersistedReceptionQueue(queueResult.queue);
       }
+
+      return { ok: calendarResult.ok && queueResult.ok };
     },
     [
       applyPatientGuardianLookupItem,
@@ -5863,6 +5890,22 @@ export function ReceptionContent() {
       workspaceId,
     ],
   );
+
+  const refreshReceptionManually = useCallback(async () => {
+    if (manualReceptionRefreshing) return;
+
+    setManualReceptionRefreshing(true);
+    try {
+      const result = await refreshReceptionReads({ showLoading: false });
+      if (result.ok) {
+        toast.success("접수/예약 정보를 새로고침했습니다.");
+      } else {
+        toast.error("접수/예약 새로고침에 실패했습니다.");
+      }
+    } finally {
+      setManualReceptionRefreshing(false);
+    }
+  }, [manualReceptionRefreshing, refreshReceptionReads]);
 
   useEffect(() => {
     let cancelled = false;
@@ -5898,7 +5941,9 @@ export function ReceptionContent() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ScheduleToolbar
+        isRefreshing={manualReceptionRefreshing}
         onOperatingDateChange={handleOperatingDateChange}
+        onRefresh={refreshReceptionManually}
         operatingDate={operatingDate}
         view={calendarView}
         onViewChange={setCalendarView}

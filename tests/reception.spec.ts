@@ -117,6 +117,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
         ),
     )
     .toEqual([
+      "접수/예약 새로고침",
       "이전 날짜",
       "다음 날짜",
       "26.05.01 (금) 날짜 선택",
@@ -143,6 +144,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
         ),
     )
     .toEqual([
+      "접수/예약 새로고침",
       "이전 주",
       "다음 주",
       "26.04.26 - 26.05.02 주 선택",
@@ -167,7 +169,13 @@ test("reception renders the first-path workspace instead of the placeholder", as
           buttons.map((button) => button.getAttribute("aria-label")),
         ),
     )
-    .toEqual(["이전 월", "다음 월", "26.05 월 선택", "오늘 일자로 이동"]);
+    .toEqual([
+      "접수/예약 새로고침",
+      "이전 월",
+      "다음 월",
+      "26.05 월 선택",
+      "오늘 일자로 이동",
+    ]);
   await dateControl.getByRole("button", { name: "26.05 월 선택" }).click();
   await expect(
     page.getByRole("button", { name: "26.05 선택됨" }),
@@ -281,9 +289,39 @@ test("reception date controls refetch the selected operating date", async ({
   await page.goto("/w/clair-demo/reception");
 
   const dateControl = page.getByTestId("reception-date-control");
+  const refreshButton = dateControl.getByRole("button", {
+    name: "접수/예약 새로고침",
+  });
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
+  await expect(refreshButton).toBeVisible();
+
+  const [refreshBox, previousBox, nextBox] = await Promise.all([
+    refreshButton.boundingBox(),
+    dateControl.getByRole("button", { name: "이전 날짜" }).boundingBox(),
+    dateControl.getByRole("button", { name: "다음 날짜" }).boundingBox(),
+  ]);
+  expect(refreshBox).not.toBeNull();
+  expect(previousBox).not.toBeNull();
+  expect(nextBox).not.toBeNull();
+  expect(refreshBox!.x + refreshBox!.width).toBeLessThanOrEqual(previousBox!.x);
+  expect(Math.round(nextBox!.x - (previousBox!.x + previousBox!.width))).toBe(
+    4,
+  );
+
+  const manualCalendarRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/calendar/day") &&
+      request.url().includes("date=2026-05-01"),
+  );
+  const manualQueueRead = page.waitForRequest(
+    (request) =>
+      request.url().includes("/reception/queue") &&
+      request.url().includes("date=2026-05-01"),
+  );
+  await refreshButton.click();
+  await Promise.all([manualCalendarRead, manualQueueRead]);
 
   const nextDayRead = page.waitForRequest(
     (request) =>
@@ -329,6 +367,26 @@ test("reception date controls refetch the selected operating date", async ({
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
+
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/calendar/day?**",
+    async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          status: 500,
+          error: "db_read_failed",
+        }),
+      });
+    },
+    { times: 1 },
+  );
+  await refreshButton.click();
+  await expect(
+    page.getByText("접수/예약 새로고침에 실패했습니다."),
+  ).toBeVisible();
 });
 
 test("reception prioritizes the Kong vomit demo context from query params", async ({
