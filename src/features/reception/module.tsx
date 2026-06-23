@@ -2222,32 +2222,6 @@ function CalendarTaskCard({
   );
 }
 
-const getReceptionVisitSummary = ({
-  appointment,
-  encounter,
-  veterinarians = allVeterinarians,
-}: {
-  appointment?: Appointment;
-  encounter?: Encounter;
-  veterinarians?: Veterinarian[];
-}) => {
-  const checkedInAt = encounter?.checkedInAt
-    ? `${getShortTime(encounter.checkedInAt)} 접수`
-    : null;
-  const appointmentAt = appointment?.scheduledStartAt
-    ? `${getShortTime(appointment.scheduledStartAt)} 예약`
-    : null;
-  const veterinarianName =
-    getStaffDisplayName(encounter?.primaryVeterinarianId, veterinarians) ??
-    getStaffDisplayName(appointment?.assignedVeterinarianId, veterinarians) ??
-    "담당의 미지정";
-  const encounterNo = encounter?.encounterNo ?? "encounter 생성 전";
-
-  return [checkedInAt ?? appointmentAt, veterinarianName, encounterNo]
-    .filter(Boolean)
-    .join(" · ");
-};
-
 const findScenarioEncounter = (
   encounters: Encounter[] | undefined,
   encounterId?: string | null,
@@ -2847,7 +2821,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
                   setActiveDrawer({
                     type: "reception-encounter",
                     id: item.encounter.id,
-                    subtitle: item.patient.patientNo,
                   });
                   return;
                 }
@@ -2857,7 +2830,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
                   setActiveDrawer({
                     type: "reception-appointment",
                     id: item.appointment.id,
-                    subtitle: item.patient.patientNo,
                   });
                   return;
                 }
@@ -4653,17 +4625,13 @@ function ReceptionVisitContextBanner({
   encounter,
   guardianName,
   patientName,
-  patientNo,
   reason,
-  veterinarians = allVeterinarians,
 }: {
   appointment?: Appointment;
   encounter?: Encounter;
   guardianName?: string;
   patientName: string;
-  patientNo: string;
   reason: string;
-  veterinarians?: Veterinarian[];
 }) {
   const statusLabel = encounter
     ? getReceptionEncounterStatusLabel(encounter.status)
@@ -4675,11 +4643,6 @@ function ReceptionVisitContextBanner({
     : appointment
       ? getAppointmentTone(appointment.status)
       : "default";
-  const summary = getReceptionVisitSummary({
-    appointment,
-    encounter,
-    veterinarians,
-  });
 
   return (
     <section className="border-b bg-[var(--emr-status-info-bg)] px-4 py-3">
@@ -4692,8 +4655,7 @@ function ReceptionVisitContextBanner({
             </h2>
           </div>
           <div className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
-            {guardianName ?? "보호자 미지정"} 보호자 · {patientName}({patientNo}
-            ) · {summary}
+            {guardianName ?? "보호자 미지정"} 보호자 · {patientName}
           </div>
         </div>
         <div className="rounded-md border border-[var(--emr-status-info-border)] bg-card px-2.5 py-1 emr-text-micro font-medium text-muted-foreground">
@@ -5943,9 +5905,7 @@ export function ReceptionContent() {
           encounter={selectedEncounter}
           guardianName={selectedBundle?.primaryGuardian?.name}
           patientName={selectedPatient.name}
-          patientNo={selectedPatient.patientNo}
           reason={selectedVisitReason}
-          veterinarians={veterinarians}
         />
       ) : null}
       {calendarReadStatus === "loading" ? (
@@ -6025,37 +5985,6 @@ function ReceptionFormField({
       ) : null}
     </label>
   );
-}
-
-function getReceptionDrawerPatientNo(
-  activeDrawer: { type: string; id: string },
-  draftCheckIns: ReceptionDraftCheckIn[],
-  appointments: Appointment[],
-  patients: Patient[],
-  workspaceId: string,
-) {
-  if (activeDrawer.type === "reception-appointment") {
-    const appointment = appointments.find(
-      (item) => item.id === activeDrawer.id,
-    );
-
-    return appointment
-      ? (patients.find((patient) => patient.id === appointment.patientId)
-          ?.patientNo ??
-          getMockPatientBundle(appointment.patientId)?.patient.patientNo)
-      : undefined;
-  }
-
-  const encounter = getEffectiveEncounters(draftCheckIns, {
-    operatingDate: getWorkspaceOperatingDate(workspaceId),
-    workspaceId,
-  }).find((item) => item.id === activeDrawer.id);
-
-  return encounter
-    ? (patients.find((patient) => patient.id === encounter.patientId)
-        ?.patientNo ??
-        getMockPatientBundle(encounter.patientId)?.patient.patientNo)
-    : undefined;
 }
 
 function ReceptionWalkInFormDrawer({
@@ -6434,7 +6363,7 @@ function ReceptionWalkInFormDrawer({
                   value={department}
                   onValueChange={(value) => value && setDepartment(value)}
                 >
-                  <SelectTrigger aria-label="진료과" className="w-full bg-card">
+                  <SelectTrigger aria-label="진료과" size="lg" className="w-full bg-card">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -6453,7 +6382,7 @@ function ReceptionWalkInFormDrawer({
                   value={effectiveVeterinarianId}
                   onValueChange={(value) => value && setVeterinarianId(value)}
                 >
-                  <SelectTrigger aria-label="담당의" className="w-full bg-card">
+                  <SelectTrigger aria-label="담당의" size="lg" className="w-full bg-card">
                     <span className="flex flex-1 text-left">
                       {getReceptionVeterinarianSelectLabel(
                         effectiveVeterinarianId,
@@ -7203,7 +7132,7 @@ function ReceptionAppointmentCheckInFormDrawer({
                 value={String(timeMinutes)}
                 onValueChange={(value) => setTimeMinutes(Number(value))}
               >
-                <SelectTrigger aria-label="접수시간" className="w-full bg-card">
+                <SelectTrigger aria-label="접수시간" size="lg" className="w-full bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -7219,7 +7148,7 @@ function ReceptionAppointmentCheckInFormDrawer({
             </ReceptionFormField>
             <ReceptionFormField label="소요시간" required>
               <Select value={duration} onValueChange={(value) => value && setDuration(value)}>
-                <SelectTrigger aria-label="소요시간" className="w-full bg-card">
+                <SelectTrigger aria-label="소요시간" size="lg" className="w-full bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -7711,34 +7640,6 @@ export function ReceptionDrawer() {
     [draftCheckIns, operatingDate, persistedCalendarAppointments, workspaceId],
   );
   useEffect(() => {
-    if (!activeDrawer || activeDrawer.subtitle) return;
-    if (
-      activeDrawer.type !== "reception-encounter" &&
-      activeDrawer.type !== "reception-appointment"
-    )
-      return;
-
-    const subtitle = getReceptionDrawerPatientNo(
-      activeDrawer,
-      draftCheckIns,
-      appointments,
-      patients,
-      workspaceId,
-    );
-
-    if (subtitle) {
-      setActiveDrawer({ ...activeDrawer, subtitle });
-    }
-  }, [
-    activeDrawer,
-    appointments,
-    draftCheckIns,
-    patients,
-    setActiveDrawer,
-    workspaceId,
-  ]);
-
-  useEffect(() => {
     let cancelled = false;
 
     async function loadStaff() {
@@ -7935,11 +7836,6 @@ export function ReceptionDrawer() {
     encounter: selectedEncounter,
     patientSpecialNote: patient?.specialNote,
   });
-  const visitSummary = getReceptionVisitSummary({
-    appointment: selectedAppointment,
-    encounter: selectedEncounter,
-    veterinarians,
-  });
   const selectedVeterinarianCandidateId =
     selectedEncounter?.primaryVeterinarianId ??
     selectedAppointment?.assignedVeterinarianId;
@@ -8122,10 +8018,7 @@ export function ReceptionDrawer() {
           <section className="rounded-lg border bg-muted p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="emr-text-body font-semibold">
-                  {selectedAppointment ? "예약 상세" : "접수 상세"}
-                </div>
-                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="text-[15px] font-semibold text-foreground">
                     {patient.name}
                   </span>
@@ -8133,14 +8026,10 @@ export function ReceptionDrawer() {
                     {getSpeciesLabel(patient.species)}
                     {patient.breed ? ` · ${patient.breed}` : ""}
                   </span>
-                  <span className="emr-text-metadata text-muted-foreground">
-                    {patient.patientNo}
-                  </span>
                 </div>
                 <div className="mt-1 emr-text-metadata text-muted-foreground">
                   {guardian?.name ?? "보호자 미지정"} 보호자
-                  {guardian?.mobilePhone ? ` · ${guardian.mobilePhone}` : ""} ·{" "}
-                  {visitSummary}
+                  {guardian?.mobilePhone ? ` · ${guardian.mobilePhone}` : ""}
                 </div>
               </div>
               {selectedAppointment ? (
@@ -8167,7 +8056,11 @@ export function ReceptionDrawer() {
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="진료과" className="w-full bg-card">
+                  <SelectTrigger
+                    aria-label="진료과"
+                    size="lg"
+                    className="w-full bg-card"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -8195,8 +8088,18 @@ export function ReceptionDrawer() {
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="담당의" className="w-full bg-card">
-                    <SelectValue />
+                  <SelectTrigger
+                    aria-label="담당의"
+                    size="lg"
+                    className="w-full bg-card"
+                  >
+                    <span className="flex min-w-0 flex-1 truncate text-left">
+                      {getReceptionVeterinarianSelectLabel(
+                        editDraft.primaryVeterinarianId ??
+                          unassignedVeterinarianValue,
+                        veterinarians,
+                      )}
+                    </span>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -8298,7 +8201,7 @@ export function ReceptionDrawer() {
                     }))
                   }
                 >
-                  <SelectTrigger aria-label="소요시간" className="w-full bg-card">
+                  <SelectTrigger aria-label="소요시간" size="lg" className="w-full bg-card">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
