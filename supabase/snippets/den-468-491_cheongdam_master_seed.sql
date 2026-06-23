@@ -18,7 +18,7 @@ insert into auth.users (
 values
   ('49110000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"청담 원장"}'::jsonb, now(), now()),
   ('49110000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'manager@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"청담 병원관리자"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'vet-suji@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"이수지"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'vet-cheongdam@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"청담 수의사"}'::jsonb, now(), now()),
   ('49110000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'tech-cheongdam@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"청담 테크니션"}'::jsonb, now(), now()),
   ('49110000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'desk-cheongdam@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"청담 데스크"}'::jsonb, now(), now()),
   ('49110000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'vet-doyun@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"김도윤"}'::jsonb, now(), now()),
@@ -65,7 +65,7 @@ from (
   values
     ('49110000-0000-4000-8000-000000000001'::uuid, 'owner@clair.local'),
     ('49110000-0000-4000-8000-000000000002'::uuid, 'manager@clair.local'),
-    ('49110000-0000-4000-8000-000000000003'::uuid, 'vet-suji@clair.local'),
+    ('49110000-0000-4000-8000-000000000003'::uuid, 'vet-cheongdam@clair.local'),
     ('49110000-0000-4000-8000-000000000004'::uuid, 'tech-cheongdam@clair.local'),
     ('49110000-0000-4000-8000-000000000005'::uuid, 'desk-cheongdam@clair.local'),
     ('49110000-0000-4000-8000-000000000006'::uuid, 'vet-doyun@clair.local'),
@@ -117,7 +117,7 @@ insert into public.users (id, display_name, initial, email, phone, status)
 values
   ('49110000-0000-4000-8000-000000000001', '청담 원장', '원', 'owner@clair.local', '010-4910-0001', 'active'),
   ('49110000-0000-4000-8000-000000000002', '청담 병원관리자', '관', 'manager@clair.local', '010-4910-0002', 'active'),
-  ('49110000-0000-4000-8000-000000000003', '이수지', '이', 'vet-suji@clair.local', '010-4910-0003', 'active'),
+  ('49110000-0000-4000-8000-000000000003', '청담 수의사', '수', 'vet-cheongdam@clair.local', '010-4910-0003', 'active'),
   ('49110000-0000-4000-8000-000000000004', '청담 테크니션', '테', 'tech-cheongdam@clair.local', '010-4910-0004', 'active'),
   ('49110000-0000-4000-8000-000000000005', '청담 데스크', '데', 'desk-cheongdam@clair.local', '010-4910-0005', 'active'),
   ('49110000-0000-4000-8000-000000000006', '김도윤', '김', 'vet-doyun@clair.local', '010-4910-0006', 'active'),

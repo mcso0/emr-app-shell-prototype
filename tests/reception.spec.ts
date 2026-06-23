@@ -2994,6 +2994,250 @@ test("Cheongdam reception readback hydrates live patient profiles after refresh"
   );
 });
 
+test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across drawer queue and calendar", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  const patientId = "49121000-0000-4000-8000-000000000081";
+  const guardianId = "49120000-0000-4000-8000-000000000081";
+  const chiefVetId = "49110000-0000-4000-8000-000000000001";
+  const staffVetId = "49110000-0000-4000-8000-000000000003";
+  const encounterId = "encounter-cheongdam-vet-assignment";
+  const readbackDate = getLocalDatePrefix();
+  const readbackAt = `${readbackDate}T10:30:00+09:00`;
+  let currentVeterinarianId: string | undefined = "user-vet-suji";
+  let updateCount = 0;
+  let latestUpdateBody: Record<string, unknown> | undefined;
+  const buildPersistedWalkIn = () => ({
+    kind: "encounter_queue",
+    encounter: {
+      id: encounterId,
+      workspaceId,
+      patientId,
+      guardianId,
+      primaryVeterinarianId: currentVeterinarianId,
+      encounterNo: "E-260623-VET",
+      receptionType: "walk_in",
+      department: "영상의학과 · 방사선종양학과",
+      durationMinutes: 30,
+      chiefComplaint: "담당의 회귀 확인",
+      visitPurpose: "담당의 회귀 확인",
+      receptionMemo: "미지정 카드 담당의 수정",
+      status: "waiting",
+      checkedInAt: readbackAt,
+      createdAt: readbackAt,
+      updatedAt: readbackAt,
+    },
+    queueEntry: {
+      id: "queue-cheongdam-vet-assignment",
+      workspaceId,
+      encounterId,
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      sortOrder: 1,
+      enteredAt: readbackAt,
+    },
+  });
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: chiefVetId,
+              displayName: "청담 원장",
+              initial: "원",
+              roles: ["vet"],
+              status: "active",
+            },
+            {
+              id: staffVetId,
+              displayName: "청담 수의사",
+              initial: "수",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [buildPersistedWalkIn()],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          date: readbackDate,
+          records: [buildPersistedWalkIn()],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "reception-patient-guardian-lookup",
+          patients: [
+            {
+              patient: {
+                id: patientId,
+                workspaceId,
+                patientNo: "CD-P-081",
+                name: "구름",
+                species: "dog",
+                breed: "Samoyed",
+                sex: "female",
+                neutered: true,
+                weightKg: 7,
+                handlingCautionLocked: false,
+                status: "active",
+                createdAt: "2026-06-23T00:00:00+09:00",
+                updatedAt: "2026-06-23T00:00:00+09:00",
+              },
+              primaryGuardian: {
+                id: guardianId,
+                workspaceId,
+                name: "문지아",
+                mobilePhone: "010-4911-0016",
+                createdAt: "2026-06-23T00:00:00+09:00",
+                updatedAt: "2026-06-23T00:00:00+09:00",
+              },
+              searchText: "구름 문지아 010-4911-0016",
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/encounters/${encounterId}`,
+    async (route) => {
+      updateCount += 1;
+      latestUpdateBody = route.request().postDataJSON() as Record<
+        string,
+        unknown
+      >;
+      currentVeterinarianId =
+        typeof latestUpdateBody.primaryVeterinarianId === "string"
+          ? latestUpdateBody.primaryVeterinarianId
+          : undefined;
+      const persistedWalkIn = buildPersistedWalkIn();
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          update: {
+            encounter: persistedWalkIn.encounter,
+            patient: {
+              id: patientId,
+              workspaceId,
+              patientNo: "CD-P-081",
+              name: "구름",
+              species: "dog",
+              breed: "Samoyed",
+              sex: "female",
+              neutered: true,
+              weightKg: 7,
+              handlingCautionLocked: false,
+              status: "active",
+              createdAt: "2026-06-23T00:00:00+09:00",
+              updatedAt: "2026-06-23T00:00:00+09:00",
+            },
+            queueEntry: persistedWalkIn.queueEntry,
+          },
+          enforcedBy: "reception-encounter-update",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${workspaceId}/reception?modulePanel=open&drawer=reception-encounter%3A${encounterId}`,
+  );
+
+  const sidePanel = page.locator("aside").first();
+  const detailDrawer = page
+    .getByRole("complementary")
+    .filter({ hasText: "접수 상세" })
+    .last();
+  const queueCard = sidePanel.getByTestId(`patient-card-${patientId}`);
+  const calendarCard = page.getByTestId(`walkin-card-${encounterId}`);
+  const veterinarianTextbox = detailDrawer.getByRole("textbox", {
+    name: "담당의",
+  });
+  const veterinarianCombobox = detailDrawer.getByRole("combobox", {
+    name: "담당의",
+  });
+  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
+  await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
+  await expect(queueCard).not.toContainText("이수지");
+  await expect(calendarCard).not.toContainText("이수지");
+
+  await detailDrawer.getByTestId("reception-encounter-edit-open").click();
+  await page.getByTestId("reception-encounter-edit-confirm").click();
+  await veterinarianCombobox.click();
+  await page.getByRole("option", { name: "청담 원장" }).click();
+  await detailDrawer.getByTestId("reception-encounter-edit-save").click();
+
+  await expect.poll(() => updateCount).toBe(1);
+  expect(latestUpdateBody).toMatchObject({
+    primaryVeterinarianId: chiefVetId,
+  });
+  await expect(veterinarianTextbox).toHaveValue("청담 원장");
+  await expect(queueCard).toContainText("청담 원장");
+  await expect(calendarCard).toContainText("청담 원장");
+
+  await detailDrawer.getByTestId("reception-encounter-edit-open").click();
+  await page.getByTestId("reception-encounter-edit-confirm").click();
+  await veterinarianCombobox.click();
+  await page.getByRole("option", { name: "수의사 미지정" }).click();
+  await detailDrawer.getByTestId("reception-encounter-edit-save").click();
+
+  await expect.poll(() => updateCount).toBe(2);
+  expect(latestUpdateBody).not.toHaveProperty("primaryVeterinarianId");
+  await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
+  await expect(queueCard).not.toContainText("청담 원장");
+  await expect(calendarCard).not.toContainText("청담 원장");
+});
+
 test("Cheongdam walk-in create failure does not say the selected DB patient is missing", async ({
   page,
 }) => {

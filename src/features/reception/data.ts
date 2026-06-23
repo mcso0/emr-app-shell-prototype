@@ -67,6 +67,7 @@ export type ReceptionProfileDataset = {
 };
 
 export type ReceptionDataScope = {
+  allowMockStaffFallback?: boolean;
   operatingDate?: string;
   profileDataset?: ReceptionProfileDataset;
   staffMembers?: Array<{ displayName: string; id: string }>;
@@ -97,11 +98,20 @@ const getPrimaryGuardian = (
     : getMockPatientBundle(patientId)?.primaryGuardian;
 };
 
-const getStaffName = (userId?: EmrId, staffMembers?: ReceptionDataScope["staffMembers"]) =>
-  userId
-    ? (staffMembers?.find((user) => user.id === userId)?.displayName ??
-      mockStaffUsers.find((user) => user.id === userId)?.name)
-    : undefined;
+const getStaffName = (
+  userId?: EmrId,
+  staffMembers?: ReceptionDataScope["staffMembers"],
+  options?: { allowMockFallback?: boolean }
+) => {
+  if (!userId) return undefined;
+
+  const staffName = staffMembers?.find((user) => user.id === userId)?.displayName;
+  if (staffName) return staffName;
+
+  return options?.allowMockFallback === false
+    ? undefined
+    : mockStaffUsers.find((user) => user.id === userId)?.name;
+};
 
 const resolveReceptionDataScope = (scope?: ReceptionDataScope) => {
   const workspaceId = scope?.workspaceId ?? defaultReceptionDataScope.workspaceId;
@@ -189,10 +199,12 @@ export const getReceptionPatientSummaries = (
       getStaffName(
         activeEncounter?.primaryVeterinarianId,
         scope?.staffMembers,
+        { allowMockFallback: scope?.allowMockStaffFallback },
       ) ??
       getStaffName(
         latestAppointment?.assignedVeterinarianId,
         scope?.staffMembers,
+        { allowMockFallback: scope?.allowMockStaffFallback },
       );
     const searchText = [
       patient.name,
@@ -328,6 +340,7 @@ export const getReceptionQueueRows = (
         veterinarianName: getStaffName(
           encounter.primaryVeterinarianId,
           scope?.staffMembers,
+          { allowMockFallback: scope?.allowMockStaffFallback },
         ),
       });
 
