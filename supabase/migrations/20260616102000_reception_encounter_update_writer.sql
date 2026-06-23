@@ -16,11 +16,18 @@ declare
   v_primary_veterinarian_id uuid := nullif(p_patch->>'primaryVeterinarianId', '')::uuid;
   v_visit_purpose text := nullif(btrim(p_patch->>'visitPurpose'), '');
   v_weight_kg numeric(6,2) := nullif(p_patch->>'weightKg', '')::numeric(6,2);
+  v_actor_user_id uuid := nullif(p_actor_user_id, '')::uuid;
   v_encounter public.encounters%rowtype;
   v_patient public.patients%rowtype;
   v_queue_entry public.waiting_queue_entries%rowtype;
 begin
-  if not private.clair_is_active_workspace_member(p_workspace_id, p_actor_user_id) then
+  if v_actor_user_id is null or not exists (
+    select 1
+      from public.user_memberships m
+     where m.workspace_id = p_workspace_id
+       and m.user_id = v_actor_user_id
+       and m.status = 'active'
+  ) then
     raise exception 'workspace_membership_missing';
   end if;
 

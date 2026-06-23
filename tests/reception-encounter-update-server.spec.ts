@@ -216,6 +216,101 @@ test("supabase encounter update gateway keeps workspace scope in the RPC write",
   ]);
 });
 
+test("supabase encounter update gateway preserves assigned and unassigned veterinarian patches", async () => {
+  const chiefVetId = "49110000-0000-4000-8000-000000000001";
+  const patches: Array<{ readonly primaryVeterinarianId?: string }> = [];
+  const gateway = createSupabaseReceptionEncounterUpdateGateway({
+    async rpc(_functionName, args) {
+      patches.push(args.p_patch);
+      return {
+        data: {
+          encounter: {
+            id: encounterId,
+            workspaceId: "workspace-clair-cheongdam",
+            patientId: "49121000-0000-4000-8000-000000000081",
+            guardianId: "49120000-0000-4000-8000-000000000081",
+            primaryVeterinarianId: args.p_patch.primaryVeterinarianId,
+            encounterNo: "E-260623-VET",
+            receptionType: "walk_in",
+            department: args.p_patch.department,
+            durationMinutes: args.p_patch.durationMinutes,
+            chiefComplaint: args.p_patch.visitPurpose,
+            visitPurpose: args.p_patch.visitPurpose,
+            receptionMemo: args.p_patch.memo,
+            status: "waiting",
+            checkedInAt: "2026-06-23T10:30:00+09:00",
+            createdAt: "2026-06-23T10:30:00+09:00",
+            updatedAt: "2026-06-23T10:35:00+09:00",
+          },
+          queueEntry: {
+            id: "queue-cheongdam-vet-assignment",
+            workspaceId: "workspace-clair-cheongdam",
+            encounterId,
+            queueType: "consultation",
+            status: "waiting",
+            priority: "normal",
+            enteredAt: "2026-06-23T10:30:00+09:00",
+          },
+        },
+        error: null,
+      };
+    },
+  });
+
+  const assigned = await gateway.updateEncounter({
+    actorUserId: "49110000-0000-4000-8000-000000000005",
+    encounterId,
+    input: { ...validInput, primaryVeterinarianId: chiefVetId },
+    workspaceId: "workspace-clair-cheongdam",
+  });
+  const unassigned = await gateway.updateEncounter({
+    actorUserId: "49110000-0000-4000-8000-000000000005",
+    encounterId,
+    input: { ...validInput, primaryVeterinarianId: undefined },
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(assigned).toMatchObject({
+    ok: true,
+    update: { encounter: { primaryVeterinarianId: chiefVetId } },
+  });
+  expect(unassigned).toMatchObject({
+    ok: true,
+    update: { encounter: { primaryVeterinarianId: undefined } },
+  });
+  expect(patches).toEqual([
+    expect.objectContaining({ primaryVeterinarianId: chiefVetId }),
+    expect.not.objectContaining({ primaryVeterinarianId: expect.any(String) }),
+  ]);
+});
+
+test("supabase encounter update gateway maps invalid veterinarian denial", async () => {
+  const gateway = createSupabaseReceptionEncounterUpdateGateway({
+    async rpc() {
+      return {
+        data: null,
+        error: { message: "primary_veterinarian_unavailable" },
+      };
+    },
+  });
+
+  const result = await gateway.updateEncounter({
+    actorUserId: "49110000-0000-4000-8000-000000000005",
+    encounterId,
+    input: {
+      ...validInput,
+      primaryVeterinarianId: "00000000-0000-4000-8000-000000000099",
+    },
+    workspaceId: "workspace-clair-cheongdam",
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "primary_veterinarian_unavailable",
+  });
+});
+
 test("encounter update route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/encounters/[encounterId]/route.ts",
@@ -238,7 +333,11 @@ test("encounter update writer migration updates encounter and patient weight", (
   );
 
   expect(migration).toContain("clair_update_reception_encounter");
-  expect(migration).toContain("private.clair_is_active_workspace_member");
+  expect(migration).toContain("v_actor_user_id");
+  expect(migration).toContain("from public.user_memberships");
+  expect(migration).not.toContain(
+    "private.clair_is_active_workspace_member(p_workspace_id, p_actor_user_id)",
+  );
   expect(migration).toContain("update public.encounters");
   expect(migration).toContain("update public.patients");
   expect(migration).toContain("duration_minutes");

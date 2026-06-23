@@ -48,8 +48,8 @@ test("workspace staff read filters active same-workspace veterinarians", async (
       return createSupabaseRows([
         {
           id: "49110000-0000-4000-8000-000000000003",
-          display_name: "이수지",
-          initial: "이",
+          display_name: "청담 수의사",
+          initial: "수",
           status: "active",
         },
         {
@@ -93,7 +93,7 @@ test("workspace staff read filters active same-workspace veterinarians", async (
     staff: [
       {
         id: "49110000-0000-4000-8000-000000000003",
-        displayName: "이수지",
+        displayName: "청담 수의사",
         roles: ["vet"],
         status: "active",
       },

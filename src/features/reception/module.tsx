@@ -1898,11 +1898,36 @@ const getReceptionDrawerDurationLabel = ({
 const getStaffDisplayName = (
   userId?: string,
   staff: Veterinarian[] = allVeterinarians,
-) =>
-  userId
-    ? (staff.find((user) => user.id === userId)?.name ??
-      mockStaffUsers.find((user) => user.id === userId)?.name)
+  options?: { allowMockFallback?: boolean },
+) => {
+  if (!userId) return undefined;
+
+  const staffName = staff.find((user) => user.id === userId)?.name;
+  if (staffName) return staffName;
+
+  const allowMockFallback =
+    options?.allowMockFallback ?? staff === allVeterinarians;
+  return allowMockFallback
+    ? mockStaffUsers.find((user) => user.id === userId)?.name
     : undefined;
+};
+
+const getScopedStaffDisplayName = ({
+  allowMockFallback,
+  staffMembers,
+  userId,
+}: {
+  allowMockFallback: boolean;
+  staffMembers: Array<{ displayName: string; id: string }>;
+  userId?: string;
+}) => {
+  if (!userId) return undefined;
+
+  const staffName = staffMembers.find((item) => item.id === userId)?.displayName;
+  if (staffName) return staffName;
+
+  return allowMockFallback ? getStaffDisplayName(userId) : undefined;
+};
 
 const getPrimaryGuardianFromProfiles = ({
   guardians,
@@ -2504,11 +2529,17 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           patientGuardians,
           patients,
         },
-        { operatingDate, staffMembers: veterinarianStaffMembers, workspaceId },
+        {
+          allowMockStaffFallback: !liveStaffSourceEnabled,
+          operatingDate,
+          staffMembers: veterinarianStaffMembers,
+          workspaceId,
+        },
       ),
     [
       draftCheckIns,
       guardians,
+      liveStaffSourceEnabled,
       operatingDate,
       patientGuardians,
       patients,
@@ -2531,6 +2562,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const queueRows = useMemo(
     () =>
       getReceptionQueueRows(draftCheckIns, {
+        allowMockStaffFallback: !liveStaffSourceEnabled,
         operatingDate,
         profileDataset: { guardians, patientGuardians, patients },
         staffMembers: veterinarianStaffMembers,
@@ -2539,6 +2571,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     [
       draftCheckIns,
       guardians,
+      liveStaffSourceEnabled,
       operatingDate,
       patientGuardians,
       patients,
@@ -2549,6 +2582,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const queueItems = useMemo(
     () =>
       getReceptionQueueSideItems({
+        allowMockStaffFallback: !liveStaffSourceEnabled,
         appointments: queueAppointments,
         guardians,
         patientGuardians,
@@ -2559,6 +2593,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       }),
     [
       guardians,
+      liveStaffSourceEnabled,
       patientGuardians,
       patients,
       queueAppointments,
@@ -2977,6 +3012,7 @@ function getReceptionQueueSideActionItems({
 }
 
 function getReceptionQueueSideItems({
+  allowMockStaffFallback = true,
   appointments,
   guardians,
   patientGuardians,
@@ -2985,6 +3021,7 @@ function getReceptionQueueSideItems({
   staffMembers,
   workspaceId,
 }: {
+  allowMockStaffFallback?: boolean;
   appointments: Appointment[];
   guardians: Guardian[];
   patientGuardians: PatientGuardian[];
@@ -3012,9 +3049,11 @@ function getReceptionQueueSideItems({
         : "waiting";
       const veterinarianName =
         row.veterinarianName ??
-        getStaffDisplayName(row.encounter.primaryVeterinarianId) ??
-        staffMembers.find((item) => item.id === row.encounter.primaryVeterinarianId)
-          ?.displayName;
+        getScopedStaffDisplayName({
+          allowMockFallback: allowMockStaffFallback,
+          staffMembers,
+          userId: row.encounter.primaryVeterinarianId,
+        });
       const visitText =
         row.encounter.chiefComplaint ??
         row.encounter.visitPurpose ??
@@ -3077,9 +3116,11 @@ function getReceptionQueueSideItems({
       const statusGroup =
         appointment.status === "cancelled" ? "cancelled" : "waiting";
       const veterinarianName =
-        getStaffDisplayName(appointment.assignedVeterinarianId) ??
-        staffMembers.find((item) => item.id === appointment.assignedVeterinarianId)
-          ?.displayName;
+        getScopedStaffDisplayName({
+          allowMockFallback: allowMockStaffFallback,
+          staffMembers,
+          userId: appointment.assignedVeterinarianId,
+        });
       const visitText =
         appointment.symptomNote ?? appointment.visitPurpose ?? "예약 내원 목적";
 
@@ -4664,6 +4705,7 @@ function ReceptionVisitContextBanner({
 }
 
 function DayScheduleBoard({
+  assignmentVeterinarians,
   calendarDraftSelection,
   currentOperatingMinutes,
   emptySlotAffordanceSuspended,
@@ -4691,17 +4733,23 @@ function DayScheduleBoard({
   onSelectAppointment: (appointment: Appointment) => void;
   selectedAppointmentId?: Appointment["id"];
   selectedVeterinarians: Veterinarian[];
+  assignmentVeterinarians: Veterinarian[];
 }) {
   const dayScheduleHeight = dayScheduleHours.length * dayScheduleHourRowHeight;
   const currentTimeOffset = getDayCurrentTimeOffset(currentOperatingMinutes);
   const scheduleGridTemplateColumns = `56px repeat(${selectedVeterinarians.length}, minmax(180px, 1fr))`;
+  const assignmentVeterinarianIds = new Set(
+    assignmentVeterinarians.map((veterinarian) => veterinarian.id),
+  );
   const walkInDrafts = draftCheckIns.filter(
     (draft) =>
       draft.receptionType === "walk_in" &&
       isDraftOnOperatingDate(draft, operatingDate),
   );
   const unassignedWalkIns = walkInDrafts.filter(
-    (draft) => !draft.encounter.primaryVeterinarianId,
+    (draft) =>
+      !draft.encounter.primaryVeterinarianId ||
+      !assignmentVeterinarianIds.has(draft.encounter.primaryVeterinarianId),
   );
 
   return (
@@ -5181,6 +5229,7 @@ function MonthScheduleBoard({
 }
 
 function ReceptionScheduleBoard({
+  assignmentVeterinarians,
   calendarDraftSelection,
   currentOperatingMinutes,
   emptySlotAffordanceSuspended,
@@ -5198,6 +5247,7 @@ function ReceptionScheduleBoard({
   selectedVeterinarians,
   view,
 }: {
+  assignmentVeterinarians: Veterinarian[];
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
   currentOperatingMinutes: number;
   emptySlotAffordanceSuspended: boolean;
@@ -5365,6 +5415,7 @@ function ReceptionScheduleBoard({
         <ScrollArea className="h-full">
           {view === "day" ? (
             <DayScheduleBoard
+              assignmentVeterinarians={assignmentVeterinarians}
               calendarDraftSelection={calendarDraftSelection}
               currentOperatingMinutes={currentOperatingMinutes}
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
@@ -5925,6 +5976,7 @@ export function ReceptionContent() {
         </EmrInlineAlert>
       ) : null}
       <ReceptionScheduleBoard
+        assignmentVeterinarians={veterinarians}
         calendarDraftSelection={calendarDraftSelection}
         currentOperatingMinutes={currentOperatingMinutes}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
@@ -7632,11 +7684,17 @@ export function ReceptionDrawer() {
           patientGuardians,
           patients,
         },
-        { operatingDate, staffMembers: veterinarianStaffMembers, workspaceId },
+        {
+          allowMockStaffFallback: !liveStaffSourceEnabled,
+          operatingDate,
+          staffMembers: veterinarianStaffMembers,
+          workspaceId,
+        },
       ),
     [
       draftCheckIns,
       guardians,
+      liveStaffSourceEnabled,
       operatingDate,
       patientGuardians,
       patients,
@@ -7882,11 +7940,22 @@ export function ReceptionDrawer() {
     encounter: selectedEncounter,
     veterinarians,
   });
+  const selectedVeterinarianCandidateId =
+    selectedEncounter?.primaryVeterinarianId ??
+    selectedAppointment?.assignedVeterinarianId;
+  const selectedVeterinarianId =
+    selectedVeterinarianCandidateId &&
+    veterinarians.some(
+      (veterinarian) => veterinarian.id === selectedVeterinarianCandidateId,
+    )
+      ? selectedVeterinarianCandidateId
+      : unassignedVeterinarianValue;
   const veterinarianName =
-    getStaffDisplayName(selectedEncounter?.primaryVeterinarianId, veterinarians) ??
-    getStaffDisplayName(selectedAppointment?.assignedVeterinarianId, veterinarians) ??
-    defaultVeterinarian?.name ??
-    "담당의 미지정";
+    selectedVeterinarianId === unassignedVeterinarianValue
+      ? "담당의 미지정"
+      : (getStaffDisplayName(selectedVeterinarianId, veterinarians, {
+          allowMockFallback: !liveStaffSourceEnabled,
+        }) ?? "담당의 미지정");
   const receptionDate = getShortDate(
     selectedEncounter?.checkedInAt ??
       selectedEncounter?.createdAt ??
@@ -7909,10 +7978,6 @@ export function ReceptionDrawer() {
       : "-";
   const memoLabel = selectedAppointment ? "예약 메모" : "접수 메모";
   const departmentValue = selectedEncounter?.department ?? defaultWalkInDepartment;
-  const selectedVeterinarianId =
-    selectedEncounter?.primaryVeterinarianId ??
-    selectedAppointment?.assignedVeterinarianId ??
-    unassignedVeterinarianValue;
   const canCancelSelectedEncounter =
     !selectedAppointment &&
     selectedEncounter &&
