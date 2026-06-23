@@ -724,6 +724,132 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   expect(Math.abs(nabiCardInsets.right)).toBeLessThanOrEqual(1);
 });
 
+test("reception day calendar keeps unassigned walk-ins sticky as compact neutral cards", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 640 });
+  await page.route("**/reception/calendar/day**", async (route) => {
+    const date =
+      new URL(route.request().url()).searchParams.get("date") ??
+      "2026-05-01";
+    const checkedInAt = `${date}T14:30:00+09:00`;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        workspaceId: "clair-demo",
+        date,
+        records: [
+          {
+            encounter: {
+              id: "encounter-unassigned-sticky",
+              workspaceId: "clair-demo",
+              patientId: "patient-coco",
+              guardianId: "guardian-lee-jieun",
+              encounterNo: "E-STICKY-001",
+              receptionType: "walk_in",
+              durationMinutes: 60,
+              chiefComplaint: "현장 접수",
+              visitPurpose: "현장 접수",
+              status: "waiting",
+              checkedInAt,
+              createdAt: checkedInAt,
+              updatedAt: checkedInAt,
+            },
+            queueEntry: {
+              id: "queue-unassigned-sticky",
+              workspaceId: "clair-demo",
+              encounterId: "encounter-unassigned-sticky",
+              queueType: "consultation",
+              status: "waiting",
+              priority: "normal",
+              sortOrder: 1,
+              enteredAt: checkedInAt,
+            },
+          },
+        ],
+        enforcedBy: "reception-calendar-read",
+      }),
+    });
+  });
+
+  await page.goto("/w/clair-demo/reception");
+
+  const calendar = page.getByTestId("reception-day-calendar");
+  const unassignedCard = calendar
+    .locator("button")
+    .filter({ hasText: "14:30-15:30" })
+    .first();
+  await expect(unassignedCard).toBeVisible();
+  await expect(unassignedCard).toContainText("외래");
+  await expect(unassignedCard).toContainText("14:30-15:30");
+  await expect(unassignedCard).not.toContainText("현장 접수");
+  await expect(unassignedCard).not.toContainText("내과");
+  await expect(unassignedCard).toHaveCSS("height", "36px");
+
+  const cardTone = await unassignedCard.evaluate((card) => {
+    const badge = card.querySelector("span:not([aria-hidden])");
+    const cardStyle = getComputedStyle(card);
+    const badgeStyle = badge ? getComputedStyle(badge) : null;
+
+    return {
+      badgeBackground: badgeStyle?.backgroundColor,
+      badgeColor: badgeStyle?.color,
+      borderColor: cardStyle.borderTopColor,
+      backgroundColor: cardStyle.backgroundColor,
+    };
+  });
+
+  expect(cardTone.backgroundColor).toBe("rgb(245, 245, 245)");
+  expect(cardTone.borderColor).toBe("rgb(229, 231, 235)");
+  expect(cardTone.badgeBackground).toBe("rgb(255, 255, 255)");
+  expect(cardTone.badgeColor).toBe("rgb(82, 82, 82)");
+
+  const stickyMetrics = await unassignedCard.evaluate(async (card) => {
+    const unassignedRow =
+      card.closest<HTMLElement>('[data-testid="unassigned-walkin-row"]') ??
+      card.parentElement?.parentElement;
+    const laneHeaderRow = unassignedRow?.previousElementSibling as
+      | HTMLElement
+      | undefined;
+    const viewport = card.closest<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+
+    if (!unassignedRow || !laneHeaderRow || !viewport) return null;
+
+    const settle = () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+
+    viewport.scrollTop = 0;
+    await settle();
+    const beforeRowBox = unassignedRow.getBoundingClientRect();
+    const beforeHeaderBox = laneHeaderRow.getBoundingClientRect();
+
+    viewport.scrollTop = 420;
+    await settle();
+    const afterRowBox = unassignedRow.getBoundingClientRect();
+    const afterHeaderBox = laneHeaderRow.getBoundingClientRect();
+
+    return {
+      afterGap: Math.round((afterRowBox.top - afterHeaderBox.bottom) * 100) / 100,
+      beforeGap:
+        Math.round((beforeRowBox.top - beforeHeaderBox.bottom) * 100) / 100,
+      rowPosition: getComputedStyle(unassignedRow).position,
+    };
+  });
+
+  if (!stickyMetrics) throw new Error("Expected unassigned row sticky metrics");
+
+  expect(stickyMetrics.rowPosition).toBe("sticky");
+  expect(Math.abs(stickyMetrics.beforeGap)).toBeLessThanOrEqual(1);
+  expect(Math.abs(stickyMetrics.afterGap)).toBeLessThanOrEqual(1);
+});
+
 test("reception day calendar lays out overlapping same-veterinarian cards side by side", async ({
   page,
 }) => {
@@ -3194,25 +3320,72 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
   );
 
   const sidePanel = page.locator("aside").first();
-  const detailDrawer = page
-    .getByRole("complementary")
-    .filter({ hasText: "접수 상세" })
-    .last();
+  const detailDrawer = page.getByTestId("workspace-drawer");
   const queueCard = sidePanel.getByTestId(`patient-card-${patientId}`);
   const calendarCard = page.getByTestId(`walkin-card-${encounterId}`);
+  const drawerHeader = detailDrawer.locator(".flex.h-12").first();
+  const summaryCard = detailDrawer.locator("section.rounded-lg").first();
   const veterinarianTextbox = detailDrawer.getByRole("textbox", {
     name: "담당의",
+  });
+  const departmentCombobox = detailDrawer.getByRole("combobox", {
+    name: "진료과",
   });
   const veterinarianCombobox = detailDrawer.getByRole("combobox", {
     name: "담당의",
   });
-  await expect(detailDrawer.getByText("접수 상세").first()).toBeVisible();
+  const weightTextbox = detailDrawer.getByRole("textbox", {
+    name: "동물 체중",
+  });
+  const receptionDateTextbox = detailDrawer.getByRole("textbox", {
+    name: "접수일",
+  });
+  const receptionStartTimeTextbox = detailDrawer.getByRole("textbox", {
+    name: "진료시작시간",
+  });
+  const durationCombobox = detailDrawer.getByRole("combobox", {
+    name: "소요시간",
+  });
+  await expect(queueCard).toBeVisible();
+  await expect(calendarCard).toBeVisible();
+  await expect(detailDrawer).toBeVisible();
+  await expect(drawerHeader).toContainText("접수 상세");
+  await expect(drawerHeader).not.toContainText("CD-P-081");
+  await expect(summaryCard).toContainText("문지아 보호자");
+  await expect(summaryCard).toContainText("010-4911-0016");
+  await expect(summaryCard).not.toContainText("CD-P-081");
+  await expect(summaryCard).not.toContainText("10:30 접수");
+  await expect(summaryCard).not.toContainText("E-260623-VET");
+  await expect(summaryCard).not.toContainText("담당의 미지정");
+  await expect(summaryCard).not.toContainText(chiefVetId);
   await expect(veterinarianTextbox).toHaveValue("담당의 미지정");
   await expect(queueCard).not.toContainText("이수지");
   await expect(calendarCard).not.toContainText("이수지");
 
   await detailDrawer.getByTestId("reception-encounter-edit-open").click();
   await page.getByTestId("reception-encounter-edit-confirm").click();
+  const [
+    departmentBox,
+    veterinarianBox,
+    weightBox,
+    dateBox,
+    startTimeBox,
+    durationBox,
+  ] = await Promise.all([
+    departmentCombobox.boundingBox(),
+    veterinarianCombobox.boundingBox(),
+    weightTextbox.boundingBox(),
+    receptionDateTextbox.boundingBox(),
+    receptionStartTimeTextbox.boundingBox(),
+    durationCombobox.boundingBox(),
+  ]);
+  expect(departmentBox?.height).toBe(dateBox?.height);
+  expect(veterinarianBox?.height).toBe(dateBox?.height);
+  expect(weightBox?.height).toBe(dateBox?.height);
+  expect(durationBox?.height).toBe(dateBox?.height);
+  expect(durationBox?.height).toBe(startTimeBox?.height);
+  await expect(veterinarianCombobox).toContainText("수의사 미지정");
+  await expect(veterinarianCombobox).not.toContainText("user-vet-suji");
   await veterinarianCombobox.click();
   await page.getByRole("option", { name: "청담 원장" }).click();
   await detailDrawer.getByTestId("reception-encounter-edit-save").click();
@@ -3222,11 +3395,15 @@ test("Cheongdam encounter edit keeps veterinarian assignment DB-backed across dr
     primaryVeterinarianId: chiefVetId,
   });
   await expect(veterinarianTextbox).toHaveValue("청담 원장");
+  await expect(summaryCard).not.toContainText("청담 원장");
+  await expect(summaryCard).not.toContainText(chiefVetId);
   await expect(queueCard).toContainText("청담 원장");
   await expect(calendarCard).toContainText("청담 원장");
 
   await detailDrawer.getByTestId("reception-encounter-edit-open").click();
   await page.getByTestId("reception-encounter-edit-confirm").click();
+  await expect(veterinarianCombobox).toContainText("청담 원장");
+  await expect(veterinarianCombobox).not.toContainText(chiefVetId);
   await veterinarianCombobox.click();
   await page.getByRole("option", { name: "수의사 미지정" }).click();
   await detailDrawer.getByTestId("reception-encounter-edit-save").click();
