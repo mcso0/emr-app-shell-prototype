@@ -107,6 +107,10 @@ import {
   type CalendarTimeRangeLayout,
 } from "@/features/reception/calendar-time-layout";
 import {
+  getCalendarOverlapLayouts,
+  type CalendarOverlapLayout,
+} from "@/features/reception/calendar-overlap-layout";
+import {
   GuardianProfileDrawer,
   RegistrationFormField,
   RegistrationFormSection,
@@ -243,8 +247,8 @@ const receptionQueueTabItems = [
   { value: "reception" as const, label: "외래" },
   { value: "appointment" as const, label: "예약" },
 ];
-const dayScheduleStartHour = 8;
-const dayScheduleEndHour = 20;
+const dayScheduleStartHour = 0;
+const dayScheduleEndHour = 24;
 const dayBusinessOpenHour = 9;
 const dayBusinessCloseHour = 19;
 const dayScheduleHourRowHeight = 112;
@@ -1491,6 +1495,20 @@ type ReceptionCalendarScheduleBlock = {
   veterinarianId?: string;
 };
 
+type DayScheduleLaneItem =
+  | {
+      readonly appointment: Appointment;
+      readonly block: ReceptionCalendarScheduleBlock;
+      readonly id: string;
+      readonly kind: "appointment";
+    }
+  | {
+      readonly block: ReceptionCalendarScheduleBlock;
+      readonly draft: ReceptionDraftCheckIn;
+      readonly id: string;
+      readonly kind: "walkIn";
+    };
+
 type ReceptionCalendarSelectionValidationResult =
   | {
       durationMinutes: number;
@@ -1602,6 +1620,40 @@ const getScheduleCardLayout = (
     startMinutes: Math.max(block.startMinutes, scheduleStartMinutes),
   });
 };
+
+const getAppointmentDayScheduleLaneItem = (
+  appointment: Appointment,
+): DayScheduleLaneItem | undefined => {
+  const block = getAppointmentScheduleBlock(appointment);
+
+  if (!block) return undefined;
+
+  return {
+    appointment,
+    block,
+    id: `appointment:${appointment.id}`,
+    kind: "appointment",
+  };
+};
+
+const getDraftDayScheduleLaneItem = (
+  draft: ReceptionDraftCheckIn,
+): DayScheduleLaneItem | undefined => {
+  const block = getDraftScheduleBlock(draft);
+
+  if (!block) return undefined;
+
+  return {
+    block,
+    draft,
+    id: `walk-in:${draft.encounter.id}`,
+    kind: "walkIn",
+  };
+};
+
+const isDayScheduleLaneItem = (
+  item: DayScheduleLaneItem | undefined,
+): item is DayScheduleLaneItem => Boolean(item);
 
 const getReceptionCalendarSelectionMessage = (
   reason: ReceptionCalendarSelectionInvalidReason,
@@ -3429,15 +3481,29 @@ function ScheduleWalkInQueueCard({
 
 function PositionedScheduleCard({
   children,
+  horizontalLayout,
   layout,
 }: {
   children: ReactNode;
+  horizontalLayout?: CalendarOverlapLayout;
   layout: CalendarTimeRangeLayout;
 }) {
+  const style: CSSProperties = horizontalLayout
+    ? {
+        height: layout.height,
+        left: `calc(${horizontalLayout.leftPercent}% + 4px)`,
+        right: "auto",
+        top: layout.top,
+        width: `calc(${horizontalLayout.widthPercent}% - 8px)`,
+      }
+    : { height: layout.height, top: layout.top };
+
   return (
     <div
       className="pointer-events-auto absolute left-1 right-2 z-20 min-w-0"
-      style={{ height: layout.height, top: layout.top }}
+      data-overlap-column-count={horizontalLayout?.columnCount}
+      data-overlap-column-index={horizontalLayout?.columnIndex}
+      style={style}
     >
       {children}
     </div>
@@ -4780,67 +4846,83 @@ function DayScheduleBoard({
               height: dayScheduleHeight,
             }}
           >
-            {selectedVeterinarians.map((veterinarian) => (
-              <div key={`day-overlay-${veterinarian.id}`} className="relative min-w-0">
-                {appointments
+            {selectedVeterinarians.map((veterinarian) => {
+              const laneItems = [
+                ...appointments
                   .filter(
                     (appointment) =>
                       appointment.assignedVeterinarianId === veterinarian.id,
                   )
-                  .map((appointment) => {
-                    const layout = getScheduleCardLayout(
-                      getAppointmentScheduleBlock(appointment),
-                    );
-                    if (!layout) return null;
-
-                    return (
-                      <PositionedScheduleCard
-                        key={`day-positioned-${appointment.id}`}
-                        layout={layout}
-                      >
-                        <ScheduleAppointmentCard
-                          fillHeight
-                          appointment={appointment}
-                          veterinarians={selectedVeterinarians}
-                          onClearCalendarTransientSelection={
-                            onClearCalendarTransientSelection
-                          }
-                          selected={appointment.id === selectedAppointmentId}
-                          onSelect={() => onSelectAppointment(appointment)}
-                        />
-                      </PositionedScheduleCard>
-                    );
-                  })}
-                {walkInDrafts
+                  .map(getAppointmentDayScheduleLaneItem),
+                ...walkInDrafts
                   .filter(
                     (draft) =>
                       draft.encounter.primaryVeterinarianId === veterinarian.id,
                   )
-                  .map((draft) => {
-                    const layout = getScheduleCardLayout(
-                      getDraftScheduleBlock(draft),
-                    );
+                  .map(getDraftDayScheduleLaneItem),
+              ].filter(isDayScheduleLaneItem);
+              const overlapLayoutById = new Map(
+                getCalendarOverlapLayouts(
+                  laneItems.map((item) => ({
+                    endMinutes: item.block.endMinutes,
+                    id: item.id,
+                    startMinutes: item.block.startMinutes,
+                  })),
+                ).map((layout) => [layout.id, layout]),
+              );
+
+              return (
+                <div
+                  key={`day-overlay-${veterinarian.id}`}
+                  className="relative min-w-0"
+                >
+                  {laneItems.map((item) => {
+                    const layout = getScheduleCardLayout(item.block);
                     if (!layout) return null;
+                    const horizontalLayout = overlapLayoutById.get(item.id);
+                    const overlappingHorizontalLayout =
+                      horizontalLayout && horizontalLayout.columnCount > 1
+                        ? horizontalLayout
+                        : undefined;
 
                     return (
                       <PositionedScheduleCard
-                        key={`day-positioned-${draft.encounter.id}`}
+                        key={`day-positioned-${item.id}`}
+                        horizontalLayout={overlappingHorizontalLayout}
                         layout={layout}
                       >
-                        <ScheduleWalkInQueueCard
-                          fillHeight
-                          draft={draft}
-                          veterinarians={selectedVeterinarians}
-                          onClearCalendarTransientSelection={
-                            onClearCalendarTransientSelection
-                          }
-                          onSelectEncounter={onSelectEncounter}
-                        />
+                        {item.kind === "appointment" ? (
+                          <ScheduleAppointmentCard
+                            fillHeight
+                            appointment={item.appointment}
+                            veterinarians={selectedVeterinarians}
+                            onClearCalendarTransientSelection={
+                              onClearCalendarTransientSelection
+                            }
+                            selected={
+                              item.appointment.id === selectedAppointmentId
+                            }
+                            onSelect={() =>
+                              onSelectAppointment(item.appointment)
+                            }
+                          />
+                        ) : (
+                          <ScheduleWalkInQueueCard
+                            fillHeight
+                            draft={item.draft}
+                            veterinarians={selectedVeterinarians}
+                            onClearCalendarTransientSelection={
+                              onClearCalendarTransientSelection
+                            }
+                            onSelectEncounter={onSelectEncounter}
+                          />
+                        )}
                       </PositionedScheduleCard>
                     );
                   })}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
