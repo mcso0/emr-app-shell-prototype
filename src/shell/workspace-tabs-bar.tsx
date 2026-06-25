@@ -9,7 +9,7 @@ import {
   HelpIcon,
   SettingsIcon,
 } from "@/components/icons";
-import { CdsActionsRefreshCwIcon } from "@/components/cds-icons/actions-and-controls";
+import { EmrMotionIcon } from "@/components/emr/motion-icon";
 import { Button } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
@@ -32,6 +32,7 @@ import { moduleIconById } from "@/shell/module-nav-icons";
 import { WorkspaceChromeTabs } from "@/shell/workspace-chrome-tabs";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { WorkspaceTab } from "@/stores/workspace-tabs-store";
+import refreshMotionIcon from "../../icons/motionIcon/iconly-icon-export-1782380161.json";
 
 type WorkspaceTabsBarProps = {
   activeTabId: string | null;
@@ -220,6 +221,7 @@ export function WorkspaceTabsBar({
   const router = useRouter();
   const pathname = usePathname();
   const [now, setNow] = useState(() => Date.now());
+  const [refreshMotionSignal, setRefreshMotionSignal] = useState(0);
   const modulePanelOpen = useLayoutStore((state) => state.modulePanelOpen);
   const { hydrated, session, hydrate, signOut } = useAuthClient();
   const personalProfile = hydrated && session ? readBrowserPersonalProfile(session) : null;
@@ -267,6 +269,12 @@ export function WorkspaceTabsBar({
     await signOut();
     router.replace("/login?reason=signed_out");
   }
+
+  function handleRefreshClick() {
+    setRefreshMotionSignal((value) => value + 1);
+    onRefresh?.();
+  }
+
   const profileHref = `/profile?${new URLSearchParams({ returnTo: pathname }).toString()}`;
 
   return (
@@ -294,10 +302,16 @@ export function WorkspaceTabsBar({
             size="icon"
             aria-label={refreshLabel ?? `${activityModuleLabel} 새로고침`}
             disabled={!onRefresh || isRefreshing}
-            onClick={onRefresh}
+            onClick={handleRefreshClick}
             className={historyButtonClassName}
           >
-            <CdsActionsRefreshCwIcon className="size-4" aria-hidden="true" />
+            <EmrMotionIcon
+              animationData={refreshMotionIcon}
+              autoplay={false}
+              className="size-4"
+              loop={false}
+              playSignal={refreshMotionSignal}
+            />
           </Button>
           <Button
             variant="ghost"
