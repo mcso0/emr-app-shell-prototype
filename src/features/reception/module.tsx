@@ -1179,6 +1179,9 @@ function getWalkInRouteErrorMessage(
   if (result.denialReason === "patient_guardian_link_missing") {
     return "접수를 생성할 수 없습니다.";
   }
+  if (result.denialReason === "walk_in_outside_business_hours") {
+    return "영업시간 안에서만 접수를 생성할 수 있습니다.";
+  }
   if (
     result.denialReason === "permission_missing" ||
     result.denialReason === "inactive_user" ||
@@ -1430,6 +1433,8 @@ const getReservationTimeOptions = (
   date: string,
   durationMinutes: number,
   appointments: Appointment[],
+  currentDate: string,
+  currentOperatingMinutes: number,
 ) => {
   const options: Array<{ disabled: boolean; label: string; minutes: number; reason?: string }> = [];
 
@@ -1454,12 +1459,14 @@ const getReservationTimeOptions = (
         : appointmentStartMs + 30 * 60_000;
       return startMs < appointmentEndMs && endMs > appointmentStartMs;
     });
+    const elapsed = date === currentDate && minutes < currentOperatingMinutes;
+    const reason = elapsed ? "지난 시간" : conflict ? "예약됨" : undefined;
 
     options.push({
-      disabled: conflict,
+      disabled: elapsed || conflict,
       label: getScheduleTimeLabelFromMinutes(minutes),
       minutes,
-      reason: conflict ? "예약됨" : undefined,
+      reason,
     });
   }
 
@@ -1471,6 +1478,25 @@ const isClosedReservationDate = (date: string) =>
     timeZone: "Asia/Seoul",
     weekday: "short",
   }).format(new Date(`${date}T00:00:00+09:00`)) === "Sun";
+
+const getWalkInTimeBlockMessage = (
+  currentOperatingMinutes: number,
+  durationMinutes: number,
+) => {
+  if (currentOperatingMinutes < dayBusinessOpenMinutes) {
+    return "아직 접수 시작 전입니다. 오늘 접수는 09:00부터 생성할 수 있어요.";
+  }
+
+  if (currentOperatingMinutes >= dayBusinessCloseMinutes) {
+    return "오늘 접수 가능 시간이 지났습니다. 다음 영업일 예약으로 등록해 주세요.";
+  }
+
+  if (currentOperatingMinutes + durationMinutes > dayBusinessCloseMinutes) {
+    return "예상시간이 영업 종료 시간을 넘습니다. 더 이른 시간이나 짧은 예상시간을 선택해 주세요.";
+  }
+
+  return undefined;
+};
 
 const getShortTime = (dateTime?: string) => {
   return formatOperatingShortTime(dateTime);
@@ -1551,6 +1577,7 @@ const snapScheduleEndMinutes = (minutes: number) =>
 
 type ReceptionCalendarSelectionInvalidReason =
   | "outside-business-hours"
+  | "past-time"
   | "unavailable-time"
   | "overlap"
   | "too-short"
@@ -1732,6 +1759,9 @@ const getReceptionCalendarSelectionMessage = (
   if (reason === "outside-business-hours") {
     return `영업시간 ${getBusinessHoursTimeRangeLabel()} 안에서만 접수/예약을 만들 수 있어.`;
   }
+  if (reason === "past-time") {
+    return "이미 지난 시간에는 접수/예약을 만들 수 없어. 현재 이후 시간을 선택해 줘.";
+  }
   if (reason === "unavailable-time") {
     return `${block?.label ?? "접수/예약 불가 시간"}에는 접수/예약을 만들 수 없어.`;
   }
@@ -1750,6 +1780,8 @@ const getReceptionCalendarSelectionMessage = (
 
 const validateReceptionCalendarSelection = ({
   appointments,
+  currentDate,
+  currentOperatingMinutes,
   draftCheckIns,
   endMinutes,
   operatingDate,
@@ -1757,6 +1789,8 @@ const validateReceptionCalendarSelection = ({
   veterinarianId,
 }: {
   appointments: Appointment[];
+  currentDate: string;
+  currentOperatingMinutes: number;
   draftCheckIns: ReceptionDraftCheckIn[];
   endMinutes: number;
   operatingDate: string;
@@ -1791,6 +1825,14 @@ const validateReceptionCalendarSelection = ({
     return {
       message: getReceptionCalendarSelectionMessage("outside-business-hours"),
       reason: "outside-business-hours",
+      valid: false,
+    };
+  }
+
+  if (operatingDate === currentDate && normalized.startMinutes < currentOperatingMinutes) {
+    return {
+      message: getReceptionCalendarSelectionMessage("past-time"),
+      reason: "past-time",
       valid: false,
     };
   }
@@ -4471,6 +4513,8 @@ function ScheduleSelectionCell({
   affordanceSuspended,
   calendarDraftSelection,
   appointments,
+  currentDate,
+  currentOperatingMinutes,
   draftCheckIns,
   hour,
   operatingDate,
@@ -4482,6 +4526,8 @@ function ScheduleSelectionCell({
   affordanceSuspended: boolean;
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
   appointments: Appointment[];
+  currentDate: string;
+  currentOperatingMinutes: number;
   draftCheckIns: ReceptionDraftCheckIn[];
   hour: number;
   operatingDate: string;
@@ -4556,6 +4602,8 @@ function ScheduleSelectionCell({
     dragState && selectionStart !== undefined && selectionEnd !== undefined
       ? validateReceptionCalendarSelection({
           appointments,
+          currentDate,
+          currentOperatingMinutes,
           draftCheckIns,
           endMinutes: selectionEnd,
           operatingDate,
@@ -4567,6 +4615,8 @@ function ScheduleSelectionCell({
   const createDraftFromMinutes = (startMinutes: number, endMinutes: number) => {
     const selection = validateReceptionCalendarSelection({
       appointments,
+      currentDate,
+      currentOperatingMinutes,
       draftCheckIns,
       endMinutes,
       operatingDate,
@@ -4601,6 +4651,8 @@ function ScheduleSelectionCell({
         });
         const startSlotValidation = validateReceptionCalendarSelection({
           appointments,
+          currentDate,
+          currentOperatingMinutes,
           draftCheckIns,
           endMinutes: startMinutes + scheduleSlotMinutes,
           operatingDate,
@@ -4701,6 +4753,8 @@ function ScheduleSelectionCell({
           const slotMinutes = hour * 60 + index * scheduleSlotMinutes;
           const slotValidation = validateReceptionCalendarSelection({
             appointments,
+            currentDate,
+            currentOperatingMinutes,
             draftCheckIns,
             endMinutes: slotMinutes + scheduleSlotMinutes,
             operatingDate,
@@ -4787,6 +4841,7 @@ function ReceptionVisitContextBanner({
 function DayScheduleBoard({
   assignmentVeterinarians,
   calendarDraftSelection,
+  currentDate,
   currentOperatingMinutes,
   emptySlotAffordanceSuspended,
   appointments,
@@ -4801,6 +4856,7 @@ function DayScheduleBoard({
   selectedVeterinarians,
 }: {
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
+  currentDate: string;
   currentOperatingMinutes: number;
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
@@ -4961,6 +5017,8 @@ function DayScheduleBoard({
                     affordanceSuspended={emptySlotAffordanceSuspended}
                     calendarDraftSelection={calendarDraftSelection}
                     appointments={appointments}
+                    currentDate={currentDate}
+                    currentOperatingMinutes={currentOperatingMinutes}
                     draftCheckIns={draftCheckIns}
                     hour={hour}
                     operatingDate={operatingDate}
@@ -5319,6 +5377,7 @@ function MonthScheduleBoard({
 function ReceptionScheduleBoard({
   assignmentVeterinarians,
   calendarDraftSelection,
+  currentDate,
   currentOperatingMinutes,
   emptySlotAffordanceSuspended,
   appointments,
@@ -5337,6 +5396,7 @@ function ReceptionScheduleBoard({
 }: {
   assignmentVeterinarians: Veterinarian[];
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
+  currentDate: string;
   currentOperatingMinutes: number;
   emptySlotAffordanceSuspended: boolean;
   appointments: Appointment[];
@@ -5505,6 +5565,7 @@ function ReceptionScheduleBoard({
             <DayScheduleBoard
               assignmentVeterinarians={assignmentVeterinarians}
               calendarDraftSelection={calendarDraftSelection}
+              currentDate={currentDate}
               currentOperatingMinutes={currentOperatingMinutes}
               emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
               appointments={appointments}
@@ -6100,6 +6161,7 @@ export function ReceptionContent() {
       <ReceptionScheduleBoard
         assignmentVeterinarians={veterinarians}
         calendarDraftSelection={calendarDraftSelection}
+        currentDate={defaultOperatingDate}
         currentOperatingMinutes={currentOperatingMinutes}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
         appointments={visibleAppointments}
@@ -6238,6 +6300,11 @@ function ReceptionWalkInFormDrawer({
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
       ? veterinarianId
       : unassignedVeterinarianValue;
+  const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
+  const timeBlockMessage = getWalkInTimeBlockMessage(
+    currentOperatingMinutes,
+    durationMinutes,
+  );
   const canCreate = Boolean(patient && trimmedVisitPurpose && !weightInvalid);
 
   useEffect(() => {
@@ -6328,15 +6395,20 @@ function ReceptionWalkInFormDrawer({
     if (!submitting) setActiveDrawer(null);
   };
   const create = async () => {
-    if (!patient || !selectedSummary || submitting) return;
+    if (!patient || !selectedSummary || submitting || !canCreate) return;
 
     const selectedVeterinarianId =
       effectiveVeterinarianId === unassignedVeterinarianValue
         ? undefined
         : effectiveVeterinarianId;
+    if (timeBlockMessage) {
+      toast.error(timeBlockMessage);
+      return;
+    }
+
     const input: WalkInReceptionInput = {
       department,
-      durationMinutes: getDurationMinutesFromLabel(duration),
+      durationMinutes,
       guardianId: guardian?.id,
       guardianMobilePhone: guardian?.mobilePhone,
       memo: memo.trim() || undefined,
@@ -6373,6 +6445,15 @@ function ReceptionWalkInFormDrawer({
     >
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-4">
+          {timeBlockMessage ? (
+            <EmrInlineAlert
+              severity="warning"
+              title="접수 가능 시간이 아닙니다"
+              testId="walk-in-time-block-alert"
+            >
+              {timeBlockMessage}
+            </EmrInlineAlert>
+          ) : null}
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
               <RegistrationFormField label="환자 검색" required>
@@ -6652,7 +6733,7 @@ function ReceptionWalkInFormDrawer({
           <Button variant="ghost" onClick={close} disabled={submitting}>
             취소
           </Button>
-          <Button onClick={create} disabled={!canCreate || submitting}>
+          <Button onClick={create} disabled={!canCreate || Boolean(timeBlockMessage) || submitting}>
             {submitting ? "생성 중" : "생성"}
           </Button>
         </div>
@@ -6663,6 +6744,7 @@ function ReceptionWalkInFormDrawer({
 
 function ReceptionReservationFormDrawer({
   appointments,
+  currentOperatingMinutes,
   initialDate,
   initialDurationMinutes,
   initialTimeMinutes,
@@ -6675,6 +6757,7 @@ function ReceptionReservationFormDrawer({
   workspaceId,
 }: {
   appointments: Appointment[];
+  currentOperatingMinutes: number;
   initialDate?: string;
   initialDurationMinutes?: number;
   initialTimeMinutes?: number;
@@ -6727,8 +6810,15 @@ function ReceptionReservationFormDrawer({
     [duration],
   );
   const timeOptions = useMemo(
-    () => getReservationTimeOptions(date, durationMinutes, appointments),
-    [appointments, date, durationMinutes],
+    () =>
+      getReservationTimeOptions(
+        date,
+        durationMinutes,
+        appointments,
+        todayDate,
+        currentOperatingMinutes,
+      ),
+    [appointments, currentOperatingMinutes, date, durationMinutes, todayDate],
   );
   const selectedSummary = patientLookup.selectedSummary;
   const selectedPatient = selectedSummary?.patient;
@@ -6740,6 +6830,15 @@ function ReceptionReservationFormDrawer({
   const parsedWeightKg = parseWeightKgInput(weightKg);
   const weightInvalid = Boolean(selectedPatient && weightKg.trim() && !parsedWeightKg);
   const closedDay = isClosedReservationDate(date);
+  const hasElapsedOptions = timeOptions.some((option) => option.reason === "지난 시간");
+  const hasAvailableTimeOption = timeOptions.some((option) => !option.disabled);
+  const reservationTimeHelper = closedDay
+    ? "휴진일입니다."
+    : !hasAvailableTimeOption
+      ? "선택한 날짜와 예상시간으로 가능한 예약 시간이 없습니다. 날짜나 예상시간을 변경해 주세요."
+      : date === todayDate && hasElapsedOptions
+        ? "오늘 예약은 현재 시각 이후만 선택할 수 있어요."
+        : undefined;
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
@@ -7014,7 +7113,7 @@ function ReceptionReservationFormDrawer({
               <RegistrationFormField
                 label="예약시간"
                 required
-                helper={closedDay ? "휴진일입니다." : undefined}
+                helper={reservationTimeHelper}
               >
                 <Select
                   value={String(timeMinutes)}
@@ -7919,6 +8018,7 @@ export function ReceptionDrawer() {
       <ReceptionReservationFormDrawer
         key={activeDrawer.id}
         appointments={appointments}
+        currentOperatingMinutes={currentOperatingMinutes}
         initialDate={reservationDraftDate}
         initialDurationMinutes={reservationDraftSelection?.durationMinutes}
         initialTimeMinutes={reservationDraftTimeMinutes}

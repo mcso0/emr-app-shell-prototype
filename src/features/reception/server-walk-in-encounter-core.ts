@@ -64,7 +64,8 @@ export type ReceptionWalkInEncounterGatewayResult =
 	        | "patient_unavailable"
 	        | "guardian_unavailable"
 	        | "patient_guardian_link_missing"
-	        | "primary_veterinarian_unavailable";
+	        | "primary_veterinarian_unavailable"
+	        | "walk_in_outside_business_hours";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
 
@@ -102,13 +103,17 @@ export type ReceptionWalkInEncounterResult =
 	        | "patient_unavailable"
 	        | "guardian_unavailable"
 	        | "patient_guardian_link_missing"
-	        | "primary_veterinarian_unavailable";
+	        | "primary_veterinarian_unavailable"
+	        | "walk_in_outside_business_hours";
     }
   | {
       ok: false;
       status: 500;
       error: "db_write_failed" | "supabase_client_missing";
     };
+
+const businessOpenMinutes = 9 * 60;
+const businessCloseMinutes = 19 * 60;
 
 export async function createReceptionWalkInEncounter({
   actorUserId,
@@ -155,6 +160,14 @@ export async function createReceptionWalkInEncounter({
       ok: false,
       status: permission.denialReason === "unauthenticated" ? 401 : 403,
       denialReason: permission.denialReason ?? "permission_missing",
+    };
+  }
+
+  if (!isWithinBusinessHours(normalized.plannedStartAt, normalized.durationMinutes)) {
+    return {
+      ok: false,
+      status: 409,
+      denialReason: "walk_in_outside_business_hours",
     };
   }
 
@@ -501,7 +514,36 @@ function mapWalkInDbDenial(message?: string) {
 	  if (message.includes("primary_veterinarian_unavailable")) {
 	    return "primary_veterinarian_unavailable" as const;
 	  }
+	  if (message.includes("walk_in_outside_business_hours")) {
+	    return "walk_in_outside_business_hours" as const;
+	  }
 	  return null;
+}
+
+function isWithinBusinessHours(iso: string | undefined, durationMinutes: number | undefined) {
+  if (!iso || !durationMinutes) return true;
+
+  const startMs = Date.parse(iso);
+  if (!Number.isFinite(startMs)) return true;
+
+  const startMinutes = getSeoulMinutes(iso);
+  const endMinutes = startMinutes + durationMinutes;
+
+  return startMinutes >= businessOpenMinutes && endMinutes <= businessCloseMinutes;
+}
+
+function getSeoulMinutes(iso: string) {
+  const date = new Date(iso);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+
+  return hour * 60 + minute;
 }
 
 async function validateSupabaseWalkInVeterinarian({

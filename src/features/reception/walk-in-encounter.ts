@@ -38,6 +38,7 @@ export type ReceptionWalkInEncounterResponse =
         | "patient_unavailable"
             | "guardian_unavailable"
             | "patient_guardian_link_missing"
-            | "primary_veterinarian_unavailable";
+            | "primary_veterinarian_unavailable"
+            | "walk_in_outside_business_hours";
       fieldErrors?: Record<string, string>;
     };

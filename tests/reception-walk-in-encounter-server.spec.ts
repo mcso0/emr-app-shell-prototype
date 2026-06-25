@@ -170,6 +170,32 @@ test("walk-in encounter core validates duration as a positive 15 minute step", a
   });
 });
 
+test("walk-in encounter core rejects reception times outside business hours", async () => {
+  const beforeOpen = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: { ...validWalkInInput, plannedStartAt: "2026-05-19T08:30:00+09:00" },
+  });
+
+  expect(beforeOpen).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "walk_in_outside_business_hours",
+  });
+
+  const afterClose = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: { ...validWalkInInput, plannedStartAt: "2026-05-19T18:45:00+09:00" },
+  });
+
+  expect(afterClose).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "walk_in_outside_business_hours",
+  });
+});
+
 test("supabase walk-in encounter gateway keeps workspace scope in the RPC write", async () => {
   const calls: string[] = [];
   let createPayload:

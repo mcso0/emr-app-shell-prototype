@@ -89,6 +89,13 @@ Turn the `+ 접수/예약 > 예약하기` entry point from a placeholder toast i
 - Appointment creation is workspace-scoped and rejects overlapping appointment slots globally for the workspace under current rules.
 - The audit event allowlist now includes `reception.appointment_created`; future audit UI changes should keep this label/filter available.
 
+## 2026-06-25 Follow-up
+
+- Reception drawer creation now blocks walk-in creation outside the 09:00-19:00 business window and explains the next action in-context.
+- Same-day reservation time options now disable elapsed slots with `지난 시간` and keep future-date reservations available within business hours.
+- Day calendar draft creation now treats today's elapsed slots as invalid, so past-time slots do not open a draft drawer or temporary card.
+- The walk-in server core now rejects `plannedStartAt` values that start before opening or end after closing with `walk_in_outside_business_hours`.
+
 ## Result
 
 Ready for Human Review.
