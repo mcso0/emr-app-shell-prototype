@@ -31,6 +31,7 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import {
   EmrSidePanelCard,
   EmrSidePanelIdentityLine,
@@ -3967,27 +3968,15 @@ function ReceptionScheduleDateControl({
                   </span>
                 ))}
                 {datePickerCells.map((cell) => (
-                  <button
+                  <EmrDatePickerDayButton
                     key={cell.key}
-                    type="button"
-                    className={cn(
-                      "flex size-7 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                      cell.inMonth
-                        ? "text-foreground"
-                        : "text-muted-foreground",
-                      cell.selected &&
-                        "bg-primary text-primary-foreground hover:bg-primary/90",
-                    )}
-                    aria-label={
-                      cell.selected
-                        ? `${formatKoreanOperatingDateLabel(cell.key)} 선택됨`
-                        : `${cell.day}일 선택`
-                    }
-                    aria-pressed={cell.selected}
+                    date={cell.key}
+                    day={cell.day}
+                    inMonth={cell.inMonth}
+                    selected={cell.selected}
+                    today={cell.key === todayDate}
                     onClick={() => selectOperatingDate(cell.key)}
-                  >
-                    {cell.day}
-                  </button>
+                  />
                 ))}
               </div>
             </>
@@ -4426,27 +4415,17 @@ function ReceptionReservationDatePicker({
             const disabled = cell.key < minDate;
 
             return (
-              <button
+              <EmrDatePickerDayButton
                 key={cell.key}
-                type="button"
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                  cell.inMonth ? "text-foreground" : "text-muted-foreground",
-                  cell.selected && "bg-primary text-primary-foreground hover:bg-primary/90",
-                  disabled &&
-                    "cursor-not-allowed text-[var(--emr-text-disabled)] hover:bg-transparent",
-                )}
-                aria-label={
-                  cell.selected
-                    ? `${formatKoreanOperatingDateLabel(cell.key)} 선택됨`
-                    : `${formatKoreanOperatingDateLabel(cell.key)} 선택`
-                }
-                aria-pressed={cell.selected}
+                date={cell.key}
+                day={cell.day}
                 disabled={disabled}
+                inMonth={cell.inMonth}
+                selected={cell.selected}
+                size="md"
+                today={cell.key === minDate}
                 onClick={() => selectDate(cell.key)}
-              >
-                {cell.day}
-              </button>
+              />
             );
           })}
         </div>

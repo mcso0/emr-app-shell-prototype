@@ -15,6 +15,7 @@ import {
 } from "@/components/cds-icons/navigation";
 import { ChevronDownIcon } from "@/components/icons";
 import { CollapseGnbIcon } from "@/components/gnb-icons";
+import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrMotionIcon } from "@/components/emr/motion-icon";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   addMonthsToIsoDate,
   formatCompactKoreanOperatingDateLabel,
-  formatKoreanOperatingDateLabel,
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
@@ -326,30 +326,15 @@ export function EmrDateNavigator({
                 </span>
               ))}
               {datePickerCells.map((cell) => (
-                <button
+                <EmrDatePickerDayButton
                   key={cell.key}
-                  type="button"
-                  className={cn(
-                    "relative flex size-7 items-center justify-center rounded-md emr-text-metadata font-medium tabular-nums outline-none transition-[scale,background-color,box-shadow] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
-                    cell.inMonth ? "text-foreground" : "text-muted-foreground",
-                    cell.today &&
-                      !cell.selected &&
-                      "font-semibold text-primary ring-1 ring-primary/35 ring-offset-1 ring-offset-background hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
-                    cell.selected &&
-                      "bg-primary text-primary-foreground ring-0 ring-offset-0 hover:bg-primary/90",
-                  )}
-                  aria-label={[
-                    cell.today ? "오늘" : undefined,
-                    formatKoreanOperatingDateLabel(cell.key),
-                    cell.selected ? "선택됨" : "선택",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-pressed={cell.selected}
+                  date={cell.key}
+                  day={cell.day}
+                  inMonth={cell.inMonth}
+                  selected={cell.selected}
+                  today={cell.today}
                   onClick={() => selectDate(cell.key)}
-                >
-                  <span>{cell.day}</span>
-                </button>
+                />
               ))}
             </div>
             {todayDate ? (
