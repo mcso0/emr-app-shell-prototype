@@ -6391,7 +6391,7 @@ function ReceptionWalkInFormDrawer({
                   <Input
                     aria-label="환자 검색"
                     autoComplete="off"
-                    className="h-10 bg-card pl-9 pr-9"
+                    className="h-9 bg-card pl-9 pr-9"
                     placeholder="동물명 또는 보호자명으로 검색"
                     value={lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
@@ -6487,7 +6487,7 @@ function ReceptionWalkInFormDrawer({
                   <Input
                     aria-label="체중"
                     className={cn(
-                      "h-10 bg-card pr-9",
+                      "h-9 bg-card pr-9",
                       weightInvalid
                         ? "border-[var(--emr-status-danger-border)]"
                         : "",
@@ -6577,7 +6577,7 @@ function ReceptionWalkInFormDrawer({
                   aria-label="접수일"
                   value={formatShortOperatingDate(operatingDate)}
                   readOnly
-                  className="h-10 bg-card"
+                  className="h-9 bg-card"
                 />
               </RegistrationFormField>
               <RegistrationFormField label="진료시간">
@@ -6585,7 +6585,7 @@ function ReceptionWalkInFormDrawer({
                   aria-label="진료시간"
                   value={getShortTime(plannedStartAt)}
                   readOnly
-                  className="h-10 bg-card"
+                  className="h-9 bg-card"
                 />
               </RegistrationFormField>
               <RegistrationFormField label="예상시간" required>
@@ -6595,7 +6595,7 @@ function ReceptionWalkInFormDrawer({
                 >
                   <SelectTrigger
                     aria-label="예상시간"
-                    size="xl"
+                    size="lg"
                     className="w-full bg-card"
                   >
                     <SelectValue />
@@ -6720,6 +6720,7 @@ function ReceptionReservationFormDrawer({
     patientSummaries,
     workspaceId,
   });
+  const [patientLookupOpen, setPatientLookupOpen] = useState(false);
   const durationMinutes = getDurationMinutesFromLabel(duration) ?? 30;
   const durationOptions = useMemo(
     () => Array.from(new Set([...receptionDurationOptions, duration])),
@@ -6751,6 +6752,8 @@ function ReceptionReservationFormDrawer({
     !weightInvalid &&
     !closedDay &&
     date >= todayDate;
+  const shouldShowPatientLookup =
+    patientLookupOpen && patientLookup.lookupActive;
   const close = () => {
     if (submitting) return;
     setCalendarDraftSelection(undefined);
@@ -6856,73 +6859,95 @@ function ReceptionReservationFormDrawer({
         <div className="flex flex-col gap-5 p-4">
           <RegistrationFormSection separated={false} title="환자 정보">
             <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
-              <RegistrationFormField
-                label="환자 검색"
-                required
-                actions={
-                  selectedPatient ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="환자 선택 초기화"
-                      onClick={patientLookup.clearPatientSelection}
-                    >
-                      <CircleCloseFillIcon aria-hidden="true" />
-                    </Button>
-                  ) : undefined
-                }
-              >
-                <Select
-                  value={patientLookup.patientId}
-                  onValueChange={(value) => {
-                    if (!value) return;
-                    const summary = patientLookup.selectablePatientSummaries.find(
-                      (item) => item.patient.id === value,
-                    );
-                    if (summary) patientLookup.selectPatientSummary(summary);
+              <RegistrationFormField label="환자 검색" required>
+                <div
+                  className="relative"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setPatientLookupOpen(false);
+                    }
                   }}
                 >
-                  <SelectTrigger
+                  <CdsActionsSearchIcon
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--emr-text-secondary)]"
+                    aria-hidden="true"
+                  />
+                  <Input
                     aria-label="환자 검색"
-                    size="lg"
-                    className="w-full bg-card"
-                  >
-                    <span
-                      className={cn(
-                        "flex min-w-0 flex-1 truncate text-left",
-                        !selectedSummary && "text-[var(--emr-text-placeholder)]",
-                      )}
+                    autoComplete="off"
+                    className="h-9 bg-card pl-9 pr-9"
+                    placeholder="동물명 또는 보호자명으로 검색"
+                    value={patientLookup.lookupQuery}
+                    onFocus={() => setPatientLookupOpen(true)}
+                    onValueChange={(value) => {
+                      patientLookup.updateLookupQuery(value);
+                      setPatientLookupOpen(true);
+                    }}
+                  />
+                  {patientLookup.lookupQuery ? (
+                    <button
+                      type="button"
+                      className="absolute right-2.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-[var(--emr-text-secondary)] focus-visible:ring-3 focus-visible:ring-ring/50"
+                      aria-label="환자 선택 초기화"
+                      onClick={() => {
+                        patientLookup.clearPatientSelection();
+                        setWeightKg("");
+                        setPatientLookupOpen(true);
+                      }}
                     >
-                      {selectedSummary
-                        ? getReceptionPatientOptionLabel(selectedSummary)
-                        : "환자 선택"}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="p-2">
-                      <Input
-                        aria-label="예약 환자 검색어"
-                        className="h-8"
-                        placeholder="환자/보호자 검색"
-                        value={patientLookup.lookupQuery}
-                        onValueChange={patientLookup.updateLookupQuery}
+                      <CircleCloseFillIcon
+                        className="size-4"
+                        aria-hidden="true"
                       />
+                    </button>
+                  ) : null}
+                  {shouldShowPatientLookup ? (
+                    <div
+                      role="listbox"
+                      aria-label="검색 결과"
+                      className="absolute left-0 right-0 top-[calc(100%+4px)] z-[80] grid max-h-72 gap-1 overflow-y-auto rounded-lg bg-popover p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                    >
+                      <ReceptionPatientLookupStateMessage
+                        lookupActive={patientLookup.lookupActive}
+                        lookupState={patientLookup.lookupState}
+                        resultCount={
+                          patientLookup.selectablePatientSummaries.length
+                        }
+                      />
+                      {patientLookup.selectablePatientSummaries.map(
+                        (summary) => {
+                          const selected =
+                            summary.patient.id === patientLookup.patientId;
+                          const optionLabel =
+                            getReceptionPatientOptionLabel(summary);
+
+                          return (
+                            <button
+                              key={summary.patient.id}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                patientLookup.selectPatientSummary(summary);
+                                setPatientLookupOpen(false);
+                              }}
+                            >
+                              <span className="truncate emr-text-dense font-semibold text-foreground">
+                                {optionLabel}
+                              </span>
+                              <span className="truncate emr-text-metadata text-muted-foreground">
+                                {summary.primaryGuardian?.mobilePhone ??
+                                  "보호자 연락처 미등록"}
+                              </span>
+                            </button>
+                          );
+                        },
+                      )}
                     </div>
-                    <SelectGroup>
-                      {patientLookup.selectablePatientSummaries.map((summary) => (
-                        <SelectItem key={summary.patient.id} value={summary.patient.id}>
-                          {getReceptionPatientOptionLabel(summary)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <ReceptionPatientLookupStateMessage
-                      lookupActive={patientLookup.lookupActive}
-                      lookupState={patientLookup.lookupState}
-                      resultCount={patientLookup.selectablePatientSummaries.length}
-                    />
-                  </SelectContent>
-                </Select>
+                  ) : null}
+                </div>
               </RegistrationFormField>
 
               <RegistrationFormField
