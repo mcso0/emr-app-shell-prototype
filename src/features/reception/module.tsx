@@ -2730,6 +2730,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     () => getReceptionSideQueueGroups(visibleQueueItems),
     [visibleQueueItems],
   );
+  const showQueueLoadingState = queueReadStatus === "loading" && visibleQueueGroups.length === 0;
   const sideListCounts = useMemo(
     () =>
       Object.fromEntries(
@@ -2921,7 +2922,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       <EmrSubpanelBody>
-        {queueReadStatus === "loading" ? (
+        {showQueueLoadingState ? (
           <EmrQueueLoadingState title="접수/예약 정보를 불러오는 중입니다." />
         ) : visibleQueueGroups.length ? (
           visibleQueueGroups.map((group) => (
@@ -5979,8 +5980,9 @@ export function ReceptionContent() {
 
       embeddedLookupItems.forEach(applyPatientGuardianLookupItem);
 
+      const currentPatients = usePatientProfileStore.getState().patients;
       const knownPatientIds = new Set([
-        ...patients.map((patient) => patient.id),
+        ...currentPatients.map((patient) => patient.id),
         ...embeddedLookupItems.map((item) => item.patient.id),
       ]);
       const missingReadbackPatientIds = getReadbackPatientIds(
@@ -6028,7 +6030,6 @@ export function ReceptionContent() {
       authSession?.id,
       liveStaffSourceEnabled,
       operatingDate,
-      patients,
       setReceptionCalendarReadStatus,
       setReceptionQueueReadStatus,
       workspaceId,

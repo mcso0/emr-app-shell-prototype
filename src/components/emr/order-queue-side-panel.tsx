@@ -264,6 +264,7 @@ export function EmrOrderQueueSidePanel({
       items: visibleItems.filter((item) => item.statusId === status.id),
     }))
     .filter((group) => group.items.length > 0);
+  const showLoadingState = loading && groupedItems.length === 0;
   const toggleStatus = (statusId: string) => {
     setCollapsedStatusIds((current) => {
       const next = new Set(current);
@@ -345,7 +346,7 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrSubpanelBody>
-        {loading ? (
+        {showLoadingState ? (
           <EmrQueueLoadingState title={loadingTitle} />
         ) : groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
           const collapsed = collapsedStatusIds.has(status.id);

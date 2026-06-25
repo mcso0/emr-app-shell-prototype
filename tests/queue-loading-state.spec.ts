@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
@@ -106,12 +108,26 @@ async function getQueueStateIconRootTagName(page: Page, stateText: string) {
 test("reception queue loading uses the side-panel body motion state instead of top loading copy", async ({
   page,
 }) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/calendar/day?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, status: 200, records: [] }),
+      });
+    },
+  );
   const queueRoute = await delayRouteUntilAsserted(
     page,
-    "**/api/workspaces/clair-demo/reception/queue?*",
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/queue?*`,
   );
 
-  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception?modulePanel=open`,
+  );
 
   await expect(
     page.getByText("접수/예약 정보를 불러오는 중입니다."),
@@ -126,6 +142,16 @@ test("reception queue loading and empty states keep the same icon box size", asy
 }) => {
   await grantCheongdamWorkspaceAccess(page);
 
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/calendar/day?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, status: 200, records: [] }),
+      });
+    },
+  );
   const queueRoute = await delayRouteUntilAsserted(
     page,
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/queue?*`,
@@ -138,20 +164,22 @@ test("reception queue loading and empty states keep the same icon box size", asy
     page.getByText("접수/예약 정보를 불러오는 중입니다."),
   ).toBeVisible();
 
-  const loadingIconBox = await getQueueStateIconBoxSize(
-    page,
-    "접수/예약 정보를 불러오는 중입니다.",
-  );
+  await expect
+    .poll(async () => getQueueStateIconBoxSize(
+      page,
+      "접수/예약 정보를 불러오는 중입니다.",
+    ))
+    .toEqual({ height: 56, width: 56 });
 
   await queueRoute.release();
   await expect(page.getByText("접수/예약 업무가 없습니다.")).toBeVisible();
 
-  const emptyIconBox = await getQueueStateIconBoxSize(
-    page,
-    "접수/예약 업무가 없습니다.",
-  );
-
-  expect(emptyIconBox).toEqual(loadingIconBox);
+  await expect
+    .poll(async () => getQueueStateIconBoxSize(
+      page,
+      "접수/예약 업무가 없습니다.",
+    ))
+    .toEqual({ height: 56, width: 56 });
   await expect
     .poll(async () => getQueueStateIconRootTagName(
       page,
@@ -163,16 +191,50 @@ test("reception queue loading and empty states keep the same icon box size", asy
 test("chart queue loading uses the shared side-panel body motion state", async ({
   page,
 }) => {
+  await grantCheongdamWorkspaceAccess(page);
+
   const liveQueueRoute = await delayRouteUntilAsserted(
     page,
-    "**/api/workspaces/clair-demo/chart/live-queue?*",
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
   );
 
-  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=open&aside=closed`,
+  );
 
   await expect(
     page.getByText("진료차트 정보를 불러오는 중입니다."),
   ).toBeVisible();
 
   await liveQueueRoute.release();
+});
+
+test("queue panels keep visible queue rows ahead of background loading states", () => {
+  const receptionModule = readFileSync("src/features/reception/module.tsx", "utf8");
+  const orderQueuePanel = readFileSync("src/components/emr/order-queue-side-panel.tsx", "utf8");
+  const labImagingModule = readFileSync("src/features/lab-imaging/module.tsx", "utf8");
+
+  expect(receptionModule).toContain(
+    'const showQueueLoadingState = queueReadStatus === "loading" && visibleQueueGroups.length === 0;',
+  );
+  expect(orderQueuePanel).toContain(
+    "const showLoadingState = loading && groupedItems.length === 0;",
+  );
+  expect(labImagingModule).toContain(
+    'const showLabQueueLoadingState = fulfillmentQueue.status === "loading" && resultCount === 0;',
+  );
+  expect(labImagingModule).toContain(
+    'const showImagingQueueLoadingState = fulfillmentQueue.status === "loading" && resultCount === 0;',
+  );
+});
+
+test("reception live read effect does not restart only because profile rows hydrate", () => {
+  const receptionModule = readFileSync("src/features/reception/module.tsx", "utf8");
+
+  expect(receptionModule).toContain(
+    "const currentPatients = usePatientProfileStore.getState().patients;",
+  );
+  expect(receptionModule).not.toMatch(
+    /const refreshReceptionReads = useCallback\([\s\S]*?\n\s+patients,\n\s+setReceptionCalendarReadStatus,/,
+  );
 });
