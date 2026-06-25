@@ -30,7 +30,7 @@ export type ChartDiagnosisRow = Diagnosis & {
 
 export type ChartDiagnosisGatewayResult =
   | { ok: true; diagnoses: ChartDiagnosisRow[] }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartDiagnosisGateway = {
@@ -65,7 +65,7 @@ export type ChartDiagnosisReadResult =
       fieldErrors: Partial<Record<"encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type ChartDiagnosisSaveResult =
@@ -82,7 +82,7 @@ export type ChartDiagnosisSaveResult =
       fieldErrors: Partial<Record<"diagnoses" | "encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockDiagnosisStore = new Map<string, ChartDiagnosisRow[]>();
@@ -132,7 +132,9 @@ export async function readChartDiagnoses({
   });
 
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 409 && result.denialReason === "encounter_unavailable") {
+      return result;
+    }
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -233,6 +235,7 @@ export function createMockChartDiagnosisGateway(
     async saveDiagnoses({ actorUserId, diagnoses, encounterId, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
 
       const existingRows = getStoredOrSeedDiagnoses({
         encounterId,
@@ -331,6 +334,9 @@ export function createSupabaseChartDiagnosisGateway(
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
+        if (error.message?.includes("stale_status")) {
+          return { ok: false, status: 409, denialReason: "stale_status" };
+        }
         return { ok: false, status: 500, error: "db_write_failed" };
       }
 
@@ -395,6 +401,10 @@ function findEncounter(encounters: Encounter[], workspaceId: string, encounterId
       encounter.workspaceId === workspaceId &&
       encounter.status !== "cancelled"
   );
+}
+
+function canMutateChart(encounter: Encounter) {
+  return encounter.status === "in_consultation" || encounter.status === "ordered";
 }
 
 function getStoredOrSeedDiagnoses({

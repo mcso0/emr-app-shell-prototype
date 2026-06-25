@@ -25,7 +25,7 @@ export type ChartSoapNoteInput = {
 
 export type ChartSoapNoteGatewayResult =
   | { ok: true; soapNote: SoapNote | null }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" | "stale_status" }
   | { ok: false; status: 409; denialReason: "soap_note_conflict" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
@@ -75,7 +75,7 @@ export type ChartSoapNoteSaveResult =
       fieldErrors: Partial<Record<keyof ChartSoapNoteInput, string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" | "stale_status" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockSoapNoteStore = new Map<string, SoapNote>();
@@ -265,6 +265,7 @@ export function createMockChartSoapNoteGateway(
     async saveSoapNote({ actorUserId, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
 
       const stored = getStoredOrSeedSoapNote({
         encounterId,
@@ -359,6 +360,9 @@ export function createSupabaseChartSoapNoteGateway(
         if (error.message?.includes("soap_note_conflict")) {
           return { ok: false, status: 409, denialReason: "soap_note_conflict" };
         }
+        if (error.message?.includes("stale_status")) {
+          return { ok: false, status: 409, denialReason: "stale_status" };
+        }
         return { ok: false, status: 500, error: "db_write_failed" };
       }
 
@@ -426,6 +430,10 @@ function findEncounter(encounters: Encounter[], workspaceId: string, encounterId
       encounter.workspaceId === workspaceId &&
       encounter.status !== "cancelled"
   );
+}
+
+function canMutateChart(encounter: Encounter) {
+  return encounter.status === "in_consultation" || encounter.status === "ordered";
 }
 
 function getStoredOrSeedSoapNote({

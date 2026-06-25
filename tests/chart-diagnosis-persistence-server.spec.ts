@@ -7,6 +7,7 @@ import {
   createSupabaseChartDiagnosisGateway,
   saveChartDiagnoses,
 } from "../src/features/chart/server-diagnosis-persistence-core";
+import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -29,6 +30,18 @@ const validDiagnosisInput = {
       isPrimary: false,
     },
   ],
+};
+
+const waitingEncounter: Encounter = {
+  id: "encounter-diagnosis-waiting-lock",
+  workspaceId,
+  patientId: "patient-diagnosis-waiting-lock",
+  guardianId: "guardian-diagnosis-waiting-lock",
+  encounterNo: "E-DX-LOCK",
+  status: "waiting",
+  checkedInAt: "2026-06-25T14:15:00+09:00",
+  createdAt: "2026-06-25T14:15:00+09:00",
+  updatedAt: "2026-06-25T14:15:00+09:00",
 };
 
 test("diagnosis route requires an actor, saves via mock fallback, and reads after save", async ({
@@ -178,6 +191,27 @@ test("diagnosis core enforces active workspace membership, chart update permissi
         updatedAt: "2026-05-19T14:00:00.000Z",
       },
     ],
+  });
+});
+
+test("diagnosis core blocks chart mutation before consultation starts", async () => {
+  const blocked = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      ...validDiagnosisInput,
+      encounterId: waitingEncounter.id,
+    },
+    gateway: createMockChartDiagnosisGateway({
+      diagnoses: [],
+      encounters: [{ ...waitingEncounter }],
+    }),
+  });
+
+  expect(blocked).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "stale_status",
   });
 });
 

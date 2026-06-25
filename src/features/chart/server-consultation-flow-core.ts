@@ -8,6 +8,10 @@ import {
   emitLiveMutationAuditEvent,
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
+import {
+  getConsultationCallRoomById,
+  type ConsultationCallRoom,
+} from "@/features/chart/data";
 import { mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
 import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 
@@ -16,6 +20,7 @@ export type ConsultationFlowAction = "call" | "start";
 export type ConsultationFlowInput = {
   action?: ConsultationFlowAction;
   encounterId?: string;
+  roomId?: string;
 };
 
 export type ConsultationCallEvent = {
@@ -26,6 +31,8 @@ export type ConsultationCallEvent = {
   eventType: "did_call_requested";
   displayText: string;
   deliveryStatus: "queued";
+  roomId: string;
+  roomName: string;
   createdAt: string;
   createdByUserId: string;
 };
@@ -44,6 +51,7 @@ export type ConsultationFlowGatewayResult =
       denialReason:
         | "encounter_unavailable"
         | "queue_entry_unavailable"
+        | "room_unavailable"
         | "stale_status";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
@@ -52,6 +60,7 @@ export type ConsultationFlowGateway = {
   callConsultation(input: {
     actorUserId: string;
     encounterId: string;
+    room: ConsultationCallRoom;
     workspaceId: string;
   }): Promise<ConsultationFlowGatewayResult>;
   startConsultation(input: {
@@ -81,6 +90,7 @@ export type ConsultationFlowMutationResult =
       denialReason:
         | "encounter_unavailable"
         | "queue_entry_unavailable"
+        | "room_unavailable"
         | "stale_status";
     }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
@@ -108,14 +118,16 @@ export async function mutateConsultationFlow({
 }): Promise<ConsultationFlowMutationResult> {
   const encounterId = trimToUndefined(input.encounterId);
   const action = input.action;
+  const room = action === "call" ? getConsultationCallRoomById(input.roomId) : undefined;
 
-  if (!encounterId || (action !== "call" && action !== "start")) {
+  if (!encounterId || (action !== "call" && action !== "start") || (action === "call" && !room)) {
     return {
       ok: false,
       status: 400,
       error: "invalid_input",
       fieldErrors: {
         ...(encounterId ? {} : { encounterId: "진료 차트를 선택해 주세요." }),
+        ...(action !== "call" || room ? {} : { roomId: "진료실을 선택해 주세요." }),
         ...(action === "call" || action === "start"
           ? {}
           : { action: "지원하지 않는 진료 흐름 액션이에요." }),
@@ -142,6 +154,7 @@ export async function mutateConsultationFlow({
       ? await gateway.callConsultation({
           actorUserId: actorUserId ?? "",
           encounterId,
+          room: room!,
           workspaceId,
         })
       : await gateway.startConsultation({
@@ -170,6 +183,8 @@ export async function mutateConsultationFlow({
         encounterStatus: result.flow.encounter.status,
         queueStatus: result.flow.queueEntry.status,
         calledAt: result.flow.queueEntry.calledAt ?? null,
+        roomId: result.flow.callEvent?.roomId ?? null,
+        roomName: result.flow.callEvent?.roomName ?? null,
         startedAt: result.flow.encounter.startedAt ?? null,
       },
       metadata: {
@@ -202,7 +217,7 @@ export function createMockConsultationFlowGateway(
   const queueEntries = dataset.waitingQueueEntries ?? [];
 
   return {
-    async callConsultation({ actorUserId, encounterId, workspaceId }) {
+    async callConsultation({ actorUserId, encounterId, room, workspaceId }) {
       const found = findConsultationFlowRows(encounters, queueEntries, workspaceId, encounterId);
       if (!found.encounter) {
         return { ok: false, status: 409, denialReason: "encounter_unavailable" };
@@ -224,8 +239,10 @@ export function createMockConsultationFlowGateway(
         encounterId,
         queueEntryId: found.queueEntry.id,
         eventType: "did_call_requested",
-        displayText: "대기 환자를 진료실로 호출합니다.",
+        displayText: `${room.name}로 환자를 호출합니다.`,
         deliveryStatus: "queued",
+        roomId: room.id,
+        roomName: room.name,
         createdAt: timestamp,
         createdByUserId: actorUserId,
       };
@@ -277,6 +294,7 @@ export type SupabaseConsultationFlowRpcClient = {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_encounter_id: string;
+      p_room_id: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
@@ -293,11 +311,12 @@ export function createSupabaseConsultationFlowGateway(
   client: SupabaseConsultationFlowRpcClient,
 ): ConsultationFlowGateway {
   return {
-    async callConsultation({ actorUserId, encounterId, workspaceId }) {
+    async callConsultation({ actorUserId, encounterId, room, workspaceId }) {
       const { data, error } = await client.rpc("clair_call_consultation_queue", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
+        p_room_id: room.id,
       });
 
       return mapSupabaseMutationResult(data, error, "db_write_failed");
@@ -405,6 +424,7 @@ function mapSupabaseMutationResult(
 
 function mapConflictReason(message?: string) {
   if (message?.includes("queue_entry_unavailable")) return "queue_entry_unavailable";
+  if (message?.includes("room_unavailable")) return "room_unavailable";
   if (message?.includes("stale_status")) return "stale_status";
   if (message?.includes("encounter_unavailable")) return "encounter_unavailable";
   return null;
@@ -511,6 +531,8 @@ function mapCallEvent(value: unknown): ConsultationCallEvent | null {
   const eventType = getString(row.eventType) ?? getString(row.event_type);
   const displayText = getString(row.displayText) ?? getString(row.display_text);
   const deliveryStatus = getString(row.deliveryStatus) ?? getString(row.delivery_status);
+  const roomId = getString(row.roomId) ?? getString(row.room_id);
+  const roomName = getString(row.roomName) ?? getString(row.room_name);
   const createdAt = getString(row.createdAt) ?? getString(row.created_at);
   const createdByUserId = getString(row.createdByUserId) ?? getString(row.created_by_user_id);
 
@@ -522,6 +544,8 @@ function mapCallEvent(value: unknown): ConsultationCallEvent | null {
     eventType !== "did_call_requested" ||
     !displayText ||
     deliveryStatus !== "queued" ||
+    !roomId ||
+    !roomName ||
     !createdAt ||
     !createdByUserId
   ) {
@@ -536,6 +560,8 @@ function mapCallEvent(value: unknown): ConsultationCallEvent | null {
     eventType,
     displayText,
     deliveryStatus,
+    roomId,
+    roomName,
     createdAt,
     createdByUserId,
   };

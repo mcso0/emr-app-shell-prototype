@@ -8,6 +8,7 @@ import {
   createSupabaseChartOrderDraftGateway,
   saveChartOrderDraft,
 } from "../src/features/chart/server-order-draft-persistence-core";
+import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -65,6 +66,18 @@ const validOrderDraftInput = {
       quantity: 1,
     },
   ],
+};
+
+const waitingEncounter: Encounter = {
+  id: "encounter-order-draft-waiting-lock",
+  workspaceId,
+  patientId: "patient-order-draft-waiting-lock",
+  guardianId: "guardian-order-draft-waiting-lock",
+  encounterNo: "E-ORDER-DRAFT-LOCK",
+  status: "waiting",
+  checkedInAt: "2026-06-25T14:15:00+09:00",
+  createdAt: "2026-06-25T14:15:00+09:00",
+  updatedAt: "2026-06-25T14:15:00+09:00",
 };
 
 test("order draft route requires an actor, saves via mock fallback, and reads after save", async ({
@@ -248,6 +261,28 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
       }),
     ]),
   );
+});
+
+test("order draft core blocks chart mutation before consultation starts", async () => {
+  const blocked = await saveChartOrderDraft({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      ...validOrderDraftInput,
+      encounterId: waitingEncounter.id,
+    },
+    gateway: createMockChartOrderDraftGateway({
+      encounters: [{ ...waitingEncounter }],
+      invoiceLines: [],
+      orders: [],
+    }),
+  });
+
+  expect(blocked).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "stale_status",
+  });
 });
 
 test("order draft Supabase gateway keeps workspace, encounter, actor, and server amount fields in RPC calls", async () => {

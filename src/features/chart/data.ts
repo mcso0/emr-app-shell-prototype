@@ -43,6 +43,15 @@ export type ChartEncounterBundle = NonNullable<ReturnType<typeof getMockEncounte
   veterinarianName?: string;
 };
 
+export type ConsultationCallRoom = {
+  id: string;
+  name: string;
+  spaceType: "consultation_room";
+  status: "active";
+  isCallTarget: true;
+  sortOrder: number;
+};
+
 const chartQueueStatuses: OrderQueueStatusDefinition[] = [
   {
     id: "in_progress",
@@ -61,6 +70,41 @@ const chartQueueStatuses: OrderQueueStatusDefinition[] = [
     label: "호출 대기",
     colorToken: "--emr-status-neutral-text",
     sortOrder: 30,
+  },
+];
+
+const consultationCallRooms: ConsultationCallRoom[] = [
+  {
+    id: "room-consult-1",
+    name: "1진료실",
+    spaceType: "consultation_room",
+    status: "active",
+    isCallTarget: true,
+    sortOrder: 10,
+  },
+  {
+    id: "room-consult-2",
+    name: "2진료실",
+    spaceType: "consultation_room",
+    status: "active",
+    isCallTarget: true,
+    sortOrder: 20,
+  },
+  {
+    id: "room-cat",
+    name: "고양이 진료실",
+    spaceType: "consultation_room",
+    status: "active",
+    isCallTarget: true,
+    sortOrder: 30,
+  },
+  {
+    id: "room-director",
+    name: "원장 진료실",
+    spaceType: "consultation_room",
+    status: "active",
+    isCallTarget: true,
+    sortOrder: 40,
   },
 ];
 
@@ -155,6 +199,11 @@ export const createChartEncounterBundleFromLiveHandoff = ({
 });
 
 export const getChartQueueStatuses = () => chartQueueStatuses;
+
+export const getConsultationCallRooms = () => consultationCallRooms;
+
+export const getConsultationCallRoomById = (roomId?: string) =>
+  roomId ? consultationCallRooms.find((room) => room.id === roomId) : undefined;
 
 export const getChartQueueItems = (): OrderQueueItem[] =>
   getChartQueueRows().map(({ encounter, patient, primaryGuardian, queueEntry, veterinarianName }) => ({

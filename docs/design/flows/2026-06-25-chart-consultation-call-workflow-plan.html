@@ -594,9 +594,8 @@
             <h3>권장 문구</h3>
             <p><strong>제목:</strong> 초코/최도현을 호출하시겠습니까?</p>
             <p>
-              <strong>설명:</strong> 대기실 DID 모니터에 진료 호출 안내가
-              표시됩니다. 환자가 진료실에 들어오면 진료 시작을 눌러 차트를
-              작성하세요.
+              <strong>설명:</strong> 진료실을 선택한 뒤 환자를 호출해 주세요.
+              진료 시작 전에는 차트 입력과 오더 작업을 할 수 없습니다.
             </p>
             <p><strong>Primary:</strong> 호출하기</p>
             <p><strong>Secondary:</strong> 취소</p>
@@ -604,19 +603,18 @@
           <div class="card">
             <h3>모달에 보여줄 정보</h3>
             <ul class="checklist">
-              <li>환자 / 보호자: 초코 / 최도현</li>
-              <li>접수 시각: 26.06.25 14:15</li>
-              <li>담당 수의사: 청담 원장</li>
-              <li>DID 표시 preview: 초코 보호자 최도현님, 진료실로 들어와 주세요.</li>
-              <li>현재 상태: 호출 대기</li>
+              <li>2열 label/field form 구조를 사용한다.</li>
+              <li>환자 / 보호자: 초코 / 최도현, read-only field</li>
+              <li>접수 시각: 26.06.25 14:15, read-only field</li>
+              <li>담당 수의사: 청담 원장, read-only field</li>
+              <li>진료실: required dropdown field</li>
             </ul>
           </div>
         </div>
         <div class="warning">
-          <strong>범위 주의:</strong> 현재 구현 계획에서는 실제 DID 장비/외부
-          provider 호출을 완료로 주장하지 않는다. 내부 호출 이벤트와 outbox
-          상태를 만들고, 실제 display adapter는 별도 승인된 integration work에서
-          붙인다.
+          <strong>범위 주의:</strong> 호출 모달에서는 DID preview, 현재 상태,
+          local outbox, provider 등 구현 설명 문구를 노출하지 않는다. 푸터에는
+          취소와 호출하기 버튼만 둔다.
         </div>
       </section>
 
@@ -741,8 +739,8 @@
             <tr>
               <td><code>/api/workspaces/[workspaceId]/chart/consultation-flow</code></td>
               <td>PATCH</td>
-              <td><code>{ encounterId, action: "call" }</code></td>
-              <td>호출 확인 후 queue를 <code>called</code>로 전환하고 call event를 기록한다.</td>
+              <td><code>{ encounterId, action: "call", roomId }</code></td>
+              <td>진료실 선택 후 queue를 <code>called</code>로 전환하고 call event에 room snapshot을 기록한다.</td>
             </tr>
             <tr>
               <td><code>/api/workspaces/[workspaceId]/chart/consultation-flow</code></td>
@@ -762,10 +760,11 @@
         <h3>RPC / server core 제안</h3>
         <ul class="checklist">
           <li><code>src/features/chart/server-consultation-flow-core.ts</code> 신규 추가</li>
-          <li><code>public.clair_call_consultation_queue(p_workspace_id, p_actor_user_id, p_encounter_id)</code></li>
+          <li><code>public.clair_call_consultation_queue(p_workspace_id, p_actor_user_id, p_encounter_id, p_room_id)</code></li>
           <li><code>public.clair_start_consultation(p_workspace_id, p_actor_user_id, p_encounter_id)</code></li>
           <li>두 RPC 모두 workspace membership, encounter workspace scope, active queue row를 확인하고 row lock을 잡는다.</li>
           <li>상태 충돌은 <code>409 stale_status</code> 또는 <code>409 encounter_unavailable</code>로 반환한다.</li>
+          <li>단기 구현은 synthetic consultation rooms(<code>1진료실</code>, <code>2진료실</code>, <code>고양이 진료실</code>, <code>원장 진료실</code>)을 사용한다. 병원 공간 관리 CRUD와 <code>hospital_spaces</code> 테이블은 후속 PR로 분리한다.</li>
         </ul>
       </section>
 
@@ -875,8 +874,8 @@
             <h3>제품 결정 필요</h3>
             <ul class="checklist">
               <li>호출 후 환자가 들어오지 않을 때 <code>호출 취소</code> 또는 <code>재호출</code>을 이번 범위에 넣을지 결정해야 한다.</li>
-              <li>진료실/room 데이터가 아직 없으므로 DID 문구는 진료실명을 일반 문구로 처리한다.</li>
-              <li>SOAP 사전 작성 허용 여부를 결정해야 한다. 권장 기본값은 진료 시작 전 읽기 중심이다.</li>
+              <li>진료실/room 데이터는 단기 synthetic seed를 사용하며, 병원 관리의 공간/진료실 관리는 별도 PR에서 설계한다.</li>
+              <li>SOAP 사전 작성은 허용하지 않는다. 진료 시작 전에는 읽기 중심이며 SOAP, 진단명, 오더, 차트 완료 mutation을 차단한다.</li>
             </ul>
           </div>
           <div class="warning">

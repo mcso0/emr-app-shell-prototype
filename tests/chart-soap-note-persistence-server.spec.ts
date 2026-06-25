@@ -7,6 +7,7 @@ import {
   createSupabaseChartSoapNoteGateway,
   saveChartSoapNote,
 } from "../src/features/chart/server-soap-note-persistence-core";
+import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -20,6 +21,18 @@ const validSoapInput = {
   assessment: "업무 흐름 재현용 평가",
   plan: "업무 흐름 재현용 계획",
   mode: "autosave" as const,
+};
+
+const waitingEncounter: Encounter = {
+  id: "encounter-soap-waiting-lock",
+  workspaceId,
+  patientId: "patient-soap-waiting-lock",
+  guardianId: "guardian-soap-waiting-lock",
+  encounterNo: "E-SOAP-LOCK",
+  status: "waiting",
+  checkedInAt: "2026-06-25T14:15:00+09:00",
+  createdAt: "2026-06-25T14:15:00+09:00",
+  updatedAt: "2026-06-25T14:15:00+09:00",
 };
 
 test("SOAP note route requires an actor, saves via mock fallback, and reads after save", async ({
@@ -194,6 +207,27 @@ test("SOAP note core rejects stale expectedUpdatedAt when another tab saved firs
     ok: false,
     status: 409,
     denialReason: "soap_note_conflict",
+  });
+});
+
+test("SOAP note core blocks chart mutation before consultation starts", async () => {
+  const blocked = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      ...validSoapInput,
+      encounterId: waitingEncounter.id,
+    },
+    gateway: createMockChartSoapNoteGateway({
+      encounters: [{ ...waitingEncounter }],
+      soapNotes: [],
+    }),
+  });
+
+  expect(blocked).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "stale_status",
   });
 });
 
