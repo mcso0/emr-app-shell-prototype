@@ -55,6 +55,7 @@ type EmrDateNavigatorProps = {
   onPrevious?: () => void;
   previousLabel?: string;
   selectedDate?: string;
+  todayDate?: string;
   todayLabel?: ReactNode;
 };
 
@@ -121,6 +122,7 @@ function getIsoDateFromUtcDate(date: Date) {
 function getEmrMonthDatePickerCells(
   visibleMonthDate: string,
   selectedDate: string,
+  todayDate?: string,
 ) {
   const parts = parseIsoDateParts(visibleMonthDate);
   const monthStart = new Date(Date.UTC(parts.year, parts.month - 1, 1));
@@ -137,6 +139,7 @@ function getEmrMonthDatePickerCells(
       day: String(cellDate.getUTCDate()),
       inMonth: cellDate.getUTCMonth() === parts.month - 1,
       selected: key === selectedDate,
+      today: key === todayDate,
     };
   });
 }
@@ -201,6 +204,7 @@ export function EmrDateNavigator({
   onPrevious,
   previousLabel = "이전 날짜",
   selectedDate,
+  todayDate,
   todayLabel,
 }: EmrDateNavigatorProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -208,7 +212,11 @@ export function EmrDateNavigator({
   const datePickerEnabled = Boolean(selectedDate && onDateChange);
   const pickerMonthDateParts = parseIsoDateParts(pickerMonthDate || selectedDate || "");
   const datePickerCells = selectedDate
-    ? getEmrMonthDatePickerCells(pickerMonthDate || selectedDate, selectedDate)
+    ? getEmrMonthDatePickerCells(
+        pickerMonthDate || selectedDate,
+        selectedDate,
+        todayDate,
+      )
     : [];
   const renderedDateLabel = selectedDate
     ? formatCompactKoreanOperatingDateLabel(selectedDate)
@@ -317,23 +325,50 @@ export function EmrDateNavigator({
                   key={cell.key}
                   type="button"
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-md emr-text-metadata font-medium tabular-nums outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
+                    "relative flex size-7 items-center justify-center rounded-md emr-text-metadata font-medium tabular-nums outline-none transition-[scale,background-color,box-shadow] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
                     cell.inMonth ? "text-foreground" : "text-muted-foreground",
+                    cell.today &&
+                      !cell.selected &&
+                      "font-semibold text-primary ring-1 ring-primary/70 ring-offset-1 ring-offset-background hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
                     cell.selected &&
-                      "bg-primary text-primary-foreground hover:bg-primary/90",
+                      "bg-primary text-primary-foreground ring-0 ring-offset-0 hover:bg-primary/90",
                   )}
-                  aria-label={
-                    cell.selected
-                      ? `${formatKoreanOperatingDateLabel(cell.key)} 선택됨`
-                      : `${formatKoreanOperatingDateLabel(cell.key)} 선택`
-                  }
+                  aria-label={[
+                    cell.today ? "오늘" : undefined,
+                    formatKoreanOperatingDateLabel(cell.key),
+                    cell.selected ? "선택됨" : "선택",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   aria-pressed={cell.selected}
                   onClick={() => selectDate(cell.key)}
                 >
-                  {cell.day}
+                  <span>{cell.day}</span>
+                  {cell.today ? (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "absolute bottom-[var(--clair-spacing-2)] size-[var(--clair-spacing-4)] rounded-full",
+                        cell.selected ? "bg-primary-foreground" : "bg-primary",
+                      )}
+                    />
+                  ) : null}
                 </button>
               ))}
             </div>
+            {todayDate ? (
+              <div className="flex justify-end border-t border-[var(--emr-line-hairline)] pt-[var(--clair-spacing-8)]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  disabled={selectedDate === todayDate}
+                  onClick={() => selectDate(todayDate)}
+                >
+                  오늘로 이동
+                </Button>
+              </div>
+            ) : null}
           </PopoverContent>
         </Popover>
       ) : (

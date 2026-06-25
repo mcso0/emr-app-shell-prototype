@@ -1369,6 +1369,7 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
       <EmrDateNavigator
         dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
         selectedDate={selectedDate}
+        todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
         onDateChange={selectDate}
         onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}

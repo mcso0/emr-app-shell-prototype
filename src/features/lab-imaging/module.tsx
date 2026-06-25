@@ -1649,6 +1649,7 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
       <EmrDateNavigator
         dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
         selectedDate={selectedDate}
+        todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
         onDateChange={(date) => {
           selectDate(date);
@@ -1797,6 +1798,7 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
       <EmrDateNavigator
         dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
         selectedDate={selectedDate}
+        todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
         onDateChange={(date) => {
           selectDate(date);
