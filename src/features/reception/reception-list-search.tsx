@@ -80,7 +80,7 @@ export function ReceptionPanelStateMessage({
 export function ReceptionEmptyState({ children }: { children: React.ReactNode }) {
   return (
     <EmrQueueEmptyState
-      icon={<CdsFilesCalendarIcon aria-hidden="true" className="size-8" />}
+      icon={<CdsFilesCalendarIcon aria-hidden="true" className="size-9" />}
     >
       {children}
     </EmrQueueEmptyState>
