@@ -1661,7 +1661,7 @@ export function LabSidePanel({
   );
   const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
-    emptyObjectLabel: queueView === "order" ? "검사 대기 업무" : "차트별 검사 업무",
+    emptyObjectLabel: "임상병리 업무",
     filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
     selectedDate,
     todayDate,
@@ -1847,7 +1847,7 @@ export function ImagingSidePanel({
   );
   const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
-    emptyObjectLabel: queueView === "order" ? "영상 대기 업무" : "차트별 영상 업무",
+    emptyObjectLabel: "영상 업무",
     filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
     selectedDate,
     todayDate,
@@ -1967,7 +1967,10 @@ function getDatedQueueEmptyStateTitle({
 }) {
   if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다.`;
 
-  return `${selectedDate === todayDate ? "오늘" : "선택한 날짜의"} ${emptyObjectLabel}가 없습니다.`;
+  void selectedDate;
+  void todayDate;
+
+  return `요청된 ${emptyObjectLabel}가 없습니다.`;
 }
 
 function LabResultInputSection({

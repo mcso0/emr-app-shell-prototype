@@ -1403,30 +1403,12 @@ function getReceptionEmptyStateCopy({
   };
   todayDate: string;
 }) {
-  const isToday = operatingDate === todayDate;
-  const scopePrefix = isToday ? "오늘" : "선택한 날짜의";
+  void operatingDate;
+  void listMode;
+  void queueSummary;
+  void todayDate;
 
-  if (
-    queueSummary &&
-    queueSummary.date === operatingDate &&
-    listMode === "appointment" &&
-    queueSummary.appointmentCount === 0
-  ) {
-    return `${scopePrefix} 예약 업무가 없습니다.`;
-  }
-
-  if (
-    queueSummary &&
-    queueSummary.date === operatingDate &&
-    listMode === "reception" &&
-    queueSummary.receptionCount === 0
-  ) {
-    return `${scopePrefix} 외래 접수 업무가 없습니다.`;
-  }
-
-  if (listMode === "appointment") return `${scopePrefix} 예약 업무가 없습니다.`;
-  if (listMode === "reception") return `${scopePrefix} 외래 접수 업무가 없습니다.`;
-  return `${scopePrefix} 접수/예약 업무가 없습니다.`;
+  return "접수/예약 업무가 없습니다.";
 }
 
 const formatPatientWeightKgInput = (weightKg?: number) =>

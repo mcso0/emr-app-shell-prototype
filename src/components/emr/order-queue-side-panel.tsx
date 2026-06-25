@@ -384,12 +384,10 @@ function getOrderQueueEmptyStateTitle({
 }) {
   if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다.`;
 
-  const scopePrefix =
-    selectedDate && todayDate && selectedDate !== todayDate
-      ? "선택한 날짜의"
-      : "오늘";
+  void selectedDate;
+  void todayDate;
 
-  return `${scopePrefix} ${emptyObjectLabel}가 없습니다.`;
+  return `요청된 ${emptyObjectLabel}가 없습니다.`;
 }
 
 function OrderQueueSortMenu({

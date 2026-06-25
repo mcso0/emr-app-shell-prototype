@@ -7,7 +7,6 @@ import {
 } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsFilesCalendarIcon,
-  CdsFilesBoxIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
   CdsNavigationChevronLeftIcon,
@@ -33,6 +32,7 @@ import {
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
+import folderFileSearchMotionIcon from "../../../icons/motionIcon/folder-file-search.json";
 import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
 
 type EmrSubpanelProps = {
@@ -523,7 +523,13 @@ export function EmrQueueEmptyState({
           iconClassName,
         )}
       >
-        {icon ?? <CdsFilesBoxIcon aria-hidden="true" className="size-8" />}
+        {icon ?? (
+          <EmrMotionIcon
+            animationData={folderFileSearchMotionIcon}
+            className="size-8 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+            loop={false}
+          />
+        )}
       </div>
       <div className="emr-text-dense font-medium text-[var(--emr-text-placeholder)]">
         {title ?? children}

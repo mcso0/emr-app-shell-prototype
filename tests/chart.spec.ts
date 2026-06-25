@@ -309,7 +309,7 @@ test("Cheongdam chart side panel shows the centered empty queue state", async ({
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
   await expect(
-    sidePanel.getByText("오늘 진료 대기 업무가 없습니다."),
+    sidePanel.getByText("요청된 진료 업무가 없습니다."),
   ).toBeVisible();
 });
 
