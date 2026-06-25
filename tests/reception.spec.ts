@@ -694,6 +694,25 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     });
   await expect
     .poll(() =>
+      kongAppointment
+        .getByTestId("appointment-card-appointment-kong-260501-badge")
+        .evaluate((badge) => {
+          const style = getComputedStyle(badge);
+
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            color: style.color,
+          };
+        }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(190, 227, 248)",
+      borderColor: "rgb(99, 179, 237)",
+      color: "rgb(42, 67, 101)",
+    });
+  await expect
+    .poll(() =>
       nabiLaneAppointment.evaluate((card) => {
         const style = getComputedStyle(card);
 
@@ -711,6 +730,25 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     });
   await expect
     .poll(() =>
+      nabiLaneAppointment
+        .getByTestId("appointment-card-appointment-nabi-260501-badge")
+        .evaluate((badge) => {
+          const style = getComputedStyle(badge);
+
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            color: style.color,
+          };
+        }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(209, 245, 221)",
+      borderColor: "rgb(132, 223, 162)",
+      color: "rgb(40, 96, 58)",
+    });
+  await expect
+    .poll(() =>
       haruNoShowAppointment.evaluate((card) => {
         const style = getComputedStyle(card);
 
@@ -719,6 +757,23 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
           color: style.color,
         };
       }),
+    )
+    .toEqual({
+      borderColor: "rgb(252, 129, 129)",
+      color: "rgb(197, 48, 48)",
+    });
+  await expect
+    .poll(() =>
+      haruNoShowAppointment
+        .getByTestId("appointment-card-appointment-haru-260501-badge")
+        .evaluate((badge) => {
+          const style = getComputedStyle(badge);
+
+          return {
+            borderColor: style.borderColor,
+            color: style.color,
+          };
+        }),
     )
     .toEqual({
       borderColor: "rgb(252, 129, 129)",
