@@ -58,6 +58,8 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toContainText("코코");
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toContainText("예약");
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toContainText("CBC 검사");
+  await sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc").click();
+  await expect(page).toHaveURL(/labResultId=lab-result-coco-cbc/);
   await expect(sidePanel.getByText("검사 · CBC 검사")).toHaveCount(0);
   await sidePanel.getByRole("button", { name: "결과입력 접기" }).click();
   await expect(sidePanel.getByRole("button", { name: "결과입력 펼치기" })).toHaveAttribute("aria-expanded", "false");
@@ -232,6 +234,8 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
+  await sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax").click();
+  await expect(page).toHaveURL(/imagingStudyId=imaging-coco-thorax/);
   const cocoQueueGroupTestId = await sidePanel
     .getByTestId("imaging-queue-item-imaging-coco-thorax")
     .evaluate((element) => element.closest("[data-testid^='imaging-queue-status-']")?.getAttribute("data-testid"));

@@ -81,6 +81,7 @@ import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import { useLayoutStore } from "@/stores/layout-store";
+import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   InvoiceLine,
@@ -1296,7 +1297,13 @@ function QueueItem({
   );
 }
 
-export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentProps) {
+export function BillingSidePanel({
+  moduleLabel,
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: ShellComponentProps) {
+  const searchParams = useSearchParams();
+  const queryInvoiceId = searchParams.get("invoiceId");
   const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const invoices = useBillingStore((state) => state.invoices);
   const invoiceLines = useBillingStore((state) => state.invoiceLines);
@@ -1345,6 +1352,28 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
     setSearchQuery("");
     setSearchActive(false);
   }, []);
+  useEffect(() => {
+    if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
+    if (!invoices.some((invoice) => invoice.id === queryInvoiceId)) return;
+
+    selectInvoice(queryInvoiceId);
+  }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId]);
+  function handleSelectInvoice(invoiceId: string) {
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({
+          moduleId: "billing",
+          params: { invoiceId },
+          search: searchParams,
+          workspaceId,
+        }),
+        "billing",
+      );
+      return;
+    }
+
+    selectInvoice(invoiceId);
+  }
   const toggleGroup = (groupId: BillingFilter) => {
     setCollapsedGroupIds((current) => {
       const next = new Set(current);
@@ -1428,7 +1457,7 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
             label={group.label}
             rows={group.rows}
             selectedInvoiceId={selectedInvoiceId}
-            onSelectInvoice={selectInvoice}
+            onSelectInvoice={handleSelectInvoice}
             onToggle={() => toggleGroup(group.value)}
           />
         ))}

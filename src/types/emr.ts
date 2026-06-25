@@ -13,6 +13,7 @@ export type ShellComponentProps = {
   moduleLabel: string;
   hasContentAside?: boolean;
   hasRightPanel?: boolean;
+  onNavigateWorkspaceSurface?: (href: string, moduleId: string) => void;
 };
 
 export type PanelState = "open" | "closed";

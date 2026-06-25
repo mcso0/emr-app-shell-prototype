@@ -5,11 +5,15 @@ const fullDemoQuery =
   "scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&labResultId=lab-result-kong-cbc&imagingStudyId=imaging-kong-abdomen&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed";
 
 async function expectUrlSearchParams(page: Page, expected: Record<string, string>) {
-  const url = new URL(page.url());
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
 
-  for (const [key, value] of Object.entries(expected)) {
-    expect(url.searchParams.get(key)).toBe(value);
-  }
+      return Object.fromEntries(
+        Object.keys(expected).map((key) => [key, url.searchParams.get(key)]),
+      );
+    })
+    .toEqual(expected);
 }
 
 async function resolveCssColor(page: Page, value: string) {
@@ -80,6 +84,7 @@ async function clearWorkspaceTabs(page: Page) {
   expect(resetStatus).toBe(200);
   await page.evaluate(() => {
     window.sessionStorage.removeItem("clair-workspace-tabs:v1:clair-demo");
+    window.localStorage.removeItem("clair-workspace-tabs-duplicate-warning-hidden:v1:clair-demo");
   });
 }
 
@@ -1104,13 +1109,15 @@ test("workspace tabs create an initial tab and keep the final tab open", async (
   await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
 
   await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
-  await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home\?modulePanel=open/);
   await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
-  await expect(workspaceTabs.getByRole("tab", { name: /조제\/처치/ })).toHaveCount(2);
-  await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(2);
+  await expectActiveWorkspaceTab(page, "원내 현황");
+  await expect(workspaceTabs.getByRole("tab", { name: /조제\/처치/ })).toHaveCount(1);
+  await expect(workspaceTabs.getByRole("tab", { name: /원내 현황/ })).toHaveCount(1);
+  await expect(workspaceTabs.getByRole("button", { name: "원내 현황 탭 닫기" })).toHaveCount(1);
 
-  await workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" }).last().click();
+  await workspaceTabs.getByRole("button", { name: "원내 현황 탭 닫기" }).click();
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(1);
   await expectActiveWorkspaceTab(page, "조제/처치");
   await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
@@ -1133,14 +1140,10 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeEnabled();
 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
-  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home\?modulePanel=open/);
   await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
-  await getNavRail(page).getByRole("link", { name: "원내 현황" }).click();
-  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
   await expectActiveWorkspaceTab(page, "원내 현황");
-  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "탭 앞으로가기" })).toBeDisabled();
 
   await getNavRail(page).getByRole("link", { name: "수납" }).click();
@@ -1184,20 +1187,38 @@ test("workspace tabs restore open tabs after reload", async ({ page }) => {
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
 });
 
-test("workspace tabs warn before opening the same work surface in another tab", async ({ page }) => {
+test("workspace tabs warn only before opening the same concrete work surface in another tab", async ({ page }) => {
   await clearWorkspaceTabs(page);
   await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
+  await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
-  await getNavRail(page).getByRole("link", { name: "원내 현황" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
 
   await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
-  await expect(page.getByRole("dialog", { name: "이미 다른 워크스페이스 탭에서 보고 있는 화면입니다." })).toBeVisible();
-
-  await page.getByRole("button", { name: "기존 탭으로 이동" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
-  await expectActiveWorkspaceTab(page, "진료/차트");
+  await expect(page.getByRole("dialog", { name: "이미 다른 워크스페이스 탭에서 같은 업무를 보고 있습니다." })).toHaveCount(0);
+
+  await page.getByTestId("order-queue-item-encounter-coco-260501").click();
+  await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("코코 · 보호자 이지은")).toBeVisible();
+
+  const chartTabs = getWorkspaceTablist(page).getByRole("tab", { name: /진료\/차트/ });
+
+  await expect(chartTabs).toHaveCount(2);
+  await chartTabs.nth(0).click();
+  await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
+  await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이 · 보호자 김하늘")).toBeVisible();
+  await chartTabs.nth(1).click();
+  await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
+
+  await chartTabs.nth(0).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
+  await page.getByTestId("order-queue-item-encounter-kong-260501").click();
+  await expect(page.getByRole("dialog", { name: "이미 다른 워크스페이스 탭에서 같은 업무를 보고 있습니다." })).toBeVisible();
+  await page.getByRole("button", { name: "기존 탭으로 이동" }).click();
+  await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
 });
 
 test("workspace tabs are hidden on mobile viewports", async ({ page }) => {

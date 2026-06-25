@@ -160,6 +160,8 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
   await expect(cocoQueueItem).toContainText("코코");
   await expect(cocoQueueItem).toContainText("이지은");
   await expect(cocoQueueItem).toContainText("오더 5건 · 121,500원");
+  await cocoQueueItem.click();
+  await expect(page).toHaveURL(/invoiceId=invoice-coco-260501/);
   await expect(cocoQueueItem).toHaveClass(/group\/emr-side-panel-card/);
   await expect(cocoQueueItem).toHaveAttribute("data-selected", "true");
   const cocoQueueAction = cocoQueueItem.getByRole("button", {
