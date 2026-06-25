@@ -16,6 +16,7 @@ import {
 import { ChevronDownIcon } from "@/components/icons";
 import { CollapseGnbIcon } from "@/components/gnb-icons";
 import { EmrIconButton } from "@/components/emr/icon-button";
+import { EmrMotionIcon } from "@/components/emr/motion-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ import {
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
+import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
 
 type EmrSubpanelProps = {
   children: ReactNode;
@@ -490,14 +492,18 @@ export function EmrListSearchEmptyState(props: {
   onClear: () => void;
   query: string;
 }) {
+  const motionIcon = props.motionIcon ?? (
+    <EmrMotionIcon
+      animationData={searchNotFoundMotionIcon}
+      className="size-14"
+      loop={false}
+    />
+  );
+
   return (
     <EmrQueueEmptyState
-      icon={
-        props.motionIcon ?? (
-          <CdsActionsSearchIcon aria-hidden="true" className="size-8" />
-        )
-      }
-      iconClassName={props.motionIcon ? "mb-3 size-16" : undefined}
+      icon={motionIcon}
+      iconClassName="mb-3 size-16"
       title="검색 결과가 없습니다."
       data-testid="emr-list-search-empty-state"
     />
