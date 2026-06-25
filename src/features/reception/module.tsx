@@ -2157,7 +2157,7 @@ function CalendarTaskCard({
       aria-label={ariaLabel}
       aria-pressed={selected}
       className={cn(
-        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color,transform] active:scale-[0.96]",
+        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
         fillHeight ? "h-full w-full flex-none" : "flex-1",
         compact ? "flex-row items-center gap-[8px]" : "flex-col gap-[6px]",
         !fillHeight && compact && "h-[36px]",
