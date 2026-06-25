@@ -1605,7 +1605,7 @@ test("patient guardian registration links an existing guardian to a new patient"
   await expect(page.getByText("환자 등록이 완료되었습니다.")).toBeVisible();
 });
 
-test("reception dialogs align 40px inputs and select triggers", async ({
+test("registration remains 40px while reception drawer controls align 36px", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
@@ -1635,12 +1635,14 @@ test("reception dialogs align 40px inputs and select triggers", async ({
   await page.goto("/w/clair-demo/reception");
   await openWalkInReceptionForm(page);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
-  await expect(
-    walkInForm.getByRole("heading", { name: "진료 접수" }),
-  ).toBeVisible();
+  await expect(walkInForm).toBeVisible();
 
   const walkInControlHeights = await Promise.all(
     [
+      walkInForm.getByLabel("환자 검색"),
+      walkInForm.getByLabel("체중"),
+      walkInForm.getByRole("combobox", { name: "진료과" }),
+      walkInForm.getByRole("combobox", { name: "담당의" }),
       walkInForm.getByLabel("접수일"),
       walkInForm.getByLabel("진료시간"),
       walkInForm.getByRole("combobox", { name: "예상시간" }),
@@ -1650,10 +1652,41 @@ test("reception dialogs align 40px inputs and select triggers", async ({
       ),
     ),
   );
-  for (const height of walkInControlHeights) {
-    expect(height).toBeGreaterThanOrEqual(38);
-    expect(height).toBeLessThanOrEqual(40);
-  }
+  expect(walkInControlHeights).toEqual([36, 36, 36, 36, 36, 36, 36]);
+  await expect(walkInForm.getByLabel("방문 목적")).not.toHaveCSS(
+    "height",
+    "36px",
+  );
+  await expect(walkInForm.getByLabel("접수 메모")).not.toHaveCSS(
+    "height",
+    "36px",
+  );
+
+  await page.goto("/w/clair-demo/reception");
+  await page.getByTestId("schedule-check-in-button").click();
+  await page.getByRole("menuitem", { name: "예약하기" }).click();
+  const reservationDrawer = page.getByTestId("reservation-create-drawer");
+  await expect(reservationDrawer).toBeVisible();
+
+  const reservationControlHeights = await Promise.all(
+    [
+      reservationDrawer.getByLabel("환자 검색"),
+      reservationDrawer.getByLabel("체중"),
+      reservationDrawer.getByLabel("예약일"),
+      reservationDrawer.getByRole("combobox", { name: "담당의" }),
+      reservationDrawer.getByRole("combobox", { name: "예약시간" }),
+      reservationDrawer.getByRole("combobox", { name: "예상시간" }),
+    ].map((control) =>
+      control.evaluate((element) =>
+        Math.round(element.getBoundingClientRect().height),
+      ),
+    ),
+  );
+  expect(reservationControlHeights).toEqual([36, 36, 36, 36, 36, 36]);
+  await expect(reservationDrawer.getByLabel("예약 메모")).not.toHaveCSS(
+    "height",
+    "36px",
+  );
 });
 
 test("walk-in reception drawer removes helper chrome and keeps focused placeholders", async ({
@@ -2687,15 +2720,15 @@ test("reception creates a reservation through the unified check-in menu", async 
   await page.getByRole("button", { name: /선택됨/ }).click();
   await expect(drawer.getByLabel("체중")).toBeDisabled();
 
-  await drawer.getByLabel("환자 검색").click();
+  await drawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
-  await expect(drawer.getByLabel("환자 검색")).toContainText("나비");
-  await expect(drawer.getByLabel("환자 검색")).not.toContainText("patient-nabi");
+  await expect(drawer.getByLabel("환자 검색")).toHaveValue(/나비/);
+  await expect(drawer.getByLabel("환자 검색")).not.toHaveValue(/patient-nabi/);
   await expect(drawer.getByLabel("체중")).toHaveValue("4.80");
   await drawer.getByRole("button", { name: "환자 선택 초기화" }).click();
-  await expect(drawer.getByLabel("환자 검색")).toContainText("환자 선택");
+  await expect(drawer.getByLabel("환자 검색")).toHaveValue("");
   await expect(drawer.getByLabel("체중")).toBeDisabled();
-  await drawer.getByLabel("환자 검색").click();
+  await drawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await drawer.getByLabel("체중").fill("4.95");
 
@@ -4249,20 +4282,18 @@ test("reservation create drawer uses DB-backed patient lookup states", async ({
   const reservationDrawer = page.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
 
-  await reservationDrawer.getByLabel("환자 검색").click();
-  await page.getByLabel("예약 환자 검색어").fill("초코");
+  await reservationDrawer.getByLabel("환자 검색").fill("초코");
   await expect(
     page.getByRole("option", { name: /초코.*최도현/ }),
   ).toBeVisible();
   await expect.poll(() => lookupQueries.includes("초코")).toBe(true);
   await page.getByRole("option", { name: /초코.*최도현/ }).click();
-  await expect(reservationDrawer.getByLabel("환자 검색")).toContainText("초코");
+  await expect(reservationDrawer.getByLabel("환자 검색")).toHaveValue(/초코/);
 
-  await reservationDrawer.getByLabel("환자 검색").click();
-  await page.getByLabel("예약 환자 검색어").fill("없는");
+  await reservationDrawer.getByLabel("환자 검색").fill("없는");
   await expect(page.getByText("검색 결과가 없습니다.")).toBeVisible();
 
-  await page.getByLabel("예약 환자 검색어").fill("오류");
+  await reservationDrawer.getByLabel("환자 검색").fill("오류");
   await expect(
     page.getByText("환자 검색을 불러오지 못했습니다."),
   ).toBeVisible();
@@ -4403,8 +4434,7 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   await expect(reservationDrawer.getByLabel("담당의")).toContainText(
     "수의사 미지정",
   );
-  await reservationDrawer.getByLabel("환자 검색").click();
-  await page.getByLabel("예약 환자 검색어").fill("초코");
+  await reservationDrawer.getByLabel("환자 검색").fill("초코");
   await page.getByRole("option", { name: /초코.*최도현/ }).click();
   await reservationDrawer.getByLabel("예약 메모").fill("mock 담당의 회귀");
   await reservationDrawer.getByRole("button", { name: "생성" }).click();
@@ -5488,16 +5518,14 @@ test("reception creates a future dragged calendar range as a reservation", async
   const expectedDurationMinutes = Number(durationText.match(/\d+/)?.[0]);
   expect(expectedDurationMinutes).toBeGreaterThan(30);
   await expect(reservationDrawer.getByLabel("담당의")).toContainText("이수지");
-  await expect(reservationDrawer.getByLabel("환자 검색")).toContainText(
-    "환자 선택",
-  );
+  await expect(reservationDrawer.getByLabel("환자 검색")).toHaveValue("");
   await expect(
     reservationDrawer.getByRole("button", { name: "생성" }),
   ).toBeDisabled();
 
   await reservationDrawer.getByLabel("환자 검색").waitFor({ state: "visible" });
   await page.waitForTimeout(300);
-  await reservationDrawer.getByLabel("환자 검색").click();
+  await reservationDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await reservationDrawer.getByLabel("체중").fill("4.95");
   await reservationDrawer.getByLabel("예약 메모").fill("미래 드래그 예약 생성");
