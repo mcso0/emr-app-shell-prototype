@@ -26,7 +26,7 @@ export type ChartCompletionSnapshot = {
 
 export type ChartCompletionGatewayResult =
   | { ok: true; completion: ChartCompletionSnapshot }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartCompletionGateway = {
@@ -55,7 +55,7 @@ export type ChartCompletionReadResult =
       fieldErrors: Partial<Record<"encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type ChartCompletionSaveResult =
@@ -72,7 +72,7 @@ export type ChartCompletionSaveResult =
       fieldErrors: Partial<Record<keyof ChartCompletionInput, string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockChartCompletionStore = new Map<string, ChartCompletionSnapshot>();
@@ -231,6 +231,9 @@ export function createMockChartCompletionGateway(
     async completeChart({ actorUserId, encounterId, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!isChartCompletionAllowed(encounter.status)) {
+        return { ok: false, status: 409, denialReason: "stale_status" };
+      }
 
       const stored = getStoredOrSeedCompletion({ encounter, workspaceId });
       const timestamp = now();
@@ -289,6 +292,9 @@ export function createSupabaseChartCompletionGateway(
       });
 
       if (error) {
+        if (error.message?.includes("stale_status")) {
+          return { ok: false, status: 409, denialReason: "stale_status" };
+        }
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
@@ -377,6 +383,10 @@ function findEncounter(encounters: Encounter[], workspaceId: string, encounterId
       encounter.workspaceId === workspaceId &&
       encounter.status !== "cancelled"
   );
+}
+
+function isChartCompletionAllowed(status: EncounterStatus) {
+  return status === "in_consultation" || status === "ordered" || status === "ready_for_billing" || status === "completed";
 }
 
 function getStoredOrSeedCompletion({

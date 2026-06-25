@@ -52,6 +52,7 @@ type WorkspaceTabsStore = {
 const STORAGE_PREFIX = "clair-workspace-tabs:v1";
 const SERVER_SAVE_DEBOUNCE_MS = 500;
 let serverSaveTimer: number | null = null;
+let tabsMutationVersion = 0;
 
 function getStorageKey(workspaceId: string) {
   return `${STORAGE_PREFIX}:${workspaceId}`;
@@ -86,14 +87,24 @@ export function getWorkspaceTabIdentityFromRoute(workspaceId: string, route: str
   const encounterId = getOptionalSearchParam(searchParams, "encounterId");
   const patientId = getOptionalSearchParam(searchParams, "patientId");
   const queueItemId = getOptionalSearchParam(searchParams, "queueItemId");
-  const surface =
-    labResultId ? { surfaceType: "labResult" as const, surfaceId: labResultId } :
-    imagingStudyId ? { surfaceType: "imagingStudy" as const, surfaceId: imagingStudyId } :
-    invoiceId ? { surfaceType: "invoice" as const, surfaceId: invoiceId } :
-    queueItemId ? { surfaceType: "queueItem" as const, surfaceId: queueItemId } :
-    encounterId ? { surfaceType: "encounter" as const, surfaceId: encounterId } :
-    patientId ? { surfaceType: "patient" as const, surfaceId: patientId } :
-    { surfaceType: "module" as const, surfaceId: moduleId };
+  let surface: { surfaceType: WorkspaceTabSurfaceType; surfaceId: string } = {
+    surfaceType: "module",
+    surfaceId: moduleId,
+  };
+
+  if ((moduleId === "treatment" || moduleId === "dispensing") && encounterId) {
+    surface = { surfaceType: "encounter", surfaceId: encounterId };
+  } else if (moduleId === "lab" && labResultId) {
+    surface = { surfaceType: "labResult", surfaceId: labResultId };
+  } else if (moduleId === "imaging" && imagingStudyId) {
+    surface = { surfaceType: "imagingStudy", surfaceId: imagingStudyId };
+  } else if (moduleId === "billing" && invoiceId) {
+    surface = { surfaceType: "invoice", surfaceId: invoiceId };
+  } else if (moduleId === "reception" && queueItemId) {
+    surface = { surfaceType: "queueItem", surfaceId: queueItemId };
+  } else if (moduleId === "customer" && patientId) {
+    surface = { surfaceType: "patient", surfaceId: patientId };
+  }
 
   return {
     ...surface,
@@ -154,6 +165,7 @@ function normalizeTabs(tabs: WorkspaceTab[]) {
 function persist(workspaceId: string | null, tabs: WorkspaceTab[], activeTabId: string | null) {
   if (!workspaceId || !activeTabId || typeof window === "undefined") return;
 
+  tabsMutationVersion += 1;
   const payload: PersistedWorkspaceTabs = { workspaceId, tabs, activeTabId };
   try {
     window.sessionStorage.setItem(getStorageKey(workspaceId), JSON.stringify(payload));
@@ -307,8 +319,9 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
       persist(workspaceId, [tab], tab.id);
     }
 
+    const restoreVersion = tabsMutationVersion;
     const serverPersisted = await readServerTabs(workspaceId);
-    if (!serverPersisted || get().workspaceId !== workspaceId) return;
+    if (!serverPersisted || get().workspaceId !== workspaceId || tabsMutationVersion !== restoreVersion) return;
 
     set({
       workspaceId,
@@ -333,12 +346,11 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
 
         return {
           ...tab,
+          ...metadata,
           title: metadata.title,
           moduleId: metadata.moduleId,
           history: nextHistory,
           historyIndex: nextHistory.length - 1,
-          patientId: metadata.patientId,
-          encounterId: metadata.encounterId,
         };
       })
     );
@@ -403,11 +415,8 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     set((state) =>
       updateActiveTab(state, (tab) => ({
         ...tab,
+        ...metadata,
         historyIndex: nextIndex,
-        title: metadata.title,
-        moduleId: metadata.moduleId,
-        patientId: metadata.patientId,
-        encounterId: metadata.encounterId,
       }))
     );
 
@@ -427,11 +436,8 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     set((state) =>
       updateActiveTab(state, (tab) => ({
         ...tab,
+        ...metadata,
         historyIndex: nextIndex,
-        title: metadata.title,
-        moduleId: metadata.moduleId,
-        patientId: metadata.patientId,
-        encounterId: metadata.encounterId,
       }))
     );
 

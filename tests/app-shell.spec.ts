@@ -47,6 +47,37 @@ async function waitForTestIdWidth(page: Page, testId: string, expectedWidth: num
 
 async function clearWorkspaceTabs(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
+  const resetStatus = await page.evaluate(async () => {
+    const route = "/w/clair-demo/home?modulePanel=open";
+    const response = await fetch("/api/workspaces/clair-demo/app-shell/workspace-tabs", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "x-clair-demo-session-user-id": "playwright-default-session",
+      },
+      body: JSON.stringify({
+        activeTabId: "tab-app-shell-reset",
+        tabs: [
+          {
+            id: "tab-app-shell-reset",
+            title: "원내 현황",
+            closable: false,
+            history: [route],
+            historyIndex: 0,
+            moduleId: "home",
+            surfaceType: "module",
+            surfaceId: "home",
+            dedupeKey: "clair-demo:module:home",
+            lastRoute: route,
+            updatedAt: "2026-06-25T09:00:00.000Z",
+          },
+        ],
+      }),
+    });
+
+    return response.status;
+  });
+  expect(resetStatus).toBe(200);
   await page.evaluate(() => {
     window.sessionStorage.removeItem("clair-workspace-tabs:v1:clair-demo");
   });
@@ -1221,10 +1252,10 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   const searchButton = getNavRail(page).getByRole("button", { name: "전역 통합 검색 열기" });
   const searchIcon = searchButton.locator("svg");
   const customerCenterButton = getNavRail(page).getByRole("button", { name: "고객센터" });
-  await expect(navRail).toHaveCSS("width", "56px");
+  await expect(navRail).toHaveCSS("width", "48px");
   await expect(navRail).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-navrail-bg)"));
   await expect(navRail).toHaveCSS("border-radius", "12px");
-  await expect(navRail).toHaveCSS("padding-left", "12px");
+  await expect(navRail).toHaveCSS("padding-left", "8px");
   await expect(searchButton).toHaveCSS("width", "32px");
   await expect(searchButton).toHaveCSS("height", "32px");
   await expect(searchButton).toHaveCSS("color", await resolveCssColor(page, "var(--emr-navrail-icon)"));
@@ -1274,7 +1305,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       }),
     )
     .toEqual({
-      contentGap: "12px",
+      contentGap: "8px",
       contentWidth: 32,
       divider: {
         wrapperHeight: 1,
@@ -1282,7 +1313,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
         lineWidth: 24,
         padding: "0px 6px",
       },
-      gaps: [12],
+      gaps: [8],
     });
   const newTabButton = page.getByRole("button", { name: "새 업무 탭" });
   await newTabButton.hover();
@@ -1364,7 +1395,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       historyGap: "4px",
       historyRightDelta: 0,
       leadingShift: 0,
-      navigationWidth: 362,
+      navigationWidth: 354,
       tablistLeftDelta: 0,
       topbarGap: 10,
       state: "open",

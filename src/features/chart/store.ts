@@ -15,6 +15,7 @@ type ChartStore = {
     records?: ChartLiveQueueRecord[];
     status: ChartStore["liveQueueStatus"];
   }) => void;
+  updateLiveQueueRecord: (record: ChartLiveQueueRecord) => void;
 };
 
 export const useChartStore = create<ChartStore>()((set) => ({
@@ -28,5 +29,11 @@ export const useChartStore = create<ChartStore>()((set) => ({
       liveQueueError: error,
       liveQueueRecords: records ?? current.liveQueueRecords,
       liveQueueStatus: status,
+    })),
+  updateLiveQueueRecord: (record) =>
+    set((current) => ({
+      liveQueueRecords: current.liveQueueRecords.map((item) =>
+        item.encounter.id === record.encounter.id ? record : item,
+      ),
     })),
 }));
