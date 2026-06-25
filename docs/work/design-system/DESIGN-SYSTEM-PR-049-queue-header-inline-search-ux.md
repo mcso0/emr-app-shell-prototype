@@ -72,3 +72,5 @@ Implement inline search mode for side-panel queue headers so queue search icons 
 ## Handoff Notes
 
 Ready for Linear Human Review.
+
+2026-06-25 correction from browser review: treatment/chart queue header controls should match the lab queue compact pattern with three icon-only controls: sort, filter, and search. The previous visible sort value label (`요청순`) and display-density control (`M`/`S`) are no longer the accepted treatment/chart header presentation.

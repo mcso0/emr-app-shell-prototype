@@ -35,7 +35,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import {
   addDaysToIsoDate,
   formatKoreanOperatingDateLabel,
@@ -51,7 +50,6 @@ type OrderQueueFilterItem = {
 };
 
 type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
-type OrderQueueDensity = "medium" | "compact";
 type OrderQueueSortKey = "request" | "assignee" | "wait";
 type OrderQueueActionContext = "chart" | "order";
 
@@ -85,11 +83,6 @@ const orderQueueSortLabels: Record<OrderQueueSortKey, string> = {
   assignee: "담당자순",
   request: "요청순",
   wait: "대기 긴 순",
-};
-
-const orderQueueDensityLabels: Record<OrderQueueDensity, string> = {
-  compact: "S",
-  medium: "M",
 };
 
 const fallbackStatusColorToken = "--emr-status-neutral-text";
@@ -208,7 +201,6 @@ export function EmrOrderQueueSidePanel({
   todayLabel = "오늘",
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
-  const [density, setDensity] = useState<OrderQueueDensity>("medium");
   const [detailFilter, setDetailFilter] = useState<OrderQueueDetailFilter>("all");
   const [filter, setFilter] = useState<string>("all");
   const [searchActive, setSearchActive] = useState(false);
@@ -318,10 +310,6 @@ export function EmrOrderQueueSidePanel({
               statuses={resolvedStatuses}
               onFilterChange={setDetailFilter}
             />
-            <OrderQueueDensityMenu
-              density={density}
-              onDensityChange={setDensity}
-            />
             <EmrListHeaderIconButton
               ariaLabel="대기열 검색 열기"
               data-testid="order-queue-search-control"
@@ -372,17 +360,13 @@ function OrderQueueSortMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            variant="ghost"
-            size="xs"
-            aria-label="대기열 정렬"
-            className="h-6 gap-1 rounded-[var(--clair-radius-sm)] px-1.5 text-[var(--emr-text-tertiary)] hover:!bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)]"
+          <EmrListHeaderIconButton
+            ariaLabel="대기열 정렬"
             data-sort-key={sortKey}
             data-testid="order-queue-sort-control"
           >
             <CdsUtilitiesSortIcon aria-hidden="true" className="size-4" />
-            <span>{orderQueueSortLabels[sortKey]}</span>
-          </Button>
+          </EmrListHeaderIconButton>
         }
       />
       <DropdownMenuContent align="end" className="w-36">
@@ -393,43 +377,6 @@ function OrderQueueSortMenu({
               {orderQueueSortLabels[key]}
             </DropdownMenuRadioItem>
           ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function OrderQueueDensityMenu({
-  density,
-  onDensityChange,
-}: {
-  density: OrderQueueDensity;
-  onDensityChange: (value: OrderQueueDensity) => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="xs"
-            aria-label="대기열 표시 옵션"
-            className="h-6 min-w-6 rounded-[var(--clair-radius-sm)] px-1.5 text-[var(--emr-text-tertiary)] hover:!bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-primary)]"
-            data-density={density}
-            data-testid="order-queue-density-control"
-          >
-            {orderQueueDensityLabels[density]}
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="end" className="w-36">
-        <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">표시 옵션</div>
-        <DropdownMenuRadioGroup
-          value={density}
-          onValueChange={(value) => onDensityChange(value as OrderQueueDensity)}
-        >
-          <DropdownMenuRadioItem value="medium">기본 밀도</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="compact">촘촘한 밀도</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
