@@ -105,9 +105,14 @@ test("reception renders the first-path workspace instead of the placeholder", as
     page.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
   ).toBeVisible();
   const dateControl = page.getByTestId("reception-date-control");
+  const selectedDateButton = dateControl.getByRole("button", {
+    name: "26.05.01 (금) 날짜 선택",
+  });
   const calendarViewTabs = page.getByRole("group", {
     name: "접수 캘린더 보기",
   });
+  await expect(selectedDateButton).toHaveCSS("font-size", "16px");
+  await expect(selectedDateButton).toHaveCSS("font-weight", "500");
   await expect
     .poll(() =>
       dateControl
@@ -125,9 +130,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
-  await dateControl
-    .getByRole("button", { name: "26.05.01 (금) 날짜 선택" })
-    .click();
+  await selectedDateButton.click();
   await expect(page.getByText("2026년 5월")).toBeVisible();
   await page.keyboard.press("Escape");
   await calendarViewTabs.getByRole("button", { name: "주" }).click();

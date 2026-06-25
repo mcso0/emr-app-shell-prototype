@@ -3770,7 +3770,7 @@ function ReceptionScheduleDateControl({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-10 justify-start px-3 text-[24px] font-bold leading-8 text-[var(--emr-text-primary)] tabular-nums [letter-spacing:0]"
+              className="h-10 justify-start px-3 !text-[16px] !font-medium leading-6 text-[var(--emr-text-primary)] tabular-nums [letter-spacing:0]"
               aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
             />
           }
