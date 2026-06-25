@@ -2489,7 +2489,8 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
   const visibleReceipts = linkedReceipts;
   const hasEnteredRows = Boolean(detail?.result.rows.some((row) => row.value));
   const latestReceiptDate = visibleReceipts[0]?.receivedAt ?? detail?.result.receivedAt;
-  const dateLabel = latestReceiptDate ? `${latestReceiptDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
+  const receiptOperatingDate = latestReceiptDate?.slice(0, 10);
+  const dateLabel = receiptOperatingDate ? formatKoreanOperatingDateLabel(receiptOperatingDate) : "-";
   const defaultExpandedReceiptId = visibleReceipts[0]?.id;
 
   return (
@@ -2518,6 +2519,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
       <EmrDateNavigator
         className="px-3"
         dateLabel={dateLabel}
+        selectedDate={receiptOperatingDate}
         todayLabel="오늘"
       />
       <EmrListHeader
