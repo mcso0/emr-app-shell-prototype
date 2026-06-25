@@ -144,6 +144,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     activeDrawer,
     contentAsideOpen,
     enterModule,
+    moduleRefreshActions,
     modulePanelOpen,
     notificationNavigationDirty,
     rightPanelOpen,
@@ -152,6 +153,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     setModulePanelOpen,
     setRightPanelOpen,
   } = useLayoutStore();
+  const moduleRefreshAction = moduleRefreshActions[moduleDefinition.id];
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
@@ -456,8 +458,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             activeTabId={activeTabId}
             canGoBack={Boolean(activeTab && activeTab.historyIndex > 0)}
             canGoForward={Boolean(activeTab && activeTab.historyIndex < activeTab.history.length - 1)}
+            isRefreshing={moduleRefreshAction?.isRefreshing}
             notificationBadgeCount={notificationBadgeCount}
             notificationDrawerOpen={notificationDrawerOpen}
+            refreshLabel={moduleRefreshAction?.label ?? `${moduleDefinition.label} 새로고침`}
             tabs={tabs}
             workspaceId={workspaceId}
             onActivateTab={handleActivateTab}
@@ -466,6 +470,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             onForward={handleTabForward}
             onNewTab={handleNewTab}
             onOpenNotifications={() => setNotificationDrawerOpen(true)}
+            onRefresh={moduleRefreshAction?.onRefresh}
           />
         }
         workspaceId={workspaceId}

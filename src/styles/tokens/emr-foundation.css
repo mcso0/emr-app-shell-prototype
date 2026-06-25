@@ -100,12 +100,15 @@
   --emr-topbar-control-radius: var(--clair-radius-atomic-8);
   --emr-topbar-section-gap: var(--clair-spacing-16);
   --emr-topbar-item-gap: var(--clair-spacing-8);
+  --emr-topbar-history-gap: var(--clair-spacing-4);
   --emr-topbar-action-gap: var(--clair-spacing-10);
   --emr-topbar-motion-duration: 160ms;
   --emr-topbar-open-history-shift: calc(
     var(--emr-topbar-control-size) +
       var(--emr-topbar-control-size) +
-      var(--emr-topbar-item-gap) +
+      var(--emr-topbar-control-size) +
+      var(--emr-topbar-history-gap) +
+      var(--emr-topbar-history-gap) +
       var(--clair-shell-gap, var(--clair-spacing-10))
   );
   --emr-topbar-divider-width: 1px;

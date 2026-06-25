@@ -1335,7 +1335,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       }),
     )
     .toEqual({
-      historyGap: "8px",
+      historyGap: "4px",
       historyRightDelta: 0,
       leadingShift: 0,
       navigationWidth: 362,
