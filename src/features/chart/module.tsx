@@ -89,8 +89,8 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  BuildingIcon,
   ClockIcon,
-  HomeIcon,
   StethoscopeIcon,
   UsersIcon,
 } from "@/components/icons";
@@ -5301,9 +5301,9 @@ function ChartPreflightField({
   label: string;
 }) {
   return (
-    <div className="grid min-h-9 grid-cols-[118px_minmax(0,1fr)] items-center gap-3 emr-text-metadata">
-      <label className="flex min-w-0 items-center gap-1.5 text-[var(--emr-text-tertiary)]">
-        <span className="flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:size-3.5">
+    <div className="grid min-h-9 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3">
+      <label className="emr-control-text flex h-9 min-w-0 items-center gap-2 font-medium text-muted-foreground">
+        <span className="flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:size-4">
           {icon}
         </span>
         <span className="truncate">{label}</span>
@@ -6153,7 +6153,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
               />
             </ChartPreflightField>
             <ChartPreflightField
-              icon={<HomeIcon aria-hidden="true" />}
+              icon={<BuildingIcon aria-hidden="true" />}
               label="진료실"
             >
               <Select
@@ -6184,7 +6184,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 </SelectContent>
               </Select>
             </ChartPreflightField>
-            <div className="grid grid-cols-[118px_minmax(0,1fr)] items-start gap-3 emr-text-metadata">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-3 emr-text-metadata">
               <span aria-hidden="true" />
               <label className="flex min-h-7 items-center gap-2 text-[var(--emr-text-secondary)]">
                 <EmrTableCheckbox
