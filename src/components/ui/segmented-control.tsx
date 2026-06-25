@@ -117,7 +117,9 @@ export function SegmentedControl<TValue extends string>({
             onClick={() => onValueChange(item.value)}
           >
             {item.label}
-            {typeof item.count === "number" ? ` ${item.count}` : null}
+            {typeof item.count === "number" ? (
+              <span className="ml-1 tabular-nums">{item.count}</span>
+            ) : null}
           </button>
         );
       })}
