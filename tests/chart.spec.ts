@@ -345,7 +345,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
         roomId?: string;
       };
       if (body.action === "call") {
-        expect(body.roomId).toBe("room-consult-1");
+        expect(body.roomId).toBe("room-consult-2");
         queueEntry = {
           ...queueEntry,
           status: "called",
@@ -376,10 +376,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
               ? {
                   callEvent: {
                     id: "call-event-choco",
-                    displayText: "1진료실로 환자를 호출합니다.",
+                    displayText: "2진료실로 환자를 호출합니다.",
                     deliveryStatus: "queued",
-                    roomId: "room-consult-1",
-                    roomName: "1진료실",
+                    roomId: "room-consult-2",
+                    roomName: "2진료실",
                   },
                 }
               : {}),
@@ -423,7 +423,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(callDialog).not.toContainText("local outbox");
   await expect(callDialog.getByRole("button", { name: "호출하기" })).toBeDisabled();
   await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
-  await page.getByRole("option", { name: "1진료실" }).click();
+  await page.getByRole("option", { name: "2진료실" }).click();
+  await expect(callDialog.getByRole("combobox", { name: "호출 진료실" })).toContainText("2진료실");
+  await expect(callDialog).not.toContainText("room-consult-2");
   await page.getByRole("button", { name: "호출하기" }).last().click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
