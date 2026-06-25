@@ -15,6 +15,7 @@ export type ChartSoapSaveMode = "autosave" | "manual_save";
 
 export type ChartSoapNoteInput = {
   encounterId?: string;
+  expectedUpdatedAt?: string | null;
   subjective?: string;
   objective?: string;
   assessment?: string;
@@ -24,7 +25,8 @@ export type ChartSoapNoteInput = {
 
 export type ChartSoapNoteGatewayResult =
   | { ok: true; soapNote: SoapNote | null }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" }
+  | { ok: false; status: 409; denialReason: "soap_note_conflict" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartSoapNoteGateway = {
@@ -36,6 +38,7 @@ export type ChartSoapNoteGateway = {
     actorUserId: string;
     fields: Required<Pick<ChartSoapNoteInput, "assessment" | "objective" | "plan" | "subjective">>;
     encounterId: string;
+    expectedUpdatedAt?: string | null;
     mode: ChartSoapSaveMode;
     workspaceId: string;
   }): Promise<ChartSoapNoteGatewayResult>;
@@ -72,7 +75,7 @@ export type ChartSoapNoteSaveResult =
       fieldErrors: Partial<Record<keyof ChartSoapNoteInput, string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockSoapNoteStore = new Map<string, SoapNote>();
@@ -121,7 +124,9 @@ export async function readChartSoapNote({
   });
 
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 409 && result.denialReason === "encounter_unavailable") {
+      return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+    }
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -181,6 +186,7 @@ export async function saveChartSoapNote({
   const result = await gateway.saveSoapNote({
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
+    expectedUpdatedAt: normalized.expectedUpdatedAt,
     fields: {
       assessment: normalized.assessment,
       objective: normalized.objective,
@@ -256,7 +262,7 @@ export function createMockChartSoapNoteGateway(
         }),
       };
     },
-    async saveSoapNote({ actorUserId, encounterId, fields, mode, workspaceId }) {
+    async saveSoapNote({ actorUserId, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
 
@@ -265,6 +271,14 @@ export function createMockChartSoapNoteGateway(
         seedSoapNotes,
         workspaceId,
       });
+      if (expectedUpdatedAt !== undefined) {
+        if (stored && expectedUpdatedAt !== stored.updatedAt) {
+          return { ok: false, status: 409, denialReason: "soap_note_conflict" };
+        }
+        if (!stored && expectedUpdatedAt !== null) {
+          return { ok: false, status: 409, denialReason: "soap_note_conflict" };
+        }
+      }
       const timestamp = now();
       const soapNote: SoapNote = {
         id: stored?.id ?? `soap-${encounterId}`,
@@ -303,6 +317,7 @@ export type SupabaseChartSoapNoteRpcClient = {
       p_actor_user_id: string;
       p_encounter_id: string;
       p_note: Required<Pick<ChartSoapNoteInput, "assessment" | "objective" | "plan" | "subjective">>;
+      p_expected_updated_at?: string | null;
       p_mode: ChartSoapSaveMode;
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
@@ -327,18 +342,22 @@ export function createSupabaseChartSoapNoteGateway(
 
       return { ok: true, soapNote: mapSoapNote(data) };
     },
-    async saveSoapNote({ actorUserId, encounterId, fields, mode, workspaceId }) {
+    async saveSoapNote({ actorUserId, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
       const { data, error } = await client.rpc("clair_save_chart_soap_note", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
         p_note: fields,
+        p_expected_updated_at: expectedUpdatedAt ?? null,
         p_mode: mode,
       });
 
       if (error) {
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+        }
+        if (error.message?.includes("soap_note_conflict")) {
+          return { ok: false, status: 409, denialReason: "soap_note_conflict" };
         }
         return { ok: false, status: 500, error: "db_write_failed" };
       }
@@ -431,6 +450,7 @@ function buildSoapKey(workspaceId: string, encounterId: string) {
 function normalizeSoapInput(input: ChartSoapNoteInput) {
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
+    expectedUpdatedAt: normalizeExpectedUpdatedAt(input.expectedUpdatedAt),
     subjective: normalizeField(input.subjective),
     objective: normalizeField(input.objective),
     assessment: normalizeField(input.assessment),
@@ -443,6 +463,9 @@ function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
   const fieldErrors: Partial<Record<keyof ChartSoapNoteInput, string>> = {};
 
   if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
+  if (input.expectedUpdatedAt !== undefined && input.expectedUpdatedAt !== null && Number.isNaN(Date.parse(input.expectedUpdatedAt))) {
+    fieldErrors.expectedUpdatedAt = "SOAP 기준 저장 시각이 올바르지 않습니다.";
+  }
 
   for (const field of ["assessment", "objective", "plan", "subjective"] as const) {
     if (input[field].length > 10000) {
@@ -459,6 +482,11 @@ function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
 
 function normalizeField(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeExpectedUpdatedAt(value: unknown) {
+  if (value === null) return null;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function trimToUndefined(value?: string | null) {

@@ -237,6 +237,20 @@ const veterinarianAccentToneClasses = [
   "bg-[var(--emr-status-info-text)]",
   "bg-[var(--emr-status-danger-text)]",
 ];
+const veterinarianCalendarCardNeutralToneClass =
+  "border-[var(--clair-color-atomic-neutral-300)] bg-[var(--clair-color-atomic-neutral-50)] text-[var(--clair-color-atomic-neutral-700)] hover:bg-[var(--clair-color-atomic-neutral-100)]";
+const veterinarianCalendarCardToneClasses = [
+  "border-[var(--clair-color-atomic-blue-300)] bg-[var(--clair-color-atomic-blue-50)] text-[var(--clair-color-atomic-blue-800)] hover:bg-[var(--clair-color-atomic-blue-100)]",
+  "border-[var(--clair-color-atomic-forest-green-300)] bg-[var(--clair-color-atomic-forest-green-50)] text-[var(--clair-color-atomic-forest-green-800)] hover:bg-[var(--clair-color-atomic-forest-green-100)]",
+  "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-50)] text-[var(--clair-color-atomic-sky-800)] hover:bg-[var(--clair-color-atomic-sky-100)]",
+  "border-[var(--clair-color-atomic-orange-300)] bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-800)] hover:bg-[var(--clair-color-atomic-orange-100)]",
+  "border-[var(--clair-color-atomic-green-300)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-800)] hover:bg-[var(--clair-color-atomic-green-100)]",
+  "border-[var(--clair-color-atomic-red-300)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-800)] hover:bg-[var(--clair-color-atomic-red-100)]",
+  "border-[var(--clair-color-atomic-teal-300)] bg-[var(--clair-color-atomic-teal-50)] text-[var(--clair-color-atomic-teal-800)] hover:bg-[var(--clair-color-atomic-teal-100)]",
+  veterinarianCalendarCardNeutralToneClass,
+  "border-[var(--clair-color-atomic-purple-300)] bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-800)] hover:bg-[var(--clair-color-atomic-purple-100)]",
+  "border-[var(--clair-color-atomic-red-300)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-800)] hover:bg-[var(--clair-color-atomic-red-100)]",
+];
 const calendarViewItems = [
   { value: "day" as const, label: "일" },
   { value: "week" as const, label: "주" },
@@ -382,6 +396,24 @@ function getVeterinarianAccentClassName(
 
   return veterinarianAccentToneClasses[
     toneIndex % veterinarianAccentToneClasses.length
+  ];
+}
+
+function getVeterinarianCalendarCardToneClassName(
+  veterinarianId?: string,
+  veterinarians: Veterinarian[] = allVeterinarians,
+) {
+  if (!veterinarianId) return veterinarianCalendarCardNeutralToneClass;
+
+  const veterinarian = veterinarians.find(
+    (item) => item.id === veterinarianId,
+  );
+  if (!veterinarian) return veterinarianCalendarCardNeutralToneClass;
+
+  const toneIndex = getVeterinarianToneIndex(veterinarian, veterinarians);
+
+  return veterinarianCalendarCardToneClasses[
+    toneIndex % veterinarianCalendarCardToneClasses.length
   ];
 }
 
@@ -2106,6 +2138,7 @@ type CalendarTaskCardProps = {
   accentTestId?: string;
   ariaLabel: string;
   badgeType: CalendarTaskBadgeType;
+  calendarToneClassName?: string;
   className?: string;
   description?: string;
   disabled?: boolean;
@@ -2128,6 +2161,7 @@ function CalendarTaskCard({
   accentTestId,
   ariaLabel,
   badgeType,
+  calendarToneClassName,
   className,
   description,
   disabled,
@@ -2147,6 +2181,8 @@ function CalendarTaskCard({
   const noShow = type === "noShow";
   const compact = type === "compact";
   const neutral = tone === "neutral";
+  const veterinarianToneClassName =
+    !neutral && !noShow ? calendarToneClassName : undefined;
   const identityLabel = guardianLabel
     ? `${patientLabel} · ${guardianLabel}`
     : `${patientLabel} · ${purposeLabel}`;
@@ -2165,9 +2201,9 @@ function CalendarTaskCard({
         !fillHeight && noShow && "h-[60px]",
         neutral
           ? "border-border bg-muted text-foreground hover:bg-muted/80"
-          : calendarTaskCardToneClasses[badgeType],
+          : (veterinarianToneClassName ?? calendarTaskCardToneClasses[badgeType]),
         selected &&
-          "border-[var(--emr-line-selected)] bg-[var(--emr-calendar-task-reservation-hover-bg)]",
+          "border-[var(--emr-line-selected)] ring-2 ring-inset ring-[var(--emr-line-selected)]",
         "focus-visible:border-[3px] focus-visible:border-[var(--emr-topbar-tab-active-close)] focus-visible:shadow-none",
         disabled && "opacity-50",
         className,
@@ -3413,6 +3449,14 @@ function ScheduleAppointmentCard({
       accentTestId={`appointment-accent-${appointment.id}`}
       ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType={noShow ? "노쇼" : "예약"}
+      calendarToneClassName={
+        noShow
+          ? undefined
+          : getVeterinarianCalendarCardToneClassName(
+              appointment.assignedVeterinarianId,
+              veterinarians,
+            )
+      }
       description={cardType === "default" ? visitDetail : undefined}
       disabled={appointment.status !== "confirmed" && !checkedIn}
       fillHeight={fillHeight}
@@ -3491,6 +3535,14 @@ function ScheduleWalkInQueueCard({
       accentTestId={`walkin-accent-${draft.encounter.id}`}
       ariaLabel={`${getReceptionEncounterStatusLabel(draft.encounter.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType="외래"
+      calendarToneClassName={
+        unassignedCompact
+          ? undefined
+          : getVeterinarianCalendarCardToneClassName(
+              draft.encounter.primaryVeterinarianId,
+              veterinarians,
+            )
+      }
       className={
         unassignedCompact ? "w-[min(360px,100%)] !flex-none" : undefined
       }
@@ -3770,7 +3822,7 @@ function ReceptionScheduleDateControl({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-10 justify-start px-3 text-[24px] font-bold leading-8 text-[var(--emr-text-primary)] [letter-spacing:0]"
+              className="h-10 justify-start px-3 !text-[16px] !font-bold leading-6 text-[var(--clair-color-atomic-gray-800)] [letter-spacing:0]"
               aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
             />
           }

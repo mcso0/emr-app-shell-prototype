@@ -47,7 +47,7 @@ export function WorkspaceChromeTabs({
 
   return (
     <div
-      className="flex min-w-0 flex-1 items-center gap-[var(--emr-topbar-tab-gap)]"
+      className="hidden min-w-0 flex-1 items-center gap-[var(--emr-topbar-tab-gap)] sm:flex"
       role="tablist"
       aria-label="열린 업무 탭"
     >

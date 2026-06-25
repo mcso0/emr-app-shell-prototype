@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
+import { useState, type ComponentProps, type KeyboardEvent, type ReactNode } from "react";
 import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
@@ -16,7 +16,17 @@ import { EmrIconButton } from "@/components/emr/icon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  addMonthsToIsoDate,
+  formatKoreanOperatingDateLabel,
+  parseIsoDateParts,
+} from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 
 type EmrSubpanelProps = {
@@ -37,11 +47,13 @@ type EmrSubpanelTitleProps = {
 type EmrDateNavigatorProps = {
   dateLabel: ReactNode;
   className?: string;
+  onDateChange?: (date: string) => void;
   nextLabel?: string;
   onNext?: () => void;
   onOpenDatePicker?: () => void;
   onPrevious?: () => void;
   previousLabel?: string;
+  selectedDate?: string;
   todayLabel?: ReactNode;
 };
 
@@ -90,6 +102,35 @@ type EmrListItemProps = {
   testId?: string;
   variant?: "default" | "outline";
 };
+
+const emrDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
+
+function getIsoDateFromUtcDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function getEmrMonthDatePickerCells(
+  visibleMonthDate: string,
+  selectedDate: string,
+) {
+  const parts = parseIsoDateParts(visibleMonthDate);
+  const monthStart = new Date(Date.UTC(parts.year, parts.month - 1, 1));
+  const firstCellDate = new Date(monthStart);
+  firstCellDate.setUTCDate(1 - monthStart.getUTCDay());
+
+  return Array.from({ length: 35 }, (_, index) => {
+    const cellDate = new Date(firstCellDate);
+    cellDate.setUTCDate(firstCellDate.getUTCDate() + index);
+    const key = getIsoDateFromUtcDate(cellDate);
+
+    return {
+      key,
+      day: String(cellDate.getUTCDate()),
+      inMonth: cellDate.getUTCMonth() === parts.month - 1,
+      selected: key === selectedDate,
+    };
+  });
+}
 
 export function EmrSubpanel({ children, className }: EmrSubpanelProps) {
   return (
@@ -144,46 +185,150 @@ export function EmrSubpanelTitle({
 export function EmrDateNavigator({
   dateLabel,
   className,
+  onDateChange,
   nextLabel = "다음 날짜",
   onNext,
   onOpenDatePicker,
   onPrevious,
   previousLabel = "이전 날짜",
+  selectedDate,
   todayLabel,
 }: EmrDateNavigatorProps) {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [pickerMonthDate, setPickerMonthDate] = useState(selectedDate ?? "");
+  const datePickerEnabled = Boolean(selectedDate && onDateChange);
+  const pickerMonthDateParts = parseIsoDateParts(pickerMonthDate || selectedDate || "");
+  const datePickerCells = selectedDate
+    ? getEmrMonthDatePickerCells(pickerMonthDate || selectedDate, selectedDate)
+    : [];
+
+  const openDatePicker = () => {
+    onOpenDatePicker?.();
+    if (datePickerEnabled) {
+      setPickerMonthDate(selectedDate ?? "");
+      setDatePickerOpen(true);
+    }
+  };
+  const selectDate = (date: string) => {
+    onDateChange?.(date);
+    setDatePickerOpen(false);
+  };
+  const trigger = (
+    <button
+      type="button"
+      className="emr-text-dense-label flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50"
+      onClick={openDatePicker}
+      disabled={!datePickerEnabled && !onOpenDatePicker}
+      aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
+    >
+      <CalendarIcon
+        className="size-3.5 shrink-0 text-[var(--emr-text-tertiary)]"
+        aria-hidden="true"
+      />
+      <span className="truncate">{dateLabel}</span>
+      {todayLabel ? (
+        <Badge variant="outline" className="h-[18px] rounded-md bg-[var(--emr-surface-panel)] px-1.5 text-[10px] leading-4">
+          {todayLabel}
+        </Badge>
+      ) : null}
+    </button>
+  );
+
   return (
     <div className={cn("flex h-12 shrink-0 items-center justify-between gap-1 px-4", className)}>
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
+        className="size-10 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
         aria-label={previousLabel}
+        disabled={!onPrevious}
         onClick={onPrevious}
       >
         <ChevronLeftIcon />
       </Button>
-      <button
-        type="button"
-        className="emr-text-dense-label flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
-        onClick={onOpenDatePicker}
-        aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
-      >
-        <CalendarIcon
-          className="size-3.5 shrink-0 text-[var(--emr-text-tertiary)]"
-          aria-hidden="true"
-        />
-        <span className="truncate">{dateLabel}</span>
-        {todayLabel ? (
-          <Badge variant="outline" className="h-[18px] rounded-md bg-[var(--emr-surface-panel)] px-1.5 text-[10px] leading-4">
-            {todayLabel}
-          </Badge>
-        ) : null}
-      </button>
+      {datePickerEnabled ? (
+        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+          <PopoverTrigger render={trigger} />
+          <PopoverContent
+            align="center"
+            className="w-[244px] gap-3 p-3"
+            initialFocus={false}
+          >
+            <div className="flex items-center justify-between">
+              <div className="emr-text-dense font-semibold leading-5 text-foreground">
+                {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="이전 달"
+                  onClick={() =>
+                    setPickerMonthDate((current) =>
+                      addMonthsToIsoDate(current || selectedDate || "", -1),
+                    )
+                  }
+                >
+                  <ChevronLeftIcon />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="다음 달"
+                  onClick={() =>
+                    setPickerMonthDate((current) =>
+                      addMonthsToIsoDate(current || selectedDate || "", 1),
+                    )
+                  }
+                >
+                  <ChevronRightIcon />
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {emrDatePickerWeekdays.map((weekday) => (
+                <span
+                  key={weekday}
+                  className="h-6 emr-text-micro font-medium leading-6 text-muted-foreground"
+                >
+                  {weekday}
+                </span>
+              ))}
+              {datePickerCells.map((cell) => (
+                <button
+                  key={cell.key}
+                  type="button"
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-md emr-text-metadata font-medium tabular-nums outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
+                    cell.inMonth ? "text-foreground" : "text-muted-foreground",
+                    cell.selected &&
+                      "bg-primary text-primary-foreground hover:bg-primary/90",
+                  )}
+                  aria-label={
+                    cell.selected
+                      ? `${formatKoreanOperatingDateLabel(cell.key)} 선택됨`
+                      : `${formatKoreanOperatingDateLabel(cell.key)} 선택`
+                  }
+                  aria-pressed={cell.selected}
+                  onClick={() => selectDate(cell.key)}
+                >
+                  {cell.day}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : (
+        trigger
+      )}
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-7 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)]"
+        className="size-10 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
         aria-label={nextLabel}
+        disabled={!onNext}
         onClick={onNext}
       >
         <ChevronRightIcon />

@@ -545,6 +545,12 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   const kongAppointment = page.getByTestId(
     "appointment-card-appointment-kong-260501",
   );
+  const nabiLaneAppointment = page.getByTestId(
+    "appointment-card-appointment-nabi-260501",
+  );
+  const haruNoShowAppointment = page.getByTestId(
+    "appointment-card-appointment-haru-260501",
+  );
 
   await expect
     .poll(() =>
@@ -665,6 +671,55 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   await expect(
     kongAppointment.getByTestId("appointment-accent-appointment-kong-260501"),
   ).toHaveClass(/emr-status-info-text/);
+  await expect
+    .poll(() =>
+      kongAppointment.evaluate((card) => {
+        const style = getComputedStyle(card);
+
+        return {
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          color: style.color,
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(235, 248, 255)",
+      borderColor: "rgb(99, 179, 237)",
+      color: "rgb(42, 67, 101)",
+    });
+  await expect
+    .poll(() =>
+      nabiLaneAppointment.evaluate((card) => {
+        const style = getComputedStyle(card);
+
+        return {
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          color: style.color,
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgb(242, 253, 245)",
+      borderColor: "rgb(132, 223, 162)",
+      color: "rgb(40, 96, 58)",
+    });
+  await expect
+    .poll(() =>
+      haruNoShowAppointment.evaluate((card) => {
+        const style = getComputedStyle(card);
+
+        return {
+          borderColor: style.borderColor,
+          color: style.color,
+        };
+      }),
+    )
+    .toEqual({
+      borderColor: "rgb(252, 129, 129)",
+      color: "rgb(197, 48, 48)",
+    });
   await expect(kongAppointment).toContainText("콩이");
   await expect(kongAppointment).toContainText("09:30-10:00");
   await expect

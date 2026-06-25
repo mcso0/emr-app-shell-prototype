@@ -3,6 +3,15 @@
 import { create } from "zustand";
 import { modules, normalizeModuleId } from "@/modules/registry";
 
+export type WorkspaceTabSurfaceType =
+  | "module"
+  | "encounter"
+  | "labResult"
+  | "imagingStudy"
+  | "invoice"
+  | "queueItem"
+  | "patient";
+
 export type WorkspaceTab = {
   id: string;
   title: string;
@@ -10,6 +19,11 @@ export type WorkspaceTab = {
   history: string[];
   historyIndex: number;
   moduleId: string;
+  surfaceType: WorkspaceTabSurfaceType;
+  surfaceId: string;
+  dedupeKey: string;
+  lastRoute: string;
+  updatedAt: string;
   patientId?: string;
   encounterId?: string;
 };
@@ -25,7 +39,7 @@ type WorkspaceTabsStore = {
   tabs: WorkspaceTab[];
   activeTabId: string | null;
   hydrated: boolean;
-  initialize: (input: { workspaceId: string; route: string; moduleId: string }) => void;
+  initialize: (input: { workspaceId: string; route: string; moduleId: string }) => Promise<void>;
   pushRoute: (route: string, moduleId: string) => void;
   activateTab: (tabId: string) => string | null;
   closeTab: (tabId: string) => string | null;
@@ -36,6 +50,8 @@ type WorkspaceTabsStore = {
 };
 
 const STORAGE_PREFIX = "clair-workspace-tabs:v1";
+const SERVER_SAVE_DEBOUNCE_MS = 500;
+let serverSaveTimer: number | null = null;
 
 function getStorageKey(workspaceId: string) {
   return `${STORAGE_PREFIX}:${workspaceId}`;
@@ -61,13 +77,41 @@ function getOptionalSearchParam(searchParams: URLSearchParams, key: string) {
   return searchParams.get(key) ?? undefined;
 }
 
-function getRouteMetadata(route: string, fallbackModuleId: string) {
+export function getWorkspaceTabIdentityFromRoute(workspaceId: string, route: string, fallbackModuleId: string) {
   const moduleId = getRouteModuleId(route) ?? fallbackModuleId;
   const searchParams = new URLSearchParams(route.split("?")[1] ?? "");
+  const labResultId = getOptionalSearchParam(searchParams, "labResultId");
+  const imagingStudyId = getOptionalSearchParam(searchParams, "imagingStudyId");
+  const invoiceId = getOptionalSearchParam(searchParams, "invoiceId");
+  const encounterId = getOptionalSearchParam(searchParams, "encounterId");
+  const patientId = getOptionalSearchParam(searchParams, "patientId");
+  const queueItemId = getOptionalSearchParam(searchParams, "queueItemId");
+  const surface =
+    labResultId ? { surfaceType: "labResult" as const, surfaceId: labResultId } :
+    imagingStudyId ? { surfaceType: "imagingStudy" as const, surfaceId: imagingStudyId } :
+    invoiceId ? { surfaceType: "invoice" as const, surfaceId: invoiceId } :
+    queueItemId ? { surfaceType: "queueItem" as const, surfaceId: queueItemId } :
+    encounterId ? { surfaceType: "encounter" as const, surfaceId: encounterId } :
+    patientId ? { surfaceType: "patient" as const, surfaceId: patientId } :
+    { surfaceType: "module" as const, surfaceId: moduleId };
+
+  return {
+    ...surface,
+    dedupeKey: `${workspaceId}:${surface.surfaceType}:${surface.surfaceId}`,
+  };
+}
+
+function getRouteMetadata(route: string, fallbackModuleId: string, workspaceId: string) {
+  const moduleId = getRouteModuleId(route) ?? fallbackModuleId;
+  const searchParams = new URLSearchParams(route.split("?")[1] ?? "");
+  const identity = getWorkspaceTabIdentityFromRoute(workspaceId, route, moduleId);
 
   return {
     title: getTabTitle(moduleId),
     moduleId,
+    ...identity,
+    lastRoute: route,
+    updatedAt: new Date().toISOString(),
     patientId: getOptionalSearchParam(searchParams, "patientId"),
     encounterId: getOptionalSearchParam(searchParams, "encounterId"),
   };
@@ -77,8 +121,9 @@ function createWorkspaceTab(input: {
   route: string;
   moduleId: string;
   closable: boolean;
+  workspaceId: string;
 }): WorkspaceTab {
-  const metadata = getRouteMetadata(input.route, input.moduleId);
+  const metadata = getRouteMetadata(input.route, input.moduleId, input.workspaceId);
 
   return {
     id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -87,6 +132,11 @@ function createWorkspaceTab(input: {
     history: [input.route],
     historyIndex: 0,
     moduleId: metadata.moduleId,
+    surfaceType: metadata.surfaceType,
+    surfaceId: metadata.surfaceId,
+    dedupeKey: metadata.dedupeKey,
+    lastRoute: metadata.lastRoute,
+    updatedAt: metadata.updatedAt,
     patientId: metadata.patientId,
     encounterId: metadata.encounterId,
   };
@@ -110,6 +160,51 @@ function persist(workspaceId: string | null, tabs: WorkspaceTab[], activeTabId: 
   } catch {
     // Persistence is a best-effort shell enhancement; storage failures should not break navigation.
   }
+
+  scheduleServerPersist(workspaceId, tabs, activeTabId);
+}
+
+function scheduleServerPersist(workspaceId: string, tabs: WorkspaceTab[], activeTabId: string) {
+  if (typeof window === "undefined") return;
+  if (serverSaveTimer) window.clearTimeout(serverSaveTimer);
+
+  serverSaveTimer = window.setTimeout(() => {
+    void saveServerTabs(workspaceId, tabs, activeTabId);
+  }, SERVER_SAVE_DEBOUNCE_MS);
+}
+
+async function readServerTabs(workspaceId: string): Promise<PersistedWorkspaceTabs | null> {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/app-shell/workspace-tabs`, {
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const body = await response.json() as {
+      ok?: boolean;
+      payload?: { tabs?: unknown; activeTabId?: unknown } | null;
+    };
+    if (!body.ok || !body.payload) return null;
+    return sanitizePersistedTabs(
+      { workspaceId, tabs: body.payload.tabs, activeTabId: body.payload.activeTabId },
+      workspaceId,
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function saveServerTabs(workspaceId: string, tabs: WorkspaceTab[], activeTabId: string) {
+  try {
+    await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/app-shell/workspace-tabs`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tabs, activeTabId }),
+    });
+  } catch {
+    // Server restore is best-effort; sessionStorage remains the immediate fallback.
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -130,7 +225,7 @@ function sanitizePersistedTab(value: unknown, workspaceId: string): WorkspaceTab
   const fallbackModuleId = typeof value.moduleId === "string" ? value.moduleId : "home";
   const route = history[historyIndex];
   if (!isWorkspaceRoute(route, workspaceId)) return null;
-  const metadata = getRouteMetadata(route, fallbackModuleId);
+  const metadata = getRouteMetadata(route, fallbackModuleId, workspaceId);
 
   return {
     id: value.id,
@@ -139,6 +234,11 @@ function sanitizePersistedTab(value: unknown, workspaceId: string): WorkspaceTab
     history,
     historyIndex,
     moduleId: metadata.moduleId,
+    surfaceType: metadata.surfaceType,
+    surfaceId: metadata.surfaceId,
+    dedupeKey: metadata.dedupeKey,
+    lastRoute: metadata.lastRoute,
+    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : metadata.updatedAt,
     patientId: metadata.patientId,
     encounterId: metadata.encounterId,
   };
@@ -190,20 +290,33 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   activeTabId: null,
   hydrated: false,
 
-  initialize: ({ workspaceId, route, moduleId }) => {
+  initialize: async ({ workspaceId, route, moduleId }) => {
     const persisted = readPersistedTabs(workspaceId);
 
     if (persisted) {
-      const tabs = persisted.tabs;
-      const activeTabId = persisted.activeTabId;
-      set({ workspaceId, tabs, activeTabId, hydrated: true });
+      set({
+        workspaceId,
+        tabs: persisted.tabs,
+        activeTabId: persisted.activeTabId,
+        hydrated: true,
+      });
       get().syncActiveRoute(route, moduleId);
-      return;
+    } else {
+      const tab = createWorkspaceTab({ route, moduleId, closable: false, workspaceId });
+      set({ workspaceId, tabs: [tab], activeTabId: tab.id, hydrated: true });
+      persist(workspaceId, [tab], tab.id);
     }
 
-    const tab = createWorkspaceTab({ route, moduleId, closable: false });
-    set({ workspaceId, tabs: [tab], activeTabId: tab.id, hydrated: true });
-    persist(workspaceId, [tab], tab.id);
+    const serverPersisted = await readServerTabs(workspaceId);
+    if (!serverPersisted || get().workspaceId !== workspaceId) return;
+
+    set({
+      workspaceId,
+      tabs: serverPersisted.tabs,
+      activeTabId: serverPersisted.activeTabId,
+      hydrated: true,
+    });
+    get().syncActiveRoute(route, moduleId);
   },
 
   pushRoute: (route, moduleId) => {
@@ -215,7 +328,8 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
 
         const nextHistory = tab.history.slice(0, tab.historyIndex + 1);
         nextHistory.push(route);
-        const metadata = getRouteMetadata(route, moduleId);
+        if (!state.workspaceId) return tab;
+        const metadata = getRouteMetadata(route, moduleId, state.workspaceId);
 
         return {
           ...tab,
@@ -262,7 +376,7 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   },
 
   createTab: ({ workspaceId, route, moduleId }) => {
-    const tab = createWorkspaceTab({ route, moduleId, closable: true });
+    const tab = createWorkspaceTab({ route, moduleId, closable: true, workspaceId });
 
     set((state) => {
       const tabs =
@@ -282,7 +396,9 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     const nextIndex = activeTab.historyIndex - 1;
     const route = activeTab.history[nextIndex];
     if (!route) return null;
-    const metadata = getRouteMetadata(route, activeTab.moduleId);
+    const workspaceId = get().workspaceId;
+    if (!workspaceId) return null;
+    const metadata = getRouteMetadata(route, activeTab.moduleId, workspaceId);
 
     set((state) =>
       updateActiveTab(state, (tab) => ({
@@ -304,7 +420,9 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     const nextIndex = activeTab.historyIndex + 1;
     const route = activeTab.history[nextIndex];
     if (!route) return null;
-    const metadata = getRouteMetadata(route, activeTab.moduleId);
+    const workspaceId = get().workspaceId;
+    if (!workspaceId) return null;
+    const metadata = getRouteMetadata(route, activeTab.moduleId, workspaceId);
 
     set((state) =>
       updateActiveTab(state, (tab) => ({
@@ -323,7 +441,8 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   syncActiveRoute: (route, moduleId) => {
     set((state) =>
       updateActiveTab(state, (tab) => {
-        const metadata = getRouteMetadata(route, moduleId);
+        if (!state.workspaceId) return tab;
+        const metadata = getRouteMetadata(route, moduleId, state.workspaceId);
         const nextHistory = [...tab.history];
 
         if (tab.history[tab.historyIndex] === route) {

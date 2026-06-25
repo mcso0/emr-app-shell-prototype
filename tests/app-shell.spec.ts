@@ -1162,6 +1162,32 @@ test("workspace tabs restore open tabs after reload", async ({ page }) => {
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
 });
 
+test("workspace tabs warn before opening the same work surface in another tab", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
+
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await getNavRail(page).getByRole("link", { name: "원내 현황" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
+
+  await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
+  await expect(page.getByRole("dialog", { name: "이미 다른 워크스페이스 탭에서 보고 있는 화면입니다." })).toBeVisible();
+
+  await page.getByRole("button", { name: "기존 탭으로 이동" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expectActiveWorkspaceTab(page, "진료/차트");
+});
+
+test("workspace tabs are hidden on mobile viewports", async ({ page }) => {
+  await clearWorkspaceTabs(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed&right=closed");
+
+  await expect(getWorkspaceTablist(page)).toBeHidden();
+  await expect(page.getByRole("button", { name: "새 업무 탭" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "탭 뒤로가기" })).toBeVisible();
+});
+
 test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   await clearWorkspaceTabs(page);
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");

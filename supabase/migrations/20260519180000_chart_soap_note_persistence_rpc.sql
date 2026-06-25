@@ -54,11 +54,14 @@ begin
 end;
 $$;
 
+drop function if exists public.clair_save_chart_soap_note(text, text, uuid, jsonb, text);
+
 create or replace function public.clair_save_chart_soap_note(
   p_workspace_id text,
   p_actor_user_id text,
   p_encounter_id uuid,
   p_note jsonb,
+  p_expected_updated_at timestamptz default null,
   p_mode text default 'autosave'
 )
 returns jsonb
@@ -69,6 +72,7 @@ as $$
 declare
   v_actor_user_id uuid := nullif(p_actor_user_id, '')::uuid;
   v_existing_id uuid;
+  v_existing_updated_at timestamptz;
   v_now timestamptz := now();
   v_status text := case when p_mode = 'manual_save' then 'draft' else 'autosaved' end;
   v_note_row jsonb;
@@ -87,14 +91,33 @@ begin
     raise exception 'encounter_unavailable';
   end if;
 
-  select s.id
-    into v_existing_id
+  select s.id, s.updated_at
+    into v_existing_id, v_existing_updated_at
   from public.soap_notes s
   where s.workspace_id = p_workspace_id
     and s.encounter_id = p_encounter_id
     and s.status <> 'voided'
   order by s.updated_at desc
   limit 1;
+
+  if v_existing_id is not null
+    and p_expected_updated_at is not null
+    and v_existing_updated_at is distinct from p_expected_updated_at
+  then
+    raise exception 'soap_note_conflict';
+  end if;
+
+  if v_existing_id is not null
+    and p_expected_updated_at is null
+  then
+    raise exception 'soap_note_conflict';
+  end if;
+
+  if v_existing_id is null
+    and p_expected_updated_at is not null
+  then
+    raise exception 'soap_note_conflict';
+  end if;
 
   if v_existing_id is null then
     insert into public.soap_notes (
@@ -156,11 +179,11 @@ end;
 $$;
 
 revoke all on function public.clair_get_chart_soap_note(text, uuid) from public;
-revoke all on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, text) from public;
+revoke all on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text) from public;
 grant execute on function public.clair_get_chart_soap_note(text, uuid) to authenticated;
-grant execute on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, text) to authenticated;
+grant execute on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text) to authenticated;
 
 comment on function public.clair_get_chart_soap_note(text, uuid) is
   'DEN-69 local-first route-owned SOAP note reader scoped by active workspace membership and encounter workspace.';
-comment on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, text) is
-  'DEN-69 local-first route-owned SOAP note save/autosave writer. Remote Supabase application remains approval-gated.';
+comment on function public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text) is
+  'DEN-69 local-first route-owned SOAP note save/autosave writer with optimistic updated_at conflict detection. Remote Supabase application remains approval-gated.';

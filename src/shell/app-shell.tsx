@@ -3,6 +3,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog } from "@/components/ui/dialog";
+import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
   applyNotificationLocalState,
@@ -17,7 +21,11 @@ import {
 import { isPreparedEmptyClinicWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
-import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
+import {
+  getWorkspaceTabIdentityFromRoute,
+  useWorkspaceTabsStore,
+  type WorkspaceTab,
+} from "@/stores/workspace-tabs-store";
 import { ShellMain } from "@/shell/shell-main";
 import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
 
@@ -31,6 +39,12 @@ type PendingUrlState = {
   contentAsideOpen?: boolean;
   modulePanelOpen?: boolean;
   rightPanelOpen?: boolean;
+};
+
+type PendingDuplicateTabNavigation = {
+  href: string;
+  nextModuleId: string;
+  existingTab: WorkspaceTab;
 };
 
 declare global {
@@ -56,6 +70,7 @@ const crossModuleQueryKeys = [
 ] as const;
 
 const emptyGlobalNotifications: GlobalNotification[] = [];
+const duplicateWarningPreferencePrefix = "clair-workspace-tabs-duplicate-warning-hidden:v1";
 
 function getCrossModuleNavigationSearch(
   search: string,
@@ -118,6 +133,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     getInitialNotificationLocalState(workspaceNotifications)
   );
   const [notificationLocalStateHydrated, setNotificationLocalStateHydrated] = useState(false);
+  const [duplicateNavigation, setDuplicateNavigation] = useState<PendingDuplicateTabNavigation | null>(null);
+  const [skipDuplicateWarning, setSkipDuplicateWarning] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
   const notifications = useMemo(
     () => applyNotificationLocalState(workspaceNotifications, notificationLocalState),
@@ -169,7 +186,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   useEffect(() => {
     if (tabsInitializedRef.current === workspaceId) return;
-    initialize({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id });
+    void initialize({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id });
     tabsInitializedRef.current = workspaceId;
   }, [currentRoute, initialize, moduleDefinition.id, workspaceId]);
 
@@ -289,6 +306,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   useEffect(() => {
     if (!urlStateReadyRef.current) return;
+    if (pendingTabRouteRef.current) return;
 
     const pendingUrlState = pendingUrlStateRef.current;
 
@@ -435,9 +453,41 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   function handleNavigateModule(href: string, nextModuleId: string) {
     if (activeTab?.history[activeTab.historyIndex] === href) return;
 
-    pushRoute(href, nextModuleId);
+    const duplicateTab = findDuplicateWorkspaceTab({
+      activeTabId,
+      href,
+      moduleId: nextModuleId,
+      tabs,
+      workspaceId,
+    });
+
+    if (duplicateTab && !readDuplicateWarningPreference(workspaceId)) {
+      setSkipDuplicateWarning(false);
+      setDuplicateNavigation({ href, nextModuleId, existingTab: duplicateTab });
+      return;
+    }
+
     pendingTabRouteRef.current = href;
     router.push(href, { scroll: false });
+    pushRoute(href, nextModuleId);
+  }
+
+  function continueDuplicateNavigation() {
+    if (!duplicateNavigation) return;
+    if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
+    const { href, nextModuleId } = duplicateNavigation;
+    setDuplicateNavigation(null);
+    pendingTabRouteRef.current = href;
+    router.push(href, { scroll: false });
+    pushRoute(href, nextModuleId);
+  }
+
+  function activateDuplicateTab() {
+    if (!duplicateNavigation) return;
+    if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
+    const route = activateTab(duplicateNavigation.existingTab.id);
+    setDuplicateNavigation(null);
+    navigateToTabRoute(route);
   }
 
   function handleTabBack() {
@@ -489,6 +539,70 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onOpenChange={setNotificationDrawerOpen}
         onRestoreNotification={handleRestoreNotification}
       />
+      <Dialog open={Boolean(duplicateNavigation)} onOpenChange={(open) => !open && setDuplicateNavigation(null)}>
+        {duplicateNavigation ? (
+          <EmrDialogShell
+            title="이미 다른 워크스페이스 탭에서 보고 있는 화면입니다."
+            description="같은 화면을 여러 탭에서 동시에 작업하면 저장되지 않은 입력이 헷갈리거나, 먼저 저장된 내용이 나중 저장에 의해 덮어써질 수 있습니다."
+            footerMeta={
+              <label className="flex min-w-0 items-center gap-2 text-sm text-[var(--emr-text-tertiary)]">
+                <Checkbox
+                  checked={skipDuplicateWarning}
+                  onCheckedChange={(checked) => setSkipDuplicateWarning(checked === true)}
+                  aria-label="다시 해당 알림 보지 않기"
+                />
+                <span>다시 해당 알림 보지 않기</span>
+              </label>
+            }
+            secondaryAction={
+              <Button type="button" variant="outline" onClick={activateDuplicateTab}>
+                기존 탭으로 이동
+              </Button>
+            }
+            primaryAction={
+              <Button type="button" onClick={continueDuplicateNavigation}>
+                그래도 현재 탭에서 열기
+              </Button>
+            }
+          >
+            <div className="rounded-md border border-[var(--emr-line-subtle)] bg-[var(--emr-surface-panel)] px-3 py-2 text-sm text-[var(--emr-text-secondary)]">
+              기존 탭: {duplicateNavigation.existingTab.title}
+            </div>
+          </EmrDialogShell>
+        ) : null}
+      </Dialog>
     </div>
   );
+}
+
+function findDuplicateWorkspaceTab({
+  activeTabId,
+  href,
+  moduleId,
+  tabs,
+  workspaceId,
+}: {
+  activeTabId: string | null;
+  href: string;
+  moduleId: string;
+  tabs: WorkspaceTab[];
+  workspaceId: string;
+}) {
+  const identity = getWorkspaceTabIdentityFromRoute(workspaceId, href, moduleId);
+
+  return tabs.find((tab) => tab.id !== activeTabId && tab.dedupeKey === identity.dedupeKey) ?? null;
+}
+
+function getDuplicateWarningPreferenceKey(workspaceId: string) {
+  return `${duplicateWarningPreferencePrefix}:${workspaceId}`;
+}
+
+function readDuplicateWarningPreference(workspaceId: string) {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(getDuplicateWarningPreferenceKey(workspaceId)) === "true";
+}
+
+function writeDuplicateWarningPreference(workspaceId: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(getDuplicateWarningPreferenceKey(workspaceId), "true");
 }

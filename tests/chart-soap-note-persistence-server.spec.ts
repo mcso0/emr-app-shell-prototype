@@ -144,6 +144,59 @@ test("SOAP note core enforces active workspace membership, chart update permissi
   });
 });
 
+test("SOAP note core rejects stale expectedUpdatedAt when another tab saved first", async () => {
+  const nowValues = [
+    "2026-05-19T12:00:00.000Z",
+    "2026-05-19T12:01:00.000Z",
+  ];
+  const gateway = createMockChartSoapNoteGateway(
+    undefined,
+    () => nowValues.shift() ?? "2026-05-19T12:02:00.000Z",
+  );
+  const permissionAdapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: "user-vet", status: "active" }],
+    memberships: [
+      {
+        id: "membership-vet",
+        workspaceId,
+        userId: "user-vet",
+        roles: ["vet"],
+        status: "active",
+      },
+    ],
+  });
+
+  const firstSave = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: { ...validSoapInput },
+    permissionAdapter,
+    gateway,
+  });
+  expect(firstSave).toMatchObject({
+    ok: true,
+    status: 200,
+    soapNote: { updatedAt: "2026-05-19T12:00:00.000Z" },
+  });
+
+  const staleSave = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      ...validSoapInput,
+      subjective: "다른 탭의 오래된 저장",
+      expectedUpdatedAt: "2026-05-19T11:59:00.000Z",
+    },
+    permissionAdapter,
+    gateway,
+  });
+  expect(staleSave).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "soap_note_conflict",
+  });
+});
+
 test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC calls", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseChartSoapNoteGateway({
@@ -172,6 +225,7 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
     actorUserId: "00000000-0000-4000-8000-000000000002",
     workspaceId,
     encounterId,
+    expectedUpdatedAt: "2026-05-19T12:00:00.000Z",
     fields: {
       subjective: validSoapInput.subjective,
       objective: validSoapInput.objective,
@@ -191,6 +245,8 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
 test("SOAP note persistence migration defines local-first RPC boundary without secrets", () => {
   expect(migration).toContain("create or replace function public.clair_get_chart_soap_note");
   expect(migration).toContain("create or replace function public.clair_save_chart_soap_note");
+  expect(migration).toContain("p_expected_updated_at timestamptz default null");
+  expect(migration).toContain("raise exception 'soap_note_conflict'");
   expect(migration).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
   expect(migration).toContain("from public.encounters e");
   expect(migration).toContain("from public.soap_notes s");

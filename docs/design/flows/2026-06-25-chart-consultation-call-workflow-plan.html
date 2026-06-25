@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진료/차트 호출-진료시작 업무 흐름 기획안</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --paper: #ffffff;
+        --ink: #111827;
+        --muted: #667085;
+        --soft: #f3f5f8;
+        --line: #d9dee8;
+        --line-strong: #b9c3d0;
+        --blue: #2563eb;
+        --blue-soft: #eff6ff;
+        --green: #15803d;
+        --green-soft: #ecfdf3;
+        --amber: #b45309;
+        --amber-soft: #fffbeb;
+        --red: #b91c1c;
+        --red-soft: #fef2f2;
+        --violet: #6d28d9;
+        --violet-soft: #f5f3ff;
+        --radius: 10px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.62;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 36px 24px 56px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        font-size: 30px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 34px 0 12px;
+        font-size: 20px;
+        line-height: 1.35;
+      }
+
+      h3 {
+        margin: 22px 0 8px;
+        font-size: 16px;
+      }
+
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+      }
+
+      code {
+        border-radius: 6px;
+        background: #eef2f7;
+        padding: 2px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .hero,
+      .section,
+      .note,
+      .warning,
+      .success {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--paper);
+      }
+
+      .hero {
+        padding: 28px;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--soft);
+        padding: 3px 10px;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .lead {
+        max-width: 900px;
+        margin-bottom: 0;
+        color: #344054;
+        font-size: 16px;
+      }
+
+      .section {
+        padding: 22px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .card h3 {
+        margin-top: 0;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 6px;
+        padding: 2px 7px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .tag-blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag-green {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .tag-amber {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag-violet {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+
+      .tag-red {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--soft);
+        color: #475467;
+        font-size: 12px;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .flow {
+        display: grid;
+        gap: 10px;
+        margin: 10px 0 0;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 13px 14px;
+      }
+
+      .step strong {
+        font-size: 13px;
+      }
+
+      .step p {
+        margin-bottom: 0;
+      }
+
+      .note,
+      .warning,
+      .success {
+        padding: 14px 16px;
+      }
+
+      .note {
+        background: var(--blue-soft);
+        border-color: #bfdbfe;
+      }
+
+      .warning {
+        background: var(--amber-soft);
+        border-color: #fde68a;
+      }
+
+      .success {
+        background: var(--green-soft);
+        border-color: #bbf7d0;
+      }
+
+      .wireframe {
+        display: grid;
+        grid-template-columns: 270px minmax(0, 1fr);
+        gap: 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 14px;
+      }
+
+      .queue-panel,
+      .chart-panel {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .queue-card {
+        border: 1px solid #93c5fd;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 12px;
+      }
+
+      .top-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .btn {
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #fff;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .btn-primary {
+        border-color: #111827;
+        background: #111827;
+        color: #fff;
+      }
+
+      .btn-blue {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #fff;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .checklist {
+        padding-left: 20px;
+      }
+
+      .checklist li {
+        margin: 4px 0;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          padding: 20px 12px 36px;
+        }
+
+        .grid,
+        .grid-3,
+        .wireframe {
+          grid-template-columns: 1fr;
+        }
+
+        .step {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="hero-meta">
+          <span class="pill">Status: draft for review</span>
+          <span class="pill">Date: 2026-06-25</span>
+          <span class="pill">Scope: 접수 후 호출, 진료 시작, 차트 작성완료</span>
+          <span class="pill">Workspace: workspace-clair-cheongdam synthetic</span>
+        </div>
+        <h1>진료/차트 호출-진료시작 업무 흐름 기획안</h1>
+        <p class="lead">
+          현재 진료 대기 환자를 선택했을 때 상단 CTA가 곧바로
+          <strong>차트 작성완료</strong>로 보이는 문제를 바로잡는다. 접수된
+          환자는 먼저 <strong>호출하기</strong>로 대기실 DID 호출을 받고, 환자가
+          진료실에 들어온 뒤 <strong>진료 시작</strong> 상태가 되어야 SOAP,
+          진단명, 오더 작성과 최종 <strong>차트 작성완료</strong>가 가능하다.
+        </p>
+      </section>
+
+      <h2>1. 결론</h2>
+      <section class="section">
+        <div class="grid">
+          <div class="card">
+            <h3>제품 결론</h3>
+            <p>
+              진료/차트 화면의 primary CTA는 encounter 상태가 아니라
+              <code>consultation</code> queue 상태까지 함께 보고 결정해야 한다.
+              <code>waiting</code> 환자에게는 <strong>호출하기</strong>,
+              <code>called</code> 환자에게는 <strong>진료 시작</strong>,
+              <code>in_progress</code>/<code>in_consultation</code> 환자에게만
+              <strong>차트 작성완료</strong>를 보여준다.
+            </p>
+          </div>
+          <div class="card">
+            <h3>기술 결론</h3>
+            <p>
+              기존 <code>chart/completion</code> API는 차트 완료와 수납 대기
+              전환을 담당하므로 호출 액션으로 재사용하면 안 된다. 별도
+              <code>chart/consultation-flow</code> 계열 API/RPC를 추가해
+              <code>call</code>, <code>start</code>, 이후 필요 시
+              <code>recall</code>을 분리한다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <h2>2. 현재 문제</h2>
+      <section class="section">
+        <table>
+          <thead>
+            <tr>
+              <th>관찰 지점</th>
+              <th>현재 화면</th>
+              <th>문제</th>
+              <th>수정 방향</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>좌측 대기열</td>
+              <td><code>대기중 1</code>, 초코 / 최도현 접수 카드 선택됨</td>
+              <td>환자는 아직 호출 전인데 중앙 차트 영역이 완료 가능한 상태처럼 보인다.</td>
+              <td>대기 상태는 <code>호출 대기</code> 업무로 표현한다.</td>
+            </tr>
+            <tr>
+              <td>상단 primary CTA</td>
+              <td><code>차트 작성완료</code></td>
+              <td>진료 시작 전 환자에게 completion 액션이 노출된다.</td>
+              <td><code>호출하기</code>로 교체하고 확인 모달을 둔다.</td>
+            </tr>
+            <tr>
+              <td>차트 상태</td>
+              <td><code>차트 대기</code></td>
+              <td>차트 대기와 환자 호출 대기가 섞여 있다.</td>
+              <td>상태를 <code>호출 대기</code>, <code>호출됨</code>, <code>진료중</code>, <code>작성완료</code>로 분리한다.</td>
+            </tr>
+            <tr>
+              <td>DB/API 의미</td>
+              <td><code>clair_complete_chart</code>는 waiting도 ready_for_billing로 넘길 수 있음</td>
+              <td>대기 환자가 곧바로 수납 대기 흐름으로 넘어갈 수 있는 상태 전이 위험이 있다.</td>
+              <td>completion은 <code>in_consultation</code> 또는 <code>ordered</code> 이후만 허용한다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>3. 목표 업무 흐름</h2>
+      <section class="section">
+        <div class="flow">
+          <div class="step">
+            <strong>1. 접수 완료</strong>
+            <p>
+              접수/예약 화면에서 보호자가 체크인하면 <code>encounter</code>가
+              생성되고, <code>waiting_queue_entries.queue_type =
+              consultation</code>, <code>status = waiting</code>으로 진료 대기열에
+              올라간다.
+            </p>
+          </div>
+          <div class="step">
+            <strong>2. 대기열 선택</strong>
+            <p>
+              담당 수의사는 진료/차트 화면 좌측 대기열에서 초코 / 최도현 접수
+              건을 선택한다. 이 시점의 CTA는 <code>호출하기</code>다.
+            </p>
+          </div>
+          <div class="step">
+            <strong>3. 호출 확인</strong>
+            <p>
+              <code>호출하기</code>를 누르면 확인 모달이 뜬다. 권장 문구는
+              <strong>초코/최도현을 호출하시겠습니까?</strong>이다. 모달에는
+              담당 수의사, 접수 시각, 호출 대상, DID 표시 문구 preview를 함께
+              보여준다.
+            </p>
+          </div>
+          <div class="step">
+            <strong>4. DID 호출</strong>
+            <p>
+              확인하면 내부 호출 이벤트가 저장되고 queue row가
+              <code>called</code>로 바뀐다. 실제 병원에서는 DID 대기실 모니터에
+              환자 호출 안내가 표시된다. 현 MVP에서는 실제 DID provider 호출을
+              하지 않고, 전송 이벤트/outbox 상태만 설계한다.
+            </p>
+          </div>
+          <div class="step">
+            <strong>5. 진료 시작</strong>
+            <p>
+              환자가 들어오면 수의사는 <code>진료 시작</code>을 누른다.
+              <code>encounter.status</code>는 <code>in_consultation</code>,
+              queue row는 <code>in_progress</code>, <code>started_at</code>은
+              현재 시각으로 저장된다.
+            </p>
+          </div>
+          <div class="step">
+            <strong>6. 차트 작성</strong>
+            <p>
+              진료중 상태에서 SOAP, 진단명, 오더 입력을 진행한다. 이 단계부터
+              기존 SOAP/diagnosis/order draft API가 정상 editing workflow가 된다.
+            </p>
+          </div>
+          <div class="step">
+            <strong>7. 차트 작성완료</strong>
+            <p>
+              작성이 끝나면 <code>차트 작성완료</code>를 누른다. 기존 completion
+              route가 차트 완료, consultation queue 종료, 수납 대기 handoff를
+              담당한다. 단, 더 이상 <code>waiting</code> 상태에서는 실행되지
+              않아야 한다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <h2>4. 화면 IA와 상호작용</h2>
+      <section class="section">
+        <div class="wireframe">
+          <div class="queue-panel">
+            <h3>좌측 진료 대기열</h3>
+            <p class="muted">그룹: 호출 대기 / 호출됨 / 진료중</p>
+            <div class="queue-card">
+              <span class="tag tag-blue">외래</span>
+              <strong> 초코 · 최도현</strong>
+              <p class="muted">방문목적 현장 접수</p>
+              <span class="tag tag-amber">14:15 접수</span>
+              <span class="tag tag-blue">청담 원장</span>
+            </div>
+          </div>
+          <div class="chart-panel">
+            <div class="top-actions">
+              <button class="btn">차트 공유</button>
+              <button class="btn btn-blue">호출하기</button>
+            </div>
+            <table>
+              <tbody>
+                <tr>
+                  <th>접수 일시</th>
+                  <td>26.06.25 14:15</td>
+                </tr>
+                <tr>
+                  <th>환자 정보</th>
+                  <td>초코(9세) · 보호자 최도현 · Pomeranian</td>
+                </tr>
+                <tr>
+                  <th>담당 수의사</th>
+                  <td>청담 원장</td>
+                </tr>
+                <tr>
+                  <th>업무 상태</th>
+                  <td><span class="tag tag-amber">호출 대기</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <h3>CTA 상태표</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Encounter</th>
+              <th>Queue</th>
+              <th>Primary CTA</th>
+              <th>Secondary CTA</th>
+              <th>입력 가능 범위</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>waiting</code></td>
+              <td><code>waiting</code></td>
+              <td><span class="tag tag-blue">호출하기</span></td>
+              <td>차트 공유, 대기열 메뉴</td>
+              <td>환자/접수 정보 확인. SOAP/오더 입력은 비활성 또는 제한.</td>
+            </tr>
+            <tr>
+              <td><code>waiting</code></td>
+              <td><code>called</code></td>
+              <td><span class="tag tag-green">진료 시작</span></td>
+              <td>재호출, 호출 취소는 후속 범위</td>
+              <td>환자 도착 전 상태. 차트 본문은 읽기 중심.</td>
+            </tr>
+            <tr>
+              <td><code>in_consultation</code></td>
+              <td><code>in_progress</code></td>
+              <td><span class="tag tag-violet">차트 작성완료</span></td>
+              <td>차트 공유, SOAP 저장, Order 확정/청구</td>
+              <td>SOAP, 진단명, 오더 입력 가능.</td>
+            </tr>
+            <tr>
+              <td><code>ordered</code></td>
+              <td><code>in_progress</code></td>
+              <td><span class="tag tag-violet">차트 작성완료</span></td>
+              <td>오더 상태 확인, Order 청구</td>
+              <td>오더 진행 상태와 차트 마감 전 확인.</td>
+            </tr>
+            <tr>
+              <td><code>ready_for_billing</code></td>
+              <td><code>done</code></td>
+              <td><span class="tag tag-green">작성완료됨</span></td>
+              <td>수납으로 이동</td>
+              <td>차트 수정은 별도 amend 정책 필요.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>5. 호출 확인 모달</h2>
+      <section class="section">
+        <div class="grid">
+          <div class="card">
+            <h3>권장 문구</h3>
+            <p><strong>제목:</strong> 초코/최도현을 호출하시겠습니까?</p>
+            <p>
+              <strong>설명:</strong> 대기실 DID 모니터에 진료 호출 안내가
+              표시됩니다. 환자가 진료실에 들어오면 진료 시작을 눌러 차트를
+              작성하세요.
+            </p>
+            <p><strong>Primary:</strong> 호출하기</p>
+            <p><strong>Secondary:</strong> 취소</p>
+          </div>
+          <div class="card">
+            <h3>모달에 보여줄 정보</h3>
+            <ul class="checklist">
+              <li>환자 / 보호자: 초코 / 최도현</li>
+              <li>접수 시각: 26.06.25 14:15</li>
+              <li>담당 수의사: 청담 원장</li>
+              <li>DID 표시 preview: 초코 보호자 최도현님, 진료실로 들어와 주세요.</li>
+              <li>현재 상태: 호출 대기</li>
+            </ul>
+          </div>
+        </div>
+        <div class="warning">
+          <strong>범위 주의:</strong> 현재 구현 계획에서는 실제 DID 장비/외부
+          provider 호출을 완료로 주장하지 않는다. 내부 호출 이벤트와 outbox
+          상태를 만들고, 실제 display adapter는 별도 승인된 integration work에서
+          붙인다.
+        </div>
+      </section>
+
+      <h2>6. 상태 모델</h2>
+      <section class="section">
+        <table>
+          <thead>
+            <tr>
+              <th>업무 단계</th>
+              <th><code>encounters.status</code></th>
+              <th><code>waiting_queue_entries.status</code></th>
+              <th>주요 timestamp</th>
+              <th>화면 문구</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>접수 후 대기</td>
+              <td><code>waiting</code></td>
+              <td><code>waiting</code></td>
+              <td><code>checked_in_at</code>, <code>entered_at</code></td>
+              <td>호출 대기</td>
+            </tr>
+            <tr>
+              <td>호출됨</td>
+              <td><code>waiting</code></td>
+              <td><code>called</code></td>
+              <td><code>called_at</code></td>
+              <td>호출됨</td>
+            </tr>
+            <tr>
+              <td>진료중</td>
+              <td><code>in_consultation</code></td>
+              <td><code>in_progress</code></td>
+              <td><code>started_at</code></td>
+              <td>진료중</td>
+            </tr>
+            <tr>
+              <td>오더 진행</td>
+              <td><code>ordered</code></td>
+              <td><code>in_progress</code></td>
+              <td>order action timestamps</td>
+              <td>오더 진행중</td>
+            </tr>
+            <tr>
+              <td>차트 완료 / 수납 대기</td>
+              <td><code>ready_for_billing</code></td>
+              <td><code>done</code></td>
+              <td><code>chart_completed_at</code>, <code>finished_at</code></td>
+              <td>작성완료 / 수납대기</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>7. DB / API 설계안</h2>
+      <section class="section">
+        <h3>기존 필드로 즉시 활용 가능한 것</h3>
+        <ul class="checklist">
+          <li><code>encounters.status</code>: waiting, in_consultation, ordered, ready_for_billing</li>
+          <li><code>encounters.started_at</code>: 실제 진료 시작 시각</li>
+          <li><code>waiting_queue_entries.status</code>: waiting, called, in_progress, done</li>
+          <li><code>waiting_queue_entries.called_at</code>: 호출 시각</li>
+          <li><code>waiting_queue_entries.finished_at</code>: consultation queue 종료 시각</li>
+        </ul>
+
+        <h3>추가 권장 데이터</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>대상</th>
+              <th>필드/테이블</th>
+              <th>목적</th>
+              <th>우선순위</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>waiting_queue_entries</code></td>
+              <td><code>called_by_user_id</code>, <code>started_by_user_id</code></td>
+              <td>누가 호출했고 누가 진료를 시작했는지 감사/운영 추적</td>
+              <td>P0</td>
+            </tr>
+            <tr>
+              <td><code>encounter_call_events</code></td>
+              <td>신규 이벤트/outbox 테이블</td>
+              <td>DID 표시 문구 snapshot, delivery status, retry 상태 저장</td>
+              <td>P0/P1</td>
+            </tr>
+            <tr>
+              <td><code>encounter_call_events</code></td>
+              <td><code>room_id</code> nullable</td>
+              <td>추후 진료실/공간 데이터 도입 대비</td>
+              <td>P1</td>
+            </tr>
+            <tr>
+              <td><code>audit_events</code></td>
+              <td><code>chart.patient_called</code>, <code>chart.consultation_started</code></td>
+              <td>임상 workflow mutation 이력</td>
+              <td>P0</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>API shape</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Method</th>
+              <th>Body</th>
+              <th>역할</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>/api/workspaces/[workspaceId]/chart/live-queue</code></td>
+              <td>GET</td>
+              <td>query: <code>date</code></td>
+              <td>현재처럼 진료 대기열을 읽되 queue status별 UI label을 충분히 내려준다.</td>
+            </tr>
+            <tr>
+              <td><code>/api/workspaces/[workspaceId]/chart/consultation-flow</code></td>
+              <td>PATCH</td>
+              <td><code>{ encounterId, action: "call" }</code></td>
+              <td>호출 확인 후 queue를 <code>called</code>로 전환하고 call event를 기록한다.</td>
+            </tr>
+            <tr>
+              <td><code>/api/workspaces/[workspaceId]/chart/consultation-flow</code></td>
+              <td>PATCH</td>
+              <td><code>{ encounterId, action: "start" }</code></td>
+              <td>환자 입실 후 진료 시작. encounter를 <code>in_consultation</code>, queue를 <code>in_progress</code>로 전환한다.</td>
+            </tr>
+            <tr>
+              <td><code>/api/workspaces/[workspaceId]/chart/completion</code></td>
+              <td>PATCH</td>
+              <td><code>{ encounterId }</code></td>
+              <td>기존 차트 작성완료. 단, <code>waiting</code>/<code>called</code> 상태에서는 409로 차단한다.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>RPC / server core 제안</h3>
+        <ul class="checklist">
+          <li><code>src/features/chart/server-consultation-flow-core.ts</code> 신규 추가</li>
+          <li><code>public.clair_call_consultation_queue(p_workspace_id, p_actor_user_id, p_encounter_id)</code></li>
+          <li><code>public.clair_start_consultation(p_workspace_id, p_actor_user_id, p_encounter_id)</code></li>
+          <li>두 RPC 모두 workspace membership, encounter workspace scope, active queue row를 확인하고 row lock을 잡는다.</li>
+          <li>상태 충돌은 <code>409 stale_status</code> 또는 <code>409 encounter_unavailable</code>로 반환한다.</li>
+        </ul>
+      </section>
+
+      <h2>8. 구현 범위 제안</h2>
+      <section class="section">
+        <div class="grid-3">
+          <div class="card">
+            <h3>PR 1: 상태 전이 foundation</h3>
+            <ul class="checklist">
+              <li>DB migration/RPC 추가</li>
+              <li>server core + API route 추가</li>
+              <li>completion이 waiting을 완료하지 못하게 제한</li>
+              <li>server tests 추가</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>PR 2: 차트 UI 적용</h3>
+            <ul class="checklist">
+              <li>CTA 상태표 적용</li>
+              <li>호출 확인 모달 추가</li>
+              <li>호출됨/진료중 상태 badge와 queue grouping</li>
+              <li>Playwright UI regression</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>PR 3: DID outbox 확장</h3>
+            <ul class="checklist">
+              <li>call event/outbox persistence</li>
+              <li>DID adapter interface</li>
+              <li>전송 실패/재시도 UI</li>
+              <li>실제 provider 연동은 별도 승인</li>
+            </ul>
+          </div>
+        </div>
+        <div class="note">
+          <strong>권장 순서:</strong> 먼저 PR 1과 PR 2를 하나의 작은 구현으로 묶을 수
+          있다. DID provider 실제 연동은 운영 비용, 보안, 장비 접근, 외부 side
+          effect가 있으므로 별도 승인 범위로 분리한다.
+        </div>
+      </section>
+
+      <h2>9. 수용 기준</h2>
+      <section class="section">
+        <ul class="checklist">
+          <li>초코 / 최도현이 <code>waiting</code> queue일 때 상단 primary CTA는 <code>호출하기</code>다.</li>
+          <li><code>호출하기</code> 클릭 시 <strong>초코/최도현을 호출하시겠습니까?</strong> 모달이 뜬다.</li>
+          <li>모달 확인 후 queue row는 <code>called</code>, <code>called_at</code>은 현재 시각으로 저장된다.</li>
+          <li>호출 후 primary CTA는 <code>진료 시작</code>으로 바뀐다.</li>
+          <li><code>진료 시작</code> 후 encounter는 <code>in_consultation</code>, queue row는 <code>in_progress</code>가 된다.</li>
+          <li>진료중 상태에서만 <code>차트 작성완료</code> CTA가 노출된다.</li>
+          <li>대기 또는 호출됨 상태에서 completion API를 직접 호출하면 409로 차단된다.</li>
+          <li>호출/start/completion 후 live queue와 chart context가 새로고침 없이 갱신된다.</li>
+          <li>권한이 없는 사용자는 호출, 진료 시작, 작성완료 mutation을 실행할 수 없다.</li>
+          <li>실제 DID provider 연동 완료를 주장하지 않는다. MVP에서는 내부 event/outbox 또는 local acknowledgement까지만 주장한다.</li>
+        </ul>
+      </section>
+
+      <h2>10. 검증 계획</h2>
+      <section class="section">
+        <table>
+          <thead>
+            <tr>
+              <th>검증</th>
+              <th>대상</th>
+              <th>명령/방식</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>문서/링크</td>
+              <td>기획안, flow README</td>
+              <td><code>npm run docs:check</code></td>
+            </tr>
+            <tr>
+              <td>TypeScript</td>
+              <td>API/core/UI 타입</td>
+              <td><code>npx tsc --noEmit --pretty false</code></td>
+            </tr>
+            <tr>
+              <td>서버 회귀</td>
+              <td>call/start/completion 상태 전이</td>
+              <td>신규 <code>tests/chart-consultation-flow-server.spec.ts</code></td>
+            </tr>
+            <tr>
+              <td>UI 회귀</td>
+              <td>CTA, 모달, queue 상태 갱신</td>
+              <td><code>tests/chart.spec.ts</code> 또는 focused Playwright spec</td>
+            </tr>
+            <tr>
+              <td>시각 확인</td>
+              <td>desktop/mobile dense layout</td>
+              <td>Playwright screenshot sanity check</td>
+            </tr>
+            <tr>
+              <td>보안/민감정보</td>
+              <td>migration/API 변경</td>
+              <td><code>npm run security:secrets</code>, permission denial tests</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>11. 리스크 / 확인 필요</h2>
+      <section class="section">
+        <div class="grid">
+          <div class="warning">
+            <h3>제품 결정 필요</h3>
+            <ul class="checklist">
+              <li>호출 후 환자가 들어오지 않을 때 <code>호출 취소</code> 또는 <code>재호출</code>을 이번 범위에 넣을지 결정해야 한다.</li>
+              <li>진료실/room 데이터가 아직 없으므로 DID 문구는 진료실명을 일반 문구로 처리한다.</li>
+              <li>SOAP 사전 작성 허용 여부를 결정해야 한다. 권장 기본값은 진료 시작 전 읽기 중심이다.</li>
+            </ul>
+          </div>
+          <div class="warning">
+            <h3>기술 리스크</h3>
+            <ul class="checklist">
+              <li>현재 작업 트리에 여러 파일 변경이 있어 구현 착수 전 branch/worktree 정리가 필요하다.</li>
+              <li>기존 completion RPC가 waiting을 ready_for_billing으로 넘길 수 있으므로 반드시 서버 차단을 먼저 넣어야 한다.</li>
+              <li>실제 DID 연동은 외부 장비/provider side effect라 별도 승인과 테스트 장비가 필요하다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <h2>12. 참고한 현재 기준</h2>
+      <section class="section">
+        <ul class="checklist">
+          <li><code>docs/engineering/data-model/emr-saas-db-structure-spec.ko.md</code>: encounter와 queue status 초안</li>
+          <li><code>docs/engineering/auth-security/auth-login/reception-chart-order-billing-handoff-closeout.md</code>: encounter를 chart/order/billing handoff ID로 사용하는 기준</li>
+          <li><code>src/features/chart/module.tsx</code>: 현재 <code>차트 작성완료</code> CTA와 completion dialog 위치</li>
+          <li><code>src/features/chart/server-chart-completion-core.ts</code>: completion route/core 의미</li>
+          <li><code>src/features/chart/server-chart-live-queue-core.ts</code>: chart live queue가 reception queue를 읽는 구조</li>
+          <li><code>supabase/migrations/20260519190000_chart_completion_persistence_rpc.sql</code>: existing completion RPC status transition</li>
+        </ul>
+      </section>
+
+      <section class="success">
+        <strong>다음 액션:</strong> 이 기획안을 검토한 뒤, 구현을 시작한다면
+        PR-sized work item을 만들거나 기존 chart/reception work item에 연결하고
+        먼저 <code>call/start</code> 서버 상태 전이와 completion 차단부터
+        구현하는 것이 안전하다.
+      </section>
+    </main>
+  </body>
+</html>

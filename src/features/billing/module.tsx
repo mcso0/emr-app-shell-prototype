@@ -58,6 +58,7 @@ import {
 import { resolveBillingAmountInclusion } from "@/features/billing/billing-data-contract";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
+import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import {
   createPersonalProfileSession,
   getDefaultSessionPersonalProfile,
@@ -72,6 +73,10 @@ import {
   isLegacySalesDemoWorkspace,
   resolveWorkspaceRouteParam,
 } from "@/lib/emr-domain/demo-workspaces";
+import {
+  addDaysToIsoDate,
+  formatKoreanOperatingDateLabel,
+} from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
@@ -1306,6 +1311,8 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
   >(() => new Set());
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { selectDate, selectedDate, todayDate } =
+    useSelectedOperatingDate(workspaceId);
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseGroupedRows = useMemo(
     () =>
@@ -1359,7 +1366,14 @@ export function BillingSidePanel({ moduleLabel, workspaceId }: ShellComponentPro
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
       />
-      <EmrDateNavigator dateLabel={legacySalesDemo ? "26.05.01 (금)" : "오늘"} todayLabel="오늘" />
+      <EmrDateNavigator
+        dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
+        selectedDate={selectedDate}
+        todayLabel={selectedDate === todayDate ? "오늘" : undefined}
+        onDateChange={selectDate}
+        onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}
+        onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
+      />
       <EmrListHeader
         label="전체"
         count={totalRowCount}
