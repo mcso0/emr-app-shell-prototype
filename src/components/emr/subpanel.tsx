@@ -347,15 +347,6 @@ export function EmrDateNavigator({
                   onClick={() => selectDate(cell.key)}
                 >
                   <span>{cell.day}</span>
-                  {cell.today ? (
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "absolute top-[var(--clair-spacing-2)] size-[var(--clair-spacing-4)] rounded-full",
-                        cell.selected ? "bg-primary-foreground" : "bg-primary/70",
-                      )}
-                    />
-                  ) : null}
                 </button>
               ))}
             </div>
