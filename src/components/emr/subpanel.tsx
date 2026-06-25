@@ -529,10 +529,10 @@ export function EmrQueueEmptyState({
       )}
       {...props}
     >
-      <div className="mb-2 flex size-10 items-center justify-center text-[var(--emr-text-tertiary)]">
+      <div className="mb-2 flex size-10 items-center justify-center text-[var(--emr-text-placeholder)]">
         {icon ?? <CdsFilesBoxIcon aria-hidden="true" className="size-8" />}
       </div>
-      <div className="emr-text-dense font-medium text-[var(--emr-text-tertiary)]">
+      <div className="emr-text-dense font-medium text-[var(--emr-text-placeholder)]">
         {title ?? children}
       </div>
     </div>
