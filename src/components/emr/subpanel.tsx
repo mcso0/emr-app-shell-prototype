@@ -329,7 +329,7 @@ export function EmrDateNavigator({
                     cell.inMonth ? "text-foreground" : "text-muted-foreground",
                     cell.today &&
                       !cell.selected &&
-                      "font-semibold text-primary ring-1 ring-primary/70 ring-offset-1 ring-offset-background hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
+                      "font-semibold text-primary ring-1 ring-primary/35 ring-offset-1 ring-offset-background hover:bg-[var(--clair-color-atomic-black-alpha-4)]",
                     cell.selected &&
                       "bg-primary text-primary-foreground ring-0 ring-offset-0 hover:bg-primary/90",
                   )}
@@ -348,8 +348,8 @@ export function EmrDateNavigator({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "absolute bottom-[var(--clair-spacing-2)] size-[var(--clair-spacing-4)] rounded-full",
-                        cell.selected ? "bg-primary-foreground" : "bg-primary",
+                        "absolute top-[var(--clair-spacing-2)] size-[var(--clair-spacing-4)] rounded-full",
+                        cell.selected ? "bg-primary-foreground" : "bg-primary/70",
                       )}
                     />
                   ) : null}
@@ -360,7 +360,7 @@ export function EmrDateNavigator({
               <div className="flex justify-end border-t border-[var(--emr-line-hairline)] pt-[var(--clair-spacing-8)]">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="xs"
                   disabled={selectedDate === todayDate}
                   onClick={() => selectDate(todayDate)}
