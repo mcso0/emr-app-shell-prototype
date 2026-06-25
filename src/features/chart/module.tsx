@@ -92,7 +92,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import {
   Table,
@@ -5755,6 +5754,9 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
 
   const currentBundle = effectiveBundle;
   const consultationCallRooms = getConsultationCallRooms();
+  const selectedCallRoom = consultationCallRooms.find(
+    (room) => room.id === selectedCallRoomId,
+  );
   const chartCompletionStatusText = getConsultationWorkflowStatusText(
     currentBundle.encounter,
     effectiveQueueEntry,
@@ -5925,7 +5927,9 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                   aria-label="호출 진료실"
                   className="h-9 w-full bg-card"
                 >
-                  <SelectValue placeholder="진료실 선택" />
+                  <span className="flex flex-1 truncate text-left">
+                    {selectedCallRoom?.name ?? "진료실 선택"}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {consultationCallRooms.map((room) => (
@@ -5953,7 +5957,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 </Button>
               }
             >
-              현재 화면은 유지되지만 호출 상태와 내부 outbox 이벤트가 확정되지 않았어.
+              호출 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.
             </EmrInlineAlert>
           ) : null}
         </EmrDialogShell>
