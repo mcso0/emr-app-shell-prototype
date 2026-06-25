@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진료 호출 모달/차트 잠금 UX 보완 결과</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f8fa;
+        color: #172033;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 40px 20px 56px;
+      }
+      section {
+        margin-top: 16px;
+        border: 1px solid #d9dee8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      code {
+        border-radius: 4px;
+        background: #eef1f6;
+        padding: 2px 5px;
+      }
+      .meta {
+        color: #5f6b7a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>진료 호출 모달/차트 잠금 UX 보완 결과</h1>
+      <p class="meta">2026-06-25 · CHART-PR-009 · synthetic Cheongdam demo scope</p>
+
+      <section>
+        <h2>요청</h2>
+        <p>
+          호출하기 모달을 진료실 선택 기반 UX로 바꾸고, 진료 시작 전에는 차트
+          입력과 오더 작업을 할 수 없도록 보완했다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 내용</h2>
+        <ul>
+          <li>호출 모달에 환자/보호자, 접수 시각, 담당 수의사, 진료실 dropdown을 2열 form 구조로 배치했다.</li>
+          <li>진료실 미선택 시 <code>호출하기</code> 버튼을 비활성화하고, call API payload에 <code>roomId</code>를 요구한다.</li>
+          <li>호출 event에 <code>roomId</code>, <code>roomName</code> snapshot을 저장한다.</li>
+          <li><code>waiting</code>/<code>called</code> 단계에서는 SOAP, 진단명, 오더, 차트 작성완료 mutation UI를 잠그고 안내 상태를 보여준다.</li>
+          <li>SOAP, diagnosis, order draft, order action 서버 코어에서 진료 시작 전 mutation을 <code>409 stale_status</code>로 차단한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: passed</li>
+          <li><code>tests/chart-consultation-flow-server.spec.ts</code>: 5 passed</li>
+          <li>SOAP/diagnosis/order draft/order action persistence specs: 37 passed</li>
+          <li><code>tests/chart.spec.ts -g "chart consultation CTA moves"</code>: 1 passed</li>
+          <li><code>npm run docs:check</code>, <code>npm run security:secrets</code>: passed</li>
+          <li><code>npm run lint</code>: passed with existing warnings</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 리스크 / 후속</h2>
+        <ul>
+          <li>실제 DID provider 전송은 여전히 범위 밖이다.</li>
+          <li><code>hospital_spaces</code> schema와 병원 관리의 공간/진료실 CRUD는 후속 PR로 분리했다.</li>
+          <li>원격 Supabase 적용 전에는 새 migration 적용 순서와 기존 room 없는 RPC 권한 회수 동작을 확인해야 한다.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

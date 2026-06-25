@@ -342,8 +342,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
     async (route) => {
       const body = (await route.request().postDataJSON()) as {
         action: "call" | "start";
+        roomId?: string;
       };
       if (body.action === "call") {
+        expect(body.roomId).toBe("room-consult-1");
         queueEntry = {
           ...queueEntry,
           status: "called",
@@ -374,9 +376,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
               ? {
                   callEvent: {
                     id: "call-event-choco",
-                    displayText:
-                      "초코 보호자 최도현님, 진료실로 들어와 주세요.",
+                    displayText: "1진료실로 환자를 호출합니다.",
                     deliveryStatus: "queued",
+                    roomId: "room-consult-1",
+                    roomName: "1진료실",
                   },
                 }
               : {}),
@@ -396,12 +399,31 @@ test("chart consultation CTA moves from call to start before chart completion", 
   );
   await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
+  await expect(page.getByTestId("chart-start-locked-state")).toContainText(
+    "진료 시작 전입니다",
+  );
 
   await page.getByRole("button", { name: "호출하기" }).click();
   await expect(
     page.getByRole("heading", { name: "초코/최도현을 호출하시겠습니까?" }),
   ).toBeVisible();
-  await expect(page.getByText("초코 보호자 최도현님")).toBeVisible();
+  const callDialog = page.getByRole("dialog", {
+    name: "초코/최도현을 호출하시겠습니까?",
+  });
+  await expect(callDialog).toContainText(
+    "진료실을 선택한 뒤 환자를 호출해 주세요.",
+  );
+  await expect(callDialog).toContainText("환자 / 보호자");
+  await expect(callDialog).toContainText("초코 / 최도현");
+  await expect(callDialog).toContainText("접수 시각");
+  await expect(callDialog).toContainText("담당 수의사");
+  await expect(callDialog).toContainText("진료실");
+  await expect(callDialog).not.toContainText("DID 표시 preview");
+  await expect(callDialog).not.toContainText("현재 상태");
+  await expect(callDialog).not.toContainText("local outbox");
+  await expect(callDialog.getByRole("button", { name: "호출하기" })).toBeDisabled();
+  await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
+  await page.getByRole("option", { name: "1진료실" }).click();
   await page.getByRole("button", { name: "호출하기" }).last().click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
@@ -409,10 +431,14 @@ test("chart consultation CTA moves from call to start before chart completion", 
   );
   await expect(page.getByRole("button", { name: "진료 시작" })).toBeVisible();
   await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
+  await expect(page.getByTestId("chart-start-locked-state")).toContainText(
+    "환자가 입실하면 진료 시작",
+  );
 
   await page.getByRole("button", { name: "진료 시작" }).click();
   await expect(page.getByTestId("chart-completion-status")).toContainText("진료중");
   await expect(page.getByRole("button", { name: "차트 작성완료" })).toBeVisible();
+  await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
 });
 
 test("chart side panel date navigator refetches the selected operating date", async ({

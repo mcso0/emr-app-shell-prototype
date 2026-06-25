@@ -88,6 +88,13 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -103,6 +110,7 @@ import {
   getChartQueueItems,
   getChartQueueStatuses,
   getChartStaffName,
+  getConsultationCallRooms,
   type ChartEncounterBundle,
   type ChartHistoryRow,
   type ChartOrderGroup,
@@ -197,6 +205,8 @@ type ConsultationFlowSnapshot = {
     id: string;
     displayText: string;
     deliveryStatus: "queued";
+    roomId: string;
+    roomName: string;
   };
   encounter: Encounter;
   queueEntry: WaitingQueueEntry;
@@ -1962,11 +1972,13 @@ async function mutateConsultationFlowRoute({
   action,
   actorHeaders,
   encounterId,
+  roomId,
   workspaceId,
 }: {
   action: "call" | "start";
   actorHeaders?: Record<string, string>;
   encounterId: string;
+  roomId?: string;
   workspaceId: string;
 }): Promise<ConsultationFlowRouteResponse> {
   try {
@@ -1978,7 +1990,7 @@ async function mutateConsultationFlowRoute({
           "Content-Type": "application/json",
           ...(actorHeaders ?? {}),
         },
-        body: JSON.stringify({ action, encounterId }),
+        body: JSON.stringify({ action, encounterId, ...(roomId ? { roomId } : {}) }),
       },
     );
     const body = (await response.json()) as ConsultationFlowRouteResponse;
@@ -5190,6 +5202,55 @@ function ChartPreflightLine({
   );
 }
 
+function ChartPreflightField({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="grid min-h-9 grid-cols-[112px_minmax(0,1fr)] items-center gap-3 emr-text-metadata">
+      <label className="text-[var(--emr-text-tertiary)]">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function ChartReadonlyField({ value }: { value: string }) {
+  return (
+    <div className="flex min-h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 text-right font-medium text-foreground">
+      <span className="w-full truncate">{value}</span>
+    </div>
+  );
+}
+
+function ChartStartLockedState({
+  queueStatus,
+}: {
+  queueStatus?: WaitingQueueEntry["status"];
+}) {
+  const isCalled = queueStatus === "called";
+
+  return (
+    <div className="mt-2 flex min-h-0 flex-1 items-center justify-center border-t border-[var(--emr-line-hairline)] pt-2">
+      <div
+        className="w-full max-w-xl rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card p-5 text-center shadow-sm"
+        data-testid="chart-start-locked-state"
+      >
+        <div className="emr-text-section font-semibold text-foreground">
+          진료 시작 전입니다
+        </div>
+        <p className="mt-2 emr-text-dense text-muted-foreground">
+          {isCalled
+            ? "환자가 입실하면 진료 시작을 눌러 차트 입력과 오더 작업을 시작할 수 있습니다."
+            : "진료실을 선택해 환자를 호출한 뒤, 환자가 입실하면 진료 시작을 눌러 차트 입력과 오더 작업을 시작할 수 있습니다."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function EmptyChartState() {
   return (
     <div className="flex h-full items-center justify-center emr-text-dense text-muted-foreground">
@@ -5272,6 +5333,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const [isChartResizing, setIsChartResizing] = useState(false);
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
   const [callDialogOpen, setCallDialogOpen] = useState(false);
+  const [selectedCallRoomId, setSelectedCallRoomId] = useState("");
   const [consultationFlowState, setConsultationFlowState] = useState<{
     action?: "call" | "start";
     status: "idle" | "saving" | "error";
@@ -5317,9 +5379,10 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
       };
     });
   };
+  const bundleEncounterId = bundle?.encounter.id;
   const orderGroups = useMemo(
-    () => (bundle ? getChartOrderGroups(bundle.encounter.id) : []),
-    [bundle?.encounter.id],
+    () => (bundleEncounterId ? getChartOrderGroups(bundleEncounterId) : []),
+    [bundleEncounterId],
   );
   const allOrders = useMemo(
     () => orderGroups.flatMap(({ orders }) => orders),
@@ -5467,12 +5530,17 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
     }
+    if (action === "call" && !selectedCallRoomId) {
+      toast.error("진료실을 선택해 주세요.");
+      return;
+    }
 
     setConsultationFlowState({ action, status: "saving" });
     const result = await mutateConsultationFlowRoute({
       action,
       actorHeaders,
       encounterId: activeEncounterId,
+      roomId: action === "call" ? selectedCallRoomId : undefined,
       workspaceId: activeWorkspaceId,
     });
 
@@ -5501,6 +5569,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     });
     setConsultationFlowState({ action, status: "idle" });
     setCallDialogOpen(false);
+    setSelectedCallRoomId("");
     toast.success(action === "call" ? "호출 상태로 전환했어요." : "진료를 시작했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
@@ -5685,6 +5754,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   if (!bundle || !effectiveBundle) return <EmptyChartState />;
 
   const currentBundle = effectiveBundle;
+  const consultationCallRooms = getConsultationCallRooms();
   const chartCompletionStatusText = getConsultationWorkflowStatusText(
     currentBundle.encounter,
     effectiveQueueEntry,
@@ -5704,6 +5774,9 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const primaryActionBusy =
     consultationFlowState.status === "saving" ||
     chartCompletionState.status === "saving";
+  const chartStartLocked =
+    currentBundle.encounter.status === "waiting" &&
+    (effectiveQueueEntry?.status === "waiting" || effectiveQueueEntry?.status === "called");
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
   const diagnosisSaveStatusText =
     diagnosisPersistenceState.encounterId === activeEncounterId
@@ -5784,16 +5857,24 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
           />
         }
       />
-      <Dialog open={callDialogOpen} onOpenChange={setCallDialogOpen}>
+      <Dialog
+        open={callDialogOpen}
+        onOpenChange={(open) => {
+          setCallDialogOpen(open);
+          if (!open) setSelectedCallRoomId("");
+        }}
+      >
         <EmrDialogShell
           variant="confirm"
           title={callDialogTitle}
-          description="대기실 DID 모니터에 진료 호출 안내가 표시될 내부 이벤트를 저장해. 환자가 진료실에 들어오면 진료 시작을 눌러 차트를 작성할 수 있어."
-          footerMeta="이번 범위는 local outbox 기록까지만 처리하며 실제 DID provider 전송은 하지 않아."
+          description="진료실을 선택한 뒤 환자를 호출해 주세요. 진료 시작 전에는 차트 입력과 오더 작업을 할 수 없습니다."
           primaryAction={
             <Button
               size="sm"
-              disabled={consultationFlowState.status === "saving"}
+              disabled={
+                consultationFlowState.status === "saving" ||
+                !selectedCallRoomId
+              }
               onClick={() => void handleConsultationFlowMutation("call")}
             >
               {consultationFlowState.status === "saving" &&
@@ -5813,31 +5894,48 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
             </Button>
           }
         >
-          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
-            <ChartPreflightLine
+          <div className="grid gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+            <ChartPreflightField
               label="환자 / 보호자"
-              value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
-            />
-            <ChartPreflightLine
-              label="접수 시각"
-              value={getShortDateTime(
-                currentBundle.encounter.checkedInAt ??
-                  currentBundle.encounter.createdAt,
-              )}
-            />
-            <ChartPreflightLine
-              label="담당 수의사"
-              value={getChartBundleVeterinarianName(currentBundle)}
-            />
-            <ChartPreflightLine
-              label="DID 표시 preview"
-              value={`${currentBundle.patient.name} 보호자 ${currentBundle.primaryGuardian?.name ?? "미지정"}님, 진료실로 들어와 주세요.`}
-            />
-            <ChartPreflightLine
-              label="현재 상태"
-              value={chartCompletionStatusText}
-              emphasis
-            />
+            >
+              <ChartReadonlyField
+                value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
+              />
+            </ChartPreflightField>
+            <ChartPreflightField label="접수 시각">
+              <ChartReadonlyField
+                value={getShortDateTime(
+                  currentBundle.encounter.checkedInAt ??
+                    currentBundle.encounter.createdAt,
+                )}
+              />
+            </ChartPreflightField>
+            <ChartPreflightField label="담당 수의사">
+              <ChartReadonlyField
+                value={getChartBundleVeterinarianName(currentBundle)}
+              />
+            </ChartPreflightField>
+            <ChartPreflightField label="진료실">
+              <Select
+                value={selectedCallRoomId}
+                onValueChange={(value) => setSelectedCallRoomId(value ?? "")}
+                disabled={consultationFlowState.status === "saving"}
+              >
+                <SelectTrigger
+                  aria-label="호출 진료실"
+                  className="h-9 w-full bg-card"
+                >
+                  <SelectValue placeholder="진료실 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {consultationCallRooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </ChartPreflightField>
           </div>
           {consultationFlowState.status === "error" &&
           consultationFlowState.action === "call" ? (
@@ -5943,76 +6041,80 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
           onDismiss={() => setChartUnavailableAction(null)}
         />
       ) : null}
-      <div
-        ref={chartWorkspaceRef}
-        data-slot="chart-workspace"
-        className={cn(
-          "mt-2 grid min-h-0 flex-1 border-t border-[var(--emr-line-hairline)] pt-2",
-          isChartResizing && "select-none",
-        )}
-        style={{
-          gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
-        }}
-      >
+      {chartStartLocked ? (
+        <ChartStartLockedState queueStatus={effectiveQueueEntry?.status} />
+      ) : (
         <div
-          data-testid="chart-soap-diagnosis-grid"
-          className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
-        >
-          <SoapPanel
-            key={`chart-soap-${effectiveLatestSoap?.id ?? selectedEncounterId}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
-            actorHeaders={actorHeaders}
-            diagnoses={diagnosisRows}
-            encounterId={bundle.encounter.id}
-            onPersistedSoapNote={(soapNote) =>
-              setPersistedSoapState({
-                encounterId: bundle.encounter.id,
-                soapNote,
-              })
-            }
-            soapNote={effectiveLatestSoap}
-            workspaceId={bundle.encounter.workspaceId}
-          />
-          <AssessmentPanel
-            key={`chart-assessment-${bundle.encounter.id}`}
-            diagnosisRows={diagnosisRows}
-            onDiagnosisRowsChange={handleDiagnosisRowsChange}
-            saveStatusText={diagnosisSaveStatusText}
-            setDiagnosisRows={setDiagnosisRows}
-            soapNote={effectiveLatestSoap}
-          />
-        </div>
-        <button
-          type="button"
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="진료 기록과 처방/오더 영역 높이 조절"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(chartTopPercent)}
+          ref={chartWorkspaceRef}
+          data-slot="chart-workspace"
           className={cn(
-            "group relative -mx-1 flex cursor-row-resize items-center justify-center rounded-md outline-none",
-            "focus-visible:ring-3 focus-visible:ring-ring/50",
-            isChartResizing && "bg-[var(--emr-state-hover)]",
+            "mt-2 grid min-h-0 flex-1 border-t border-[var(--emr-line-hairline)] pt-2",
+            isChartResizing && "select-none",
           )}
-          onKeyDown={handleChartResizeKeyDown}
-          onLostPointerCapture={stopChartResize}
-          onPointerCancel={stopChartResize}
-          onPointerDown={handleChartResizePointerDown}
-          onPointerMove={handleChartResizePointerMove}
-          onPointerUp={stopChartResize}
+          style={{
+            gridTemplateRows: `minmax(${CHART_TOP_MIN_PX}px, ${chartTopPercent}fr) ${CHART_RESIZER_HEIGHT_PX}px minmax(${CHART_ORDER_MIN_PX}px, ${100 - chartTopPercent}fr)`,
+          }}
         >
-          <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--emr-line-hairline)]" />
-          <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
-        </button>
-        <div className="min-h-0 min-w-0">
-          <OrderArea
-            key={bundle.encounter.id}
-            actorHeaders={actorHeaders}
-            bundle={bundle}
-            orderGroups={orderGroups}
-          />
+          <div
+            data-testid="chart-soap-diagnosis-grid"
+            className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
+          >
+            <SoapPanel
+              key={`chart-soap-${effectiveLatestSoap?.id ?? selectedEncounterId}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
+              actorHeaders={actorHeaders}
+              diagnoses={diagnosisRows}
+              encounterId={bundle.encounter.id}
+              onPersistedSoapNote={(soapNote) =>
+                setPersistedSoapState({
+                  encounterId: bundle.encounter.id,
+                  soapNote,
+                })
+              }
+              soapNote={effectiveLatestSoap}
+              workspaceId={bundle.encounter.workspaceId}
+            />
+            <AssessmentPanel
+              key={`chart-assessment-${bundle.encounter.id}`}
+              diagnosisRows={diagnosisRows}
+              onDiagnosisRowsChange={handleDiagnosisRowsChange}
+              saveStatusText={diagnosisSaveStatusText}
+              setDiagnosisRows={setDiagnosisRows}
+              soapNote={effectiveLatestSoap}
+            />
+          </div>
+          <button
+            type="button"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="진료 기록과 처방/오더 영역 높이 조절"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(chartTopPercent)}
+            className={cn(
+              "group relative -mx-1 flex cursor-row-resize items-center justify-center rounded-md outline-none",
+              "focus-visible:ring-3 focus-visible:ring-ring/50",
+              isChartResizing && "bg-[var(--emr-state-hover)]",
+            )}
+            onKeyDown={handleChartResizeKeyDown}
+            onLostPointerCapture={stopChartResize}
+            onPointerCancel={stopChartResize}
+            onPointerDown={handleChartResizePointerDown}
+            onPointerMove={handleChartResizePointerMove}
+            onPointerUp={stopChartResize}
+          >
+            <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-[var(--emr-line-hairline)]" />
+            <span className="relative h-1.5 w-10 rounded-full bg-[var(--emr-line-strong)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
+          </button>
+          <div className="min-h-0 min-w-0">
+            <OrderArea
+              key={bundle.encounter.id}
+              actorHeaders={actorHeaders}
+              bundle={bundle}
+              orderGroups={orderGroups}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

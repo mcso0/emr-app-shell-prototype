@@ -16,6 +16,7 @@ import {
   createSupabaseOrderCatalogGateway,
   type OrderCatalogGateway,
 } from "../src/features/hospital-admin/server-order-catalog-core";
+import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-kong-260501";
@@ -48,6 +49,18 @@ const validConfirmInput = {
   action: "confirm" as const,
   encounterId,
   orderIds: [orderId],
+};
+
+const waitingEncounter: Encounter = {
+  id: "encounter-order-action-waiting-lock",
+  workspaceId,
+  patientId: "patient-order-action-waiting-lock",
+  guardianId: "guardian-order-action-waiting-lock",
+  encounterNo: "E-ORDER-ACTION-LOCK",
+  status: "waiting",
+  checkedInAt: "2026-06-25T14:15:00+09:00",
+  createdAt: "2026-06-25T14:15:00+09:00",
+  updatedAt: "2026-06-25T14:15:00+09:00",
 };
 
 test("order action route confirms selected orders via mock fallback and reads after save", async ({
@@ -183,6 +196,28 @@ test("order action core submits billing candidates separately from confirmation"
     }),
   ]);
   expect(result.ok ? result.fulfillmentWorkItems : undefined).toBeUndefined();
+});
+
+test("order action core blocks chart mutation before consultation starts", async () => {
+  const blocked = await saveChartOrderAction({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      action: "bill",
+      encounterId: waitingEncounter.id,
+      orderIds: ["order-waiting-lock"],
+    },
+    gateway: createMockChartOrderActionGateway({
+      encounters: [{ ...waitingEncounter }],
+      orders: [],
+    }),
+  });
+
+  expect(blocked).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "stale_status",
+  });
 });
 
 test("order action core creates billing candidates immediately for billing-only catalog snapshots", async () => {

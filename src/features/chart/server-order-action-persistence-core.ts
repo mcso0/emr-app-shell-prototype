@@ -108,7 +108,7 @@ export type ChartOrderActionGatewayResult =
   | {
       ok: false;
       status: 409;
-      denialReason: "encounter_unavailable" | "order_unavailable";
+      denialReason: "encounter_unavailable" | "order_unavailable" | "stale_status";
     }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
@@ -186,6 +186,7 @@ export type ChartOrderActionSaveResult =
         | "invalid_transition"
         | "invoice_unavailable"
         | "order_unavailable"
+        | "stale_status"
         | "unsupported_order_type"
         | "work_item_unavailable";
     }
@@ -241,7 +242,17 @@ export async function readChartOrderActions({
   });
 
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (
+      result.status === 409 &&
+      (result.denialReason === "encounter_unavailable" ||
+        result.denialReason === "order_unavailable")
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        denialReason: result.denialReason,
+      };
+    }
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -478,6 +489,9 @@ export function createMockChartOrderActionGateway(
           status: 409,
           denialReason: "encounter_unavailable",
         };
+      if (!canMutateChart(encounter)) {
+        return { ok: false, status: 409, denialReason: "stale_status" };
+      }
 
       const seedRows = mergeCatalogSnapshotRows(
         getStoredOrSeedOrderActions({ encounterId, orders, workspaceId }),
@@ -609,6 +623,9 @@ export function createSupabaseChartOrderActionGateway(
         if (error.message?.includes("order_unavailable")) {
           return { ok: false, status: 409, denialReason: "order_unavailable" };
         }
+        if (error.message?.includes("stale_status")) {
+          return { ok: false, status: 409, denialReason: "stale_status" };
+        }
         return { ok: false, status: 500, error: "db_write_failed" };
       }
 
@@ -689,6 +706,10 @@ function findEncounter(
       encounter.workspaceId === workspaceId &&
       encounter.status !== "cancelled",
   );
+}
+
+function canMutateChart(encounter: Encounter) {
+  return encounter.status === "in_consultation" || encounter.status === "ordered";
 }
 
 function getStoredOrSeedOrderActions({

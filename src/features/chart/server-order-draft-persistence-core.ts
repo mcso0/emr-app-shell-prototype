@@ -50,7 +50,7 @@ type NormalizedOrderDraftLineInput = {
 
 export type ChartOrderDraftGatewayResult =
   | { ok: true; orderDrafts: ChartOrderDraftLine[] }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartOrderDraftGateway = {
@@ -80,7 +80,7 @@ export type ChartOrderDraftReadResult =
       fieldErrors: Partial<Record<"encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type ChartOrderDraftSaveResult =
@@ -97,7 +97,7 @@ export type ChartOrderDraftSaveResult =
       fieldErrors: Partial<Record<"encounterId" | "orders", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockOrderDraftStore = new Map<string, ChartOrderDraftLine[]>();
@@ -143,7 +143,9 @@ export async function readChartOrderDraft({
   const result = await gateway.readOrderDraft({ encounterId: normalizedEncounterId, workspaceId });
 
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 409 && result.denialReason === "encounter_unavailable") {
+      return result;
+    }
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -243,6 +245,7 @@ export function createMockChartOrderDraftGateway(
     async saveOrderDraft({ encounterId, orders: draftRows, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
 
       const seedRows = getStoredOrSeedOrderDrafts({ encounterId, invoiceLines, orders, workspaceId });
       const timestamp = now();
@@ -340,6 +343,9 @@ export function createSupabaseChartOrderDraftGateway(
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
+        if (error.message?.includes("stale_status")) {
+          return { ok: false, status: 409, denialReason: "stale_status" };
+        }
         return { ok: false, status: 500, error: "db_write_failed" };
       }
 
@@ -404,6 +410,10 @@ function findEncounter(encounters: Encounter[], workspaceId: string, encounterId
       encounter.workspaceId === workspaceId &&
       encounter.status !== "cancelled"
   );
+}
+
+function canMutateChart(encounter: Encounter) {
+  return encounter.status === "in_consultation" || encounter.status === "ordered";
 }
 
 function getStoredOrSeedOrderDrafts({
