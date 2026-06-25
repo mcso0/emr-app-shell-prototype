@@ -1702,6 +1702,7 @@ export function LabSidePanel({
     selectedDate,
     todayDate,
   });
+  const showLabQueueLoadingState = fulfillmentQueue.status === "loading" && resultCount === 0;
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1766,7 +1767,7 @@ export function LabSidePanel({
         headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
       <EmrSubpanelBody>
-        {fulfillmentQueue.status === "loading" ? (
+        {showLabQueueLoadingState ? (
           <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다." />
         ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
@@ -1890,6 +1891,7 @@ export function ImagingSidePanel({
     selectedDate,
     todayDate,
   });
+  const showImagingQueueLoadingState = fulfillmentQueue.status === "loading" && resultCount === 0;
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1953,7 +1955,7 @@ export function ImagingSidePanel({
         headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
       <EmrSubpanelBody>
-        {fulfillmentQueue.status === "loading" ? (
+        {showImagingQueueLoadingState ? (
           <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다." />
         ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
