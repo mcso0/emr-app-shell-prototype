@@ -90,6 +90,7 @@ Make the reception module's date, queue, and search controls behave like a real 
 - Follow-up reception issues should reuse the store selected operating date instead of calling `getWorkspaceOperatingDate` directly for user-visible forms or drawers that depend on the active schedule date.
 - Follow-up tests that create synthetic queue or calendar responses must align their timestamps with the selected operating date, otherwise the side panel will correctly filter them out.
 - Do not reintroduce the removed custom queue search row; extend the shared `EmrListHeader` search path if more list-search behavior is needed.
+- 2026-06-25 follow-up: reception queue read responses now include DB-readback summary counts for total, walk-in, and appointment work. Reception and shared queue empty states use centered icon+single-line copy without bordered placeholder panels.
 
 ## Result
 

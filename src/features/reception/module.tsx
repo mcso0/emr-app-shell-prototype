@@ -1386,23 +1386,46 @@ function getReceptionReadFailureMessage(
 }
 
 function getReceptionEmptyStateCopy({
+  operatingDate,
   listMode,
-  searchQuery,
-  workspaceId,
+  queueSummary,
+  todayDate,
 }: {
+  operatingDate: string;
   listMode: ReceptionSideListMode;
-  searchQuery: string;
-  workspaceId: string;
+  queueSummary?: {
+    appointmentCount: number;
+    date: string;
+    receptionCount: number;
+    totalCount: number;
+    workspaceId: string;
+  };
+  todayDate: string;
 }) {
-  if (searchQuery.trim()) return "검색 결과가 없습니다.";
-  if (isPreparedEmptyClinicWorkspace(workspaceId)) {
-    if (listMode === "appointment") return "오늘 예정된 예약이 아직 없습니다.";
-    if (listMode === "reception") return "아직 외래 접수 업무가 없습니다.";
-    return "아직 오늘 접수/예약 업무가 없습니다.";
+  const isToday = operatingDate === todayDate;
+  const scopePrefix = isToday ? "오늘" : "선택한 날짜의";
+
+  if (
+    queueSummary &&
+    queueSummary.date === operatingDate &&
+    listMode === "appointment" &&
+    queueSummary.appointmentCount === 0
+  ) {
+    return `${scopePrefix} 예약 업무가 없습니다.`;
   }
-  if (listMode === "appointment") return "예약 목록이 비어 있습니다.";
-  if (listMode === "reception") return "외래 목록이 비어 있습니다.";
-  return "목록이 비어 있습니다.";
+
+  if (
+    queueSummary &&
+    queueSummary.date === operatingDate &&
+    listMode === "reception" &&
+    queueSummary.receptionCount === 0
+  ) {
+    return `${scopePrefix} 외래 접수 업무가 없습니다.`;
+  }
+
+  if (listMode === "appointment") return `${scopePrefix} 예약 업무가 없습니다.`;
+  if (listMode === "reception") return `${scopePrefix} 외래 접수 업무가 없습니다.`;
+  return `${scopePrefix} 접수/예약 업무가 없습니다.`;
 }
 
 const formatPatientWeightKgInput = (weightKg?: number) =>
@@ -2530,6 +2553,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const queueReadError = useReceptionStore((state) => state.queueReadError);
   const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
+  const queueSummary = useReceptionStore((state) => state.queueSummary);
   const persistedCalendarAppointments = useReceptionStore(
     (state) => state.persistedCalendarAppointments,
   );
@@ -2700,9 +2724,11 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     [sideListCounts],
   );
   const emptyStateCopy = getReceptionEmptyStateCopy({
+    operatingDate,
     listMode,
-    searchQuery,
-    workspaceId,
+    queueSummary:
+      queueSummary?.workspaceId === workspaceId ? queueSummary : undefined,
+    todayDate: defaultOperatingDate,
   });
   const closeSearch = useCallback(() => {
     setSearchQuery("");
@@ -5969,7 +5995,7 @@ export function ReceptionContent() {
           getReceptionReadFailureMessage(queueResult, workspaceId),
         );
       } else {
-        applyPersistedReceptionQueue(queueResult.queue);
+        applyPersistedReceptionQueue(queueResult.queue, queueResult.summary);
       }
 
       return { ok: calendarResult.ok && queueResult.ok };

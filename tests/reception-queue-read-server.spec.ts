@@ -86,6 +86,11 @@ test("reception queue read route requires an actor and preserves mock fallback",
   await expectJson(mockFallback, {
     ok: true,
     queue: [],
+    summary: {
+      appointmentCount: 0,
+      receptionCount: 0,
+      totalCount: 0,
+    },
     enforcedBy: "reception-queue-read",
   });
 });
@@ -289,6 +294,11 @@ test("reception queue read includes cancelled encounter queue rows for the selec
 
   expect(result).toMatchObject({
     ok: true,
+    summary: {
+      appointmentCount: 0,
+      receptionCount: 2,
+      totalCount: 2,
+    },
     queue: [
       {
         encounter: { id: encounter.id, status: "waiting" },
@@ -317,6 +327,11 @@ test("reception queue read keeps appointment-only rows separate from walk-in enc
 
   expect(result).toMatchObject({
     ok: true,
+    summary: {
+      appointmentCount: 1,
+      receptionCount: 1,
+      totalCount: 2,
+    },
     queue: [
       {
         kind: "encounter_queue",

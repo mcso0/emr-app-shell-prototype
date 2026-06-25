@@ -4,7 +4,10 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
-import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
+import type {
+  ReceptionQueueReadRecord,
+  ReceptionQueueReadSummary,
+} from "@/features/reception/reception-queue-read";
 import { mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
 import type {
   Appointment,
@@ -29,6 +32,7 @@ export type ReceptionQueueReadResult =
       ok: true;
       status: 200;
       queue: ReceptionQueueReadRecord[];
+      summary: ReceptionQueueReadSummary;
       enforcedBy: "reception-queue-read";
     }
   | {
@@ -77,8 +81,43 @@ export async function readReceptionQueue({
     ok: true,
     status: 200,
     queue: result.queue,
+    summary: getReceptionQueueReadSummary({
+      date,
+      queue: result.queue,
+      workspaceId,
+    }),
     enforcedBy: "reception-queue-read",
   };
+}
+
+export function getReceptionQueueReadSummary({
+  date,
+  queue,
+  workspaceId,
+}: {
+  date: string;
+  queue: ReceptionQueueReadRecord[];
+  workspaceId: string;
+}): ReceptionQueueReadSummary {
+  return queue.reduce<ReceptionQueueReadSummary>(
+    (summary, record) => {
+      if (record.kind === "appointment" || record.encounter.appointmentId) {
+        summary.appointmentCount += 1;
+      } else {
+        summary.receptionCount += 1;
+      }
+
+      summary.totalCount += 1;
+      return summary;
+    },
+    {
+      appointmentCount: 0,
+      date,
+      receptionCount: 0,
+      totalCount: 0,
+      workspaceId,
+    },
+  );
 }
 
 export function createMockReceptionQueueReadGateway(

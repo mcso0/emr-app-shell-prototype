@@ -5,7 +5,10 @@ import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
+import {
+  CdsFilesCalendarIcon,
+  CdsFilesBoxIcon,
+} from "@/components/cds-icons/files-and-layout";
 import {
   CdsNavigationChevronLeftIcon,
   CdsNavigationChevronRightIcon,
@@ -490,32 +493,48 @@ export function EmrListHeaderIconButton({
   );
 }
 
-export function EmrListSearchEmptyState({
-  objectLabel = "대기열 항목",
-  onClear,
-  query,
-}: {
+export function EmrListSearchEmptyState(props: {
   objectLabel?: string;
   onClear: () => void;
   query: string;
 }) {
+  void props;
+
   return (
-    <div className="mx-1 mt-3 rounded-[var(--clair-radius-md)] border border-dashed border-[var(--emr-line-strong)] bg-[var(--emr-surface-panel)] px-3 py-4 text-center">
-      <div className="emr-text-section font-semibold text-[var(--emr-text-secondary)]">
-        검색 결과가 없어
+    <EmrQueueEmptyState
+      icon={<CdsActionsSearchIcon aria-hidden="true" className="size-8" />}
+      title="검색 결과가 없습니다."
+      data-testid="emr-list-search-empty-state"
+    />
+  );
+}
+
+export function EmrQueueEmptyState({
+  children,
+  className,
+  icon,
+  title,
+  ...props
+}: {
+  children?: ReactNode;
+  className?: string;
+  icon?: ReactNode;
+  title?: ReactNode;
+} & ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-[220px] flex-1 flex-col items-center justify-center px-4 py-8 text-center",
+        className,
+      )}
+      {...props}
+    >
+      <div className="mb-2 flex size-10 items-center justify-center text-[var(--emr-text-tertiary)]">
+        {icon ?? <CdsFilesBoxIcon aria-hidden="true" className="size-8" />}
       </div>
-      <p className="emr-text-metadata mt-1 text-[var(--emr-text-tertiary)]">
-        {`'${query.trim()}'에 맞는 ${objectLabel}이 없어.`}
-      </p>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        className="mt-3 bg-card"
-        onClick={onClear}
-      >
-        검색어 지우기
-      </Button>
+      <div className="emr-text-dense font-medium text-[var(--emr-text-tertiary)]">
+        {title ?? children}
+      </div>
     </div>
   );
 }
@@ -665,7 +684,7 @@ export function EmrListItem({
 export function EmrSubpanelBody({ children, className }: EmrSubpanelProps) {
   return (
     <ScrollArea className={cn("min-h-0 flex-1", className)}>
-      <div className="emr-density-panel-inset emr-density-stack-md flex flex-col">{children}</div>
+      <div className="emr-density-panel-inset emr-density-stack-md flex min-h-full flex-col">{children}</div>
     </ScrollArea>
   );
 }

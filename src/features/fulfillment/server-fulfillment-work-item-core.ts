@@ -96,6 +96,17 @@ export type FulfillmentWorkItem = {
   workspaceId: string;
 };
 
+export type FulfillmentWorkItemReadSummary = {
+  date?: string;
+  encounterId?: string;
+  orderId?: string;
+  queueType: FulfillmentQueueType;
+  status?: FulfillmentWorkItemStatus;
+  statusCounts: Record<FulfillmentWorkItemStatus, number>;
+  totalCount: number;
+  workspaceId: string;
+};
+
 export type FulfillmentWorkItemFilters = {
   date?: string | null;
   encounterId?: string | null;
@@ -182,6 +193,7 @@ export type FulfillmentWorkItemReadResult =
       ok: true;
       status: 200;
       enforcedBy: "fulfillment-work-item-persistence";
+      summary: FulfillmentWorkItemReadSummary;
       workItems: FulfillmentWorkItem[];
     }
   | {
@@ -329,7 +341,48 @@ export async function readFulfillmentWorkItems({
     ok: true,
     status: 200,
     enforcedBy: "fulfillment-work-item-persistence",
+    summary: getFulfillmentWorkItemReadSummary({
+      filters: normalized,
+      queueType,
+      workItems: result.workItems,
+      workspaceId,
+    }),
     workItems: result.workItems,
+  };
+}
+
+export function getFulfillmentWorkItemReadSummary({
+  filters,
+  queueType,
+  workItems,
+  workspaceId,
+}: {
+  filters: FulfillmentWorkItemFilters;
+  queueType: FulfillmentQueueType;
+  workItems: FulfillmentWorkItem[];
+  workspaceId: string;
+}): FulfillmentWorkItemReadSummary {
+  const statusCounts = fulfillmentStatuses.reduce(
+    (counts, status) => ({
+      ...counts,
+      [status]: 0,
+    }),
+    {} as Record<FulfillmentWorkItemStatus, number>,
+  );
+
+  workItems.forEach((item) => {
+    statusCounts[item.status] += 1;
+  });
+
+  return {
+    ...(filters.date ? { date: filters.date } : {}),
+    ...(filters.encounterId ? { encounterId: filters.encounterId } : {}),
+    ...(filters.orderId ? { orderId: filters.orderId } : {}),
+    queueType,
+    ...(filters.status ? { status: filters.status as FulfillmentWorkItemStatus } : {}),
+    statusCounts,
+    totalCount: workItems.length,
+    workspaceId,
   };
 }
 

@@ -23,6 +23,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrQueueEmptyState,
   EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
@@ -1348,6 +1349,13 @@ export function BillingSidePanel({
     (total, group) => total + group.rows.length,
     0,
   );
+  const baseRowCount = baseGroupedRows.reduce(
+    (total, group) => total + group.rows.length,
+    0,
+  );
+  const emptyStateTitle = baseRowCount > 0
+    ? "조건에 맞는 수납 대기 업무가 없습니다."
+    : `${selectedDate === todayDate ? "오늘" : "선택한 날짜의"} 수납 대기 업무가 없습니다.`;
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1448,6 +1456,8 @@ export function BillingSidePanel({
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
+        ) : totalRowCount === 0 ? (
+          <EmrQueueEmptyState title={emptyStateTitle} />
         ) : groupedRows.map((group) => (
           <BillingQueueGroup
             key={group.value}

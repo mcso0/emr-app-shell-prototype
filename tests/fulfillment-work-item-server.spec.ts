@@ -76,8 +76,32 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   expect(readBack.status()).toBe(200);
   const readBody = (await readBack.json()) as {
     ok: true;
+    summary: {
+      encounterId?: string;
+      queueType: string;
+      statusCounts: Record<string, number>;
+      totalCount: number;
+      workspaceId: string;
+    };
     workItems: Array<{ id: string; orderId: string }>;
   };
+  expect(readBody.summary).toMatchObject({
+    encounterId,
+    queueType: "dispensing",
+    totalCount: expect.any(Number),
+    workspaceId,
+  });
+  expect(readBody.summary.totalCount).toBe(readBody.workItems.length);
+  expect(readBody.summary.statusCounts).toEqual(
+    expect.objectContaining({
+      requested: expect.any(Number),
+      accepted: expect.any(Number),
+      in_progress: expect.any(Number),
+      completed: expect.any(Number),
+      cancelled: expect.any(Number),
+      returned: expect.any(Number),
+    }),
+  );
   expect(readBody.workItems).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ id: workItemId, orderId }),
@@ -326,11 +350,31 @@ test("fulfillment read filters work items by selected operating date", async () 
   });
 
   expect(selectedDate).toMatchObject({ ok: true });
+  expect(selectedDate.ok ? selectedDate.summary : null).toMatchObject({
+    date: "2026-05-01",
+    queueType: "dispensing",
+    totalCount: selectedDate.ok ? selectedDate.workItems.length : 0,
+    workspaceId,
+  });
   expect(selectedDate.ok ? selectedDate.workItems : []).toEqual(
     expect.arrayContaining([expect.objectContaining({ id: workItemId })]),
   );
   expect(otherDate).toMatchObject({
     ok: true,
+    summary: {
+      date: "2026-06-25",
+      queueType: "dispensing",
+      statusCounts: {
+        accepted: 0,
+        cancelled: 0,
+        completed: 0,
+        in_progress: 0,
+        requested: 0,
+        returned: 0,
+      },
+      totalCount: 0,
+      workspaceId,
+    },
     workItems: [],
   });
 });

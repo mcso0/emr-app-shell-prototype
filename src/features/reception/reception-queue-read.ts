@@ -26,11 +26,20 @@ export type ReceptionQueueReadRecord =
   | ReceptionEncounterQueueReadRecord
   | ReceptionAppointmentQueueReadRecord;
 
+export type ReceptionQueueReadSummary = {
+  appointmentCount: number;
+  date: string;
+  receptionCount: number;
+  totalCount: number;
+  workspaceId: string;
+};
+
 export type ReceptionQueueReadResponse =
   | {
       ok: true;
       status: 200;
       queue: ReceptionQueueReadRecord[];
+      summary: ReceptionQueueReadSummary;
       enforcedBy: "reception-queue-read";
     }
   | {

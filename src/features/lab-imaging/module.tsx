@@ -38,6 +38,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrQueueEmptyState,
   EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
@@ -406,6 +407,17 @@ type FulfillmentWorkItem = {
   updatedAt?: string;
   workspaceId: string;
 };
+type FulfillmentWorkItemReadSummary = {
+  date?: string;
+  queueType: FulfillmentQueueType;
+  statusCounts: Record<FulfillmentWorkItemStatus, number>;
+  totalCount: number;
+  workspaceId: string;
+};
+type FulfillmentQueueSnapshot = {
+  summary?: FulfillmentWorkItemReadSummary;
+  workItems: FulfillmentWorkItem[];
+};
 type LabResultSheetCatalogItem = {
   categoryId: string;
   categoryName: string;
@@ -458,8 +470,11 @@ const imagingQueueViewItems = [
   { value: "chart" as const, label: "차트별" },
 ];
 
-const fulfillmentQueueCache = new Map<string, FulfillmentWorkItem[]>();
-const fulfillmentQueueListeners = new Map<string, Set<(workItems: FulfillmentWorkItem[]) => void>>();
+const fulfillmentQueueCache = new Map<string, FulfillmentQueueSnapshot>();
+const fulfillmentQueueListeners = new Map<
+  string,
+  Set<(snapshot: FulfillmentQueueSnapshot) => void>
+>();
 
 function getFulfillmentQueueCacheKey(
   workspaceId: string,
@@ -469,9 +484,9 @@ function getFulfillmentQueueCacheKey(
   return `${workspaceId}:${selectedDate}:${queueType}`;
 }
 
-function setCachedFulfillmentQueue(cacheKey: string, workItems: FulfillmentWorkItem[]) {
-  fulfillmentQueueCache.set(cacheKey, workItems);
-  fulfillmentQueueListeners.get(cacheKey)?.forEach((listener) => listener(workItems));
+function setCachedFulfillmentQueue(cacheKey: string, snapshot: FulfillmentQueueSnapshot) {
+  fulfillmentQueueCache.set(cacheKey, snapshot);
+  fulfillmentQueueListeners.get(cacheKey)?.forEach((listener) => listener(snapshot));
 }
 
 function useWorkspaceIdFromPath() {
@@ -606,15 +621,15 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
   const cacheKey = getFulfillmentQueueCacheKey(workspaceId, queueType, effectiveDate);
   const [queueState, setQueueState] = useState<{
     cacheKey: string;
-    workItems: FulfillmentWorkItem[];
+    snapshot: FulfillmentQueueSnapshot;
   }>(() => ({
     cacheKey,
-    workItems: fulfillmentQueueCache.get(cacheKey) ?? [],
+    snapshot: fulfillmentQueueCache.get(cacheKey) ?? { workItems: [] },
   }));
-  const workItems =
+  const snapshot =
     queueState.cacheKey === cacheKey
-      ? queueState.workItems
-      : fulfillmentQueueCache.get(cacheKey) ?? [];
+      ? queueState.snapshot
+      : fulfillmentQueueCache.get(cacheKey) ?? { workItems: [] };
 
   const refresh = useCallback(async () => {
     try {
@@ -622,13 +637,19 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
         `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
         { headers: { "x-clair-demo-session-user-id": "user-tech" } }
       );
-      const body = await response.json() as { ok?: boolean; workItems?: FulfillmentWorkItem[] };
+      const body = await response.json() as {
+        ok?: boolean;
+        summary?: FulfillmentWorkItemReadSummary;
+        workItems?: FulfillmentWorkItem[];
+      };
       setCachedFulfillmentQueue(
         cacheKey,
-        response.ok && body.ok && Array.isArray(body.workItems) ? body.workItems : [],
+        response.ok && body.ok && Array.isArray(body.workItems)
+          ? { summary: body.summary, workItems: body.workItems }
+          : { workItems: [] },
       );
     } catch {
-      setCachedFulfillmentQueue(cacheKey, []);
+      setCachedFulfillmentQueue(cacheKey, { workItems: [] });
     }
   }, [cacheKey, effectiveDate, queueType, workspaceId]);
 
@@ -638,8 +659,8 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
   }, [refresh]);
 
   useEffect(() => {
-    const listener = (nextWorkItems: FulfillmentWorkItem[]) =>
-      setQueueState({ cacheKey, workItems: nextWorkItems });
+    const listener = (nextSnapshot: FulfillmentQueueSnapshot) =>
+      setQueueState({ cacheKey, snapshot: nextSnapshot });
 
     const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
     listeners.add(listener);
@@ -672,7 +693,7 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
     return allTransitionsSucceeded;
   }, [refresh, workspaceId]);
 
-  return { updateStatus, workItems };
+  return { summary: snapshot.summary, updateStatus, workItems: snapshot.workItems };
 }
 
 async function loadLabResultSheetCatalog({
@@ -1639,6 +1660,12 @@ export function LabSidePanel({
     [filteredItems]
   );
   const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
+  const emptyStateTitle = getDatedQueueEmptyStateTitle({
+    emptyObjectLabel: queueView === "order" ? "검사 대기 업무" : "차트별 검사 업무",
+    filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
+    selectedDate,
+    todayDate,
+  });
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1709,6 +1736,8 @@ export function LabSidePanel({
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
+        ) : resultCount === 0 ? (
+          <EmrQueueEmptyState title={emptyStateTitle} />
         ) : queueView === "order"
           ? groups.map((group) => (
               <LabQueueGroup
@@ -1817,6 +1846,12 @@ export function ImagingSidePanel({
     [filteredItems]
   );
   const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
+  const emptyStateTitle = getDatedQueueEmptyStateTitle({
+    emptyObjectLabel: queueView === "order" ? "영상 대기 업무" : "차트별 영상 업무",
+    filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
+    selectedDate,
+    todayDate,
+  });
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1886,6 +1921,8 @@ export function ImagingSidePanel({
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
+        ) : resultCount === 0 ? (
+          <EmrQueueEmptyState title={emptyStateTitle} />
         ) : queueView === "order"
           ? groups.map((group) => (
               <ImagingQueueGroup
@@ -1915,6 +1952,22 @@ export function ImagingSidePanel({
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
+}
+
+function getDatedQueueEmptyStateTitle({
+  emptyObjectLabel,
+  filtered,
+  selectedDate,
+  todayDate,
+}: {
+  emptyObjectLabel: string;
+  filtered: boolean;
+  selectedDate: string;
+  todayDate: string;
+}) {
+  if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다.`;
+
+  return `${selectedDate === todayDate ? "오늘" : "선택한 날짜의"} ${emptyObjectLabel}가 없습니다.`;
 }
 
 function LabResultInputSection({
