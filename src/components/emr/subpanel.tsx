@@ -495,7 +495,7 @@ export function EmrListSearchEmptyState(props: {
   const motionIcon = props.motionIcon ?? (
     <EmrMotionIcon
       animationData={searchNotFoundMotionIcon}
-      className="size-14"
+      className="size-14 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
       loop={false}
     />
   );
