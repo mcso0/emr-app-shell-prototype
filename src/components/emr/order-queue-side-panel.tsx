@@ -12,6 +12,7 @@ import {
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrQueueEmptyState,
+  EmrQueueLoadingState,
   EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
@@ -72,6 +73,8 @@ type EmrOrderQueueSidePanelProps = {
   getActionItems?: OrderQueueActionItemsResolver;
   getTaskCardItem?: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   listLabel?: string;
+  loading?: boolean;
+  loadingTitle?: string;
   onCollapse?: () => void;
   onDateChange?: (date: string) => void;
   onSelectItem?: (itemId: string) => void;
@@ -201,6 +204,8 @@ export function EmrOrderQueueSidePanel({
   getTaskCardItem = getDefaultTaskCardItem,
   items,
   listLabel = "전체 오더",
+  loading = false,
+  loadingTitle,
   onCollapse,
   onDateChange,
   onSelectItem,
@@ -340,7 +345,9 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrSubpanelBody>
-        {groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
+        {loading ? (
+          <EmrQueueLoadingState title={loadingTitle} />
+        ) : groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
           const collapsed = collapsedStatusIds.has(status.id);
 
           return (

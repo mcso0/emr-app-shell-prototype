@@ -27,6 +27,7 @@ import {
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrListSearchEmptyState,
+  EmrQueueLoadingState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -169,7 +170,6 @@ import {
 } from "@/features/reception/store";
 import {
   ReceptionEmptyState,
-  ReceptionPanelStateMessage,
 } from "@/features/reception/reception-list-search";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import {
@@ -2799,9 +2799,6 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
       />
-      {queueReadStatus === "loading" ? (
-        <ReceptionPanelStateMessage>대기열 확인 중</ReceptionPanelStateMessage>
-      ) : null}
       {queueReadStatus === "error" ? (
         <EmrInlineAlert
           className="mx-3 my-2"
@@ -2882,7 +2879,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }
       />
       <EmrSubpanelBody>
-        {visibleQueueGroups.length ? (
+        {queueReadStatus === "loading" ? (
+          <EmrQueueLoadingState title="접수/예약 정보를 불러오는 중입니다." />
+        ) : visibleQueueGroups.length ? (
           visibleQueueGroups.map((group) => (
             <ReceptionQueueSideGroup
               key={group.statusGroup}
@@ -6075,11 +6074,6 @@ export function ReceptionContent() {
           patientName={selectedPatient.name}
           reason={selectedVisitReason}
         />
-      ) : null}
-      {calendarReadStatus === "loading" ? (
-        <ReceptionPanelStateMessage>
-          저장된 예약을 불러오는 중
-        </ReceptionPanelStateMessage>
       ) : null}
       {calendarReadStatus === "error" ? (
         <EmrInlineAlert

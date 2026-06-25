@@ -645,6 +645,8 @@ export function DispensingSidePanel({
       emptyObjectLabel="조제/처치 업무"
       getTaskCardItem={getDispensingTaskCardItem}
       items={items}
+      loading={fulfillmentQueue.status === "loading"}
+      loadingTitle="조제/처치 업무를 불러오는 중입니다."
       statuses={statuses}
       sourceTotalCount={fulfillmentQueue.sourceTotalCount}
       title="조제/처치"

@@ -39,6 +39,7 @@ import {
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrQueueEmptyState,
+  EmrQueueLoadingState,
   EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
@@ -418,6 +419,7 @@ type FulfillmentQueueSnapshot = {
   summary?: FulfillmentWorkItemReadSummary;
   workItems: FulfillmentWorkItem[];
 };
+type FulfillmentQueueReadStatus = "loading" | "ready";
 type LabResultSheetCatalogItem = {
   categoryId: string;
   categoryName: string;
@@ -475,6 +477,7 @@ const fulfillmentQueueListeners = new Map<
   string,
   Set<(snapshot: FulfillmentQueueSnapshot) => void>
 >();
+const emptyFulfillmentQueueSnapshot: FulfillmentQueueSnapshot = { workItems: [] };
 
 function getFulfillmentQueueCacheKey(
   workspaceId: string,
@@ -619,19 +622,29 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
   const workspaceId = useWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
   const cacheKey = getFulfillmentQueueCacheKey(workspaceId, queueType, effectiveDate);
+  const cachedSnapshot = fulfillmentQueueCache.get(cacheKey);
   const [queueState, setQueueState] = useState<{
     cacheKey: string;
     snapshot: FulfillmentQueueSnapshot;
+    status: FulfillmentQueueReadStatus;
   }>(() => ({
     cacheKey,
-    snapshot: fulfillmentQueueCache.get(cacheKey) ?? { workItems: [] },
+    snapshot: cachedSnapshot ?? emptyFulfillmentQueueSnapshot,
+    status: cachedSnapshot ? "ready" : "loading",
   }));
+  const fallbackSnapshot = fulfillmentQueueCache.get(cacheKey);
   const snapshot =
     queueState.cacheKey === cacheKey
       ? queueState.snapshot
-      : fulfillmentQueueCache.get(cacheKey) ?? { workItems: [] };
+      : fallbackSnapshot ?? emptyFulfillmentQueueSnapshot;
+  const status =
+    queueState.cacheKey === cacheKey
+      ? queueState.status
+      : fallbackSnapshot
+        ? "ready"
+        : "loading";
 
-  const refresh = useCallback(async () => {
+  const loadQueueSnapshot = useCallback(async (): Promise<FulfillmentQueueSnapshot> => {
     try {
       const response = await fetch(
         `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
@@ -642,25 +655,48 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
         summary?: FulfillmentWorkItemReadSummary;
         workItems?: FulfillmentWorkItem[];
       };
-      setCachedFulfillmentQueue(
-        cacheKey,
+      const nextSnapshot =
         response.ok && body.ok && Array.isArray(body.workItems)
           ? { summary: body.summary, workItems: body.workItems }
-          : { workItems: [] },
-      );
+          : emptyFulfillmentQueueSnapshot;
+      return nextSnapshot;
     } catch {
-      setCachedFulfillmentQueue(cacheKey, { workItems: [] });
+      return emptyFulfillmentQueueSnapshot;
     }
-  }, [cacheKey, effectiveDate, queueType, workspaceId]);
+  }, [effectiveDate, queueType, workspaceId]);
+
+  const applyQueueSnapshot = useCallback(
+    (nextSnapshot: FulfillmentQueueSnapshot) => {
+      setCachedFulfillmentQueue(cacheKey, nextSnapshot);
+      setQueueState({ cacheKey, snapshot: nextSnapshot, status: "ready" });
+    },
+    [cacheKey],
+  );
+
+  const refresh = useCallback(async () => {
+    applyQueueSnapshot(await loadQueueSnapshot());
+  }, [applyQueueSnapshot, loadQueueSnapshot]);
 
   useEffect(() => {
+    let canceled = false;
+
     // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
-    void refresh();
-  }, [refresh]);
+    async function loadInitialQueue() {
+      const nextSnapshot = await loadQueueSnapshot();
+      if (canceled) return;
+      applyQueueSnapshot(nextSnapshot);
+    }
+
+    void loadInitialQueue();
+
+    return () => {
+      canceled = true;
+    };
+  }, [applyQueueSnapshot, loadQueueSnapshot]);
 
   useEffect(() => {
     const listener = (nextSnapshot: FulfillmentQueueSnapshot) =>
-      setQueueState({ cacheKey, snapshot: nextSnapshot });
+      setQueueState({ cacheKey, snapshot: nextSnapshot, status: "ready" });
 
     const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
     listeners.add(listener);
@@ -693,7 +729,7 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
     return allTransitionsSucceeded;
   }, [refresh, workspaceId]);
 
-  return { summary: snapshot.summary, updateStatus, workItems: snapshot.workItems };
+  return { status, summary: snapshot.summary, updateStatus, workItems: snapshot.workItems };
 }
 
 async function loadLabResultSheetCatalog({
@@ -1730,7 +1766,9 @@ export function LabSidePanel({
         headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
       <EmrSubpanelBody>
-        {resultCount === 0 && searchQuery.trim() ? (
+        {fulfillmentQueue.status === "loading" ? (
+          <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다." />
+        ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel={queueView === "order" ? "검사 대기열 항목" : "차트별 검사"}
             query={searchQuery}
@@ -1915,7 +1953,9 @@ export function ImagingSidePanel({
         headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
       <EmrSubpanelBody>
-        {resultCount === 0 && searchQuery.trim() ? (
+        {fulfillmentQueue.status === "loading" ? (
+          <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다." />
+        ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel={queueView === "order" ? "영상 대기열 항목" : "차트별 영상"}
             query={searchQuery}
