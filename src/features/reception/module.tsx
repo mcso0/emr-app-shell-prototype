@@ -251,6 +251,20 @@ const veterinarianCalendarCardToneClasses = [
   "border-[var(--clair-color-atomic-purple-300)] bg-[var(--clair-color-atomic-purple-50)] text-[var(--clair-color-atomic-purple-800)] hover:bg-[var(--clair-color-atomic-purple-100)]",
   "border-[var(--clair-color-atomic-red-300)] bg-[var(--clair-color-atomic-red-50)] text-[var(--clair-color-atomic-red-800)] hover:bg-[var(--clair-color-atomic-red-100)]",
 ];
+const veterinarianCalendarBadgeNeutralToneClass =
+  "border-[var(--clair-color-atomic-neutral-300)] bg-[var(--clair-color-atomic-neutral-100)] text-[var(--clair-color-atomic-neutral-700)]";
+const veterinarianCalendarBadgeToneClasses = [
+  "border-[var(--clair-color-atomic-blue-300)] bg-[var(--clair-color-atomic-blue-100)] text-[var(--clair-color-atomic-blue-800)]",
+  "border-[var(--clair-color-atomic-forest-green-300)] bg-[var(--clair-color-atomic-forest-green-100)] text-[var(--clair-color-atomic-forest-green-800)]",
+  "border-[var(--clair-color-atomic-sky-300)] bg-[var(--clair-color-atomic-sky-100)] text-[var(--clair-color-atomic-sky-800)]",
+  "border-[var(--clair-color-atomic-orange-300)] bg-[var(--clair-color-atomic-orange-100)] text-[var(--clair-color-atomic-orange-800)]",
+  "border-[var(--clair-color-atomic-green-300)] bg-[var(--clair-color-atomic-green-100)] text-[var(--clair-color-atomic-green-800)]",
+  "border-[var(--clair-color-atomic-red-300)] bg-[var(--clair-color-atomic-red-100)] text-[var(--clair-color-atomic-red-800)]",
+  "border-[var(--clair-color-atomic-teal-300)] bg-[var(--clair-color-atomic-teal-100)] text-[var(--clair-color-atomic-teal-800)]",
+  veterinarianCalendarBadgeNeutralToneClass,
+  "border-[var(--clair-color-atomic-purple-300)] bg-[var(--clair-color-atomic-purple-100)] text-[var(--clair-color-atomic-purple-800)]",
+  "border-[var(--clair-color-atomic-red-300)] bg-[var(--clair-color-atomic-red-100)] text-[var(--clair-color-atomic-red-800)]",
+];
 const calendarViewItems = [
   { value: "day" as const, label: "일" },
   { value: "week" as const, label: "주" },
@@ -414,6 +428,24 @@ function getVeterinarianCalendarCardToneClassName(
 
   return veterinarianCalendarCardToneClasses[
     toneIndex % veterinarianCalendarCardToneClasses.length
+  ];
+}
+
+function getVeterinarianCalendarBadgeToneClassName(
+  veterinarianId?: string,
+  veterinarians: Veterinarian[] = allVeterinarians,
+) {
+  if (!veterinarianId) return veterinarianCalendarBadgeNeutralToneClass;
+
+  const veterinarian = veterinarians.find(
+    (item) => item.id === veterinarianId,
+  );
+  if (!veterinarian) return veterinarianCalendarBadgeNeutralToneClass;
+
+  const toneIndex = getVeterinarianToneIndex(veterinarian, veterinarians);
+
+  return veterinarianCalendarBadgeToneClasses[
+    toneIndex % veterinarianCalendarBadgeToneClasses.length
   ];
 }
 
@@ -2053,10 +2085,12 @@ const calendarTaskCardToneClasses: Record<CalendarTaskBadgeType, string> = {
 };
 
 function CalendarTaskBadge({
+  calendarToneClassName,
   tone = "default",
   testId,
   type = "예약",
 }: {
+  calendarToneClassName?: string;
   tone?: "default" | "neutral";
   testId?: string;
   type?: CalendarTaskBadgeType;
@@ -2068,7 +2102,7 @@ function CalendarTaskBadge({
         "inline-flex h-5 min-w-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] border px-[6px] py-[2px] font-['Pretendard'] text-[12px] font-medium leading-4 [letter-spacing:0]",
         tone === "neutral"
           ? "border-border bg-card text-muted-foreground"
-          : calendarTaskBadgeToneClasses[type],
+          : (calendarToneClassName ?? calendarTaskBadgeToneClasses[type]),
       )}
     >
       {type}
@@ -2138,6 +2172,7 @@ type CalendarTaskCardProps = {
   accentTestId?: string;
   ariaLabel: string;
   badgeType: CalendarTaskBadgeType;
+  calendarBadgeToneClassName?: string;
   calendarToneClassName?: string;
   className?: string;
   description?: string;
@@ -2161,6 +2196,7 @@ function CalendarTaskCard({
   accentTestId,
   ariaLabel,
   badgeType,
+  calendarBadgeToneClassName,
   calendarToneClassName,
   className,
   description,
@@ -2229,7 +2265,12 @@ function CalendarTaskCard({
       />
       {compact ? (
         <>
-          <CalendarTaskBadge tone={tone} type={badgeType} />
+          <CalendarTaskBadge
+            calendarToneClassName={calendarBadgeToneClassName}
+            testId={`${testId}-badge`}
+            tone={tone}
+            type={badgeType}
+          />
           <span
             data-testid={purposeTestId}
             className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
@@ -2245,7 +2286,12 @@ function CalendarTaskCard({
       ) : (
         <>
           <span className="flex w-full min-w-0 items-center gap-[8px] overflow-hidden">
-            <CalendarTaskBadge tone={tone} type={badgeType} />
+            <CalendarTaskBadge
+              calendarToneClassName={calendarBadgeToneClassName}
+              testId={`${testId}-badge`}
+              tone={tone}
+              type={badgeType}
+            />
             <span
               data-testid={purposeTestId}
               className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
@@ -3449,6 +3495,14 @@ function ScheduleAppointmentCard({
       accentTestId={`appointment-accent-${appointment.id}`}
       ariaLabel={`${getStatusLabel("appointment", appointment.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType={noShow ? "노쇼" : "예약"}
+      calendarBadgeToneClassName={
+        noShow
+          ? undefined
+          : getVeterinarianCalendarBadgeToneClassName(
+              appointment.assignedVeterinarianId,
+              veterinarians,
+            )
+      }
       calendarToneClassName={
         noShow
           ? undefined
@@ -3535,6 +3589,14 @@ function ScheduleWalkInQueueCard({
       accentTestId={`walkin-accent-${draft.encounter.id}`}
       ariaLabel={`${getReceptionEncounterStatusLabel(draft.encounter.status)} ${patientLabel} · ${visitPurpose}`}
       badgeType="외래"
+      calendarBadgeToneClassName={
+        unassignedCompact
+          ? undefined
+          : getVeterinarianCalendarBadgeToneClassName(
+              draft.encounter.primaryVeterinarianId,
+              veterinarians,
+            )
+      }
       calendarToneClassName={
         unassignedCompact
           ? undefined
