@@ -238,6 +238,253 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
+test("chart consultation CTA moves from call to start before chart completion", async ({
+  page,
+}) => {
+  const workspaceId = "clair-demo";
+  const encounterId = "encounter-choco-call-flow";
+  const baseEncounter = {
+    id: encounterId,
+    workspaceId,
+    patientId: "patient-choco-call-flow",
+    guardianId: "guardian-choi-dohyun",
+    primaryVeterinarianId: "user-vet",
+    encounterNo: "E-260625-0001",
+    chiefComplaint: "현장 접수",
+    visitPurpose: "내과 진료",
+    status: "waiting",
+    checkedInAt: "2026-06-25T14:15:00+09:00",
+    createdAt: "2026-06-25T14:15:00+09:00",
+    updatedAt: "2026-06-25T14:15:00+09:00",
+  };
+  const baseQueueEntry = {
+    id: "queue-choco-consultation",
+    workspaceId,
+    encounterId,
+    queueType: "consultation",
+    status: "waiting",
+    priority: "normal",
+    sortOrder: 1,
+    enteredAt: "2026-06-25T14:15:00+09:00",
+  };
+  const patient = {
+    id: "patient-choco-call-flow",
+    patientNo: "CD-P-CTA",
+    workspaceId,
+    name: "초코",
+    species: "dog",
+    breed: "Pomeranian",
+    estimatedAgeText: "9세",
+    sex: "male",
+    neutered: true,
+    handlingCautionLocked: true,
+    status: "active",
+    createdAt: "2026-06-25T14:00:00+09:00",
+    updatedAt: "2026-06-25T14:00:00+09:00",
+  };
+  const primaryGuardian = {
+    id: "guardian-choi-dohyun",
+    workspaceId,
+    name: "최도현",
+    mobilePhone: "010-0000-0000",
+    createdAt: "2026-06-25T14:00:00+09:00",
+    updatedAt: "2026-06-25T14:00:00+09:00",
+  };
+  let encounter = {
+    ...baseEncounter,
+    startedAt: undefined as string | undefined,
+  };
+  let queueEntry = {
+    ...baseQueueEntry,
+    calledAt: undefined as string | undefined,
+  };
+
+  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        queue: [
+          {
+            encounter,
+            patient,
+            primaryGuardian,
+            queueEntry,
+            veterinarianName: "청담 원장",
+          },
+        ],
+        enforcedBy: "chart-live-queue-read",
+      }),
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/chart/completion**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          completion: {
+            encounterId,
+            workspaceId,
+            status: encounter.status,
+            updatedAt: encounter.updatedAt,
+          },
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/consultation-flow",
+    async (route) => {
+      const body = (await route.request().postDataJSON()) as {
+        action: "call" | "start";
+      };
+      if (body.action === "call") {
+        queueEntry = {
+          ...queueEntry,
+          status: "called",
+          calledAt: "2026-06-25T05:20:00.000Z",
+        };
+      } else {
+        encounter = {
+          ...encounter,
+          status: "in_consultation",
+          startedAt: "2026-06-25T05:22:00.000Z",
+          updatedAt: "2026-06-25T05:22:00.000Z",
+        };
+        queueEntry = {
+          ...queueEntry,
+          status: "in_progress",
+        };
+      }
+
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          flow: {
+            encounter,
+            queueEntry,
+            ...(body.action === "call"
+              ? {
+                  callEvent: {
+                    id: "call-event-choco",
+                    displayText:
+                      "초코 보호자 최도현님, 진료실로 들어와 주세요.",
+                    deliveryStatus: "queued",
+                  },
+                }
+              : {}),
+          },
+          enforcedBy: "chart-consultation-flow",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
+  );
+
+  await expect(page.getByTestId("chart-completion-status")).toContainText(
+    "호출 대기",
+  );
+  await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "호출하기" }).click();
+  await expect(
+    page.getByRole("heading", { name: "초코/최도현을 호출하시겠습니까?" }),
+  ).toBeVisible();
+  await expect(page.getByText("초코 보호자 최도현님")).toBeVisible();
+  await page.getByRole("button", { name: "호출하기" }).last().click();
+
+  await expect(page.getByTestId("chart-completion-status")).toContainText(
+    "호출됨",
+  );
+  await expect(page.getByRole("button", { name: "진료 시작" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "진료 시작" }).click();
+  await expect(page.getByTestId("chart-completion-status")).toContainText("진료중");
+  await expect(page.getByRole("button", { name: "차트 작성완료" })).toBeVisible();
+});
+
+test("chart side panel date navigator refetches the selected operating date", async ({
+  page,
+}) => {
+  const requestedDates: string[] = [];
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/live-queue?*",
+    async (route) => {
+      const url = new URL(route.request().url());
+      requestedDates.push(url.searchParams.get("date") ?? "");
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [],
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+
+  const sidePanel = page.locator("aside").first();
+  const initialDateButton = sidePanel.getByRole("button", {
+    name: "26.05.01 (금) 날짜 선택",
+  });
+  await expect(initialDateButton).toBeVisible();
+  await expect(initialDateButton).toContainText("26.05.01 (금)");
+  await expect(initialDateButton).toContainText("오늘");
+  await expect
+    .poll(() => requestedDates.join(","))
+    .toContain("2026-05-01");
+
+  await sidePanel.getByRole("button", { name: "다음 날짜" }).click({
+    force: true,
+  });
+  await expect
+    .poll(() => requestedDates.join(","))
+    .toContain("2026-05-02");
+  await expect(
+    sidePanel.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+  ).toBeVisible();
+  await expect(sidePanel.getByText("오늘", { exact: true })).toHaveCount(0);
+
+  await sidePanel.getByRole("button", { name: "이전 날짜" }).click({
+    force: true,
+  });
+  await expect
+    .poll(() => requestedDates.filter((date) => date === "2026-05-01").length)
+    .toBeGreaterThanOrEqual(2);
+  const todayDateButton = sidePanel.getByRole("button", {
+    name: "26.05.01 (금) 날짜 선택",
+  });
+  await expect(todayDateButton).toBeVisible();
+  await expect(todayDateButton).toContainText("오늘");
+
+  await todayDateButton.click();
+  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
+  await expect
+    .poll(() => requestedDates.join(","))
+    .toContain("2026-05-08");
+  await expect(
+    sidePanel.getByRole("button", { name: "26.05.08 (금) 날짜 선택" }),
+  ).toBeVisible();
+  await expect(sidePanel.getByText("오늘", { exact: true })).toHaveCount(0);
+});
+
 test("chart diagnosis panel omits comment and plan text areas", async ({
   page,
 }) => {

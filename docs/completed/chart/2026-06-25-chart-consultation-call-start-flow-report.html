@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진료/차트 호출-진료시작 흐름 구현 리포트</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; }
+      main { max-width: 920px; margin: 0 auto; padding: 40px 24px 56px; }
+      section { margin-top: 16px; border: 1px solid #d9dee8; border-radius: 10px; background: #fff; padding: 20px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li { font-size: 14px; }
+      code { border-radius: 6px; background: #eef2f7; padding: 2px 5px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>진료/차트 호출-진료시작 흐름 구현 리포트</h1>
+      <p>작성일: 2026-06-25 KST · 대상: <code>CHART-PR-008</code></p>
+
+      <section>
+        <h2>요청</h2>
+        <p>
+          접수 후 진료/차트 화면에서 대기 환자가 곧바로 차트 작성완료로 넘어가지 않도록
+          <code>접수 대기 → 호출하기 → 진료 시작 → 차트 작성완료</code> 순서로 흐름을 고쳤다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경</h2>
+        <ul>
+          <li><code>chart/consultation-flow</code> API와 server core를 추가해 <code>call</code>, <code>start</code>를 분리했다.</li>
+          <li>DB migration에 consultation call/start RPC와 <code>encounter_call_events</code> local outbox를 추가했다.</li>
+          <li>차트 completion은 <code>waiting</code>/<code>called</code> 상태에서 <code>ready_for_billing</code>로 갈 수 없게 막았다.</li>
+          <li>상단 CTA와 확인 모달, 상태 문구를 queue 상태 기준으로 갱신했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>범위 밖</h2>
+        <p>
+          실제 DID 장비/provider 호출, 재호출, 호출 취소, 진료실 배정, real data 사용은 이번 범위에 포함하지 않았다.
+        </p>
+      </section>
+
+      <section>
+        <h2>검증</h2>
+        <ul>
+          <li><code>npx tsc --noEmit --pretty false</code>: 통과</li>
+          <li><code>tests/chart-consultation-flow-server.spec.ts</code>: 5개 통과</li>
+          <li><code>tests/chart-completion-persistence-server.spec.ts</code>: 6개 통과</li>
+          <li><code>tests/chart.spec.ts -g "chart consultation CTA moves"</code>: 1개 통과</li>
+          <li><code>npm run docs:check</code>, <code>npm run security:secrets</code>: 통과</li>
+          <li><code>npm run lint</code>: 기존 warning만 남고 오류 없이 통과</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

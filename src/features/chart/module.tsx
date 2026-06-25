@@ -154,6 +154,7 @@ import type {
   EmrOrderType,
   Encounter,
   SoapNote,
+  WaitingQueueEntry,
 } from "@/types/emr-domain";
 
 type ChartBundle = ChartEncounterBundle;
@@ -184,6 +185,27 @@ type ChartCompletionRouteResponse =
       ok: true;
       status: number;
       completion: ChartCompletionSnapshot;
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+    };
+type ConsultationFlowSnapshot = {
+  callEvent?: {
+    id: string;
+    displayText: string;
+    deliveryStatus: "queued";
+  };
+  encounter: Encounter;
+  queueEntry: WaitingQueueEntry;
+};
+type ConsultationFlowRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      flow: ConsultationFlowSnapshot;
     }
   | {
       ok: false;
@@ -446,6 +468,33 @@ const getChartCompletionStatusText = (
 
   return getStatusLabel("encounter", encounter.status);
 };
+
+function getConsultationWorkflowStatusText(
+  encounter: Pick<Encounter, "chartCompletedAt" | "status">,
+  queueEntry?: Pick<WaitingQueueEntry, "status">,
+) {
+  if (isChartReadyForBilling(encounter)) return "작성완료 / 수납대기";
+  if (encounter.status === "completed") return "수납완료";
+  if (encounter.status === "ordered") return "오더 진행중";
+  if (encounter.status === "in_consultation" || queueEntry?.status === "in_progress") {
+    return "진료중";
+  }
+  if (queueEntry?.status === "called") return "호출됨";
+  if (queueEntry?.status === "waiting") return "호출 대기";
+  return getChartCompletionStatusText(encounter);
+}
+
+function canCompleteChartFromWorkflow(
+  encounter: Pick<Encounter, "chartCompletedAt" | "status">,
+  queueEntry?: Pick<WaitingQueueEntry, "status">,
+) {
+  if (isChartReadyForBilling(encounter) || encounter.status === "completed") return false;
+  return (
+    encounter.status === "in_consultation" ||
+    encounter.status === "ordered" ||
+    queueEntry?.status === "in_progress"
+  );
+}
 
 const getDiagnosisSystemLabel = (diagnosis: Diagnosis) => {
   const text = diagnosis.diagnosisText;
@@ -1897,6 +1946,42 @@ async function completeChartRoute({
       },
     );
     const body = (await response.json()) as ChartCompletionRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function mutateConsultationFlowRoute({
+  action,
+  actorHeaders,
+  encounterId,
+  workspaceId,
+}: {
+  action: "call" | "start";
+  actorHeaders?: Record<string, string>;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<ConsultationFlowRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/consultation-flow`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({ action, encounterId }),
+      },
+    );
+    const body = (await response.json()) as ConsultationFlowRouteResponse;
 
     if (!response.ok || !body.ok) {
       if (!body.ok) return { ...body, status: response.status };
@@ -5025,9 +5110,11 @@ function OrderArea({
 function ChartInstructionInfo({
   bundle,
   latestSoap,
+  queueEntry,
 }: {
   bundle: ChartBundle;
   latestSoap?: SoapNote;
+  queueEntry?: WaitingQueueEntry;
 }) {
   const veterinarianName = getChartBundleVeterinarianName(bundle);
   const infoItems: Array<{ label: string; value: ReactNode }> = [
@@ -5050,7 +5137,7 @@ function ChartInstructionInfo({
             data-testid="chart-completion-status"
             className="emr-text-dense font-semibold text-[var(--emr-status-info-text)]"
           >
-            {getChartCompletionStatusText(bundle.encounter)}
+            {getConsultationWorkflowStatusText(bundle.encounter, queueEntry)}
           </span>
           <span
             data-testid="chart-soap-status"
@@ -5118,6 +5205,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     (state) => state.selectedEncounterId,
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
+  const updateLiveQueueRecord = useChartStore((state) => state.updateLiveQueueRecord);
   const allowStoreMockFallback = useChartStore(
     (state) => state.liveQueueStatus === "idle",
   );
@@ -5137,6 +5225,9 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const bundle = getSelectedBundle(selectedEncounterId, liveQueueRecords, {
     allowMockFallback,
   });
+  const selectedLiveQueueRecord = liveQueueRecords.find(
+    (record) => record.encounter.id === selectedEncounterId,
+  );
   const latestSoap = bundle?.soapNotes.at(-1);
   const activeEncounterId = bundle?.encounter.id;
   const activeWorkspaceId = bundle?.encounter.workspaceId;
@@ -5180,6 +5271,11 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   );
   const [isChartResizing, setIsChartResizing] = useState(false);
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
+  const [callDialogOpen, setCallDialogOpen] = useState(false);
+  const [consultationFlowState, setConsultationFlowState] = useState<{
+    action?: "call" | "start";
+    status: "idle" | "saving" | "error";
+  }>({ status: "idle" });
   const [chartUnavailableAction, setChartUnavailableAction] =
     useState<ChartUnavailableAction | null>(null);
   const [diagnosisState, setDiagnosisState] = useState<{
@@ -5229,6 +5325,11 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     () => orderGroups.flatMap(({ orders }) => orders),
     [orderGroups],
   );
+  const effectiveQueueEntry =
+    selectedLiveQueueRecord?.queueEntry ??
+    (bundle?.encounter.id === selectedEncounterId
+      ? selectedLiveQueueRecord?.queueEntry
+      : undefined);
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
     const availableHeight = workspace
@@ -5359,6 +5460,48 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     });
     setChartCompleteDialogOpen(false);
     toast.success("차트 작성완료 상태를 저장했어요.");
+  };
+  const handleConsultationFlowMutation = async (action: "call" | "start") => {
+    if (consultationFlowState.status === "saving") return;
+    if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
+      toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
+      return;
+    }
+
+    setConsultationFlowState({ action, status: "saving" });
+    const result = await mutateConsultationFlowRoute({
+      action,
+      actorHeaders,
+      encounterId: activeEncounterId,
+      workspaceId: activeWorkspaceId,
+    });
+
+    if (!result.ok) {
+      setConsultationFlowState({ action, status: "error" });
+      toast.error(
+        result.denialReason === "permission_missing"
+          ? "진료 흐름 변경 권한이 없어 저장하지 못했어요."
+          : action === "call"
+            ? "호출 상태를 저장하지 못했어요."
+            : "진료 시작 상태를 저장하지 못했어요.",
+      );
+      return;
+    }
+
+    updateLiveQueueRecord({
+      ...selectedLiveQueueRecord,
+      encounter: result.flow.encounter,
+      queueEntry: result.flow.queueEntry,
+    });
+    saveChartLiveEncounterHandoff({
+      encounter: result.flow.encounter,
+      patient: selectedLiveQueueRecord.patient,
+      primaryGuardian: selectedLiveQueueRecord.primaryGuardian,
+      veterinarianName: selectedLiveQueueRecord.veterinarianName,
+    });
+    setConsultationFlowState({ action, status: "idle" });
+    setCallDialogOpen(false);
+    toast.success(action === "call" ? "호출 상태로 전환했어요." : "진료를 시작했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
     if (!activeEncounterId || !activeWorkspaceId) {
@@ -5542,9 +5685,26 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   if (!bundle || !effectiveBundle) return <EmptyChartState />;
 
   const currentBundle = effectiveBundle;
-  const chartCompletionStatusText = getChartCompletionStatusText(
+  const chartCompletionStatusText = getConsultationWorkflowStatusText(
     currentBundle.encounter,
+    effectiveQueueEntry,
   );
+  const canCompleteCurrentChart = canCompleteChartFromWorkflow(
+    currentBundle.encounter,
+    effectiveQueueEntry,
+  );
+  const primaryAction =
+    currentBundle.encounter.status === "waiting" && effectiveQueueEntry?.status === "waiting"
+      ? "call"
+      : currentBundle.encounter.status === "waiting" && effectiveQueueEntry?.status === "called"
+        ? "start"
+        : canCompleteCurrentChart
+          ? "complete"
+          : null;
+  const primaryActionBusy =
+    consultationFlowState.status === "saving" ||
+    chartCompletionState.status === "saving";
+  const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
   const diagnosisSaveStatusText =
     diagnosisPersistenceState.encounterId === activeEncounterId
       ? diagnosisPersistenceState.status === "saving"
@@ -5588,9 +5748,30 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 >
                   차트 공유
                 </Button>
-                <Button onClick={() => setChartCompleteDialogOpen(true)}>
-                  차트 작성완료
-                </Button>
+                {primaryAction === "call" ? (
+                  <Button
+                    disabled={primaryActionBusy}
+                    onClick={() => setCallDialogOpen(true)}
+                  >
+                    호출하기
+                  </Button>
+                ) : null}
+                {primaryAction === "start" ? (
+                  <Button
+                    disabled={primaryActionBusy}
+                    onClick={() => void handleConsultationFlowMutation("start")}
+                  >
+                    진료 시작
+                  </Button>
+                ) : null}
+                {primaryAction === "complete" ? (
+                  <Button
+                    disabled={primaryActionBusy}
+                    onClick={() => setChartCompleteDialogOpen(true)}
+                  >
+                    차트 작성완료
+                  </Button>
+                ) : null}
               </>
             }
           />
@@ -5599,9 +5780,86 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
           <ChartInstructionInfo
             bundle={currentBundle}
             latestSoap={effectiveLatestSoap}
+            queueEntry={effectiveQueueEntry}
           />
         }
       />
+      <Dialog open={callDialogOpen} onOpenChange={setCallDialogOpen}>
+        <EmrDialogShell
+          variant="confirm"
+          title={callDialogTitle}
+          description="대기실 DID 모니터에 진료 호출 안내가 표시될 내부 이벤트를 저장해. 환자가 진료실에 들어오면 진료 시작을 눌러 차트를 작성할 수 있어."
+          footerMeta="이번 범위는 local outbox 기록까지만 처리하며 실제 DID provider 전송은 하지 않아."
+          primaryAction={
+            <Button
+              size="sm"
+              disabled={consultationFlowState.status === "saving"}
+              onClick={() => void handleConsultationFlowMutation("call")}
+            >
+              {consultationFlowState.status === "saving" &&
+              consultationFlowState.action === "call"
+                ? "호출 중"
+                : "호출하기"}
+            </Button>
+          }
+          secondaryAction={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={consultationFlowState.status === "saving"}
+              onClick={() => setCallDialogOpen(false)}
+            >
+              취소
+            </Button>
+          }
+        >
+          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+            <ChartPreflightLine
+              label="환자 / 보호자"
+              value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
+            />
+            <ChartPreflightLine
+              label="접수 시각"
+              value={getShortDateTime(
+                currentBundle.encounter.checkedInAt ??
+                  currentBundle.encounter.createdAt,
+              )}
+            />
+            <ChartPreflightLine
+              label="담당 수의사"
+              value={getChartBundleVeterinarianName(currentBundle)}
+            />
+            <ChartPreflightLine
+              label="DID 표시 preview"
+              value={`${currentBundle.patient.name} 보호자 ${currentBundle.primaryGuardian?.name ?? "미지정"}님, 진료실로 들어와 주세요.`}
+            />
+            <ChartPreflightLine
+              label="현재 상태"
+              value={chartCompletionStatusText}
+              emphasis
+            />
+          </div>
+          {consultationFlowState.status === "error" &&
+          consultationFlowState.action === "call" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="호출 상태가 저장되지 않았어"
+              className="mt-3 emr-text-metadata"
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleConsultationFlowMutation("call")}
+                >
+                  다시 시도
+                </Button>
+              }
+            >
+              현재 화면은 유지되지만 호출 상태와 내부 outbox 이벤트가 확정되지 않았어.
+            </EmrInlineAlert>
+          ) : null}
+        </EmrDialogShell>
+      </Dialog>
       <Dialog
         open={chartCompleteDialogOpen}
         onOpenChange={setChartCompleteDialogOpen}

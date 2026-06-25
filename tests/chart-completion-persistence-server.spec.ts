@@ -141,6 +141,32 @@ test("chart completion core enforces active workspace membership, chart update p
   });
 });
 
+test("chart completion core blocks waiting encounters from moving directly to billing", async () => {
+  const blocked = await completeChart({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: { encounterId: "encounter-haru-260430" },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-vet", status: "active" }],
+      memberships: [
+        {
+          id: "membership-vet",
+          workspaceId,
+          userId: "user-vet",
+          roles: ["vet"],
+          status: "active",
+        },
+      ],
+    }),
+  });
+
+  expect(blocked).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "stale_status",
+  });
+});
+
 test("chart completion Supabase gateway keeps workspace and encounter scope in RPC calls", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseChartCompletionGateway({
@@ -186,6 +212,15 @@ test("chart completion migration defines local-first RPC boundary without secret
   expect(migration).toContain("'billing'");
   expect(migration).toContain("grant execute on function public.clair_complete_chart");
   expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
+
+  const guardMigration = readFileSync(
+    "supabase/migrations/20260625103000_chart_consultation_flow_rpc.sql",
+    "utf8",
+  );
+  expect(guardMigration).toContain(
+    "status in ('in_consultation', 'ordered', 'ready_for_billing', 'completed')",
+  );
+  expect(guardMigration).toContain("raise exception 'stale_status'");
 });
 
 test("chart completion route stays server-owned and secret-free", () => {
