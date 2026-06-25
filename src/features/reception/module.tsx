@@ -2118,7 +2118,7 @@ function CalendarCurrentTimeIndicator({
     >
       <span
         data-testid={labelTestId}
-        className="flex h-[var(--emr-calendar-current-time-label-height)] w-[var(--emr-calendar-current-time-label-width)] shrink-0 items-center justify-center gap-0 rounded-[var(--emr-calendar-current-time-label-radius)] bg-[var(--emr-calendar-current-time)] px-[var(--emr-calendar-current-time-label-padding-x)] py-[var(--emr-calendar-current-time-label-padding-y)] text-center text-[12px] font-semibold leading-4 text-white [letter-spacing:0]"
+        className="flex h-[var(--emr-calendar-current-time-label-height)] w-[var(--emr-calendar-current-time-label-width)] shrink-0 items-center justify-center gap-0 rounded-[var(--emr-calendar-current-time-label-radius)] bg-[var(--emr-calendar-current-time)] px-[var(--emr-calendar-current-time-label-padding-x)] py-[var(--emr-calendar-current-time-label-padding-y)] text-center text-[12px] font-semibold leading-4 text-white tabular-nums [letter-spacing:0]"
       >
         {getCurrentOperatingTimeLabel(currentOperatingMinutes)}
       </span>
@@ -2193,7 +2193,7 @@ function CalendarTaskCard({
       aria-label={ariaLabel}
       aria-pressed={selected}
       className={cn(
-        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-colors",
+        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
         fillHeight ? "h-full w-full flex-none" : "flex-1",
         compact ? "flex-row items-center gap-[8px]" : "flex-col gap-[6px]",
         !fillHeight && compact && "h-[36px]",
@@ -2237,7 +2237,7 @@ function CalendarTaskCard({
             {identityLabel}
           </span>
           {timeLabel ? (
-            <span className="shrink-0 text-[12px] font-semibold leading-4 [letter-spacing:0] opacity-80">
+            <span className="shrink-0 text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-80">
               {timeLabel}
             </span>
           ) : null}
@@ -2253,7 +2253,7 @@ function CalendarTaskCard({
               {identityLabel}
             </span>
             {timeLabel ? (
-              <span className="shrink-0 text-[12px] font-semibold leading-4 [letter-spacing:0] opacity-80">
+              <span className="shrink-0 text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-80">
                 {timeLabel}
               </span>
             ) : null}
@@ -3822,12 +3822,12 @@ function ReceptionScheduleDateControl({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-10 justify-start px-3 !text-[16px] !font-bold leading-6 text-[var(--clair-color-atomic-gray-800)] [letter-spacing:0]"
+              className="h-10 justify-start px-3 !text-[16px] !font-bold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
               aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
             />
           }
         >
-          <span>{dateControlLabel.dateLabel}</span>
+          <span className="tabular-nums">{dateControlLabel.dateLabel}</span>
         </PopoverTrigger>
         <PopoverContent
           align="start"
@@ -3837,7 +3837,7 @@ function ReceptionScheduleDateControl({
           {view === "day" ? (
             <>
               <div className="flex items-center justify-between">
-                <div className="emr-text-dense font-semibold leading-5 text-foreground">
+                <div className="emr-text-dense font-semibold leading-5 text-foreground tabular-nums">
                   {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
                 </div>
                 <div className="flex items-center gap-1">
@@ -4091,7 +4091,7 @@ function ScheduleToolbar({
         />
         <span className="rounded-md bg-[var(--emr-surface-muted)] px-2.5 py-1.5 emr-text-metadata font-medium leading-4 text-[var(--emr-text-secondary)]">
           영업시간{" "}
-          <span className="font-semibold text-[var(--emr-text-link)]">
+          <span className="font-semibold text-[var(--emr-text-link)] tabular-nums">
             {getBusinessHoursTimeRangeLabel()}
           </span>
         </span>
@@ -4868,7 +4868,7 @@ function DayScheduleBoard({
               <div
                 key={hour}
                 className={cn(
-                  "absolute left-0 right-0 flex justify-end pr-2 emr-text-micro leading-4 text-muted-foreground",
+                  "absolute left-0 right-0 flex justify-end pr-2 emr-text-micro leading-4 text-muted-foreground tabular-nums",
                   firstLabel && "translate-y-1",
                   lastLabel && "-translate-y-full",
                   !firstLabel && !lastLabel && "-translate-y-1/2",
@@ -5116,7 +5116,7 @@ function WeekScheduleBoard({
             }}
           >
             <div className="relative border-r">
-              <span className="absolute left-0 right-0 top-2 text-center emr-text-micro text-muted-foreground">
+              <span className="absolute left-0 right-0 top-2 text-center emr-text-micro text-muted-foreground tabular-nums">
                 {getScheduleHourLabel(hour)}
               </span>
             </div>
@@ -5218,7 +5218,7 @@ function WeekScheduleBoard({
           style={{ gridTemplateColumns: "56px repeat(7, minmax(0, 1fr))" }}
         >
           <div className="relative h-6 border-r">
-            <span className="absolute left-0 right-0 -top-3 text-center emr-text-micro text-muted-foreground">
+            <span className="absolute left-0 right-0 -top-3 text-center emr-text-micro text-muted-foreground tabular-nums">
               {getScheduleHourLabel(dayScheduleEndHour)}
             </span>
           </div>
@@ -5255,8 +5255,8 @@ function MonthScheduleBoard({
             day === 1 && "bg-[var(--emr-status-info-bg)]/50",
           )}
         >
-          <div className="emr-text-dense font-semibold">{day}</div>
-          <div className="mt-3 space-y-1 emr-text-metadata leading-5 text-[var(--emr-text-secondary)]">
+          <div className="emr-text-dense font-semibold tabular-nums">{day}</div>
+          <div className="mt-3 space-y-1 emr-text-metadata leading-5 text-[var(--emr-text-secondary)] tabular-nums">
             <div>진료 0건</div>
             <div>예약 {day === 1 ? appointmentCount : 1}건</div>
             <div>행사 0건</div>
@@ -5443,7 +5443,7 @@ function ReceptionScheduleBoard({
     <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden">
       <section
         ref={calendarFrameRef}
-        className="min-h-0 min-w-0 overflow-hidden bg-card"
+        className="min-h-0 min-w-0 overflow-hidden bg-card shadow-[var(--clair-shadow-xs)]"
         data-testid="reception-calendar-frame"
         onKeyDownCapture={markCalendarUserScrolledByKeyboard}
         onPointerDown={() => {

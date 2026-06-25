@@ -24,7 +24,7 @@ export function WorkspaceSwitcher({ collapsed = false, className, workspaceId }:
       className={cn(
         "h-8 items-center justify-center gap-[var(--clair-border-width-atomic-4)] rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-workspace-button-border)] bg-[var(--emr-workspace-button-bg)] px-[var(--clair-spacing-8)] py-[var(--clair-radius-atomic-6)] text-[14px] font-medium leading-5 tracking-[0.196px] text-[var(--emr-workspace-button-text)] shadow-[var(--clair-shadow-xs)] transition-[background-color,border-color,width] hover:border-[var(--emr-workspace-button-border)] hover:bg-[var(--emr-workspace-button-hover-bg)] hover:text-[var(--emr-workspace-button-text)] focus-visible:ring-ring/40 active:bg-[var(--emr-workspace-button-bg)] active:shadow-none",
         collapsed
-          ? "w-14"
+          ? "w-[var(--emr-navrail-width)]"
           : "w-fit max-w-full min-w-48",
         className,
       )}
