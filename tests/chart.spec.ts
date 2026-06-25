@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
+import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
+
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
 const kongEncounterId = "encounter-kong-260501";
@@ -55,6 +58,47 @@ async function expectTopEdgeInViewport(page: Page, locator: Locator) {
   expect(box).not.toBeNull();
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(box!.y).toBeLessThan(viewportHeight);
+}
+
+async function grantCheongdamWorkspaceAccess(page: Page) {
+  await page.addInitScript(
+    ([storageKey, workspaceId]) => {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          currentWorkspaceId: workspaceId,
+          workspaces: [
+            {
+              id: workspaceId,
+              displayName: "VIP동물의료센터 청담점",
+              representativeName: "김승욱",
+              contactEmail: "owner@cheongdam.test",
+              contactPhone: null,
+              subscriptionStatus: "trialing",
+              createdBySessionId: "playwright-default-session",
+              createdAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          memberships: [
+            {
+              id: "membership-cheongdam-playwright-admin",
+              workspaceId,
+              userSessionId: "playwright-default-session",
+              displayName: "Playwright Admin",
+              email: "admin@cheongdam.test",
+              roles: ["hospital_admin"],
+              status: "active",
+              createdAt: "2026-06-14T00:00:00.000Z",
+              activatedAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          invitations: [],
+          updatedAt: "2026-06-14T00:00:00.000Z",
+        }),
+      );
+    },
+    [SESSION_WORKSPACES_STORAGE_KEY, PREPARED_EMPTY_CLINIC_WORKSPACE_ID],
+  );
 }
 
 async function restoreKongOrderDraftDefaults(page: Page) {
@@ -236,6 +280,37 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("menuitem", { name: "첨부 1" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
+});
+
+test("Cheongdam chart side panel shows the centered empty queue state", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-live-queue-read",
+          queue: [],
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=open&aside=closed&right=closed`,
+  );
+
+  const sidePanel = page.locator("aside").first();
+  await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
+  await expect(
+    sidePanel.getByText("오늘 진료 대기 업무가 없습니다."),
+  ).toBeVisible();
 });
 
 test("chart consultation CTA moves from call to start before chart completion", async ({
