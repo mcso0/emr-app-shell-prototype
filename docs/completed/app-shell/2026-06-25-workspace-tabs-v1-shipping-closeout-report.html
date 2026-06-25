@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Workspace Tabs V1 Shipping Closeout</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 48px 28px 72px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      code { background: #eef1f5; border-radius: 4px; padding: 1px 4px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">WORKSPACE-TABS-PR-001 / 2026-06-25</p>
+      <h1>워크스페이스 탭 1차 구현 출하 정리</h1>
+      <p>새 기능을 더 얹지 않고, 이미 구현된 워크스페이스 탭 v1과 SOAP 저장 충돌 방어의 출하 범위, 검증 증거, 남은 리스크를 정리했다.</p>
+      <span class="badge">Status: Human Review</span>
+
+      <section>
+        <h2>핵심 결론</h2>
+        <ul>
+          <li>실제 작업 checkout은 <code>/Users/iseung-ug/project/emr-app-shell-prototype</code>이다.</li>
+          <li><code>/Users/iseung-ug/Projects/emr-app-shell-prototype</code> 경로는 이 환경에 없다.</li>
+          <li>현재 구현은 하나의 리뷰 단위인 “Workspace Tabs v1 + SOAP conflict guard”로 보는 것이 가장 안전하다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>포함된 범위</h2>
+        <ul>
+          <li>서버 기반 워크스페이스 탭 복원 API와 세션 저장 경계.</li>
+          <li>동일 업무 화면 중복 접근 알림과 기존 탭 이동 선택지.</li>
+          <li>모바일에서 데스크톱 탭 리스트 숨김.</li>
+          <li>SOAP 저장 stale 충돌 감지와 <code>409 soap_note_conflict</code> 응답.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>명시적 비범위</h2>
+        <ul>
+          <li>모바일 전용 워크스페이스 탭 UX는 아직 제공하지 않는다.</li>
+          <li>중복 접근은 차단이 아니라 알림 후 선택 방식이다.</li>
+          <li>SOAP 외 모든 임상/수납 mutation 충돌 방어는 후속 작업이다.</li>
+          <li>remote Supabase replay, production monitoring, launch readiness는 별도 범위다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 증거</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li><code>npm run lint</code> error 0, warning 11.</li>
+          <li>App Shell workspace tab focused Playwright 통과.</li>
+          <li>workspace tabs server-session Playwright 4개 통과.</li>
+          <li>SOAP note persistence server Playwright 6개 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 권장 작업</h2>
+        <p>Vercel Cheongdam 배포 화면에서 접수, 진료/차트, 검사/처치, 수납을 한 번 도는 프로덕션 스모크를 먼저 수행한다. 문제가 발견되면 새 기능이 아니라 핫픽스 PR로 좁게 처리한다.</p>
+      </section>
+    </main>
+  </body>
+</html>
