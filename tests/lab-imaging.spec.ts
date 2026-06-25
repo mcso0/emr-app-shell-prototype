@@ -52,7 +52,7 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(sidePanel.getByText("임상병리검사")).toBeVisible();
   await expect(queueViewFilter.getByRole("button", { name: "오더별" })).toHaveAttribute("aria-pressed", "true");
   await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
-  await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
+  await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("검사 대기열")).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "결과입력 접기" })).toHaveAttribute("aria-expanded", "true");
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toContainText("코코");
@@ -177,7 +177,7 @@ test("lab workspace shows equipment receipts in the right panel", async ({ page 
   await expect(receiptPanelToggle).toHaveAttribute("aria-expanded", "false");
   await receiptPanelToggle.click();
   await expect(receiptPanelToggle).toHaveAttribute("aria-expanded", "true");
-  await expect(receiptPanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
+  await expect(receiptPanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(receiptPanel.getByRole("button", { name: "장비 검사 수신함 검색" })).toBeVisible();
   await expect(page.getByText("장비 수신값과 현재 결과지를 비교합니다.")).toHaveCount(0);
   await expect(receiptPanel.getByRole("group", { name: "장비 검사 수신함 필터" })).toHaveCount(0);
@@ -229,7 +229,7 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(sidePanel.getByText("영상검사")).toBeVisible();
   await expect(queueViewFilter.getByRole("button", { name: "오더별" })).toHaveAttribute("aria-pressed", "true");
   await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
-  await expect(sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" })).toBeVisible();
+  await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
   const cocoQueueGroupTestId = await sidePanel

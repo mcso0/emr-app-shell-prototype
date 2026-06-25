@@ -74,6 +74,15 @@ export function formatKoreanOperatingDateLabel(date: string) {
   return `${formatShortOperatingDate(date)}${weekday}`;
 }
 
+export function formatCompactKoreanOperatingDateLabel(date: string) {
+  const parsed = new Date(`${date}T00:00:00+09:00`);
+  const weekday = Number.isNaN(parsed.getTime())
+    ? ""
+    : `(${koreanWeekdayLabels[parsed.getDay()]})`;
+
+  return `${formatShortOperatingDate(date)}${weekday}`;
+}
+
 export function formatOperatingMonthLabel(date: string) {
   const [year = "0000", month = "00"] = date.split("-");
   return `${year.slice(2)}.${month}`;

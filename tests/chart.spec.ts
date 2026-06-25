@@ -470,10 +470,10 @@ test("chart side panel date navigator refetches the selected operating date", as
 
   const sidePanel = page.locator("aside").first();
   const initialDateButton = sidePanel.getByRole("button", {
-    name: "26.05.01 (금) 날짜 선택",
+    name: "26.05.01(금) 날짜 선택",
   });
   await expect(initialDateButton).toBeVisible();
-  await expect(initialDateButton).toContainText("26.05.01 (금)");
+  await expect(initialDateButton).toContainText("26.05.01(금)");
   await expect(initialDateButton).toContainText("오늘");
   await expect
     .poll(() => requestedDates.join(","))
@@ -486,7 +486,7 @@ test("chart side panel date navigator refetches the selected operating date", as
     .poll(() => requestedDates.join(","))
     .toContain("2026-05-02");
   await expect(
-    sidePanel.getByRole("button", { name: "26.05.02 (토) 날짜 선택" }),
+    sidePanel.getByRole("button", { name: "26.05.02(토) 날짜 선택" }),
   ).toBeVisible();
   await expect(sidePanel.getByText("오늘", { exact: true })).toHaveCount(0);
 
@@ -497,7 +497,7 @@ test("chart side panel date navigator refetches the selected operating date", as
     .poll(() => requestedDates.filter((date) => date === "2026-05-01").length)
     .toBeGreaterThanOrEqual(2);
   const todayDateButton = sidePanel.getByRole("button", {
-    name: "26.05.01 (금) 날짜 선택",
+    name: "26.05.01(금) 날짜 선택",
   });
   await expect(todayDateButton).toBeVisible();
   await expect(todayDateButton).toContainText("오늘");
@@ -508,7 +508,7 @@ test("chart side panel date navigator refetches the selected operating date", as
     .poll(() => requestedDates.join(","))
     .toContain("2026-05-08");
   await expect(
-    sidePanel.getByRole("button", { name: "26.05.08 (금) 날짜 선택" }),
+    sidePanel.getByRole("button", { name: "26.05.08(금) 날짜 선택" }),
   ).toBeVisible();
   await expect(sidePanel.getByText("오늘", { exact: true })).toHaveCount(0);
 });

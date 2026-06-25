@@ -5,12 +5,12 @@ import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import {
-  CalendarIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "@/components/icons";
+  CdsNavigationChevronLeftIcon,
+  CdsNavigationChevronRightIcon,
+} from "@/components/cds-icons/navigation";
+import { ChevronDownIcon } from "@/components/icons";
 import { CollapseGnbIcon } from "@/components/gnb-icons";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   addMonthsToIsoDate,
+  formatCompactKoreanOperatingDateLabel,
   formatKoreanOperatingDateLabel,
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
@@ -104,6 +105,14 @@ type EmrListItemProps = {
 };
 
 const emrDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
+const emrDateNavigatorClassName =
+  "flex h-[calc(var(--clair-control-height-md)+var(--clair-spacing-10)*2)] shrink-0 items-center justify-between gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-16)]";
+const emrDateNavigatorTriggerClassName =
+  "emr-text-dense-label flex h-[var(--clair-control-height-md)] min-w-0 flex-1 items-center justify-center gap-[var(--clair-spacing-6)] rounded-[var(--clair-radius-md)] px-[var(--clair-spacing-10)] font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50";
+const emrDateNavigatorIconButtonClassName =
+  "rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]";
+const emrDateNavigatorTodayBadgeClassName =
+  "rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-6)] emr-text-metadata font-medium";
 
 function getIsoDateFromUtcDate(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
@@ -201,6 +210,9 @@ export function EmrDateNavigator({
   const datePickerCells = selectedDate
     ? getEmrMonthDatePickerCells(pickerMonthDate || selectedDate, selectedDate)
     : [];
+  const renderedDateLabel = selectedDate
+    ? formatCompactKoreanOperatingDateLabel(selectedDate)
+    : dateLabel;
 
   const openDatePicker = () => {
     onOpenDatePicker?.();
@@ -216,18 +228,22 @@ export function EmrDateNavigator({
   const trigger = (
     <button
       type="button"
-      className="emr-text-dense-label flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50"
+      className={emrDateNavigatorTriggerClassName}
       onClick={openDatePicker}
       disabled={!datePickerEnabled && !onOpenDatePicker}
-      aria-label={typeof dateLabel === "string" ? `${dateLabel} 날짜 선택` : "날짜 선택"}
+      aria-label={
+        typeof renderedDateLabel === "string"
+          ? `${renderedDateLabel} 날짜 선택`
+          : "날짜 선택"
+      }
     >
-      <CalendarIcon
-        className="size-3.5 shrink-0 text-[var(--emr-text-tertiary)]"
+      <CdsFilesCalendarIcon
+        className="size-[var(--clair-spacing-16)] shrink-0 text-[var(--emr-text-tertiary)]"
         aria-hidden="true"
       />
-      <span className="truncate">{dateLabel}</span>
+      <span className="truncate">{renderedDateLabel}</span>
       {todayLabel ? (
-        <Badge variant="outline" className="h-[18px] rounded-md bg-[var(--emr-surface-panel)] px-1.5 text-[10px] leading-4">
+        <Badge variant="outline" className={emrDateNavigatorTodayBadgeClassName}>
           {todayLabel}
         </Badge>
       ) : null}
@@ -235,16 +251,16 @@ export function EmrDateNavigator({
   );
 
   return (
-    <div className={cn("flex h-12 shrink-0 items-center justify-between gap-1 px-4", className)}>
+    <div className={cn(emrDateNavigatorClassName, className)}>
       <Button
         variant="outline"
         size="icon"
-        className="rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
+        className={emrDateNavigatorIconButtonClassName}
         aria-label={previousLabel}
         disabled={!onPrevious}
         onClick={onPrevious}
       >
-        <ChevronLeftIcon />
+        <CdsNavigationChevronLeftIcon />
       </Button>
       {datePickerEnabled ? (
         <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -270,7 +286,7 @@ export function EmrDateNavigator({
                     )
                   }
                 >
-                  <ChevronLeftIcon />
+                  <CdsNavigationChevronLeftIcon />
                 </Button>
                 <Button
                   type="button"
@@ -283,7 +299,7 @@ export function EmrDateNavigator({
                     )
                   }
                 >
-                  <ChevronRightIcon />
+                  <CdsNavigationChevronRightIcon />
                 </Button>
               </div>
             </div>
@@ -326,12 +342,12 @@ export function EmrDateNavigator({
       <Button
         variant="outline"
         size="icon"
-        className="rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
+        className={emrDateNavigatorIconButtonClassName}
         aria-label={nextLabel}
         disabled={!onNext}
         onClick={onNext}
       >
-        <ChevronRightIcon />
+        <CdsNavigationChevronRightIcon />
       </Button>
     </div>
   );

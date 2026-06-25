@@ -142,7 +142,7 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
     sidePanel.getByRole("button", { name: "대기 2", exact: true }),
   ).toHaveCount(0);
   await expect(
-    sidePanel.getByRole("button", { name: "26.05.01 (금) 날짜 선택" }),
+    sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" }),
   ).toBeVisible();
   await expect(sidePanel.getByText("전체")).toBeVisible();
   await expect(
