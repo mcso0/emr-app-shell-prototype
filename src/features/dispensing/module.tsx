@@ -60,6 +60,7 @@ import {
   getOrderQueueStatuses,
   getSelectedOrderQueueItem,
 } from "@/features/order-queue/data";
+import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
   allOrderRows,
@@ -169,8 +170,8 @@ const emptyFulfillmentQueueSnapshot: DispensingFulfillmentQueueSnapshot = {
   workItems: [],
 };
 
-function getFulfillmentQueueCacheKey(workspaceId: string) {
-  return `${workspaceId}:dispensing-treatment`;
+function getFulfillmentQueueCacheKey(workspaceId: string, selectedDate: string) {
+  return `${workspaceId}:${selectedDate}:dispensing-treatment`;
 }
 
 function setCachedDispensingFulfillmentQueue(
@@ -192,9 +193,10 @@ function getFulfillmentReadFailureStatus(result: {
   return "error";
 }
 
-function useDispensingFulfillmentQueue() {
+function useDispensingFulfillmentQueue(selectedDate?: string) {
   const workspaceId = getWorkspaceIdFromPath();
-  const cacheKey = getFulfillmentQueueCacheKey(workspaceId);
+  const effectiveDate = selectedDate ?? "";
+  const cacheKey = getFulfillmentQueueCacheKey(workspaceId, effectiveDate);
   const [queueState, setQueueState] =
     useState<DispensingFulfillmentQueueSnapshot>(
       () => fulfillmentQueueCache.get(cacheKey) ?? emptyFulfillmentQueueSnapshot,
@@ -208,10 +210,10 @@ function useDispensingFulfillmentQueue() {
         workItems: fulfillmentQueueCache.get(cacheKey)?.workItems ?? [],
       });
       const [dispensingResponse, treatmentResponse] = await Promise.all([
-        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing`, {
+        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`, {
           headers: { "x-clair-demo-session-user-id": "user-tech" },
         }),
-        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment`, {
+        fetch(`/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`, {
           headers: { "x-clair-demo-session-user-id": "user-tech" },
         }),
       ]);
@@ -261,7 +263,7 @@ function useDispensingFulfillmentQueue() {
         workItems: [],
       });
     }
-  }, [cacheKey, workspaceId]);
+  }, [cacheKey, effectiveDate, workspaceId]);
 
   useEffect(() => {
     // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
@@ -543,7 +545,9 @@ function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
 
 export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
-  const fulfillmentQueue = useDispensingFulfillmentQueue();
+  const { selectDate, selectedDate, todayDate } =
+    useSelectedOperatingDate(workspaceId);
+  const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
     [fulfillmentQueue.workItems, workspaceId]
@@ -560,8 +564,15 @@ export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
       items={items}
       statuses={statuses}
       title="조제/처치"
+      selectedDate={selectedDate}
       selectedItemId={selectedQueueItemIds.dispensing}
+      todayDate={todayDate}
       onCollapse={() => setModulePanelOpen(false)}
+      onDateChange={(date) => {
+        selectDate(date);
+        setSelectedQueueItem("dispensing", "");
+        setSelectedQueueItem("treatment", "");
+      }}
       onSelectItem={(itemId) => setSelectedQueueItem("dispensing", itemId)}
     />
   );

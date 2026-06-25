@@ -16,6 +16,7 @@ import type { Guardian, Patient } from "@/types/emr-domain";
 
 export type ChartLiveQueueGateway = {
   listChartQueue(input: {
+    date?: string;
     workspaceId: string;
   }): Promise<
     | { ok: true; queue: ChartLiveQueueRecord[] }
@@ -45,11 +46,13 @@ const activeEncounterStatuses = new Set(["waiting", "in_consultation", "ordered"
 
 export async function readChartLiveQueue({
   actorUserId,
+  date,
   gateway = createMockChartLiveQueueGateway(),
   permissionAdapter = createDemoChartLiveQueuePermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
+  date?: string;
   gateway?: ChartLiveQueueGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
@@ -68,7 +71,7 @@ export async function readChartLiveQueue({
     };
   }
 
-  const result = await gateway.listChartQueue({ workspaceId });
+  const result = await gateway.listChartQueue({ date, workspaceId });
   if (!result.ok) return { ok: false, status: 500, error: result.error };
 
   return {
@@ -120,9 +123,9 @@ export function createSupabaseChartLiveQueueGateway(
   const receptionQueueGateway = createSupabaseReceptionQueueReadGateway(client);
 
   return {
-    async listChartQueue({ workspaceId }) {
+    async listChartQueue({ date, workspaceId }) {
       const queueResult = await receptionQueueGateway.listReceptionQueue({
-        date: getWorkspaceOperatingDate(workspaceId),
+        date: date ?? getWorkspaceOperatingDate(workspaceId),
         workspaceId,
       });
       if (!queueResult.ok) return queueResult;

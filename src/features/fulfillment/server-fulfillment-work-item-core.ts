@@ -24,6 +24,10 @@ import {
   mockOrders,
   mockPatients,
 } from "@/mocks/emr-domain";
+import {
+  getOperatingDateFromIso,
+  isIsoOperatingDate,
+} from "@/lib/emr-domain/demo-date";
 import type {
   EmrOrder,
   EmrOrderType,
@@ -93,6 +97,7 @@ export type FulfillmentWorkItem = {
 };
 
 export type FulfillmentWorkItemFilters = {
+  date?: string | null;
   encounterId?: string | null;
   orderId?: string | null;
   queueType?: string | null;
@@ -148,6 +153,7 @@ type FulfillmentGatewayFailure = Exclude<
 
 export type FulfillmentWorkItemGateway = {
   listWorkItems(input: {
+    date?: string;
     encounterId?: string;
     orderId?: string;
     queueType: FulfillmentQueueType;
@@ -182,7 +188,7 @@ export type FulfillmentWorkItemReadResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"queueType" | "status", string>>;
+      fieldErrors: Partial<Record<"date" | "queueType" | "status", string>>;
     }
   | {
       ok: false;
@@ -307,6 +313,7 @@ export async function readFulfillmentWorkItems({
 
   const result = await gateway.listWorkItems({
     encounterId: normalized.encounterId,
+    date: normalized.date,
     orderId: normalized.orderId,
     queueType,
     status: normalized.status,
@@ -603,6 +610,7 @@ export function createMockFulfillmentWorkItemGateway(
   return {
     async listWorkItems({
       encounterId,
+      date,
       orderId,
       queueType,
       status,
@@ -617,6 +625,7 @@ export function createMockFulfillmentWorkItemGateway(
       });
       const rows = seeded
         .filter((item) => item.queueType === queueType)
+        .filter((item) => !date || getFulfillmentWorkItemOperatingDate(item) === date)
         .filter((item) => !encounterId || item.encounterId === encounterId)
         .filter((item) => !orderId || item.orderId === orderId)
         .filter((item) => !status || item.status === status)
@@ -839,6 +848,7 @@ export function createSupabaseFulfillmentWorkItemGateway(
   return {
     async listWorkItems({
       encounterId,
+      date,
       orderId,
       queueType,
       status,
@@ -855,7 +865,12 @@ export function createSupabaseFulfillmentWorkItemGateway(
         },
       );
       if (error) return mapGatewayError(error.message, "db_read_failed");
-      return { ok: true, workItems: mapWorkItemRows(data) };
+      return {
+        ok: true,
+        workItems: mapWorkItemRows(data).filter(
+          (item) => !date || getFulfillmentWorkItemOperatingDate(item) === date,
+        ),
+      };
     },
     async syncFromOrders({
       actorUserId,
@@ -1549,6 +1564,10 @@ function mapOrderStatusToWorkItemStatus(
   return "requested";
 }
 
+function getFulfillmentWorkItemOperatingDate(item: FulfillmentWorkItem) {
+  return getOperatingDateFromIso(item.dueAt ?? undefined) ?? getOperatingDateFromIso(item.createdAt);
+}
+
 function canTransition(
   current: FulfillmentWorkItemStatus,
   next: FulfillmentWorkItemStatus,
@@ -1570,6 +1589,7 @@ function canTransition(
 
 function normalizeFilters(input: FulfillmentWorkItemFilters) {
   return {
+    date: trimToUndefined(input.date),
     encounterId: trimToUndefined(input.encounterId),
     orderId: trimToUndefined(input.orderId),
     queueType: trimToUndefined(input.queueType) as
@@ -1582,7 +1602,10 @@ function normalizeFilters(input: FulfillmentWorkItemFilters) {
 }
 
 function validateReadFilters(input: ReturnType<typeof normalizeFilters>) {
-  const fieldErrors: Partial<Record<"queueType" | "status", string>> = {};
+  const fieldErrors: Partial<Record<"date" | "queueType" | "status", string>> = {};
+  if (input.date && !isIsoOperatingDate(input.date)) {
+    fieldErrors.date = "invalid_date";
+  }
   if (!input.queueType || !isSupportedOrderType(input.queueType)) {
     fieldErrors.queueType = "업무 queue를 선택해 주세요.";
   }

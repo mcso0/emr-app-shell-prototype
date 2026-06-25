@@ -35,6 +35,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  addDaysToIsoDate,
+  formatKoreanOperatingDateLabel,
+} from "@/lib/emr-domain/demo-date";
 import type {
   OrderQueueItem,
   OrderQueueStatusDefinition,
@@ -61,9 +65,12 @@ type EmrOrderQueueSidePanelProps = {
   getTaskCardItem?: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   listLabel?: string;
   onCollapse?: () => void;
+  onDateChange?: (date: string) => void;
   onSelectItem?: (itemId: string) => void;
   selectedItemId?: string;
+  selectedDate?: string;
   todayLabel?: string;
+  todayDate?: string;
 };
 
 const orderQueueFilterItems = [
@@ -184,10 +191,13 @@ export function EmrOrderQueueSidePanel({
   items,
   listLabel = "전체 오더",
   onCollapse,
+  onDateChange,
   onSelectItem,
   selectedItemId,
+  selectedDate,
   statuses,
   title,
+  todayDate,
   todayLabel = "오늘",
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
@@ -212,10 +222,19 @@ export function EmrOrderQueueSidePanel({
     [resolvedStatuses, scopedItems, searchQuery, sortKey]
   );
   const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
+  const isToday = Boolean(selectedDate && todayDate && selectedDate === todayDate);
+  const displayDateLabel = selectedDate ? formatKoreanOperatingDateLabel(selectedDate) : dateLabel;
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
   }, []);
+  const handleDateChange = useCallback(
+    (date: string) => {
+      closeSearch();
+      onDateChange?.(date);
+    },
+    [closeSearch, onDateChange],
+  );
   const groupedItems = resolvedStatuses
     .map((status) => ({
       status,
@@ -252,7 +271,24 @@ export function EmrOrderQueueSidePanel({
           />
         }
       />
-      <EmrDateNavigator dateLabel={dateLabel} todayLabel={todayLabel} />
+      <EmrDateNavigator
+        dateLabel={displayDateLabel}
+        nextLabel="다음 날짜"
+        previousLabel="이전 날짜"
+        selectedDate={selectedDate}
+        todayLabel={isToday ? todayLabel : undefined}
+        onDateChange={onDateChange ? handleDateChange : undefined}
+        onNext={
+          selectedDate && onDateChange
+            ? () => handleDateChange(addDaysToIsoDate(selectedDate, 1))
+            : undefined
+        }
+        onPrevious={
+          selectedDate && onDateChange
+            ? () => handleDateChange(addDaysToIsoDate(selectedDate, -1))
+            : undefined
+        }
+      />
       <EmrListHeader
         label={listLabel}
         count={visibleItems.length}

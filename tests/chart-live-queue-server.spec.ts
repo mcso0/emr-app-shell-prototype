@@ -73,11 +73,22 @@ test("chart live queue hydrates multiple live encounters without patient-specifi
     ],
   });
   expect(calls).toEqual([
-    "rpc:clair_list_reception_queue:clair-demo",
+    "rpc:clair_list_reception_queue:clair-demo:2026-05-01",
     "from:patients:clair-demo:19421000-0000-4000-8000-000000000001,19421000-0000-4000-8000-000000000002",
     "from:guardians:clair-demo:19420000-0000-4000-8000-000000000001,19420000-0000-4000-8000-000000000002",
     "from:users::19410000-0000-4000-8000-000000000001,19410000-0000-4000-8000-000000000002",
   ]);
+});
+
+test("chart live queue passes the selected operating date to reception queue read", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseChartLiveQueueGateway(
+    createFakeChartLiveQueueClient(calls) as unknown as SupabaseChartLiveQueueClient,
+  );
+
+  await gateway.listChartQueue({ workspaceId, date: "2026-06-25" });
+
+  expect(calls[0]).toBe("rpc:clair_list_reception_queue:clair-demo:2026-06-25");
 });
 
 test("chart live queue falls back to reception profile lookup when direct profile read is blocked", async () => {
@@ -104,7 +115,7 @@ test("chart live queue falls back to reception profile lookup when direct profil
     ],
   });
   expect(calls).toEqual([
-    "rpc:clair_list_reception_queue:clair-demo",
+    "rpc:clair_list_reception_queue:clair-demo:2026-05-01",
     "from:patients:clair-demo:19421000-0000-4000-8000-000000000001,19421000-0000-4000-8000-000000000002",
     "from:guardians:clair-demo:19420000-0000-4000-8000-000000000001,19420000-0000-4000-8000-000000000002",
     "from:users::19410000-0000-4000-8000-000000000001,19410000-0000-4000-8000-000000000002",
@@ -211,8 +222,8 @@ function createFakeChartLiveQueueClient(
   options: { directProfileReadFails?: boolean } = {},
 ) {
   return {
-    async rpc(functionName: string, args: { p_workspace_id: string }) {
-      calls.push(`rpc:${functionName}:${args.p_workspace_id}`);
+    async rpc(functionName: string, args: { p_day?: string; p_workspace_id: string }) {
+      calls.push(`rpc:${functionName}:${args.p_workspace_id}${args.p_day ? `:${args.p_day}` : ""}`);
       if (functionName === "clair_search_reception_patient_guardian_lookup") {
         return {
           data: [

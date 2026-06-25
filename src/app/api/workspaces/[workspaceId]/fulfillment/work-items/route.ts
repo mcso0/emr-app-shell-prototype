@@ -57,6 +57,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     workspaceId,
     permissionAdapter,
     filters: {
+      date: url.searchParams.get("date"),
       encounterId: url.searchParams.get("encounterId"),
       orderId: url.searchParams.get("orderId"),
       queueType: url.searchParams.get("queueType"),

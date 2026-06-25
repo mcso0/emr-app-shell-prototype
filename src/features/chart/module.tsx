@@ -121,6 +121,7 @@ import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-gr
 import { ChartSectionTitle } from "@/features/chart/components/chart-section-title";
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
+import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import {
   getPatientDisplayAge,
   getPatientSexLabel,
@@ -157,7 +158,7 @@ import type {
 
 type ChartBundle = ChartEncounterBundle;
 type OrderFilter = "all" | EmrOrderType | "billing";
-type SoapSaveState = "idle" | "loading" | "saving" | "saved" | "error";
+type SoapSaveState = "idle" | "loading" | "saving" | "saved" | "error" | "conflict";
 type ChartSoapNoteRouteResponse =
   | {
       ok: true;
@@ -858,6 +859,8 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     [authSession],
   );
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const { selectDate, selectedDate, todayDate } =
+    useSelectedOperatingDate(workspaceId);
   const mockItems = useMemo(
     () => (legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems),
     [legacySalesDemo],
@@ -884,7 +887,11 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     setLiveQueueState({ records: [], status: "loading" });
 
     async function loadLiveQueue() {
-      const result = await loadChartLiveQueue({ actorHeaders, workspaceId });
+      const result = await loadChartLiveQueue({
+        actorHeaders,
+        date: selectedDate,
+        workspaceId,
+      });
       if (cancelled) return;
 
       if (!result.ok) {
@@ -943,6 +950,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     actorHeaders,
     authHydrated,
     explicitQueryEncounterId,
+    selectedDate,
     selectEncounter,
     selectedEncounterId,
     setLiveQueueState,
@@ -982,7 +990,6 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
 
   return (
       <EmrOrderQueueSidePanel
-      dateLabel={legacySalesDemo ? "26.05.05 (화)" : "오늘"}
       filterAriaLabel="진료 대기 유형 필터"
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
@@ -991,10 +998,16 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
       getTaskCardItem={getChartTaskCardItem}
       items={items}
       listLabel="진료 대기열"
+      selectedDate={selectedDate}
       selectedItemId={selectedEncounterId}
       statuses={getChartQueueStatuses()}
       title="진료/차트"
+      todayDate={todayDate}
       onCollapse={() => setModulePanelOpen(false)}
+      onDateChange={(date) => {
+        selectDate(date);
+        if (selectedEncounterId) selectEncounter("");
+      }}
       onSelectItem={(itemId) => {
         if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
         selectEncounter(itemId);
@@ -1437,12 +1450,14 @@ async function saveChartSoapNote({
   actorHeaders,
   content,
   encounterId,
+  expectedUpdatedAt,
   mode,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   content: string;
   encounterId: string;
+  expectedUpdatedAt?: string | null;
   mode: "autosave" | "manual_save";
   workspaceId: string;
 }): Promise<ChartSoapNoteRouteResponse> {
@@ -1457,6 +1472,7 @@ async function saveChartSoapNote({
         },
         body: JSON.stringify({
           encounterId,
+          expectedUpdatedAt,
           mode,
           ...extractSoapFieldsFromHtml(content),
         }),
@@ -1613,14 +1629,16 @@ async function loadChartOrderDraft({
 
 async function loadChartLiveQueue({
   actorHeaders,
+  date,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
+  date: string;
   workspaceId: string;
 }): Promise<ChartLiveQueueResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/live-queue`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/live-queue?date=${encodeURIComponent(date)}`,
       {
         cache: "no-store",
         headers: actorHeaders,
@@ -1936,6 +1954,7 @@ function SoapPanel({
   >(null);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
   const latestDefaultContentRef = useRef(defaultSection.content);
+  const expectedUpdatedAtRef = useRef<string | null>(soapNote?.updatedAt ?? null);
 
   const diagnosisSystemSections = useMemo(() => {
     const labels = diagnoses.map(getSoapSystemLabel).filter(Boolean);
@@ -2023,17 +2042,23 @@ function SoapPanel({
       actorHeaders,
       content,
       encounterId,
+      expectedUpdatedAt: expectedUpdatedAtRef.current,
       mode,
       workspaceId,
     });
 
     if (!result.ok || !result.soapNote) {
+      if (!result.ok && result.denialReason === "soap_note_conflict") {
+        setSaveState("conflict");
+        return;
+      }
       setSaveState("error");
       return;
     }
 
     setSaveState("saved");
     latestDefaultContentRef.current = content;
+    expectedUpdatedAtRef.current = result.soapNote.updatedAt;
     onPersistedSoapNote(result.soapNote);
     updateSectionOverride({
       ...defaultSection,
@@ -2050,6 +2075,10 @@ function SoapPanel({
   useEffect(() => {
     latestDefaultContentRef.current = defaultSection.content;
   }, [defaultSection.content]);
+
+  useEffect(() => {
+    expectedUpdatedAtRef.current = soapNote?.updatedAt ?? null;
+  }, [soapNote?.updatedAt]);
 
   useEffect(() => {
     if (pendingDefaultContent === null) return;
@@ -2231,6 +2260,8 @@ function SoapPanel({
       ? "저장 상태 확인 중"
       : saveState === "saving"
         ? "자동저장 중"
+        : saveState === "conflict"
+          ? "저장 충돌"
         : saveState === "error"
           ? "저장 실패"
           : getSoapSectionStatusText(
@@ -2302,6 +2333,14 @@ function SoapPanel({
           </DropdownMenu>
         ) : null}
       </div>
+      {saveState === "conflict" ? (
+        <div
+          role="alert"
+          className="border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-2 text-sm text-[var(--emr-status-warning-text)]"
+        >
+          다른 탭이나 사용자가 먼저 SOAP를 저장했어. 현재 입력은 유지되며, 최신 내용을 확인한 뒤 다시 저장해.
+        </div>
+      ) : null}
       <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
         {activeSection ? (
           <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">

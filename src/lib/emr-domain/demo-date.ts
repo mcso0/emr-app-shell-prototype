@@ -5,6 +5,7 @@ export const LEGACY_FIXTURE_OPERATING_NOW = "2026-05-01T10:45:00+09:00";
 export const DEMO_OPERATING_TIME_ZONE = "Asia/Seoul";
 
 const koreanWeekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function getDatePartsInTimeZone(
   date: Date,
@@ -112,6 +113,60 @@ export function formatOperatingShortTime(dateTime?: string) {
 
   const parts = getDatePartsInTimeZone(date);
   return `${parts.hour}:${parts.minute}`;
+}
+
+export function isIsoOperatingDate(date?: string | null) {
+  if (!date || !isoDatePattern.test(date)) return false;
+
+  const parsed = new Date(`${date}T00:00:00+09:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+
+  return getOperatingDateFromIso(parsed.toISOString()) === date;
+}
+
+export function parseIsoDateParts(date: string) {
+  const match = isoDatePattern.exec(date);
+  if (!match) return { year: 2026, month: 5, day: 1 };
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+}
+
+export function getIsoDateFromUtcDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+export function addDaysToIsoDate(date: string, days: number) {
+  const parts = parseIsoDateParts(date);
+  const utcDate = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + days),
+  );
+
+  return getIsoDateFromUtcDate(utcDate);
+}
+
+export function getDaysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+export function addMonthsToIsoDate(date: string, months: number) {
+  const parts = parseIsoDateParts(date);
+  const nextMonthIndex = parts.month - 1 + months;
+  const year = parts.year + Math.floor(nextMonthIndex / 12);
+  const monthIndex = ((nextMonthIndex % 12) + 12) % 12;
+  const day = Math.min(parts.day, getDaysInMonth(year, monthIndex + 1));
+
+  return getIsoDateFromUtcDate(new Date(Date.UTC(year, monthIndex, day)));
+}
+
+export function setMonthOnIsoDate(date: string, month: number) {
+  const parts = parseIsoDateParts(date);
+  const day = Math.min(parts.day, getDaysInMonth(parts.year, month));
+
+  return getIsoDateFromUtcDate(new Date(Date.UTC(parts.year, month - 1, day)));
 }
 
 function parseIsoDateTime(dateTime?: string) {

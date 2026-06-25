@@ -86,6 +86,7 @@ import {
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
+import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getChartEncounter } from "@/features/chart/data";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
 import type { EmrTableDensity } from "@/components/emr/table-density";
@@ -101,6 +102,10 @@ import {
   isLegacySalesDemoWorkspace,
   resolveWorkspacePathname,
 } from "@/lib/emr-domain/demo-workspaces";
+import {
+  addDaysToIsoDate,
+  formatKoreanOperatingDateLabel,
+} from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ShellComponentProps } from "@/types/emr";
@@ -455,8 +460,12 @@ const imagingQueueViewItems = [
 const fulfillmentQueueCache = new Map<string, FulfillmentWorkItem[]>();
 const fulfillmentQueueListeners = new Map<string, Set<(workItems: FulfillmentWorkItem[]) => void>>();
 
-function getFulfillmentQueueCacheKey(workspaceId: string, queueType: FulfillmentQueueType) {
-  return `${workspaceId}:${queueType}`;
+function getFulfillmentQueueCacheKey(
+  workspaceId: string,
+  queueType: FulfillmentQueueType,
+  selectedDate: string,
+) {
+  return `${workspaceId}:${selectedDate}:${queueType}`;
 }
 
 function setCachedFulfillmentQueue(cacheKey: string, workItems: FulfillmentWorkItem[]) {
@@ -590,9 +599,10 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): EmrOrder {
   };
 }
 
-function useFulfillmentQueue(queueType: FulfillmentQueueType) {
+function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: string) {
   const workspaceId = useWorkspaceIdFromPath();
-  const cacheKey = getFulfillmentQueueCacheKey(workspaceId, queueType);
+  const effectiveDate = selectedDate ?? "";
+  const cacheKey = getFulfillmentQueueCacheKey(workspaceId, queueType, effectiveDate);
   const [queueState, setQueueState] = useState<{
     cacheKey: string;
     workItems: FulfillmentWorkItem[];
@@ -608,7 +618,7 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType) {
   const refresh = useCallback(async () => {
     try {
       const response = await fetch(
-        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}`,
+        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
         { headers: { "x-clair-demo-session-user-id": "user-tech" } }
       );
       const body = await response.json() as { ok?: boolean; workItems?: FulfillmentWorkItem[] };
@@ -619,7 +629,7 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType) {
     } catch {
       setCachedFulfillmentQueue(cacheKey, []);
     }
-  }, [cacheKey, queueType, workspaceId]);
+  }, [cacheKey, effectiveDate, queueType, workspaceId]);
 
   useEffect(() => {
     // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
@@ -1555,11 +1565,13 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const { selectDate, selectedDate, todayDate } =
+    useSelectedOperatingDate(workspaceId);
   const [queueView, setQueueView] = useState<LabQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<LabResult["status"]>>(() => new Set());
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const fulfillmentQueue = useFulfillmentQueue("lab");
+  const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseItems = useMemo(
     () => (legacySalesDemo ? getLabWorkItems() : []),
@@ -1578,8 +1590,6 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
   const effectiveSelectedLabResultId = items.some((item) => item.result.id === selectedLabResultId)
     ? selectedLabResultId
     : items[0]?.result.id;
-  const latestLabDate = items[0]?.result.receivedAt ?? items[0]?.result.collectedAt;
-  const dateLabel = latestLabDate ? `${latestLabDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getLabChartGroups(items), [items]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesQueueSearch(getLabWorkItemSearchText(item), searchQuery)),
@@ -1636,7 +1646,17 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
           />
         }
       />
-      <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
+      <EmrDateNavigator
+        dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
+        selectedDate={selectedDate}
+        todayLabel={selectedDate === todayDate ? "오늘" : undefined}
+        onDateChange={(date) => {
+          selectDate(date);
+          selectLabResult("");
+        }}
+        onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}
+        onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
+      />
       <EmrListHeader
         label={queueView === "order" ? "검사 대기열" : "차트별 검사"}
         count={resultCount}
@@ -1694,11 +1714,13 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
+  const { selectDate, selectedDate, todayDate } =
+    useSelectedOperatingDate(workspaceId);
   const [queueView, setQueueView] = useState<ImagingQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<ImagingStudyStatus>>(() => new Set());
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const fulfillmentQueue = useFulfillmentQueue("imaging");
+  const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseItems = useMemo(
     () => (legacySalesDemo ? getImagingWorkItems() : []),
@@ -1717,8 +1739,6 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
   const effectiveSelectedImagingStudyId = items.some((item) => item.study.id === selectedImagingStudyId)
     ? selectedImagingStudyId
     : items[0]?.study.id;
-  const latestImagingDate = items[0]?.study.capturedAt ?? items[0]?.study.requestedAt;
-  const dateLabel = latestImagingDate ? `${latestImagingDate.slice(2, 10).replaceAll("-", ".")} (금)` : "-";
   const chartGroups = useMemo(() => getImagingChartGroups(items), [items]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesQueueSearch(getImagingWorkItemSearchText(item), searchQuery)),
@@ -1774,7 +1794,17 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
           />
         }
       />
-      <EmrDateNavigator dateLabel={dateLabel} todayLabel="오늘" />
+      <EmrDateNavigator
+        dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
+        selectedDate={selectedDate}
+        todayLabel={selectedDate === todayDate ? "오늘" : undefined}
+        onDateChange={(date) => {
+          selectDate(date);
+          selectImagingStudy("");
+        }}
+        onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}
+        onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
+      />
       <EmrListHeader
         label={queueView === "order" ? "영상 대기열" : "차트별 영상"}
         count={resultCount}

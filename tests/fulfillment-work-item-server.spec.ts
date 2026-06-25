@@ -300,6 +300,56 @@ test("phase-1 treatment fulfillment intentionally shares dispensing permissions"
   });
 });
 
+test("fulfillment read filters work items by selected operating date", async () => {
+  const gateway = createMockFulfillmentWorkItemGateway(
+    undefined,
+    () => "2026-06-25T01:00:00.000Z",
+  );
+  await syncFulfillmentWorkItemsFromOrders({
+    actorUserId: "user-vet",
+    gateway,
+    input: { encounterId, orderIds: [orderId] },
+    workspaceId,
+  });
+
+  const selectedDate = await readFulfillmentWorkItems({
+    actorUserId: "user-tech",
+    filters: { date: "2026-05-01", queueType: "dispensing" },
+    gateway,
+    workspaceId,
+  });
+  const otherDate = await readFulfillmentWorkItems({
+    actorUserId: "user-tech",
+    filters: { date: "2026-06-25", queueType: "dispensing" },
+    gateway,
+    workspaceId,
+  });
+
+  expect(selectedDate).toMatchObject({ ok: true });
+  expect(selectedDate.ok ? selectedDate.workItems : []).toEqual(
+    expect.arrayContaining([expect.objectContaining({ id: workItemId })]),
+  );
+  expect(otherDate).toMatchObject({
+    ok: true,
+    workItems: [],
+  });
+});
+
+test("fulfillment read rejects invalid selected operating dates", async () => {
+  const result = await readFulfillmentWorkItems({
+    actorUserId: "user-tech",
+    filters: { date: "2026-6-25", queueType: "dispensing" },
+    workspaceId,
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { date: "invalid_date" },
+  });
+});
+
 test("fulfillment mock gateway routes catalog snapshots idempotently to downstream queues", async () => {
   const gateway = createMockFulfillmentWorkItemGateway(
     undefined,

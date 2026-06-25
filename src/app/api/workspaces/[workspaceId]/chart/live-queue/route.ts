@@ -41,6 +41,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     );
   }
 
+  const url = new URL(request.url);
+  const date = url.searchParams.get("date") ?? undefined;
   const client = identity.source === "supabase_session" ? await createClient() : null;
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
@@ -53,6 +55,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     : undefined;
   const result = await readChartLiveQueue({
     actorUserId: identity.actorUserId,
+    date,
     gateway: client
       ? createSupabaseChartLiveQueueGateway(client as unknown as SupabaseChartLiveQueueClient)
       : undefined,
