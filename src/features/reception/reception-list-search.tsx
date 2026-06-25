@@ -2,7 +2,6 @@
 
 import type * as React from "react";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
-import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
 import { CircleCloseFillIcon } from "@/components/icons";
 import { EmrQueueEmptyState } from "@/components/emr/subpanel";
 import { Input } from "@/components/ui/input";
@@ -78,11 +77,5 @@ export function ReceptionPanelStateMessage({
 }
 
 export function ReceptionEmptyState({ children }: { children: React.ReactNode }) {
-  return (
-    <EmrQueueEmptyState
-      icon={<CdsFilesCalendarIcon aria-hidden="true" className="size-9" />}
-    >
-      {children}
-    </EmrQueueEmptyState>
-  );
+  return <EmrQueueEmptyState>{children}</EmrQueueEmptyState>;
 }

@@ -32,7 +32,7 @@ import {
   parseIsoDateParts,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
-import folderFileSearchMotionIcon from "../../../icons/motionIcon/folder-file-search.json";
+import folderFileCloseMotionIcon from "../../../icons/motionIcon/Folder File close.json";
 import queueLoadingMotionIcon from "../../../icons/motionIcon/iconly-icon-export-1782392467.json";
 import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
 
@@ -531,7 +531,7 @@ export function EmrQueueEmptyState({
   return (
     <div
       className={cn(
-        "flex min-h-[220px] flex-1 flex-col items-center justify-center px-4 py-8 text-center",
+        "flex min-h-[220px] flex-1 flex-col items-center justify-center px-4 py-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
         className,
       )}
       {...props}
@@ -544,7 +544,7 @@ export function EmrQueueEmptyState({
       >
         {icon ?? (
           <EmrMotionIcon
-            animationData={folderFileSearchMotionIcon}
+            animationData={folderFileCloseMotionIcon}
             className="size-9 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
             loop={false}
           />
