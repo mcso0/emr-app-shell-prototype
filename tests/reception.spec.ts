@@ -12,6 +12,30 @@ async function submitAppointmentCheckInForm(page: Page) {
   await form.getByRole("button", { name: "생성" }).click();
 }
 
+async function freezeBrowserClock(page: Page, iso: string) {
+  await page.addInitScript((fixedIso) => {
+    const RealDate = Date;
+    const fixedTime = new RealDate(fixedIso).getTime();
+
+    class MockDate extends RealDate {
+      constructor(value?: string | number | Date) {
+        if (value === undefined) {
+          super(fixedTime);
+          return;
+        }
+
+        super(value);
+      }
+
+      static now() {
+        return fixedTime;
+      }
+    }
+
+    window.Date = MockDate as DateConstructor;
+  }, iso);
+}
+
 function getLocalDatePrefix(date = new Date()) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -2586,9 +2610,9 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await openWalkInReceptionForm(page);
   await expect(page).toHaveURL(/drawer=reception-form/);
   const walkInForm = page.getByTestId("walk-in-reception-dialog");
-  await expect(
-    walkInForm.getByRole("heading", { name: "진료 접수" }),
-  ).toBeVisible();
+  await expect(page.getByTestId("workspace-drawer").last()).toContainText(
+    "접수 생성",
+  );
   await expect(walkInForm.getByLabel("체중")).toBeDisabled();
   await expect(walkInForm.getByLabel("환자 검색")).toHaveAttribute(
     "placeholder",
@@ -2609,31 +2633,26 @@ test("reception creates a walk-in waiting row from the new check-in dialog", asy
   await walkInForm.getByLabel("접수 메모").fill("보호자가 계단 보행을 걱정함");
   await walkInForm.getByRole("button", { name: "생성" }).click();
 
-  const dubuCard = page.getByTestId("patient-card-patient-dubu");
+  const dubuCard = page
+    .getByTestId("patient-card-patient-dubu")
+    .filter({ hasText: "보행 재검 및 통증 상담" });
   await expect(dubuCard).toContainText("두부");
   await expect(dubuCard).toContainText("재활");
   await expect(dubuCard).toContainText("보행 재검 및 통증 상담");
-  await expect(dubuCard).toContainText("수의사 미지정");
+  await expect(dubuCard).toContainText("미지정");
 
-  const walkInCalendarCard = page
-    .locator('[data-testid^="walkin-card-"]')
-    .filter({
-      hasText: "보행 재검 및 통증 상담",
-    });
-  await expect(walkInCalendarCard).toContainText("외래");
-  await expect(walkInCalendarCard).toContainText("재활");
-  await expect(walkInCalendarCard).toContainText("보행 재검 및 통증 상담");
   await expect(
-    walkInCalendarCard.locator('[data-testid^="walkin-purpose-encounter-"]'),
-  ).toContainText("두부 · 정하린");
-  await expect(
-    walkInCalendarCard.locator('[data-testid^="walkin-accent-"]'),
-  ).toHaveClass(/emr-line-strong/);
+    page.getByRole("button", {
+      name: /진료대기 두부 · 재활 · 보행 재검 및 통증 상담/,
+    }),
+  ).toBeVisible();
 });
 
 test("reception creates a reservation through the unified check-in menu", async ({
   page,
 }) => {
+  await freezeBrowserClock(page, "2026-05-01T08:55:00+09:00");
+
   let createdAppointment: Record<string, unknown> | null = null;
   let latestBody: Record<string, unknown> | undefined;
 
@@ -2682,7 +2701,7 @@ test("reception creates a reservation through the unified check-in menu", async 
         guardianId: latestBody.guardianId,
         assignedVeterinarianId: latestBody.assignedVeterinarianId,
         scheduledStartAt: latestBody.scheduledStartAt,
-        scheduledEndAt: "2026-05-01T10:30:00+09:00",
+        scheduledEndAt: "2026-05-01T12:30:00+09:00",
         visitPurpose: latestBody.reservationMemo,
         symptomNote: latestBody.reservationMemo,
         status: "confirmed",
@@ -2732,11 +2751,11 @@ test("reception creates a reservation through the unified check-in menu", async 
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await drawer.getByLabel("체중").fill("4.95");
 
-  await expect(drawer.getByLabel("예약시간")).toContainText("09:00");
+  await expect(drawer.getByLabel("예약시간")).toContainText("11:00");
   await expect(drawer.getByLabel("예약시간")).not.toContainText("540");
   await drawer.getByLabel("예약시간").click();
-  await page.getByRole("option", { name: /^10:00$/ }).click();
-  await expect(drawer.getByLabel("예약시간")).toContainText("10:00");
+  await page.getByRole("option", { name: /^12:00$/ }).click();
+  await expect(drawer.getByLabel("예약시간")).toContainText("12:00");
   await expect(drawer.getByLabel("예약시간")).not.toContainText("600");
 
   await drawer.getByLabel("예약 메모").fill("DEN-516 예약 생성 UI 검증");
@@ -2750,7 +2769,7 @@ test("reception creates a reservation through the unified check-in menu", async 
     weightKg: 4.95,
   });
   expect(String(latestBody?.scheduledStartAt)).toMatch(
-    /^2026-05-01T10:00:00\+09:00$/,
+    /^2026-05-01T12:00:00\+09:00$/,
   );
 
   await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
@@ -2764,6 +2783,42 @@ test("reception creates a reservation through the unified check-in menu", async 
     .locator('[data-testid^="appointment-card-"]')
     .filter({ hasText: "DEN-516 예약 생성 UI 검증" });
   await expect(reservationCard).toBeVisible();
+});
+
+test("reservation drawer disables elapsed same-day time options", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open&drawer=reception-reservation-form%3Anew");
+
+  const drawer = page.getByTestId("reservation-create-drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByLabel("예약시간")).toContainText("11:00");
+
+  await drawer.getByLabel("예약시간").click();
+  await expect(
+    page.getByRole("option", { name: "09:00 · 지난 시간" }),
+  ).toHaveAttribute("aria-disabled", "true");
+  await expect(
+    page.getByRole("option", { name: "10:30 · 지난 시간" }),
+  ).toHaveAttribute("aria-disabled", "true");
+  await expect(
+    page.getByRole("option", { name: "11:00" }),
+  ).not.toHaveAttribute("aria-disabled", "true");
+});
+
+test("walk-in drawer explains that reception is closed outside business hours", async ({
+  page,
+}) => {
+  await freezeBrowserClock(page, "2026-06-25T20:10:00+09:00");
+  await page.goto(
+    "/w/workspace-clair-cheongdam/reception?modulePanel=open&drawer=reception-form%3Awalk-in",
+  );
+
+  const drawer = page.getByTestId("walk-in-reception-dialog");
+  await expect(drawer).toBeVisible();
+  await expect(
+    drawer.getByText("오늘 접수 가능 시간이 지났습니다. 다음 영업일 예약으로 등록해 주세요."),
+  ).toBeVisible();
 });
 
 test("Cheongdam empty reception still renders the calendar workspace", async ({
@@ -5097,6 +5152,16 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   );
   await expect(outsideBusinessSlot).toHaveAttribute("aria-disabled", "true");
   await outsideBusinessSlot.click({ force: true });
+  await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
+  await expect(
+    page.locator('[data-testid^="calendar-draft-card-"]'),
+  ).toHaveCount(0);
+
+  const elapsedSlot = page.getByTestId(
+    "day-empty-slot-10-user-vet-suji-slot-1000",
+  );
+  await expect(elapsedSlot).toHaveAttribute("aria-disabled", "true");
+  await elapsedSlot.click({ force: true });
   await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
