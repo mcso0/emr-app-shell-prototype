@@ -112,7 +112,8 @@ test("reception renders the first-path workspace instead of the placeholder", as
     name: "접수 캘린더 보기",
   });
   await expect(selectedDateButton).toHaveCSS("font-size", "16px");
-  await expect(selectedDateButton).toHaveCSS("font-weight", "500");
+  await expect(selectedDateButton).toHaveCSS("font-weight", "700");
+  await expect(selectedDateButton).toHaveCSS("color", "rgb(31, 41, 55)");
   await expect
     .poll(() =>
       dateControl
