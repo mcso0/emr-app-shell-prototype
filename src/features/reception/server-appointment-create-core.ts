@@ -122,7 +122,9 @@ export async function createReceptionAppointment({
     return { ok: false, status: 500, error: result.error };
   }
 
-  const audit = await emitLiveMutationAuditEvent({
+  // The appointment has already been persisted. Audit write failures must not
+  // make the client believe the reservation was not created.
+  await emitLiveMutationAuditEvent({
     auditGateway,
     auditNow,
     input: {
@@ -142,7 +144,6 @@ export async function createReceptionAppointment({
       metadata: { source: "reception-appointment-create" },
     },
   });
-  if (!audit.ok) return { ok: false, status: 500, error: "db_write_failed" };
 
   return {
     ok: true,

@@ -7872,6 +7872,9 @@ export function ReceptionDrawer() {
     Veterinarian[]
   >([]);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
+  const setWorkspaceOperatingDate = useReceptionStore(
+    (state) => state.setWorkspaceOperatingDate,
+  );
   const operatingDateOverride = useReceptionStore(
     (state) => state.operatingDateByWorkspace[workspaceId],
   );
@@ -8029,6 +8032,12 @@ export function ReceptionDrawer() {
         veterinarians={veterinarians}
         workspaceId={workspaceId}
         onCreate={(appointment) => {
+          const appointmentOperatingDate = getOperatingDateFromIso(
+            appointment.scheduledStartAt,
+          );
+          if (appointmentOperatingDate) {
+            setWorkspaceOperatingDate(workspaceId, appointmentOperatingDate);
+          }
           applyAppointmentCreate(appointment);
           requestReceptionReadRetry();
           setActiveDrawer({

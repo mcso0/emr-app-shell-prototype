@@ -270,6 +270,78 @@ test("supabase appointment create gateway keeps workspace scope in the RPC write
   ]);
 });
 
+test("appointment create keeps the created reservation when audit append fails after DB write", async () => {
+  const scheduledStartAt = getUniqueBusinessStartAt();
+  const appointment = {
+    id: "appointment-cheongdam-gureum-0900",
+    workspaceId: "workspace-clair-cheongdam",
+    patientId: "49121000-0000-4000-8000-000000000004",
+    guardianId: "49120000-0000-4000-8000-000000000004",
+    assignedVeterinarianId: "49110000-0000-4000-8000-000000000003",
+    scheduledStartAt,
+    scheduledEndAt: scheduledStartAt.replace("13:00:00", "13:30:00"),
+    visitPurpose: "구름 09시 예약",
+    symptomNote: "구름 09시 예약",
+    status: "confirmed" as const,
+    createdByUserId: "49110000-0000-4000-8000-000000000001",
+    createdAt: "2026-06-25T23:55:00+09:00",
+    updatedAt: "2026-06-25T23:55:00+09:00",
+  };
+
+  const result = await createReceptionAppointment({
+    actorUserId: "49110000-0000-4000-8000-000000000001",
+    workspaceId: "workspace-clair-cheongdam",
+    input: {
+      assignedVeterinarianId: appointment.assignedVeterinarianId,
+      durationMinutes: 30,
+      guardianId: appointment.guardianId,
+      patientId: appointment.patientId,
+      reservationMemo: appointment.visitPurpose,
+      scheduledStartAt,
+      weightKg: 12,
+    },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [
+        {
+          id: "49110000-0000-4000-8000-000000000001",
+          status: "active",
+        },
+      ],
+      memberships: [
+        {
+          id: "membership-cheongdam-owner",
+          workspaceId: "workspace-clair-cheongdam",
+          userId: "49110000-0000-4000-8000-000000000001",
+          roles: ["hospital_admin"],
+          status: "active",
+        },
+      ],
+    }),
+    gateway: {
+      async createAppointment() {
+        return { ok: true, appointment };
+      },
+    },
+    auditGateway: {
+      async appendEvent() {
+        return { ok: false, status: 500, error: "db_write_failed" };
+      },
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 201,
+    workspaceId: "workspace-clair-cheongdam",
+    appointment: {
+      id: "appointment-cheongdam-gureum-0900",
+      patientId: "49121000-0000-4000-8000-000000000004",
+      scheduledStartAt,
+      status: "confirmed",
+    },
+  });
+});
+
 test("appointment create route stays server-owned and avoids secret-shaped values", () => {
   const routeSource = readFileSync(
     "src/app/api/workspaces/[workspaceId]/reception/appointments/route.ts",
