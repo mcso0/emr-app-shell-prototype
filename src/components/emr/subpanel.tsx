@@ -33,6 +33,7 @@ import {
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import folderFileSearchMotionIcon from "../../../icons/motionIcon/folder-file-search.json";
+import queueLoadingMotionIcon from "../../../icons/motionIcon/iconly-icon-export-1782392467.json";
 import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
 
 type EmrSubpanelProps = {
@@ -491,6 +492,26 @@ export function EmrListSearchEmptyState(props: {
       iconClassName="mb-3 size-16"
       title="검색 결과가 없습니다."
       data-testid="emr-list-search-empty-state"
+    />
+  );
+}
+
+export function EmrQueueLoadingState({
+  title = "업무 정보를 불러오는 중입니다.",
+}: {
+  title?: string;
+}) {
+  return (
+    <EmrQueueEmptyState
+      icon={
+        <EmrMotionIcon
+          animationData={queueLoadingMotionIcon}
+          className="size-14 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+        />
+      }
+      iconClassName="mb-3 size-16"
+      title={title}
+      data-testid="emr-queue-loading-state"
     />
   );
 }
