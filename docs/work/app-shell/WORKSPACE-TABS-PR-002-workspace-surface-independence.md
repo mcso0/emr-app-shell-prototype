@@ -72,6 +72,16 @@ The first workspace-tab pass could show two `진료/차트` tabs, but the active
 - Global stores still exist; this PR uses URL as the tab-level source of truth rather than implementing complete store isolation.
 - The route-driven surface pattern should be extended consistently when new clinical/billing surfaces are introduced.
 
+## Follow-Up UI Polish
+
+2026-06-25 post-merge duplicate-warning dialog polish:
+
+- Shortened the duplicate-warning title and body copy while keeping product UX writing in 존댓말.
+- Removed the low-value `기존 탭: ...` body box.
+- Split the footer into a dedicated `다시 보지 않기` row and an action row to prevent checkbox/button label wrapping.
+- Kept `기존 탭으로 이동` as the primary action and shortened the current-tab action to `현재 탭에서 열기`.
+- Focused verification: `npx playwright test tests/app-shell.spec.ts --grep "workspace tabs warn only before opening the same concrete work surface in another tab" --timeout=90000 --reporter=line`.
+
 ## Closeout Report
 
 - `docs/completed/app-shell/2026-06-25-workspace-tabs-pr-002-surface-independence-report.html`

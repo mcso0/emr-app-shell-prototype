@@ -1197,7 +1197,7 @@ test("workspace tabs warn only before opening the same concrete work surface in 
 
   await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
-  await expect(page.getByRole("dialog", { name: "이미 다른 워크스페이스 탭에서 같은 업무를 보고 있습니다." })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "같은 업무가 이미 열려 있습니다" })).toHaveCount(0);
 
   await page.getByTestId("order-queue-item-encounter-coco-260501").click();
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
@@ -1216,7 +1216,12 @@ test("workspace tabs warn only before opening the same concrete work surface in 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
   await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
   await page.getByTestId("order-queue-item-encounter-kong-260501").click();
-  await expect(page.getByRole("dialog", { name: "이미 다른 워크스페이스 탭에서 같은 업무를 보고 있습니다." })).toBeVisible();
+  const duplicateDialog = page.getByRole("dialog", { name: "같은 업무가 이미 열려 있습니다" });
+  await expect(duplicateDialog).toBeVisible();
+  await expect(duplicateDialog).toContainText("다른 탭에서 같은 업무를 보고 있습니다.");
+  await expect(duplicateDialog).not.toContainText("기존 탭:");
+  await expect(duplicateDialog.getByRole("checkbox", { name: "다시 보지 않기" })).toBeVisible();
+  await expect(duplicateDialog.getByRole("button", { name: "현재 탭에서 열기" })).toBeVisible();
   await page.getByRole("button", { name: "기존 탭으로 이동" }).click();
   await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
 });
