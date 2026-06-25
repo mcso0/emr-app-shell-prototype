@@ -68,11 +68,11 @@
 
   --emr-navrail-bg: var(--clair-color-atomic-gray-900);
   --emr-navrail-width: 56px;
-  --emr-navrail-padding: var(--clair-spacing-12);
+  --emr-navrail-padding: var(--clair-spacing-8);
   --emr-navrail-radius: var(--clair-radius-atomic-12);
   --emr-navrail-root-gap: var(--clair-spacing-10);
   --emr-navrail-content-width: var(--clair-control-height-md);
-  --emr-navrail-content-gap: var(--clair-spacing-12);
+  --emr-navrail-content-gap: var(--clair-spacing-8);
   --emr-navrail-item-size: var(--clair-control-height-md);
   --emr-navrail-item-padding: var(--clair-spacing-4);
   --emr-navrail-item-radius: var(--clair-radius-atomic-6);
