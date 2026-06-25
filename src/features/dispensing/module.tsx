@@ -642,7 +642,7 @@ export function DispensingSidePanel({
 
   return (
     <EmrOrderQueueSidePanel
-      emptyObjectLabel="조제/처치 요청"
+      emptyObjectLabel="조제/처치 업무"
       getTaskCardItem={getDispensingTaskCardItem}
       items={items}
       statuses={statuses}

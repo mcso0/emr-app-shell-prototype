@@ -1134,7 +1134,7 @@ export function ChartSidePanel({
 
   return (
     <EmrOrderQueueSidePanel
-      emptyObjectLabel="진료 대기 업무"
+      emptyObjectLabel="진료 업무"
       filterAriaLabel="진료 대기 유형 필터"
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
