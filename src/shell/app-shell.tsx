@@ -27,6 +27,7 @@ import {
   type WorkspaceTab,
 } from "@/stores/workspace-tabs-store";
 import { ShellMain } from "@/shell/shell-main";
+import { buildWorkspaceHomeRoute } from "@/shell/workspace-surface-route";
 import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
 
 type AppShellProps = {
@@ -375,8 +376,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   function handleNewTab() {
+    const route = buildWorkspaceHomeRoute(workspaceId);
+
     toast.success("새 탭이 생성되었습니다.");
-    navigateToTabRoute(createTab({ workspaceId, route: currentRoute, moduleId: moduleDefinition.id }));
+    navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
   }
 
   function handleMarkNotificationRead(notificationId: string) {
@@ -542,8 +545,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       <Dialog open={Boolean(duplicateNavigation)} onOpenChange={(open) => !open && setDuplicateNavigation(null)}>
         {duplicateNavigation ? (
           <EmrDialogShell
-            title="이미 다른 워크스페이스 탭에서 보고 있는 화면입니다."
-            description="같은 화면을 여러 탭에서 동시에 작업하면 저장되지 않은 입력이 헷갈리거나, 먼저 저장된 내용이 나중 저장에 의해 덮어써질 수 있습니다."
+            title="이미 다른 워크스페이스 탭에서 같은 업무를 보고 있습니다."
+            description="같은 차트, 검사, 청구 업무를 여러 탭에서 동시에 작업하면 저장되지 않은 입력이 헷갈리거나, 먼저 저장된 내용이 나중 저장에 의해 덮어써질 수 있습니다."
             footerMeta={
               <label className="flex min-w-0 items-center gap-2 text-sm text-[var(--emr-text-tertiary)]">
                 <Checkbox
@@ -589,6 +592,8 @@ function findDuplicateWorkspaceTab({
   workspaceId: string;
 }) {
   const identity = getWorkspaceTabIdentityFromRoute(workspaceId, href, moduleId);
+
+  if (identity.surfaceType === "module") return null;
 
   return tabs.find((tab) => tab.id !== activeTabId && tab.dedupeKey === identity.dedupeKey) ?? null;
 }

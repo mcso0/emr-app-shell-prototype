@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -55,6 +56,7 @@ import {
 } from "@/lib/emr-domain/demo-workspaces";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import {
   getOrderQueueItems,
   getOrderQueueStatuses,
@@ -328,6 +330,25 @@ function findFulfillmentForQueueItem(
   });
 }
 
+function getQueueItemEncounterId(
+  item: OrderQueueItem | null,
+  workItems: FulfillmentWorkItem[]
+) {
+  if (!item) return undefined;
+
+  return findFulfillmentForQueueItem(item, workItems)?.encounterId;
+}
+
+function findQueueItemByEncounterId(
+  items: OrderQueueItem[],
+  workItems: FulfillmentWorkItem[],
+  encounterId: string | null,
+) {
+  if (!encounterId) return undefined;
+
+  return items.find((item) => getQueueItemEncounterId(item, workItems) === encounterId);
+}
+
 function applyFulfillmentToQueueItems(
   items: OrderQueueItem[],
   workItems: FulfillmentWorkItem[]
@@ -543,7 +564,12 @@ function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
   };
 }
 
-export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
+export function DispensingSidePanel({
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: ShellComponentProps) {
+  const searchParams = useSearchParams();
+  const queryEncounterId = searchParams.get("encounterId");
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId);
@@ -554,9 +580,42 @@ export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
-    if (!items.length || items.some((item) => item.id === selectedQueueItemIds.dispensing)) return;
+    const queryQueueItem = findQueueItemByEncounterId(items, fulfillmentQueue.workItems, queryEncounterId);
+
+    if (queryQueueItem) {
+      setSelectedQueueItem("dispensing", queryQueueItem.id);
+      return;
+    }
+
+    if (queryEncounterId || !items.length || items.some((item) => item.id === selectedQueueItemIds.dispensing)) return;
     setSelectedQueueItem("dispensing", items[0].id);
-  }, [items, selectedQueueItemIds.dispensing, setSelectedQueueItem]);
+  }, [
+    fulfillmentQueue.workItems,
+    items,
+    queryEncounterId,
+    selectedQueueItemIds.dispensing,
+    setSelectedQueueItem,
+  ]);
+
+  function handleSelectQueueItem(itemId: string) {
+    const item = items.find((candidate) => candidate.id === itemId) ?? null;
+    const encounterId = getQueueItemEncounterId(item, fulfillmentQueue.workItems);
+
+    if (encounterId && onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({
+          moduleId: "dispensing",
+          params: { encounterId },
+          search: searchParams,
+          workspaceId,
+        }),
+        "dispensing",
+      );
+      return;
+    }
+
+    setSelectedQueueItem("dispensing", itemId);
+  }
 
   return (
     <EmrOrderQueueSidePanel
@@ -573,7 +632,7 @@ export function DispensingSidePanel({ workspaceId }: ShellComponentProps) {
         setSelectedQueueItem("dispensing", "");
         setSelectedQueueItem("treatment", "");
       }}
-      onSelectItem={(itemId) => setSelectedQueueItem("dispensing", itemId)}
+      onSelectItem={handleSelectQueueItem}
     />
   );
 }

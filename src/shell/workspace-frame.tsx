@@ -15,10 +15,15 @@ import { SHELL_LAYOUT } from "@/shell/layout-contract";
 
 type WorkspaceFrameProps = {
   moduleDefinition: ModuleDefinition;
+  onNavigateWorkspaceSurface?: (href: string, moduleId: string) => void;
   workspaceId: string;
 };
 
-export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrameProps) {
+export function WorkspaceFrame({
+  moduleDefinition,
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: WorkspaceFrameProps) {
   const {
     activeDrawer,
     contentAsideOpen,
@@ -94,6 +99,7 @@ export function WorkspaceFrame({ moduleDefinition, workspaceId }: WorkspaceFrame
     moduleLabel: moduleDefinition.label,
     hasContentAside: Boolean(ContentAside),
     hasRightPanel: Boolean(RightPanel),
+    onNavigateWorkspaceSurface,
   };
 
   return (

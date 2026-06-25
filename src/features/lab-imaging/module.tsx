@@ -108,6 +108,7 @@ import {
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import type { ShellComponentProps } from "@/types/emr";
 import type {
   EmrAttachment,
@@ -1561,7 +1562,12 @@ function ImagingChartQueueItem({
   );
 }
 
-export function LabSidePanel({ workspaceId }: ShellComponentProps) {
+export function LabSidePanel({
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: ShellComponentProps) {
+  const searchParams = useSearchParams();
+  const queryLabResultId = searchParams.get("labResultId");
   const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
@@ -1584,9 +1590,32 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
     [baseItems, fulfillmentQueue.workItems, legacySalesDemo]
   );
   useEffect(() => {
+    if (queryLabResultId) {
+      if (items.some((item) => item.result.id === queryLabResultId)) {
+        selectLabResult(queryLabResultId);
+      }
+      return;
+    }
+
     if (!items.length || items.some((item) => item.result.id === selectedLabResultId)) return;
     selectLabResult(items[0].result.id);
-  }, [items, selectLabResult, selectedLabResultId]);
+  }, [items, queryLabResultId, selectLabResult, selectedLabResultId]);
+  function handleSelectLabResult(resultId: string) {
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({
+          moduleId: "lab",
+          params: { labResultId: resultId },
+          search: searchParams,
+          workspaceId,
+        }),
+        "lab",
+      );
+      return;
+    }
+
+    selectLabResult(resultId);
+  }
   const effectiveSelectedLabResultId = items.some((item) => item.result.id === selectedLabResultId)
     ? selectedLabResultId
     : items[0]?.result.id;
@@ -1686,7 +1715,7 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
                 key={group.status}
                 collapsed={collapsedStatusIds.has(group.status)}
                 items={group.items}
-                onSelectItem={selectLabResult}
+                onSelectItem={handleSelectLabResult}
                 onToggle={() => toggleStatus(group.status)}
                 selectedLabResultId={effectiveSelectedLabResultId}
                 status={group.status}
@@ -1701,7 +1730,7 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
                   const firstResultId = group.items[0]?.result.id;
 
                   if (firstResultId) {
-                    selectLabResult(firstResultId);
+                    handleSelectLabResult(firstResultId);
                   }
                 }}
               />
@@ -1711,7 +1740,12 @@ export function LabSidePanel({ workspaceId }: ShellComponentProps) {
   );
 }
 
-export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
+export function ImagingSidePanel({
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: ShellComponentProps) {
+  const searchParams = useSearchParams();
+  const queryImagingStudyId = searchParams.get("imagingStudyId");
   const selectedImagingStudyId = useLabImagingStore((state) => state.selectedImagingStudyId);
   const selectImagingStudy = useLabImagingStore((state) => state.selectImagingStudy);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
@@ -1734,9 +1768,32 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
     [baseItems, fulfillmentQueue.workItems, legacySalesDemo]
   );
   useEffect(() => {
+    if (queryImagingStudyId) {
+      if (items.some((item) => item.study.id === queryImagingStudyId)) {
+        selectImagingStudy(queryImagingStudyId);
+      }
+      return;
+    }
+
     if (!items.length || items.some((item) => item.study.id === selectedImagingStudyId)) return;
     selectImagingStudy(items[0].study.id);
-  }, [items, selectImagingStudy, selectedImagingStudyId]);
+  }, [items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
+  function handleSelectImagingStudy(studyId: string) {
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({
+          moduleId: "imaging",
+          params: { imagingStudyId: studyId },
+          search: searchParams,
+          workspaceId,
+        }),
+        "imaging",
+      );
+      return;
+    }
+
+    selectImagingStudy(studyId);
+  }
   const effectiveSelectedImagingStudyId = items.some((item) => item.study.id === selectedImagingStudyId)
     ? selectedImagingStudyId
     : items[0]?.study.id;
@@ -1835,7 +1892,7 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
                 key={group.status}
                 collapsed={collapsedStatusIds.has(group.status)}
                 items={group.items}
-                onSelectItem={selectImagingStudy}
+                onSelectItem={handleSelectImagingStudy}
                 onToggle={() => toggleStatus(group.status)}
                 selectedImagingStudyId={effectiveSelectedImagingStudyId}
                 status={group.status}
@@ -1850,7 +1907,7 @@ export function ImagingSidePanel({ workspaceId }: ShellComponentProps) {
                   const firstStudyId = group.items[0]?.study.id;
 
                   if (firstStudyId) {
-                    selectImagingStudy(firstStudyId);
+                    handleSelectImagingStudy(firstStudyId);
                   }
                 }}
               />

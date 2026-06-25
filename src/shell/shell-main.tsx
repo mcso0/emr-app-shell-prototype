@@ -48,6 +48,7 @@ export function ShellMain({
     moduleLabel: moduleDefinition.label,
     hasContentAside: Boolean(moduleDefinition.contentAside),
     hasRightPanel: Boolean(moduleDefinition.rightPanel),
+    onNavigateWorkspaceSurface: onNavigateModule,
   };
 
   return (
@@ -133,7 +134,11 @@ export function ShellMain({
 
         <section data-testid="shell-workspace-area" className="min-h-0 min-w-0 flex-1">
           <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
-            <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} />
+            <WorkspaceFrame
+              moduleDefinition={moduleDefinition}
+              workspaceId={workspaceId}
+              onNavigateWorkspaceSurface={onNavigateModule}
+            />
           </div>
         </section>
       </section>

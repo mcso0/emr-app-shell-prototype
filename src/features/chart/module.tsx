@@ -146,6 +146,7 @@ import {
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
+import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import type {
   EmrColumnResize,
   EmrTableDensity,
@@ -898,7 +899,11 @@ function useDemoScenarioChartEncounterId() {
   return scenario?.encounterId ?? null;
 }
 
-export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
+export function ChartSidePanel({
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -933,6 +938,23 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
     [liveItems, liveMode, mockItems],
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const selectWorkspaceEncounter = (itemId: string) => {
+    const href = buildWorkspaceSurfaceRoute({
+      moduleId: "treatment",
+      params: { encounterId: itemId },
+      search: searchParams,
+      workspaceId,
+    });
+
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(href, "treatment");
+      return;
+    }
+
+    if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
+    selectEncounter(itemId);
+    setSelectedQueueItem("treatment", itemId);
+  };
 
   useEffect(() => {
     hydrateAuthSession();
@@ -1066,11 +1088,7 @@ export function ChartSidePanel({ workspaceId }: ShellComponentProps) {
         selectDate(date);
         if (selectedEncounterId) selectEncounter("");
       }}
-      onSelectItem={(itemId) => {
-        if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
-        selectEncounter(itemId);
-        setSelectedQueueItem("treatment", itemId);
-      }}
+      onSelectItem={selectWorkspaceEncounter}
     />
   );
 }

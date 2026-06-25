@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Workspace Tabs PR-002 Surface Independence</title>
+    <style>
+      body { margin: 0; background: #f6f7f9; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 980px; margin: 0 auto; padding: 48px 28px 72px; }
+      section { margin-top: 18px; border: 1px solid #d9dee8; border-radius: 8px; background: #fff; padding: 22px 24px; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      p, li { font-size: 14px; line-height: 1.7; }
+      code { background: #eef1f5; border-radius: 4px; padding: 1px 4px; }
+      .meta { color: #5f6b7a; font-size: 13px; }
+      .badge { display: inline-block; margin-top: 14px; border-radius: 999px; background: #e8f2ff; color: #07569f; padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="meta">WORKSPACE-TABS-PR-002 / 2026-06-25</p>
+      <h1>탭별 업무 Surface 독립화</h1>
+      <p>워크스페이스 탭이 모듈 이름만 나누는 수준을 넘어, URL query의 실제 업무 surface 기준으로 복원되고 중복 감지되도록 정리했다.</p>
+      <span class="badge">Status: Human Review</span>
+
+      <section>
+        <h2>핵심 변경</h2>
+        <ul>
+          <li>새 업무 탭은 현재 화면 복제가 아니라 <code>/w/:workspaceId/home?modulePanel=open</code>에서 시작한다.</li>
+          <li>진료/차트, 조제/처치, 검사, 영상, 수납 선택은 각각 route query에 구체 surface ID를 남긴다.</li>
+          <li>중복 경고는 module-only 탭이 아니라 같은 <code>encounterId</code>, <code>labResultId</code>, <code>imagingStudyId</code>, <code>invoiceId</code>에만 반응한다.</li>
+          <li>비활성 탭 preview는 현재 전역 선택 store가 아니라 해당 탭 route metadata에서 환자 맥락을 계산한다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>사용자 관점</h2>
+        <ul>
+          <li>초코 차트 탭과 구름 차트 탭처럼 서로 다른 encounter를 동시에 열 수 있다.</li>
+          <li>환자나 차트가 아직 선택되지 않은 진료/차트 탭을 하나 더 여는 것만으로는 중복 안내가 뜨지 않는다.</li>
+          <li>같은 차트나 같은 검사/영상/수납 작업을 다른 탭에서 다시 열 때만 기존 탭 이동 안내가 뜬다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>명시적 비범위</h2>
+        <ul>
+          <li>DB, migration, 서버 세션 스키마는 변경하지 않았다.</li>
+          <li>완전한 component keep-alive나 전역 store의 탭별 인스턴스 분리는 포함하지 않았다.</li>
+          <li>SOAP 충돌 방어 범위는 PR-001의 기존 구현을 그대로 유지했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>검증 증거</h2>
+        <ul>
+          <li><code>./node_modules/.bin/tsc --noEmit</code> 통과.</li>
+          <li><code>npm run docs:check</code> 통과.</li>
+          <li>변경 파일 대상 <code>eslint</code> error 0, 기존 chart hook warning 1개.</li>
+          <li>App Shell workspace tabs focused Playwright 6개 통과.</li>
+          <li>검사/영상 URL surface 회귀 Playwright 2개 통과.</li>
+          <li>수납 URL surface 회귀 Playwright 1개 통과.</li>
+          <li>workspace tabs server-session Playwright 4개 통과.</li>
+          <li>SOAP note persistence server Playwright 7개 통과.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>남은 리스크</h2>
+        <p>이번 변경은 URL을 탭별 source of truth로 삼는 1차 독립화다. 전역 store 자체를 탭별로 완전히 분리하거나 inactive DOM을 보존하는 작업은 후속 PR에서 별도 범위로 다루는 것이 안전하다.</p>
+      </section>
+    </main>
+  </body>
+</html>
