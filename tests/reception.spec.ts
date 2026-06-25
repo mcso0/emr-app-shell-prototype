@@ -357,12 +357,15 @@ test("reception topbar refresh refetches the selected operating date", async ({
   await dateControl
     .getByRole("button", { name: "26.05.02 (토) 날짜 선택" })
     .click();
+  await expect(
+    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택" }),
+  ).toBeVisible();
   const pickedDayRead = page.waitForRequest(
     (request) =>
       request.url().includes("/reception/calendar/day") &&
       request.url().includes("date=2026-05-08"),
   );
-  await page.getByRole("button", { name: "8일 선택", exact: true }).click();
+  await page.getByRole("button", { name: "26.05.08 (금) 선택" }).click();
   await pickedDayRead;
   await expect(
     page.getByRole("button", { name: "26.05.08 (금) 날짜 선택" }),
