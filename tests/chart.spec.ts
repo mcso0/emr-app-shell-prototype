@@ -478,7 +478,17 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "진료 시작 전입니다",
   );
 
-  await page.getByRole("button", { name: "호출하기" }).click();
+  await page.getByTestId(`order-queue-item-action-${encounterId}`).click();
+  const queueActionMenu = page.getByRole("menu");
+  await expect(
+    queueActionMenu.getByRole("menuitem", { name: "호출하기" }),
+  ).toBeVisible();
+  await expect(
+    queueActionMenu.getByRole("menuitem", { name: "차트 열기" }),
+  ).toBeVisible();
+  await expect(queueActionMenu).not.toContainText("정보 drawer 연결 예정");
+  await expect(queueActionMenu).not.toContainText("선택");
+  await queueActionMenu.getByRole("menuitem", { name: "호출하기" }).click();
   await expect(
     page.getByRole("heading", { name: "초코/최도현을 호출하시겠습니까?" }),
   ).toBeVisible();

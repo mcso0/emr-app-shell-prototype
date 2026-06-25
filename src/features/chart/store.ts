@@ -8,7 +8,10 @@ type ChartStore = {
   liveQueueError?: string;
   liveQueueRecords: ChartLiveQueueRecord[];
   liveQueueStatus: "idle" | "loading" | "ready" | "error";
+  pendingConsultationCallEncounterId: EmrId;
   selectedEncounterId: EmrId;
+  clearPendingConsultationCall: () => void;
+  requestConsultationCall: (encounterId: EmrId) => void;
   selectEncounter: (encounterId: EmrId) => void;
   setLiveQueueState: (state: {
     error?: string;
@@ -22,7 +25,12 @@ export const useChartStore = create<ChartStore>()((set) => ({
   liveQueueError: undefined,
   liveQueueRecords: [],
   liveQueueStatus: "idle",
+  pendingConsultationCallEncounterId: "",
   selectedEncounterId: "",
+  clearPendingConsultationCall: () =>
+    set({ pendingConsultationCallEncounterId: "" }),
+  requestConsultationCall: (pendingConsultationCallEncounterId) =>
+    set({ pendingConsultationCallEncounterId }),
   selectEncounter: (selectedEncounterId) => set({ selectedEncounterId }),
   setLiveQueueState: ({ error, records, status }) =>
     set((current) => ({
