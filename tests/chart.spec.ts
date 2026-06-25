@@ -511,6 +511,18 @@ test("chart side panel date navigator refetches the selected operating date", as
     sidePanel.getByRole("button", { name: "26.05.08(금) 날짜 선택" }),
   ).toBeVisible();
   await expect(sidePanel.getByText("오늘", { exact: true })).toHaveCount(0);
+
+  await sidePanel.getByRole("button", { name: "26.05.08(금) 날짜 선택" }).click();
+  await expect(
+    page.getByRole("button", { name: "오늘 26.05.01 (금) 선택" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "오늘로 이동" }).click();
+  await expect
+    .poll(() => requestedDates.filter((date) => date === "2026-05-01").length)
+    .toBeGreaterThanOrEqual(3);
+  await expect(
+    sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" }),
+  ).toContainText("오늘");
 });
 
 test("chart diagnosis panel omits comment and plan text areas", async ({

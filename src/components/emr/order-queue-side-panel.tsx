@@ -276,6 +276,7 @@ export function EmrOrderQueueSidePanel({
         nextLabel="다음 날짜"
         previousLabel="이전 날짜"
         selectedDate={selectedDate}
+        todayDate={todayDate}
         todayLabel={isToday ? todayLabel : undefined}
         onDateChange={onDateChange ? handleDateChange : undefined}
         onNext={
