@@ -6,6 +6,7 @@ import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-lay
 import { CdsPeopleUserCheckIcon } from "@/components/cds-icons/people-and-places";
 import {
   EmrRowActionMenu,
+  type EmrRowActionMenuDensity,
   type EmrRowActionMenuItem,
 } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
@@ -106,10 +107,12 @@ export function EmrSidePanelIdentityLine({
 
 export function EmrSidePanelCardAction({
   ariaLabel,
+  density,
   items,
   testId,
 }: {
   ariaLabel: string;
+  density?: EmrRowActionMenuDensity;
   items?: EmrRowActionMenuItem[];
   testId?: string;
 }) {
@@ -117,6 +120,7 @@ export function EmrSidePanelCardAction({
     return (
       <EmrRowActionMenu
         ariaLabel={ariaLabel}
+        density={density}
         items={items}
         testId={testId}
         triggerClassName={emrSidePanelCardActionButtonClassName}

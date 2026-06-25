@@ -53,6 +53,11 @@ type OrderQueueFilterItem = {
 type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
 type OrderQueueSortKey = "request" | "assignee" | "wait";
 type OrderQueueActionContext = "chart" | "order";
+type OrderQueueActionItemsResolver = (
+  item: OrderQueueItem,
+  onSelect: () => void,
+  context: OrderQueueActionContext
+) => EmrRowActionMenuItem[];
 
 type EmrOrderQueueSidePanelProps = {
   items: OrderQueueItem[];
@@ -64,6 +69,7 @@ type EmrOrderQueueSidePanelProps = {
   filterAriaLabel?: string;
   filterItems?: OrderQueueFilterItem[];
   getFilterValue?: (item: OrderQueueItem) => string;
+  getActionItems?: OrderQueueActionItemsResolver;
   getTaskCardItem?: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   listLabel?: string;
   onCollapse?: () => void;
@@ -190,6 +196,7 @@ export function EmrOrderQueueSidePanel({
   emptyObjectLabel = "대기열 업무",
   filterAriaLabel = "오더 유형 필터",
   filterItems = orderQueueFilterItems,
+  getActionItems = getOrderQueueActionItems,
   getFilterValue = (item) => item.orderTypeCategory,
   getTaskCardItem = getDefaultTaskCardItem,
   items,
@@ -340,6 +347,7 @@ export function EmrOrderQueueSidePanel({
             <OrderQueueGroup
               key={status.id}
               collapsed={collapsed}
+              getActionItems={getActionItems}
               getTaskCardItem={getTaskCardItem}
               actionContext={actionContext}
               items={groupItems}
@@ -460,6 +468,7 @@ function OrderQueueFilterMenu({
 function OrderQueueGroup({
   actionContext,
   collapsed,
+  getActionItems,
   getTaskCardItem,
   items,
   onSelectItem,
@@ -469,6 +478,7 @@ function OrderQueueGroup({
 }: {
   actionContext: OrderQueueActionContext;
   collapsed: boolean;
+  getActionItems: OrderQueueActionItemsResolver;
   getTaskCardItem: (item: OrderQueueItem) => EmrTaskQueueCardItem;
   items: OrderQueueItem[];
   onSelectItem?: (itemId: string) => void;
@@ -499,6 +509,7 @@ function OrderQueueGroup({
         <OrderQueueCard
           key={item.id}
           actionContext={actionContext}
+          getActionItems={getActionItems}
           item={item}
           onSelect={() => onSelectItem?.(item.id)}
           selected={selectedItemId === item.id}
@@ -511,18 +522,20 @@ function OrderQueueGroup({
 
 function OrderQueueCard({
   actionContext,
+  getActionItems,
   item,
   onSelect,
   selected,
   taskCardItem,
 }: {
   actionContext: OrderQueueActionContext;
+  getActionItems: OrderQueueActionItemsResolver;
   item: OrderQueueItem;
   onSelect: () => void;
   selected: boolean;
   taskCardItem: EmrTaskQueueCardItem;
 }) {
-  const actionItems = getOrderQueueActionItems(item, onSelect, actionContext);
+  const actionItems = getActionItems(item, onSelect, actionContext);
 
   return (
     <EmrTaskQueueCard

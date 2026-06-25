@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+export type EmrRowActionMenuDensity = "default" | "compact";
+
 export type EmrRowActionMenuItem = {
   key: string;
   label: ReactNode;
@@ -25,6 +27,7 @@ export type EmrRowActionMenuItem = {
 export type EmrRowActionMenuProps = {
   ariaLabel: string;
   contentClassName?: string;
+  density?: EmrRowActionMenuDensity;
   items: EmrRowActionMenuItem[];
   testId?: string;
   triggerClassName?: string;
@@ -36,10 +39,13 @@ const defaultRowActionMenuTriggerClassName =
 export function EmrRowActionMenu({
   ariaLabel,
   contentClassName,
+  density = "default",
   items,
   testId,
   triggerClassName,
 }: EmrRowActionMenuProps) {
+  const compact = density === "compact";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -58,14 +64,19 @@ export function EmrRowActionMenu({
       >
         <CdsFilesMoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={cn("w-52", contentClassName)}>
+      <DropdownMenuContent
+        align="end"
+        className={cn(compact ? "w-40" : "w-52", contentClassName)}
+      >
         {items.map((item, index) => (
           <div key={item.key}>
-            {index > 0 ? <DropdownMenuSeparator /> : null}
+            {!compact && index > 0 ? <DropdownMenuSeparator /> : null}
             <DropdownMenuItem
               className={cn(
-                "min-h-9 cursor-pointer flex-col items-start justify-center gap-0.5 py-2",
-                item.description && "min-h-12"
+                compact
+                  ? "h-8 cursor-pointer justify-start px-2.5 py-1.5"
+                  : "min-h-9 cursor-pointer flex-col items-start justify-center gap-0.5 py-2",
+                !compact && item.description && "min-h-12"
               )}
               data-testid={item.testId}
               disabled={item.disabled}
@@ -75,8 +86,8 @@ export function EmrRowActionMenu({
                 item.onSelect?.();
               }}
             >
-              <span className="emr-text-dense font-medium">{item.label}</span>
-              {item.description ? (
+              <span className="w-full truncate emr-text-dense font-medium">{item.label}</span>
+              {!compact && item.description ? (
                 <span className="emr-text-micro text-muted-foreground">{item.description}</span>
               ) : null}
             </DropdownMenuItem>

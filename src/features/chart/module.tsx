@@ -65,6 +65,7 @@ import {
   getTaskQueueEventKindFromStatus,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
+import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -389,6 +390,7 @@ function getChartTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
 
   return {
     actionAriaLabel: `${item.patientName} ${item.orderName} 더보기`,
+    actionMenuDensity: "compact",
     actionTestId: `order-queue-item-action-${item.id}`,
     assigneeName: item.assigneeName,
     eventActorName: item.requesterName,
@@ -402,6 +404,59 @@ function getChartTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
     secondLineText: item.orderType || item.orderName,
     testId: `order-queue-item-${item.id}`,
   };
+}
+
+function getChartQueueActionItems({
+  item,
+  onRequestCall,
+  onSelect,
+}: {
+  item: OrderQueueItem;
+  onRequestCall: () => void;
+  onSelect: () => void;
+}): EmrRowActionMenuItem[] {
+  const items: EmrRowActionMenuItem[] = [];
+
+  if (item.statusId === "waiting") {
+    items.push({
+      key: "call",
+      label: "호출하기",
+      onSelect: () => {
+        onRequestCall();
+        onSelect();
+      },
+      testId: `chart-queue-action-call-${item.id}`,
+    });
+  }
+
+  items.push(
+    {
+      key: "open",
+      label: "차트 열기",
+      onSelect,
+      testId: `chart-queue-action-open-${item.id}`,
+    },
+    {
+      key: "assign",
+      label: item.assigneeName ? "담당자 보기" : "담당하기",
+      onSelect,
+      testId: `chart-queue-action-assign-${item.id}`,
+    },
+    {
+      key: "patient",
+      label: "환자 정보",
+      disabled: true,
+      testId: `chart-queue-action-patient-${item.id}`,
+    },
+    {
+      key: "guardian",
+      label: "보호자 정보",
+      disabled: true,
+      testId: `chart-queue-action-guardian-${item.id}`,
+    },
+  );
+
+  return items;
 }
 
 const chartOrderTabs: Array<{ value: OrderFilter; label: string }> = [
@@ -909,6 +964,9 @@ export function ChartSidePanel({
   );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
+  const requestConsultationCall = useChartStore(
+    (state) => state.requestConsultationCall,
+  );
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
   const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
@@ -1075,6 +1133,13 @@ export function ChartSidePanel({
       filterItems={chartQueueFilterItems}
       getFilterValue={(item) =>
         item.receptionType === "예약" ? "appointment" : "walk-in"
+      }
+      getActionItems={(item, onSelect) =>
+        getChartQueueActionItems({
+          item,
+          onRequestCall: () => requestConsultationCall(item.id),
+          onSelect,
+        })
       }
       getTaskCardItem={getChartTaskCardItem}
       items={items}
@@ -5336,6 +5401,12 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
+  const pendingConsultationCallEncounterId = useChartStore(
+    (state) => state.pendingConsultationCallEncounterId,
+  );
+  const clearPendingConsultationCall = useChartStore(
+    (state) => state.clearPendingConsultationCall,
+  );
   const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
   const updateLiveQueueRecord = useChartStore((state) => state.updateLiveQueueRecord);
   const allowStoreMockFallback = useChartStore(
@@ -5713,6 +5784,49 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     setSelectedCallRoomId(storedRoomId);
     setCallDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (
+      !pendingConsultationCallEncounterId ||
+      pendingConsultationCallEncounterId !== activeEncounterId ||
+      !bundle?.encounter.status
+    ) {
+      return;
+    }
+
+    if (
+      bundle.encounter.status !== "waiting" ||
+      effectiveQueueEntry?.status !== "waiting"
+    ) {
+      clearPendingConsultationCall();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const roomIds = new Set(getConsultationCallRooms().map((room) => room.id));
+      const storedRoomId = readCallRoomPreference({
+        actorUserId: authSession?.id,
+        roomIds,
+        workspaceId: activeWorkspaceId,
+      });
+
+      setPreferredCallRoomId(storedRoomId);
+      setSaveCallRoomPreference(Boolean(storedRoomId));
+      setSelectedCallRoomId(storedRoomId);
+      setCallDialogOpen(true);
+      clearPendingConsultationCall();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    activeEncounterId,
+    activeWorkspaceId,
+    authSession?.id,
+    bundle?.encounter.status,
+    clearPendingConsultationCall,
+    effectiveQueueEntry?.status,
+    pendingConsultationCallEncounterId,
+  ]);
 
   useEffect(() => {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
