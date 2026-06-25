@@ -1,5 +1,49 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
+import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
+
+async function grantCheongdamWorkspaceAccess(page: Page) {
+  await page.addInitScript(
+    ([storageKey, workspaceId]) => {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          currentWorkspaceId: workspaceId,
+          workspaces: [
+            {
+              id: workspaceId,
+              displayName: "VIP동물의료센터 청담점",
+              representativeName: "김승욱",
+              contactEmail: "owner@cheongdam.test",
+              contactPhone: null,
+              subscriptionStatus: "trialing",
+              createdBySessionId: "playwright-default-session",
+              createdAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          memberships: [
+            {
+              id: "membership-cheongdam-playwright-admin",
+              workspaceId,
+              userSessionId: "playwright-default-session",
+              displayName: "Playwright Admin",
+              email: "admin@cheongdam.test",
+              roles: ["hospital_admin"],
+              status: "active",
+              createdAt: "2026-06-14T00:00:00.000Z",
+              activatedAt: "2026-06-14T00:00:00.000Z",
+            },
+          ],
+          invitations: [],
+          updatedAt: "2026-06-14T00:00:00.000Z",
+        }),
+      );
+    },
+    [SESSION_WORKSPACES_STORAGE_KEY, PREPARED_EMPTY_CLINIC_WORKSPACE_ID],
+  );
+}
+
 function createDeferredRoute() {
   let fulfillRoute: ((route: Route) => Promise<void>) | undefined;
   const pending = new Promise<void>((resolve) => {
@@ -39,6 +83,19 @@ async function delayRouteUntilAsserted(page: Page, url: string) {
   };
 }
 
+async function getQueueStateIconBoxSize(page: Page, stateText: string) {
+  return page.getByText(stateText, { exact: true }).evaluate((textElement) => {
+    const iconElement = textElement.previousElementSibling;
+    if (!iconElement) return null;
+
+    const box = iconElement.getBoundingClientRect();
+    return {
+      height: Math.round(box.height),
+      width: Math.round(box.width),
+    };
+  });
+}
+
 test("reception queue loading uses the side-panel body motion state instead of top loading copy", async ({
   page,
 }) => {
@@ -55,6 +112,39 @@ test("reception queue loading uses the side-panel body motion state instead of t
   await expect(page.getByText("대기열 확인 중")).toHaveCount(0);
 
   await queueRoute.release();
+});
+
+test("reception queue loading and empty states keep the same icon box size", async ({
+  page,
+}) => {
+  await grantCheongdamWorkspaceAccess(page);
+
+  const queueRoute = await delayRouteUntilAsserted(
+    page,
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception/queue?*`,
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception?modulePanel=open`,
+  );
+  await expect(
+    page.getByText("접수/예약 정보를 불러오는 중입니다."),
+  ).toBeVisible();
+
+  const loadingIconBox = await getQueueStateIconBoxSize(
+    page,
+    "접수/예약 정보를 불러오는 중입니다.",
+  );
+
+  await queueRoute.release();
+  await expect(page.getByText("접수/예약 업무가 없습니다.")).toBeVisible();
+
+  const emptyIconBox = await getQueueStateIconBoxSize(
+    page,
+    "접수/예약 업무가 없습니다.",
+  );
+
+  expect(emptyIconBox).toEqual(loadingIconBox);
 });
 
 test("chart queue loading uses the shared side-panel body motion state", async ({

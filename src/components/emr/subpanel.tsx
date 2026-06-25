@@ -481,7 +481,7 @@ export function EmrListSearchEmptyState(props: {
   const motionIcon = props.motionIcon ?? (
     <EmrMotionIcon
       animationData={searchNotFoundMotionIcon}
-      className="size-14 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+      className="size-10 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
       loop={false}
     />
   );
@@ -489,7 +489,6 @@ export function EmrListSearchEmptyState(props: {
   return (
     <EmrQueueEmptyState
       icon={motionIcon}
-      iconClassName="mb-3 size-16"
       title="검색 결과가 없습니다."
       data-testid="emr-list-search-empty-state"
     />
@@ -506,10 +505,9 @@ export function EmrQueueLoadingState({
       icon={
         <EmrMotionIcon
           animationData={queueLoadingMotionIcon}
-          className="size-14 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+          className="size-10 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
         />
       }
-      iconClassName="mb-3 size-16"
       title={title}
       data-testid="emr-queue-loading-state"
     />
@@ -540,14 +538,14 @@ export function EmrQueueEmptyState({
     >
       <div
         className={cn(
-          "mb-2 flex size-10 items-center justify-center text-[var(--emr-text-placeholder)]",
+          "mb-3 flex size-14 items-center justify-center text-[var(--emr-text-placeholder)]",
           iconClassName,
         )}
       >
         {icon ?? (
           <EmrMotionIcon
             animationData={folderFileSearchMotionIcon}
-            className="size-8 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
+            className="size-9 text-[var(--emr-text-placeholder)] [&_path]:!stroke-current"
             loop={false}
           />
         )}
