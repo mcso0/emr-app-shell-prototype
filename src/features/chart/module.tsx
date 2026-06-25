@@ -89,6 +89,12 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  ClockIcon,
+  HomeIcon,
+  StethoscopeIcon,
+  UsersIcon,
+} from "@/components/icons";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -5287,14 +5293,21 @@ function ChartPreflightLine({
 
 function ChartPreflightField({
   children,
+  icon,
   label,
 }: {
   children: ReactNode;
+  icon: ReactNode;
   label: string;
 }) {
   return (
-    <div className="grid min-h-9 grid-cols-[112px_minmax(0,1fr)] items-center gap-3 emr-text-metadata">
-      <label className="text-[var(--emr-text-tertiary)]">{label}</label>
+    <div className="grid min-h-9 grid-cols-[118px_minmax(0,1fr)] items-center gap-3 emr-text-metadata">
+      <label className="flex min-w-0 items-center gap-1.5 text-[var(--emr-text-tertiary)]">
+        <span className="flex size-4 shrink-0 items-center justify-center text-[var(--emr-text-tertiary)] [&_svg]:size-3.5">
+          {icon}
+        </span>
+        <span className="truncate">{label}</span>
+      </label>
       {children}
     </div>
   );
@@ -5302,8 +5315,8 @@ function ChartPreflightField({
 
 function ChartReadonlyField({ value }: { value: string }) {
   return (
-    <div className="flex min-h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 text-left font-medium text-foreground">
-      <span className="w-full truncate text-left">{value}</span>
+    <div className="emr-control-text flex h-9 w-full items-center rounded-[var(--emr-radius-control)] border border-input bg-card px-3 text-left text-foreground">
+      <span className="w-full truncate text-left font-medium">{value}</span>
     </div>
   );
 }
@@ -6111,15 +6124,19 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
             </Button>
           }
         >
-          <div className="grid gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+          <div className="grid gap-2 emr-text-dense text-foreground">
             <ChartPreflightField
+              icon={<UsersIcon aria-hidden="true" />}
               label="환자 / 보호자"
             >
               <ChartReadonlyField
                 value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
               />
             </ChartPreflightField>
-            <ChartPreflightField label="접수 시각">
+            <ChartPreflightField
+              icon={<ClockIcon aria-hidden="true" />}
+              label="접수 시각"
+            >
               <ChartReadonlyField
                 value={getShortDateTime(
                   currentBundle.encounter.checkedInAt ??
@@ -6127,12 +6144,18 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 )}
               />
             </ChartPreflightField>
-            <ChartPreflightField label="담당 수의사">
+            <ChartPreflightField
+              icon={<StethoscopeIcon aria-hidden="true" />}
+              label="담당 수의사"
+            >
               <ChartReadonlyField
                 value={getChartBundleVeterinarianName(currentBundle)}
               />
             </ChartPreflightField>
-            <ChartPreflightField label="진료실">
+            <ChartPreflightField
+              icon={<HomeIcon aria-hidden="true" />}
+              label="진료실"
+            >
               <Select
                 value={selectedCallRoomId}
                 onValueChange={(value) => {
@@ -6161,7 +6184,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 </SelectContent>
               </Select>
             </ChartPreflightField>
-            <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3 emr-text-metadata">
+            <div className="grid grid-cols-[118px_minmax(0,1fr)] items-start gap-3 emr-text-metadata">
               <span aria-hidden="true" />
               <label className="flex min-h-7 items-center gap-2 text-[var(--emr-text-secondary)]">
                 <EmrTableCheckbox
