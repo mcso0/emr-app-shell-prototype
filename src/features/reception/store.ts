@@ -18,7 +18,10 @@ import type {
 import type { ReceptionAppointmentCheckInRecord } from "@/features/reception/appointment-check-in";
 import type { ReceptionEncounterUpdateRecord } from "@/features/reception/encounter-update";
 import type { ReceptionCalendarReadRecord } from "@/features/reception/reception-calendar-read";
-import type { ReceptionQueueReadRecord } from "@/features/reception/reception-queue-read";
+import type {
+  ReceptionQueueReadRecord,
+  ReceptionQueueReadSummary,
+} from "@/features/reception/reception-queue-read";
 import type { ReceptionWalkInEncounterRecord } from "@/features/reception/walk-in-encounter";
 
 type ReceptionDraftCheckIn = {
@@ -58,10 +61,14 @@ type ReceptionStore = {
   calendarReadStatus: ReceptionQueueReadStatus;
   queueReadError?: string;
   queueReadStatus: ReceptionQueueReadStatus;
+  queueSummary?: ReceptionQueueReadSummary;
   readRetryNonce: number;
   applyAppointmentCreate: (appointment: Appointment) => void;
   applyPersistedReceptionCalendar: (records: ReceptionCalendarReadRecord[]) => void;
-  applyPersistedReceptionQueue: (queue: ReceptionQueueReadRecord[]) => void;
+  applyPersistedReceptionQueue: (
+    queue: ReceptionQueueReadRecord[],
+    summary?: ReceptionQueueReadSummary,
+  ) => void;
   clearWorkspaceSessionDrafts: (workspaceId: EmrId) => void;
   cancelReceptionEncounter: (input: {
     encounterId: EmrId;
@@ -264,6 +271,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
   persistedCalendarAppointments: [],
   calendarReadStatus: "idle",
   queueReadStatus: "idle",
+  queueSummary: undefined,
   readRetryNonce: 0,
   applyAppointmentCreate: (appointment) =>
     set((state) => ({
@@ -320,7 +328,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         persistedCalendarAppointments,
       };
     }),
-  applyPersistedReceptionQueue: (queue) =>
+  applyPersistedReceptionQueue: (queue, summary) =>
     set((state) => {
       const nonPersistedDrafts = state.draftCheckIns.filter(
         (draft) => draft.source !== "persisted_queue"
@@ -362,6 +370,7 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
         ],
         queueReadError: undefined,
         queueReadStatus: "ready",
+        queueSummary: summary,
       };
     }),
   clearWorkspaceSessionDrafts: (workspaceId) =>
@@ -438,7 +447,11 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
   setReceptionCalendarReadStatus: (calendarReadStatus, calendarReadError) =>
     set({ calendarReadError, calendarReadStatus }),
   setReceptionQueueReadStatus: (queueReadStatus, queueReadError) =>
-    set({ queueReadError, queueReadStatus }),
+    set({
+      queueReadError,
+      queueReadStatus,
+      ...(queueReadStatus === "loading" ? { queueSummary: undefined } : {}),
+    }),
   selectAppointment: (selectedAppointmentId) => set({ selectedAppointmentId }),
   selectEncounter: (selectedEncounterId) => set({ selectedEncounterId }),
   selectPatient: (selectedPatientId) =>

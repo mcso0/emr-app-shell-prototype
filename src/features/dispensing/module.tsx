@@ -106,6 +106,13 @@ type FulfillmentWorkItem = {
   updatedAt?: string;
   workspaceId: string;
 };
+type FulfillmentWorkItemReadSummary = {
+  date?: string;
+  queueType: FulfillmentQueueType;
+  statusCounts: Record<FulfillmentWorkItemStatus, number>;
+  totalCount: number;
+  workspaceId: string;
+};
 type DispensingFulfillmentQueueStatus =
   | "idle"
   | "loading"
@@ -114,6 +121,7 @@ type DispensingFulfillmentQueueStatus =
   | "error"
   | "permission_denied";
 type DispensingFulfillmentQueueSnapshot = {
+  sourceTotalCount?: number;
   status: DispensingFulfillmentQueueStatus;
   workItems: FulfillmentWorkItem[];
 };
@@ -208,6 +216,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   const refresh = useCallback(async () => {
     try {
       setCachedDispensingFulfillmentQueue(cacheKey, {
+        sourceTotalCount: fulfillmentQueueCache.get(cacheKey)?.sourceTotalCount,
         status: "loading",
         workItems: fulfillmentQueueCache.get(cacheKey)?.workItems ?? [],
       });
@@ -223,12 +232,14 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         denialReason?: string;
         ok?: boolean;
         status?: number;
+        summary?: FulfillmentWorkItemReadSummary;
         workItems?: FulfillmentWorkItem[];
       };
       const treatmentBody = await treatmentResponse.json() as {
         denialReason?: string;
         ok?: boolean;
         status?: number;
+        summary?: FulfillmentWorkItemReadSummary;
         workItems?: FulfillmentWorkItem[];
       };
       if (!dispensingResponse.ok || !dispensingBody.ok) {
@@ -255,7 +266,13 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         ...(Array.isArray(dispensingBody.workItems) ? dispensingBody.workItems : []),
         ...(Array.isArray(treatmentBody.workItems) ? treatmentBody.workItems : []),
       ];
+      const sourceTotalCount =
+        (dispensingBody.summary?.totalCount ??
+          (Array.isArray(dispensingBody.workItems) ? dispensingBody.workItems.length : 0)) +
+        (treatmentBody.summary?.totalCount ??
+          (Array.isArray(treatmentBody.workItems) ? treatmentBody.workItems.length : 0));
       setCachedDispensingFulfillmentQueue(cacheKey, {
+        sourceTotalCount,
         status: nextItems.length ? "ready" : "empty",
         workItems: nextItems,
       });
@@ -307,7 +324,13 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
     return allTransitionsSucceeded;
   }, [refresh, workspaceId]);
 
-  return { refresh, status: snapshot.status, updateStatus, workItems: snapshot.workItems };
+  return {
+    refresh,
+    sourceTotalCount: snapshot.sourceTotalCount,
+    status: snapshot.status,
+    updateStatus,
+    workItems: snapshot.workItems,
+  };
 }
 
 function findFulfillmentForQueueItem(
@@ -619,9 +642,11 @@ export function DispensingSidePanel({
 
   return (
     <EmrOrderQueueSidePanel
+      emptyObjectLabel="조제/처치 요청"
       getTaskCardItem={getDispensingTaskCardItem}
       items={items}
       statuses={statuses}
+      sourceTotalCount={fulfillmentQueue.sourceTotalCount}
       title="조제/처치"
       selectedDate={selectedDate}
       selectedItemId={selectedQueueItemIds.dispensing}

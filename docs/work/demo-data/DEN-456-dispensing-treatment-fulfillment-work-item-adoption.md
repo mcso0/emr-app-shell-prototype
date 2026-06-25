@@ -13,7 +13,7 @@ source_docs:
 dependencies:
   - "UI-PR-002"
   - "DEN-455"
-updated: "2026-06-11"
+updated: "2026-06-25"
 ---
 
 # Dispensing/Treatment Fulfillment Work Item Adoption
@@ -59,3 +59,5 @@ Make the dispensing/treatment execution screen read visible queue state from `or
 ## Result
 
 DEN-456 makes the dispensing/treatment screen API-aware at the execution surface. The screen now combines the existing fixture queue with fulfillment work-item readback, shows selected server state, saves status changes through the route boundary, and exposes read/mutation failures without silently mutating local state.
+
+2026-06-25 follow-up: the fulfillment work-items read response now includes a server readback `summary` with total and status counts. Lab/imaging and dispensing/treatment queue empty states can use that API-backed source count to distinguish true no-work days from filtered or transformed-empty UI states.

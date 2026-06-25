@@ -219,7 +219,7 @@ test("dispensing treatment workspace shows server readback and refreshes after p
   let treatmentReads = 0;
 
   await page.route(
-    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=dispensing$`),
+    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=dispensing(?:&.*)?$`),
     async (route) => {
       dispensingReads += 1;
       await route.fulfill({
@@ -240,7 +240,7 @@ test("dispensing treatment workspace shows server readback and refreshes after p
     },
   );
   await page.route(
-    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=treatment$`),
+    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=treatment(?:&.*)?$`),
     async (route) => {
       treatmentReads += 1;
       await route.fulfill({
@@ -309,7 +309,7 @@ test("dispensing treatment workspace shows server readback and refreshes after p
 
 test("dispensing treatment workspace surfaces fulfillment read permission denial", async ({ page }) => {
   await page.route(
-    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=(dispensing|treatment)$`),
+    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=(dispensing|treatment)(?:&.*)?$`),
     async (route) => {
       await route.fulfill({
         contentType: "application/json",
@@ -330,7 +330,7 @@ test("dispensing treatment workspace surfaces fulfillment read permission denial
 
 test("dispensing treatment workspace keeps local state unchanged when fulfillment mutation fails", async ({ page }) => {
   await page.route(
-    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=dispensing$`),
+    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=dispensing(?:&.*)?$`),
     async (route) => {
       await route.fulfill({
         contentType: "application/json",
@@ -350,7 +350,7 @@ test("dispensing treatment workspace keeps local state unchanged when fulfillmen
     },
   );
   await page.route(
-    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=treatment$`),
+    new RegExp(`/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=treatment(?:&.*)?$`),
     async (route) => {
       await route.fulfill({
         contentType: "application/json",

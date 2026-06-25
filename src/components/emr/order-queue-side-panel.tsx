@@ -11,6 +11,7 @@ import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
+  EmrQueueEmptyState,
   EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
@@ -59,6 +60,7 @@ type EmrOrderQueueSidePanelProps = {
   title: string;
   className?: string;
   dateLabel?: string;
+  emptyObjectLabel?: string;
   filterAriaLabel?: string;
   filterItems?: OrderQueueFilterItem[];
   getFilterValue?: (item: OrderQueueItem) => string;
@@ -69,6 +71,7 @@ type EmrOrderQueueSidePanelProps = {
   onSelectItem?: (itemId: string) => void;
   selectedItemId?: string;
   selectedDate?: string;
+  sourceTotalCount?: number;
   todayLabel?: string;
   todayDate?: string;
 };
@@ -184,6 +187,7 @@ function compareOrderQueueItems(a: OrderQueueItem, b: OrderQueueItem, sortKey: O
 export function EmrOrderQueueSidePanel({
   className,
   dateLabel = "26.04.29 (수)",
+  emptyObjectLabel = "대기열 업무",
   filterAriaLabel = "오더 유형 필터",
   filterItems = orderQueueFilterItems,
   getFilterValue = (item) => item.orderTypeCategory,
@@ -195,6 +199,7 @@ export function EmrOrderQueueSidePanel({
   onSelectItem,
   selectedItemId,
   selectedDate,
+  sourceTotalCount,
   statuses,
   title,
   todayDate,
@@ -224,6 +229,12 @@ export function EmrOrderQueueSidePanel({
   const effectiveSelectedItemId = selectedItemId ?? visibleItems[0]?.id;
   const isToday = Boolean(selectedDate && todayDate && selectedDate === todayDate);
   const displayDateLabel = selectedDate ? formatKoreanOperatingDateLabel(selectedDate) : dateLabel;
+  const emptyStateTitle = getOrderQueueEmptyStateTitle({
+    emptyObjectLabel,
+    filtered: (sourceTotalCount ?? items.length) > 0,
+    selectedDate,
+    todayDate,
+  });
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -344,10 +355,33 @@ export function EmrOrderQueueSidePanel({
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
-        ) : null}
+        ) : (
+          <EmrQueueEmptyState title={emptyStateTitle} />
+        )}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
+}
+
+function getOrderQueueEmptyStateTitle({
+  emptyObjectLabel,
+  filtered,
+  selectedDate,
+  todayDate,
+}: {
+  emptyObjectLabel: string;
+  filtered: boolean;
+  selectedDate?: string;
+  todayDate?: string;
+}) {
+  if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다.`;
+
+  const scopePrefix =
+    selectedDate && todayDate && selectedDate !== todayDate
+      ? "선택한 날짜의"
+      : "오늘";
+
+  return `${scopePrefix} ${emptyObjectLabel}가 없습니다.`;
 }
 
 function OrderQueueSortMenu({
