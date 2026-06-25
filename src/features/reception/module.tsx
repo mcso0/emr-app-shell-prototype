@@ -3853,8 +3853,8 @@ function ReceptionScheduleDateControl({
     >
       <Button
         variant="outline"
-        size="icon-sm"
-        className="size-8 bg-[var(--emr-surface-panel)]"
+        size="icon"
+        className="bg-[var(--emr-surface-panel)]"
         aria-label={dateControlLabel.previousLabel}
         onClick={() =>
           onOperatingDateChange(
@@ -3866,8 +3866,8 @@ function ReceptionScheduleDateControl({
       </Button>
       <Button
         variant="outline"
-        size="icon-sm"
-        className="size-8 bg-[var(--emr-surface-panel)]"
+        size="icon"
+        className="bg-[var(--emr-surface-panel)]"
         aria-label={dateControlLabel.nextLabel}
         onClick={() =>
           onOperatingDateChange(

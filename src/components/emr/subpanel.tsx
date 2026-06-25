@@ -238,8 +238,8 @@ export function EmrDateNavigator({
     <div className={cn("flex h-12 shrink-0 items-center justify-between gap-1 px-4", className)}>
       <Button
         variant="outline"
-        size="icon-sm"
-        className="size-10 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
+        size="icon"
+        className="rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
         aria-label={previousLabel}
         disabled={!onPrevious}
         onClick={onPrevious}
@@ -325,8 +325,8 @@ export function EmrDateNavigator({
       )}
       <Button
         variant="outline"
-        size="icon-sm"
-        className="size-10 rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
+        size="icon"
+        className="rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]"
         aria-label={nextLabel}
         disabled={!onNext}
         onClick={onNext}
