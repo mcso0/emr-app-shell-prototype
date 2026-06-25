@@ -117,7 +117,6 @@ test("reception renders the first-path workspace instead of the placeholder", as
         ),
     )
     .toEqual([
-      "접수/예약 새로고침",
       "이전 날짜",
       "다음 날짜",
       "26.05.01 (금) 날짜 선택",
@@ -144,7 +143,6 @@ test("reception renders the first-path workspace instead of the placeholder", as
         ),
     )
     .toEqual([
-      "접수/예약 새로고침",
       "이전 주",
       "다음 주",
       "26.04.26 - 26.05.02 주 선택",
@@ -170,7 +168,6 @@ test("reception renders the first-path workspace instead of the placeholder", as
         ),
     )
     .toEqual([
-      "접수/예약 새로고침",
       "이전 월",
       "다음 월",
       "26.05 월 선택",
@@ -283,30 +280,42 @@ test("reception renders the first-path workspace instead of the placeholder", as
   );
 });
 
-test("reception date controls refetch the selected operating date", async ({
+test("reception topbar refresh refetches the selected operating date", async ({
   page,
 }) => {
   await page.goto("/w/clair-demo/reception");
 
   const dateControl = page.getByTestId("reception-date-control");
-  const refreshButton = dateControl.getByRole("button", {
+  const historyControls = page.getByTestId("workspace-history-controls");
+  const refreshButton = historyControls.getByRole("button", {
     name: "접수/예약 새로고침",
   });
+  const backButton = historyControls.getByRole("button", {
+    name: "탭 뒤로가기",
+  });
+  const forwardButton = historyControls.getByRole("button", {
+    name: "탭 앞으로가기",
+  });
+  await expect(
+    dateControl.getByRole("button", { name: "접수/예약 새로고침" }),
+  ).toHaveCount(0);
   await expect(
     dateControl.getByRole("button", { name: "오늘 일자로 이동" }),
   ).toBeDisabled();
-  await expect(refreshButton).toBeVisible();
+  await expect(refreshButton).toBeEnabled();
 
-  const [refreshBox, previousBox, nextBox] = await Promise.all([
+  const [refreshBox, backBox, forwardBox] = await Promise.all([
     refreshButton.boundingBox(),
-    dateControl.getByRole("button", { name: "이전 날짜" }).boundingBox(),
-    dateControl.getByRole("button", { name: "다음 날짜" }).boundingBox(),
+    backButton.boundingBox(),
+    forwardButton.boundingBox(),
   ]);
   expect(refreshBox).not.toBeNull();
-  expect(previousBox).not.toBeNull();
-  expect(nextBox).not.toBeNull();
-  expect(refreshBox!.x + refreshBox!.width).toBeLessThanOrEqual(previousBox!.x);
-  expect(Math.round(nextBox!.x - (previousBox!.x + previousBox!.width))).toBe(
+  expect(backBox).not.toBeNull();
+  expect(forwardBox).not.toBeNull();
+  expect(Math.round(backBox!.x - (refreshBox!.x + refreshBox!.width))).toBe(
+    4,
+  );
+  expect(Math.round(forwardBox!.x - (backBox!.x + backBox!.width))).toBe(
     4,
   );
 

@@ -4,9 +4,16 @@ import { create } from "zustand";
 import type { DrawerState } from "@/types/emr";
 import { SHELL_LAYOUT } from "@/shell/layout-contract";
 
+export type ModuleRefreshAction = {
+  isRefreshing?: boolean;
+  label: string;
+  onRefresh: () => void | Promise<void>;
+};
+
 type LayoutStore = {
   activeDrawer: DrawerState;
   contentAsideOpen: boolean;
+  moduleRefreshActions: Record<string, ModuleRefreshAction | undefined>;
   modulePanelOpen: boolean;
   rightPanelOpen: boolean;
   notificationNavigationDirty: boolean;
@@ -16,6 +23,11 @@ type LayoutStore = {
   rightPanelWidth: number;
   setActiveDrawer: (drawer: DrawerState) => void;
   setContentAsideOpen: (open: boolean) => void;
+  setModuleRefreshAction: (
+    moduleId: string,
+    action: ModuleRefreshAction,
+  ) => void;
+  clearModuleRefreshAction: (moduleId: string) => void;
   setModulePanelOpen: (open: boolean) => void;
   setNotificationNavigationDirty: (dirty: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
@@ -26,6 +38,7 @@ type LayoutStore = {
 export const useLayoutStore = create<LayoutStore>()((set) => ({
   activeDrawer: null,
   contentAsideOpen: false,
+  moduleRefreshActions: {},
   modulePanelOpen: true,
   notificationNavigationDirty: false,
   rightPanelOpen: true,
@@ -49,6 +62,22 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
     set((state) =>
       state.contentAsideOpen === contentAsideOpen ? state : { contentAsideOpen }
     ),
+  setModuleRefreshAction: (moduleId, action) =>
+    set((state) => ({
+      moduleRefreshActions: {
+        ...state.moduleRefreshActions,
+        [moduleId]: action,
+      },
+    })),
+  clearModuleRefreshAction: (moduleId) =>
+    set((state) => {
+      if (!state.moduleRefreshActions[moduleId]) return state;
+
+      const moduleRefreshActions = { ...state.moduleRefreshActions };
+      delete moduleRefreshActions[moduleId];
+
+      return { moduleRefreshActions };
+    }),
   setModulePanelOpen: (modulePanelOpen) =>
     set((state) =>
       state.modulePanelOpen === modulePanelOpen ? state : { modulePanelOpen }

@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
-  CdsActionsRefreshCwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
@@ -3700,16 +3699,12 @@ function getAdjacentReceptionDate(
 }
 
 function ReceptionScheduleDateControl({
-  isRefreshing,
   onOperatingDateChange,
-  onRefresh,
   operatingDate,
   todayDate,
   view,
 }: {
-  isRefreshing?: boolean;
   onOperatingDateChange: (operatingDate: string) => void;
-  onRefresh?: () => void;
   operatingDate: string;
   todayDate: string;
   view: ReceptionCalendarView;
@@ -3739,21 +3734,9 @@ function ReceptionScheduleDateControl({
 
   return (
     <div
-      className="flex h-10 shrink-0 items-center gap-1"
+      className="flex h-10 shrink-0 items-center gap-2"
       data-testid="reception-date-control"
     >
-      {onRefresh ? (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-8"
-          aria-label="접수/예약 새로고침"
-          disabled={isRefreshing}
-          onClick={onRefresh}
-        >
-          <CdsActionsRefreshCwIcon />
-        </Button>
-      ) : null}
       <Button
         variant="outline"
         size="icon-sm"
@@ -4006,12 +3989,10 @@ function ReceptionScheduleDateControl({
 }
 
 function ScheduleToolbar({
-  isRefreshing,
   onOperatingDateChange,
   operatingDate,
   onCreateReservation,
   onCreateWalkIn,
-  onRefresh,
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
@@ -4020,12 +4001,10 @@ function ScheduleToolbar({
   view,
   onViewChange,
 }: {
-  isRefreshing?: boolean;
   onOperatingDateChange: (operatingDate: string) => void;
   operatingDate: string;
   onCreateReservation: () => void;
   onCreateWalkIn: () => void;
-  onRefresh?: () => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
@@ -4053,9 +4032,7 @@ function ScheduleToolbar({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <ReceptionScheduleDateControl
-          isRefreshing={isRefreshing}
           onOperatingDateChange={onOperatingDateChange}
-          onRefresh={onRefresh}
           operatingDate={operatingDate}
           todayDate={todayDate}
           view={view}
@@ -5545,7 +5522,13 @@ export function ReceptionContent() {
   );
   const patients = usePatientProfileStore((state) => state.patients);
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
+  const clearModuleRefreshAction = useLayoutStore(
+    (state) => state.clearModuleRefreshAction,
+  );
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setModuleRefreshAction = useLayoutStore(
+    (state) => state.setModuleRefreshAction,
+  );
   const authSession = useMockAuthStore((state) => state.session);
   const scenario = getDemoScenarioFromParams(searchParams);
   const queryPatientId = searchParams.get("patientId") ?? scenario?.patientId;
@@ -5908,6 +5891,21 @@ export function ReceptionContent() {
   }, [manualReceptionRefreshing, refreshReceptionReads]);
 
   useEffect(() => {
+    setModuleRefreshAction("reception", {
+      isRefreshing: manualReceptionRefreshing,
+      label: "접수/예약 새로고침",
+      onRefresh: refreshReceptionManually,
+    });
+
+    return () => clearModuleRefreshAction("reception");
+  }, [
+    clearModuleRefreshAction,
+    manualReceptionRefreshing,
+    refreshReceptionManually,
+    setModuleRefreshAction,
+  ]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function refresh() {
@@ -5941,9 +5939,7 @@ export function ReceptionContent() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ScheduleToolbar
-        isRefreshing={manualReceptionRefreshing}
         onOperatingDateChange={handleOperatingDateChange}
-        onRefresh={refreshReceptionManually}
         operatingDate={operatingDate}
         view={calendarView}
         onViewChange={setCalendarView}

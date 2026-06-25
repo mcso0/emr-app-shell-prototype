@@ -9,6 +9,7 @@ import {
   HelpIcon,
   SettingsIcon,
 } from "@/components/icons";
+import { CdsActionsRefreshCwIcon } from "@/components/cds-icons/actions-and-controls";
 import { Button } from "@/components/ui/button";
 import { useAuthClient } from "@/features/auth/auth-client";
 import {
@@ -43,8 +44,10 @@ type WorkspaceTabsBarProps = {
   activeTabId: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
+  isRefreshing?: boolean;
   notificationBadgeCount: number;
   notificationDrawerOpen: boolean;
+  refreshLabel?: string;
   tabs: WorkspaceTab[];
   workspaceId: string;
   onActivateTab: (tabId: string) => void;
@@ -53,6 +56,7 @@ type WorkspaceTabsBarProps = {
   onForward: () => void;
   onNewTab: () => void;
   onOpenNotifications: () => void;
+  onRefresh?: () => void;
 };
 
 function getDisplayTitle(tab: WorkspaceTab) {
@@ -249,8 +253,10 @@ export function WorkspaceTabsBar({
   activeTabId,
   canGoBack,
   canGoForward,
+  isRefreshing,
   notificationBadgeCount,
   notificationDrawerOpen,
+  refreshLabel,
   tabs,
   workspaceId,
   onActivateTab,
@@ -259,6 +265,7 @@ export function WorkspaceTabsBar({
   onForward,
   onNewTab,
   onOpenNotifications,
+  onRefresh,
 }: WorkspaceTabsBarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -345,11 +352,21 @@ export function WorkspaceTabsBar({
         <div
           data-testid="workspace-history-controls"
           className={cn(
-            "flex shrink-0 items-center gap-[var(--emr-topbar-item-gap)]",
+            "flex shrink-0 items-center gap-[var(--emr-topbar-history-gap)]",
             modulePanelOpen &&
               "md:absolute md:left-[calc(-1*var(--emr-topbar-open-history-shift))] md:top-0"
           )}
         >
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={refreshLabel ?? `${activityModuleLabel} 새로고침`}
+            disabled={!onRefresh || isRefreshing}
+            onClick={onRefresh}
+            className={historyButtonClassName}
+          >
+            <CdsActionsRefreshCwIcon className="size-4" aria-hidden="true" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
