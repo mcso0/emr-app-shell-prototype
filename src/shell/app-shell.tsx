@@ -475,16 +475,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     pushRoute(href, nextModuleId);
   }
 
-  function continueDuplicateNavigation() {
-    if (!duplicateNavigation) return;
-    if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
-    const { href, nextModuleId } = duplicateNavigation;
-    setDuplicateNavigation(null);
-    pendingTabRouteRef.current = href;
-    router.push(href, { scroll: false });
-    pushRoute(href, nextModuleId);
-  }
-
   function activateDuplicateTab() {
     if (!duplicateNavigation) return;
     if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
@@ -546,35 +536,35 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         {duplicateNavigation ? (
           <EmrDialogShell
             title="같은 업무가 이미 열려 있습니다"
-            description="다른 탭에서 같은 업무를 보고 있습니다. 기존 탭으로 이동하거나 현재 탭에서 열 수 있습니다."
+            description="다른 탭에서 같은 업무를 보고 있습니다. 기존 탭으로 이동하거나 이 알림을 닫을 수 있습니다."
             bodyClassName="hidden"
             className="[&_[data-slot=dialog-title]]:block [&_[data-slot=dialog-title]]:truncate [&_[data-slot=dialog-title]]:whitespace-nowrap"
-            footerClassName="items-stretch"
+            footerClassName="items-center"
             footer={
-              <div className="flex w-full min-w-0 flex-col gap-3">
-                <label className="flex min-w-0 items-center gap-2 text-sm leading-5 text-[var(--emr-text-tertiary)]">
+              <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                <label className="flex min-w-0 shrink items-center gap-2 text-sm leading-5 text-[var(--emr-text-tertiary)]">
                   <Checkbox
                     checked={skipDuplicateWarning}
                     onCheckedChange={(checked) => setSkipDuplicateWarning(checked === true)}
                     className="shrink-0"
                   />
-                  <span className="min-w-0 truncate">다시 보지 않기</span>
+                  <span className="min-w-0 truncate whitespace-nowrap">다시 보지 않기</span>
                 </label>
-                <div className="flex min-w-0 items-center justify-end gap-2">
+                <div className="flex shrink-0 items-center justify-end gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     className="whitespace-nowrap px-3"
-                    onClick={continueDuplicateNavigation}
+                    onClick={() => setDuplicateNavigation(null)}
                   >
-                    현재 탭에서 열기
+                    닫기
                   </Button>
                   <Button
                     type="button"
                     className="whitespace-nowrap px-3"
                     onClick={activateDuplicateTab}
                   >
-                    기존 탭으로 이동
+                    이동하기
                   </Button>
                 </div>
               </div>
