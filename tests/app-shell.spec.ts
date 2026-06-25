@@ -1221,8 +1221,14 @@ test("workspace tabs warn only before opening the same concrete work surface in 
   await expect(duplicateDialog).toContainText("다른 탭에서 같은 업무를 보고 있습니다.");
   await expect(duplicateDialog).not.toContainText("기존 탭:");
   await expect(duplicateDialog.getByRole("checkbox", { name: "다시 보지 않기" })).toBeVisible();
-  await expect(duplicateDialog.getByRole("button", { name: "현재 탭에서 열기" })).toBeVisible();
-  await page.getByRole("button", { name: "기존 탭으로 이동" }).click();
+  await expect(duplicateDialog.getByRole("button", { name: "닫기", exact: true })).toBeVisible();
+  await expect(duplicateDialog.getByRole("button", { name: "이동하기" })).toBeVisible();
+  await duplicateDialog.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(duplicateDialog).toHaveCount(0);
+
+  await page.getByTestId("order-queue-item-encounter-kong-260501").click();
+  await expect(duplicateDialog).toBeVisible();
+  await page.getByRole("button", { name: "이동하기" }).click();
   await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
 });
 

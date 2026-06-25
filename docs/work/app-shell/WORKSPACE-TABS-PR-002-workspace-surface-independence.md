@@ -78,8 +78,8 @@ The first workspace-tab pass could show two `진료/차트` tabs, but the active
 
 - Shortened the duplicate-warning title and body copy while keeping product UX writing in 존댓말.
 - Removed the low-value `기존 탭: ...` body box.
-- Split the footer into a dedicated `다시 보지 않기` row and an action row to prevent checkbox/button label wrapping.
-- Kept `기존 탭으로 이동` as the primary action and shortened the current-tab action to `현재 탭에서 열기`.
+- Kept the footer on one line so the `다시 보지 않기` checkbox and action buttons do not wrap.
+- Shortened the actions to `닫기` and `이동하기`; `닫기` only dismisses the warning, while `이동하기` activates the existing tab.
 - Focused verification: `npx playwright test tests/app-shell.spec.ts --grep "workspace tabs warn only before opening the same concrete work surface in another tab" --timeout=90000 --reporter=line`.
 
 ## Closeout Report
