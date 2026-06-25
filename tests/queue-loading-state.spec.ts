@@ -96,6 +96,13 @@ async function getQueueStateIconBoxSize(page: Page, stateText: string) {
   });
 }
 
+async function getQueueStateIconRootTagName(page: Page, stateText: string) {
+  return page.getByText(stateText, { exact: true }).evaluate((textElement) => {
+    const iconElement = textElement.previousElementSibling;
+    return iconElement?.firstElementChild?.tagName ?? null;
+  });
+}
+
 test("reception queue loading uses the side-panel body motion state instead of top loading copy", async ({
   page,
 }) => {
@@ -145,6 +152,12 @@ test("reception queue loading and empty states keep the same icon box size", asy
   );
 
   expect(emptyIconBox).toEqual(loadingIconBox);
+  await expect
+    .poll(async () => getQueueStateIconRootTagName(
+      page,
+      "접수/예약 업무가 없습니다.",
+    ))
+    .toBe("DIV");
 });
 
 test("chart queue loading uses the shared side-panel body motion state", async ({
