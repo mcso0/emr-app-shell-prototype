@@ -545,33 +545,41 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       <Dialog open={Boolean(duplicateNavigation)} onOpenChange={(open) => !open && setDuplicateNavigation(null)}>
         {duplicateNavigation ? (
           <EmrDialogShell
-            title="이미 다른 워크스페이스 탭에서 같은 업무를 보고 있습니다."
-            description="같은 차트, 검사, 청구 업무를 여러 탭에서 동시에 작업하면 저장되지 않은 입력이 헷갈리거나, 먼저 저장된 내용이 나중 저장에 의해 덮어써질 수 있습니다."
-            footerMeta={
-              <label className="flex min-w-0 items-center gap-2 text-sm text-[var(--emr-text-tertiary)]">
-                <Checkbox
-                  checked={skipDuplicateWarning}
-                  onCheckedChange={(checked) => setSkipDuplicateWarning(checked === true)}
-                  aria-label="다시 해당 알림 보지 않기"
-                />
-                <span>다시 해당 알림 보지 않기</span>
-              </label>
+            title="같은 업무가 이미 열려 있습니다"
+            description="다른 탭에서 같은 업무를 보고 있습니다. 기존 탭으로 이동하거나 현재 탭에서 열 수 있습니다."
+            bodyClassName="hidden"
+            className="[&_[data-slot=dialog-title]]:block [&_[data-slot=dialog-title]]:truncate [&_[data-slot=dialog-title]]:whitespace-nowrap"
+            footerClassName="items-stretch"
+            footer={
+              <div className="flex w-full min-w-0 flex-col gap-3">
+                <label className="flex min-w-0 items-center gap-2 text-sm leading-5 text-[var(--emr-text-tertiary)]">
+                  <Checkbox
+                    checked={skipDuplicateWarning}
+                    onCheckedChange={(checked) => setSkipDuplicateWarning(checked === true)}
+                    className="shrink-0"
+                  />
+                  <span className="min-w-0 truncate">다시 보지 않기</span>
+                </label>
+                <div className="flex min-w-0 items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="whitespace-nowrap px-3"
+                    onClick={continueDuplicateNavigation}
+                  >
+                    현재 탭에서 열기
+                  </Button>
+                  <Button
+                    type="button"
+                    className="whitespace-nowrap px-3"
+                    onClick={activateDuplicateTab}
+                  >
+                    기존 탭으로 이동
+                  </Button>
+                </div>
+              </div>
             }
-            secondaryAction={
-              <Button type="button" variant="outline" onClick={activateDuplicateTab}>
-                기존 탭으로 이동
-              </Button>
-            }
-            primaryAction={
-              <Button type="button" onClick={continueDuplicateNavigation}>
-                그래도 현재 탭에서 열기
-              </Button>
-            }
-          >
-            <div className="rounded-md border border-[var(--emr-line-subtle)] bg-[var(--emr-surface-panel)] px-3 py-2 text-sm text-[var(--emr-text-secondary)]">
-              기존 탭: {duplicateNavigation.existingTab.title}
-            </div>
-          </EmrDialogShell>
+          />
         ) : null}
       </Dialog>
     </div>
