@@ -4504,6 +4504,197 @@ test("Cheongdam reservation create omits mock veterinarian fallback when staff l
   });
 });
 
+test("Cheongdam reservation create uses UUID veterinarian and renders calendar readback", async ({
+  page,
+}) => {
+  await freezeBrowserClock(page, "2026-06-25T23:50:00+09:00");
+
+  let createdAppointment: Record<string, unknown> | null = null;
+  let latestAppointmentBody: Record<string, unknown> | undefined;
+
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/staff?role=vet",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: "49110000-0000-4000-8000-000000000003",
+              displayName: "청담 원장",
+              initial: "원",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+          enforcedBy: "workspace-staff-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/calendar/day**",
+    async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "workspace-clair-cheongdam",
+          date,
+          records: createdAppointment ? [{ appointment: createdAppointment }] : [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/queue",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId: "workspace-clair-cheongdam",
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/patient-guardian-lookup?query=*",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          patients: [
+            {
+              patient: {
+                id: "49121000-0000-4000-8000-000000000023",
+                workspaceId: "workspace-clair-cheongdam",
+                patientNo: "CD-P-0023",
+                name: "구름",
+                species: "dog",
+                breed: "Samoyed",
+                sex: "female",
+                neutered: true,
+                birthDate: "2023-06-01",
+                weightKg: 12,
+                handlingCautionLocked: false,
+                status: "active",
+                createdAt: "2026-06-01T00:00:00.000Z",
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+              primaryGuardian: {
+                id: "49120000-0000-4000-8000-000000000023",
+                workspaceId: "workspace-clair-cheongdam",
+                name: "문지아",
+                mobilePhone: "010-4911-0023",
+                createdAt: "2026-06-01T00:00:00.000Z",
+                updatedAt: "2026-06-01T00:00:00.000Z",
+              },
+            },
+          ],
+          enforcedBy: "reception-patient-guardian-lookup",
+        }),
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/workspace-clair-cheongdam/reception/appointments",
+    async (route) => {
+      latestAppointmentBody = route.request().postDataJSON() as Record<
+        string,
+        unknown
+      >;
+      createdAppointment = {
+        id: "appointment-cheongdam-gureum-0900",
+        workspaceId: "workspace-clair-cheongdam",
+        patientId: latestAppointmentBody.patientId,
+        guardianId: latestAppointmentBody.guardianId,
+        assignedVeterinarianId: latestAppointmentBody.assignedVeterinarianId,
+        scheduledStartAt: latestAppointmentBody.scheduledStartAt,
+        scheduledEndAt: "2026-06-26T09:30:00+09:00",
+        visitPurpose: latestAppointmentBody.reservationMemo,
+        symptomNote: latestAppointmentBody.reservationMemo,
+        status: "confirmed",
+        createdByUserId: "49110000-0000-4000-8000-000000000001",
+        createdAt: "2026-06-25T23:50:00+09:00",
+        updatedAt: "2026-06-25T23:50:00+09:00",
+      };
+
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 201,
+          workspaceId: "workspace-clair-cheongdam",
+          appointment: createdAppointment,
+          enforcedBy: "reception-appointment-create",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    "/w/workspace-clair-cheongdam/reception?modulePanel=open&drawer=reception-reservation-form%3Anew",
+  );
+
+  const reservationDrawer = page.getByTestId("reservation-create-drawer");
+  await expect(reservationDrawer).toBeVisible();
+  await reservationDrawer.getByLabel("담당의").click();
+  await page.getByRole("option", { name: "청담 원장" }).click();
+  await expect(reservationDrawer.getByLabel("담당의")).toContainText("청담 원장");
+
+  await reservationDrawer.getByLabel("환자 검색").fill("구름");
+  await page.getByRole("option", { name: /구름.*문지아/ }).click();
+  await expect(reservationDrawer.getByLabel("체중")).toHaveValue("12.00");
+
+  await reservationDrawer.getByLabel("예약일").click();
+  await page.getByRole("button", { name: /26\.06\.26.*선택/ }).click();
+  await expect(reservationDrawer.getByLabel("예약시간")).toContainText("09:00");
+  await expect(reservationDrawer.getByLabel("예상시간")).toContainText("30분");
+
+  await reservationDrawer.getByLabel("예약 메모").fill("구름 09시 예약");
+  await reservationDrawer.getByRole("button", { name: "생성" }).click();
+
+  await expect.poll(() => latestAppointmentBody).toMatchObject({
+    assignedVeterinarianId: "49110000-0000-4000-8000-000000000003",
+    durationMinutes: 30,
+    guardianId: "49120000-0000-4000-8000-000000000023",
+    patientId: "49121000-0000-4000-8000-000000000023",
+    reservationMemo: "구름 09시 예약",
+    scheduledStartAt: "2026-06-26T09:00:00+09:00",
+    weightKg: 12,
+  });
+  await expect(page.getByText("예약을 생성했습니다.")).toBeVisible();
+  await expect(
+    page.locator('[data-testid^="appointment-card-"]').filter({
+      hasText: "구름 09시 예약",
+    }),
+  ).toBeVisible();
+
+  await page.goto("/w/workspace-clair-cheongdam/reception?modulePanel=open");
+  await page.getByRole("button", { name: /26\.06\.25.*날짜 선택/ }).click();
+  await page.getByRole("button", { name: /26\.06\.26.*선택/ }).click();
+  await expect(
+    page.locator('[data-testid^="appointment-card-"]').filter({
+      hasText: "구름 09시 예약",
+    }),
+  ).toBeVisible();
+});
+
 test("reception draft task drawer uses DB-backed patient lookup states", async ({
   page,
 }) => {

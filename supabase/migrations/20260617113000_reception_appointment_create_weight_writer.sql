@@ -21,7 +21,7 @@ declare
   v_weight_kg numeric(6,2) := nullif(p_appointment->>'weightKg', '')::numeric(6,2);
   v_appointment public.appointments%rowtype;
 begin
-  if not private.clair_is_active_workspace_member(p_workspace_id, v_actor_user_id) then
+  if not private.clair_is_active_workspace_member(p_workspace_id) then
     raise exception 'workspace_membership_missing';
   end if;
 
@@ -153,7 +153,7 @@ begin
     p_workspace_id,
     v_appointment.id,
     v_actor_user_id,
-    'created',
+    'create',
     '{}'::jsonb,
     jsonb_build_object(
       'status', v_appointment.status,

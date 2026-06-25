@@ -41,7 +41,7 @@ Turn the `+ 접수/예약 > 예약하기` entry point from a placeholder toast i
 - Change reservation detail CTA to `접수하기` and open a prefilled appointment check-in form.
 - Send appointment check-in form payloads for weight, visit purpose, department, veterinarian, duration, reception memo, and checked-in time.
 - Extend the appointment check-in RPC boundary with a JSON payload wrapper that updates the linked encounter and patient `weight_kg`.
-- Keep the flow synthetic/demo-data-backed; no remote Supabase operation was executed.
+- Keep the flow synthetic/demo-data-backed. Initial implementation did not execute remote Supabase operations; the 2026-06-25 follow-up below records the scoped staging RPC/readback repair.
 
 ## Out Of Scope
 
@@ -95,6 +95,14 @@ Turn the `+ 접수/예약 > 예약하기` entry point from a placeholder toast i
 - Same-day reservation time options now disable elapsed slots with `지난 시간` and keep future-date reservations available within business hours.
 - Day calendar draft creation now treats today's elapsed slots as invalid, so past-time slots do not open a draft drawer or temporary card.
 - The walk-in server core now rejects `plannedStartAt` values that start before opening or end after closing with `walk_in_outside_business_hours`.
+
+## 2026-06-25 Reservation Create Readback Follow-up
+
+- Staging Supabase was missing `public.clair_create_reception_appointment(text, text, jsonb)`, so valid reservation writes returned a generic create failure before an appointment row could be inserted.
+- The appointment writer migrations now match the existing staging membership helper contract, `private.clair_is_active_workspace_member(p_workspace_id)`, and use the current `appointment_change_logs.change_type = 'create'` constraint value.
+- Appointment create now treats the primary appointment write as authoritative: if the appointment is persisted but the follow-up audit append fails, the API returns the created appointment instead of telling the client the reservation failed.
+- Creating a future reservation now moves the calendar operating date to the reservation date so the newly created card is visible immediately, and calendar readback remains available after navigating back to that date.
+- Scoped staging readback created synthetic Cheongdam appointment `62702ce7-be92-4d40-97e9-8e3e3ef1cebe` for `구름` / `문지아` / `청담 원장`, 2026-06-26 09:00-09:30 KST, status `confirmed`, memo `12`, and weight `12.00`.
 
 ## Result
 
