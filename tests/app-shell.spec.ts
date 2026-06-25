@@ -826,16 +826,13 @@ test("module side panel order type segmented control filters side orders", async
 
   const sortControl = sidePanel.getByTestId("order-queue-sort-control");
   const filterControl = sidePanel.getByTestId("order-queue-filter-control");
-  const densityControl = sidePanel.getByTestId("order-queue-density-control");
   const searchControl = sidePanel.getByTestId("order-queue-search-control");
 
   await expect(sortControl).toHaveAttribute("aria-label", "대기열 정렬");
   await expect(sortControl).toHaveAttribute("data-sort-key", "request");
-  await expect(sortControl).toContainText("요청순");
-  await expect(sortControl).not.toContainText("현재 정렬");
+  await expect(sortControl).toHaveText("");
   await expect(filterControl).toHaveAttribute("aria-label", "대기열 필터");
-  await expect(densityControl).toHaveAttribute("aria-label", "대기열 표시 옵션");
-  await expect(densityControl).toHaveText("M");
+  await expect(sidePanel.getByTestId("order-queue-density-control")).toHaveCount(0);
   await expect(searchControl).toHaveAttribute("aria-label", "대기열 검색 열기");
   await searchControl.click();
   await expect(sidePanel.getByLabel("전체 오더 검색")).toBeVisible();
@@ -845,7 +842,7 @@ test("module side panel order type segmented control filters side orders", async
   await expect(page.getByRole("menu").filter({ hasText: "정렬" })).toContainText("대기 긴 순");
   await page.getByRole("menuitemradio", { name: "대기 긴 순" }).click();
   await expect(sortControl).toHaveAttribute("data-sort-key", "wait");
-  await expect(sortControl).toContainText("대기 긴 순");
+  await expect(sortControl).toHaveText("");
   await page.keyboard.press("Escape");
 
   await filterControl.click();
@@ -853,12 +850,6 @@ test("module side panel order type segmented control filters side orders", async
   await expect(filterControl).toHaveAttribute("data-filter", "unassigned");
   await expect(sidePanel.getByText("소염제 세트")).toBeVisible();
   await expect(sidePanel.getByText("항생제 세트 A")).toBeHidden();
-  await page.keyboard.press("Escape");
-
-  await densityControl.click();
-  await page.getByRole("menuitemradio", { name: "촘촘한 밀도" }).click();
-  await expect(densityControl).toHaveAttribute("data-density", "compact");
-  await expect(densityControl).toHaveText("S");
   await page.keyboard.press("Escape");
 
   await filterControl.click();

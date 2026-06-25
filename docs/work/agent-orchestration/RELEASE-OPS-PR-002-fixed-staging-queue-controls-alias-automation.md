@@ -60,6 +60,8 @@ Restore the compact shared queue header controls on fixed staging and automate t
 
 Keep production blocked. The fixed staging alias workflow is allowed only for successful `staging` branch deployments or a separately approved integration branch.
 
+2026-06-25 browser review correction: the treatment/chart queue header should not keep the visible `요청순` or `M`/`S` compact value labels. The accepted visible header pattern is now three icon-only controls matching the lab queue: sort, filter, and search.
+
 Closeout:
 
 - `docs/completed/agent-orchestration/2026-06-16-fixed-staging-queue-controls-alias-automation-report.html`
