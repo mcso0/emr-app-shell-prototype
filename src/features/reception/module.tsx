@@ -3884,7 +3884,7 @@ function ReceptionScheduleDateControl({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-10 justify-start px-3 !text-[16px] !font-bold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+              className="h-8 justify-start px-3 !text-[16px] !font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
               aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
             />
           }
