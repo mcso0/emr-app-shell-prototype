@@ -1,8 +1,13 @@
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
 } from "@/features/auth/server-role-update-identity";
+import {
+  createSupabaseWorkspacePermissionGateway,
+  type SupabaseWorkspacePermissionClient,
+} from "@/features/auth/supabase-workspace-permission-gateway";
 import {
   completeChart,
   createSupabaseChartCompletionGateway,
@@ -91,6 +96,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(
+          client as unknown as SupabaseWorkspacePermissionClient,
+        ),
+        sessionUserId: identity.actorUserId,
+        workspaceId,
+      })
+    : undefined;
   const result = await completeChart({
     actorUserId: identity.actorUserId,
     workspaceId,
@@ -100,6 +114,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           client as unknown as SupabaseChartCompletionRpcClient
         )
       : undefined,
+    permissionAdapter,
     auditGateway: client
       ? createSupabaseLiveAuditAppendGateway(
           client as unknown as SupabaseLiveAuditAppendRpcClient

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>날짜 기준 업무 큐 공통화 v1 마무리 보고</title>
+    <style>
+      body {
+        color: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        margin: 40px auto;
+        max-width: 880px;
+        padding: 0 24px;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2 {
+        border-top: 1px solid #e5e7eb;
+        font-size: 18px;
+        margin-top: 28px;
+        padding-top: 18px;
+      }
+      code {
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>날짜 기준 업무 큐 공통화 v1 마무리 보고</h1>
+    <p>
+      진료/차트, 조제/처치, 검사/영상, 수납 side panel의 날짜 네비게이터가
+      고정된 "오늘" 표시가 아니라 선택된 운영일을 보여주도록 정리했다. 진료와
+      fulfillment 계열 API read는 <code>date=YYYY-MM-DD</code> query를 따라가며,
+      수납은 이번 v1에서 UI 날짜 계약까지만 맞췄다.
+    </p>
+
+    <h2>이번 마무리에서 정리한 내용</h2>
+    <ul>
+      <li>queue header 계약에 맞게 sort 버튼의 visible label을 복구했다.</li>
+      <li>누락돼 있던 queue display density 버튼을 복구해 기존 header 테스트 계약을 맞췄다.</li>
+      <li>chart side panel 날짜 네비게이터 focused Playwright 테스트를 추가했다.</li>
+      <li>새 테스트는 오늘 badge, 실제 날짜 라벨, 이전/다음 날짜 이동, date picker 선택, chart live queue date query 변경을 검증한다.</li>
+    </ul>
+
+    <h2>검증</h2>
+    <ul>
+      <li><code>npx tsc --noEmit --pretty false</code> 통과.</li>
+      <li><code>npm run lint</code> 통과, error 없음. 현재 dirty checkout의 기존 warning은 남아 있다.</li>
+      <li><code>npm run docs:check</code> 통과.</li>
+      <li><code>npx playwright test tests/chart.spec.ts --grep "chart workspace renders queue|chart queue selection changes|date navigator" --reporter=line</code> 통과.</li>
+    </ul>
+
+    <h2>남은 범위</h2>
+    <p>
+      수납 queue의 API-backed 날짜별 readback은 의도적으로 후속 범위에 남겼다.
+      이번 v1은 수납의 날짜 표시와 조작 계약만 맞추며, billing 데이터 read 기준은
+      별도 billing API 작업에서 확정해야 한다.
+    </p>
+  </body>
+</html>

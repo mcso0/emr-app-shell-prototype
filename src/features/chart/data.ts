@@ -52,13 +52,13 @@ const chartQueueStatuses: OrderQueueStatusDefinition[] = [
   },
   {
     id: "called",
-    label: "호출",
+    label: "호출됨",
     colorToken: "--emr-status-warning-text",
     sortOrder: 20,
   },
   {
     id: "waiting",
-    label: "진료대기",
+    label: "호출 대기",
     colorToken: "--emr-status-neutral-text",
     sortOrder: 30,
   },
