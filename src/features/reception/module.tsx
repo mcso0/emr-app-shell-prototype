@@ -44,6 +44,7 @@ import {
   EmrTaskQueueCard,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
+import { EmrMotionIcon } from "@/components/emr/motion-icon";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import {
   ChevronLeftIcon,
@@ -189,6 +190,7 @@ import {
 } from "@/lib/emr-domain/demo-workspaces";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
+import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
 import {
   getMockPatientBundle,
   mockEncounters,
@@ -2964,6 +2966,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           ))
         ) : searchQuery.trim() ? (
           <EmrListSearchEmptyState
+            motionIcon={
+              <EmrMotionIcon
+                animationData={searchNotFoundMotionIcon}
+                className="size-14"
+              />
+            }
             objectLabel="접수/예약 항목"
             query={searchQuery}
             onClear={() => setSearchQuery("")}

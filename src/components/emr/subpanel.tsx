@@ -485,15 +485,19 @@ export function EmrListHeaderIconButton({
 }
 
 export function EmrListSearchEmptyState(props: {
+  motionIcon?: ReactNode;
   objectLabel?: string;
   onClear: () => void;
   query: string;
 }) {
-  void props;
-
   return (
     <EmrQueueEmptyState
-      icon={<CdsActionsSearchIcon aria-hidden="true" className="size-8" />}
+      icon={
+        props.motionIcon ?? (
+          <CdsActionsSearchIcon aria-hidden="true" className="size-8" />
+        )
+      }
+      iconClassName={props.motionIcon ? "mb-3 size-16" : undefined}
       title="검색 결과가 없습니다."
       data-testid="emr-list-search-empty-state"
     />
@@ -504,12 +508,14 @@ export function EmrQueueEmptyState({
   children,
   className,
   icon,
+  iconClassName,
   title,
   ...props
 }: {
   children?: ReactNode;
   className?: string;
   icon?: ReactNode;
+  iconClassName?: string;
   title?: ReactNode;
 } & ComponentProps<"div">) {
   return (
@@ -520,7 +526,12 @@ export function EmrQueueEmptyState({
       )}
       {...props}
     >
-      <div className="mb-2 flex size-10 items-center justify-center text-[var(--emr-text-placeholder)]">
+      <div
+        className={cn(
+          "mb-2 flex size-10 items-center justify-center text-[var(--emr-text-placeholder)]",
+          iconClassName,
+        )}
+      >
         {icon ?? <CdsFilesBoxIcon aria-hidden="true" className="size-8" />}
       </div>
       <div className="emr-text-dense font-medium text-[var(--emr-text-placeholder)]">
