@@ -490,6 +490,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
   );
   await expect(callDialog).toContainText("환자 / 보호자");
   await expect(callDialog).toContainText("초코 / 최도현");
+  await expect(callDialog.getByText("초코 / 최도현")).toHaveCSS(
+    "text-align",
+    "left",
+  );
   await expect(callDialog).toContainText("접수 시각");
   await expect(callDialog).toContainText("담당 수의사");
   await expect(callDialog).toContainText("진료실");
@@ -497,15 +501,31 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(callDialog).not.toContainText("현재 상태");
   await expect(callDialog).not.toContainText("local outbox");
   await expect(callDialog.getByRole("button", { name: "호출하기" })).toBeDisabled();
+  const defaultRoomCheckbox = callDialog.getByRole("checkbox", {
+    name: "이 진료실을 내 기본 진료실로 저장",
+  });
+  await expect(defaultRoomCheckbox).toBeDisabled();
   await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
   await page.getByRole("option", { name: "2진료실" }).click();
   await expect(callDialog.getByRole("combobox", { name: "호출 진료실" })).toContainText("2진료실");
+  await expect(defaultRoomCheckbox).toBeEnabled();
+  await defaultRoomCheckbox.click();
+  await expect(defaultRoomCheckbox).toBeChecked();
   await expect(callDialog).not.toContainText("room-consult-2");
   await page.getByRole("button", { name: "호출하기" }).last().click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
     "호출됨",
   );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.localStorage.getItem(
+          "clair.chart.callRoomPreference.v1:clair-demo:playwright-default-session",
+        ),
+      ),
+    )
+    .toBe("room-consult-2");
   await expect(page.getByRole("button", { name: "진료 시작" })).toBeVisible();
   await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
   await expect(page.getByTestId("chart-start-locked-state")).toContainText(

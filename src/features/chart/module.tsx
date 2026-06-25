@@ -5237,10 +5237,63 @@ function ChartPreflightField({
 
 function ChartReadonlyField({ value }: { value: string }) {
   return (
-    <div className="flex min-h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 text-right font-medium text-foreground">
-      <span className="w-full truncate">{value}</span>
+    <div className="flex min-h-9 items-center rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-card px-3 text-left font-medium text-foreground">
+      <span className="w-full truncate text-left">{value}</span>
     </div>
   );
+}
+
+const callRoomPreferenceStoragePrefix = "clair.chart.callRoomPreference.v1";
+
+function getCallRoomPreferenceStorageKey({
+  actorUserId,
+  workspaceId,
+}: {
+  actorUserId?: string;
+  workspaceId?: string;
+}) {
+  if (!actorUserId || !workspaceId) return null;
+  return `${callRoomPreferenceStoragePrefix}:${workspaceId}:${actorUserId}`;
+}
+
+function readCallRoomPreference({
+  actorUserId,
+  roomIds,
+  workspaceId,
+}: {
+  actorUserId?: string;
+  roomIds: Set<string>;
+  workspaceId?: string;
+}) {
+  if (typeof window === "undefined") return "";
+  const key = getCallRoomPreferenceStorageKey({ actorUserId, workspaceId });
+  if (!key) return "";
+
+  const storedRoomId = window.localStorage.getItem(key);
+  return storedRoomId && roomIds.has(storedRoomId) ? storedRoomId : "";
+}
+
+function writeCallRoomPreference({
+  actorUserId,
+  roomId,
+  shouldSave,
+  workspaceId,
+}: {
+  actorUserId?: string;
+  roomId: string;
+  shouldSave: boolean;
+  workspaceId?: string;
+}) {
+  if (typeof window === "undefined") return;
+  const key = getCallRoomPreferenceStorageKey({ actorUserId, workspaceId });
+  if (!key) return;
+
+  if (shouldSave) {
+    window.localStorage.setItem(key, roomId);
+    return;
+  }
+
+  window.localStorage.removeItem(key);
 }
 
 function ChartStartLockedState({
@@ -5352,6 +5405,8 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
   const [callDialogOpen, setCallDialogOpen] = useState(false);
   const [selectedCallRoomId, setSelectedCallRoomId] = useState("");
+  const [saveCallRoomPreference, setSaveCallRoomPreference] = useState(false);
+  const [preferredCallRoomId, setPreferredCallRoomId] = useState("");
   const [consultationFlowState, setConsultationFlowState] = useState<{
     action?: "call" | "start";
     status: "idle" | "saving" | "error";
@@ -5585,9 +5640,19 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
       primaryGuardian: selectedLiveQueueRecord.primaryGuardian,
       veterinarianName: selectedLiveQueueRecord.veterinarianName,
     });
+    if (action === "call") {
+      writeCallRoomPreference({
+        actorUserId: authSession?.id,
+        roomId: selectedCallRoomId,
+        shouldSave: saveCallRoomPreference,
+        workspaceId: activeWorkspaceId,
+      });
+      setPreferredCallRoomId(saveCallRoomPreference ? selectedCallRoomId : "");
+    }
     setConsultationFlowState({ action, status: "idle" });
     setCallDialogOpen(false);
     setSelectedCallRoomId("");
+    setSaveCallRoomPreference(false);
     toast.success(action === "call" ? "호출 상태로 전환했어요." : "진료를 시작했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
@@ -5634,6 +5699,20 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   useEffect(() => {
     hydrateAuthSession();
   }, [hydrateAuthSession]);
+
+  const handleOpenCallDialog = () => {
+    const roomIds = new Set(getConsultationCallRooms().map((room) => room.id));
+    const storedRoomId = readCallRoomPreference({
+      actorUserId: authSession?.id,
+      roomIds,
+      workspaceId: activeWorkspaceId,
+    });
+
+    setPreferredCallRoomId(storedRoomId);
+    setSaveCallRoomPreference(Boolean(storedRoomId));
+    setSelectedCallRoomId(storedRoomId);
+    setCallDialogOpen(true);
+  };
 
   useEffect(() => {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
@@ -5845,7 +5924,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 {primaryAction === "call" ? (
                   <Button
                     disabled={primaryActionBusy}
-                    onClick={() => setCallDialogOpen(true)}
+                    onClick={handleOpenCallDialog}
                   >
                     호출하기
                   </Button>
@@ -5882,7 +5961,10 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
         open={callDialogOpen}
         onOpenChange={(open) => {
           setCallDialogOpen(open);
-          if (!open) setSelectedCallRoomId("");
+          if (!open) {
+            setSelectedCallRoomId("");
+            setSaveCallRoomPreference(false);
+          }
         }}
       >
         <EmrDialogShell
@@ -5939,7 +6021,13 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
             <ChartPreflightField label="진료실">
               <Select
                 value={selectedCallRoomId}
-                onValueChange={(value) => setSelectedCallRoomId(value ?? "")}
+                onValueChange={(value) => {
+                  const nextRoomId = value ?? "";
+                  setSelectedCallRoomId(nextRoomId);
+                  if (preferredCallRoomId && nextRoomId === preferredCallRoomId) {
+                    setSaveCallRoomPreference(true);
+                  }
+                }}
                 disabled={consultationFlowState.status === "saving"}
               >
                 <SelectTrigger
@@ -5959,6 +6047,23 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 </SelectContent>
               </Select>
             </ChartPreflightField>
+            <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3 emr-text-metadata">
+              <span aria-hidden="true" />
+              <label className="flex min-h-7 items-center gap-2 text-[var(--emr-text-secondary)]">
+                <EmrTableCheckbox
+                  aria-label="이 진료실을 내 기본 진료실로 저장"
+                  checked={saveCallRoomPreference}
+                  disabled={
+                    consultationFlowState.status === "saving" ||
+                    !selectedCallRoomId
+                  }
+                  onCheckedChange={(checked) =>
+                    setSaveCallRoomPreference(Boolean(checked))
+                  }
+                />
+                <span>이 진료실을 내 기본 진료실로 저장</span>
+              </label>
+            </div>
           </div>
           {consultationFlowState.status === "error" &&
           consultationFlowState.action === "call" ? (
