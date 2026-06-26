@@ -77,5 +77,7 @@ export function ReceptionPanelStateMessage({
 }
 
 export function ReceptionEmptyState({ children }: { children: React.ReactNode }) {
-  return <EmrQueueEmptyState>{children}</EmrQueueEmptyState>;
+  return (
+    <EmrQueueEmptyState iconClassName="mb-1.5">{children}</EmrQueueEmptyState>
+  );
 }

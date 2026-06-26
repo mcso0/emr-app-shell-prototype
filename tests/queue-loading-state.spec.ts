@@ -172,18 +172,18 @@ test("reception queue loading and empty states keep the same icon box size", asy
     .toEqual({ height: 56, width: 56 });
 
   await queueRoute.release();
-  await expect(page.getByText("접수/예약 업무가 없습니다.")).toBeVisible();
+  await expect(page.getByText("접수/예약이 없습니다")).toBeVisible();
 
   await expect
     .poll(async () => getQueueStateIconBoxSize(
       page,
-      "접수/예약 업무가 없습니다.",
+      "접수/예약이 없습니다",
     ))
     .toEqual({ height: 56, width: 56 });
   await expect
     .poll(async () => getQueueStateIconRootTagName(
       page,
-      "접수/예약 업무가 없습니다.",
+      "접수/예약이 없습니다",
     ))
     .toBe("DIV");
 });
