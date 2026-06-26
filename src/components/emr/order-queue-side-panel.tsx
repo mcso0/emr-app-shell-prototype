@@ -390,12 +390,12 @@ function getOrderQueueEmptyStateTitle({
   selectedDate?: string;
   todayDate?: string;
 }) {
-  if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다.`;
+  if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다`;
 
   void selectedDate;
   void todayDate;
 
-  return `요청된 ${emptyObjectLabel}가 없습니다.`;
+  return `${emptyObjectLabel}가 없습니다`;
 }
 
 function OrderQueueSortMenu({

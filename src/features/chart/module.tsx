@@ -1151,7 +1151,7 @@ export function ChartSidePanel({
       items={items}
       listLabel="진료 대기열"
       loading={liveQueueStatus === "loading"}
-      loadingTitle="진료차트 정보를 불러오는 중입니다."
+      loadingTitle="진료차트 정보를 불러오는 중입니다"
       selectedDate={selectedDate}
       selectedItemId={selectedEncounterId}
       statuses={getChartQueueStatuses()}
