@@ -298,6 +298,10 @@ test("reception day calendar reader migration keeps appointment and walk-in rows
   expect(migrationSource).toContain("e.workspace_id = p_workspace_id");
   expect(migrationSource).toContain("e.appointment_id is null");
   expect(migrationSource).toContain("'scheduledEndAt', a.scheduled_end_at");
+  expect(migrationSource).toContain("'patient',");
+  expect(migrationSource).toContain("'primaryGuardian',");
+  expect(migrationSource).toContain("left join public.patients p");
+  expect(migrationSource).toContain("left join public.guardians g");
   expect(migrationSource).toContain("'durationMinutes', e.duration_minutes");
   expect(migrationSource).toContain("'checkedInAt', e.checked_in_at");
   expect(migrationSource).toContain("'enteredAt', q.entered_at");

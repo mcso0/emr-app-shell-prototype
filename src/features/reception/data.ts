@@ -362,13 +362,22 @@ export const getGuardianDisplay = (guardian?: Guardian) => {
   return guardian.mobilePhone ? `${guardian.name} · ${guardian.mobilePhone}` : guardian.name;
 };
 
-export const getAppointmentPatient = (appointment: Appointment) =>
+export const getAppointmentPatient = (
+  appointment: Appointment,
+  dataset: ReceptionProfileDataset = defaultProfileDataset
+) =>
+  dataset.patients.find((patient) => patient.id === appointment.patientId) ??
   mockPatients.find((patient) => patient.id === appointment.patientId);
 
-export const getAppointmentGuardian = (appointment: Appointment) =>
+export const getAppointmentGuardian = (
+  appointment: Appointment,
+  dataset: ReceptionProfileDataset = defaultProfileDataset
+) =>
   appointment.guardianId
-    ? mockGuardians.find((guardian) => guardian.id === appointment.guardianId)
-    : getPrimaryGuardian(appointment.patientId);
+    ? dataset.guardians.find((guardian) => guardian.id === appointment.guardianId) ??
+      mockGuardians.find((guardian) => guardian.id === appointment.guardianId) ??
+      getPrimaryGuardian(appointment.patientId, dataset)
+    : getPrimaryGuardian(appointment.patientId, dataset);
 
 export const getAppointmentVeterinarianName = (appointment: Appointment) =>
   getStaffName(appointment.assignedVeterinarianId) ?? "미배정";

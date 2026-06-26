@@ -2007,8 +2007,8 @@ test("server-backed reception day calendar read hydrates appointments and walk-i
             appointment: {
               id: "appointment-den63-coco",
               workspaceId: "clair-demo",
-              patientId: "patient-coco",
-              guardianId: "guardian-lee-jieun",
+              patientId: "patient-live-choco-den63",
+              guardianId: "guardian-live-dohyun-den63",
               assignedVeterinarianId: "user-vet-suji",
               scheduledStartAt: "2026-05-01T09:10:00+09:00",
               scheduledEndAt: "2026-05-01T09:30:00+09:00",
@@ -2017,6 +2017,27 @@ test("server-backed reception day calendar read hydrates appointments and walk-i
               status: "confirmed",
               createdAt: "2026-05-01T08:00:00+09:00",
               updatedAt: "2026-05-01T08:00:00+09:00",
+            },
+            patient: {
+              id: "patient-live-choco-den63",
+              workspaceId: "clair-demo",
+              patientNo: "P-LIVE-DEN63",
+              name: "초코",
+              species: "dog",
+              breed: "Maltese",
+              sex: "male",
+              handlingCautionLocked: true,
+              status: "active",
+              createdAt: "2026-05-01T00:00:00+09:00",
+              updatedAt: "2026-05-01T00:00:00+09:00",
+            },
+            primaryGuardian: {
+              id: "guardian-live-dohyun-den63",
+              workspaceId: "clair-demo",
+              name: "최도현",
+              mobilePhone: "010-4911-0004",
+              createdAt: "2026-05-01T00:00:00+09:00",
+              updatedAt: "2026-05-01T00:00:00+09:00",
             },
           },
           {
@@ -2058,10 +2079,16 @@ test("server-backed reception day calendar read hydrates appointments and walk-i
   await expect.poll(() => requested).toBe(true);
   await expect(
     page.getByTestId("appointment-card-appointment-den63-coco"),
-  ).toContainText("DEN-63 persisted appointment");
+  ).toContainText("초코");
+  await expect(
+    page.getByTestId("appointment-card-appointment-den63-coco"),
+  ).toContainText("최도현");
   await expect(
     page.getByTestId("walkin-card-encounter-den63-walkin-nabi"),
-  ).toContainText("DEN-63 persisted walk-in");
+  ).toContainText("나비");
+  await expect(
+    page.getByTestId("walkin-card-encounter-den63-walkin-nabi"),
+  ).toContainText("오세아");
 });
 
 test("reception day and week calendars place walk-in cards by actual start minute and duration", async ({

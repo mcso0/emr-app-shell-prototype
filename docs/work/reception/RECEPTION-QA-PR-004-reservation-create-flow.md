@@ -104,6 +104,13 @@ Turn the `+ 접수/예약 > 예약하기` entry point from a placeholder toast i
 - Creating a future reservation now moves the calendar operating date to the reservation date so the newly created card is visible immediately, and calendar readback remains available after navigating back to that date.
 - Scoped staging readback created synthetic Cheongdam appointment `62702ce7-be92-4d40-97e9-8e3e3ef1cebe` for `구름` / `문지아` / `청담 원장`, 2026-06-26 09:00-09:30 KST, status `confirmed`, memo `12`, and weight `12.00`.
 
+## 2026-06-26 Calendar Card Profile Follow-up
+
+- Reservation creation was confirmed in staging, but the day calendar card rendered `환자 미지정 · 보호자 미지정` while the detail drawer displayed the selected patient and guardian.
+- Root cause was display/readback coupling, not creation persistence: `appointments.patient_id` and `appointments.guardian_id` were saved correctly, but `clair_list_reception_day_calendar(...)` returned only appointment IDs without embedded `patient` / `primaryGuardian` records, and the calendar appointment card looked up names through mock-only appointment helpers.
+- Calendar appointment cards now receive the live `ReceptionProfileDataset` and resolve appointment patient/guardian names from live profile state first, with mock fallback preserved for legacy demo data.
+- The calendar reader function now embeds patient and primary guardian objects for appointment and walk-in records. Scoped staging readback for appointment `2c7bcd75-348b-48ff-9073-1240dda16e5d` returned `초코` / `최도현` from `public.clair_list_reception_day_calendar('workspace-clair-cheongdam', date '2026-06-27')`.
+
 ## Result
 
 Ready for Human Review.
