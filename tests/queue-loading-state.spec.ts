@@ -105,6 +105,17 @@ async function getQueueStateIconRootTagName(page: Page, stateText: string) {
   });
 }
 
+async function getQueueStateIconTextGap(page: Page, stateText: string) {
+  return page.getByText(stateText, { exact: true }).evaluate((textElement) => {
+    const iconElement = textElement.previousElementSibling;
+    if (!iconElement) return null;
+
+    const iconBox = iconElement.getBoundingClientRect();
+    const textBox = textElement.getBoundingClientRect();
+    return Math.round(textBox.top - iconBox.bottom);
+  });
+}
+
 test("reception queue loading uses the side-panel body motion state instead of top loading copy", async ({
   page,
 }) => {
@@ -137,7 +148,7 @@ test("reception queue loading uses the side-panel body motion state instead of t
   await queueRoute.release();
 });
 
-test("reception queue loading and empty states keep the same icon box size", async ({
+test("reception queue empty state keeps the icon and copy visually tight", async ({
   page,
 }) => {
   await grantCheongdamWorkspaceAccess(page);
@@ -179,7 +190,13 @@ test("reception queue loading and empty states keep the same icon box size", asy
       page,
       "접수/예약이 없습니다",
     ))
-    .toEqual({ height: 56, width: 56 });
+    .toEqual({ height: 40, width: 40 });
+  await expect
+    .poll(async () => getQueueStateIconTextGap(
+      page,
+      "접수/예약이 없습니다",
+    ))
+    .toBe(8);
   await expect
     .poll(async () => getQueueStateIconRootTagName(
       page,
