@@ -102,6 +102,7 @@ import {
   getReceptionQueueRows,
   getTodayAppointments,
   type ReceptionDraftCheckIn,
+  type ReceptionProfileDataset,
   type ReceptionPatientSummary,
 } from "@/features/reception/data";
 import {
@@ -3522,6 +3523,7 @@ function ScheduleAppointmentCard({
   appointment,
   onClearCalendarTransientSelection,
   onSelect,
+  profileDataset,
   selected,
   veterinarians = allVeterinarians,
 }: {
@@ -3529,11 +3531,12 @@ function ScheduleAppointmentCard({
   fillHeight?: boolean;
   onClearCalendarTransientSelection: () => void;
   onSelect: () => void;
+  profileDataset?: ReceptionProfileDataset;
   selected: boolean;
   veterinarians?: Veterinarian[];
 }) {
-  const patient = getAppointmentPatient(appointment);
-  const guardian = getAppointmentGuardian(appointment);
+  const patient = getAppointmentPatient(appointment, profileDataset);
+  const guardian = getAppointmentGuardian(appointment, profileDataset);
   const visitPurpose = appointment.visitPurpose ?? "내원";
   const visitDetail = appointment.symptomNote ?? visitPurpose;
   const noShow =
@@ -4874,6 +4877,7 @@ function DayScheduleBoard({
   onCreateCalendarDraft,
   onSelectEncounter,
   onSelectAppointment,
+  profileDataset,
   selectedAppointmentId,
   selectedVeterinarians,
 }: {
@@ -4889,6 +4893,7 @@ function DayScheduleBoard({
   onCreateCalendarDraft: (draft: ReceptionCalendarDraftInput) => void;
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
+  profileDataset: ReceptionProfileDataset;
   selectedAppointmentId?: Appointment["id"];
   selectedVeterinarians: Veterinarian[];
   assignmentVeterinarians: Veterinarian[];
@@ -5111,6 +5116,7 @@ function DayScheduleBoard({
                           <ScheduleAppointmentCard
                             fillHeight
                             appointment={item.appointment}
+                            profileDataset={profileDataset}
                             veterinarians={selectedVeterinarians}
                             onClearCalendarTransientSelection={
                               onClearCalendarTransientSelection
@@ -5157,6 +5163,7 @@ function WeekScheduleBoard({
   onCreateWalkIn,
   onSelectEncounter,
   onSelectAppointment,
+  profileDataset,
   selectedAppointmentId,
   veterinarians = allVeterinarians,
 }: {
@@ -5170,6 +5177,7 @@ function WeekScheduleBoard({
   onCreateWalkIn: () => void;
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
+  profileDataset: ReceptionProfileDataset;
   selectedAppointmentId?: Appointment["id"];
   veterinarians?: Veterinarian[];
 }) {
@@ -5301,6 +5309,7 @@ function WeekScheduleBoard({
                       <ScheduleAppointmentCard
                         fillHeight
                         appointment={appointment}
+                        profileDataset={profileDataset}
                         veterinarians={veterinarians}
                         onClearCalendarTransientSelection={
                           onClearCalendarTransientSelection
@@ -5412,6 +5421,7 @@ function ReceptionScheduleBoard({
   onCreateWalkIn,
   onSelectEncounter,
   onSelectAppointment,
+  profileDataset,
   selectedAppointmentId,
   selectedVeterinarians,
   view,
@@ -5431,6 +5441,7 @@ function ReceptionScheduleBoard({
   onCreateWalkIn: () => void;
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
+  profileDataset: ReceptionProfileDataset;
   selectedAppointmentId?: Appointment["id"];
   selectedVeterinarians: Veterinarian[];
   view: ReceptionCalendarView;
@@ -5600,6 +5611,7 @@ function ReceptionScheduleBoard({
                 onClearCalendarTransientSelection
               }
               onCreateCalendarDraft={onCreateCalendarDraft}
+              profileDataset={profileDataset}
               selectedAppointmentId={selectedAppointmentId}
               selectedVeterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
@@ -5620,6 +5632,7 @@ function ReceptionScheduleBoard({
                 onClearCalendarTransientSelection
               }
               selectedAppointmentId={selectedAppointmentId}
+              profileDataset={profileDataset}
               veterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
               onSelectEncounter={onSelectEncounter}
@@ -5704,6 +5717,10 @@ export function ReceptionContent() {
     (state) => state.persistedCalendarAppointments,
   );
   const patients = usePatientProfileStore((state) => state.patients);
+  const guardians = usePatientProfileStore((state) => state.guardians);
+  const patientGuardians = usePatientProfileStore(
+    (state) => state.patientGuardians,
+  );
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const clearModuleRefreshAction = useLayoutStore(
     (state) => state.clearModuleRefreshAction,
@@ -5747,6 +5764,10 @@ export function ReceptionContent() {
         (draft) => draft.encounter.workspaceId === workspaceId,
       ),
     [draftCheckIns, workspaceId],
+  );
+  const profileDataset = useMemo(
+    () => ({ guardians, patientGuardians, patients }),
+    [guardians, patientGuardians, patients],
   );
   const calendarDraftCheckIns = useMemo(
     () => workspaceDraftCheckIns.filter(isReceptionDraftCalendarActive),
@@ -6194,6 +6215,7 @@ export function ReceptionContent() {
         onEmptySlotAffordancePointerMove={() =>
           setEmptySlotAffordanceSuspended(false)
         }
+        profileDataset={profileDataset}
         selectedAppointmentId={selectedAppointmentId}
         selectedVeterinarians={selectedVeterinarians}
         view={calendarView}

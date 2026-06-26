@@ -1,5 +1,6 @@
 -- DEN-63: local-first reception day calendar reader.
--- This migration is not applied to remote Supabase by this work.
+-- 2026-06-26 follow-up: staging Supabase was updated with the embedded
+-- patient/guardian profile shape used by the live calendar cards.
 
 create or replace function public.clair_list_reception_day_calendar(
   p_workspace_id text,
@@ -39,6 +40,50 @@ begin
           'createdAt', a.created_at,
           'updatedAt', a.updated_at
         ),
+        'patient',
+        case
+          when p.id is null then null
+          else jsonb_build_object(
+            'id', p.id,
+            'workspaceId', p.workspace_id,
+            'patientNo', p.patient_no,
+            'name', p.name,
+            'species', p.species,
+            'breed', p.breed,
+            'birthDate', p.birth_date,
+            'estimatedAgeText', p.estimated_age_text,
+            'sex', p.sex,
+            'neutered', p.neutered,
+            'microchipNo', p.microchip_no,
+            'patientRegistrationNo', p.patient_registration_no,
+            'weightKg', p.weight_kg,
+            'allergyNote', p.allergy_note,
+            'specialNote', p.special_note,
+            'handlingCautionNote', p.handling_caution_note,
+            'handlingCautionLocked', p.handling_caution_locked,
+            'status', p.status,
+            'createdAt', p.created_at,
+            'updatedAt', p.updated_at
+          )
+        end,
+        'primaryGuardian',
+        case
+          when g.id is null then null
+          else jsonb_build_object(
+            'id', g.id,
+            'workspaceId', g.workspace_id,
+            'name', g.name,
+            'mobilePhone', g.mobile_phone,
+            'phone', g.phone,
+            'email', g.email,
+            'birthDate', g.birth_date,
+            'address', g.address,
+            'occupation', g.occupation,
+            'memo', g.memo,
+            'createdAt', g.created_at,
+            'updatedAt', g.updated_at
+          )
+        end,
         'encounter',
         case
           when e.id is null then null
@@ -86,6 +131,13 @@ begin
       on e.workspace_id = a.workspace_id
       and e.appointment_id = a.id
       and e.status <> 'cancelled'
+    left join public.patients p
+      on p.workspace_id = a.workspace_id
+      and p.id = a.patient_id
+      and p.status <> 'deleted'
+    left join public.guardians g
+      on g.workspace_id = a.workspace_id
+      and g.id = a.guardian_id
     left join public.waiting_queue_entries q
       on q.workspace_id = e.workspace_id
       and q.encounter_id = e.id
@@ -123,6 +175,50 @@ begin
           'createdAt', e.created_at,
           'updatedAt', e.updated_at
         ),
+        'patient',
+        case
+          when p.id is null then null
+          else jsonb_build_object(
+            'id', p.id,
+            'workspaceId', p.workspace_id,
+            'patientNo', p.patient_no,
+            'name', p.name,
+            'species', p.species,
+            'breed', p.breed,
+            'birthDate', p.birth_date,
+            'estimatedAgeText', p.estimated_age_text,
+            'sex', p.sex,
+            'neutered', p.neutered,
+            'microchipNo', p.microchip_no,
+            'patientRegistrationNo', p.patient_registration_no,
+            'weightKg', p.weight_kg,
+            'allergyNote', p.allergy_note,
+            'specialNote', p.special_note,
+            'handlingCautionNote', p.handling_caution_note,
+            'handlingCautionLocked', p.handling_caution_locked,
+            'status', p.status,
+            'createdAt', p.created_at,
+            'updatedAt', p.updated_at
+          )
+        end,
+        'primaryGuardian',
+        case
+          when g.id is null then null
+          else jsonb_build_object(
+            'id', g.id,
+            'workspaceId', g.workspace_id,
+            'name', g.name,
+            'mobilePhone', g.mobile_phone,
+            'phone', g.phone,
+            'email', g.email,
+            'birthDate', g.birth_date,
+            'address', g.address,
+            'occupation', g.occupation,
+            'memo', g.memo,
+            'createdAt', g.created_at,
+            'updatedAt', g.updated_at
+          )
+        end,
         'queueEntry',
         case
           when q.id is null then null
@@ -141,6 +237,13 @@ begin
         end
       ) as record
     from public.encounters e
+    left join public.patients p
+      on p.workspace_id = e.workspace_id
+      and p.id = e.patient_id
+      and p.status <> 'deleted'
+    left join public.guardians g
+      on g.workspace_id = e.workspace_id
+      and g.id = e.guardian_id
     left join public.waiting_queue_entries q
       on q.workspace_id = e.workspace_id
       and q.encounter_id = e.id
@@ -166,6 +269,6 @@ end;
 $$;
 
 comment on function public.clair_list_reception_day_calendar(text, date) is
-  'DEN-63 local-first reader for workspace-scoped reception day calendar appointments and encounters.';
+  'DEN-63 local-first reader for workspace-scoped reception day calendar appointments, encounters, and embedded patient/guardian profiles.';
 
 grant execute on function public.clair_list_reception_day_calendar(text, date) to authenticated;
