@@ -912,8 +912,32 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     nabiAppointment.getByTestId("appointment-purpose-appointment-nabi-260501"),
   ).toContainText("나비 · 오세아");
   await expect(nabiAppointment).toContainText("10:45-11:00");
-  await expect(nabiAppointment).toContainText("피부 재진");
+  await expect(nabiAppointment).not.toContainText("피부 재진");
   await expect(nabiAppointment).toHaveCSS("height", "28px");
+  const nabiBadgeMetrics = await nabiAppointment
+    .getByTestId("appointment-card-appointment-nabi-260501-badge")
+    .evaluate((badge) => {
+      const parent = badge.parentElement;
+      if (!parent) return null;
+
+      const badgeBox = badge.getBoundingClientRect();
+      const parentBox = parent.getBoundingClientRect();
+
+      return {
+        badgeHeight: Math.round(badgeBox.height),
+        parentHeight: Math.round(parentBox.height),
+        parentTestId: parent.getAttribute("data-testid"),
+      };
+    });
+
+  if (!nabiBadgeMetrics)
+    throw new Error("Expected Nabi appointment badge metrics");
+  expect(nabiBadgeMetrics.parentTestId).toBe(
+    "appointment-card-appointment-nabi-260501",
+  );
+  expect(nabiBadgeMetrics.parentHeight).toBeGreaterThanOrEqual(
+    nabiBadgeMetrics.badgeHeight,
+  );
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;
     if (!parent) return null;
@@ -2121,8 +2145,32 @@ test("reception day and week calendars place walk-in cards by actual start minut
   const shortCard = page.getByTestId("walkin-card-encounter-time-axis-minutes");
   const longCard = page.getByTestId("walkin-card-encounter-time-axis-long");
   await expect(shortCard).toContainText("15:13");
-  await expect(shortCard).toContainText("30분");
+  await expect(shortCard).not.toContainText("30분");
   await expect(longCard).toContainText("90분");
+  const shortCardBadgeMetrics = await shortCard
+    .getByTestId("walkin-card-encounter-time-axis-minutes-badge")
+    .evaluate((badge) => {
+      const parent = badge.parentElement;
+      if (!parent) return null;
+
+      const badgeBox = badge.getBoundingClientRect();
+      const parentBox = parent.getBoundingClientRect();
+
+      return {
+        badgeHeight: Math.round(badgeBox.height),
+        parentHeight: Math.round(parentBox.height),
+        parentTestId: parent.getAttribute("data-testid"),
+      };
+    });
+
+  if (!shortCardBadgeMetrics)
+    throw new Error("Expected short walk-in badge metrics");
+  expect(shortCardBadgeMetrics.parentTestId).toBe(
+    "walkin-card-encounter-time-axis-minutes",
+  );
+  expect(shortCardBadgeMetrics.parentHeight).toBeGreaterThanOrEqual(
+    shortCardBadgeMetrics.badgeHeight,
+  );
 
   const dayMetrics = await shortCard.evaluate((card) => {
     const row = document.querySelector('[data-testid="day-hour-row-15"]');

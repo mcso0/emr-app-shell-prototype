@@ -1989,6 +1989,16 @@ const getAppointmentDurationLabel = (appointment: Appointment) => {
   return `${minutes}분`;
 };
 
+const getAppointmentDurationMinutes = (appointment: Appointment) => {
+  if (!appointment.scheduledEndAt) return scheduleSlotMinutes;
+
+  const start = new Date(appointment.scheduledStartAt).getTime();
+  const end = new Date(appointment.scheduledEndAt).getTime();
+  const minutes = Math.round((end - start) / 60000);
+
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : scheduleSlotMinutes;
+};
+
 const getReceptionDrawerDurationLabel = ({
   appointment,
   encounter,
@@ -3529,7 +3539,14 @@ function ScheduleAppointmentCard({
   const noShow =
     appointment.status === "no_show" || appointment.status === "cancelled";
   const checkedIn = appointment.status === "checked_in";
-  const cardType = noShow ? "noShow" : checkedIn ? "compact" : "default";
+  const compactDuration = getAppointmentDurationMinutes(appointment) <= 30;
+  const cardType = compactDuration
+    ? "compact"
+    : noShow
+      ? "noShow"
+      : checkedIn
+        ? "compact"
+        : "default";
   const patientLabel = patient?.name ?? "환자 미지정";
   const guardianLabel = guardian?.name ?? "보호자 미지정";
   const timeLabel = getScheduleTimeRangeLabelFromIso({
@@ -3630,6 +3647,10 @@ function ScheduleWalkInQueueCard({
     .filter(Boolean)
     .join(" · ");
   const unassignedCompact = displayMode === "unassignedCompact";
+  const compactDuration =
+    (draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration) ?? 30) <=
+    30;
+  const cardType = unassignedCompact || compactDuration ? "compact" : "default";
 
   return (
     <CalendarTaskCard
@@ -3659,7 +3680,7 @@ function ScheduleWalkInQueueCard({
       className={
         unassignedCompact ? "w-[min(360px,100%)] !flex-none" : undefined
       }
-      description={unassignedCompact ? undefined : description}
+      description={cardType === "compact" ? undefined : description}
       fillHeight={fillHeight}
       guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
@@ -3670,7 +3691,7 @@ function ScheduleWalkInQueueCard({
       testId={`walkin-card-${draft.encounter.id}`}
       timeLabel={timeLabel}
       tone={unassignedCompact ? "neutral" : "default"}
-      type={unassignedCompact ? "compact" : "default"}
+      type={cardType}
     />
   );
 }
