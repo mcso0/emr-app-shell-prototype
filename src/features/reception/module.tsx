@@ -1411,7 +1411,7 @@ function getReceptionEmptyStateCopy({
   void queueSummary;
   void todayDate;
 
-  return "접수/예약 업무가 없습니다.";
+  return "접수/예약이 없습니다";
 }
 
 const formatPatientWeightKgInput = (weightKg?: number) =>
