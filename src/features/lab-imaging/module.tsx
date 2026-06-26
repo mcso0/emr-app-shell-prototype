@@ -1697,7 +1697,7 @@ export function LabSidePanel({
   );
   const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
-    emptyObjectLabel: "임상병리 업무",
+    emptyObjectLabel: "검사 업무",
     filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
     selectedDate,
     todayDate,
@@ -1768,7 +1768,7 @@ export function LabSidePanel({
       />
       <EmrSubpanelBody>
         {showLabQueueLoadingState ? (
-          <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다." />
+          <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다" />
         ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel={queueView === "order" ? "검사 대기열 항목" : "차트별 검사"}
@@ -1956,7 +1956,7 @@ export function ImagingSidePanel({
       />
       <EmrSubpanelBody>
         {showImagingQueueLoadingState ? (
-          <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다." />
+          <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다" />
         ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel={queueView === "order" ? "영상 대기열 항목" : "차트별 영상"}
@@ -2007,12 +2007,12 @@ function getDatedQueueEmptyStateTitle({
   selectedDate: string;
   todayDate: string;
 }) {
-  if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다.`;
+  if (filtered) return `조건에 맞는 ${emptyObjectLabel}가 없습니다`;
 
   void selectedDate;
   void todayDate;
 
-  return `요청된 ${emptyObjectLabel}가 없습니다.`;
+  return `${emptyObjectLabel}가 없습니다`;
 }
 
 function LabResultInputSection({
