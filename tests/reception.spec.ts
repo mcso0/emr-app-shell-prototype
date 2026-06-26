@@ -925,6 +925,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
       return {
         badgeHeight: Math.round(badgeBox.height),
+        badgeTopInset: Math.round(badgeBox.top - parentBox.top),
         parentHeight: Math.round(parentBox.height),
         parentTestId: parent.getAttribute("data-testid"),
       };
@@ -938,6 +939,8 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   expect(nabiBadgeMetrics.parentHeight).toBeGreaterThanOrEqual(
     nabiBadgeMetrics.badgeHeight,
   );
+  expect(nabiBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(7);
+  expect(nabiBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(9);
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;
     if (!parent) return null;
@@ -2185,6 +2188,7 @@ test("reception day and week calendars place walk-in cards by actual start minut
 
       return {
         badgeHeight: Math.round(badgeBox.height),
+        badgeTopInset: Math.round(badgeBox.top - parentBox.top),
         parentHeight: Math.round(parentBox.height),
         parentTestId: parent.getAttribute("data-testid"),
       };
@@ -2198,6 +2202,8 @@ test("reception day and week calendars place walk-in cards by actual start minut
   expect(shortCardBadgeMetrics.parentHeight).toBeGreaterThanOrEqual(
     shortCardBadgeMetrics.badgeHeight,
   );
+  expect(shortCardBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(7);
+  expect(shortCardBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(9);
 
   const dayMetrics = await shortCard.evaluate((card) => {
     const row = document.querySelector('[data-testid="day-hour-row-15"]');
@@ -5333,6 +5339,24 @@ test("reception clears an active drag preview immediately when selecting an exis
   await appointmentCard.click();
   await expect(page.getByTestId("reception-draft-task-drawer")).toHaveCount(0);
   await expect(page.getByText("예약 상세").first()).toBeVisible();
+});
+
+test("reception appointment calendar card does not add a selected ring while its drawer is open", async ({
+  page,
+}) => {
+  await page.goto("/w/clair-demo/reception?modulePanel=open");
+
+  const appointmentCard = page.getByTestId(
+    "appointment-card-appointment-nabi-260501",
+  );
+  await expect(appointmentCard).toBeVisible();
+  await appointmentCard.click();
+
+  await expect
+    .poll(() =>
+      appointmentCard.evaluate((card) => getComputedStyle(card).boxShadow),
+    )
+    .not.toContain("inset");
 });
 
 test("reception keeps drag preview flush when crossing into a scheduled hour", async ({

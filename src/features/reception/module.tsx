@@ -2243,7 +2243,6 @@ type CalendarTaskCardProps = {
   patientLabel: string;
   purposeLabel: string;
   purposeTestId?: string;
-  selected?: boolean;
   testId: string;
   timeLabel?: string;
   tone?: "default" | "neutral";
@@ -2267,7 +2266,6 @@ function CalendarTaskCard({
   patientLabel,
   purposeLabel,
   purposeTestId,
-  selected,
   testId,
   timeLabel,
   tone = "default",
@@ -2286,19 +2284,16 @@ function CalendarTaskCard({
     <button
       type="button"
       aria-label={ariaLabel}
-      aria-pressed={selected}
       className={cn(
         "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
         fillHeight ? "h-full w-full flex-none" : "flex-1",
-        compact ? "flex-row items-center gap-[8px]" : "flex-col gap-[6px]",
+        compact ? "flex-row items-start gap-[8px]" : "flex-col gap-[6px]",
         !fillHeight && compact && "h-[36px]",
         !fillHeight && type === "default" && "h-[80px]",
         !fillHeight && noShow && "h-[60px]",
         neutral
           ? "border-border bg-muted text-foreground hover:bg-muted/80"
           : (veterinarianToneClassName ?? calendarTaskCardToneClasses[badgeType]),
-        selected &&
-          "border-[var(--emr-line-selected)] ring-2 ring-inset ring-[var(--emr-line-selected)]",
         "focus-visible:border-[3px] focus-visible:border-[var(--emr-topbar-tab-active-close)] focus-visible:shadow-none",
         disabled && "opacity-50",
         className,
@@ -3524,7 +3519,6 @@ function ScheduleAppointmentCard({
   onClearCalendarTransientSelection,
   onSelect,
   profileDataset,
-  selected,
   veterinarians = allVeterinarians,
 }: {
   appointment: Appointment;
@@ -3532,7 +3526,6 @@ function ScheduleAppointmentCard({
   onClearCalendarTransientSelection: () => void;
   onSelect: () => void;
   profileDataset?: ReceptionProfileDataset;
-  selected: boolean;
   veterinarians?: Veterinarian[];
 }) {
   const patient = getAppointmentPatient(appointment, profileDataset);
@@ -3591,7 +3584,6 @@ function ScheduleAppointmentCard({
       patientLabel={patientLabel}
       purposeLabel={visitPurpose}
       purposeTestId={`appointment-purpose-${appointment.id}`}
-      selected={selected}
       testId={`appointment-card-${appointment.id}`}
       timeLabel={timeLabel}
       type={cardType}
@@ -4878,7 +4870,6 @@ function DayScheduleBoard({
   onSelectEncounter,
   onSelectAppointment,
   profileDataset,
-  selectedAppointmentId,
   selectedVeterinarians,
 }: {
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
@@ -4894,7 +4885,6 @@ function DayScheduleBoard({
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   profileDataset: ReceptionProfileDataset;
-  selectedAppointmentId?: Appointment["id"];
   selectedVeterinarians: Veterinarian[];
   assignmentVeterinarians: Veterinarian[];
 }) {
@@ -5121,9 +5111,6 @@ function DayScheduleBoard({
                             onClearCalendarTransientSelection={
                               onClearCalendarTransientSelection
                             }
-                            selected={
-                              item.appointment.id === selectedAppointmentId
-                            }
                             onSelect={() =>
                               onSelectAppointment(item.appointment)
                             }
@@ -5164,7 +5151,6 @@ function WeekScheduleBoard({
   onSelectEncounter,
   onSelectAppointment,
   profileDataset,
-  selectedAppointmentId,
   veterinarians = allVeterinarians,
 }: {
   currentOperatingMinutes: number;
@@ -5178,7 +5164,6 @@ function WeekScheduleBoard({
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   profileDataset: ReceptionProfileDataset;
-  selectedAppointmentId?: Appointment["id"];
   veterinarians?: Veterinarian[];
 }) {
   const currentTimeOffset = getDayCurrentTimeOffset(currentOperatingMinutes);
@@ -5314,10 +5299,6 @@ function WeekScheduleBoard({
                         onClearCalendarTransientSelection={
                           onClearCalendarTransientSelection
                         }
-                        selected={Boolean(
-                          day.active &&
-                            appointment.id === selectedAppointmentId,
-                        )}
                         onSelect={() => onSelectAppointment(appointment)}
                       />
                     </PositionedScheduleCard>
@@ -5422,7 +5403,6 @@ function ReceptionScheduleBoard({
   onSelectEncounter,
   onSelectAppointment,
   profileDataset,
-  selectedAppointmentId,
   selectedVeterinarians,
   view,
 }: {
@@ -5442,7 +5422,6 @@ function ReceptionScheduleBoard({
   onSelectEncounter: (draft: ReceptionDraftCheckIn) => void;
   onSelectAppointment: (appointment: Appointment) => void;
   profileDataset: ReceptionProfileDataset;
-  selectedAppointmentId?: Appointment["id"];
   selectedVeterinarians: Veterinarian[];
   view: ReceptionCalendarView;
 }) {
@@ -5612,7 +5591,6 @@ function ReceptionScheduleBoard({
               }
               onCreateCalendarDraft={onCreateCalendarDraft}
               profileDataset={profileDataset}
-              selectedAppointmentId={selectedAppointmentId}
               selectedVeterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
               onSelectEncounter={onSelectEncounter}
@@ -5631,7 +5609,6 @@ function ReceptionScheduleBoard({
               onClearCalendarTransientSelection={
                 onClearCalendarTransientSelection
               }
-              selectedAppointmentId={selectedAppointmentId}
               profileDataset={profileDataset}
               veterinarians={selectedVeterinarians}
               onSelectAppointment={onSelectAppointment}
@@ -6216,7 +6193,6 @@ export function ReceptionContent() {
           setEmptySlotAffordanceSuspended(false)
         }
         profileDataset={profileDataset}
-        selectedAppointmentId={selectedAppointmentId}
         selectedVeterinarians={selectedVeterinarians}
         view={calendarView}
         onSelectAppointment={handleSelectAppointment}
