@@ -196,7 +196,10 @@ function EmrModuleListSidePanelSection({
         onClick={onToggle}
       >
         {icon ? (
-          <span className="flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]">
+          <span
+            className="flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]"
+            data-emr-module-list-section-icon="true"
+          >
             {icon}
           </span>
         ) : null}
@@ -217,11 +220,19 @@ function EmrModuleListSidePanelSection({
         </span>
       </button>
       {open ? (
-        <div className="flex items-start">
-          <div className="flex self-stretch overflow-hidden pl-[var(--emr-module-list-child-rail-padding-left)] pr-[var(--emr-module-list-child-rail-padding-right)]">
-            <span className="my-[var(--emr-module-list-item-padding-y)] w-px bg-[var(--emr-module-list-child-rail-color)]" aria-hidden="true" />
+        <div className="grid grid-cols-[var(--emr-module-list-child-rail-column-width)_minmax(0,1fr)] items-start">
+          <div className="relative self-stretch overflow-hidden">
+            <span
+              className="absolute bottom-[var(--emr-module-list-item-padding-y)] top-[var(--emr-module-list-item-padding-y)] w-[var(--emr-module-list-child-rail-line-width)] bg-[var(--emr-module-list-child-rail-color)]"
+              aria-hidden="true"
+              data-emr-module-list-child-rail="true"
+              style={{ left: "var(--emr-module-list-child-rail-line-left)" }}
+            />
           </div>
-          <div className="grid min-w-0 flex-1 gap-[var(--emr-module-list-group-gap)] pr-[var(--emr-module-list-leaf-list-padding-right)]">
+          <div
+            className="grid min-w-0 gap-[var(--emr-module-list-group-gap)] pr-[var(--emr-module-list-leaf-list-padding-right)]"
+            data-emr-module-list-child-list="true"
+          >
             {children}
           </div>
         </div>
