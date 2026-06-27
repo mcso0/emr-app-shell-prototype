@@ -178,7 +178,12 @@ export function EmrSubpanelTitle({
   titleActions,
 }: EmrSubpanelTitleProps) {
   return (
-    <div className={cn("flex h-12 shrink-0 items-center px-4 py-3", className)}>
+    <div
+      className={cn(
+        "flex shrink-0 items-center px-[var(--clair-spacing-16)] pb-[var(--clair-spacing-10)] pt-[var(--clair-spacing-16)]",
+        className
+      )}
+    >
       <div className="flex min-w-0 flex-1 items-center">
         <div className="relative flex min-w-0 max-w-full items-center">
           <div className="emr-text-panel-title min-w-0 truncate font-semibold text-foreground">
