@@ -414,15 +414,32 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "**/api/workspaces/clair-demo/chart/consultation-flow",
     async (route) => {
       const body = (await route.request().postDataJSON()) as {
-        action: "call" | "start";
+        action: "call" | "return_to_waiting" | "start";
         roomId?: string;
       };
       if (body.action === "call") {
         expect(body.roomId).toBe("room-consult-2");
+        encounter = {
+          ...encounter,
+          status: "in_consultation",
+          startedAt: "2026-06-25T05:20:00.000Z",
+          updatedAt: "2026-06-25T05:20:00.000Z",
+        };
         queueEntry = {
           ...queueEntry,
-          status: "called",
+          status: "in_progress",
           calledAt: "2026-06-25T05:20:00.000Z",
+        };
+      } else if (body.action === "return_to_waiting") {
+        encounter = {
+          ...encounter,
+          status: "waiting",
+          startedAt: undefined,
+          updatedAt: "2026-06-25T05:24:00.000Z",
+        };
+        queueEntry = {
+          ...queueEntry,
+          status: "waiting",
         };
       } else {
         encounter = {
@@ -471,7 +488,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "호출 대기",
   );
   await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
   await expect(page.getByTestId("chart-start-locked-state")).toContainText(
     "진료 시작 전입니다",
   );
@@ -494,7 +511,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
     name: "초코/최도현을 호출하시겠습니까?",
   });
   await expect(callDialog).toContainText(
-    "진료실을 선택한 뒤 환자를 호출해 주세요.",
+    "진료실을 선택해 환자를 호출하면 즉시 진료가 시작됩니다.",
   );
   await expect(callDialog).toContainText("환자 / 보호자");
   await expect(callDialog).toContainText("초코 / 최도현");
@@ -523,8 +540,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await page.getByRole("button", { name: "호출하기" }).last().click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
-    "호출됨",
+    "진료중",
   );
+  await expect(page.getByText("호출됨")).toHaveCount(0);
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -534,16 +552,30 @@ test("chart consultation CTA moves from call to start before chart completion", 
       ),
     )
     .toBe("room-consult-2");
-  await expect(page.getByRole("button", { name: "진료 시작" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "차트 작성완료" })).toHaveCount(0);
-  await expect(page.getByTestId("chart-start-locked-state")).toContainText(
-    "환자가 입실하면 진료 시작",
-  );
-
-  await page.getByRole("button", { name: "진료 시작" }).click();
-  await expect(page.getByTestId("chart-completion-status")).toContainText("진료중");
-  await expect(page.getByRole("button", { name: "차트 작성완료" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "진료 시작" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "진료 완료" })).toBeVisible();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "진료 보조 액션 열기" }).click();
+  const chartActionMenu = page.getByRole("menu");
+  await expect(
+    chartActionMenu.getByRole("menuitem", { name: "대기로 변경" }),
+  ).toBeVisible();
+  await expect(
+    chartActionMenu.getByRole("menuitem", { name: "진료 취소" }),
+  ).toBeVisible();
+  await chartActionMenu.getByRole("menuitem", { name: "진료 취소" }).click();
+  const cancelDialog = page.getByRole("dialog", { name: "진료 취소" });
+  await expect(cancelDialog).toBeVisible();
+  await expect(
+    cancelDialog.getByRole("button", { name: "진료 취소" }),
+  ).toBeDisabled();
+  await cancelDialog
+    .getByLabel("진료 취소 사유")
+    .fill("보호자 요청으로 진료를 취소합니다.");
+  await expect(
+    cancelDialog.getByRole("button", { name: "진료 취소" }),
+  ).toBeEnabled();
 });
 
 test("chart side panel date navigator refetches the selected operating date", async ({
@@ -846,12 +878,12 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(page.getByRole("button", { name: "Order 청구" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Order 확정" })).toBeDisabled();
 
-  await page.getByRole("button", { name: "차트 작성완료" }).click();
+  await page.getByRole("button", { name: "진료 완료" }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
-    name: "차트 작성완료 확인",
+    name: "진료 완료 확인",
   });
   await expect(
-    chartCompleteDialog.getByText("차트 작성완료 확인"),
+    chartCompleteDialog.getByText("진료 완료 확인"),
   ).toBeVisible();
   await expect(chartCompleteDialog.getByText("콩이 / 김하늘")).toBeVisible();
   await expect(chartCompleteDialog.getByText("E-260501-0003")).toBeVisible();
@@ -1336,12 +1368,12 @@ test("chart completion persists through route-backed reload", async ({
     /오더 진행중|작성완료/,
   );
 
-  await page.getByRole("button", { name: "차트 작성완료" }).click();
+  await page.getByRole("button", { name: "진료 완료" }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
-    name: "차트 작성완료 확인",
+    name: "진료 완료 확인",
   });
   await expect(
-    chartCompleteDialog.getByText("차트 작성완료 확인"),
+    chartCompleteDialog.getByText("진료 완료 확인"),
   ).toBeVisible();
   await expect(
     chartCompleteDialog
@@ -1350,7 +1382,7 @@ test("chart completion persists through route-backed reload", async ({
       .first(),
   ).toBeVisible();
   await chartCompleteDialog
-    .getByRole("button", { name: "작성완료 저장" })
+    .getByRole("button", { name: "진료 완료 저장" })
     .click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(

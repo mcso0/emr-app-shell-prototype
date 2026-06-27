@@ -54,6 +54,7 @@ const frontDeskPermissionAdapter = createMockWorkspacePermissionAdapter({
 test("DEN-510 mock encounter cancel marks encounter and consultation queue cancelled together", async () => {
   const result = await cancelReceptionEncounter({
     actorUserId: "user-front-desk",
+    cancelReason: "보호자 요청으로 진료를 취소합니다.",
     encounterId: encounter.id,
     workspaceId,
     permissionAdapter: frontDeskPermissionAdapter,
@@ -62,7 +63,11 @@ test("DEN-510 mock encounter cancel marks encounter and consultation queue cance
         return {
           ok: true,
           cancellation: {
-            encounter: { ...encounter, status: "cancelled" },
+            encounter: {
+              ...encounter,
+              status: "cancelled",
+              cancellationReason: "보호자 요청으로 진료를 취소합니다.",
+            },
             queueEntry: { ...queueEntry, status: "cancelled" },
           },
         };
@@ -75,7 +80,11 @@ test("DEN-510 mock encounter cancel marks encounter and consultation queue cance
     status: 200,
     workspaceId,
     cancellation: {
-      encounter: { id: encounter.id, status: "cancelled" },
+      encounter: {
+        id: encounter.id,
+        status: "cancelled",
+        cancellationReason: "보호자 요청으로 진료를 취소합니다.",
+      },
       queueEntry: { id: queueEntry.id, status: "cancelled" },
     },
     enforcedBy: "reception-encounter-cancel",
@@ -85,6 +94,7 @@ test("DEN-510 mock encounter cancel marks encounter and consultation queue cance
 test("DEN-510 encounter cancel rejects non-cancelable encounter state", async () => {
   const result = await cancelReceptionEncounter({
     actorUserId: "user-front-desk",
+    cancelReason: "보호자 요청으로 진료를 취소합니다.",
     encounterId: encounter.id,
     workspaceId,
     permissionAdapter: frontDeskPermissionAdapter,
@@ -106,14 +116,36 @@ test("DEN-510 encounter cancel rejects non-cancelable encounter state", async ()
   });
 });
 
+test("DEN-510 encounter cancel requires a human-readable cancel reason", async () => {
+  const result = await cancelReceptionEncounter({
+    actorUserId: "user-front-desk",
+    cancelReason: " ",
+    encounterId: encounter.id,
+    workspaceId,
+    permissionAdapter: frontDeskPermissionAdapter,
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: { cancelReason: "진료 취소 사유를 입력해 주세요." },
+  });
+});
+
 test("DEN-510 supabase encounter cancel gateway calls scoped RPC and maps response", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseReceptionEncounterCancelGateway({
     async rpc(functionName, args) {
-      calls.push(`${functionName}:${args.p_workspace_id}:${args.p_encounter_id}`);
+      calls.push(
+        `${functionName}:${args.p_workspace_id}:${args.p_encounter_id}:${args.p_cancel_reason}`,
+      );
       return {
         data: {
-          encounter: { ...encounter, status: "cancelled" },
+          encounter: {
+            ...encounter,
+            status: "cancelled",
+            cancellationReason: args.p_cancel_reason,
+          },
           queueEntry: { ...queueEntry, status: "cancelled" },
         },
         error: null,
@@ -123,17 +155,22 @@ test("DEN-510 supabase encounter cancel gateway calls scoped RPC and maps respon
 
   const result = await gateway.cancelEncounter({
     actorUserId: "user-front-desk",
+    cancelReason: "보호자 요청으로 진료를 취소합니다.",
     encounterId: encounter.id,
     workspaceId,
   });
 
   expect(calls).toEqual([
-    "clair_cancel_reception_encounter:clair-demo:encounter-den510-cancel",
+    "clair_cancel_reception_encounter:clair-demo:encounter-den510-cancel:보호자 요청으로 진료를 취소합니다.",
   ]);
   expect(result).toMatchObject({
     ok: true,
     cancellation: {
-      encounter: { id: encounter.id, status: "cancelled" },
+      encounter: {
+        id: encounter.id,
+        status: "cancelled",
+        cancellationReason: "보호자 요청으로 진료를 취소합니다.",
+      },
       queueEntry: { id: queueEntry.id, status: "cancelled" },
     },
   });
@@ -160,7 +197,7 @@ test("DEN-510 encounter cancel route and server wrapper keep write boundary expl
 
 test("DEN-510 encounter cancel writer migration updates encounter and queue in one RPC", () => {
   const migrationSource = readFileSync(
-    "supabase/migrations/20260616090000_reception_encounter_cancel_writer.sql",
+    "supabase/migrations/20260627183000_chart_cta_direct_start_flow.sql",
     "utf8",
   );
 
@@ -172,6 +209,9 @@ test("DEN-510 encounter cancel writer migration updates encounter and queue in o
   );
   expect(migrationSource).toContain("for update");
   expect(migrationSource).toContain("status = 'cancelled'");
+  expect(migrationSource).toContain("p_cancel_reason text");
+  expect(migrationSource).toContain("cancel_reason_required");
+  expect(migrationSource).toContain("cancellation_reason = v_cancel_reason");
   expect(migrationSource).toContain("queue_type = 'consultation'");
   expect(migrationSource).toContain("'waiting', 'in_consultation'");
   expect(migrationSource).toContain("'waiting', 'called', 'in_progress'");

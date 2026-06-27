@@ -283,6 +283,8 @@ function mapEncounter(value: unknown): Encounter | null {
       getString(row.checkedInAt) ?? getString(row.checked_in_at) ?? new Date(0).toISOString(),
     checkedInByUserId:
       getString(row.checkedInByUserId) ?? getString(row.checked_in_by_user_id),
+    cancellationReason:
+      getString(row.cancellationReason) ?? getString(row.cancellation_reason),
     createdAt: getString(row.createdAt) ?? getString(row.created_at) ?? new Date(0).toISOString(),
     updatedAt: getString(row.updatedAt) ?? getString(row.updated_at) ?? new Date(0).toISOString(),
   };

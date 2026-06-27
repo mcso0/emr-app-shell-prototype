@@ -28,7 +28,19 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(request: Request, { params }: RouteContext) {
+type EncounterCancelRequestBody = {
+  cancelReason?: string;
+};
+
+export async function POST(request: Request, context: RouteContext) {
+  return handleEncounterCancel(request, context);
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  return handleEncounterCancel(request, context);
+}
+
+async function handleEncounterCancel(request: Request, { params }: RouteContext) {
   const { encounterId, workspaceId } = await params;
   const serverSession = await readServerSession();
   const identity = resolveRoleUpdateActorIdentity({
@@ -56,6 +68,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
   if (rateLimitResponse) return rateLimitResponse;
 
+  const input = await readJsonBody(request);
   const client = identity.source === "supabase_session" ? await createClient() : null;
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
@@ -68,6 +81,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     : undefined;
   const result = await cancelReceptionEncounter({
     actorUserId: identity.actorUserId,
+    cancelReason: input.cancelReason,
     encounterId,
     workspaceId,
     permissionAdapter,
@@ -85,4 +99,13 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
 
   return Response.json(result, { status: result.status });
+}
+
+async function readJsonBody(request: Request): Promise<EncounterCancelRequestBody> {
+  try {
+    const value = (await request.json()) as unknown;
+    return value && typeof value === "object" ? value as EncounterCancelRequestBody : {};
+  } catch {
+    return {};
+  }
 }

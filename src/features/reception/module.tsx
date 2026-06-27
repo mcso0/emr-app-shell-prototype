@@ -905,8 +905,10 @@ async function submitReceptionEncounterCancel({
       {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
         },
+        body: JSON.stringify({ cancelReason: "접수 화면에서 취소" }),
       },
     );
     const body = (await response.json()) as ReceptionEncounterCancelResponse;
