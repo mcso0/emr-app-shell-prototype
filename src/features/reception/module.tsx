@@ -52,6 +52,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  CalendarIcon,
   CheckIcon,
   CircleCloseFillIcon,
   ExcelFileIcon,
@@ -3892,9 +3893,10 @@ function ReceptionScheduleDateControl({
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
         <span className="flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center">
-          <CdsFilesCalendarIcon
+          <CalendarIcon
             aria-hidden="true"
-            className="size-4 shrink-0 text-[var(--emr-text-tertiary)]"
+            className="shrink-0 text-[var(--emr-text-secondary)]"
+            size={24}
           />
         </span>
         {dateControlLabel.dateLabel}
