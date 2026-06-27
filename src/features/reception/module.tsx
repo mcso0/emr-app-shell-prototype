@@ -3886,9 +3886,13 @@ function ReceptionScheduleDateControl({
       data-testid="reception-date-control"
     >
       <span
-        className="flex h-8 items-center text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+        className="flex h-8 items-center gap-1.5 text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
+        <CdsFilesCalendarIcon
+          aria-hidden="true"
+          className="size-4 shrink-0 text-[var(--emr-text-tertiary)]"
+        />
         {dateControlLabel.dateLabel}
       </span>
       <Button
