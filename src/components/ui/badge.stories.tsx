@@ -22,6 +22,11 @@ const meta = {
       options: ["default", "secondary", "destructive", "outline", "ghost", "link"],
       description: "Visual style for generic labels. Domain status tone belongs in EMR components.",
     },
+    size: {
+      control: "select",
+      options: ["sm", "md"],
+      description: "Badge density. sm is 20px tall; md matches the CDS V2 22px badge.",
+    },
     children: {
       control: "text",
       description: "Short visible label. Keep badges concise enough for dense tables and panels.",
@@ -29,6 +34,7 @@ const meta = {
   },
   args: {
     children: "필터 적용",
+    size: "sm",
     variant: "secondary",
   },
 } satisfies Meta<typeof Badge>;
@@ -64,6 +70,32 @@ export const Variants: Story = {
       <Badge variant="ghost">보조</Badge>
       <Badge variant="destructive">위험</Badge>
       <Badge variant="link">링크</Badge>
+    </div>
+  ),
+};
+
+export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: "Badge supports the CDS V2 sm and md densities. Use md when the design calls for the 22px toolbar/header badge.",
+      },
+    },
+  },
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <Badge size="sm" variant="secondary">
+        Small
+      </Badge>
+      <Badge size="md" variant="secondary">
+        Medium
+      </Badge>
+      <Badge size="sm" variant="outline">
+        20px
+      </Badge>
+      <Badge size="md" variant="outline">
+        22px
+      </Badge>
     </div>
   ),
 };

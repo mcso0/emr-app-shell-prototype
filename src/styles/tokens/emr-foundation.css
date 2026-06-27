@@ -279,7 +279,7 @@
   --emr-sidepanel-task-card-action-radius: var(--clair-radius-atomic-4);
   --emr-sidepanel-task-card-action-bg: var(--clair-color-atomic-common-100);
   --emr-sidepanel-task-card-action-border: var(--clair-color-atomic-neutral-200);
-  --emr-calendar-toolbar-height: var(--clair-spacing-64);
+  --emr-calendar-toolbar-height: 58px;
   --emr-calendar-toolbar-padding-x: var(--clair-spacing-16);
   --emr-calendar-lane-header-cell-height: var(--clair-spacing-64);
   --emr-calendar-lane-header-cell-padding: var(--clair-spacing-8);
