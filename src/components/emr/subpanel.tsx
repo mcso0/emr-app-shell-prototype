@@ -402,10 +402,12 @@ export function EmrListHeader({
 
   return (
     <>
+      {topDividerVisible ? (
+        <div className="mx-[var(--clair-spacing-16)] h-px shrink-0 bg-[var(--emr-line-hairline)]" />
+      ) : null}
       <div
         className={cn(
           "flex shrink-0 items-center gap-[var(--clair-spacing-12)] px-[var(--clair-spacing-16)] py-[var(--clair-spacing-12)]",
-          topDividerVisible && "border-t border-[var(--emr-line-hairline)]",
           className
         )}
       >
