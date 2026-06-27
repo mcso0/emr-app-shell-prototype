@@ -149,9 +149,7 @@ export function EmrSidePanelMiniCalendar({
                   inRange &&
                     !selected &&
                     "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
-                  selected &&
-                    !today &&
-                    "bg-[var(--clair-color-atomic-black-alpha-4)] text-[var(--emr-text-primary)]",
+                  selected && !today && "text-[var(--emr-text-primary)]",
                   "focus-visible:z-10 focus-visible:ring-3 focus-visible:ring-ring/50",
                 )}
                 aria-label={[
@@ -175,7 +173,7 @@ export function EmrSidePanelMiniCalendar({
                       "bg-[var(--clair-color-atomic-red-500)] font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.12)] group-hover/date:bg-[var(--clair-color-atomic-red-500)]",
                     selected &&
                       !today &&
-                      "shadow-[inset_0_0_0_1px_var(--emr-line-default)] group-hover/date:bg-transparent",
+                      "bg-[var(--emr-state-hover)] shadow-[inset_0_0_0_1px_var(--emr-line-default)] group-hover/date:bg-[var(--emr-state-hover)]",
                   )}
                 >
                   {cell.day}
