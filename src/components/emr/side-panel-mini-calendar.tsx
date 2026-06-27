@@ -93,7 +93,7 @@ export function EmrSidePanelMiniCalendar({
   return (
     <section
       className={cn(
-        "h-[237px] w-[296px] shrink-0 bg-[var(--emr-surface-sidepanel)]",
+        "h-[225px] w-[296px] shrink-0 bg-[var(--emr-surface-sidepanel)]",
         className,
       )}
       data-testid="side-panel-mini-calendar"
