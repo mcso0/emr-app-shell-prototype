@@ -101,7 +101,7 @@ test("customer workspace renders animal master list and opens the common patient
   await expect(page.getByTestId("customer-side-panel-guardian")).toContainText("5");
   const scheduleFollowUp = customerSidePanel.getByRole("button", { name: /스케줄 관리/ });
   await expect(scheduleFollowUp).toBeDisabled();
-  await expect(scheduleFollowUp).toContainText("후속");
+  await expect(scheduleFollowUp).toContainText("비활성");
   await expect(customerSidePanel.getByRole("button", { name: "예약 일정" })).toHaveCount(0);
   await expect(page.getByTestId("customer-page-header").getByRole("heading", { name: "동물" })).toBeVisible();
   await expect(page.getByTestId("customer-page-header")).not.toContainText("스케줄 관리");
