@@ -40,6 +40,8 @@ type ReceptionDraftCheckIn = {
 
 type ReceptionQueueReadStatus = "idle" | "loading" | "ready" | "error";
 
+export type ReceptionCalendarView = "day" | "week" | "month";
+
 export type ReceptionCalendarDraftSelection = {
   durationMinutes: number;
   id: EmrId;
@@ -48,6 +50,7 @@ export type ReceptionCalendarDraftSelection = {
 };
 
 type ReceptionStore = {
+  calendarViewByWorkspace: Record<EmrId, ReceptionCalendarView>;
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
   messageDeliveries: MessageDelivery[];
   operatingDateByWorkspace: Record<EmrId, string>;
@@ -77,6 +80,7 @@ type ReceptionStore = {
   applyEncounterUpdate: (update: ReceptionEncounterUpdateRecord) => void;
   requestReceptionReadRetry: () => void;
   setCalendarDraftSelection: (selection?: ReceptionCalendarDraftSelection) => void;
+  setWorkspaceCalendarView: (workspaceId: EmrId, calendarView: ReceptionCalendarView) => void;
   setWorkspaceOperatingDate: (workspaceId: EmrId, operatingDate: string) => void;
   setSearchQuery: (query: string) => void;
   setReceptionCalendarReadStatus: (status: ReceptionQueueReadStatus, error?: string) => void;
@@ -262,6 +266,7 @@ const createSessionCheckInMessage = ({
 });
 
 export const useReceptionStore = create<ReceptionStore>()((set) => ({
+  calendarViewByWorkspace: {},
   calendarDraftSelection: undefined,
   messageDeliveries: [],
   operatingDateByWorkspace: {},
@@ -437,6 +442,13 @@ export const useReceptionStore = create<ReceptionStore>()((set) => ({
       readRetryNonce: state.readRetryNonce + 1,
     })),
   setCalendarDraftSelection: (calendarDraftSelection) => set({ calendarDraftSelection }),
+  setWorkspaceCalendarView: (workspaceId, calendarView) =>
+    set((state) => ({
+      calendarViewByWorkspace: {
+        ...state.calendarViewByWorkspace,
+        [workspaceId]: calendarView,
+      },
+    })),
   setWorkspaceOperatingDate: (workspaceId, operatingDate) =>
     set((state) => ({
       operatingDateByWorkspace: {
