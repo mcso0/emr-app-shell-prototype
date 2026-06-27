@@ -221,7 +221,7 @@ function EmrModuleListSidePanelSection({
           <div className="flex self-stretch overflow-hidden pl-[var(--emr-module-list-child-rail-padding-left)] pr-[var(--emr-module-list-child-rail-padding-right)]">
             <span className="my-[var(--emr-module-list-item-padding-y)] w-px bg-[var(--emr-module-list-child-rail-color)]" aria-hidden="true" />
           </div>
-          <div className="grid min-w-0 flex-1 gap-[var(--emr-module-list-group-gap)]">
+          <div className="grid min-w-0 flex-1 gap-[var(--emr-module-list-group-gap)] pr-[var(--emr-module-list-leaf-list-padding-right)]">
             {children}
           </div>
         </div>
@@ -263,7 +263,7 @@ export function EmrModuleListSidePanel({
                 active={item.active}
                 count={item.count}
                 disabled={item.disabled}
-                disabledBadge={<EmrModuleListSidePanelBadge variant="outline">비활성</EmrModuleListSidePanelBadge>}
+                disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
                 icon={item.icon}
                 onClick={item.onClick}
                 testId={item.testId}
@@ -291,7 +291,7 @@ export function EmrModuleListSidePanel({
                       className={moduleListLeafItemClassName}
                       count={child.count}
                       disabled={child.disabled}
-                      disabledBadge={<EmrModuleListSidePanelBadge variant="outline">비활성</EmrModuleListSidePanelBadge>}
+                      disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
                       onClick={child.onClick}
                       testId={child.testId}
                     >
