@@ -88,7 +88,7 @@ export function SegmentedControl<TValue extends string>({
         "inline-flex w-fit items-center",
         variant === "pill" && "gap-2.5",
         variant === "tabs" &&
-          "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] p-[var(--clair-border-width-atomic-4)]",
+          "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--clair-color-atomic-black-alpha-4)] p-[var(--clair-border-width-atomic-2)]",
         className
       )}
     >
@@ -110,8 +110,8 @@ export function SegmentedControl<TValue extends string>({
                   : "emr-control-text min-h-8 rounded-full border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-1.5 font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"),
               variant === "tabs" &&
                 (active
-                  ? "emr-text-metadata min-h-5 min-w-5 rounded-[var(--emr-radius-control)] border-transparent bg-card px-1.5 py-px font-medium text-[var(--emr-text-primary)] hover:bg-card"
-                  : "emr-text-metadata min-h-5 min-w-5 rounded-[var(--emr-radius-control)] border-transparent bg-transparent px-1.5 py-px font-medium text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"),
+                  ? "emr-text-metadata min-h-5 min-w-5 rounded-[var(--emr-radius-control)] border-transparent bg-card px-1.5 py-px font-medium text-[var(--clair-color-atomic-neutral-800)] shadow-[var(--clair-shadow-xs)] hover:bg-card"
+                  : "emr-text-metadata min-h-5 min-w-5 rounded-[var(--emr-radius-control)] border-transparent bg-transparent px-1.5 py-px font-medium text-[var(--clair-color-atomic-neutral-600)] hover:bg-[var(--emr-state-hover)]"),
               itemClassName
             )}
             onClick={() => onValueChange(item.value)}
