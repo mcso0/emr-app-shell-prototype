@@ -21,6 +21,7 @@ import {
   CdsFilesCalendarIcon,
   CdsFilesClockIcon,
   CdsFilesMoreHorizontalIcon,
+  CdsFilesReceptionCalendarIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
@@ -52,7 +53,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  CalendarOutlineIcon,
   CheckIcon,
   CircleCloseFillIcon,
   ExcelFileIcon,
@@ -3893,7 +3893,7 @@ function ReceptionScheduleDateControl({
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
         <span className="flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center">
-          <CalendarOutlineIcon
+          <CdsFilesReceptionCalendarIcon
             aria-hidden="true"
             className="shrink-0 text-[var(--clair-color-atomic-neutral-400)]"
             size={24}
