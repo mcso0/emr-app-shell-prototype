@@ -56,6 +56,11 @@ export type SegmentedControlProps<TValue extends string> = {
    */
   variant?: "pill" | "tabs";
   /**
+   * Control density for the tabs variant. `xs` preserves the compact 24px
+   * queue-filter control; `md` matches the CDS V2 32px toolbar tab group.
+   */
+  size?: "xs" | "sm" | "md";
+  /**
    * Called with the selected item value. The consuming screen owns state,
    * persistence, analytics, and permission behavior.
    */
@@ -77,9 +82,21 @@ export function SegmentedControl<TValue extends string>({
   "aria-label": ariaLabel,
   className,
   itemClassName,
+  size = "xs",
   variant = "pill",
   onValueChange,
 }: SegmentedControlProps<TValue>) {
+  const tabsSizeClassName = {
+    xs: "h-[var(--clair-control-height-xs)]",
+    sm: "h-[var(--clair-control-height-sm)]",
+    md: "h-[var(--clair-control-height-md)]",
+  }[size];
+  const tabsItemSizeClassName = {
+    xs: "h-[calc(var(--clair-control-height-xs)-var(--clair-border-width-atomic-4))] min-w-5 px-1.5",
+    sm: "h-[var(--clair-control-height-xs)] min-w-6 px-2",
+    md: "h-[var(--clair-control-height-sm)] min-w-7 px-2.5",
+  }[size];
+
   return (
     <div
       role="group"
@@ -88,7 +105,10 @@ export function SegmentedControl<TValue extends string>({
         "inline-flex w-fit items-center",
         variant === "pill" && "gap-2.5",
         variant === "tabs" &&
-          "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--clair-color-atomic-black-alpha-4)] p-[var(--clair-border-width-atomic-2)]",
+          [
+            tabsSizeClassName,
+            "gap-[var(--clair-border-width-atomic-2)] rounded-[var(--clair-radius-atomic-8)] bg-[var(--clair-color-atomic-black-alpha-4)] p-[var(--clair-border-width-atomic-2)]",
+          ],
         className
       )}
     >
@@ -110,8 +130,14 @@ export function SegmentedControl<TValue extends string>({
                   : "emr-control-text min-h-8 rounded-full border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-1.5 font-medium text-[var(--emr-text-tertiary)] hover:bg-[var(--emr-state-hover)]"),
               variant === "tabs" &&
                 (active
-                  ? "emr-text-metadata min-h-5 min-w-5 rounded-[var(--emr-radius-control)] border-transparent bg-card px-1.5 py-px font-medium text-[var(--clair-color-atomic-neutral-800)] shadow-[var(--clair-shadow-xs)] hover:bg-card"
-                  : "emr-text-metadata min-h-5 min-w-5 rounded-[var(--emr-radius-control)] border-transparent bg-transparent px-1.5 py-px font-medium text-[var(--clair-color-atomic-neutral-600)] hover:bg-[var(--emr-state-hover)]"),
+                  ? [
+                      tabsItemSizeClassName,
+                      "emr-text-metadata rounded-[var(--emr-radius-control)] border-transparent bg-card font-medium text-[var(--clair-color-atomic-neutral-800)] shadow-[var(--clair-shadow-xs)] hover:bg-card",
+                    ]
+                  : [
+                      tabsItemSizeClassName,
+                      "emr-text-metadata rounded-[var(--emr-radius-control)] border-transparent bg-transparent font-medium text-[var(--clair-color-atomic-neutral-600)] hover:bg-[var(--emr-state-hover)]",
+                    ]),
               itemClassName
             )}
             onClick={() => onValueChange(item.value)}

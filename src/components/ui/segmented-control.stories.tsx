@@ -69,6 +69,11 @@ const meta = {
       options: ["pill", "tabs"],
       description: "Use pill for filters and tabs for compact display-mode selectors.",
     },
+    size: {
+      control: "radio",
+      options: ["xs", "sm", "md"],
+      description: "Tabs density. xs is 24px, sm is 28px, and md is 32px.",
+    },
     onValueChange: {
       table: {
         disable: true,
@@ -79,6 +84,7 @@ const meta = {
     "aria-label": "업무 상태 필터",
     items: workStatusItems,
     onValueChange: () => undefined,
+    size: "xs",
     value: "waiting",
     variant: "pill",
   },
@@ -119,6 +125,7 @@ export const TabsVariant: Story = {
     "aria-label": "표 밀도",
     items: densityItems,
     onValueChange: () => undefined,
+    size: "xs",
     value: "standard",
     variant: "tabs",
   },
@@ -133,6 +140,45 @@ export const TabsVariant: Story = {
   },
 };
 
+export const TabSizes: Story = {
+  render: () => (
+    <div className="grid gap-3">
+      <ControlledSegmentedControl
+        aria-label="xs 탭 그룹"
+        items={densityItems}
+        onValueChange={() => undefined}
+        size="xs"
+        value="standard"
+        variant="tabs"
+      />
+      <ControlledSegmentedControl
+        aria-label="sm 탭 그룹"
+        items={densityItems}
+        onValueChange={() => undefined}
+        size="sm"
+        value="standard"
+        variant="tabs"
+      />
+      <ControlledSegmentedControl
+        aria-label="md 탭 그룹"
+        items={densityItems}
+        onValueChange={() => undefined}
+        size="md"
+        value="standard"
+        variant="tabs"
+      />
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Tabs support xs, sm, and md densities. xs matches compact side-panel filters; md matches the 32px CDS V2 toolbar tab group.",
+      },
+    },
+  },
+};
+
 export const ShortLabelsNeedAriaLabels: Story = {
   args: {
     "aria-label": "표 밀도",
@@ -142,6 +188,7 @@ export const ShortLabelsNeedAriaLabels: Story = {
       { value: "comfortable", label: "L", ariaLabel: "넓은 밀도" },
     ],
     onValueChange: () => undefined,
+    size: "xs",
     value: "standard",
     variant: "tabs",
   },
