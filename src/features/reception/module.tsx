@@ -2879,6 +2879,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         rangeEndDate={miniCalendarWeekEndDate}
         onDateSelect={handleSidePanelDateSelect}
       />
+      <div aria-hidden="true" className="shrink-0 border-t border-[var(--emr-line-default)]" />
       {queueReadStatus === "error" ? (
         <EmrInlineAlert
           className="mx-3 my-2"
