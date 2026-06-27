@@ -74,3 +74,5 @@ Implement inline search mode for side-panel queue headers so queue search icons 
 Ready for Linear Human Review.
 
 2026-06-25 correction from browser review: treatment/chart queue header controls should match the lab queue compact pattern with three icon-only controls: sort, filter, and search. The previous visible sort value label (`요청순`) and display-density control (`M`/`S`) are no longer the accepted treatment/chart header presentation.
+
+2026-06-27 browser review follow-up: shared `SegmentedControl` tabs now use the existing CDS/CLAiR tokens for the compact tab group (`black-alpha-4` group fill, 2px group padding, neutral-800 active text, neutral-600 inactive text, `shadow-xs` active tab). `EmrListHeader` inactive mode now uses the existing 16px/12px spacing tokens so the queue header frame measures as a 48px list header instead of the previous fixed 40px bar. Verification: `npm run lint` and `npx tsc --noEmit` passed; local browser measurement on the reception queue header confirmed `48px` header height, `12px 16px` padding, `2px` tab-group padding/gap, `rgba(0,0,0,0.04)` group fill, and `#262626`/`#525252` active/inactive text.

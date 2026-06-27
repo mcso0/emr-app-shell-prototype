@@ -3884,24 +3884,26 @@ function ReceptionScheduleDateControl({
 
   return (
     <div
-      className="flex h-10 shrink-0 items-center gap-3"
+      className="flex h-[var(--clair-control-height-sm)] shrink-0 items-center gap-[var(--clair-spacing-8)]"
       data-testid="reception-date-control"
     >
       <span
-        className="flex h-8 items-center gap-1.5 text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+        className="flex h-[var(--clair-control-height-sm)] items-center gap-[var(--clair-spacing-8)] text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
         aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
-        <CdsFilesCalendarIcon
-          aria-hidden="true"
-          className="size-4 shrink-0 text-[var(--emr-text-tertiary)]"
-        />
+        <span className="flex size-[var(--clair-spacing-24)] shrink-0 items-center justify-center">
+          <CdsFilesCalendarIcon
+            aria-hidden="true"
+            className="size-4 shrink-0 text-[var(--emr-text-tertiary)]"
+          />
+        </span>
         {dateControlLabel.dateLabel}
       </span>
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 bg-[var(--emr-surface-panel)] px-3 emr-text-body font-semibold"
+        className="bg-[var(--emr-surface-panel)] emr-text-metadata font-semibold"
         aria-label="오늘 일자로 이동"
         disabled={showingToday}
         onClick={() => onOperatingDateChange(todayDate)}
@@ -3954,19 +3956,23 @@ function ScheduleToolbar({
       className="flex h-[var(--emr-calendar-toolbar-height)] shrink-0 flex-nowrap items-center justify-between gap-4 overflow-hidden border-b bg-card px-[var(--emr-calendar-toolbar-padding-x)]"
       data-testid="schedule-toolbar"
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-16)]">
         <ReceptionScheduleDateControl
           onOperatingDateChange={onOperatingDateChange}
           operatingDate={operatingDate}
           todayDate={todayDate}
           view={view}
         />
-        <span className="rounded-md bg-[var(--emr-surface-muted)] px-2.5 py-1.5 emr-text-metadata font-medium leading-4 text-[var(--emr-text-secondary)]">
+        <Badge
+          size="md"
+          variant="secondary"
+          className="rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-muted)] emr-text-metadata font-medium text-[var(--emr-text-secondary)]"
+        >
           영업시간{" "}
           <span className="font-semibold text-[var(--emr-text-link)] tabular-nums">
             {getBusinessHoursTimeRangeLabel()}
           </span>
-        </span>
+        </Badge>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <DropdownMenu>

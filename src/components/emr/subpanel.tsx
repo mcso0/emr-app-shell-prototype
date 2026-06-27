@@ -399,8 +399,8 @@ export function EmrListHeader({
     <>
       <div
         className={cn(
-          "mx-4 flex h-10 shrink-0 items-center border-y border-[var(--emr-line-hairline)]",
-          !topDividerVisible && "border-t-transparent",
+          "flex shrink-0 items-center gap-[var(--clair-spacing-12)] px-[var(--clair-spacing-16)] py-[var(--clair-spacing-12)]",
+          topDividerVisible && "border-t border-[var(--emr-line-hairline)]",
           className
         )}
       >
