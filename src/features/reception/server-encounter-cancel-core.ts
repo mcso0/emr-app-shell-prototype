@@ -27,6 +27,7 @@ export type ReceptionEncounterCancelGatewayResult =
 export type ReceptionEncounterCancelGateway = {
   cancelEncounter(input: {
     actorUserId: string;
+    cancelReason: string;
     encounterId: string;
     workspaceId: string;
   }): Promise<ReceptionEncounterCancelGatewayResult>;
@@ -44,7 +45,7 @@ export type ReceptionEncounterCancelResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: { encounterId: string };
+      fieldErrors: Partial<Record<"cancelReason" | "encounterId", string>>;
     }
   | {
       ok: false;
@@ -67,6 +68,7 @@ export async function cancelReceptionEncounter({
   auditGateway,
   auditNow,
   auditRequestId,
+  cancelReason,
   encounterId,
   gateway = createMockReceptionEncounterCancelGateway(),
   permissionAdapter = createDemoReceptionEncounterCancelPermissionAdapter(),
@@ -76,18 +78,27 @@ export async function cancelReceptionEncounter({
   auditGateway?: LiveMutationAuditOptions["auditGateway"];
   auditNow?: LiveMutationAuditOptions["auditNow"];
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
+  cancelReason?: string;
   encounterId: string;
   gateway?: ReceptionEncounterCancelGateway;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<ReceptionEncounterCancelResult> {
   const normalizedEncounterId = trimToUndefined(encounterId);
-  if (!normalizedEncounterId) {
+  const normalizedCancelReason = trimToUndefined(cancelReason);
+  if (!normalizedEncounterId || !normalizedCancelReason || normalizedCancelReason.length > 500) {
     return {
       ok: false,
       status: 400,
       error: "invalid_input",
-      fieldErrors: { encounterId: "접수를 선택해 주세요." },
+      fieldErrors: {
+        ...(normalizedEncounterId ? {} : { encounterId: "접수를 선택해 주세요." }),
+        ...(normalizedCancelReason
+          ? normalizedCancelReason.length > 500
+            ? { cancelReason: "진료 취소 사유는 500자 이하로 입력해 주세요." }
+            : {}
+          : { cancelReason: "진료 취소 사유를 입력해 주세요." }),
+      },
     };
   }
 
@@ -108,6 +119,7 @@ export async function cancelReceptionEncounter({
 
   const result = await gateway.cancelEncounter({
     actorUserId: actorUserId ?? "",
+    cancelReason: normalizedCancelReason,
     encounterId: normalizedEncounterId,
     workspaceId,
   });
@@ -134,6 +146,7 @@ export async function cancelReceptionEncounter({
       guardianId: result.cancellation.encounter.guardianId ?? null,
       requestId: auditRequestId,
       after: {
+        reason: normalizedCancelReason,
         queueStatus: result.cancellation.queueEntry.status,
         status: result.cancellation.encounter.status,
       },
@@ -162,7 +175,7 @@ export function createMockReceptionEncounterCancelGateway(
   now = new Date().toISOString(),
 ): ReceptionEncounterCancelGateway {
   return {
-    async cancelEncounter({ encounterId, workspaceId }) {
+    async cancelEncounter({ cancelReason, encounterId, workspaceId }) {
       const encounter = (dataset.encounters ?? []).find(
         (item) => item.id === encounterId && item.workspaceId === workspaceId,
       );
@@ -195,7 +208,12 @@ export function createMockReceptionEncounterCancelGateway(
       return {
         ok: true,
         cancellation: {
-          encounter: { ...encounter, status: "cancelled", updatedAt: now },
+          encounter: {
+            ...encounter,
+            status: "cancelled",
+            cancellationReason: cancelReason,
+            updatedAt: now,
+          },
           queueEntry: { ...queueEntry, status: "cancelled", finishedAt: now },
         },
       };
@@ -210,6 +228,7 @@ export type SupabaseReceptionEncounterCancelRpcClient = {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_encounter_id: string;
+      p_cancel_reason: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -218,11 +237,12 @@ export function createSupabaseReceptionEncounterCancelGateway(
   client: SupabaseReceptionEncounterCancelRpcClient,
 ): ReceptionEncounterCancelGateway {
   return {
-    async cancelEncounter({ actorUserId, encounterId, workspaceId }) {
+    async cancelEncounter({ actorUserId, cancelReason, encounterId, workspaceId }) {
       const { data, error } = await client.rpc("clair_cancel_reception_encounter", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
+        p_cancel_reason: cancelReason,
       });
 
       if (error) {
@@ -280,6 +300,8 @@ function mapEncounter(value: unknown): Encounter | null {
   const row = value as Partial<Encounter> & {
     receptionType?: string;
     reception_type?: string;
+    cancellationReason?: string;
+    cancellation_reason?: string;
   };
   if (
     typeof row.id !== "string" ||
@@ -308,6 +330,9 @@ function mapEncounter(value: unknown): Encounter | null {
     status: row.status as Encounter["status"],
     checkedInAt: trimToUndefined(row.checkedInAt) ?? new Date(0).toISOString(),
     checkedInByUserId: trimToUndefined(row.checkedInByUserId),
+    cancellationReason:
+      trimToUndefined(row.cancellationReason) ??
+      trimToUndefined(row.cancellation_reason),
     createdAt: trimToUndefined(row.createdAt) ?? new Date(0).toISOString(),
     updatedAt: trimToUndefined(row.updatedAt) ?? new Date(0).toISOString(),
   };

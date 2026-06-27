@@ -201,6 +201,7 @@ for (const permissionCase of deniedPermissionCases) {
   test(`DEN-510 encounter cancel denies ${permissionCase.name}`, async () => {
     const result = await cancelReceptionEncounter({
       actorUserId: permissionCase.actorUserId,
+      cancelReason: "권한 테스트 취소 사유",
       encounterId: "encounter-coco-260501",
       workspaceId,
       permissionAdapter: permissionCase.adapter,
@@ -287,6 +288,7 @@ test("DEN-61 front desk mutation permission still allows existing mock fallback 
 
   const cancel = await cancelReceptionEncounter({
     actorUserId: "user-front-desk",
+    cancelReason: "권한 테스트 취소 사유",
     encounterId: "encounter-haru-260430",
     workspaceId,
     permissionAdapter: activeFrontDeskPermissionAdapter,

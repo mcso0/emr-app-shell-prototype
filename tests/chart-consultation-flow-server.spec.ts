@@ -11,7 +11,7 @@ import type { Encounter, WaitingQueueEntry } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-waiting-consultation";
-const migrationPath = "supabase/migrations/20260625113000_chart_consultation_room_selection.sql";
+const migrationPath = "supabase/migrations/20260627183000_chart_cta_direct_start_flow.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
 const roomId = "room-consult-1";
 
@@ -40,7 +40,7 @@ const baseQueueEntry: WaitingQueueEntry = {
   enteredAt: "2026-06-25T14:15:00+09:00",
 };
 
-test("consultation flow core moves waiting to called and then in consultation", async () => {
+test("consultation flow core calls and starts consultation in one action", async () => {
   const encounters = [{ ...baseEncounter }];
   const waitingQueueEntries = [{ ...baseQueueEntry }];
   const gateway = createMockConsultationFlowGateway(
@@ -72,9 +72,12 @@ test("consultation flow core moves waiting to called and then in consultation", 
     ok: true,
     status: 200,
     flow: {
-      encounter: { status: "waiting" },
+      encounter: {
+        status: "in_consultation",
+        startedAt: "2026-06-25T05:20:00.000Z",
+      },
       queueEntry: {
-        status: "called",
+        status: "in_progress",
         calledAt: "2026-06-25T05:20:00.000Z",
       },
       callEvent: {
@@ -86,23 +89,20 @@ test("consultation flow core moves waiting to called and then in consultation", 
     },
   });
 
-  const started = await mutateConsultationFlow({
+  const returned = await mutateConsultationFlow({
     actorUserId: "user-vet",
     workspaceId,
-    input: { action: "start", encounterId },
+    input: { action: "return_to_waiting", encounterId },
     gateway,
     permissionAdapter,
   });
 
-  expect(started).toMatchObject({
+  expect(returned).toMatchObject({
     ok: true,
     status: 200,
     flow: {
-      encounter: {
-        status: "in_consultation",
-        startedAt: "2026-06-25T05:20:00.000Z",
-      },
-      queueEntry: { status: "in_progress" },
+      encounter: { status: "waiting" },
+      queueEntry: { status: "waiting" },
     },
   });
 });
@@ -170,7 +170,7 @@ test("consultation flow core rejects unauthorized users and stale transitions", 
   });
 });
 
-test("consultation flow Supabase gateway calls separated call and start RPCs", async () => {
+test("consultation flow Supabase gateway calls direct-start and return RPCs", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseConsultationFlowGateway({
     async rpc(functionName: string, args: Record<string, unknown>) {
@@ -180,20 +180,20 @@ test("consultation flow Supabase gateway calls separated call and start RPCs", a
           encounter: {
             ...baseEncounter,
             status:
-              functionName === "clair_start_consultation"
-                ? "in_consultation"
-                : "waiting",
+              functionName === "clair_return_consultation_to_waiting"
+                ? "waiting"
+                : "in_consultation",
             startedAt:
-              functionName === "clair_start_consultation"
-                ? "2026-06-25T05:20:00.000Z"
-                : undefined,
+              functionName === "clair_return_consultation_to_waiting"
+                ? undefined
+                : "2026-06-25T05:20:00.000Z",
           },
           queueEntry: {
             ...baseQueueEntry,
             status:
-              functionName === "clair_start_consultation"
-                ? "in_progress"
-                : "called",
+              functionName === "clair_return_consultation_to_waiting"
+                ? "waiting"
+                : "in_progress",
             calledAt: "2026-06-25T05:20:00.000Z",
           },
           callEvent:
@@ -204,7 +204,7 @@ test("consultation flow Supabase gateway calls separated call and start RPCs", a
                   encounterId,
                   queueEntryId: baseQueueEntry.id,
                   eventType: "did_call_requested",
-                  displayText: "1진료실로 환자를 호출합니다.",
+                  displayText: "1진료실로 환자를 호출하고 진료를 시작합니다.",
                   deliveryStatus: "queued",
                   roomId,
                   roomName: "1진료실",
@@ -231,24 +231,28 @@ test("consultation flow Supabase gateway calls separated call and start RPCs", a
     },
     workspaceId,
   });
-  await gateway.startConsultation({ actorUserId: "user-vet", encounterId, workspaceId });
+  await gateway.returnConsultationToWaiting({ actorUserId: "user-vet", encounterId, workspaceId });
 
   expect(calls).toEqual([
     `clair_call_consultation_queue:${workspaceId}:${encounterId}:${roomId}`,
-    `clair_start_consultation:${workspaceId}:${encounterId}:-`,
+    `clair_return_consultation_to_waiting:${workspaceId}:${encounterId}:-`,
   ]);
 });
 
-test("consultation room migration stores selected room snapshots", () => {
-  expect(migration).toContain("add column if not exists room_name text");
+test("consultation direct-start migration stores room snapshots and return RPC", () => {
   expect(migration).toContain("create or replace function public.clair_call_consultation_queue");
+  expect(migration).toContain("create or replace function public.clair_return_consultation_to_waiting");
   expect(migration).toContain("p_room_id text");
   expect(migration).toContain("raise exception 'room_unavailable'");
   expect(migration).toContain("raise exception 'stale_status'");
+  expect(migration).toContain("status = 'in_consultation'");
+  expect(migration).toContain("status = 'in_progress'");
+  expect(migration).toContain("status = 'waiting'");
+  expect(migration).toContain("'chart.consultation_returned_to_waiting'");
   expect(migration).toContain("'roomId', p_room_id");
   expect(migration).toContain("'roomName', v_room_name");
-  expect(migration).toContain("revoke all on function public.clair_call_consultation_queue(text, text, uuid) from authenticated");
   expect(migration).toContain("grant execute on function public.clair_call_consultation_queue(text, text, uuid, text) to authenticated");
+  expect(migration).toContain("grant execute on function public.clair_return_consultation_to_waiting(text, text, uuid) to authenticated");
   expect(migration).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET|real patient/i);
 });
 

@@ -15,7 +15,7 @@ import {
 import { mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
 import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
 
-export type ConsultationFlowAction = "call" | "start";
+export type ConsultationFlowAction = "call" | "start" | "return_to_waiting";
 
 export type ConsultationFlowInput = {
   action?: ConsultationFlowAction;
@@ -64,6 +64,11 @@ export type ConsultationFlowGateway = {
     workspaceId: string;
   }): Promise<ConsultationFlowGatewayResult>;
   startConsultation(input: {
+    actorUserId: string;
+    encounterId: string;
+    workspaceId: string;
+  }): Promise<ConsultationFlowGatewayResult>;
+  returnConsultationToWaiting(input: {
     actorUserId: string;
     encounterId: string;
     workspaceId: string;
@@ -120,7 +125,11 @@ export async function mutateConsultationFlow({
   const action = input.action;
   const room = action === "call" ? getConsultationCallRoomById(input.roomId) : undefined;
 
-  if (!encounterId || (action !== "call" && action !== "start") || (action === "call" && !room)) {
+  if (
+    !encounterId ||
+    (action !== "call" && action !== "start" && action !== "return_to_waiting") ||
+    (action === "call" && !room)
+  ) {
     return {
       ok: false,
       status: 400,
@@ -128,7 +137,7 @@ export async function mutateConsultationFlow({
       fieldErrors: {
         ...(encounterId ? {} : { encounterId: "진료 차트를 선택해 주세요." }),
         ...(action !== "call" || room ? {} : { roomId: "진료실을 선택해 주세요." }),
-        ...(action === "call" || action === "start"
+        ...(action === "call" || action === "start" || action === "return_to_waiting"
           ? {}
           : { action: "지원하지 않는 진료 흐름 액션이에요." }),
       },
@@ -157,11 +166,17 @@ export async function mutateConsultationFlow({
           room: room!,
           workspaceId,
         })
-      : await gateway.startConsultation({
-          actorUserId: actorUserId ?? "",
-          encounterId,
-          workspaceId,
-        });
+      : action === "return_to_waiting"
+        ? await gateway.returnConsultationToWaiting({
+            actorUserId: actorUserId ?? "",
+            encounterId,
+            workspaceId,
+          })
+        : await gateway.startConsultation({
+            actorUserId: actorUserId ?? "",
+            encounterId,
+            workspaceId,
+          });
 
   if (!result.ok) {
     if (result.status === 409) return result;
@@ -174,7 +189,12 @@ export async function mutateConsultationFlow({
     input: {
       workspaceId,
       actorUserId,
-      eventType: action === "call" ? "chart.patient_called" : "chart.consultation_started",
+      eventType:
+        action === "call"
+          ? "chart.patient_called"
+          : action === "return_to_waiting"
+            ? "chart.consultation_returned_to_waiting"
+            : "chart.consultation_started",
       targetType: "encounter",
       targetId: encounterId,
       encounterId,
@@ -190,6 +210,7 @@ export async function mutateConsultationFlow({
       metadata: {
         source: "chart-consultation-flow",
         didProvider: "not_configured",
+        action,
       },
     },
   });
@@ -230,7 +251,10 @@ export function createMockConsultationFlowGateway(
       }
 
       const timestamp = now();
-      found.queueEntry.status = "called";
+      found.encounter.status = "in_consultation";
+      found.encounter.startedAt = timestamp;
+      found.encounter.updatedAt = timestamp;
+      found.queueEntry.status = "in_progress";
       found.queueEntry.calledAt = timestamp;
 
       const callEvent: ConsultationCallEvent = {
@@ -239,7 +263,7 @@ export function createMockConsultationFlowGateway(
         encounterId,
         queueEntryId: found.queueEntry.id,
         eventType: "did_call_requested",
-        displayText: `${room.name}로 환자를 호출합니다.`,
+        displayText: `${room.name}로 환자를 호출하고 진료를 시작합니다.`,
         deliveryStatus: "queued",
         roomId: room.id,
         roomName: room.name,
@@ -284,6 +308,35 @@ export function createMockConsultationFlowGateway(
         },
       };
     },
+    async returnConsultationToWaiting({ encounterId, workspaceId }) {
+      const found = findConsultationFlowRows(encounters, queueEntries, workspaceId, encounterId);
+      if (!found.encounter) {
+        return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+      }
+      if (!found.queueEntry) {
+        return { ok: false, status: 409, denialReason: "queue_entry_unavailable" };
+      }
+      if (
+        found.encounter.status !== "in_consultation" ||
+        found.queueEntry.status !== "in_progress"
+      ) {
+        return { ok: false, status: 409, denialReason: "stale_status" };
+      }
+
+      const timestamp = now();
+      found.encounter.status = "waiting";
+      found.encounter.startedAt = undefined;
+      found.encounter.updatedAt = timestamp;
+      found.queueEntry.status = "waiting";
+
+      return {
+        ok: true,
+        flow: {
+          encounter: { ...found.encounter },
+          queueEntry: { ...found.queueEntry },
+        },
+      };
+    },
   };
 }
 
@@ -299,6 +352,14 @@ export type SupabaseConsultationFlowRpcClient = {
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_start_consultation",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_encounter_id: string;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(
+    functionName: "clair_return_consultation_to_waiting",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
@@ -323,6 +384,15 @@ export function createSupabaseConsultationFlowGateway(
     },
     async startConsultation({ actorUserId, encounterId, workspaceId }) {
       const { data, error } = await client.rpc("clair_start_consultation", {
+        p_workspace_id: workspaceId,
+        p_actor_user_id: actorUserId,
+        p_encounter_id: encounterId,
+      });
+
+      return mapSupabaseMutationResult(data, error, "db_write_failed");
+    },
+    async returnConsultationToWaiting({ actorUserId, encounterId, workspaceId }) {
+      const { data, error } = await client.rpc("clair_return_consultation_to_waiting", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
@@ -488,6 +558,8 @@ function mapEncounter(value: unknown): Encounter | null {
     chartCompletedByUserId:
       getString(row.chartCompletedByUserId) ?? getString(row.chart_completed_by_user_id),
     completedAt: getString(row.completedAt) ?? getString(row.completed_at),
+    cancellationReason:
+      getString(row.cancellationReason) ?? getString(row.cancellation_reason),
     createdAt,
     updatedAt,
   };

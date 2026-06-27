@@ -151,8 +151,11 @@ test("live mutation routes wire Supabase writes to the audit append gateway", ()
     "src/app/api/workspaces/[workspaceId]/reception/walk-in-encounters/route.ts",
     "src/app/api/workspaces/[workspaceId]/reception/appointments/route.ts",
     "src/app/api/workspaces/[workspaceId]/reception/appointments/[appointmentId]/check-in/route.ts",
+    "src/app/api/workspaces/[workspaceId]/reception/encounters/[encounterId]/cancel/route.ts",
+    "src/app/api/workspaces/[workspaceId]/reception/encounters/[encounterId]/restore/route.ts",
     "src/app/api/workspaces/[workspaceId]/chart/soap-notes/route.ts",
     "src/app/api/workspaces/[workspaceId]/chart/completion/route.ts",
+    "src/app/api/workspaces/[workspaceId]/chart/consultation-flow/route.ts",
     "src/app/api/workspaces/[workspaceId]/chart/order-actions/route.ts",
     "src/app/api/workspaces/[workspaceId]/billing/payment-status/route.ts",
   ];

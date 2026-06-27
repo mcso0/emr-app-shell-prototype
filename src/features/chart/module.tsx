@@ -79,6 +79,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -229,6 +231,23 @@ type ConsultationFlowRouteResponse =
       status: number;
       denialReason?: string;
       error?: string;
+    };
+type EncounterCancelRouteResponse =
+  | {
+      ok: true;
+      status: number;
+      cancellation: {
+        encounter: Encounter;
+        queueEntry: WaitingQueueEntry;
+      };
+      workspaceId?: string;
+    }
+  | {
+      ok: false;
+      status: number;
+      denialReason?: string;
+      error?: string;
+      fieldErrors?: Partial<Record<"cancelReason" | "encounterId", string>>;
     };
 type ChartDiagnosisRouteResponse =
   | {
@@ -1530,6 +1549,17 @@ const hasMeaningfulSoapContent = (section: SoapSectionState) => {
   return Boolean(plainValue && plainValue !== templateValue);
 };
 
+const hasSavedSoapContent = (soapNote?: SoapNote | null) =>
+  Boolean(
+    soapNote &&
+      [
+        soapNote.subjective,
+        soapNote.objective,
+        soapNote.assessment,
+        soapNote.plan,
+      ].some((value) => Boolean(value?.trim())),
+  );
+
 function getDemoActorHeader(session: AuthSession | null) {
   return getDemoActorHeaders(session);
 }
@@ -2066,7 +2096,7 @@ async function mutateConsultationFlowRoute({
   roomId,
   workspaceId,
 }: {
-  action: "call" | "start";
+  action: "call" | "start" | "return_to_waiting";
   actorHeaders?: Record<string, string>;
   encounterId: string;
   roomId?: string;
@@ -2085,6 +2115,42 @@ async function mutateConsultationFlowRoute({
       },
     );
     const body = (await response.json()) as ConsultationFlowRouteResponse;
+
+    if (!response.ok || !body.ok) {
+      if (!body.ok) return { ...body, status: response.status };
+      return { ok: false, status: response.status, error: "db_write_failed" };
+    }
+
+    return body;
+  } catch {
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+}
+
+async function cancelEncounterRoute({
+  actorHeaders,
+  cancelReason,
+  encounterId,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  cancelReason: string;
+  encounterId: string;
+  workspaceId: string;
+}): Promise<EncounterCancelRouteResponse> {
+  try {
+    const response = await fetch(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/encounters/${encodeURIComponent(encounterId)}/cancel`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(actorHeaders ?? {}),
+        },
+        body: JSON.stringify({ cancelReason }),
+      },
+    );
+    const body = (await response.json()) as EncounterCancelRouteResponse;
 
     if (!response.ok || !body.ok) {
       if (!body.ok) return { ...body, status: response.status };
@@ -5394,8 +5460,8 @@ function ChartStartLockedState({
         </div>
         <p className="mt-2 emr-text-dense text-muted-foreground">
           {isCalled
-            ? "환자가 입실하면 진료 시작을 눌러 차트 입력과 오더 작업을 시작할 수 있습니다."
-            : "진료실을 선택해 환자를 호출한 뒤, 환자가 입실하면 진료 시작을 눌러 차트 입력과 오더 작업을 시작할 수 있습니다."}
+            ? "현재 호출된 환자 상태를 확인한 뒤 진료 흐름을 새로고침해 주세요."
+            : "진료실을 선택해 환자를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다."}
         </p>
       </div>
     </div>
@@ -5493,9 +5559,18 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const [selectedCallRoomId, setSelectedCallRoomId] = useState("");
   const [saveCallRoomPreference, setSaveCallRoomPreference] = useState(false);
   const [preferredCallRoomId, setPreferredCallRoomId] = useState("");
+  const [returnToWaitingDialogOpen, setReturnToWaitingDialogOpen] =
+    useState(false);
+  const [cancelEncounterDialogOpen, setCancelEncounterDialogOpen] =
+    useState(false);
+  const [cancelEncounterReason, setCancelEncounterReason] = useState("");
   const [consultationFlowState, setConsultationFlowState] = useState<{
-    action?: "call" | "start";
+    action?: "call" | "start" | "return_to_waiting";
     status: "idle" | "saving" | "error";
+  }>({ status: "idle" });
+  const [encounterCancelState, setEncounterCancelState] = useState<{
+    status: "idle" | "saving" | "error";
+    message?: string;
   }>({ status: "idle" });
   const [chartUnavailableAction, setChartUnavailableAction] =
     useState<ChartUnavailableAction | null>(null);
@@ -5669,8 +5744,8 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
       }));
       toast.error(
         result.denialReason === "permission_missing"
-          ? "차트 작성완료 권한이 없어 저장하지 못했어요."
-          : "차트 작성완료 상태를 저장하지 못했어요.",
+          ? "진료 완료 권한이 없어 저장하지 못했어요."
+          : "진료 완료 상태를 저장하지 못했어요.",
       );
       return;
     }
@@ -5681,9 +5756,11 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
       status: "saved",
     });
     setChartCompleteDialogOpen(false);
-    toast.success("차트 작성완료 상태를 저장했어요.");
+    toast.success("진료 완료 상태를 저장했어요.");
   };
-  const handleConsultationFlowMutation = async (action: "call" | "start") => {
+  const handleConsultationFlowMutation = async (
+    action: "call" | "start" | "return_to_waiting",
+  ) => {
     if (consultationFlowState.status === "saving") return;
     if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
@@ -5709,8 +5786,10 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
         result.denialReason === "permission_missing"
           ? "진료 흐름 변경 권한이 없어 저장하지 못했어요."
           : action === "call"
-            ? "호출 상태를 저장하지 못했어요."
-            : "진료 시작 상태를 저장하지 못했어요.",
+            ? "호출과 진료 시작 상태를 저장하지 못했어요."
+            : action === "return_to_waiting"
+              ? "대기 상태로 변경하지 못했어요."
+              : "진료 시작 상태를 저장하지 못했어요.",
       );
       return;
     }
@@ -5737,9 +5816,62 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     }
     setConsultationFlowState({ action, status: "idle" });
     setCallDialogOpen(false);
+    setReturnToWaitingDialogOpen(false);
     setSelectedCallRoomId("");
     setSaveCallRoomPreference(false);
-    toast.success(action === "call" ? "호출 상태로 전환했어요." : "진료를 시작했어요.");
+    toast.success(
+      action === "call"
+        ? "환자를 호출하고 진료를 시작했어요."
+        : action === "return_to_waiting"
+          ? "대기 상태로 변경했어요."
+          : "진료를 시작했어요.",
+    );
+  };
+  const handleCancelEncounterConfirm = async () => {
+    if (encounterCancelState.status === "saving") return;
+    if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
+      toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
+      return;
+    }
+
+    const reason = cancelEncounterReason.trim();
+    if (!reason) {
+      setEncounterCancelState({
+        status: "error",
+        message: "진료 취소 사유를 입력해 주세요.",
+      });
+      return;
+    }
+
+    setEncounterCancelState({ status: "saving" });
+    const result = await cancelEncounterRoute({
+      actorHeaders,
+      cancelReason: reason,
+      encounterId: activeEncounterId,
+      workspaceId: activeWorkspaceId,
+    });
+
+    if (!result.ok) {
+      setEncounterCancelState({
+        status: "error",
+        message:
+          result.fieldErrors?.cancelReason ??
+          (result.denialReason === "permission_missing"
+            ? "진료 취소 권한이 없어 저장하지 못했어요."
+            : "진료 취소 상태를 저장하지 못했어요."),
+      });
+      return;
+    }
+
+    updateLiveQueueRecord({
+      ...selectedLiveQueueRecord,
+      encounter: result.cancellation.encounter,
+      queueEntry: result.cancellation.queueEntry,
+    });
+    setEncounterCancelState({ status: "idle" });
+    setCancelEncounterDialogOpen(false);
+    setCancelEncounterReason("");
+    toast.success("진료를 취소했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
     if (!activeEncounterId || !activeWorkspaceId) {
@@ -5995,17 +6127,23 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
   const primaryAction =
     currentBundle.encounter.status === "waiting" && effectiveQueueEntry?.status === "waiting"
       ? "call"
-      : currentBundle.encounter.status === "waiting" && effectiveQueueEntry?.status === "called"
-        ? "start"
-        : canCompleteCurrentChart
-          ? "complete"
-          : null;
+      : canCompleteCurrentChart
+        ? "complete"
+        : null;
+  const canUseConsultationSecondaryActions =
+    currentBundle.encounter.status === "in_consultation" ||
+    effectiveQueueEntry?.status === "in_progress";
+  const hasChartWorkContent =
+    hasSavedSoapContent(effectiveLatestSoap) ||
+    diagnosisRows.length > 0 ||
+    allOrders.length > 0;
   const primaryActionBusy =
     consultationFlowState.status === "saving" ||
-    chartCompletionState.status === "saving";
+    chartCompletionState.status === "saving" ||
+    encounterCancelState.status === "saving";
   const chartStartLocked =
     currentBundle.encounter.status === "waiting" &&
-    (effectiveQueueEntry?.status === "waiting" || effectiveQueueEntry?.status === "called");
+    effectiveQueueEntry?.status === "waiting";
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
   const diagnosisSaveStatusText =
     diagnosisPersistenceState.encounterId === activeEncounterId
@@ -6058,21 +6196,63 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                     호출하기
                   </Button>
                 ) : null}
-                {primaryAction === "start" ? (
-                  <Button
-                    disabled={primaryActionBusy}
-                    onClick={() => void handleConsultationFlowMutation("start")}
-                  >
-                    진료 시작
-                  </Button>
-                ) : null}
                 {primaryAction === "complete" ? (
-                  <Button
-                    disabled={primaryActionBusy}
-                    onClick={() => setChartCompleteDialogOpen(true)}
-                  >
-                    차트 작성완료
-                  </Button>
+                  <div className="inline-flex items-center">
+                    <Button
+                      className={
+                        canUseConsultationSecondaryActions
+                          ? "rounded-r-none"
+                          : undefined
+                      }
+                      disabled={primaryActionBusy}
+                      onClick={() => setChartCompleteDialogOpen(true)}
+                    >
+                      진료 완료
+                    </Button>
+                    {canUseConsultationSecondaryActions ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              aria-label="진료 보조 액션 열기"
+                              className="-ml-px rounded-l-none"
+                              disabled={primaryActionBusy}
+                              size="icon"
+                            />
+                          }
+                        >
+                          <CdsFilesMoreHorizontalIcon aria-hidden="true" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              if (hasChartWorkContent) {
+                                setReturnToWaitingDialogOpen(true);
+                                return;
+                              }
+                              void handleConsultationFlowMutation(
+                                "return_to_waiting",
+                              );
+                            }}
+                          >
+                            대기로 변경
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer text-[var(--emr-status-danger-text)]"
+                            onClick={() => {
+                              setCancelEncounterReason("");
+                              setEncounterCancelState({ status: "idle" });
+                              setCancelEncounterDialogOpen(true);
+                            }}
+                          >
+                            진료 취소
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
+                  </div>
                 ) : null}
               </>
             }
@@ -6099,7 +6279,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
         <EmrDialogShell
           variant="confirm"
           title={callDialogTitle}
-          description="진료실을 선택한 뒤 환자를 호출해 주세요. 진료 시작 전에는 차트 입력과 오더 작업을 할 수 없습니다."
+          description="진료실을 선택해 환자를 호출하면 즉시 진료가 시작됩니다."
           primaryAction={
             <Button
               size="sm"
@@ -6208,7 +6388,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
           consultationFlowState.action === "call" ? (
             <EmrInlineAlert
               severity="error"
-              title="호출 상태가 저장되지 않았어"
+              title="호출과 진료 시작 상태가 저장되지 않았어"
               className="mt-3 emr-text-metadata"
               action={
                 <Button
@@ -6220,7 +6400,151 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                 </Button>
               }
             >
-              호출 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.
+              호출과 진료 시작 상태를 저장하지 못했어요. 잠시 후 다시 시도해
+              주세요.
+            </EmrInlineAlert>
+          ) : null}
+        </EmrDialogShell>
+      </Dialog>
+      <Dialog
+        open={returnToWaitingDialogOpen}
+        onOpenChange={setReturnToWaitingDialogOpen}
+      >
+        <EmrDialogShell
+          variant="confirm"
+          title="대기로 변경할까요?"
+          description="작성된 차트, 진단명, 오더가 있어요. 대기로 변경하면 진료 시작 전 상태로 돌아갑니다."
+          primaryAction={
+            <Button
+              size="sm"
+              disabled={consultationFlowState.status === "saving"}
+              onClick={() =>
+                void handleConsultationFlowMutation("return_to_waiting")
+              }
+            >
+              {consultationFlowState.status === "saving" &&
+              consultationFlowState.action === "return_to_waiting"
+                ? "변경 중"
+                : "대기로 변경"}
+            </Button>
+          }
+          secondaryAction={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={consultationFlowState.status === "saving"}
+              onClick={() => setReturnToWaitingDialogOpen(false)}
+            >
+              계속 진료
+            </Button>
+          }
+        >
+          <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+            <ChartPreflightLine
+              label="환자 / 보호자"
+              value={`${currentBundle.patient.name} / ${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}`}
+            />
+            <ChartPreflightLine
+              label="차트번호"
+              value={currentBundle.encounter.encounterNo}
+            />
+            <ChartPreflightLine
+              label="작성물"
+              value={`${hasSavedSoapContent(effectiveLatestSoap) ? "SOAP 있음" : "SOAP 없음"} · 진단 ${diagnosisRows.length}건 · 오더 ${allOrders.length}건`}
+            />
+          </div>
+          {consultationFlowState.status === "error" &&
+          consultationFlowState.action === "return_to_waiting" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="대기 상태로 변경하지 못했어"
+              className="mt-3 emr-text-metadata"
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void handleConsultationFlowMutation("return_to_waiting")
+                  }
+                >
+                  다시 시도
+                </Button>
+              }
+            >
+              현재 진료 상태는 화면에 남아 있지만 대기 상태 변경은 저장되지
+              않았어. 권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해.
+            </EmrInlineAlert>
+          ) : null}
+        </EmrDialogShell>
+      </Dialog>
+      <Dialog
+        open={cancelEncounterDialogOpen}
+        onOpenChange={(open) => {
+          setCancelEncounterDialogOpen(open);
+          if (!open) {
+            setCancelEncounterReason("");
+            setEncounterCancelState({ status: "idle" });
+          }
+        }}
+      >
+        <EmrDialogShell
+          variant="confirm"
+          title="진료 취소"
+          description="진료 업무를 종료합니다. 복구하면 다시 대기 상태로 돌아갑니다."
+          primaryAction={
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={
+                encounterCancelState.status === "saving" ||
+                !cancelEncounterReason.trim()
+              }
+              onClick={() => void handleCancelEncounterConfirm()}
+            >
+              {encounterCancelState.status === "saving"
+                ? "취소 중"
+                : "진료 취소"}
+            </Button>
+          }
+          secondaryAction={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={encounterCancelState.status === "saving"}
+              onClick={() => setCancelEncounterDialogOpen(false)}
+            >
+              닫기
+            </Button>
+          }
+        >
+          <div className="grid gap-2">
+            <label
+              className="emr-text-metadata font-medium text-foreground"
+              htmlFor="chart-encounter-cancel-reason"
+            >
+              진료 취소 사유
+            </label>
+            <Textarea
+              id="chart-encounter-cancel-reason"
+              maxLength={500}
+              value={cancelEncounterReason}
+              onChange={(event) => {
+                setCancelEncounterReason(event.target.value);
+                if (encounterCancelState.status === "error") {
+                  setEncounterCancelState({ status: "idle" });
+                }
+              }}
+              placeholder="예: 보호자 요청으로 진료를 취소합니다."
+            />
+          </div>
+          {encounterCancelState.status === "error" ? (
+            <EmrInlineAlert
+              severity="error"
+              title="진료 취소가 저장되지 않았어"
+              className="mt-3 emr-text-metadata"
+            >
+              {encounterCancelState.message ??
+                "진료 취소 상태를 저장하지 못했어요."}
             </EmrInlineAlert>
           ) : null}
         </EmrDialogShell>
@@ -6231,9 +6555,9 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
       >
         <EmrDialogShell
           variant="confirm"
-          title="차트 작성완료 확인"
-          description="진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 작성완료 상태를 저장해."
-          footerMeta="작성완료는 local-first/server route 저장 상태만 바꾸며 외부 전송이나 청구 확정은 별도 흐름이야."
+          title="진료 완료 확인"
+          description="진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 진료 완료 상태를 저장해."
+          footerMeta="진료 완료는 local-first/server route 저장 상태만 바꾸며 외부 전송이나 청구 확정은 별도 흐름이야."
           primaryAction={
             <Button
               size="sm"
@@ -6242,7 +6566,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
             >
               {chartCompletionState.status === "saving"
                 ? "저장 중"
-                : "작성완료 저장"}
+                : "진료 완료 저장"}
             </Button>
           }
           secondaryAction={
@@ -6282,7 +6606,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
           {chartCompletionState.status === "error" ? (
             <EmrInlineAlert
               severity="error"
-              title="차트 작성완료가 저장되지 않았어"
+              title="진료 완료가 저장되지 않았어"
               className="mt-3 emr-text-metadata"
               action={
                 <Button
@@ -6290,7 +6614,7 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
                   variant="outline"
                   onClick={() => void handleChartCompletionConfirm()}
                 >
-                  작성완료 다시 시도
+                  진료 완료 다시 시도
                 </Button>
               }
               testId="chart-completion-error-alert"

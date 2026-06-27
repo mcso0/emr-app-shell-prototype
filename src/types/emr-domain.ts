@@ -240,6 +240,7 @@ export type Encounter = {
   chartCompletedAt?: IsoDateTime;
   chartCompletedByUserId?: EmrId;
   completedAt?: IsoDateTime;
+  cancellationReason?: string;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 };
