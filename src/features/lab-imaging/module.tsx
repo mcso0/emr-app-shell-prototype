@@ -1766,7 +1766,7 @@ export function LabSidePanel({
         }}
         headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
-      <EmrSubpanelBody>
+      <EmrSubpanelBody density="queue">
         {showLabQueueLoadingState ? (
           <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다" />
         ) : resultCount === 0 && searchQuery.trim() ? (
@@ -1954,7 +1954,7 @@ export function ImagingSidePanel({
         }}
         headerActions={<QueueActions onSearch={() => setSearchActive(true)} />}
       />
-      <EmrSubpanelBody>
+      <EmrSubpanelBody density="queue">
         {showImagingQueueLoadingState ? (
           <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다" />
         ) : resultCount === 0 && searchQuery.trim() ? (

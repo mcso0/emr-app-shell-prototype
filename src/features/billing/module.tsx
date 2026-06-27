@@ -1449,7 +1449,7 @@ export function BillingSidePanel({
           </>
         }
       />
-      <EmrSubpanelBody>
+      <EmrSubpanelBody density="queue">
         {totalRowCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="수납 대기열 항목"

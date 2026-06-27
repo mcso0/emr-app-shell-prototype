@@ -345,7 +345,7 @@ export function EmrOrderQueueSidePanel({
           </>
         }
       />
-      <EmrSubpanelBody>
+      <EmrSubpanelBody density="queue">
         {showLoadingState ? (
           <EmrQueueLoadingState title={loadingTitle} />
         ) : groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
