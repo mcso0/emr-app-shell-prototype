@@ -261,7 +261,6 @@ export function EmrModuleListSidePanel({
     >
       <EmrSubpanelTitle
         title={<span data-testid="module-side-panel-title">{title}</span>}
-        className="h-auto px-[var(--emr-module-list-header-padding-x)] pb-[var(--emr-module-list-header-padding-bottom)] pt-[var(--emr-module-list-header-padding-top)]"
         collapseLabel={collapseLabel}
         onCollapse={onCollapse}
       />
