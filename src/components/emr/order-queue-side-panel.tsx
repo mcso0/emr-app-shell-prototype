@@ -317,6 +317,7 @@ export function EmrOrderQueueSidePanel({
       <EmrListHeader
         label={listLabel}
         count={visibleItems.length}
+        topDividerVisible
         search={{
           active: searchActive,
           closeLabel: "대기열 검색 닫기",
