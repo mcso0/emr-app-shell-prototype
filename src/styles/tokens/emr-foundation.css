@@ -219,6 +219,7 @@
   --emr-module-list-leaf-item-height: var(--clair-spacing-32);
   --emr-module-list-leaf-item-padding-x: var(--clair-spacing-8);
   --emr-module-list-leaf-item-padding-y: var(--clair-spacing-4);
+  --emr-module-list-leaf-list-padding-right: var(--clair-spacing-16);
   --emr-module-list-action-size: var(--clair-spacing-24);
   --emr-module-list-action-icon-size: 14px;
   --emr-module-list-action-icon: var(--clair-color-atomic-neutral-500);

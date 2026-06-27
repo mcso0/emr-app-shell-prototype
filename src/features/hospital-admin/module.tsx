@@ -751,7 +751,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       id: `${group.id}-label`,
       label: group.label,
     },
-    ...group.children.map((item) => {
+    ...group.children.filter((item) => item.categoryId && item.subcategoryId).map((item) => {
       const active =
         item.categoryId === selectedCategoryId &&
         item.subcategoryId === selectedSubcategoryId;
@@ -845,6 +845,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
         toggleSection(sectionId);
       }}
       openSectionIds={openSections}
+      testId="hospital-admin-side-panel"
     />
   );
 }
