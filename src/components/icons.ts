@@ -4,6 +4,7 @@ import {
   IconBed,
   IconBone,
   IconBusiness,
+  IconCalendar,
   IconCalendarDates,
   IconCalendarCheck,
   IconCheck,
@@ -149,6 +150,7 @@ export const BedIcon = createIcon(IconBed, "BedIcon");
 export const ActivityIcon = createIcon(IconBusiness, "ActivityIcon");
 export const BuildingIcon = createIcon(IconBusiness, "BuildingIcon");
 export const CalendarIcon = createIcon(IconCalendarDates, "CalendarIcon");
+export const CalendarOutlineIcon = createIcon(IconCalendar, "CalendarOutlineIcon");
 export const CalendarCheckIcon = createIcon(
   IconCalendarCheck,
   "CalendarCheckIcon",
