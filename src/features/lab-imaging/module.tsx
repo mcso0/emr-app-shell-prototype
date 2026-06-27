@@ -1754,6 +1754,7 @@ export function LabSidePanel({
       <EmrListHeader
         label={queueView === "order" ? "검사 대기열" : "차트별 검사"}
         count={resultCount}
+        topDividerVisible
         search={{
           active: searchActive,
           closeLabel: "검사 대기열 검색 닫기",
@@ -1942,6 +1943,7 @@ export function ImagingSidePanel({
       <EmrListHeader
         label={queueView === "order" ? "영상 대기열" : "차트별 영상"}
         count={resultCount}
+        topDividerVisible
         search={{
           active: searchActive,
           closeLabel: "영상 대기열 검색 닫기",
@@ -2683,6 +2685,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
         className="mx-3"
         count={visibleReceipts.length}
         label="검사 결과"
+        topDividerVisible
         headerActions={
           <>
             <EmrListHeaderIconButton ariaLabel="장비 검사 수신함 정렬">

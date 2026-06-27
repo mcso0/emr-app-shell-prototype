@@ -1415,6 +1415,7 @@ export function BillingSidePanel({
       <EmrListHeader
         label="전체"
         count={totalRowCount}
+        topDividerVisible
         search={{
           active: searchActive,
           closeLabel: "수납 대기열 검색 닫기",
