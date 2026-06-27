@@ -6,7 +6,7 @@ import {
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
-  CdsFilesCalendarIcon,
+  CdsFilesReceptionCalendarIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
   CdsNavigationChevronLeftIcon,
@@ -118,11 +118,11 @@ type EmrListItemProps = {
 
 const emrDatePickerWeekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const emrDateNavigatorClassName =
-  "flex h-[calc(var(--clair-control-height-md)+var(--clair-spacing-10)*2)] shrink-0 items-center justify-between gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-16)]";
+  "flex h-[calc(var(--clair-control-height-md)+var(--clair-spacing-8)*2)] shrink-0 items-center justify-between gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-12)]";
 const emrDateNavigatorTriggerClassName =
   "emr-text-dense-label flex h-[var(--clair-control-height-md)] min-w-0 flex-1 items-center justify-center gap-[var(--clair-spacing-6)] rounded-[var(--clair-radius-md)] px-[var(--clair-spacing-10)] font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50";
 const emrDateNavigatorIconButtonClassName =
-  "rounded-[var(--clair-radius-md)] bg-[var(--emr-surface-panel)] transition-transform active:scale-[0.96]";
+  "rounded-[var(--clair-radius-md)] bg-transparent text-[var(--emr-text-tertiary)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
 const emrDateNavigatorTodayBadgeClassName =
   "rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-6)] emr-text-metadata font-medium";
 
@@ -256,8 +256,8 @@ export function EmrDateNavigator({
           : "날짜 선택"
       }
     >
-      <CdsFilesCalendarIcon
-        className="size-[var(--clair-spacing-16)] shrink-0 text-[var(--emr-text-tertiary)]"
+      <CdsFilesReceptionCalendarIcon
+        className="size-[var(--clair-spacing-16)] shrink-0 text-[var(--emr-text-secondary)]"
         aria-hidden="true"
       />
       <span className="truncate">{renderedDateLabel}</span>
@@ -272,7 +272,7 @@ export function EmrDateNavigator({
   return (
     <div className={cn(emrDateNavigatorClassName, className)}>
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         className={emrDateNavigatorIconButtonClassName}
         aria-label={previousLabel}
@@ -362,7 +362,7 @@ export function EmrDateNavigator({
         trigger
       )}
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         className={emrDateNavigatorIconButtonClassName}
         aria-label={nextLabel}
