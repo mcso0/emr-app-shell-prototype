@@ -42,6 +42,7 @@ import {
   emrSidePanelCardActionButtonClassName,
 } from "@/components/emr/side-panel-card";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
+import { EmrSidePanelMiniCalendar } from "@/components/emr/side-panel-mini-calendar";
 import {
   EmrTaskQueueCard,
   type EmrTaskQueueCardItem,
@@ -168,6 +169,7 @@ import {
 import {
   useReceptionStore,
   type ReceptionCalendarDraftSelection,
+  type ReceptionCalendarView,
 } from "@/features/reception/store";
 import {
   ReceptionEmptyState,
@@ -307,7 +309,6 @@ const weekDays = [
 ];
 const monthDays = Array.from({ length: 35 }, (_, index) => index + 1);
 
-type ReceptionCalendarView = (typeof calendarViewItems)[number]["value"];
 type ReceptionSideListMode = (typeof receptionQueueTabItems)[number]["value"];
 type CalendarTaskBadgeType = "예약" | "외래" | "노쇼";
 type Veterinarian = {
@@ -2619,14 +2620,29 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const requestReceptionReadRetry = useReceptionStore(
     (state) => state.requestReceptionReadRetry,
   );
+  const calendarViewByWorkspace = useReceptionStore(
+    (state) => state.calendarViewByWorkspace,
+  );
+  const setCalendarDraftSelection = useReceptionStore(
+    (state) => state.setCalendarDraftSelection,
+  );
   const setSearchQuery = useReceptionStore((state) => state.setSearchQuery);
+  const setWorkspaceOperatingDate = useReceptionStore(
+    (state) => state.setWorkspaceOperatingDate,
+  );
   const scenario = getDemoScenarioFromParams(searchParams);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
   const operatingDateOverride = useReceptionStore(
     (state) => state.operatingDateByWorkspace[workspaceId],
   );
+  const calendarView = calendarViewByWorkspace[workspaceId] ?? "day";
   const operatingDate = operatingDateOverride ?? defaultOperatingDate;
+  const miniCalendarWeekStartDate =
+    calendarView === "week" ? getStartOfWeekIsoDate(operatingDate) : undefined;
+  const miniCalendarWeekEndDate = miniCalendarWeekStartDate
+    ? addDaysToIsoDate(miniCalendarWeekStartDate, 6)
+    : undefined;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
   const veterinarians = liveStaffSourceEnabled
@@ -2772,6 +2788,14 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       [group]: !current[group],
     }));
   }, []);
+  const handleSidePanelDateSelect = useCallback(
+    (nextOperatingDate: string) => {
+      dispatchReceptionCalendarDragClear();
+      setCalendarDraftSelection(undefined);
+      setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+    },
+    [setCalendarDraftSelection, setWorkspaceOperatingDate, workspaceId],
+  );
   const handleRestoreQueueItem = useCallback(
     async (item: ReceptionQueueSideItem) => {
       if (item.statusGroup !== "cancelled" || pendingRestoreId) return;
@@ -2847,6 +2871,13 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         title={moduleLabel}
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
+      />
+      <EmrSidePanelMiniCalendar
+        selectedDate={operatingDate}
+        todayDate={defaultOperatingDate}
+        rangeStartDate={miniCalendarWeekStartDate}
+        rangeEndDate={miniCalendarWeekEndDate}
+        onDateSelect={handleSidePanelDateSelect}
       />
       {queueReadStatus === "error" ? (
         <EmrInlineAlert
@@ -5629,8 +5660,9 @@ export function ReceptionContent() {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const searchParams = useSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
-  const [calendarView, setCalendarView] =
-    useState<ReceptionCalendarView>("day");
+  const calendarViewByWorkspace = useReceptionStore(
+    (state) => state.calendarViewByWorkspace,
+  );
   const [emptySlotAffordanceSuspended, setEmptySlotAffordanceSuspended] =
     useState(false);
   const [selectedVeterinarianIds, setSelectedVeterinarianIds] = useState(() =>
@@ -5677,6 +5709,9 @@ export function ReceptionContent() {
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
+  const setWorkspaceCalendarView = useReceptionStore(
+    (state) => state.setWorkspaceCalendarView,
+  );
   const setWorkspaceOperatingDate = useReceptionStore(
     (state) => state.setWorkspaceOperatingDate,
   );
@@ -5713,7 +5748,9 @@ export function ReceptionContent() {
     searchParams.get("encounterId") ?? scenario?.encounterId;
   const [manualReceptionRefreshing, setManualReceptionRefreshing] =
     useState(false);
+  const receptionReadRequestSeqRef = useRef(0);
   const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
+  const calendarView = calendarViewByWorkspace[workspaceId] ?? "day";
   const defaultOperatingDate = getWorkspaceOperatingDate(workspaceId);
   const operatingDateOverride = useReceptionStore(
     (state) => state.operatingDateByWorkspace[workspaceId],
@@ -5837,6 +5874,9 @@ export function ReceptionContent() {
   const handleOperatingDateChange = (nextOperatingDate: string) => {
     clearCalendarTransientSelection();
     setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+  };
+  const handleCalendarViewChange = (nextView: ReceptionCalendarView) => {
+    setWorkspaceCalendarView(workspaceId, nextView);
   };
   const handleSelectAppointment = (appointment: Appointment) => {
     clearCalendarTransientSelection();
@@ -5974,6 +6014,10 @@ export function ReceptionContent() {
   ]);
   const refreshReceptionReads = useCallback(
     async ({ showLoading = false }: { showLoading?: boolean } = {}) => {
+      const requestSeq = receptionReadRequestSeqRef.current + 1;
+      receptionReadRequestSeqRef.current = requestSeq;
+      const isLatestRequest = () => receptionReadRequestSeqRef.current === requestSeq;
+
       if (showLoading) {
         setReceptionCalendarReadStatus("loading");
         setReceptionQueueReadStatus("loading");
@@ -5991,6 +6035,11 @@ export function ReceptionContent() {
           workspaceId,
         }),
       ]);
+
+      if (!isLatestRequest()) {
+        return { ok: false, stale: true };
+      }
+
       const readbackRecords = getReceptionReadbackRecords({
         calendarResult,
         queueResult,
@@ -6013,6 +6062,10 @@ export function ReceptionContent() {
           actorId: authSession?.id,
           workspaceId,
         });
+
+        if (!isLatestRequest()) {
+          return { ok: false, stale: true };
+        }
 
         if (profileResult.ok) {
           const missingPatientIds = new Set(missingReadbackPatientIds);
@@ -6061,6 +6114,7 @@ export function ReceptionContent() {
     setManualReceptionRefreshing(true);
     try {
       const result = await refreshReceptionReads({ showLoading: false });
+      if (result.stale) return;
       if (result.ok) {
         toast.success("접수/예약 정보를 새로고침했습니다.");
       } else {
@@ -6123,7 +6177,7 @@ export function ReceptionContent() {
         onOperatingDateChange={handleOperatingDateChange}
         operatingDate={operatingDate}
         view={calendarView}
-        onViewChange={setCalendarView}
+        onViewChange={handleCalendarViewChange}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
         todayDate={defaultOperatingDate}
         veterinarians={veterinarians}
