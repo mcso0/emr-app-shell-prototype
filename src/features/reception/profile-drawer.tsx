@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import {
   CdsActionsPlusIcon,
@@ -2874,9 +2874,11 @@ function getRegistrationRouteErrorMessage(
 function PatientGuardianRegistrationButton({
   label = "환자/보호자 등록",
   onPatientReady,
+  size = "sm",
 }: {
   label?: string;
   onPatientReady: (patientId: EmrId) => void;
+  size?: ComponentProps<typeof Button>["size"];
 }) {
   const applyPatientGuardianRegistration = usePatientProfileStore(
     (state) => state.applyPatientGuardianRegistration
@@ -3190,7 +3192,7 @@ function PatientGuardianRegistrationButton({
       <Button
         aria-label={label}
         variant="outline"
-        size="sm"
+        size={size}
         className="bg-card px-3 font-semibold"
         onClick={() => setOpen(true)}
       >

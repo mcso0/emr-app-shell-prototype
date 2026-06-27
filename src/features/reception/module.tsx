@@ -3979,9 +3979,9 @@ function ScheduleToolbar({
           <DropdownMenuTrigger
             className={buttonVariants({
               variant: "outline",
-              size: "sm",
+              size: "default",
               className:
-                "h-8 min-w-[148px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-foreground",
+                "min-w-[148px] justify-start border !border-[var(--emr-line-hairline)] bg-card text-foreground",
             })}
           >
             <CdsActionsSearchIcon data-icon="inline-start" />
@@ -4018,6 +4018,7 @@ function ScheduleToolbar({
         <SegmentedControl
           aria-label="접수 캘린더 보기"
           items={calendarViewItems}
+          size="md"
           value={view}
           variant="tabs"
           onValueChange={onViewChange}
@@ -4029,13 +4030,14 @@ function ScheduleToolbar({
         <NewUnifiedRegistrationButton
           label="신규 동물/보호자"
           onPatientReady={onUnifiedPatientReady}
+          size="default"
         />
         <DropdownMenu>
           <DropdownMenuTrigger
             data-testid="schedule-check-in-button"
             className={buttonVariants({
-              size: "sm",
-              className: "h-8 px-3 font-semibold",
+              size: "default",
+              className: "font-semibold",
             })}
           >
             <CdsActionsPlusIcon data-icon="inline-start" />
