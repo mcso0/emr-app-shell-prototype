@@ -3852,33 +3852,6 @@ function getReceptionMonthDatePickerCells(
   });
 }
 
-function getReceptionWeekPickerRows(operatingDate: string) {
-  const selectedWeekStart = getStartOfWeekIsoDate(operatingDate);
-
-  return [-2, -1, 0, 1, 2].map((offset) => {
-    const key = addDaysToIsoDate(selectedWeekStart, offset * 7);
-
-    return {
-      key,
-      label: getReceptionWeekLabel(key),
-      selected: key === selectedWeekStart,
-    };
-  });
-}
-
-function getReceptionMonthPickerItems(operatingDate: string) {
-  const { year, month } = parseIsoDateParts(operatingDate);
-
-  return Array.from({ length: 12 }, (_, index) => {
-    const monthNumber = index + 1;
-
-    return {
-      label: `${String(year).slice(2)}.${String(monthNumber).padStart(2, "0")}`,
-      selected: monthNumber === month,
-    };
-  });
-}
-
 function getDaysInMonth(year: number, month: number) {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
@@ -3893,24 +3866,6 @@ function addMonthsToIsoDate(date: string, months: number) {
   return getIsoDateFromUtcDate(new Date(Date.UTC(year, monthIndex, day)));
 }
 
-function setMonthOnIsoDate(date: string, month: number) {
-  const parts = parseIsoDateParts(date);
-  const day = Math.min(parts.day, getDaysInMonth(parts.year, month));
-
-  return getIsoDateFromUtcDate(new Date(Date.UTC(parts.year, month - 1, day)));
-}
-
-function getAdjacentReceptionDate(
-  operatingDate: string,
-  view: ReceptionCalendarView,
-  direction: -1 | 1,
-) {
-  if (view === "week") return addDaysToIsoDate(operatingDate, direction * 7);
-  if (view === "month") return addMonthsToIsoDate(operatingDate, direction);
-
-  return addDaysToIsoDate(operatingDate, direction);
-}
-
 function ReceptionScheduleDateControl({
   onOperatingDateChange,
   operatingDate,
@@ -3922,258 +3877,20 @@ function ReceptionScheduleDateControl({
   todayDate: string;
   view: ReceptionCalendarView;
 }) {
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [pickerMonthDate, setPickerMonthDate] = useState(operatingDate);
   const dateControlLabel = getReceptionDateControlLabels(operatingDate)[view];
-  const datePickerCells = getReceptionMonthDatePickerCells(
-    pickerMonthDate,
-    operatingDate,
-  );
-  const weekPickerRows = getReceptionWeekPickerRows(operatingDate);
-  const monthPickerItems = getReceptionMonthPickerItems(operatingDate);
-  const pickerMonthDateParts = parseIsoDateParts(pickerMonthDate);
-  const operatingDateParts = parseIsoDateParts(operatingDate);
   const showingToday = operatingDate === todayDate;
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!datePickerOpen) setPickerMonthDate(operatingDate);
-  }, [datePickerOpen, operatingDate]);
-
-  const selectOperatingDate = (nextOperatingDate: string) => {
-    onOperatingDateChange(nextOperatingDate);
-    setDatePickerOpen(false);
-  };
 
   return (
     <div
-      className="flex h-10 shrink-0 items-center gap-2"
+      className="flex h-10 shrink-0 items-center gap-3"
       data-testid="reception-date-control"
     >
-      <Button
-        variant="outline"
-        size="icon"
-        className="bg-[var(--emr-surface-panel)]"
-        aria-label={dateControlLabel.previousLabel}
-        onClick={() =>
-          onOperatingDateChange(
-            getAdjacentReceptionDate(operatingDate, view, -1),
-          )
-        }
+      <span
+        className="flex h-8 items-center text-[16px] font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
+        aria-label={`${dateControlLabel.dateLabel} 표시 중`}
       >
-        <ChevronLeftIcon />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        className="bg-[var(--emr-surface-panel)]"
-        aria-label={dateControlLabel.nextLabel}
-        onClick={() =>
-          onOperatingDateChange(
-            getAdjacentReceptionDate(operatingDate, view, 1),
-          )
-        }
-      >
-        <ChevronRightIcon />
-      </Button>
-      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-        <PopoverTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 justify-start px-3 !text-[16px] !font-semibold leading-6 text-[var(--clair-color-atomic-gray-800)] tabular-nums [letter-spacing:0]"
-              aria-label={`${dateControlLabel.dateLabel} ${dateControlLabel.pickerLabel}`}
-            />
-          }
-        >
-          <span className="tabular-nums">{dateControlLabel.dateLabel}</span>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          className="w-[244px] gap-3 p-3"
-          initialFocus={false}
-        >
-          {view === "day" ? (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="emr-text-dense font-semibold leading-5 text-foreground tabular-nums">
-                  {pickerMonthDateParts.year}년 {pickerMonthDateParts.month}월
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="이전 달"
-                    onClick={() =>
-                      setPickerMonthDate((current) =>
-                        addMonthsToIsoDate(current, -1),
-                      )
-                    }
-                  >
-                    <ChevronLeftIcon />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="다음 달"
-                    onClick={() =>
-                      setPickerMonthDate((current) =>
-                        addMonthsToIsoDate(current, 1),
-                      )
-                    }
-                  >
-                    <ChevronRightIcon />
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {receptionDatePickerWeekdays.map((weekday) => (
-                  <span
-                    key={weekday}
-                    className="h-6 emr-text-micro font-medium leading-6 text-muted-foreground"
-                  >
-                    {weekday}
-                  </span>
-                ))}
-                {datePickerCells.map((cell) => (
-                  <EmrDatePickerDayButton
-                    key={cell.key}
-                    date={cell.key}
-                    day={cell.day}
-                    inMonth={cell.inMonth}
-                    selected={cell.selected}
-                    today={cell.key === todayDate}
-                    onClick={() => selectOperatingDate(cell.key)}
-                  />
-                ))}
-              </div>
-            </>
-          ) : null}
-          {view === "week" ? (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                  {operatingDateParts.year}년 {operatingDateParts.month}월
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="이전 주 보기"
-                    onClick={() =>
-                      onOperatingDateChange(addDaysToIsoDate(operatingDate, -7))
-                    }
-                  >
-                    <ChevronLeftIcon />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="다음 주 보기"
-                    onClick={() =>
-                      onOperatingDateChange(addDaysToIsoDate(operatingDate, 7))
-                    }
-                  >
-                    <ChevronRightIcon />
-                  </Button>
-                </div>
-              </div>
-              <div className="grid gap-1">
-                {weekPickerRows.map((week) => (
-                  <button
-                    key={week.key}
-                    type="button"
-                    className={cn(
-                      "flex h-8 items-center rounded-md px-2 text-left emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                      week.selected
-                        ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]"
-                        : "text-foreground",
-                    )}
-                    aria-label={
-                      week.selected
-                        ? `${week.label} 선택됨`
-                        : `${week.label} 주 선택`
-                    }
-                    aria-pressed={week.selected}
-                    onClick={() => selectOperatingDate(week.key)}
-                  >
-                    {week.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
-          {view === "month" ? (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="emr-text-dense font-semibold leading-5 text-foreground">
-                  {operatingDateParts.year}년
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="이전 연도"
-                    onClick={() =>
-                      onOperatingDateChange(addMonthsToIsoDate(operatingDate, -12))
-                    }
-                  >
-                    <ChevronLeftIcon />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="다음 연도"
-                    onClick={() =>
-                      onOperatingDateChange(addMonthsToIsoDate(operatingDate, 12))
-                    }
-                  >
-                    <ChevronRightIcon />
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {monthPickerItems.map((month, index) => {
-                  const nextMonth = index + 1;
-                  return (
-                    <button
-                      key={month.label}
-                      type="button"
-                      className={cn(
-                        "flex h-8 items-center justify-center rounded-md emr-text-metadata font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                        month.selected
-                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                          : "text-foreground",
-                      )}
-                      aria-label={
-                        month.selected
-                          ? `${month.label} 선택됨`
-                          : `${month.label} 월 선택`
-                      }
-                      aria-pressed={month.selected}
-                      onClick={() =>
-                        selectOperatingDate(
-                          setMonthOnIsoDate(operatingDate, nextMonth),
-                        )
-                      }
-                    >
-                      {month.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-        </PopoverContent>
-      </Popover>
+        {dateControlLabel.dateLabel}
+      </span>
       <Button
         type="button"
         variant="outline"
@@ -4181,7 +3898,7 @@ function ReceptionScheduleDateControl({
         className="h-8 bg-[var(--emr-surface-panel)] px-3 emr-text-body font-semibold"
         aria-label="오늘 일자로 이동"
         disabled={showingToday}
-        onClick={() => selectOperatingDate(todayDate)}
+        onClick={() => onOperatingDateChange(todayDate)}
       >
         오늘
       </Button>
