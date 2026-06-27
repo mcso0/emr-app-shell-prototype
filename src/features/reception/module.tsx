@@ -2961,7 +2961,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
           </>
         }
       />
-      <EmrSubpanelBody>
+      <EmrSubpanelBody contentClassName="pt-0">
         {showQueueLoadingState ? (
           <EmrQueueLoadingState title="접수/예약 정보를 불러오는 중입니다" />
         ) : visibleQueueGroups.length ? (
