@@ -11,6 +11,59 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.locator('[data-selected="true"]')).toHaveCount(1);
   await expect(page.getByTestId("hospital-admin-side-panel").getByRole("button", { name: /^전체/ })).toHaveCount(0);
   await expect(page.getByTestId("order-set-placeholder")).toContainText("미구현");
+  const sidePanelMetrics = await page.getByTestId("hospital-admin-menu-order-management").evaluate((trigger) => {
+    const section = trigger.closest("section");
+    const panel = trigger.closest('[data-testid="hospital-admin-side-panel"]');
+    const icon = trigger.querySelector('[data-emr-module-list-section-icon="true"]');
+    const rail = section?.querySelector('[data-emr-module-list-child-rail="true"]');
+    const childList = section?.querySelector('[data-emr-module-list-child-list="true"]');
+    const selectedLeaf = section?.querySelector('[data-selected="true"]');
+
+    if (!section || !panel || !icon || !rail || !childList || !selectedLeaf) {
+      throw new Error("Missing module list side-panel layout target");
+    }
+
+    const sectionRect = section.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const railRect = rail.getBoundingClientRect();
+    const childListRect = childList.getBoundingClientRect();
+    const leafRect = selectedLeaf.getBoundingClientRect();
+
+    return {
+      childListOffset: childListRect.left - sectionRect.left,
+      iconCenterX: iconRect.left + iconRect.width / 2,
+      leafHeight: leafRect.height,
+      leafRightInset: panelRect.right - leafRect.right,
+      railCenterX: railRect.left + railRect.width / 2,
+    };
+  });
+  expect(Math.round(sidePanelMetrics.iconCenterX)).toBe(Math.round(sidePanelMetrics.railCenterX));
+  expect(Math.round(sidePanelMetrics.childListOffset)).toBe(26);
+  expect(Math.round(sidePanelMetrics.leafHeight)).toBe(32);
+  expect(Math.round(sidePanelMetrics.leafRightInset)).toBe(16);
+  await page
+    .getByTestId("hospital-admin-menu-order-management")
+    .locator("xpath=ancestor::section")
+    .locator('[data-selected="true"]')
+    .hover();
+  await expect
+    .poll(async () =>
+      page.getByTestId("hospital-admin-menu-order-management").evaluate((trigger) => {
+        const panel = trigger.closest('[data-testid="hospital-admin-side-panel"]');
+        const selectedLeaf = trigger.closest("section")?.querySelector('[data-selected="true"]');
+
+        if (!panel || !selectedLeaf) {
+          throw new Error("Missing selected module list leaf");
+        }
+
+        const panelRect = panel.getBoundingClientRect();
+        const leafRect = selectedLeaf.getBoundingClientRect();
+
+        return Math.round(panelRect.right - leafRect.right);
+      })
+    )
+    .toBe(16);
   await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
   await expect(page.getByRole("button", { name: /임상병리 검사/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("group", { name: "임상병리 검사 하위 타입" }).getByRole("button", { name: "전체" })).toHaveAttribute("aria-pressed", "true");

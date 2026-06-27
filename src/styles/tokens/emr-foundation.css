@@ -216,10 +216,18 @@
   --emr-module-list-item-disabled-text: var(--clair-color-atomic-neutral-400);
   --emr-module-list-item-icon: var(--clair-color-atomic-neutral-500);
   --emr-module-list-item-icon-size: var(--clair-spacing-12);
+  --emr-module-list-section-icon-center-x: calc(
+    var(--emr-module-list-item-padding-x) +
+      (var(--emr-module-list-item-icon-size) / 2)
+  );
   --emr-module-list-leaf-item-height: var(--clair-spacing-32);
   --emr-module-list-leaf-item-padding-x: var(--clair-spacing-8);
   --emr-module-list-leaf-item-padding-y: var(--clair-spacing-4);
-  --emr-module-list-leaf-list-padding-right: var(--clair-spacing-16);
+  --emr-module-list-leaf-item-panel-right-inset: var(--clair-spacing-16);
+  --emr-module-list-leaf-list-padding-right: calc(
+    var(--emr-module-list-leaf-item-panel-right-inset) -
+      var(--emr-module-list-body-padding-x)
+  );
   --emr-module-list-action-size: var(--clair-spacing-24);
   --emr-module-list-action-icon-size: 14px;
   --emr-module-list-action-icon: var(--clair-color-atomic-neutral-500);
@@ -228,9 +236,17 @@
   --emr-module-list-group-title-padding-y: var(--clair-spacing-2);
   --emr-module-list-group-title-text: var(--clair-color-atomic-neutral-400);
   --emr-module-list-child-indent: var(--clair-spacing-16);
-  --emr-module-list-child-rail-padding-left: var(--clair-spacing-8);
-  --emr-module-list-child-rail-padding-right: var(--clair-spacing-6);
-  --emr-module-list-child-rail-width: var(--clair-spacing-12);
+  --emr-module-list-child-rail-line-width: 1px;
+  --emr-module-list-child-rail-column-width: calc(
+    var(--emr-module-list-item-padding-x) +
+      var(--emr-module-list-item-icon-size) +
+      var(--emr-module-list-item-gap)
+  );
+  --emr-module-list-child-rail-line-x: var(--emr-module-list-section-icon-center-x);
+  --emr-module-list-child-rail-line-left: calc(
+    var(--emr-module-list-child-rail-line-x) -
+      (var(--emr-module-list-child-rail-line-width) / 2)
+  );
   --emr-module-list-child-rail-color: var(--clair-color-atomic-neutral-200);
   --emr-module-list-badge-height: var(--clair-spacing-20);
   --emr-module-list-badge-min-width: var(--clair-spacing-20);

@@ -50,3 +50,9 @@ Unify the customer-management and hospital-admin module side panels as shared ch
 - Migrated customer management and hospital admin side panels to the shared module-list component.
 - Replaced repeated generic side-panel icons with existing Obra icon wrappers.
 - Updated customer side-panel tests for count badges and top-level disabled follow-up items.
+
+## 2026-06-27 Follow-Up
+
+- Aligned the expanded child rail in `EmrModuleListSidePanel` to the parent section icon center using EMR token aliases.
+- Kept leaf row height at 32px, preserved the panel-level 16px right inset, and kept non-action placeholder leaves absent.
+- Added browser DOM measurement coverage to the hospital-admin side-panel regression for icon/rail alignment, child content offset, leaf height, and right inset.
