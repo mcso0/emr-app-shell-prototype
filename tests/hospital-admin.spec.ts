@@ -9,7 +9,7 @@ test("hospital admin order management opens with category and subcategory naviga
   await expect(page.getByTestId("hospital-admin-menu-order-management")).toContainText("Order 관리");
   await expect(page.locator('[data-testid^="hospital-admin-category-"]')).toHaveCount(0);
   await expect(page.locator('[data-selected="true"]')).toHaveCount(1);
-  await expect(page.getByTestId("order-set-placeholder")).toContainText("후속");
+  await expect(page.getByTestId("order-set-placeholder")).toContainText("비활성");
   await expect(page.getByRole("heading", { name: "임상병리 검사" })).toBeVisible();
   await expect(page.getByRole("button", { name: /임상병리 검사/ })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("group", { name: "임상병리 검사 하위 타입" }).getByRole("button", { name: "전체" })).toHaveAttribute("aria-pressed", "true");

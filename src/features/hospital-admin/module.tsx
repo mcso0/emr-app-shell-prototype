@@ -802,6 +802,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
       id: "orders",
       label: "Order 관리",
       icon: <DocumentIcon className="size-4 shrink-0" />,
+      showGroupLabels: false,
       testId: "hospital-admin-menu-order-management",
       children: orderSectionChildren,
     },

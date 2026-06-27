@@ -45,6 +45,7 @@ export type EmrModuleListSidePanelSectionItem = EmrModuleListSidePanelBaseItem &
   type: "section";
   children: EmrModuleListSidePanelSectionChild[];
   icon?: ReactNode;
+  showGroupLabels?: boolean;
   testId?: string;
 };
 
@@ -65,6 +66,9 @@ type EmrModuleListSidePanelProps = {
 
 const moduleListItemBaseClassName =
   "group/emr-module-list-item flex h-[var(--emr-module-list-item-height)] w-full items-center gap-[var(--emr-module-list-item-gap)] rounded-[var(--emr-module-list-item-radius)] px-[var(--emr-module-list-item-padding-x)] py-[var(--emr-module-list-item-padding-y)] text-left outline-none transition-colors";
+
+const moduleListLeafItemClassName =
+  "h-[var(--emr-module-list-leaf-item-height)] px-[var(--emr-module-list-leaf-item-padding-x)] py-[var(--emr-module-list-leaf-item-padding-y)]";
 
 const moduleListItemEnabledClassName =
   "text-[var(--emr-module-list-item-text)] hover:bg-[var(--emr-module-list-item-hover-bg)] focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -103,6 +107,7 @@ function EmrModuleListSidePanelItemButton({
   className,
   count,
   disabled = false,
+  disabledBadge,
   icon,
   onClick,
   testId,
@@ -112,10 +117,13 @@ function EmrModuleListSidePanelItemButton({
   className?: string;
   count?: ReactNode;
   disabled?: boolean;
+  disabledBadge?: ReactNode;
   icon?: ReactNode;
   onClick?: () => void;
   testId?: string;
 }) {
+  const trailing = disabled && disabledBadge ? disabledBadge : count;
+
   return (
     <button
       type="button"
@@ -139,7 +147,7 @@ function EmrModuleListSidePanelItemButton({
       <span className="emr-text-dense flex min-w-0 flex-1 items-center gap-[var(--emr-module-list-item-left-gap)] font-medium tracking-[var(--emr-type-tracking-dense-label)]">
         <span className="truncate">{children}</span>
       </span>
-      {count ? <span className="shrink-0">{count}</span> : null}
+      {trailing ? <span className="shrink-0">{trailing}</span> : null}
     </button>
   );
 }
@@ -255,6 +263,7 @@ export function EmrModuleListSidePanel({
                 active={item.active}
                 count={item.count}
                 disabled={item.disabled}
+                disabledBadge={<EmrModuleListSidePanelBadge variant="outline">비활성</EmrModuleListSidePanelBadge>}
                 icon={item.icon}
                 onClick={item.onClick}
                 testId={item.testId}
@@ -271,22 +280,24 @@ export function EmrModuleListSidePanel({
                 onToggle={() => onToggleSection(item.id)}
               >
                 {item.children.map((child) =>
-                  child.type === "groupLabel" ? (
+                  child.type === "groupLabel" && item.showGroupLabels !== false ? (
                     <EmrModuleListSidePanelGroupTitle key={child.id}>
                       {child.label}
                     </EmrModuleListSidePanelGroupTitle>
-                  ) : (
+                  ) : child.type === "leaf" ? (
                     <EmrModuleListSidePanelItemButton
                       key={child.id}
                       active={child.active}
+                      className={moduleListLeafItemClassName}
                       count={child.count}
                       disabled={child.disabled}
+                      disabledBadge={<EmrModuleListSidePanelBadge variant="outline">비활성</EmrModuleListSidePanelBadge>}
                       onClick={child.onClick}
                       testId={child.testId}
                     >
                       {child.label}
                     </EmrModuleListSidePanelItemButton>
-                  )
+                  ) : null
                 )}
               </EmrModuleListSidePanelSection>
             )
