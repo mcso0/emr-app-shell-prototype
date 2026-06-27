@@ -41,6 +41,10 @@ type EmrSubpanelProps = {
   className?: string;
 };
 
+type EmrSubpanelBodyProps = EmrSubpanelProps & {
+  contentClassName?: string;
+};
+
 type EmrSubpanelTitleProps = {
   title: ReactNode;
   className?: string;
@@ -699,10 +703,12 @@ export function EmrListItem({
   return <div className={itemClassName} data-testid={testId}>{content}</div>;
 }
 
-export function EmrSubpanelBody({ children, className }: EmrSubpanelProps) {
+export function EmrSubpanelBody({ children, className, contentClassName }: EmrSubpanelBodyProps) {
   return (
     <ScrollArea className={cn("min-h-0 flex-1", className)}>
-      <div className="emr-density-panel-inset emr-density-stack-md flex min-h-full flex-col">{children}</div>
+      <div className={cn("emr-density-panel-inset emr-density-stack-md flex min-h-full flex-col", contentClassName)}>
+        {children}
+      </div>
     </ScrollArea>
   );
 }
