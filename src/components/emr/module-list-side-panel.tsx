@@ -65,7 +65,7 @@ type EmrModuleListSidePanelProps = {
 };
 
 const moduleListItemBaseClassName =
-  "group/emr-module-list-item flex h-[var(--emr-module-list-item-height)] w-full items-center gap-[var(--emr-module-list-item-gap)] rounded-[var(--emr-module-list-item-radius)] px-[var(--emr-module-list-item-padding-x)] py-[var(--emr-module-list-item-padding-y)] text-left outline-none transition-colors";
+  "group/emr-module-list-item flex h-[var(--emr-module-list-item-height)] w-full items-center rounded-[var(--emr-module-list-item-radius)] px-[var(--emr-module-list-item-padding-x)] py-[var(--emr-module-list-item-padding-y)] text-left outline-none transition-colors";
 
 const moduleListLeafItemClassName =
   "h-[var(--emr-module-list-leaf-item-height)] px-[var(--emr-module-list-leaf-item-padding-x)] py-[var(--emr-module-list-leaf-item-padding-y)]";
@@ -140,14 +140,17 @@ function EmrModuleListSidePanelItemButton({
       onClick={onClick}
     >
       {icon ? (
-        <span className="flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]">
+        <span
+          className="mr-[var(--emr-module-list-item-gap)] flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]"
+          data-emr-module-list-item-icon="true"
+        >
           {icon}
         </span>
       ) : null}
       <span className="emr-text-dense flex min-w-0 flex-1 items-center gap-[var(--emr-module-list-item-left-gap)] font-medium tracking-[var(--emr-type-tracking-dense-label)]">
         <span className="truncate">{children}</span>
       </span>
-      {trailing ? <span className="shrink-0">{trailing}</span> : null}
+      {trailing ? <span className="ml-[var(--clair-spacing-6)] shrink-0">{trailing}</span> : null}
     </button>
   );
 }
@@ -197,7 +200,8 @@ function EmrModuleListSidePanelSection({
       >
         {icon ? (
           <span
-            className="flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]"
+            className="mr-[var(--emr-module-list-item-gap)] flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]"
+            data-emr-module-list-item-icon="true"
             data-emr-module-list-section-icon="true"
           >
             {icon}

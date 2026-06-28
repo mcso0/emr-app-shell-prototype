@@ -15,17 +15,19 @@ test("hospital admin order management opens with category and subcategory naviga
     const section = trigger.closest("section");
     const panel = trigger.closest('[data-testid="hospital-admin-side-panel"]');
     const icon = trigger.querySelector('[data-emr-module-list-section-icon="true"]');
+    const label = trigger.querySelector(".emr-text-dense");
     const rail = section?.querySelector('[data-emr-module-list-child-rail="true"]');
     const childList = section?.querySelector('[data-emr-module-list-child-list="true"]');
     const selectedLeaf = section?.querySelector('[data-selected="true"]');
 
-    if (!section || !panel || !icon || !rail || !childList || !selectedLeaf) {
+    if (!section || !panel || !icon || !label || !rail || !childList || !selectedLeaf) {
       throw new Error("Missing module list side-panel layout target");
     }
 
     const sectionRect = section.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const iconRect = icon.getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
     const railRect = rail.getBoundingClientRect();
     const childListRect = childList.getBoundingClientRect();
     const leafRect = selectedLeaf.getBoundingClientRect();
@@ -33,15 +35,40 @@ test("hospital admin order management opens with category and subcategory naviga
     return {
       childListOffset: childListRect.left - sectionRect.left,
       iconCenterX: iconRect.left + iconRect.width / 2,
+      iconLabelGap: labelRect.left - iconRect.right,
+      iconWidth: iconRect.width,
       leafHeight: leafRect.height,
       leafRightInset: panelRect.right - leafRect.right,
       railCenterX: railRect.left + railRect.width / 2,
     };
   });
   expect(Math.round(sidePanelMetrics.iconCenterX)).toBe(Math.round(sidePanelMetrics.railCenterX));
-  expect(Math.round(sidePanelMetrics.childListOffset)).toBe(26);
+  expect(Math.round(sidePanelMetrics.iconWidth)).toBe(14);
+  expect(Math.round(sidePanelMetrics.iconLabelGap)).toBe(8);
+  expect(Math.round(sidePanelMetrics.childListOffset)).toBe(30);
   expect(Math.round(sidePanelMetrics.leafHeight)).toBe(32);
   expect(Math.round(sidePanelMetrics.leafRightInset)).toBe(16);
+  const topItemMetrics = await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: /병원구성원 관리/ })
+    .evaluate((trigger) => {
+      const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
+      const label = trigger.querySelector(".emr-text-dense");
+
+      if (!icon || !label) {
+        throw new Error("Missing module list top item icon target");
+      }
+
+      const iconRect = icon.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+
+      return {
+        iconLabelGap: labelRect.left - iconRect.right,
+        iconWidth: iconRect.width,
+      };
+    });
+  expect(Math.round(topItemMetrics.iconWidth)).toBe(14);
+  expect(Math.round(topItemMetrics.iconLabelGap)).toBe(8);
   await page
     .getByTestId("hospital-admin-menu-order-management")
     .locator("xpath=ancestor::section")
