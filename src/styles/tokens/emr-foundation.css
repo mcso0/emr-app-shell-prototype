@@ -206,7 +206,7 @@
   --emr-module-list-item-height: 36px;
   --emr-module-list-item-padding-x: var(--clair-spacing-8);
   --emr-module-list-item-padding-y: var(--clair-spacing-6);
-  --emr-module-list-item-gap: var(--clair-spacing-6);
+  --emr-module-list-item-gap: var(--clair-spacing-8);
   --emr-module-list-item-left-gap: var(--clair-spacing-6);
   --emr-module-list-item-radius: var(--clair-radius-atomic-8);
   --emr-module-list-item-hover-bg: var(--emr-state-hover);
@@ -215,7 +215,7 @@
   --emr-module-list-item-selected-text: var(--clair-color-atomic-neutral-900);
   --emr-module-list-item-disabled-text: var(--clair-color-atomic-neutral-400);
   --emr-module-list-item-icon: var(--clair-color-atomic-neutral-500);
-  --emr-module-list-item-icon-size: var(--clair-spacing-12);
+  --emr-module-list-item-icon-size: 14px;
   --emr-module-list-section-icon-center-x: calc(
     var(--emr-module-list-item-padding-x) +
       (var(--emr-module-list-item-icon-size) / 2)
