@@ -1091,6 +1091,25 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(instructionInfoCard).toHaveCSS("min-height", "72px");
   await expect(instructionInfoCard).toHaveCSS("padding-left", "16px");
   await expect(instructionInfoCard).toHaveCSS("border-radius", "10px");
+  const instructionInfoValueStyles = await instructionInfoCard
+    .locator("[data-slot='instruction-info-card-value']")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+
+        return {
+          overflowX: style.overflowX,
+          whiteSpace: style.whiteSpace,
+        };
+      }),
+    );
+  expect(instructionInfoValueStyles).toHaveLength(5);
+  expect(instructionInfoValueStyles).toEqual(
+    instructionInfoValueStyles.map(() => ({
+      overflowX: "hidden",
+      whiteSpace: "nowrap",
+    })),
+  );
 
   await expect(page.getByTestId("order-queue-selection-summary")).toHaveCount(0);
   await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
