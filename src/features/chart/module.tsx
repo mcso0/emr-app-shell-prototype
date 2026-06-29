@@ -23,12 +23,14 @@ import {
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import {
-  CdsNavigationChevronsLeftIcon,
   CdsNavigationChevronsRightIcon,
 } from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import {
+  EmrContentAsideHeader,
+  EmrContentAsidePanel,
+} from "@/components/emr/content-aside-panel";
 import {
   EmrContentHistoryGroup,
   EmrContentHistoryItem,
@@ -42,7 +44,6 @@ import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
-  EmrListHeader,
   EmrListHeaderIconButton,
 } from "@/components/emr/subpanel";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
@@ -1315,20 +1316,12 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrContentAsidePanel id="chart-content-aside">
-      <EmrListHeader
-        className="mx-0 h-6 border-y-0"
+      <EmrContentAsideHeader
         count={historyRows.length}
         label="차트이력"
-        leadingAction={
-          <EmrListHeaderIconButton
-            ariaLabel="차트 이력 목록 접기"
-            iconSize="md"
-            onClick={() => setContentAsideOpen(false)}
-          >
-            <CdsNavigationChevronsLeftIcon className="size-4" />
-          </EmrListHeaderIconButton>
-        }
-        headerActions={
+        collapseAriaLabel="차트 이력 목록 접기"
+        onCollapse={() => setContentAsideOpen(false)}
+        actions={
           <>
             <EmrListHeaderIconButton ariaLabel="정렬">
               <CdsUtilitiesSortIcon className="size-4" />
