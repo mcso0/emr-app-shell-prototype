@@ -182,7 +182,7 @@ export function EmrSubpanelTitle({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center px-[var(--clair-spacing-16)] pb-[var(--clair-spacing-10)] pt-[var(--clair-spacing-16)]",
+        "flex shrink-0 items-center px-[var(--clair-spacing-16)] pb-[var(--clair-spacing-10)] pt-[var(--clair-spacing-12)]",
         className
       )}
     >
