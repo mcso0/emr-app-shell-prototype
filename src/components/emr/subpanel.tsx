@@ -126,6 +126,8 @@ const emrDateNavigatorIconButtonClassName =
   "rounded-[var(--clair-radius-md)] bg-transparent text-[var(--emr-text-tertiary)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
 const emrDateNavigatorTodayBadgeClassName =
   "rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-6)] emr-text-metadata font-medium";
+const emrSubpanelHeaderIconButtonClassName =
+  "inline-flex size-6 shrink-0 items-center justify-center rounded-[var(--clair-radius-sm)] bg-transparent p-0 text-[var(--clair-color-atomic-gray-600)] outline-none transition-[background-color,box-shadow,color] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] hover:bg-[var(--emr-state-hover)] hover:text-[var(--clair-color-atomic-gray-600)] focus-visible:ring-3 focus-visible:ring-ring/50 aria-pressed:bg-[var(--emr-state-active)] aria-pressed:text-[var(--clair-color-atomic-gray-600)] aria-pressed:hover:bg-[var(--emr-state-active)] disabled:cursor-not-allowed disabled:bg-transparent disabled:text-[var(--emr-text-disabled)] disabled:opacity-100 disabled:hover:bg-transparent disabled:hover:text-[var(--emr-text-disabled)] [&_svg]:size-5 [&_svg]:shrink-0";
 
 function getIsoDateFromUtcDate(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
@@ -186,35 +188,47 @@ export function EmrSubpanelTitle({
       )}
     >
       <div className="flex min-w-0 flex-1 items-center">
-        <div className="flex min-w-0 max-w-full items-center gap-[var(--clair-spacing-8)]">
-          <div className="emr-text-panel-title min-w-0 truncate font-semibold text-foreground">
-            {title}
-          </div>
-          {onCollapse ? (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="shrink-0 text-[var(--clair-color-atomic-gray-600)] hover:text-[var(--clair-color-atomic-gray-600)] [&_svg]:size-[22px]"
-                    aria-label={collapseLabel}
-                    onClick={onCollapse}
-                  >
-                    <SidebarGnbIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent side="right" sideOffset={8}>
-                {collapseLabel}
-              </TooltipContent>
-            </Tooltip>
-          ) : null}
+        <div className="emr-text-panel-title min-w-0 truncate font-semibold text-foreground">
+          {title}
         </div>
       </div>
       {tabs ? <div className={cn("ml-3 flex shrink-0 items-center", tabsClassName)}>{tabs}</div> : null}
       {titleActions ? <div className="ml-2 flex shrink-0 items-center">{titleActions}</div> : null}
+      {onCollapse ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <EmrSubpanelHeaderIconButton
+                aria-label={collapseLabel}
+                onClick={onCollapse}
+                className={cn((tabs || titleActions) && "ml-2")}
+              >
+                <SidebarGnbIcon />
+              </EmrSubpanelHeaderIconButton>
+            }
+          />
+          <TooltipContent side="right" sideOffset={8}>
+            {collapseLabel}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
     </div>
+  );
+}
+
+function EmrSubpanelHeaderIconButton({
+  className,
+  selected = false,
+  type = "button",
+  ...props
+}: ComponentProps<"button"> & { selected?: boolean }) {
+  return (
+    <button
+      type={type}
+      aria-pressed={selected ? "true" : undefined}
+      className={cn(emrSubpanelHeaderIconButtonClassName, className)}
+      {...props}
+    />
   );
 }
 

@@ -746,7 +746,75 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
   await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "조제/처치");
   await expect(getNavRail(page).getByRole("button", { name: "고객센터" })).toBeVisible();
-  await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
+
+  const collapseButton = page.getByRole("button", { name: "사이드 패널 접기", exact: true });
+  const collapseIcon = collapseButton.locator("svg");
+  const expectedIconColor = await resolveCssColor(page, "var(--clair-color-atomic-gray-600)");
+  const expectedHoverBackground = await resolveCssColor(page, "var(--emr-state-hover)");
+  const expectedSelectedBackground = await resolveCssColor(page, "var(--emr-state-active)");
+  const expectedDisabledColor = await resolveCssColor(page, "var(--emr-text-disabled)");
+
+  await expect(collapseButton).toBeVisible();
+  await expect
+    .poll(async () => {
+      const box = await collapseButton.boundingBox();
+      return box ? { height: Math.round(box.height), width: Math.round(box.width) } : null;
+    })
+    .toEqual({ height: 24, width: 24 });
+  await expect
+    .poll(async () => {
+      const box = await collapseIcon.boundingBox();
+      return box ? { height: Math.round(box.height), width: Math.round(box.width) } : null;
+    })
+    .toEqual({ height: 20, width: 20 });
+  await expect
+    .poll(() =>
+      collapseButton.evaluate((element) => {
+        const style = window.getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderRadius: style.borderRadius,
+          color: style.color,
+        };
+      })
+    )
+    .toEqual({
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      borderRadius: "4px",
+      color: expectedIconColor,
+    });
+
+  await collapseButton.hover();
+  await expect.poll(() => collapseButton.evaluate((element) => window.getComputedStyle(element).backgroundColor)).toBe(expectedHoverBackground);
+  await collapseButton.evaluate((element) => element.setAttribute("aria-pressed", "true"));
+  await expect.poll(() => collapseButton.evaluate((element) => window.getComputedStyle(element).backgroundColor)).toBe(expectedSelectedBackground);
+  await collapseButton.evaluate((element) => {
+    element.removeAttribute("aria-pressed");
+    (element as HTMLButtonElement).disabled = true;
+  });
+  await expect
+    .poll(() =>
+      collapseButton.evaluate((element) => {
+        const style = window.getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+          cursor: style.cursor,
+          opacity: style.opacity,
+        };
+      })
+    )
+    .toEqual({
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      color: expectedDisabledColor,
+      cursor: "not-allowed",
+      opacity: "1",
+    });
+  await collapseButton.evaluate((element) => {
+    (element as HTMLButtonElement).disabled = false;
+  });
+
+  await collapseButton.click();
   await expect(page).toHaveURL(/modulePanel=closed/);
   await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
 
