@@ -964,6 +964,54 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   );
   expect(nabiBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(7);
   expect(nabiBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(9);
+  const nabiContentInsets = await nabiAppointment.evaluate((card) => {
+    const badge = card.querySelector(
+      '[data-testid="appointment-card-appointment-nabi-260501-badge"]',
+    );
+    const purpose = card.querySelector(
+      '[data-testid="appointment-purpose-appointment-nabi-260501"]',
+    );
+    const time = card.querySelector(
+      '[data-testid="appointment-card-appointment-nabi-260501-time"]',
+    );
+    if (!badge || !purpose || !time) return null;
+
+    const purposeTextRange = document.createRange();
+    purposeTextRange.selectNodeContents(purpose);
+    const purposeTextBox = purposeTextRange.getBoundingClientRect();
+    purposeTextRange.detach();
+
+    const timeTextRange = document.createRange();
+    timeTextRange.selectNodeContents(time);
+    const timeTextBox = timeTextRange.getBoundingClientRect();
+    timeTextRange.detach();
+
+    const badgeBox = badge.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
+    const timeBox = time.getBoundingClientRect();
+    const verticalCenterOffset = Math.abs(
+      (purposeTextBox.top + purposeTextBox.bottom) / 2 -
+        (timeTextBox.top + timeTextBox.bottom) / 2,
+    );
+
+    return {
+      badgeLeftInset: Math.round((badgeBox.left - cardBox.left) * 100) / 100,
+      timeHeight: Math.round(timeBox.height),
+      timeTextRightInset:
+        Math.round((cardBox.right - timeTextBox.right) * 100) / 100,
+      verticalCenterOffset: Math.round(verticalCenterOffset * 100) / 100,
+    };
+  });
+
+  if (!nabiContentInsets)
+    throw new Error("Expected Nabi compact schedule content inset data");
+  expect(nabiContentInsets.badgeLeftInset).toBeGreaterThanOrEqual(7);
+  expect(nabiContentInsets.badgeLeftInset).toBeLessThanOrEqual(9);
+  expect(nabiContentInsets.timeHeight).toBe(20);
+  expect(nabiContentInsets.timeTextRightInset).toBeGreaterThanOrEqual(
+    nabiContentInsets.badgeLeftInset + 3,
+  );
+  expect(nabiContentInsets.verticalCenterOffset).toBeLessThanOrEqual(1);
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;
     if (!parent) return null;
@@ -2227,6 +2275,54 @@ test("reception day and week calendars place walk-in cards by actual start minut
   );
   expect(shortCardBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(7);
   expect(shortCardBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(9);
+  const shortWalkInContentMetrics = await shortCard.evaluate((card) => {
+    const badge = card.querySelector(
+      '[data-testid="walkin-card-encounter-time-axis-minutes-badge"]',
+    );
+    const purpose = card.querySelector(
+      '[data-testid="walkin-purpose-encounter-time-axis-minutes"]',
+    );
+    const time = card.querySelector(
+      '[data-testid="walkin-card-encounter-time-axis-minutes-time"]',
+    );
+    if (!badge || !purpose || !time) return null;
+
+    const purposeTextRange = document.createRange();
+    purposeTextRange.selectNodeContents(purpose);
+    const purposeTextBox = purposeTextRange.getBoundingClientRect();
+    purposeTextRange.detach();
+
+    const timeTextRange = document.createRange();
+    timeTextRange.selectNodeContents(time);
+    const timeTextBox = timeTextRange.getBoundingClientRect();
+    timeTextRange.detach();
+
+    const badgeBox = badge.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
+    const timeBox = time.getBoundingClientRect();
+    const verticalCenterOffset = Math.abs(
+      (purposeTextBox.top + purposeTextBox.bottom) / 2 -
+        (timeTextBox.top + timeTextBox.bottom) / 2,
+    );
+
+    return {
+      badgeLeftInset: Math.round((badgeBox.left - cardBox.left) * 100) / 100,
+      timeHeight: Math.round(timeBox.height),
+      timeTextRightInset:
+        Math.round((cardBox.right - timeTextBox.right) * 100) / 100,
+      verticalCenterOffset: Math.round(verticalCenterOffset * 100) / 100,
+    };
+  });
+
+  if (!shortWalkInContentMetrics)
+    throw new Error("Expected short walk-in compact content metrics");
+  expect(shortWalkInContentMetrics.badgeLeftInset).toBeGreaterThanOrEqual(7);
+  expect(shortWalkInContentMetrics.badgeLeftInset).toBeLessThanOrEqual(9);
+  expect(shortWalkInContentMetrics.timeHeight).toBe(20);
+  expect(shortWalkInContentMetrics.timeTextRightInset).toBeGreaterThanOrEqual(
+    shortWalkInContentMetrics.badgeLeftInset + 3,
+  );
+  expect(shortWalkInContentMetrics.verticalCenterOffset).toBeLessThanOrEqual(1);
 
   const dayMetrics = await shortCard.evaluate((card) => {
     const row = document.querySelector('[data-testid="day-hour-row-15"]');
