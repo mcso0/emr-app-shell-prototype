@@ -1314,12 +1314,9 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   if (!bundle) return null;
 
   return (
-    <EmrContentAsidePanel
-      id="chart-content-aside"
-      className="px-[var(--clair-spacing-12)]"
-    >
+    <EmrContentAsidePanel id="chart-content-aside">
       <EmrListHeader
-        className="mx-0 h-6 border-y-0 px-0 py-0"
+        className="mx-0 h-6 border-y-0"
         count={historyRows.length}
         label="차트이력"
         leadingAction={

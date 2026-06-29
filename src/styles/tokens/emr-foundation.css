@@ -159,6 +159,8 @@
   --emr-sidepanel-list-title-action-radius: var(--clair-radius-atomic-4);
   --emr-sidepanel-list-title-action-icon-size: 14px;
   --emr-sidepanel-list-title-action-icon: var(--clair-color-atomic-neutral-600);
+  --emr-list-header-padding-x: var(--clair-spacing-16);
+  --emr-list-header-padding-y: var(--clair-spacing-12);
   --emr-sidepanel-state-icon-size: var(--clair-spacing-16);
   --emr-sidepanel-state-icon-bg-base: var(--clair-color-atomic-common-100);
   --emr-sidepanel-state-icon-done-bg: var(--clair-color-atomic-green-400);
@@ -355,9 +357,11 @@
   --emr-content-aside-width: 280px;
   --emr-content-aside-bg: var(--emr-surface-content-panel);
   --emr-content-aside-border: var(--clair-color-atomic-neutral-200);
-  --emr-content-aside-padding-x: var(--clair-spacing-16);
+  --emr-content-aside-padding-x: var(--clair-spacing-12);
   --emr-content-aside-header-padding-top: var(--clair-spacing-8);
   --emr-content-aside-section-gap: var(--clair-spacing-8);
+  --emr-content-aside-list-header-padding-x: 0px;
+  --emr-content-aside-list-header-padding-y: 0px;
   --emr-content-history-group-title-height: var(--clair-control-height-md);
   --emr-content-history-group-title-padding: var(--clair-spacing-4);
   --emr-content-history-group-title-gap: var(--clair-spacing-12);

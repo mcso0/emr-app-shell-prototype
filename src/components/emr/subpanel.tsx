@@ -420,11 +420,11 @@ export function EmrListHeader({
   return (
     <>
       {topDividerVisible ? (
-        <div className="mx-[var(--clair-spacing-16)] h-px shrink-0 bg-[var(--emr-line-hairline)]" />
+        <div className="mx-[var(--emr-list-header-padding-x)] h-px shrink-0 bg-[var(--emr-line-hairline)]" />
       ) : null}
       <div
         className={cn(
-          "flex shrink-0 items-center gap-[var(--clair-spacing-12)] px-[var(--clair-spacing-16)] py-[var(--clair-spacing-12)]",
+          "flex shrink-0 items-center gap-[var(--clair-spacing-12)] px-[var(--emr-list-header-padding-x)] py-[var(--emr-list-header-padding-y)]",
           className
         )}
       >
@@ -471,7 +471,7 @@ export function EmrListHeader({
         )}
       </div>
       {searchActive && searchQuery.trim() ? (
-        <div className="emr-text-metadata mx-4 flex min-h-7 shrink-0 items-center border-b border-[var(--emr-line-hairline)] text-[var(--emr-text-tertiary)]">
+        <div className="emr-text-metadata mx-[var(--emr-list-header-padding-x)] flex min-h-7 shrink-0 items-center border-b border-[var(--emr-line-hairline)] text-[var(--emr-text-tertiary)]">
           검색 결과 {search?.resultCount ?? 0}건
         </div>
       ) : null}
