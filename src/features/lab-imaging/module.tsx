@@ -13,7 +13,6 @@ import {
   CdsFilesImageIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
-  CdsNavigationChevronsLeftIcon,
   CdsNavigationChevronsRightIcon,
 } from "@/components/cds-icons/navigation";
 import {
@@ -32,7 +31,10 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
-import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import {
+  EmrContentAsideHeader,
+  EmrContentAsidePanel,
+} from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import {
   EmrDateNavigator,
@@ -2321,16 +2323,12 @@ export function LabContentAside({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrContentAsidePanel id="lab-content-aside">
-      <EmrListHeader
-        className="mx-0 h-6 border-y-0"
+      <EmrContentAsideHeader
         count={totalHistoryCount}
         label="임상병리검사 이력"
-        leadingAction={
-          <EmrListHeaderIconButton ariaLabel="임상병리검사 이력 목록 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
-            <CdsNavigationChevronsLeftIcon className="size-4" />
-          </EmrListHeaderIconButton>
-        }
-        headerActions={<QueueActions />}
+        collapseAriaLabel="임상병리검사 이력 목록 접기"
+        onCollapse={() => setContentAsideOpen(false)}
+        actions={<QueueActions />}
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">
@@ -3025,16 +3023,12 @@ export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrContentAsidePanel id="imaging-content-aside">
-      <EmrListHeader
-        className="mx-0 h-6 border-y-0"
+      <EmrContentAsideHeader
         count={totalHistoryCount}
         label="영상검사 이력"
-        leadingAction={
-          <EmrListHeaderIconButton ariaLabel="영상검사 이력 목록 접기" iconSize="md" onClick={() => setContentAsideOpen(false)}>
-            <CdsNavigationChevronsLeftIcon className="size-4" />
-          </EmrListHeaderIconButton>
-        }
-        headerActions={<QueueActions />}
+        collapseAriaLabel="영상검사 이력 목록 접기"
+        onCollapse={() => setContentAsideOpen(false)}
+        actions={<QueueActions />}
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-line-subtle)]" />
       <ScrollArea className="min-h-0 flex-1">

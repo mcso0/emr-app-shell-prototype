@@ -1,13 +1,21 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
+import {
+  CdsActionsListFilterIcon,
+  CdsActionsSearchIcon,
+} from "@/components/cds-icons/actions-and-controls";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { Badge } from "@/components/ui/badge";
 
-import { EmrContentAsidePanel } from "./content-aside-panel";
+import {
+  EmrContentAsideHeader,
+  EmrContentAsidePanel,
+} from "./content-aside-panel";
 import {
   EmrContentHistoryGroup,
   EmrContentHistoryItem,
 } from "./content-history-list";
-import { EmrListHeader } from "./subpanel";
+import { EmrListHeaderIconButton } from "./subpanel";
 
 type EmrContentAsidePanelStoryArgs = {
   title: string;
@@ -17,10 +25,23 @@ function EmrContentAsidePanelExample({ title }: EmrContentAsidePanelStoryArgs) {
   return (
     <div className="h-[420px] max-w-[360px] overflow-hidden rounded-lg border border-border">
       <EmrContentAsidePanel>
-        <EmrListHeader
-          className="mx-0 h-6 border-y-0"
+        <EmrContentAsideHeader
           count={2}
           label={title}
+          onCollapse={() => undefined}
+          actions={
+            <>
+              <EmrListHeaderIconButton ariaLabel="정렬">
+                <CdsUtilitiesSortIcon className="size-4" />
+              </EmrListHeaderIconButton>
+              <EmrListHeaderIconButton ariaLabel="필터">
+                <CdsActionsListFilterIcon className="size-4" />
+              </EmrListHeaderIconButton>
+              <EmrListHeaderIconButton ariaLabel="검색">
+                <CdsActionsSearchIcon className="size-4" />
+              </EmrListHeaderIconButton>
+            </>
+          }
         />
         <EmrContentHistoryGroup count={2} label="오늘">
           <EmrContentHistoryItem

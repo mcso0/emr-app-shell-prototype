@@ -13,16 +13,17 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import {
+  EmrContentAsideHeader,
+  EmrContentAsidePanel,
+} from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup, EmrContentHistoryItem } from "@/components/emr/content-history-list";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import {
-  EmrListHeader,
   EmrListHeaderIconButton,
 } from "@/components/emr/subpanel";
 import {
@@ -806,16 +807,11 @@ function HistoryListHeader({
   onCollapse: () => void;
 }) {
   return (
-    <EmrListHeader
-      className="mx-0 h-6 border-y-0"
+    <EmrContentAsideHeader
       count={count}
       label={label}
-      leadingAction={
-        <EmrListHeaderIconButton ariaLabel={`${label} 목록 접기`} iconSize="md" onClick={onCollapse}>
-          <CdsNavigationChevronsLeftIcon className="size-4" />
-        </EmrListHeaderIconButton>
-      }
-      headerActions={
+      onCollapse={onCollapse}
+      actions={
         <>
           <EmrListHeaderIconButton ariaLabel="정렬">
             <CdsUtilitiesSortIcon className="size-4" />

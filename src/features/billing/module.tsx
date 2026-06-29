@@ -8,9 +8,11 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { EmrContentAsidePanel } from "@/components/emr/content-aside-panel";
+import {
+  EmrContentAsideHeader,
+  EmrContentAsidePanel,
+} from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup } from "@/components/emr/content-history-list";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import {
@@ -2395,20 +2397,12 @@ export function BillingContentAside() {
 
   return (
     <EmrContentAsidePanel id="billing-content-aside">
-      <EmrListHeader
-        className="mx-0 h-6 border-y-0"
+      <EmrContentAsideHeader
         count={visibleRows.length}
         label="수납이력"
-        leadingAction={
-          <EmrListHeaderIconButton
-            ariaLabel="보호자 수납 이력 접기"
-            iconSize="md"
-            onClick={() => setContentAsideOpen(false)}
-          >
-            <CdsNavigationChevronsLeftIcon className="size-4" />
-          </EmrListHeaderIconButton>
-        }
-        headerActions={
+        collapseAriaLabel="보호자 수납 이력 접기"
+        onCollapse={() => setContentAsideOpen(false)}
+        actions={
           <>
             <EmrListHeaderIconButton ariaLabel="정렬">
               <CdsUtilitiesSortIcon className="size-4" />

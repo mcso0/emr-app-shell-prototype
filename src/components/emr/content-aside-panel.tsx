@@ -1,12 +1,26 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CdsNavigationChevronsLeftIcon } from "@/components/cds-icons/navigation";
+import {
+  EmrListHeader,
+  EmrListHeaderIconButton,
+} from "@/components/emr/subpanel";
 import { cn } from "@/lib/utils";
 
 type EmrContentAsidePanelProps = {
   children: ReactNode;
   className?: string;
   id?: string;
+};
+
+type EmrContentAsideHeaderProps = {
+  label: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+  collapseAriaLabel?: string;
+  count?: ReactNode;
+  onCollapse: () => void;
 };
 
 export function EmrContentAsidePanel({
@@ -25,5 +39,37 @@ export function EmrContentAsidePanel({
     >
       {children}
     </div>
+  );
+}
+
+export function EmrContentAsideHeader({
+  actions,
+  className,
+  collapseAriaLabel,
+  count,
+  label,
+  onCollapse,
+}: EmrContentAsideHeaderProps) {
+  const fallbackCollapseLabel =
+    typeof label === "string" ? `${label} 목록 접기` : "이력 목록 접기";
+
+  return (
+    <EmrListHeader
+      className={cn("mx-0 h-6 border-y-0", className)}
+      count={count}
+      label={label}
+      headerActions={
+        <>
+          <EmrListHeaderIconButton
+            ariaLabel={collapseAriaLabel ?? fallbackCollapseLabel}
+            iconSize="md"
+            onClick={onCollapse}
+          >
+            <CdsNavigationChevronsLeftIcon className="size-4" />
+          </EmrListHeaderIconButton>
+          {actions}
+        </>
+      }
+    />
   );
 }

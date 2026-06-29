@@ -275,6 +275,55 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
+test("imaging history aside keeps title count separate from evenly spaced actions", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/imaging?modulePanel=open&aside=history&right=closed",
+  );
+
+  const contentAside = page.locator("#imaging-content-aside");
+  const title = contentAside.getByText("영상검사 이력", { exact: true }).first();
+  const collapseButton = contentAside.getByRole("button", {
+    name: "영상검사 이력 목록 접기",
+  });
+  const actionLabels = ["영상검사 이력 목록 접기", "정렬", "필터", "검색"];
+  const actionMetrics = await contentAside.evaluate((root, labels) => {
+    return labels.map((label) => {
+      const button = root.querySelector(
+        `button[aria-label="${label}"]`,
+      ) as HTMLButtonElement | null;
+
+      if (!button) return null;
+
+      const rect = button.getBoundingClientRect();
+
+      return {
+        label,
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+      };
+    });
+  }, actionLabels);
+  const titleBox = await title.boundingBox();
+  const collapseBox = await collapseButton.boundingBox();
+
+  expect(actionMetrics.every(Boolean)).toBe(true);
+  expect(actionMetrics.map((metric) => metric?.label)).toEqual(actionLabels);
+  expect(titleBox).not.toBeNull();
+  expect(collapseBox).not.toBeNull();
+  expect(titleBox!.x + titleBox!.width).toBeLessThan(collapseBox!.x);
+
+  const actionGaps = actionMetrics.slice(1).map((metric, index) => {
+    return metric!.left - actionMetrics[index]!.right;
+  });
+
+  expect(actionGaps[0]).toBeGreaterThan(0);
+  for (const gap of actionGaps) {
+    expect(Math.abs(gap - actionGaps[0])).toBeLessThanOrEqual(1);
+  }
+});
+
 test("Cheongdam imaging workspace renders live fulfillment rows without legacy study fixtures", async ({
   page,
 }) => {
