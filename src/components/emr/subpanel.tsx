@@ -13,7 +13,7 @@ import {
   CdsNavigationChevronRightIcon,
 } from "@/components/cds-icons/navigation";
 import { ChevronDownIcon } from "@/components/icons";
-import { CollapseGnbIcon } from "@/components/gnb-icons";
+import { SidebarGnbIcon } from "@/components/gnb-icons";
 import { EmrDatePickerDayButton } from "@/components/emr/date-picker-day-button";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrMotionIcon } from "@/components/emr/motion-icon";
@@ -26,6 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   addMonthsToIsoDate,
   formatCompactKoreanOperatingDateLabel,
@@ -185,22 +186,29 @@ export function EmrSubpanelTitle({
       )}
     >
       <div className="flex min-w-0 flex-1 items-center">
-        <div className="relative flex min-w-0 max-w-full items-center">
+        <div className="flex min-w-0 max-w-full items-center gap-[var(--clair-spacing-8)]">
           <div className="emr-text-panel-title min-w-0 truncate font-semibold text-foreground">
             {title}
           </div>
           {onCollapse ? (
-            <span className="pointer-events-auto absolute left-full z-10 ml-1 flex w-7 shrink-0 opacity-0 group-hover/emr-subpanel:opacity-100">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="text-[var(--emr-text-tertiary)] hover:text-[var(--emr-text-tertiary)]"
-                aria-label={collapseLabel}
-                onClick={onCollapse}
-              >
-                <CollapseGnbIcon aria-hidden="true" />
-              </Button>
-            </span>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="shrink-0 text-[var(--clair-color-atomic-gray-600)] hover:text-[var(--clair-color-atomic-gray-600)] [&_svg]:size-[22px]"
+                    aria-label={collapseLabel}
+                    onClick={onCollapse}
+                  >
+                    <SidebarGnbIcon />
+                  </Button>
+                }
+              />
+              <TooltipContent side="right" sideOffset={8}>
+                {collapseLabel}
+              </TooltipContent>
+            </Tooltip>
           ) : null}
         </div>
       </div>
