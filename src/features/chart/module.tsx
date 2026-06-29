@@ -5276,6 +5276,11 @@ function ChartInstructionInfo({
   queueEntry?: WaitingQueueEntry;
 }) {
   const veterinarianName = getChartBundleVeterinarianName(bundle);
+  const chartWorkflowStatus = getConsultationWorkflowStatusText(
+    bundle.encounter,
+    queueEntry,
+  );
+  const soapStatus = getSoapStatusText(latestSoap);
   const infoItems: Array<{ label: string; value: ReactNode }> = [
     {
       label: "접수 일시",
@@ -5291,18 +5296,21 @@ function ChartInstructionInfo({
     {
       label: "차트 상태",
       value: (
-        <span className="grid gap-0.5">
+        <span className="inline-flex min-w-0 max-w-full items-center gap-1 overflow-hidden whitespace-nowrap">
           <span
             data-testid="chart-completion-status"
-            className="emr-text-dense font-semibold text-[var(--emr-status-info-text)]"
+            className="shrink-0 emr-text-dense font-semibold text-[var(--emr-status-info-text)]"
           >
-            {getConsultationWorkflowStatusText(bundle.encounter, queueEntry)}
+            {chartWorkflowStatus}
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-muted-foreground">
+            ·
           </span>
           <span
             data-testid="chart-soap-status"
-            className="emr-text-metadata font-medium text-muted-foreground"
+            className="min-w-0 truncate emr-text-metadata font-medium text-muted-foreground"
           >
-            {getSoapStatusText(latestSoap)}
+            {soapStatus}
           </span>
         </span>
       ),
@@ -5310,22 +5318,36 @@ function ChartInstructionInfo({
   ];
 
   return (
-    <div className="grid grid-cols-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3">
+    <div
+      data-slot="chart-instruction-info-card"
+      className="grid grid-cols-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-4 py-3"
+    >
       {infoItems.map(({ label, value }) => (
         <div
           key={label}
-          className="border-r border-[var(--emr-line-hairline)] px-3 last:border-r-0"
+          className="min-w-0 border-r border-[var(--emr-line-hairline)] px-3 last:border-r-0"
         >
-          <div className="emr-text-metadata font-medium text-muted-foreground">
+          <div className="truncate emr-text-metadata font-medium text-muted-foreground">
             {label}
           </div>
-          <div className="mt-1 flex min-h-6 items-center emr-text-dense font-medium text-foreground">
-            {value}
+          <div
+            data-slot="chart-instruction-info-value"
+            className="mt-1 flex min-h-6 min-w-0 items-center overflow-hidden whitespace-nowrap emr-text-dense font-medium text-foreground"
+          >
+            {renderChartInstructionInfoValue(value)}
           </div>
         </div>
       ))}
     </div>
   );
+}
+
+function renderChartInstructionInfoValue(value: ReactNode) {
+  if (typeof value === "string" || typeof value === "number") {
+    return <span className="block min-w-0 truncate">{value}</span>;
+  }
+
+  return value;
 }
 
 function ChartPreflightLine({

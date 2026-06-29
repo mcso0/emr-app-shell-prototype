@@ -727,6 +727,14 @@ function getDispensingInstructionType(selectedQueueItem: OrderQueueItem | null) 
   return selectedQueueItem?.orderTypeCategory === "treatment" ? "처치" : "조제";
 }
 
+function renderInstructionInfoCardValue(value: ReactNode) {
+  if (typeof value === "string" || typeof value === "number") {
+    return <span className="block min-w-0 truncate">{value}</span>;
+  }
+
+  return value;
+}
+
 export function DispensingContentAside({ moduleId, workspaceId }: ShellComponentProps) {
   const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
@@ -1289,8 +1297,8 @@ function DispensingContentBody({
     {
       label: "요청 일시",
       value: (
-        <span className="flex flex-wrap items-center gap-1.5">
-          <span>{instructionRequestedAt}</span>
+        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap">
+          <span className="min-w-0 truncate">{instructionRequestedAt}</span>
           <EmrStatusBadge
             label={instructionStartStatus}
             marker="none"
@@ -1470,9 +1478,14 @@ function DispensingContentBody({
               className="grid min-h-[72px] grid-cols-5 rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
             >
               {instructionInfoItems.map(({ label, value }) => (
-                <div key={label} className="border-r border-[var(--emr-document-info-divider)] px-[var(--clair-spacing-12)] first:pl-0 last:border-r-0 last:pr-0">
-                  <div className="emr-text-metadata font-medium text-[var(--emr-context-bar-chip-label)]">{label}</div>
-                  <div className="mt-[var(--clair-spacing-4)] flex min-h-6 items-center emr-text-dense font-medium text-[var(--emr-context-bar-chip-value)]">{value}</div>
+                <div key={label} className="min-w-0 border-r border-[var(--emr-document-info-divider)] px-[var(--clair-spacing-12)] first:pl-0 last:border-r-0 last:pr-0">
+                  <div className="truncate emr-text-metadata font-medium text-[var(--emr-context-bar-chip-label)]">{label}</div>
+                  <div
+                    data-slot="instruction-info-card-value"
+                    className="mt-[var(--clair-spacing-4)] flex min-h-6 min-w-0 items-center overflow-hidden whitespace-nowrap emr-text-dense font-medium text-[var(--emr-context-bar-chip-value)]"
+                  >
+                    {renderInstructionInfoCardValue(value)}
+                  </div>
                 </div>
               ))}
             </div>

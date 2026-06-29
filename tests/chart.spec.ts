@@ -493,6 +493,48 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
     "호출 대기",
   );
+  const chartStatusLayout = await page
+    .getByTestId("chart-completion-status")
+    .evaluate((completionStatus) => {
+      const soapStatus = document.querySelector(
+        "[data-testid='chart-soap-status']",
+      );
+
+      if (!(soapStatus instanceof HTMLElement)) return null;
+
+      const completionRect = completionStatus.getBoundingClientRect();
+      const soapRect = soapStatus.getBoundingClientRect();
+
+      return {
+        completionTop: Math.round(completionRect.top),
+        soapTop: Math.round(soapRect.top),
+      };
+    });
+  expect(chartStatusLayout).not.toBeNull();
+  expect(
+    Math.abs(
+      chartStatusLayout!.completionTop - chartStatusLayout!.soapTop,
+    ),
+  ).toBeLessThanOrEqual(1);
+  const chartInfoValueStyles = await page
+    .locator("[data-slot='chart-instruction-info-value']")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+
+        return {
+          overflowX: style.overflowX,
+          whiteSpace: style.whiteSpace,
+        };
+      }),
+    );
+  expect(chartInfoValueStyles).toHaveLength(4);
+  expect(chartInfoValueStyles).toEqual(
+    chartInfoValueStyles.map(() => ({
+      overflowX: "hidden",
+      whiteSpace: "nowrap",
+    })),
+  );
   await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
   await expect(page.getByTestId("chart-start-locked-state")).toContainText(
