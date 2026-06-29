@@ -321,7 +321,7 @@
   --emr-calendar-current-time-leading-width: calc(
     var(--emr-calendar-current-time-label-width) +
       var(--emr-calendar-current-time-gap) +
-      var(--emr-calendar-current-time-dot-size)
+      (var(--emr-calendar-current-time-dot-size) * 0.5)
   );
   --emr-context-bar-min-height: 50px;
   --emr-context-bar-padding-x: var(--clair-spacing-16);
