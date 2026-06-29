@@ -808,11 +808,22 @@ test("module side panel order type segmented control filters side orders", async
 
   const sidePanel = page.locator("aside").first();
   const orderTypeFilter = sidePanel.getByRole("group", { name: "오더 유형 필터" });
-  const allFilter = orderTypeFilter.getByRole("button", { name: "전체" });
-  const dispensingFilter = orderTypeFilter.getByRole("button", { name: "조제" });
-  const treatmentFilter = orderTypeFilter.getByRole("button", { name: "처치" });
+  const allFilter = orderTypeFilter.getByRole("button", { name: /^전체 \d+$/ });
+  const dispensingFilter = orderTypeFilter.getByRole("button", { name: /^조제 \d+$/ });
+  const treatmentFilter = orderTypeFilter.getByRole("button", { name: /^처치 \d+$/ });
 
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
+  await expect
+    .poll(async () =>
+      orderTypeFilter.evaluate((filter) => {
+        const title = document.querySelector("[data-testid='module-side-panel-title']");
+        if (!title) return false;
+
+        return filter.getBoundingClientRect().top > title.getBoundingClientRect().bottom;
+      }),
+    )
+    .toBe(true);
+  await expect(sidePanel.getByText("전체 오더")).toHaveCount(0);
   await expect(allFilter).toHaveAttribute("aria-pressed", "true");
   await expect(sidePanel.getByText("항생제 세트 A")).toBeVisible();
   await expect(sidePanel.getByText("수액 처치", { exact: true })).toBeVisible();
@@ -840,7 +851,7 @@ test("module side panel order type segmented control filters side orders", async
   await expect(sidePanel.getByTestId("order-queue-density-control")).toHaveCount(0);
   await expect(searchControl).toHaveAttribute("aria-label", "대기열 검색 열기");
   await searchControl.click();
-  await expect(sidePanel.getByLabel("전체 오더 검색")).toBeVisible();
+  await expect(sidePanel.getByLabel("조제/처치 업무 검색")).toBeVisible();
   await page.keyboard.press("Escape");
 
   await sortControl.click();
