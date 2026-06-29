@@ -642,6 +642,9 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
         return {
           borderRadius: style.borderRadius,
+          borderWidth: style.borderWidth,
+          boxShadow: style.boxShadow,
+          color: style.color,
           height: Math.round(box.height),
           width: Math.round(box.width),
         };
@@ -649,6 +652,9 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     )
     .toEqual({
       borderRadius: "8px",
+      borderWidth: "0px",
+      boxShadow: "none",
+      color: "rgb(113, 128, 150)",
       height: 32,
       width: 32,
     });

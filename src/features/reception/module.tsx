@@ -472,7 +472,7 @@ function VeterinarianLaneHeader({
     >
       <span
         data-testid="veterinarian-lane-avatar"
-        className="flex size-[var(--emr-calendar-lane-avatar-size)] shrink-0 items-center justify-center rounded-[var(--emr-calendar-lane-avatar-radius)] border border-[var(--emr-text-inverse)] bg-[var(--emr-surface-panel)] text-[16px] font-bold leading-none text-[var(--emr-text-primary)] shadow-[var(--clair-shadow-xs)]"
+        className="flex size-[var(--emr-calendar-lane-avatar-size)] shrink-0 items-center justify-center rounded-[var(--emr-calendar-lane-avatar-radius)] bg-[var(--emr-surface-panel)] text-[16px] font-bold leading-none text-[var(--clair-color-atomic-gray-500)]"
       >
         {veterinarian.initial}
       </span>
