@@ -749,7 +749,7 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
 
   const collapseButton = page.getByRole("button", { name: "사이드 패널 접기", exact: true });
   const collapseIcon = collapseButton.locator("svg");
-  const expectedIconColor = await resolveCssColor(page, "var(--clair-color-atomic-gray-600)");
+  const expectedIconColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-500)");
   const expectedHoverBackground = await resolveCssColor(page, "var(--emr-state-hover)");
   const expectedSelectedBackground = await resolveCssColor(page, "var(--emr-state-active)");
   const expectedDisabledColor = await resolveCssColor(page, "var(--emr-text-disabled)");
@@ -766,7 +766,7 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
       const box = await collapseIcon.boundingBox();
       return box ? { height: Math.round(box.height), width: Math.round(box.width) } : null;
     })
-    .toEqual({ height: 20, width: 20 });
+    .toEqual({ height: 16, width: 16 });
   await expect
     .poll(() =>
       collapseButton.evaluate((element) => {
