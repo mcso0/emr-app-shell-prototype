@@ -7,6 +7,7 @@ import {
   EmrContentHistoryGroup,
   EmrContentHistoryItem,
 } from "./content-history-list";
+import { EmrListHeader } from "./subpanel";
 
 type EmrContentAsidePanelStoryArgs = {
   title: string;
@@ -16,10 +17,11 @@ function EmrContentAsidePanelExample({ title }: EmrContentAsidePanelStoryArgs) {
   return (
     <div className="h-[420px] max-w-[360px] overflow-hidden rounded-lg border border-border">
       <EmrContentAsidePanel>
-        <div>
-          <h3 className="emr-text-panel-title font-semibold text-foreground">{title}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">합성 히스토리와 보조 정보를 담는 예시입니다.</p>
-        </div>
+        <EmrListHeader
+          className="mx-0 h-6 border-y-0"
+          count={2}
+          label={title}
+        />
         <EmrContentHistoryGroup count={2} label="오늘">
           <EmrContentHistoryItem
             selected
