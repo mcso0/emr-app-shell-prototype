@@ -56,7 +56,6 @@ import {
 import {
   EmrTaskQueueCard,
   getTaskQueueEventKindFromStatus,
-  joinTaskQueueSummary,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
@@ -65,7 +64,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -168,33 +166,6 @@ function getLabTaskQueueCardItem({
   };
 }
 
-function getLabGroupTaskQueueCardItem(group: LabChartGroup): EmrTaskQueueCardItem {
-  const latestItem = group.items[0];
-  const categorySummary = joinTaskQueueSummary(
-    group.items.map((item) => item.result.resultName),
-    "검사"
-  );
-  const orderSummary = joinTaskQueueSummary(
-    group.items.map((item) => item.order?.displayName ?? item.result.resultName),
-    "검사 오더"
-  );
-
-  return {
-    actionAriaLabel: `${group.patient.name} 임상병리검사 차트 더보기`,
-    actionTestId: `lab-chart-item-action-${group.encounter.id}`,
-    assigneeName: latestItem?.technicianName,
-    eventActorName: getOrderRequesterName(latestItem?.order),
-    eventKind: getTaskQueueEventKindFromStatus(latestItem?.order?.status),
-    eventTime: getOrderEventTime(latestItem?.order, latestItem?.result.receivedAt ?? latestItem?.result.collectedAt),
-    guardianName: group.primaryGuardianName ?? "보호자 미지정",
-    patientName: group.patient.name,
-    receptionType: getReceptionTypeLabel(group.encounter),
-    secondLineBadgeLabel: categorySummary,
-    secondLineText: orderSummary,
-    testId: `lab-chart-card-${group.encounter.id}`,
-  };
-}
-
 function getImagingTaskQueueCardItem({
   actionTestId,
   item,
@@ -219,33 +190,6 @@ function getImagingTaskQueueCardItem({
     secondLineBadgeLabel: item.study.modality,
     secondLineText: orderLabel,
     testId,
-  };
-}
-
-function getImagingGroupTaskQueueCardItem(group: ImagingChartGroup): EmrTaskQueueCardItem {
-  const latestItem = group.items[0];
-  const categorySummary = joinTaskQueueSummary(
-    group.items.map((item) => item.study.modality),
-    "영상"
-  );
-  const orderSummary = joinTaskQueueSummary(
-    group.items.map((item) => item.order?.displayName ?? `${item.study.modality} ${item.study.bodyPart}`),
-    "영상 오더"
-  );
-
-  return {
-    actionAriaLabel: `${group.patient.name} 영상검사 차트 더보기`,
-    actionTestId: `imaging-chart-item-action-${group.encounter.id}`,
-    assigneeName: latestItem?.radiologistName,
-    eventActorName: getOrderRequesterName(latestItem?.order),
-    eventKind: getTaskQueueEventKindFromStatus(latestItem?.order?.status),
-    eventTime: getOrderEventTime(latestItem?.order, latestItem?.study.capturedAt ?? latestItem?.study.requestedAt),
-    guardianName: group.primaryGuardianName ?? "보호자 미지정",
-    patientName: group.patient.name,
-    receptionType: getReceptionTypeLabel(group.encounter),
-    secondLineBadgeLabel: categorySummary,
-    secondLineText: orderSummary,
-    testId: `imaging-chart-card-${group.encounter.id}`,
   };
 }
 
@@ -375,8 +319,6 @@ const labStatusGroupColorToken: Record<LabResult["status"], string> = {
 };
 
 type LabResultTab = "all" | "cbc" | "chemistry";
-type LabQueueView = "order" | "chart";
-type ImagingQueueView = "order" | "chart";
 type ImagingReadingStatus = "requested" | "reading" | "completed";
 type FulfillmentQueueType = "lab" | "imaging";
 type FulfillmentWorkItemStatus =
@@ -460,16 +402,6 @@ const labResultTabItems = [
   { value: "all" as const, label: "전체" },
   { value: "cbc" as const, label: "CBC" },
   { value: "chemistry" as const, label: "혈청화학" },
-];
-
-const labQueueViewItems = [
-  { value: "order" as const, label: "오더별" },
-  { value: "chart" as const, label: "차트별" },
-];
-
-const imagingQueueViewItems = [
-  { value: "order" as const, label: "오더별" },
-  { value: "chart" as const, label: "차트별" },
 ];
 
 const fulfillmentQueueCache = new Map<string, FulfillmentQueueSnapshot>();
@@ -1328,17 +1260,6 @@ function getLabWorkItemSearchText(item: LabWorkItem) {
     .join(" ");
 }
 
-function getLabChartGroupSearchText(group: LabChartGroup) {
-  return [
-    group.patient.name,
-    group.primaryGuardianName,
-    getReceptionTypeLabel(group.encounter),
-    ...group.items.map(getLabWorkItemSearchText),
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
 function getImagingWorkItemSearchText(item: ImagingWorkItem) {
   return [
     item.patient.name,
@@ -1353,17 +1274,6 @@ function getImagingWorkItemSearchText(item: ImagingWorkItem) {
     item.radiologistName,
     getOrderRequesterName(item.order),
     getOrderEventTime(item.order, item.study.capturedAt ?? item.study.requestedAt),
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function getImagingChartGroupSearchText(group: ImagingChartGroup) {
-  return [
-    group.patient.name,
-    group.primaryGuardianName,
-    getReceptionTypeLabel(group.encounter),
-    ...group.items.map(getImagingWorkItemSearchText),
   ]
     .filter(Boolean)
     .join(" ");
@@ -1449,60 +1359,6 @@ function LabQueueItem({
   );
 }
 
-type LabChartGroup = {
-  encounter: Encounter;
-  items: LabWorkItem[];
-  patient: Patient;
-  primaryGuardianName?: string;
-};
-
-function getLabChartGroups(items: LabWorkItem[]) {
-  const groupsByEncounter = new Map<string, LabChartGroup>();
-
-  items.forEach((item) => {
-    const group = groupsByEncounter.get(item.encounter.id);
-
-    if (group) {
-      group.items.push(item);
-      return;
-    }
-
-    groupsByEncounter.set(item.encounter.id, {
-      encounter: item.encounter,
-      items: [item],
-      patient: item.patient,
-      primaryGuardianName: item.primaryGuardian?.name,
-    });
-  });
-
-  return Array.from(groupsByEncounter.values()).sort((a, b) => {
-    const aTime = a.items[0]?.result.receivedAt ?? a.items[0]?.result.collectedAt ?? "";
-    const bTime = b.items[0]?.result.receivedAt ?? b.items[0]?.result.collectedAt ?? "";
-
-    return bTime.localeCompare(aTime);
-  });
-}
-
-function LabChartQueueItem({
-  group,
-  onSelect,
-  selected,
-}: {
-  group: LabChartGroup;
-  onSelect: () => void;
-  selected: boolean;
-}) {
-  return (
-    <div data-testid={`lab-chart-group-${group.encounter.id}`}>
-      <EmrTaskQueueCard
-        item={getLabGroupTaskQueueCardItem(group)}
-        selected={selected}
-        onSelect={onSelect}
-      />
-    </div>
-  );
-}
-
 function ImagingQueueItem({
   item,
   selected,
@@ -1565,60 +1421,6 @@ function ImagingQueueGroup({
   );
 }
 
-type ImagingChartGroup = {
-  encounter: Encounter;
-  items: ImagingWorkItem[];
-  patient: Patient;
-  primaryGuardianName?: string;
-};
-
-function getImagingChartGroups(items: ImagingWorkItem[]) {
-  const groupsByEncounter = new Map<string, ImagingChartGroup>();
-
-  items.forEach((item) => {
-    const group = groupsByEncounter.get(item.encounter.id);
-
-    if (group) {
-      group.items.push(item);
-      return;
-    }
-
-    groupsByEncounter.set(item.encounter.id, {
-      encounter: item.encounter,
-      items: [item],
-      patient: item.patient,
-      primaryGuardianName: item.primaryGuardian?.name,
-    });
-  });
-
-  return Array.from(groupsByEncounter.values()).sort((a, b) => {
-    const aTime = a.items[0]?.study.capturedAt ?? a.items[0]?.study.requestedAt ?? "";
-    const bTime = b.items[0]?.study.capturedAt ?? b.items[0]?.study.requestedAt ?? "";
-
-    return bTime.localeCompare(aTime);
-  });
-}
-
-function ImagingChartQueueItem({
-  group,
-  onSelect,
-  selected,
-}: {
-  group: ImagingChartGroup;
-  onSelect: () => void;
-  selected: boolean;
-}) {
-  return (
-    <div data-testid={`imaging-chart-group-${group.encounter.id}`}>
-      <EmrTaskQueueCard
-        item={getImagingGroupTaskQueueCardItem(group)}
-        selected={selected}
-        onSelect={onSelect}
-      />
-    </div>
-  );
-}
-
 export function LabSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
@@ -1630,7 +1432,6 @@ export function LabSidePanel({
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId);
-  const [queueView, setQueueView] = useState<LabQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<LabResult["status"]>>(() => new Set());
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1676,14 +1477,9 @@ export function LabSidePanel({
   const effectiveSelectedLabResultId = items.some((item) => item.result.id === selectedLabResultId)
     ? selectedLabResultId
     : items[0]?.result.id;
-  const chartGroups = useMemo(() => getLabChartGroups(items), [items]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesQueueSearch(getLabWorkItemSearchText(item), searchQuery)),
     [items, searchQuery]
-  );
-  const filteredChartGroups = useMemo(
-    () => chartGroups.filter((group) => matchesQueueSearch(getLabChartGroupSearchText(group), searchQuery)),
-    [chartGroups, searchQuery]
   );
   const groups = useMemo(
     () =>
@@ -1695,7 +1491,7 @@ export function LabSidePanel({
         .filter((group) => group.items.length > 0),
     [filteredItems]
   );
-  const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
+  const resultCount = filteredItems.length;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
     emptyObjectLabel: "검사 업무",
     filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
@@ -1727,17 +1523,6 @@ export function LabSidePanel({
         title="임상병리검사"
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
-        tabsClassName="ml-2.5"
-        tabs={
-          <SegmentedControl
-            aria-label="임상병리검사 목록 보기"
-            className="shrink-0"
-            items={labQueueViewItems}
-            value={queueView}
-            variant="tabs"
-            onValueChange={setQueueView}
-          />
-        }
       />
       <EmrDateNavigator
         dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
@@ -1752,13 +1537,13 @@ export function LabSidePanel({
         onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
       />
       <EmrListHeader
-        label={queueView === "order" ? "검사 대기열" : "차트별 검사"}
+        label="검사 대기열"
         count={resultCount}
         topDividerVisible
         search={{
           active: searchActive,
           closeLabel: "검사 대기열 검색 닫기",
-          inputLabel: `${queueView === "order" ? "검사 대기열" : "차트별 검사"} 검색`,
+          inputLabel: "검사 대기열 검색",
           onClose: closeSearch,
           onQueryChange: setSearchQuery,
           placeholder: "환자, 보호자, 검사, 담당자 검색",
@@ -1772,38 +1557,23 @@ export function LabSidePanel({
           <EmrQueueLoadingState title="임상병리 검사 정보를 불러오는 중입니다" />
         ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
-            objectLabel={queueView === "order" ? "검사 대기열 항목" : "차트별 검사"}
+            objectLabel="검사 대기열 항목"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
         ) : resultCount === 0 ? (
           <EmrQueueEmptyState title={emptyStateTitle} />
-        ) : queueView === "order"
-          ? groups.map((group) => (
-              <LabQueueGroup
-                key={group.status}
-                collapsed={collapsedStatusIds.has(group.status)}
-                items={group.items}
-                onSelectItem={handleSelectLabResult}
-                onToggle={() => toggleStatus(group.status)}
-                selectedLabResultId={effectiveSelectedLabResultId}
-                status={group.status}
-              />
-            ))
-          : filteredChartGroups.map((group) => (
-              <LabChartQueueItem
-                key={group.encounter.id}
-                group={group}
-                selected={group.items.some((item) => item.result.id === effectiveSelectedLabResultId)}
-                onSelect={() => {
-                  const firstResultId = group.items[0]?.result.id;
-
-                  if (firstResultId) {
-                    handleSelectLabResult(firstResultId);
-                  }
-                }}
-              />
-            ))}
+        ) : groups.map((group) => (
+          <LabQueueGroup
+            key={group.status}
+            collapsed={collapsedStatusIds.has(group.status)}
+            items={group.items}
+            onSelectItem={handleSelectLabResult}
+            onToggle={() => toggleStatus(group.status)}
+            selectedLabResultId={effectiveSelectedLabResultId}
+            status={group.status}
+          />
+        ))}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -1820,7 +1590,6 @@ export function ImagingSidePanel({
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId);
-  const [queueView, setQueueView] = useState<ImagingQueueView>("order");
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<ImagingStudyStatus>>(() => new Set());
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1866,14 +1635,9 @@ export function ImagingSidePanel({
   const effectiveSelectedImagingStudyId = items.some((item) => item.study.id === selectedImagingStudyId)
     ? selectedImagingStudyId
     : items[0]?.study.id;
-  const chartGroups = useMemo(() => getImagingChartGroups(items), [items]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesQueueSearch(getImagingWorkItemSearchText(item), searchQuery)),
     [items, searchQuery]
-  );
-  const filteredChartGroups = useMemo(
-    () => chartGroups.filter((group) => matchesQueueSearch(getImagingChartGroupSearchText(group), searchQuery)),
-    [chartGroups, searchQuery]
   );
   const groups = useMemo(
     () =>
@@ -1885,7 +1649,7 @@ export function ImagingSidePanel({
         .filter((group) => group.items.length > 0),
     [filteredItems]
   );
-  const resultCount = queueView === "order" ? filteredItems.length : filteredChartGroups.length;
+  const resultCount = filteredItems.length;
   const emptyStateTitle = getDatedQueueEmptyStateTitle({
     emptyObjectLabel: "영상 업무",
     filtered: (fulfillmentQueue.summary?.totalCount ?? items.length) > 0,
@@ -1917,16 +1681,6 @@ export function ImagingSidePanel({
         title="영상검사"
         collapseLabel="사이드 패널 접기"
         onCollapse={() => setModulePanelOpen(false)}
-        tabs={
-          <SegmentedControl
-            aria-label="영상검사 목록 보기"
-            className="shrink-0"
-            items={imagingQueueViewItems}
-            value={queueView}
-            variant="tabs"
-            onValueChange={setQueueView}
-          />
-        }
       />
       <EmrDateNavigator
         dateLabel={formatKoreanOperatingDateLabel(selectedDate)}
@@ -1941,13 +1695,13 @@ export function ImagingSidePanel({
         onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
       />
       <EmrListHeader
-        label={queueView === "order" ? "영상 대기열" : "차트별 영상"}
+        label="영상 대기열"
         count={resultCount}
         topDividerVisible
         search={{
           active: searchActive,
           closeLabel: "영상 대기열 검색 닫기",
-          inputLabel: `${queueView === "order" ? "영상 대기열" : "차트별 영상"} 검색`,
+          inputLabel: "영상 대기열 검색",
           onClose: closeSearch,
           onQueryChange: setSearchQuery,
           placeholder: "환자, 보호자, 영상, 담당자 검색",
@@ -1961,38 +1715,23 @@ export function ImagingSidePanel({
           <EmrQueueLoadingState title="영상검사 정보를 불러오는 중입니다" />
         ) : resultCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
-            objectLabel={queueView === "order" ? "영상 대기열 항목" : "차트별 영상"}
+            objectLabel="영상 대기열 항목"
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
         ) : resultCount === 0 ? (
           <EmrQueueEmptyState title={emptyStateTitle} />
-        ) : queueView === "order"
-          ? groups.map((group) => (
-              <ImagingQueueGroup
-                key={group.status}
-                collapsed={collapsedStatusIds.has(group.status)}
-                items={group.items}
-                onSelectItem={handleSelectImagingStudy}
-                onToggle={() => toggleStatus(group.status)}
-                selectedImagingStudyId={effectiveSelectedImagingStudyId}
-                status={group.status}
-              />
-            ))
-          : filteredChartGroups.map((group) => (
-              <ImagingChartQueueItem
-                key={group.encounter.id}
-                group={group}
-                selected={group.items.some((item) => item.study.id === effectiveSelectedImagingStudyId)}
-                onSelect={() => {
-                  const firstStudyId = group.items[0]?.study.id;
-
-                  if (firstStudyId) {
-                    handleSelectImagingStudy(firstStudyId);
-                  }
-                }}
-              />
-            ))}
+        ) : groups.map((group) => (
+          <ImagingQueueGroup
+            key={group.status}
+            collapsed={collapsedStatusIds.has(group.status)}
+            items={group.items}
+            onSelectItem={handleSelectImagingStudy}
+            onToggle={() => toggleStatus(group.status)}
+            selectedImagingStudyId={effectiveSelectedImagingStudyId}
+            status={group.status}
+          />
+        ))}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
