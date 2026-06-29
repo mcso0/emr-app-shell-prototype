@@ -906,6 +906,8 @@ test("module side panel order type segmented control filters side orders", async
   const treatmentCard = page.getByTestId("order-queue-item-dispensing-queue-1");
   const treatmentCardAction = page.getByTestId("order-queue-item-action-dispensing-queue-1");
   await expect(treatmentCard).toContainText(/외래\s*나비\s*·\s*오세아/);
+  await expect(treatmentCard).toHaveCSS("row-gap", "2px");
+  await expect(treatmentCard).toHaveCSS("column-gap", "2px");
   await expect(treatmentCardAction).toHaveCSS("opacity", "0");
   await treatmentCard.hover();
   await treatmentCardAction.click({ force: true });

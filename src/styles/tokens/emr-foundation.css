@@ -260,7 +260,7 @@
   --emr-module-list-badge-outline-border: var(--clair-color-atomic-black-alpha-8);
   --emr-module-list-badge-outline-text: var(--clair-color-atomic-neutral-700);
   --emr-sidepanel-task-card-padding: var(--clair-spacing-8);
-  --emr-sidepanel-task-card-gap: var(--clair-spacing-4);
+  --emr-sidepanel-task-card-gap: var(--clair-spacing-2);
   --emr-sidepanel-task-card-radius: var(--clair-radius-atomic-10);
   --emr-sidepanel-task-card-bg: var(--clair-color-atomic-common-100);
   --emr-sidepanel-task-card-hover-bg: var(--clair-color-atomic-black-alpha-4);
