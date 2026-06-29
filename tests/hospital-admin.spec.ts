@@ -69,6 +69,23 @@ test("hospital admin order management opens with category and subcategory naviga
     });
   expect(Math.round(topItemMetrics.iconWidth)).toBe(14);
   expect(Math.round(topItemMetrics.iconLabelGap)).toBe(8);
+  const disabledTopItemColors = await page
+    .getByTestId("hospital-admin-side-panel")
+    .getByRole("button", { name: /근무표/ })
+    .evaluate((trigger) => {
+      const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
+      const label = trigger.querySelector(".emr-text-dense");
+
+      if (!icon || !label) {
+        throw new Error("Missing disabled module list color target");
+      }
+
+      return {
+        iconColor: getComputedStyle(icon).color,
+        labelColor: getComputedStyle(label).color,
+      };
+    });
+  expect(disabledTopItemColors.iconColor).toBe(disabledTopItemColors.labelColor);
   await page
     .getByTestId("hospital-admin-menu-order-management")
     .locator("xpath=ancestor::section")

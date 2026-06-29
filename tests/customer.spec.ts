@@ -142,6 +142,29 @@ test("customer workspace renders animal master list and opens the common patient
   await expect(page).toHaveURL(/drawer=patient%3Apatient-dubu|drawer=patient:patient-dubu/);
 });
 
+test("customer disabled side-panel item uses one muted color for icon and label", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+
+  const disabledItemColors = await page
+    .getByTestId("customer-side-panel")
+    .getByRole("button", { name: /스케줄 관리/ })
+    .evaluate((trigger) => {
+      const icon = trigger.querySelector('[data-emr-module-list-item-icon="true"]');
+      const label = trigger.querySelector(".emr-text-dense");
+
+      if (!icon || !label) {
+        throw new Error("Missing disabled customer module list color target");
+      }
+
+      return {
+        iconColor: getComputedStyle(icon).color,
+        labelColor: getComputedStyle(label).color,
+      };
+    });
+
+  expect(disabledItemColors.iconColor).toBe(disabledItemColors.labelColor);
+});
+
 test("customer side panel switches to guardians and search filters rows", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 
