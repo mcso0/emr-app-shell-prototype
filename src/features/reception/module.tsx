@@ -2253,6 +2253,9 @@ type CalendarTaskCardProps = {
   type?: "default" | "compact" | "noShow";
 };
 
+const calendarTaskTimeLabelClassName =
+  "flex h-5 shrink-0 items-center pr-[4px] text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-80";
+
 function CalendarTaskCard({
   accentClassName,
   accentTestId,
@@ -2336,7 +2339,10 @@ function CalendarTaskCard({
             {identityLabel}
           </span>
           {timeLabel ? (
-            <span className="shrink-0 text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-80">
+            <span
+              data-testid={`${testId}-time`}
+              className={calendarTaskTimeLabelClassName}
+            >
               {timeLabel}
             </span>
           ) : null}
@@ -2357,7 +2363,10 @@ function CalendarTaskCard({
               {identityLabel}
             </span>
             {timeLabel ? (
-              <span className="shrink-0 text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-80">
+              <span
+                data-testid={`${testId}-time`}
+                className={calendarTaskTimeLabelClassName}
+              >
                 {timeLabel}
               </span>
             ) : null}
