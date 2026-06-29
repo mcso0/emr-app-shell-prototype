@@ -989,6 +989,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     const badgeBox = badge.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
     const timeBox = time.getBoundingClientRect();
+    const timeStyle = getComputedStyle(time);
     const verticalCenterOffset = Math.abs(
       (purposeTextBox.top + purposeTextBox.bottom) / 2 -
         (timeTextBox.top + timeTextBox.bottom) / 2,
@@ -997,6 +998,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     return {
       badgeLeftInset: Math.round((badgeBox.left - cardBox.left) * 100) / 100,
       timeHeight: Math.round(timeBox.height),
+      timeOpacity: timeStyle.opacity,
       timeTextRightInset:
         Math.round((cardBox.right - timeTextBox.right) * 100) / 100,
       verticalCenterOffset: Math.round(verticalCenterOffset * 100) / 100,
@@ -1008,6 +1010,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   expect(nabiContentInsets.badgeLeftInset).toBeGreaterThanOrEqual(7);
   expect(nabiContentInsets.badgeLeftInset).toBeLessThanOrEqual(9);
   expect(nabiContentInsets.timeHeight).toBe(20);
+  expect(nabiContentInsets.timeOpacity).toBe("0.6");
   expect(nabiContentInsets.timeTextRightInset).toBeGreaterThanOrEqual(
     nabiContentInsets.badgeLeftInset + 3,
   );
@@ -2300,6 +2303,7 @@ test("reception day and week calendars place walk-in cards by actual start minut
     const badgeBox = badge.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
     const timeBox = time.getBoundingClientRect();
+    const timeStyle = getComputedStyle(time);
     const verticalCenterOffset = Math.abs(
       (purposeTextBox.top + purposeTextBox.bottom) / 2 -
         (timeTextBox.top + timeTextBox.bottom) / 2,
@@ -2308,6 +2312,7 @@ test("reception day and week calendars place walk-in cards by actual start minut
     return {
       badgeLeftInset: Math.round((badgeBox.left - cardBox.left) * 100) / 100,
       timeHeight: Math.round(timeBox.height),
+      timeOpacity: timeStyle.opacity,
       timeTextRightInset:
         Math.round((cardBox.right - timeTextBox.right) * 100) / 100,
       verticalCenterOffset: Math.round(verticalCenterOffset * 100) / 100,
@@ -2319,6 +2324,7 @@ test("reception day and week calendars place walk-in cards by actual start minut
   expect(shortWalkInContentMetrics.badgeLeftInset).toBeGreaterThanOrEqual(7);
   expect(shortWalkInContentMetrics.badgeLeftInset).toBeLessThanOrEqual(9);
   expect(shortWalkInContentMetrics.timeHeight).toBe(20);
+  expect(shortWalkInContentMetrics.timeOpacity).toBe("0.6");
   expect(shortWalkInContentMetrics.timeTextRightInset).toBeGreaterThanOrEqual(
     shortWalkInContentMetrics.badgeLeftInset + 3,
   );

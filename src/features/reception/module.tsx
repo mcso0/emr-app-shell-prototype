@@ -2254,7 +2254,7 @@ type CalendarTaskCardProps = {
 };
 
 const calendarTaskTimeLabelClassName =
-  "flex h-5 shrink-0 items-center pr-[4px] text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-80";
+  "flex h-5 shrink-0 items-center pr-[4px] text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-60";
 
 function CalendarTaskCard({
   accentClassName,
