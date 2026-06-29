@@ -670,6 +670,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
         return {
           backgroundColor: style.backgroundColor,
           borderRadius: style.borderRadius,
+          fontSize: style.fontSize,
           height: Math.round(box.height),
           paddingBottom: style.paddingBottom,
           paddingLeft: style.paddingLeft,
@@ -682,6 +683,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     .toEqual({
       backgroundColor: "rgb(229, 62, 62)",
       borderRadius: "6px",
+      fontSize: "11px",
       height: 16,
       paddingBottom: "1px",
       paddingLeft: "4px",
@@ -696,6 +698,21 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
         .evaluate((line) => getComputedStyle(line).paddingLeft),
     )
     .toBe("2px");
+  await expect
+    .poll(() =>
+      calendar.getByTestId("day-current-time-indicator-line").evaluate((line) => {
+        const dot = line.querySelector("span");
+        const timeAxis = document.querySelector('[data-testid="day-time-axis"]');
+
+        if (!dot || !timeAxis) return Number.POSITIVE_INFINITY;
+
+        const dotBox = dot.getBoundingClientRect();
+        const timeAxisBox = timeAxis.getBoundingClientRect();
+
+        return Math.abs(dotBox.left + dotBox.width / 2 - timeAxisBox.right);
+      }),
+    )
+    .toBeLessThanOrEqual(1);
   await expect(
     calendar
       .getByTestId("day-hour-row-10")

@@ -2215,7 +2215,7 @@ function CalendarCurrentTimeIndicator({
     >
       <span
         data-testid={labelTestId}
-        className="flex h-[var(--emr-calendar-current-time-label-height)] w-[var(--emr-calendar-current-time-label-width)] shrink-0 items-center justify-center gap-0 rounded-[var(--emr-calendar-current-time-label-radius)] bg-[var(--emr-calendar-current-time)] px-[var(--emr-calendar-current-time-label-padding-x)] py-[var(--emr-calendar-current-time-label-padding-y)] text-center text-[12px] font-semibold leading-4 text-white tabular-nums [letter-spacing:0]"
+        className="flex h-[var(--emr-calendar-current-time-label-height)] w-[var(--emr-calendar-current-time-label-width)] shrink-0 items-center justify-center gap-0 rounded-[var(--emr-calendar-current-time-label-radius)] bg-[var(--emr-calendar-current-time)] px-[var(--emr-calendar-current-time-label-padding-x)] py-[var(--emr-calendar-current-time-label-padding-y)] text-center text-[11px] font-semibold leading-4 text-white tabular-nums [letter-spacing:0]"
       >
         {getCurrentOperatingTimeLabel(currentOperatingMinutes)}
       </span>
