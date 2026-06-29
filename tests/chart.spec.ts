@@ -144,6 +144,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("진료 대기열")).toBeVisible();
   await expect(
+    sidePanel.getByRole("group", { name: "진료 대기 유형 필터" }),
+  ).toHaveCount(0);
+  await expect(
     sidePanel.getByTestId("order-queue-sort-control"),
   ).toHaveAttribute("aria-label", "대기열 정렬");
   await expect(
@@ -155,6 +158,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(
     sidePanel.getByTestId("order-queue-density-control"),
   ).toHaveCount(0);
+  await expect(
+    sidePanel.getByTestId("order-queue-search-control"),
+  ).toHaveAttribute("aria-label", "대기열 검색 열기");
   await sidePanel.getByTestId("order-queue-search-control").click();
   await expect(sidePanel.getByLabel("진료 대기열 검색")).toBeVisible();
   await page.keyboard.press("Escape");
