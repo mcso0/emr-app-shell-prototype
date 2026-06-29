@@ -70,6 +70,9 @@ const moduleListItemBaseClassName =
 const moduleListLeafItemClassName =
   "h-[var(--emr-module-list-leaf-item-height)] px-[var(--emr-module-list-leaf-item-padding-x)] py-[var(--emr-module-list-leaf-item-padding-y)]";
 
+const moduleListItemIconClassName =
+  "mr-[var(--emr-module-list-item-gap)] flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center [&_svg]:size-[var(--emr-module-list-item-icon-size)]";
+
 const moduleListItemEnabledClassName =
   "text-[var(--emr-module-list-item-text)] hover:bg-[var(--emr-module-list-item-hover-bg)] focus-visible:ring-3 focus-visible:ring-ring/50";
 
@@ -141,7 +144,12 @@ function EmrModuleListSidePanelItemButton({
     >
       {icon ? (
         <span
-          className="mr-[var(--emr-module-list-item-gap)] flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]"
+          className={cn(
+            moduleListItemIconClassName,
+            disabled
+              ? "text-[var(--emr-module-list-item-disabled-text)]"
+              : "text-[var(--emr-module-list-item-icon)]"
+          )}
           data-emr-module-list-item-icon="true"
         >
           {icon}
@@ -200,7 +208,7 @@ function EmrModuleListSidePanelSection({
       >
         {icon ? (
           <span
-            className="mr-[var(--emr-module-list-item-gap)] flex size-[var(--emr-module-list-item-icon-size)] shrink-0 items-center justify-center text-[var(--emr-module-list-item-icon)] [&_svg]:size-[var(--emr-module-list-item-icon-size)]"
+            className={cn(moduleListItemIconClassName, "text-[var(--emr-module-list-item-icon)]")}
             data-emr-module-list-item-icon="true"
             data-emr-module-list-section-icon="true"
           >
