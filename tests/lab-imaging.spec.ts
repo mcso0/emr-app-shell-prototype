@@ -48,10 +48,8 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await page.goto("/w/clair-demo/lab?modulePanel=open");
 
   const sidePanel = page.locator("aside").first();
-  const queueViewFilter = sidePanel.getByRole("group", { name: "임상병리검사 목록 보기" });
   await expect(sidePanel.getByText("임상병리검사")).toBeVisible();
-  await expect(queueViewFilter.getByRole("button", { name: "오더별" })).toHaveAttribute("aria-pressed", "true");
-  await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
+  await expect(sidePanel.getByRole("group", { name: "임상병리검사 목록 보기" })).toHaveCount(0);
   await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("검사 대기열")).toBeVisible();
   await expect(sidePanel.getByRole("button", { name: "결과입력 접기" })).toHaveAttribute("aria-expanded", "true");
@@ -66,11 +64,7 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
   await sidePanel.getByRole("button", { name: "결과입력 펼치기" }).click();
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toBeVisible();
-  await queueViewFilter.getByRole("button", { name: "차트별" }).click();
-  await expect(sidePanel.getByText("차트별 검사")).toBeVisible();
-  await expect(sidePanel.getByTestId("lab-chart-group-encounter-coco-260501")).toContainText("코코");
-  await expect(sidePanel.getByTestId("lab-chart-group-encounter-coco-260501")).toContainText("CBC 검사");
-  await queueViewFilter.getByRole("button", { name: "오더별" }).click();
+  await expect(sidePanel.getByText("차트별 검사")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "임상병리검사 이력 패널 접기" })).toBeVisible();
   await page.getByRole("button", { name: "임상병리검사 이력 패널 접기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "임상병리검사 이력" })).toBeVisible();
@@ -227,10 +221,8 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await page.goto("/w/clair-demo/imaging?modulePanel=open");
 
   const sidePanel = page.locator("aside").first();
-  const queueViewFilter = sidePanel.getByRole("group", { name: "영상검사 목록 보기" });
   await expect(sidePanel.getByText("영상검사")).toBeVisible();
-  await expect(queueViewFilter.getByRole("button", { name: "오더별" })).toHaveAttribute("aria-pressed", "true");
-  await expect(queueViewFilter.getByRole("button", { name: "차트별" })).toBeVisible();
+  await expect(sidePanel.getByRole("group", { name: "영상검사 목록 보기" })).toHaveCount(0);
   await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
@@ -250,10 +242,7 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(cocoQueueGroup.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
   await collapsedCocoQueueGroupToggle.click();
   await expect(cocoQueueGroup.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
-  await queueViewFilter.getByRole("button", { name: "차트별" }).click();
-  await expect(sidePanel.getByText("차트별 영상")).toBeVisible();
-  await expect(sidePanel.getByTestId("imaging-chart-group-encounter-coco-260501")).toContainText("코코");
-  await queueViewFilter.getByRole("button", { name: "오더별" }).click();
+  await expect(sidePanel.getByText("차트별 영상")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "영상검사 이력 패널 접기" })).toBeVisible();
   await page.getByRole("button", { name: "영상검사 이력 패널 접기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "영상검사 이력" })).toBeVisible();
