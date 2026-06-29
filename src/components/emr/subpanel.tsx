@@ -26,7 +26,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   addMonthsToIsoDate,
   formatCompactKoreanOperatingDateLabel,
@@ -195,22 +194,13 @@ export function EmrSubpanelTitle({
       {tabs ? <div className={cn("ml-3 flex shrink-0 items-center", tabsClassName)}>{tabs}</div> : null}
       {titleActions ? <div className="ml-2 flex shrink-0 items-center">{titleActions}</div> : null}
       {onCollapse ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <EmrSubpanelHeaderIconButton
-                aria-label={collapseLabel}
-                onClick={onCollapse}
-                className={cn((tabs || titleActions) && "ml-2")}
-              >
-                <SidebarGnbIcon />
-              </EmrSubpanelHeaderIconButton>
-            }
-          />
-          <TooltipContent side="right" sideOffset={8}>
-            {collapseLabel}
-          </TooltipContent>
-        </Tooltip>
+        <EmrSubpanelHeaderIconButton
+          aria-label={collapseLabel}
+          onClick={onCollapse}
+          className={cn((tabs || titleActions) && "ml-2")}
+        >
+          <SidebarGnbIcon />
+        </EmrSubpanelHeaderIconButton>
       ) : null}
     </div>
   );

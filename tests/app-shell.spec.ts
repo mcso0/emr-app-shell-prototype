@@ -813,12 +813,18 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
   await collapseButton.evaluate((element) => {
     (element as HTMLButtonElement).disabled = false;
   });
+  await collapseButton.hover();
+  await page.waitForTimeout(800);
+  await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "사이드 패널 접기" })).toHaveCount(0);
 
   await collapseButton.click();
   await expect(page).toHaveURL(/modulePanel=closed/);
-  await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
+  const expandButton = page.getByRole("button", { name: "사이드 패널 펼치기" });
+  await expect(expandButton).toBeVisible();
+  await expandButton.hover();
+  await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "사이드 패널 펼치기" })).toBeVisible();
 
-  await page.getByRole("button", { name: "사이드 패널 펼치기" }).click();
+  await expandButton.click();
   await expect(page).toHaveURL(/modulePanel=open/);
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
 });
