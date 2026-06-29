@@ -647,12 +647,14 @@ export function DispensingSidePanel({
       items={items}
       loading={fulfillmentQueue.status === "loading"}
       loadingTitle="조제/처치 업무를 불러오는 중입니다"
+      listLabel="조제/처치 업무"
       statuses={statuses}
       sourceTotalCount={fulfillmentQueue.sourceTotalCount}
       title="조제/처치"
       selectedDate={selectedDate}
       selectedItemId={selectedQueueItemIds.dispensing}
       todayDate={todayDate}
+      typeFilterPlacement="list-header"
       onCollapse={() => setModulePanelOpen(false)}
       onDateChange={(date) => {
         selectDate(date);

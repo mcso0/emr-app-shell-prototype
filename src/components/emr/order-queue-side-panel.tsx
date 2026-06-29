@@ -54,6 +54,7 @@ type OrderQueueFilterItem = {
 type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
 type OrderQueueSortKey = "request" | "assignee" | "wait";
 type OrderQueueActionContext = "chart" | "order";
+type OrderQueueTypeFilterPlacement = "title" | "list-header";
 type OrderQueueActionItemsResolver = (
   item: OrderQueueItem,
   onSelect: () => void,
@@ -83,6 +84,7 @@ type EmrOrderQueueSidePanelProps = {
   sourceTotalCount?: number;
   todayLabel?: string;
   todayDate?: string;
+  typeFilterPlacement?: OrderQueueTypeFilterPlacement;
   typeFilterVisible?: boolean;
 };
 
@@ -217,6 +219,7 @@ export function EmrOrderQueueSidePanel({
   title,
   todayDate,
   todayLabel = "오늘",
+  typeFilterPlacement = "title",
   typeFilterVisible = true,
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
@@ -227,11 +230,27 @@ export function EmrOrderQueueSidePanel({
   const [sortKey, setSortKey] = useState<OrderQueueSortKey>("request");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
   const actionContext: OrderQueueActionContext = listLabel.includes("진료") ? "chart" : "order";
+  const detailFilteredItems = useMemo(
+    () => items.filter((item) => matchesDetailFilter(item, detailFilter)),
+    [detailFilter, items],
+  );
+  const countedFilterItems = useMemo(
+    () =>
+      filterItems.map((filterItem) => ({
+        ...filterItem,
+        count:
+          filterItem.value === "all"
+            ? detailFilteredItems.length
+            : detailFilteredItems.filter((item) => getFilterValue(item) === filterItem.value).length,
+      })),
+    [detailFilteredItems, filterItems, getFilterValue],
+  );
   const scopedItems = useMemo(
     () =>
-      (!typeFilterVisible || filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter))
-        .filter((item) => matchesDetailFilter(item, detailFilter)),
-    [detailFilter, filter, getFilterValue, items, typeFilterVisible]
+      !typeFilterVisible || filter === "all"
+        ? detailFilteredItems
+        : detailFilteredItems.filter((item) => getFilterValue(item) === filter),
+    [detailFilteredItems, filter, getFilterValue, typeFilterVisible]
   );
   const visibleItems = useMemo(
     () =>
@@ -267,6 +286,16 @@ export function EmrOrderQueueSidePanel({
     }))
     .filter((group) => group.items.length > 0);
   const showLoadingState = loading && groupedItems.length === 0;
+  const typeFilterControl = typeFilterVisible ? (
+    <SegmentedControl
+      aria-label={filterAriaLabel}
+      className="shrink-0"
+      items={typeFilterPlacement === "list-header" ? countedFilterItems : filterItems}
+      value={filter}
+      variant="tabs"
+      onValueChange={setFilter}
+    />
+  ) : undefined;
   const toggleStatus = (statusId: string) => {
     setCollapsedStatusIds((current) => {
       const next = new Set(current);
@@ -286,16 +315,7 @@ export function EmrOrderQueueSidePanel({
       <EmrSubpanelTitle
         title={<span data-testid="module-side-panel-title">{title}</span>}
         onCollapse={onCollapse}
-        tabs={typeFilterVisible ? (
-          <SegmentedControl
-            aria-label={filterAriaLabel}
-            className="shrink-0"
-            items={filterItems}
-            value={filter}
-            variant="tabs"
-            onValueChange={setFilter}
-          />
-        ) : undefined}
+        tabs={typeFilterPlacement === "title" ? typeFilterControl : undefined}
       />
       <EmrDateNavigator
         dateLabel={displayDateLabel}
@@ -317,8 +337,8 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrListHeader
-        label={listLabel}
-        count={visibleItems.length}
+        label={typeFilterPlacement === "list-header" ? typeFilterControl : listLabel}
+        count={typeFilterPlacement === "list-header" ? undefined : visibleItems.length}
         topDividerVisible
         search={{
           active: searchActive,
