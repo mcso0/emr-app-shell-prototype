@@ -6,6 +6,7 @@ import { EmrOrderQueueSidePanel } from "./order-queue-side-panel";
 
 type EmrOrderQueueSidePanelStoryArgs = {
   title: string;
+  typeFilterVisible: boolean;
 };
 
 const queueStatuses: OrderQueueStatusDefinition[] = [
@@ -61,7 +62,10 @@ const queueItems: OrderQueueItem[] = [
   },
 ];
 
-function EmrOrderQueueSidePanelExample({ title }: EmrOrderQueueSidePanelStoryArgs) {
+function EmrOrderQueueSidePanelExample({
+  title,
+  typeFilterVisible,
+}: EmrOrderQueueSidePanelStoryArgs) {
   return (
     <div className="h-[520px]">
       <EmrOrderQueueSidePanel
@@ -69,6 +73,7 @@ function EmrOrderQueueSidePanelExample({ title }: EmrOrderQueueSidePanelStoryArg
         selectedItemId="sample-1"
         statuses={queueStatuses}
         title={title}
+        typeFilterVisible={typeFilterVisible}
       />
     </div>
   );
@@ -82,7 +87,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use EmrOrderQueueSidePanel for synthetic EMR order queues with date navigation, segmented type filters, sort/filter/display menus, status groups, and task cards. 사용할 때: dispensing/treatment-like modules need the shared queue shell. 쓰지 말아야 할 때: feature workflows without stable fixtures, real patient/guardian data, or server-side queue mutation behavior.",
+          "Use EmrOrderQueueSidePanel for synthetic EMR order queues with date navigation, optional segmented type filters, sort/filter/display menus, status groups, and task cards. 사용할 때: dispensing/treatment-like modules need the shared queue shell. 쓰지 말아야 할 때: feature workflows without stable fixtures, real patient/guardian data, or server-side queue mutation behavior.",
       },
     },
   },
@@ -91,9 +96,14 @@ const meta = {
       control: "text",
       description: "Queue side panel title.",
     },
+    typeFilterVisible: {
+      control: "boolean",
+      description: "Shows the top segmented queue type filter when the queue workflow needs one.",
+    },
   },
   args: {
     title: "오더 큐",
+    typeFilterVisible: true,
   },
   render: (args) => <EmrOrderQueueSidePanelExample {...args} />,
 } satisfies Meta<EmrOrderQueueSidePanelStoryArgs>;

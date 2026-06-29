@@ -83,6 +83,7 @@ type EmrOrderQueueSidePanelProps = {
   sourceTotalCount?: number;
   todayLabel?: string;
   todayDate?: string;
+  typeFilterVisible?: boolean;
 };
 
 const orderQueueFilterItems = [
@@ -216,6 +217,7 @@ export function EmrOrderQueueSidePanel({
   title,
   todayDate,
   todayLabel = "오늘",
+  typeFilterVisible = true,
 }: EmrOrderQueueSidePanelProps) {
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<string>>(() => new Set());
   const [detailFilter, setDetailFilter] = useState<OrderQueueDetailFilter>("all");
@@ -227,9 +229,9 @@ export function EmrOrderQueueSidePanel({
   const actionContext: OrderQueueActionContext = listLabel.includes("진료") ? "chart" : "order";
   const scopedItems = useMemo(
     () =>
-      (filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter))
+      (!typeFilterVisible || filter === "all" ? items : items.filter((item) => getFilterValue(item) === filter))
         .filter((item) => matchesDetailFilter(item, detailFilter)),
-    [detailFilter, filter, getFilterValue, items]
+    [detailFilter, filter, getFilterValue, items, typeFilterVisible]
   );
   const visibleItems = useMemo(
     () =>
@@ -284,7 +286,7 @@ export function EmrOrderQueueSidePanel({
       <EmrSubpanelTitle
         title={<span data-testid="module-side-panel-title">{title}</span>}
         onCollapse={onCollapse}
-        tabs={
+        tabs={typeFilterVisible ? (
           <SegmentedControl
             aria-label={filterAriaLabel}
             className="shrink-0"
@@ -293,7 +295,7 @@ export function EmrOrderQueueSidePanel({
             variant="tabs"
             onValueChange={setFilter}
           />
-        }
+        ) : undefined}
       />
       <EmrDateNavigator
         dateLabel={displayDateLabel}

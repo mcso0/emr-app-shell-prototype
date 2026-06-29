@@ -385,12 +385,6 @@ const chartSelectedEncounterStoragePrefix =
   "clair-emr:chart-selected-encounter:v1";
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
-const chartQueueFilterItems = [
-  { value: "all", label: "전체" },
-  { value: "appointment", label: "예약" },
-  { value: "walk-in", label: "외래" },
-];
-
 const emptyChartQueueItems: OrderQueueItem[] = [];
 
 const orderTypeMeta: Record<EmrOrderType, { handoff: string; label: string }> =
@@ -1154,11 +1148,6 @@ export function ChartSidePanel({
   return (
     <EmrOrderQueueSidePanel
       emptyObjectLabel="진료 업무"
-      filterAriaLabel="진료 대기 유형 필터"
-      filterItems={chartQueueFilterItems}
-      getFilterValue={(item) =>
-        item.receptionType === "예약" ? "appointment" : "walk-in"
-      }
       getActionItems={(item, onSelect) =>
         getChartQueueActionItems({
           item,
@@ -1176,6 +1165,7 @@ export function ChartSidePanel({
       statuses={getChartQueueStatuses()}
       title="진료/차트"
       todayDate={todayDate}
+      typeFilterVisible={false}
       onCollapse={() => setModulePanelOpen(false)}
       onDateChange={(date) => {
         selectDate(date);
