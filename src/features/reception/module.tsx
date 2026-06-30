@@ -85,6 +85,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   Select,
@@ -320,6 +321,8 @@ type Veterinarian = {
   role: "veterinarian";
   title?: string;
 };
+type WorkspaceStaffReadStatus = "idle" | "loading" | "ready" | "error";
+type CalendarResourceState = "loading" | "ready" | "empty" | "error";
 type WorkspaceStaffReadResponse =
   | {
       ok: true;
@@ -380,7 +383,7 @@ function getVeterinarianFilterLabel(selectedVeterinarians: Veterinarian[]) {
   const [firstVeterinarian] = selectedVeterinarians;
 
   if (!firstVeterinarian) {
-    return "수의사 0";
+    return "선택된 수의사 없음";
   }
 
   return selectedVeterinarians.length === 1
@@ -3933,6 +3936,7 @@ function ScheduleToolbar({
   onUnifiedPatientReady,
   onToggleVeterinarian,
   selectedVeterinarianIds,
+  staffReadStatus = "ready",
   todayDate,
   veterinarians,
   view,
@@ -3945,6 +3949,7 @@ function ScheduleToolbar({
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
   selectedVeterinarianIds: string[];
+  staffReadStatus?: WorkspaceStaffReadStatus;
   todayDate: string;
   veterinarians: Veterinarian[];
   view: ReceptionCalendarView;
@@ -3960,7 +3965,18 @@ function ScheduleToolbar({
   const otherVeterinarians = veterinarians.filter(
     (veterinarian) => !todayWorkingVeterinarianIds.has(veterinarian.id),
   );
-  const veterinarianLabel = getVeterinarianFilterLabel(selectedVeterinarians);
+  const veterinarianLabel =
+    staffReadStatus === "loading" || staffReadStatus === "idle"
+      ? "수의사 불러오는 중"
+      : staffReadStatus === "error" && veterinarians.length === 0
+        ? "수의사 확인 필요"
+        : veterinarians.length === 0
+          ? "근무 수의사 없음"
+          : getVeterinarianFilterLabel(selectedVeterinarians);
+  const veterinarianFilterDisabled =
+    staffReadStatus === "loading" ||
+    staffReadStatus === "idle" ||
+    veterinarians.length === 0;
 
   return (
     <div
@@ -3988,6 +4004,7 @@ function ScheduleToolbar({
       <div className="flex shrink-0 items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger
+            disabled={veterinarianFilterDisabled}
             className={buttonVariants({
               variant: "outline",
               size: "default",
@@ -5160,9 +5177,107 @@ function MonthScheduleBoard({
   );
 }
 
+function CalendarResourceLoadingState() {
+  const skeletonLanes = Array.from({ length: 3 }, (_, index) => index);
+  const skeletonRows = Array.from({ length: 8 }, (_, index) => index);
+
+  return (
+    <div
+      aria-busy="true"
+      aria-label="오늘 근무 수의사와 일정을 불러오는 중입니다"
+      className="flex min-h-[720px] flex-col bg-card"
+      data-testid="reception-calendar-resource-loading"
+      role="status"
+    >
+      <div className="grid border-b bg-card shadow-xs [grid-template-columns:56px_repeat(3,minmax(180px,1fr))]">
+        <div className="h-[var(--emr-calendar-lane-header-cell-height)] border-r" />
+        {skeletonLanes.map((lane) => (
+          <div
+            key={`calendar-loading-lane-${lane}`}
+            className="h-[var(--emr-calendar-lane-header-cell-height)] border-r p-[var(--emr-calendar-lane-header-cell-padding)] last:border-r-0"
+          >
+            <div className="flex h-full items-center gap-2 rounded-[var(--emr-calendar-lane-header-radius)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-[var(--emr-calendar-lane-header-padding)]">
+              <Skeleton className="size-[var(--emr-calendar-lane-avatar-size)] shrink-0 rounded-[var(--emr-calendar-lane-avatar-radius)]" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-2.5 w-16" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="grid flex-1 [grid-template-columns:56px_repeat(3,minmax(180px,1fr))]">
+        <div className="relative border-r">
+          {skeletonRows.map((row) => (
+            <Skeleton
+              key={`calendar-loading-time-${row}`}
+              className="absolute right-2 h-2.5 w-9"
+              style={{ top: 18 + row * 112 }}
+            />
+          ))}
+        </div>
+        <div className="relative col-span-3 min-w-0">
+          {skeletonRows.map((row) => (
+            <div
+              key={`calendar-loading-row-${row}`}
+              className="grid h-[112px] border-b [grid-template-columns:repeat(3,minmax(180px,1fr))]"
+            >
+              {skeletonLanes.map((lane) => (
+                <div
+                  key={`calendar-loading-cell-${row}-${lane}`}
+                  className="relative border-r last:border-r-0"
+                />
+              ))}
+            </div>
+          ))}
+          <Skeleton className="absolute left-3 top-[112px] h-9 w-[28%] rounded-[var(--emr-calendar-task-radius)]" />
+          <Skeleton className="absolute left-[36%] top-[224px] h-9 w-[24%] rounded-[var(--emr-calendar-task-radius)]" />
+          <div className="absolute inset-x-0 top-8 flex justify-center">
+            <span className="rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-panel)] px-3 py-1.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)]">
+              오늘 근무 수의사와 일정을 불러오는 중입니다
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalendarResourceEmptyState({
+  state,
+}: {
+  state: Exclude<CalendarResourceState, "loading" | "ready">;
+}) {
+  const title =
+    state === "error"
+      ? "수의사 목록을 불러오지 못했습니다"
+      : "오늘 근무 수의사가 없습니다";
+  const description =
+    state === "error"
+      ? "근무 수의사 정보가 준비되지 않아 캘린더를 아직 배치할 수 없습니다."
+      : "근무 수의사가 등록되면 의사별 캘린더가 표시됩니다.";
+
+  return (
+    <div
+      className="flex min-h-[720px] items-start justify-center bg-card px-6 pt-24"
+      data-testid="reception-calendar-resource-empty"
+    >
+      <div className="max-w-sm text-center">
+        <div className="emr-text-body font-semibold text-[var(--emr-text-primary)]">
+          {title}
+        </div>
+        <div className="mt-2 emr-text-metadata leading-5 text-[var(--emr-text-secondary)]">
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReceptionScheduleBoard({
   assignmentVeterinarians,
   calendarDraftSelection,
+  calendarResourceState,
   currentDate,
   currentOperatingMinutes,
   emptySlotAffordanceSuspended,
@@ -5182,6 +5297,7 @@ function ReceptionScheduleBoard({
 }: {
   assignmentVeterinarians: Veterinarian[];
   calendarDraftSelection?: ReceptionCalendarDraftSelection;
+  calendarResourceState: CalendarResourceState;
   currentDate: string;
   currentOperatingMinutes: number;
   emptySlotAffordanceSuspended: boolean;
@@ -5203,6 +5319,7 @@ function ReceptionScheduleBoard({
   const centeredCalendarScrollKeyRef = useRef<string | null>(null);
   const calendarInitialScrollLockTimerRef = useRef<number | null>(null);
   const userScrolledCalendarKeyRef = useRef<string | null>(null);
+  const [showResourceSkeleton, setShowResourceSkeleton] = useState(false);
 
   const calendarInitialScrollKey = `${operatingDate}:${view}`;
   const markCalendarUserScrolled = useCallback(() => {
@@ -5234,7 +5351,7 @@ function ReceptionScheduleBoard({
   );
 
   useEffect(() => {
-    if (view === "month") return;
+    if (view === "month" || calendarResourceState !== "ready") return;
 
     if (
       centeredCalendarScrollKeyRef.current === calendarInitialScrollKey ||
@@ -5331,7 +5448,93 @@ function ReceptionScheduleBoard({
         calendarInitialScrollLockTimerRef.current = null;
       }
     };
-  }, [calendarInitialScrollKey, currentOperatingMinutes, view]);
+  }, [
+    calendarInitialScrollKey,
+    calendarResourceState,
+    currentOperatingMinutes,
+    view,
+  ]);
+
+  useEffect(() => {
+    if (calendarResourceState !== "loading") {
+      const timeoutId = window.setTimeout(() => {
+        setShowResourceSkeleton(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowResourceSkeleton(true);
+    }, 180);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [calendarResourceState]);
+
+  const calendarBoard =
+    calendarResourceState === "loading" ? (
+      showResourceSkeleton ? (
+        <CalendarResourceLoadingState />
+      ) : (
+        <div
+          aria-busy="true"
+          aria-label="오늘 근무 수의사와 일정을 준비 중입니다"
+          className="min-h-[720px] bg-card"
+          data-testid="reception-calendar-resource-pending"
+        />
+      )
+    ) : calendarResourceState === "ready" ? (
+      <>
+        {view === "day" ? (
+          <DayScheduleBoard
+            assignmentVeterinarians={assignmentVeterinarians}
+            calendarDraftSelection={calendarDraftSelection}
+            currentDate={currentDate}
+            currentOperatingMinutes={currentOperatingMinutes}
+            emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
+            appointments={appointments}
+            draftCheckIns={draftCheckIns}
+            operatingDate={operatingDate}
+            onEmptySlotAffordancePointerMove={
+              onEmptySlotAffordancePointerMove
+            }
+            onClearCalendarTransientSelection={
+              onClearCalendarTransientSelection
+            }
+            onCreateCalendarDraft={onCreateCalendarDraft}
+            profileDataset={profileDataset}
+            selectedVeterinarians={selectedVeterinarians}
+            onSelectAppointment={onSelectAppointment}
+            onSelectEncounter={onSelectEncounter}
+          />
+        ) : null}
+        {view === "week" ? (
+          <WeekScheduleBoard
+            currentOperatingMinutes={currentOperatingMinutes}
+            emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
+            appointments={appointments}
+            draftCheckIns={draftCheckIns}
+            operatingDate={operatingDate}
+            onEmptySlotAffordancePointerMove={
+              onEmptySlotAffordancePointerMove
+            }
+            onClearCalendarTransientSelection={
+              onClearCalendarTransientSelection
+            }
+            profileDataset={profileDataset}
+            veterinarians={selectedVeterinarians}
+            onSelectAppointment={onSelectAppointment}
+            onSelectEncounter={onSelectEncounter}
+            onCreateWalkIn={onCreateWalkIn}
+          />
+        ) : null}
+        {view === "month" ? (
+          <MonthScheduleBoard appointmentCount={appointments.length} />
+        ) : null}
+      </>
+    ) : (
+      <CalendarResourceEmptyState state={calendarResourceState} />
+    );
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden">
@@ -5347,52 +5550,7 @@ function ReceptionScheduleBoard({
         onWheelCapture={markCalendarUserScrolled}
       >
         <ScrollArea className="h-full">
-          {view === "day" ? (
-            <DayScheduleBoard
-              assignmentVeterinarians={assignmentVeterinarians}
-              calendarDraftSelection={calendarDraftSelection}
-              currentDate={currentDate}
-              currentOperatingMinutes={currentOperatingMinutes}
-              emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
-              appointments={appointments}
-              draftCheckIns={draftCheckIns}
-              operatingDate={operatingDate}
-              onEmptySlotAffordancePointerMove={
-                onEmptySlotAffordancePointerMove
-              }
-              onClearCalendarTransientSelection={
-                onClearCalendarTransientSelection
-              }
-              onCreateCalendarDraft={onCreateCalendarDraft}
-              profileDataset={profileDataset}
-              selectedVeterinarians={selectedVeterinarians}
-              onSelectAppointment={onSelectAppointment}
-              onSelectEncounter={onSelectEncounter}
-            />
-          ) : null}
-          {view === "week" ? (
-            <WeekScheduleBoard
-              currentOperatingMinutes={currentOperatingMinutes}
-              emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
-              appointments={appointments}
-              draftCheckIns={draftCheckIns}
-              operatingDate={operatingDate}
-              onEmptySlotAffordancePointerMove={
-                onEmptySlotAffordancePointerMove
-              }
-              onClearCalendarTransientSelection={
-                onClearCalendarTransientSelection
-              }
-              profileDataset={profileDataset}
-              veterinarians={selectedVeterinarians}
-              onSelectAppointment={onSelectAppointment}
-              onSelectEncounter={onSelectEncounter}
-              onCreateWalkIn={onCreateWalkIn}
-            />
-          ) : null}
-          {view === "month" ? (
-            <MonthScheduleBoard appointmentCount={appointments.length} />
-          ) : null}
+          {calendarBoard}
         </ScrollArea>
       </section>
     </div>
@@ -5414,6 +5572,8 @@ export function ReceptionContent() {
   const [workspaceVeterinarians, setWorkspaceVeterinarians] = useState<
     Veterinarian[]
   >([]);
+  const [workspaceStaffReadStatus, setWorkspaceStaffReadStatus] =
+    useState<WorkspaceStaffReadStatus>("idle");
   const selectedAppointmentId = useReceptionStore(
     (state) => state.selectedAppointmentId,
   );
@@ -5554,6 +5714,15 @@ export function ReceptionContent() {
       ),
     [effectiveSelectedVeterinarianIds, veterinarians],
   );
+  const calendarResourceState: CalendarResourceState = !liveStaffSourceEnabled
+    ? "ready"
+    : workspaceStaffReadStatus === "loading" || workspaceStaffReadStatus === "idle"
+      ? "loading"
+      : workspaceStaffReadStatus === "error" && veterinarians.length === 0
+        ? "error"
+        : veterinarians.length === 0
+          ? "empty"
+          : "ready";
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
@@ -5711,9 +5880,11 @@ export function ReceptionContent() {
     async function loadStaff() {
       if (!liveStaffSourceEnabled) {
         setWorkspaceVeterinarians([]);
+        setWorkspaceStaffReadStatus("ready");
         return;
       }
 
+      setWorkspaceStaffReadStatus("loading");
       const result = await loadWorkspaceVeterinarians({
         actorId: authSession?.id,
         workspaceId,
@@ -5722,6 +5893,7 @@ export function ReceptionContent() {
 
       const nextVeterinarians = mapWorkspaceStaffToVeterinarians(result);
       setWorkspaceVeterinarians(nextVeterinarians);
+      setWorkspaceStaffReadStatus(result.ok ? "ready" : "error");
     }
 
     void loadStaff();
@@ -5922,6 +6094,7 @@ export function ReceptionContent() {
         view={calendarView}
         onViewChange={handleCalendarViewChange}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
+        staffReadStatus={workspaceStaffReadStatus}
         todayDate={defaultOperatingDate}
         veterinarians={veterinarians}
         onToggleVeterinarian={toggleVeterinarian}
@@ -5978,6 +6151,7 @@ export function ReceptionContent() {
       <ReceptionScheduleBoard
         assignmentVeterinarians={veterinarians}
         calendarDraftSelection={calendarDraftSelection}
+        calendarResourceState={calendarResourceState}
         currentDate={defaultOperatingDate}
         currentOperatingMinutes={currentOperatingMinutes}
         emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}

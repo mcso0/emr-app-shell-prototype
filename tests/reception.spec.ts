@@ -3073,6 +3073,84 @@ test("Cheongdam empty reception still renders the calendar workspace", async ({
   await expect(page.locator('[data-testid^="walkin-card-"]')).toHaveCount(0);
 });
 
+test("Cheongdam reception defers the calendar board while veterinarian lanes load", async ({
+  page,
+}) => {
+  const workspaceId = "workspace-clair-cheongdam";
+  let releaseStaffResponse!: () => void;
+  const staffResponseReady = new Promise<void>((resolve) => {
+    releaseStaffResponse = resolve;
+  });
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?role=vet`,
+    async (route) => {
+      await staffResponseReady;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: "49110000-0000-4000-8000-000000000003",
+              displayName: "청담 원장",
+              initial: "청",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day?**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          records: [],
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
+
+  await expect(page.getByTestId("reception-calendar-resource-loading")).toBeVisible();
+  await expect(page.getByText("수의사 0")).toHaveCount(0);
+  await expect(page.getByTestId("reception-day-calendar")).toHaveCount(0);
+  await expect(page.getByTestId("day-current-time-indicator")).toHaveCount(0);
+
+  releaseStaffResponse();
+
+  await expect(page.getByTestId("reception-calendar-resource-loading")).toHaveCount(0);
+  const calendar = page.getByTestId("reception-day-calendar");
+  await expect(calendar).toBeVisible();
+  await expect(calendar.getByText("청담 원장")).toBeVisible();
+});
+
 test("Cheongdam empty reception ignores stale completed calendar queue records", async ({
   page,
 }) => {
