@@ -19,7 +19,7 @@ function SidePanelMiniCalendarStory({
   const [activeDate, setActiveDate] = useState(selectedDate);
 
   return (
-    <div className="w-[296px] bg-[var(--emr-surface-sidepanel)]">
+    <div className="w-[288px] bg-[var(--emr-surface-sidepanel)]">
       <EmrSidePanelMiniCalendar
         selectedDate={activeDate}
         todayDate={todayDate}

@@ -19,7 +19,7 @@ function EmrSidePanelCardExample({
   selectionVariant,
 }: EmrSidePanelCardStoryArgs) {
   return (
-    <div className="w-[296px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
+    <div className="w-[288px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
       <EmrSidePanelCard
         selected={selected}
         selectionVariant={selectionVariant}

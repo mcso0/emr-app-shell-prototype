@@ -1,6 +1,6 @@
 const SHELL_GAP = 10;
 const NAV_RAIL_WIDTH = 48;
-const MODULE_SIDE_PANEL_WIDTH = 296;
+const MODULE_SIDE_PANEL_WIDTH = 288;
 
 export const SHELL_LAYOUT = {
   shell: {
