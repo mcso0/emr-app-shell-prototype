@@ -161,7 +161,7 @@ export function EmrSubpanel({ children, className }: EmrSubpanelProps) {
   return (
     <div
       className={cn(
-        "group/emr-subpanel flex h-full min-h-0 w-full min-w-[296px] max-w-[296px] flex-col bg-[var(--emr-surface-sidepanel)]",
+        "group/emr-subpanel flex h-full min-h-0 w-full min-w-[288px] max-w-[288px] flex-col bg-[var(--emr-surface-sidepanel)]",
         className
       )}
     >

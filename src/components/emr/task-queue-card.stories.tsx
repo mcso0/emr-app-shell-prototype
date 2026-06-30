@@ -8,7 +8,7 @@ type EmrTaskQueueCardStoryArgs = {
 
 function EmrTaskQueueCardExample({ selected }: EmrTaskQueueCardStoryArgs) {
   return (
-    <div className="w-[296px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
+    <div className="w-[288px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
       <EmrTaskQueueCard
         item={{
           actionAriaLabel: "샘플 작업 더보기",

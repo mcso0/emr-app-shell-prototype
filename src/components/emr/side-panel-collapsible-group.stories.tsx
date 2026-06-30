@@ -18,7 +18,7 @@ function EmrSidePanelCollapsibleGroupExample({
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
 
   return (
-    <div className="w-[296px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
+    <div className="w-[288px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
       <EmrSidePanelCollapsibleGroup
         collapsed={isCollapsed}
         count={count}

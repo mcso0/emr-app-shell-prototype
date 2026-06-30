@@ -406,6 +406,7 @@ test("app shell renders workspace switcher in the navigation column when module 
   const modulePanelArea = page.getByTestId("module-panel-area");
   const workspaceArea = page.getByTestId("shell-workspace-area");
   const workspaceSwitcher = page.getByTestId("workspace-switcher");
+  const miniCalendar = page.getByTestId("side-panel-mini-calendar");
 
   await expect(tabsBar.getByRole("button", { name: "clair-demo 워크스페이스 선택" })).toHaveCount(0);
   await expect(navigationColumn.getByRole("button", { name: "clair-demo 워크스페이스 선택" })).toBeVisible();
@@ -432,6 +433,14 @@ test("app shell renders workspace switcher in the navigation column when module 
   expect(Math.round(tabsBox.height)).toBe(32);
   expect(Math.round(switcherBox.height)).toBe(32);
   expect(Math.round(switcherBox.width)).toBeGreaterThanOrEqual(192);
+  const moduleSidePanelWidth = await miniCalendar.evaluate((element) => {
+    const panel = element.closest("[class*='group/emr-subpanel']");
+    return panel ? Math.round(panel.getBoundingClientRect().width) : null;
+  });
+  const miniCalendarBox = await miniCalendar.boundingBox();
+  expect(moduleSidePanelWidth).toBe(288);
+  expectRect(miniCalendarBox);
+  expect(Math.round(miniCalendarBox.width)).toBe(288);
   await expect(switcherLabel).not.toHaveCSS("text-overflow", "ellipsis");
   await expect(switcherLabel).toHaveText("VIP 동물의료센터 청담점");
   await expect(workspaceSwitcher).toHaveCSS("font-size", "14px");

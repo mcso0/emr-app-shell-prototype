@@ -93,13 +93,13 @@ export function EmrSidePanelMiniCalendar({
   return (
     <section
       className={cn(
-        "h-[233px] w-[296px] shrink-0 bg-[var(--emr-surface-sidepanel)] pb-2",
+        "h-[233px] w-full shrink-0 bg-[var(--emr-surface-sidepanel)] pb-2",
         className,
       )}
       data-testid="side-panel-mini-calendar"
       aria-label="접수/예약 간이 캘린더"
     >
-      <div className="mx-[6px] h-[225px] w-[284px]">
+      <div className="mx-[6px] h-[225px]">
         <div className="flex h-9 items-center px-1.5">
           <button
             type="button"
