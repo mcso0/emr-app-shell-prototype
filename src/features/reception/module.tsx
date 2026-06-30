@@ -5184,7 +5184,7 @@ function CalendarResourceLoadingState() {
   return (
     <div
       aria-busy="true"
-      aria-label="오늘 근무 수의사와 일정을 불러오는 중입니다"
+      aria-label="진료 일정을 불러오는 중입니다"
       className="flex min-h-[720px] flex-col bg-card"
       data-testid="reception-calendar-resource-loading"
       role="status"
@@ -5216,7 +5216,10 @@ function CalendarResourceLoadingState() {
             />
           ))}
         </div>
-        <div className="relative col-span-3 min-w-0">
+        <div
+          className="relative col-span-3 min-w-0"
+          data-testid="reception-calendar-resource-loading-grid"
+        >
           {skeletonRows.map((row) => (
             <div
               key={`calendar-loading-row-${row}`}
@@ -5232,9 +5235,12 @@ function CalendarResourceLoadingState() {
           ))}
           <Skeleton className="absolute left-3 top-[112px] h-9 w-[28%] rounded-[var(--emr-calendar-task-radius)]" />
           <Skeleton className="absolute left-[36%] top-[224px] h-9 w-[24%] rounded-[var(--emr-calendar-task-radius)]" />
-          <div className="absolute inset-x-0 top-8 flex justify-center">
-            <span className="rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-panel)] px-3 py-1.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)]">
-              오늘 근무 수의사와 일정을 불러오는 중입니다
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span
+              className="rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-panel)] px-3 py-1.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)]"
+              data-testid="reception-calendar-resource-loading-message"
+            >
+              진료 일정을 불러오는 중입니다
             </span>
           </div>
         </div>
@@ -5478,7 +5484,7 @@ function ReceptionScheduleBoard({
       ) : (
         <div
           aria-busy="true"
-          aria-label="오늘 근무 수의사와 일정을 준비 중입니다"
+          aria-label="진료 일정을 불러오는 중입니다"
           className="min-h-[720px] bg-card"
           data-testid="reception-calendar-resource-pending"
         />
