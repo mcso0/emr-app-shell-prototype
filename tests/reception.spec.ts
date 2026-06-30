@@ -858,7 +858,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
   expect(Math.abs(kongCardInsets.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(kongCardInsets.top)).toBeLessThanOrEqual(1);
-  expect(kongCardInsets.height).toBe(56);
+  expect(kongCardInsets.height).toBe(60);
   expect(kongCardInsets.width).toBeGreaterThanOrEqual(160);
   expect(Math.abs(kongCardInsets.right)).toBeLessThanOrEqual(1);
 
@@ -924,7 +924,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   for (const alignment of timeAxisAlignment.alignments) {
     expect(alignment?.gapToAxisRight).toBeGreaterThanOrEqual(6);
     expect(alignment?.gapToAxisRight).toBeLessThanOrEqual(10);
-    expect(alignment?.rowHeight).toBe(112);
+    expect(alignment?.rowHeight).toBe(120);
     expect(alignment?.textCenterOffsetFromRowLine).toBeLessThanOrEqual(1);
   }
 
@@ -936,7 +936,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   ).toContainText("나비 · 오세아");
   await expect(nabiAppointment).toContainText("10:45-11:00");
   await expect(nabiAppointment).not.toContainText("피부 재진");
-  await expect(nabiAppointment).toHaveCSS("height", "28px");
+  await expect(nabiAppointment).toHaveCSS("height", "30px");
   const nabiBadgeMetrics = await nabiAppointment
     .getByTestId("appointment-card-appointment-nabi-260501-badge")
     .evaluate((badge) => {
@@ -962,8 +962,8 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   expect(nabiBadgeMetrics.parentHeight).toBeGreaterThanOrEqual(
     nabiBadgeMetrics.badgeHeight,
   );
-  expect(nabiBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(7);
-  expect(nabiBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(9);
+  expect(nabiBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(5);
+  expect(nabiBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(7);
   const nabiContentInsets = await nabiAppointment.evaluate((card) => {
     const badge = card.querySelector(
       '[data-testid="appointment-card-appointment-nabi-260501-badge"]',
@@ -1009,11 +1009,10 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
     throw new Error("Expected Nabi compact schedule content inset data");
   expect(nabiContentInsets.badgeLeftInset).toBeGreaterThanOrEqual(7);
   expect(nabiContentInsets.badgeLeftInset).toBeLessThanOrEqual(9);
-  expect(nabiContentInsets.timeHeight).toBe(20);
+  expect(nabiContentInsets.timeHeight).toBe(18);
   expect(nabiContentInsets.timeOpacity).toBe("0.6");
-  expect(nabiContentInsets.timeTextRightInset).toBeGreaterThanOrEqual(
-    nabiContentInsets.badgeLeftInset + 3,
-  );
+  expect(nabiContentInsets.timeTextRightInset).toBeGreaterThanOrEqual(7);
+  expect(nabiContentInsets.timeTextRightInset).toBeLessThanOrEqual(10);
   expect(nabiContentInsets.verticalCenterOffset).toBeLessThanOrEqual(1);
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;
@@ -1100,7 +1099,7 @@ test("reception day calendar keeps unassigned walk-ins sticky as compact neutral
   await expect(unassignedCard).toContainText("14:30-15:30");
   await expect(unassignedCard).not.toContainText("현장 접수");
   await expect(unassignedCard).not.toContainText("내과");
-  await expect(unassignedCard).toHaveCSS("height", "36px");
+  await expect(unassignedCard).toHaveCSS("height", "30px");
 
   const cardTone = await unassignedCard.evaluate((card) => {
     const badge = card.querySelector("span:not([aria-hidden])");
@@ -2251,20 +2250,40 @@ test("reception day and week calendars place walk-in cards by actual start minut
   await expect(shortCard).toContainText("15:13");
   await expect(shortCard).not.toContainText("30분");
   await expect(longCard).toContainText("90분");
+  const longDescription = longCard.getByTestId(
+    "walkin-card-encounter-time-axis-long-description",
+  );
+  await expect(longDescription).toContainText("90분 실제 시간 배치");
+  const longDescriptionMetrics = await longDescription.evaluate((description) => {
+    const box = description.getBoundingClientRect();
+    const style = getComputedStyle(description);
+    return {
+      fontSize: style.fontSize,
+      lineClamp:
+        style.getPropertyValue("-webkit-line-clamp") || style.webkitLineClamp,
+      lineHeight: style.lineHeight,
+      maxVisualHeight: Math.round(box.height),
+    };
+  });
+  expect(longDescriptionMetrics.fontSize).toBe("13px");
+  expect(longDescriptionMetrics.lineHeight).toBe("18px");
+  expect(longDescriptionMetrics.lineClamp).toBe("2");
+  expect(longDescriptionMetrics.maxVisualHeight).toBeLessThanOrEqual(36);
   const shortCardBadgeMetrics = await shortCard
     .getByTestId("walkin-card-encounter-time-axis-minutes-badge")
     .evaluate((badge) => {
       const parent = badge.parentElement;
-      if (!parent) return null;
+      const card = badge.closest("button");
+      if (!parent || !card) return null;
 
       const badgeBox = badge.getBoundingClientRect();
-      const parentBox = parent.getBoundingClientRect();
+      const cardBox = card.getBoundingClientRect();
 
       return {
         badgeHeight: Math.round(badgeBox.height),
-        badgeTopInset: Math.round(badgeBox.top - parentBox.top),
-        parentHeight: Math.round(parentBox.height),
-        parentTestId: parent.getAttribute("data-testid"),
+        badgeTopInset: Math.round(badgeBox.top - cardBox.top),
+        parentHeight: Math.round(cardBox.height),
+        parentTestId: card.getAttribute("data-testid"),
       };
     });
 
@@ -2276,8 +2295,8 @@ test("reception day and week calendars place walk-in cards by actual start minut
   expect(shortCardBadgeMetrics.parentHeight).toBeGreaterThanOrEqual(
     shortCardBadgeMetrics.badgeHeight,
   );
-  expect(shortCardBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(7);
-  expect(shortCardBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(9);
+  expect(shortCardBadgeMetrics.badgeTopInset).toBeGreaterThanOrEqual(5);
+  expect(shortCardBadgeMetrics.badgeTopInset).toBeLessThanOrEqual(7);
   const shortWalkInContentMetrics = await shortCard.evaluate((card) => {
     const badge = card.querySelector(
       '[data-testid="walkin-card-encounter-time-axis-minutes-badge"]',
@@ -2304,31 +2323,28 @@ test("reception day and week calendars place walk-in cards by actual start minut
     const cardBox = card.getBoundingClientRect();
     const timeBox = time.getBoundingClientRect();
     const timeStyle = getComputedStyle(time);
-    const verticalCenterOffset = Math.abs(
-      (purposeTextBox.top + purposeTextBox.bottom) / 2 -
-        (timeTextBox.top + timeTextBox.bottom) / 2,
-    );
+    const verticalGap = timeTextBox.top - purposeTextBox.bottom;
 
     return {
       badgeLeftInset: Math.round((badgeBox.left - cardBox.left) * 100) / 100,
       timeHeight: Math.round(timeBox.height),
+      timeTextLeftInset:
+        Math.round((timeTextBox.left - cardBox.left) * 100) / 100,
       timeOpacity: timeStyle.opacity,
-      timeTextRightInset:
-        Math.round((cardBox.right - timeTextBox.right) * 100) / 100,
-      verticalCenterOffset: Math.round(verticalCenterOffset * 100) / 100,
+      verticalGap: Math.round(verticalGap * 100) / 100,
     };
   });
 
   if (!shortWalkInContentMetrics)
-    throw new Error("Expected short walk-in compact content metrics");
+    throw new Error("Expected short walk-in medium content metrics");
   expect(shortWalkInContentMetrics.badgeLeftInset).toBeGreaterThanOrEqual(7);
   expect(shortWalkInContentMetrics.badgeLeftInset).toBeLessThanOrEqual(9);
-  expect(shortWalkInContentMetrics.timeHeight).toBe(20);
+  expect(shortWalkInContentMetrics.timeHeight).toBe(18);
   expect(shortWalkInContentMetrics.timeOpacity).toBe("0.6");
-  expect(shortWalkInContentMetrics.timeTextRightInset).toBeGreaterThanOrEqual(
-    shortWalkInContentMetrics.badgeLeftInset + 3,
-  );
-  expect(shortWalkInContentMetrics.verticalCenterOffset).toBeLessThanOrEqual(1);
+  expect(shortWalkInContentMetrics.timeTextLeftInset).toBeGreaterThanOrEqual(7);
+  expect(shortWalkInContentMetrics.timeTextLeftInset).toBeLessThanOrEqual(9);
+  expect(shortWalkInContentMetrics.verticalGap).toBeGreaterThanOrEqual(3);
+  expect(shortWalkInContentMetrics.verticalGap).toBeLessThanOrEqual(7);
 
   const dayMetrics = await shortCard.evaluate((card) => {
     const row = document.querySelector('[data-testid="day-hour-row-15"]');
@@ -2349,11 +2365,10 @@ test("reception day and week calendars place walk-in cards by actual start minut
   });
 
   if (!dayMetrics) throw new Error("Expected day card metrics");
-  expect(dayMetrics.top).toBeGreaterThan(22);
+  expect(dayMetrics.top).toBeGreaterThan(25);
   expect(dayMetrics.top).toBeLessThan(27);
-  expect(dayMetrics.height).toBeGreaterThan(54);
-  expect(dayMetrics.height).toBeLessThan(58);
-  expect(dayMetrics.longHeight).toBeGreaterThan(dayMetrics.height * 2.8);
+  expect(dayMetrics.height).toBe(60);
+  expect(dayMetrics.longHeight).toBeGreaterThan(dayMetrics.height * 2.9);
 
   await shortCard.click();
   await expect(page.getByTestId("workspace-drawer")).toContainText(
@@ -2384,10 +2399,9 @@ test("reception day and week calendars place walk-in cards by actual start minut
   });
 
   if (!weekMetrics) throw new Error("Expected week card metrics");
-  expect(weekMetrics.top).toBeGreaterThan(22);
+  expect(weekMetrics.top).toBeGreaterThan(25);
   expect(weekMetrics.top).toBeLessThan(27);
-  expect(weekMetrics.height).toBeGreaterThan(54);
-  expect(weekMetrics.height).toBeLessThan(58);
+  expect(weekMetrics.height).toBe(60);
 });
 
 test("reception persisted reads deny cross-workspace demo actors", async ({
@@ -5283,7 +5297,7 @@ test("reception creates a draft task from a 15-minute calendar click", async ({
 
   expect(Math.abs(draftCardInsets.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(draftCardInsets.top)).toBeLessThanOrEqual(1);
-  expect(draftCardInsets.height).toBe(28);
+  expect(draftCardInsets.height).toBe(30);
   expect(draftCardInsets.width).toBeGreaterThanOrEqual(160);
   expect(Math.abs(draftCardInsets.right)).toBeLessThanOrEqual(1);
 });

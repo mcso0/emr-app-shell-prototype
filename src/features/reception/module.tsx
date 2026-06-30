@@ -285,7 +285,7 @@ const dayScheduleStartHour = 0;
 const dayScheduleEndHour = 24;
 const dayBusinessOpenHour = 9;
 const dayBusinessCloseHour = 19;
-const dayScheduleHourRowHeight = 112;
+const dayScheduleHourRowHeight = 120;
 const scheduleSlotMinutes = 15;
 const scheduleSlotCountPerHour = 60 / scheduleSlotMinutes;
 const maxReceptionCalendarDraftDurationMinutes = 240;
@@ -2165,7 +2165,7 @@ function CalendarTaskBadge({
     <span
       data-testid={testId}
       className={cn(
-        "inline-flex h-5 min-w-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] border px-[6px] py-[2px] font-['Pretendard'] text-[12px] font-medium leading-4 [letter-spacing:0]",
+        "inline-flex h-[18px] min-w-[30px] shrink-0 items-center justify-center whitespace-nowrap rounded-[6px] border px-[4px] py-px font-['Pretendard'] text-[12px] font-medium leading-4 [letter-spacing:0]",
         tone === "neutral"
           ? "border-border bg-card text-muted-foreground"
           : (calendarToneClassName ?? calendarTaskBadgeToneClasses[type]),
@@ -2253,11 +2253,14 @@ type CalendarTaskCardProps = {
   testId: string;
   timeLabel?: string;
   tone?: "default" | "neutral";
-  type?: "default" | "compact" | "noShow";
+  type?: "compact" | "default" | "medium" | "noShow";
+  statusTone?: "noShow";
 };
 
 const calendarTaskTimeLabelClassName =
-  "flex h-5 shrink-0 items-center pr-[4px] text-[12px] font-semibold leading-4 tabular-nums [letter-spacing:0] opacity-60";
+  "flex h-[18px] shrink-0 items-center text-[13px] font-normal leading-[18px] tabular-nums [letter-spacing:0] opacity-60";
+const calendarTaskIdentityClassName =
+  "min-w-0 truncate text-[13px] font-medium leading-[18px] [letter-spacing:0]";
 
 function CalendarTaskCard({
   accentClassName,
@@ -2280,9 +2283,11 @@ function CalendarTaskCard({
   timeLabel,
   tone = "default",
   type = "default",
+  statusTone,
 }: CalendarTaskCardProps) {
-  const noShow = type === "noShow";
+  const noShow = statusTone === "noShow" || type === "noShow";
   const compact = type === "compact";
+  const medium = type === "medium";
   const neutral = tone === "neutral";
   const veterinarianToneClassName =
     !neutral && !noShow ? calendarToneClassName : undefined;
@@ -2295,11 +2300,12 @@ function CalendarTaskCard({
       type="button"
       aria-label={ariaLabel}
       className={cn(
-        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border p-[8px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
+        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border px-[8px] py-[6px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
         fillHeight ? "h-full w-full flex-none" : "flex-1",
-        compact ? "flex-row items-start gap-[8px]" : "flex-col gap-[6px]",
-        !fillHeight && compact && "h-[36px]",
-        !fillHeight && type === "default" && "h-[80px]",
+        compact ? "flex-row items-center gap-[6px]" : "flex-col gap-[4px]",
+        !fillHeight && compact && "h-[30px]",
+        !fillHeight && medium && "h-[60px]",
+        !fillHeight && type === "default" && "h-[154px]",
         !fillHeight && noShow && "h-[60px]",
         neutral
           ? "border-border bg-muted text-foreground hover:bg-muted/80"
@@ -2337,7 +2343,7 @@ function CalendarTaskCard({
           />
           <span
             data-testid={purposeTestId}
-            className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
+            className={cn("flex-1", calendarTaskIdentityClassName)}
           >
             {identityLabel}
           </span>
@@ -2352,7 +2358,7 @@ function CalendarTaskCard({
         </>
       ) : (
         <>
-          <span className="flex w-full min-w-0 items-center gap-[8px] overflow-hidden">
+          <span className="flex h-[18px] w-full min-w-0 items-center gap-[6px] overflow-hidden">
             <CalendarTaskBadge
               calendarToneClassName={calendarBadgeToneClassName}
               testId={`${testId}-badge`}
@@ -2361,22 +2367,25 @@ function CalendarTaskCard({
             />
             <span
               data-testid={purposeTestId}
-              className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-5 [letter-spacing:0]"
+              className={cn("flex-1", calendarTaskIdentityClassName)}
             >
               {identityLabel}
             </span>
-            {timeLabel ? (
-              <span
-                data-testid={`${testId}-time`}
-                className={calendarTaskTimeLabelClassName}
-              >
-                {timeLabel}
-              </span>
-            ) : null}
           </span>
-          {!noShow && description ? (
-            <span className="w-full truncate text-[12px] font-medium leading-4 [letter-spacing:0] opacity-90">
+          {!noShow && !medium && description ? (
+            <span
+              data-testid={`${testId}-description`}
+              className="line-clamp-2 w-full text-[13px] font-normal leading-[18px] [letter-spacing:0] opacity-90"
+            >
               {description}
+            </span>
+          ) : null}
+          {timeLabel ? (
+            <span
+              data-testid={`${testId}-time`}
+              className={calendarTaskTimeLabelClassName}
+            >
+              {timeLabel}
             </span>
           ) : null}
         </>
@@ -3582,13 +3591,12 @@ function ScheduleAppointmentCard({
   const noShow =
     appointment.status === "no_show" || appointment.status === "cancelled";
   const checkedIn = appointment.status === "checked_in";
-  const compactDuration = getAppointmentDurationMinutes(appointment) <= 30;
-  const cardType = compactDuration
-    ? "compact"
-    : noShow
-      ? "noShow"
-      : checkedIn
-        ? "compact"
+  const durationMinutes = getAppointmentDurationMinutes(appointment);
+  const cardType =
+    durationMinutes < 30
+      ? "compact"
+      : durationMinutes <= 30
+        ? "medium"
         : "default";
   const patientLabel = patient?.name ?? "환자 미지정";
   const guardianLabel = guardian?.name ?? "보호자 미지정";
@@ -3622,7 +3630,7 @@ function ScheduleAppointmentCard({
               veterinarians,
             )
       }
-      description={cardType === "default" ? visitDetail : undefined}
+      description={cardType === "default" && !noShow ? visitDetail : undefined}
       disabled={appointment.status !== "confirmed" && !checkedIn}
       fillHeight={fillHeight}
       guardianLabel={guardianLabel}
@@ -3634,6 +3642,7 @@ function ScheduleAppointmentCard({
       testId={`appointment-card-${appointment.id}`}
       timeLabel={timeLabel}
       type={cardType}
+      statusTone={noShow ? "noShow" : undefined}
     />
   );
 }
@@ -3689,10 +3698,15 @@ function ScheduleWalkInQueueCard({
     .filter(Boolean)
     .join(" · ");
   const unassignedCompact = displayMode === "unassignedCompact";
-  const compactDuration =
-    (draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration) ?? 30) <=
-    30;
-  const cardType = unassignedCompact || compactDuration ? "compact" : "default";
+  const durationMinutes =
+    draft.durationMinutes ?? getDurationMinutesFromLabel(defaultWalkInDuration) ?? 30;
+  const cardType = unassignedCompact
+    ? "compact"
+    : durationMinutes < 30
+      ? "compact"
+      : durationMinutes <= 30
+        ? "medium"
+        : "default";
 
   return (
     <CalendarTaskCard
@@ -3722,7 +3736,7 @@ function ScheduleWalkInQueueCard({
       className={
         unassignedCompact ? "w-[min(360px,100%)] !flex-none" : undefined
       }
-      description={cardType === "compact" ? undefined : description}
+      description={cardType === "default" ? description : undefined}
       fillHeight={fillHeight}
       guardianLabel={guardianLabel}
       onPointerDown={onClearCalendarTransientSelection}
