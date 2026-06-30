@@ -5447,28 +5447,141 @@ function writeCallRoomPreference({
   window.localStorage.removeItem(key);
 }
 
+function getChartPrecallVisitPurpose(bundle: ChartBundle) {
+  return (
+    bundle.encounter.visitPurpose ??
+    bundle.encounter.chiefComplaint ??
+    "현장 접수"
+  );
+}
+
+function getChartPrecallReservationMemo(bundle: ChartBundle) {
+  const memo = bundle.encounter.chiefComplaint;
+
+  return memo && memo !== bundle.encounter.visitPurpose ? memo : "예약 메모 없음";
+}
+
+function getChartPrecallReceptionMemo(bundle: ChartBundle) {
+  return bundle.encounter.receptionMemo ?? "접수 메모 없음";
+}
+
+function getChartPrecallCautionText(bundle: ChartBundle) {
+  return bundle.patient.handlingCautionLocked ? "핸들링 주의" : "주의사항 없음";
+}
+
 function ChartStartLockedState({
+  bundle,
+  onOpenReceptionInfo,
+  onRequestCall,
+  primaryActionBusy,
   queueStatus,
 }: {
+  bundle: ChartBundle;
+  onOpenReceptionInfo: () => void;
+  onRequestCall: () => void;
+  primaryActionBusy: boolean;
   queueStatus?: WaitingQueueEntry["status"];
 }) {
   const isCalled = queueStatus === "called";
+  const veterinarianName = getChartBundleVeterinarianName(bundle);
 
   return (
-    <div className="mt-2 flex min-h-0 flex-1 items-center justify-center border-t border-[var(--emr-line-hairline)] pt-2">
+    <div className="min-h-0 flex-1 overflow-auto px-3 py-5">
       <div
-        className="w-full max-w-xl rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-card p-5 text-center shadow-sm"
+        className="mx-auto grid w-full max-w-5xl gap-3"
         data-testid="chart-start-locked-state"
       >
-        <div className="emr-text-section font-semibold text-foreground">
-          진료 시작 전입니다
-        </div>
-        <p className="mt-2 emr-text-dense text-muted-foreground">
-          {isCalled
-            ? "현재 호출된 환자 상태를 확인한 뒤 진료 흐름을 새로고침해 주세요."
-            : "진료실을 선택해 환자를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다."}
+        <section className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[linear-gradient(180deg,rgba(239,246,255,0.78),rgba(255,255,255,0))] p-4">
+          <div className="min-w-0">
+            <div className="emr-text-title font-semibold text-foreground">
+              진료 시작 전입니다
+            </div>
+            <p className="mt-1 emr-text-dense text-muted-foreground">
+              {isCalled
+                ? "현재 호출된 환자 상태를 확인한 뒤 진료 흐름을 새로고침해 주세요."
+                : `${bundle.patient.name}를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다`}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              className="bg-card"
+              variant="outline"
+              onClick={onOpenReceptionInfo}
+            >
+              접수 정보 보기
+            </Button>
+            {!isCalled ? (
+              <Button disabled={primaryActionBusy} onClick={onRequestCall}>
+                호출하기
+              </Button>
+            ) : null}
+          </div>
+        </section>
+
+        <section
+          className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]"
+          aria-label="접수 정보"
+        >
+          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3">
+            <div className="emr-text-section font-semibold text-foreground">
+              접수 정보
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Badge variant="secondary" className="rounded-md px-2">
+                {bundle.encounter.appointmentId ? "예약" : "외래"}
+              </Badge>
+              <Badge variant="secondary" className="rounded-md px-2">
+                {getShortClockTime(
+                  bundle.encounter.checkedInAt ?? bundle.encounter.createdAt,
+                )} 접수
+              </Badge>
+              <Badge variant="secondary" className="rounded-md px-2">
+                {veterinarianName}
+              </Badge>
+            </div>
+          </div>
+          <dl className="grid">
+            <ChartPrecallIntakeRow
+              label="방문목적"
+              value={getChartPrecallVisitPurpose(bundle)}
+            />
+            <ChartPrecallIntakeRow
+              label="예약 메모"
+              value={getChartPrecallReservationMemo(bundle)}
+            />
+            <ChartPrecallIntakeRow
+              label="접수 메모"
+              value={getChartPrecallReceptionMemo(bundle)}
+            />
+            <ChartPrecallIntakeRow
+              label="주의사항"
+              value={getChartPrecallCautionText(bundle)}
+            />
+          </dl>
+        </section>
+        <p className="emr-text-metadata text-muted-foreground">
+          호출 전에는 SOAP, 진단명, 오더 입력이 잠겨 있습니다
         </p>
       </div>
+    </div>
+  );
+}
+
+function ChartPrecallIntakeRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="grid min-h-12 grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)] border-b border-[var(--emr-line-hairline)] last:border-b-0">
+      <dt className="flex items-center bg-[var(--emr-surface-muted)] px-4 py-3 emr-text-dense font-semibold text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="m-0 flex min-w-0 items-center px-4 py-3 emr-text-dense font-medium text-foreground">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -5481,9 +5594,13 @@ function EmptyChartState() {
   );
 }
 
-export function ChartContent({ workspaceId }: ShellComponentProps) {
+export function ChartContent({
+  onNavigateWorkspaceSurface,
+  workspaceId,
+}: ShellComponentProps) {
   useScenarioEncounterSync();
 
+  const searchParams = useSearchParams();
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -5937,6 +6054,27 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
     setCallDialogOpen(true);
   };
 
+  const handleOpenReceptionInfo = () => {
+    if (!activeEncounterId) return;
+
+    const href = buildWorkspaceSurfaceRoute({
+      moduleId: "reception",
+      params: {
+        encounterId: activeEncounterId,
+        modulePanel: "open",
+      },
+      search: searchParams,
+      workspaceId,
+    });
+
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(href, "reception");
+      return;
+    }
+
+    window.location.href = href;
+  };
+
   useEffect(() => {
     if (
       !pendingConsultationCallEncounterId ||
@@ -6163,114 +6301,116 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
-      <EmrInstructionHeaderStack
-        titleBar={
-          <EmrInstructionTitleBar
-            title="진료 차트"
-            icon={
-              <EmrInstructionHistoryToggle
-                ariaLabelPrefix="차트 이력"
-                controls="chart-content-aside"
-                expanded={contentAsideOpen}
-                tooltipLabel="과거 이력 보기"
-                onClick={() => setContentAsideOpen(!contentAsideOpen)}
-              />
-            }
-            badge={
-              <Badge
-                variant="secondary"
-                className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
-              >
-                {currentBundle.encounter.encounterNo}
-              </Badge>
-            }
-            actions={
-              <>
-                <Button
-                  variant="outline"
-                  className="bg-card"
-                  onClick={() => setChartUnavailableAction("chart-share")}
+      {!chartStartLocked ? (
+        <EmrInstructionHeaderStack
+          titleBar={
+            <EmrInstructionTitleBar
+              title="진료 차트"
+              icon={
+                <EmrInstructionHistoryToggle
+                  ariaLabelPrefix="차트 이력"
+                  controls="chart-content-aside"
+                  expanded={contentAsideOpen}
+                  tooltipLabel="과거 이력 보기"
+                  onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                />
+              }
+              badge={
+                <Badge
+                  variant="secondary"
+                  className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
                 >
-                  차트 공유
-                </Button>
-                {primaryAction === "call" ? (
+                  {currentBundle.encounter.encounterNo}
+                </Badge>
+              }
+              actions={
+                <>
                   <Button
-                    disabled={primaryActionBusy}
-                    onClick={handleOpenCallDialog}
+                    variant="outline"
+                    className="bg-card"
+                    onClick={() => setChartUnavailableAction("chart-share")}
                   >
-                    호출하기
+                    차트 공유
                   </Button>
-                ) : null}
-                {primaryAction === "complete" ? (
-                  <div className="inline-flex items-center">
+                  {primaryAction === "call" ? (
                     <Button
-                      className={
-                        canUseConsultationSecondaryActions
-                          ? "rounded-r-none"
-                          : undefined
-                      }
                       disabled={primaryActionBusy}
-                      onClick={() => setChartCompleteDialogOpen(true)}
+                      onClick={handleOpenCallDialog}
                     >
-                      진료 완료
+                      호출하기
                     </Button>
-                    {canUseConsultationSecondaryActions ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              aria-label="진료 보조 액션 열기"
-                              className="-ml-px rounded-l-none"
-                              disabled={primaryActionBusy}
-                              size="icon"
-                            />
-                          }
-                        >
-                          <CdsFilesMoreHorizontalIcon aria-hidden="true" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => {
-                              if (hasChartWorkContent) {
-                                setReturnToWaitingDialogOpen(true);
-                                return;
-                              }
-                              void handleConsultationFlowMutation(
-                                "return_to_waiting",
-                              );
-                            }}
+                  ) : null}
+                  {primaryAction === "complete" ? (
+                    <div className="inline-flex items-center">
+                      <Button
+                        className={
+                          canUseConsultationSecondaryActions
+                            ? "rounded-r-none"
+                            : undefined
+                        }
+                        disabled={primaryActionBusy}
+                        onClick={() => setChartCompleteDialogOpen(true)}
+                      >
+                        진료 완료
+                      </Button>
+                      {canUseConsultationSecondaryActions ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                aria-label="진료 보조 액션 열기"
+                                className="-ml-px rounded-l-none"
+                                disabled={primaryActionBusy}
+                                size="icon"
+                              />
+                            }
                           >
-                            대기로 변경
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="cursor-pointer text-[var(--emr-status-danger-text)]"
-                            onClick={() => {
-                              setCancelEncounterReason("");
-                              setEncounterCancelState({ status: "idle" });
-                              setCancelEncounterDialogOpen(true);
-                            }}
-                          >
-                            진료 취소
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
-            }
-          />
-        }
-        orderInfo={
-          <ChartInstructionInfo
-            bundle={currentBundle}
-            latestSoap={effectiveLatestSoap}
-            queueEntry={effectiveQueueEntry}
-          />
-        }
-      />
+                            <CdsFilesMoreHorizontalIcon aria-hidden="true" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => {
+                                if (hasChartWorkContent) {
+                                  setReturnToWaitingDialogOpen(true);
+                                  return;
+                                }
+                                void handleConsultationFlowMutation(
+                                  "return_to_waiting",
+                                );
+                              }}
+                            >
+                              대기로 변경
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="cursor-pointer text-[var(--emr-status-danger-text)]"
+                              onClick={() => {
+                                setCancelEncounterReason("");
+                                setEncounterCancelState({ status: "idle" });
+                                setCancelEncounterDialogOpen(true);
+                              }}
+                            >
+                              진료 취소
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              }
+            />
+          }
+          orderInfo={
+            <ChartInstructionInfo
+              bundle={currentBundle}
+              latestSoap={effectiveLatestSoap}
+              queueEntry={effectiveQueueEntry}
+            />
+          }
+        />
+      ) : null}
       <Dialog
         open={callDialogOpen}
         onOpenChange={(open) => {
@@ -6638,7 +6778,13 @@ export function ChartContent({ workspaceId }: ShellComponentProps) {
         />
       ) : null}
       {chartStartLocked ? (
-        <ChartStartLockedState queueStatus={effectiveQueueEntry?.status} />
+        <ChartStartLockedState
+          bundle={currentBundle}
+          onOpenReceptionInfo={handleOpenReceptionInfo}
+          onRequestCall={handleOpenCallDialog}
+          primaryActionBusy={primaryActionBusy}
+          queueStatus={effectiveQueueEntry?.status}
+        />
       ) : (
         <div
           ref={chartWorkspaceRef}
