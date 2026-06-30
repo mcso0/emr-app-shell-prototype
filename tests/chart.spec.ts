@@ -329,8 +329,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
     guardianId: "guardian-choi-dohyun",
     primaryVeterinarianId: "user-vet",
     encounterNo: "E-260625-0001",
-    chiefComplaint: "현장 접수",
-    visitPurpose: "내과 진료",
+    chiefComplaint: "보호자 요청 - 피부 가려움 재상담",
+    visitPurpose: "현장 접수",
+    receptionMemo: "최근 식욕 저하, 산책 후 발 핥음 증가",
     status: "waiting",
     checkedInAt: "2026-06-25T14:15:00+09:00",
     createdAt: "2026-06-25T14:15:00+09:00",
@@ -490,56 +491,34 @@ test("chart consultation CTA moves from call to start before chart completion", 
     `/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
   );
 
-  await expect(page.getByTestId("chart-completion-status")).toContainText(
-    "호출 대기",
-  );
-  const chartStatusLayout = await page
-    .getByTestId("chart-completion-status")
-    .evaluate((completionStatus) => {
-      const soapStatus = document.querySelector(
-        "[data-testid='chart-soap-status']",
-      );
-
-      if (!(soapStatus instanceof HTMLElement)) return null;
-
-      const completionRect = completionStatus.getBoundingClientRect();
-      const soapRect = soapStatus.getBoundingClientRect();
-
-      return {
-        completionTop: Math.round(completionRect.top),
-        soapTop: Math.round(soapRect.top),
-      };
-    });
-  expect(chartStatusLayout).not.toBeNull();
-  expect(
-    Math.abs(
-      chartStatusLayout!.completionTop - chartStatusLayout!.soapTop,
-    ),
-  ).toBeLessThanOrEqual(1);
-  const chartInfoValueStyles = await page
-    .locator("[data-slot='chart-instruction-info-value']")
-    .evaluateAll((elements) =>
-      elements.map((element) => {
-        const style = getComputedStyle(element);
-
-        return {
-          overflowX: style.overflowX,
-          whiteSpace: style.whiteSpace,
-        };
-      }),
-    );
-  expect(chartInfoValueStyles).toHaveLength(4);
-  expect(chartInfoValueStyles).toEqual(
-    chartInfoValueStyles.map(() => ({
-      overflowX: "hidden",
-      whiteSpace: "nowrap",
-    })),
-  );
+  await expect(page.getByTestId("chart-completion-status")).toHaveCount(0);
+  await expect(page.locator("[data-slot='chart-instruction-info-card']")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "차트 공유" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "호출하기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "접수 정보 보기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
-  await expect(page.getByTestId("chart-start-locked-state")).toContainText(
-    "진료 시작 전입니다",
+  const lockedState = page.getByTestId("chart-start-locked-state");
+  await expect(lockedState).toContainText("진료 시작 전입니다");
+  await expect(lockedState).toContainText(
+    "초코를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다",
   );
+  await expect(lockedState).toContainText("접수 정보");
+  await expect(lockedState).toContainText("방문목적");
+  await expect(lockedState).toContainText("현장 접수");
+  await expect(lockedState).toContainText("예약 메모");
+  await expect(lockedState).toContainText("보호자 요청 - 피부 가려움 재상담");
+  await expect(lockedState).toContainText("접수 메모");
+  await expect(lockedState).toContainText("최근 식욕 저하, 산책 후 발 핥음 증가");
+  await expect(lockedState).toContainText("주의사항");
+  await expect(lockedState).toContainText("핸들링 주의");
+  await expect(page.getByTestId("chart-soap-diagnosis-grid")).toHaveCount(0);
+  await page.getByRole("button", { name: "접수 정보 보기" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/reception\?/);
+  await expect(page).toHaveURL(new RegExp(`encounterId=${encounterId}`));
+  await page.goto(
+    `/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`,
+  );
+  await expect(page.getByTestId("chart-start-locked-state")).toBeVisible();
 
   await page.getByTestId(`order-queue-item-action-${encounterId}`).click();
   const queueActionMenu = page.getByRole("menu");
@@ -1297,8 +1276,14 @@ test("chart queue selection changes the selected encounter", async ({
   ).toBeVisible();
   await expect(page.getByText("E-260430-0005").first()).toBeVisible();
   await expect(page.getByText("예방접종 전 건강 확인").first()).toBeVisible();
-  await expect(page.getByText("진단 입력 전입니다.")).toBeVisible();
-  await expect(page.getByText("기본 SOAP")).toBeVisible();
+  const lockedState = page.getByTestId("chart-start-locked-state");
+  await expect(lockedState).toContainText("진료 시작 전입니다");
+  await expect(lockedState).toContainText(
+    "하루를 호출하면 차트 입력과 오더 작업을 시작할 수 있습니다",
+  );
+  await expect(lockedState).toContainText("접수 정보");
+  await expect(page.getByText("진단 입력 전입니다.")).toHaveCount(0);
+  await expect(page.getByText("기본 SOAP")).toHaveCount(0);
   expect(
     consoleErrors.filter((message) =>
       message.includes("Encountered two children with the same key"),
