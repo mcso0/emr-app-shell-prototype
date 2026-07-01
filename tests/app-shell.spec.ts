@@ -1129,6 +1129,7 @@ test("dispensing queue selection updates existing patient and instruction contex
   await expect(selectedQueueCard).toHaveCSS("padding-top", "8px");
   await expect(selectedQueueCard).toHaveCSS("border-radius", "10px");
   await expect(selectedQueueCard).toHaveCSS("border-color", await resolveCssColor(page, "var(--emr-sidepanel-task-card-selected-border)"));
+  await expect(selectedQueueCard).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-sidepanel-task-card-selected-bg)"));
   await expect(selectedQueueCard.getByText("예약")).toHaveCSS("height", "20px");
   await expect(selectedQueueCard).toContainText("10:30 이수지 재요청");
   await expect(selectedQueueCard).toContainText("김미래");
