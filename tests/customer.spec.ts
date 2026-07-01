@@ -142,6 +142,33 @@ test("customer workspace renders animal master list and opens the common patient
   await expect(page).toHaveURL(/drawer=patient%3Apatient-dubu|drawer=patient:patient-dubu/);
 });
 
+test("customer table aligns selection header and row checkboxes", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+
+  const table = page.getByRole("table", { name: "동물 고객관리 테이블" });
+  const row = page.getByTestId("customer-patient-row-patient-coco");
+
+  await expect(table).toBeVisible();
+  await expect(row).toBeVisible();
+
+  const selectAllPatientBox = await table
+    .getByRole("checkbox", { name: "동물 전체 선택" })
+    .boundingBox();
+  const rowCheckboxBox = await row
+    .getByRole("checkbox", { name: "코코 선택" })
+    .boundingBox();
+
+  expect(selectAllPatientBox).not.toBeNull();
+  expect(rowCheckboxBox).not.toBeNull();
+  expect(
+    Math.abs(
+      selectAllPatientBox!.x +
+        selectAllPatientBox!.width / 2 -
+        (rowCheckboxBox!.x + rowCheckboxBox!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+});
+
 test("customer disabled side-panel item uses one muted color for icon and label", async ({ page }) => {
   await page.goto("/w/clair-demo/customer?modulePanel=open");
 

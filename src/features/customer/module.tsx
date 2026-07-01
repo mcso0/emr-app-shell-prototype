@@ -23,7 +23,12 @@ import {
   getEmrTableFilterBuilderActiveCount,
   type EmrTableFilterBuilderField,
 } from "@/components/emr/table-filter-builder-model";
-import { EmrTableCellText, EmrTableHeaderCell } from "@/components/emr/table-primitives";
+import {
+  EmrTableCellText,
+  EmrTableHeaderCell,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
+} from "@/components/emr/table-primitives";
 import {
   CalendarCheckIcon,
   ChevronDownIcon,
@@ -589,11 +594,9 @@ function CustomerDataTable<TRow extends { id: string }>({
       >
         <TableHeader className="bg-[var(--emr-surface-muted)]">
           <TableRow className="border-border hover:bg-transparent">
-            <EmrTableHeaderCell
+            <EmrTableSelectionHeaderCell
               aria-label={`${title} 선택`}
               className="w-12"
-              interaction="static"
-              resize="none"
             >
               <span className="sr-only">선택</span>
               <span
@@ -609,7 +612,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                   onCheckedChange={toggleAllRows}
                 />
               </span>
-            </EmrTableHeaderCell>
+            </EmrTableSelectionHeaderCell>
             {visibleColumns.map((column) =>
               column.sortValue ? (
                 <CustomerSortableHeader
@@ -660,7 +663,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                   )}
                   onClick={() => onOpenRow(row)}
                 >
-                  <TableCell className="w-12">
+                  <EmrTableSelectionCell className="w-12">
                     <span
                       data-row-interactive="true"
                       className="inline-flex size-6 items-center justify-center"
@@ -673,7 +676,7 @@ function CustomerDataTable<TRow extends { id: string }>({
                         onCheckedChange={() => toggleRow(row.id)}
                       />
                     </span>
-                  </TableCell>
+                  </EmrTableSelectionCell>
                   {visibleColumns.map((column) => (
                     <TableCell key={column.key} className={cn("h-12", column.className)}>
                       {renderCell(column, row)}

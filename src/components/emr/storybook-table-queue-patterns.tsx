@@ -10,6 +10,8 @@ import { EmrTableDensitySelector } from "@/components/emr/table-density-selector
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
 import type { EmrTableDensity } from "@/components/emr/table-density";
 import { Button } from "@/components/ui/button";
@@ -286,7 +288,7 @@ function RowSelectionPattern() {
       <TableFrame>
         <TableHeader>
           <TableRow>
-            <EmrTableHeaderCell className="w-10">
+            <EmrTableSelectionHeaderCell>
               <EmrTableCheckbox
                 aria-label="샘플 행 전체 선택"
                 checked={allSelected}
@@ -296,7 +298,7 @@ function RowSelectionPattern() {
                   )
                 }
               />
-            </EmrTableHeaderCell>
+            </EmrTableSelectionHeaderCell>
             <EmrTableHeaderCell>업무</EmrTableHeaderCell>
             <EmrTableHeaderCell>상태</EmrTableHeaderCell>
           </TableRow>
@@ -304,13 +306,13 @@ function RowSelectionPattern() {
         <TableBody>
           {sampleRows.map((row) => (
             <TableRow key={row.id} data-state={selectedIds.has(row.id) ? "selected" : undefined}>
-              <TableCell>
+              <EmrTableSelectionCell>
                 <EmrTableCheckbox
                   aria-label={`${row.request} 선택`}
                   checked={selectedIds.has(row.id)}
                   onCheckedChange={() => toggleRow(row.id)}
                 />
-              </TableCell>
+              </EmrTableSelectionCell>
               <TableCell>
                 <EmrTableCellText>{row.request}</EmrTableCellText>
               </TableCell>
