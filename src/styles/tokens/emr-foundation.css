@@ -267,6 +267,11 @@
   --emr-sidepanel-task-card-bg: var(--clair-color-atomic-common-100);
   --emr-sidepanel-task-card-hover-bg: var(--clair-color-atomic-black-alpha-4);
   --emr-sidepanel-task-card-border: var(--clair-color-atomic-neutral-200);
+  --emr-sidepanel-task-card-selected-bg: color-mix(
+    in srgb,
+    var(--clair-color-atomic-sky-500) 6%,
+    var(--emr-sidepanel-task-card-bg)
+  );
   --emr-sidepanel-task-card-selected-border: var(--clair-color-atomic-sky-300);
   --emr-sidepanel-task-card-type-bg: var(--clair-color-atomic-gray-50);
   --emr-sidepanel-task-card-type-text: var(--clair-color-atomic-gray-600);
