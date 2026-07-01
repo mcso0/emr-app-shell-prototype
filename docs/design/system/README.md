@@ -29,7 +29,7 @@ Current files:
 
 Storybook is the executable component catalog for CLAiR EMR. Use `storybook-operating-rules.md` as the operating contract before adding or changing stories.
 
-Current Storybook coverage from PR-048 through PR-061:
+Current Storybook coverage from PR-048 through PR-070:
 
 | Area | Storybook title | Coverage |
 | --- | --- | --- |
@@ -74,6 +74,7 @@ Current Storybook coverage from PR-048 through PR-061:
 | EMR shared | `Design System/EMR/EmrContentHistoryList` | date-grouped content history groups and selectable history cards |
 | EMR shared | `Design System/EMR/EmrTextSidePanel` | text-heavy module side navigation buttons and expandable sections |
 | EMR shared | `Design System/EMR/EmrModuleListSidePanel` | module-local list side panel with buttons, sections, leaves, and badges |
+| EMR shared | `Design System/EMR/EmrEmptyState` | shared empty-state component with state kind, surface, and CTA ownership variants |
 | EMR shared | `Design System/EMR/OrderQueueSelectionSummary` | selected synthetic order queue item summary |
 | EMR shared | `Design System/EMR/EmrOrderQueueSidePanel` | synthetic order queue side panel with filters, groups, and task cards |
 | EMR patterns | `Design System/EMR/Table Queue Patterns` | status cell, action cell, filter toolbar, empty table, sortable/filterable header, row selection, density selector, long text cell |

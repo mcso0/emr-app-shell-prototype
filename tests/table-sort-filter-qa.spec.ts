@@ -107,7 +107,7 @@ test.describe("DEN-275 adopted table sort/filter QA", () => {
     await page.getByRole("option", { name: "상태" }).click();
     await popover.getByRole("combobox", { name: "필터 값" }).first().click();
     await page.getByRole("option", { name: "요청", exact: true }).click();
-    await expect(orderArea).toContainText("현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.");
+    await expect(orderArea).toContainText("분류나 필터를 바꾸면 오더가 다시 보입니다.");
     await popover.getByRole("button", { name: "초기화" }).evaluate((button) => {
       (button as HTMLButtonElement).click();
     });

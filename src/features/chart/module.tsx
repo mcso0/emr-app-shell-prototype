@@ -44,6 +44,7 @@ import {
 } from "@/components/emr/instruction-header-stack";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   EmrListHeaderIconButton,
@@ -4047,18 +4048,16 @@ function ChartOrderTable({
           })}
           {!rows.length ? (
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
-              <TableCell
-                colSpan={11}
-                className="h-28 text-center emr-text-dense text-muted-foreground"
-              >
-                <span className="grid gap-1">
-                  <span className="font-semibold text-foreground">
-                    표시할 오더가 없습니다.
-                  </span>
-                  <span>
-                    현재 선택한 분류 또는 필터에 해당하는 오더가 없어요.
-                  </span>
-                </span>
+              <TableCell colSpan={11} className="h-44 px-4 py-6">
+                <div className="flex justify-center">
+                  <EmrEmptyState
+                    kind="no-filter-results"
+                    priority="local-recovery"
+                    surface="table"
+                    title="표시할 오더가 없습니다"
+                    description="분류나 필터를 바꾸면 오더가 다시 보입니다."
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ) : null}
@@ -5670,8 +5669,14 @@ function ChartPrecallIntakeRow({
 
 function EmptyChartState() {
   return (
-    <div className="flex h-full items-center justify-center emr-text-dense text-muted-foreground">
-      진료 대기열에서 환자를 선택해 주세요.
+    <div className="flex h-full items-center justify-center px-6 py-10">
+      <EmrEmptyState
+        kind="no-scope-result"
+        priority="supporting"
+        surface="content"
+        title="환자를 선택해 주세요"
+        description="대기열에서 환자를 선택하면 차트가 표시됩니다."
+      />
     </div>
   );
 }
