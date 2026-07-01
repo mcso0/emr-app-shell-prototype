@@ -238,7 +238,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
         leftGap: Math.abs(frameBox.left - toolbarBox.left),
         rightGap: Math.abs(frameBox.right - toolbarBox.right),
       };
-    });
+  });
 
   if (!calendarFrameAlignment)
     throw new Error("Expected reception calendar frame alignment data");
@@ -940,17 +940,19 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   const nabiBadgeMetrics = await nabiAppointment
     .getByTestId("appointment-card-appointment-nabi-260501-badge")
     .evaluate((badge) => {
-      const parent = badge.parentElement;
-      if (!parent) return null;
+      const card = badge.closest(
+        '[data-testid="appointment-card-appointment-nabi-260501"]',
+      );
+      if (!card) return null;
 
       const badgeBox = badge.getBoundingClientRect();
-      const parentBox = parent.getBoundingClientRect();
+      const cardBox = card.getBoundingClientRect();
 
       return {
         badgeHeight: Math.round(badgeBox.height),
-        badgeTopInset: Math.round(badgeBox.top - parentBox.top),
-        parentHeight: Math.round(parentBox.height),
-        parentTestId: parent.getAttribute("data-testid"),
+        badgeTopInset: Math.round(badgeBox.top - cardBox.top),
+        parentHeight: Math.round(cardBox.height),
+        parentTestId: card.getAttribute("data-testid"),
       };
     });
 
@@ -988,6 +990,7 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
 
     const badgeBox = badge.getBoundingClientRect();
     const cardBox = card.getBoundingClientRect();
+    const purposeBox = purpose.getBoundingClientRect();
     const timeBox = time.getBoundingClientRect();
     const timeStyle = getComputedStyle(time);
     const verticalCenterOffset = Math.abs(
@@ -999,8 +1002,8 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
       badgeLeftInset: Math.round((badgeBox.left - cardBox.left) * 100) / 100,
       timeHeight: Math.round(timeBox.height),
       timeOpacity: timeStyle.opacity,
-      timeTextRightInset:
-        Math.round((cardBox.right - timeTextBox.right) * 100) / 100,
+      timeTextLeftGap:
+        Math.round((timeBox.left - purposeBox.right) * 100) / 100,
       verticalCenterOffset: Math.round(verticalCenterOffset * 100) / 100,
     };
   });
@@ -1011,8 +1014,8 @@ test("reception day calendar emphasizes schedule card hierarchy and current line
   expect(nabiContentInsets.badgeLeftInset).toBeLessThanOrEqual(9);
   expect(nabiContentInsets.timeHeight).toBe(18);
   expect(nabiContentInsets.timeOpacity).toBe("0.6");
-  expect(nabiContentInsets.timeTextRightInset).toBeGreaterThanOrEqual(7);
-  expect(nabiContentInsets.timeTextRightInset).toBeLessThanOrEqual(10);
+  expect(nabiContentInsets.timeTextLeftGap).toBeGreaterThanOrEqual(4);
+  expect(nabiContentInsets.timeTextLeftGap).toBeLessThanOrEqual(8);
   expect(nabiContentInsets.verticalCenterOffset).toBeLessThanOrEqual(1);
   const nabiCardInsets = await nabiAppointment.evaluate((card) => {
     const parent = card.parentElement;

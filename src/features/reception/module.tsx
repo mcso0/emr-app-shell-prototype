@@ -2258,9 +2258,11 @@ type CalendarTaskCardProps = {
 };
 
 const calendarTaskTimeLabelClassName =
-  "flex h-[18px] shrink-0 items-center text-[13px] font-normal leading-[18px] tabular-nums [letter-spacing:0] opacity-60";
+  "flex h-[var(--emr-calendar-task-line-height)] shrink-0 items-center text-[var(--emr-calendar-task-text-size)] font-normal leading-[var(--emr-calendar-task-line-height)] tabular-nums [letter-spacing:0] opacity-[var(--emr-calendar-task-time-opacity)]";
 const calendarTaskIdentityClassName =
-  "min-w-0 truncate text-[13px] font-medium leading-[18px] [letter-spacing:0]";
+  "min-w-0 truncate text-[var(--emr-calendar-task-text-size)] font-medium leading-[var(--emr-calendar-task-line-height)] [letter-spacing:0]";
+const calendarTaskCompactContentClassName =
+  "flex h-[var(--emr-calendar-task-line-height)] w-full min-w-0 items-center gap-[var(--emr-calendar-task-content-gap)] overflow-hidden";
 
 function CalendarTaskCard({
   accentClassName,
@@ -2300,13 +2302,18 @@ function CalendarTaskCard({
       type="button"
       aria-label={ariaLabel}
       className={cn(
-        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border px-[8px] py-[6px] text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
+        "relative z-10 flex min-w-0 items-start overflow-hidden rounded-[var(--emr-calendar-task-radius)] border text-left font-['Pretendard'] shadow-[var(--emr-calendar-task-shadow)] outline-none transition-[background-color,border-color,box-shadow,color]",
         fillHeight ? "h-full w-full flex-none" : "flex-1",
-        compact ? "flex-row items-center gap-[6px]" : "flex-col gap-[4px]",
-        !fillHeight && compact && "h-[30px]",
-        !fillHeight && medium && "h-[60px]",
-        !fillHeight && type === "default" && "h-[154px]",
-        !fillHeight && noShow && "h-[60px]",
+        "px-[var(--emr-calendar-task-padding-x)] py-[var(--emr-calendar-task-padding-y)]",
+        compact
+          ? "items-center"
+          : "flex-col gap-[var(--emr-calendar-task-content-gap)]",
+        !fillHeight && compact && "h-[var(--emr-calendar-task-compact-height)]",
+        !fillHeight && medium && "h-[var(--emr-calendar-task-medium-height)]",
+        !fillHeight &&
+          type === "default" &&
+          "h-[var(--emr-calendar-task-default-height)]",
+        !fillHeight && noShow && "h-[var(--emr-calendar-task-medium-height)]",
         neutral
           ? "border-border bg-muted text-foreground hover:bg-muted/80"
           : (veterinarianToneClassName ?? calendarTaskCardToneClasses[badgeType]),
@@ -2334,7 +2341,7 @@ function CalendarTaskCard({
         aria-hidden="true"
       />
       {compact ? (
-        <>
+        <span className={calendarTaskCompactContentClassName}>
           <CalendarTaskBadge
             calendarToneClassName={calendarBadgeToneClassName}
             testId={`${testId}-badge`}
@@ -2343,7 +2350,7 @@ function CalendarTaskCard({
           />
           <span
             data-testid={purposeTestId}
-            className={cn("flex-1", calendarTaskIdentityClassName)}
+            className={calendarTaskIdentityClassName}
           >
             {identityLabel}
           </span>
@@ -2355,10 +2362,10 @@ function CalendarTaskCard({
               {timeLabel}
             </span>
           ) : null}
-        </>
+        </span>
       ) : (
         <>
-          <span className="flex h-[18px] w-full min-w-0 items-center gap-[6px] overflow-hidden">
+          <span className={calendarTaskCompactContentClassName}>
             <CalendarTaskBadge
               calendarToneClassName={calendarBadgeToneClassName}
               testId={`${testId}-badge`}

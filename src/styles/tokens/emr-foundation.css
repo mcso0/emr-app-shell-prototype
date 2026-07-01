@@ -293,6 +293,15 @@
   --emr-calendar-lane-avatar-radius: var(--clair-radius-atomic-8);
   --emr-calendar-task-radius: var(--clair-radius-atomic-8);
   --emr-calendar-task-shadow: var(--clair-shadow-xs);
+  --emr-calendar-task-padding-x: var(--clair-spacing-8);
+  --emr-calendar-task-padding-y: var(--clair-spacing-6);
+  --emr-calendar-task-content-gap: var(--clair-spacing-6);
+  --emr-calendar-task-compact-height: 30px;
+  --emr-calendar-task-medium-height: 60px;
+  --emr-calendar-task-default-height: 154px;
+  --emr-calendar-task-line-height: 18px;
+  --emr-calendar-task-text-size: 13px;
+  --emr-calendar-task-time-opacity: 0.6;
   --emr-calendar-task-outpatient-bg: color-mix(in srgb, var(--clair-color-atomic-forest-green-400) 8%, transparent);
   --emr-calendar-task-outpatient-hover-bg: color-mix(in srgb, var(--clair-color-atomic-forest-green-400) 14%, transparent);
   --emr-calendar-task-outpatient-border: var(--clair-color-atomic-forest-green-400);
