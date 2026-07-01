@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import Link from "@tiptap/extension-link";
@@ -60,10 +60,12 @@ function EditorToolbarButton({
 }
 
 export function SoapRichTextEditor({
+  disabled = false,
   initialContent,
   label,
   onContentChange,
 }: {
+  disabled?: boolean;
   initialContent: string;
   label: string;
   onContentChange: (content: string) => void;
@@ -71,6 +73,7 @@ export function SoapRichTextEditor({
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkValue, setLinkValue] = useState("");
+  const disabledRef = useRef(disabled);
   const editorAriaLabel = label === "기본 SOAP" ? "기본 SOAP 기록" : `${label} SOAP 기록`;
   const editor = useEditor({
     extensions: [
@@ -87,6 +90,7 @@ export function SoapRichTextEditor({
       }),
     ],
     content: initialContent,
+    editable: !disabled,
     editorProps: {
       attributes: {
         "aria-label": editorAriaLabel,
@@ -98,24 +102,40 @@ export function SoapRichTextEditor({
       setActiveEditor(currentEditor);
     },
     onUpdate: ({ editor: currentEditor }) => {
+      if (disabledRef.current) return;
       onContentChange(currentEditor.getHTML());
     },
     immediatelyRender: false,
   });
 
+  useEffect(() => {
+    disabledRef.current = disabled;
+    editor?.setEditable(!disabled);
+  }, [disabled, editor]);
+
+  useEffect(() => {
+    if (disabled) {
+      const timeoutId = window.setTimeout(() => setLinkOpen(false), 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    return undefined;
+  }, [disabled]);
+
   const runEditorCommand = (command: (editor: Editor) => void) => {
-    if (!activeEditor) return;
+    if (!activeEditor || disabled) return;
 
     command(activeEditor);
   };
   const openLinkEditor = () => {
-    if (!activeEditor) return;
+    if (!activeEditor || disabled) return;
 
     setLinkValue((activeEditor.getAttributes("link").href as string | undefined) ?? "");
     setLinkOpen(true);
   };
   const applyLink = () => {
-    if (!activeEditor) return;
+    if (!activeEditor || disabled) return;
 
     const href = normalizeEditorLinkHref(linkValue);
 
@@ -130,6 +150,8 @@ export function SoapRichTextEditor({
     setLinkOpen(false);
   };
   const removeLink = () => {
+    if (disabled) return;
+
     runEditorCommand((currentEditor) => currentEditor.chain().focus().unsetLink().run());
     setLinkValue("");
     setLinkOpen(false);
@@ -147,7 +169,8 @@ export function SoapRichTextEditor({
             shift: { padding: 8 },
           }}
           shouldShow={({ editor: currentEditor, state }) =>
-            linkOpen || (currentEditor.isEditable && !state.selection.empty)
+            !disabled &&
+            (linkOpen || (currentEditor.isEditable && !state.selection.empty))
           }
           role="toolbar"
           aria-label={`${label} 선택 서식 도구`}
@@ -155,7 +178,7 @@ export function SoapRichTextEditor({
         >
           <EditorToolbarButton
             active={activeEditor?.isActive("bold") ?? false}
-            disabled={!activeEditor}
+            disabled={!activeEditor || disabled}
             label={`${label} 굵게`}
             onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBold().run())}
           >
@@ -163,7 +186,7 @@ export function SoapRichTextEditor({
           </EditorToolbarButton>
           <EditorToolbarButton
             active={activeEditor?.isActive("italic") ?? false}
-            disabled={!activeEditor}
+            disabled={!activeEditor || disabled}
             label={`${label} 기울임`}
             onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleItalic().run())}
           >
@@ -171,7 +194,7 @@ export function SoapRichTextEditor({
           </EditorToolbarButton>
           <EditorToolbarButton
             active={activeEditor?.isActive("underline") ?? false}
-            disabled={!activeEditor}
+            disabled={!activeEditor || disabled}
             label={`${label} 밑줄`}
             onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleUnderline().run())}
           >
@@ -179,7 +202,7 @@ export function SoapRichTextEditor({
           </EditorToolbarButton>
           <EditorToolbarButton
             active={activeEditor?.isActive("bulletList") ?? false}
-            disabled={!activeEditor}
+            disabled={!activeEditor || disabled}
             label={`${label} 글머리 목록`}
             onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleBulletList().run())}
           >
@@ -187,7 +210,7 @@ export function SoapRichTextEditor({
           </EditorToolbarButton>
           <EditorToolbarButton
             active={activeEditor?.isActive("orderedList") ?? false}
-            disabled={!activeEditor}
+            disabled={!activeEditor || disabled}
             label={`${label} 번호 목록`}
             onClick={() => runEditorCommand((currentEditor) => currentEditor.chain().focus().toggleOrderedList().run())}
           >
@@ -203,7 +226,7 @@ export function SoapRichTextEditor({
                   aria-label={`${label} 링크`}
                   aria-pressed={activeEditor?.isActive("link") ?? false}
                   className={editorToolbarButtonClassName}
-                  disabled={!activeEditor}
+                  disabled={!activeEditor || disabled}
                   onClick={openLinkEditor}
                 >
                   <CdsContentLink2Icon className="size-4" />
@@ -215,6 +238,7 @@ export function SoapRichTextEditor({
                 <div className="emr-text-metadata font-semibold text-foreground">링크 추가</div>
                 <Input
                   aria-label="링크 URL"
+                  disabled={disabled}
                   value={linkValue}
                   placeholder="https://example.com"
                   onChange={(event) => setLinkValue(event.target.value)}
@@ -227,10 +251,21 @@ export function SoapRichTextEditor({
                 />
               </div>
               <div className="flex justify-end gap-1.5">
-                <Button type="button" variant="ghost" size="xs" onClick={removeLink}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  disabled={disabled}
+                  onClick={removeLink}
+                >
                   해제
                 </Button>
-                <Button type="button" size="xs" onClick={applyLink}>
+                <Button
+                  type="button"
+                  size="xs"
+                  disabled={disabled}
+                  onClick={applyLink}
+                >
                   적용
                 </Button>
               </div>
