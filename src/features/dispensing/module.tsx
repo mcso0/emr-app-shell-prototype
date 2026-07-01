@@ -63,6 +63,7 @@ import {
   getOrderQueueStatuses,
   getSelectedOrderQueueItem,
 } from "@/features/order-queue/data";
+import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
@@ -244,22 +245,28 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         workItems?: FulfillmentWorkItem[];
       };
       if (!dispensingResponse.ok || !dispensingBody.ok) {
+        const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
+
         setCachedDispensingFulfillmentQueue(cacheKey, {
+          sourceTotalCount: previousSnapshot?.sourceTotalCount,
           status: getFulfillmentReadFailureStatus({
             denialReason: dispensingBody.denialReason,
             status: dispensingResponse.status,
           }),
-          workItems: [],
+          workItems: previousSnapshot?.workItems ?? [],
         });
         return;
       }
       if (!treatmentResponse.ok || !treatmentBody.ok) {
+        const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
+
         setCachedDispensingFulfillmentQueue(cacheKey, {
+          sourceTotalCount: previousSnapshot?.sourceTotalCount,
           status: getFulfillmentReadFailureStatus({
             denialReason: treatmentBody.denialReason,
             status: treatmentResponse.status,
           }),
-          workItems: [],
+          workItems: previousSnapshot?.workItems ?? [],
         });
         return;
       }
@@ -278,9 +285,12 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         workItems: nextItems,
       });
     } catch {
+      const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
+
       setCachedDispensingFulfillmentQueue(cacheKey, {
+        sourceTotalCount: previousSnapshot?.sourceTotalCount,
         status: "error",
-        workItems: [],
+        workItems: previousSnapshot?.workItems ?? [],
       });
     }
   }, [cacheKey, effectiveDate, workspaceId]);
@@ -598,6 +608,11 @@ export function DispensingSidePanel({
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId);
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
+  useQueueRealtimeRefresh({
+    onQueueChange: fulfillmentQueue.refresh,
+    scopeKey: `dispensing-treatment:${selectedDate}`,
+    workspaceId,
+  });
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
     [fulfillmentQueue.workItems, workspaceId]

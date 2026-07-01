@@ -88,6 +88,7 @@ import {
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
+import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getChartEncounter } from "@/features/chart/data";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
@@ -579,6 +580,8 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
         : "loading";
 
   const loadQueueSnapshot = useCallback(async (): Promise<FulfillmentQueueSnapshot> => {
+    const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
+
     try {
       const response = await fetch(
         `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
@@ -592,12 +595,12 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
       const nextSnapshot =
         response.ok && body.ok && Array.isArray(body.workItems)
           ? { summary: body.summary, workItems: body.workItems }
-          : emptyFulfillmentQueueSnapshot;
+          : previousSnapshot ?? emptyFulfillmentQueueSnapshot;
       return nextSnapshot;
     } catch {
-      return emptyFulfillmentQueueSnapshot;
+      return previousSnapshot ?? emptyFulfillmentQueueSnapshot;
     }
-  }, [effectiveDate, queueType, workspaceId]);
+  }, [cacheKey, effectiveDate, queueType, workspaceId]);
 
   const applyQueueSnapshot = useCallback(
     (nextSnapshot: FulfillmentQueueSnapshot) => {
@@ -663,7 +666,13 @@ function useFulfillmentQueue(queueType: FulfillmentQueueType, selectedDate?: str
     return allTransitionsSucceeded;
   }, [refresh, workspaceId]);
 
-  return { status, summary: snapshot.summary, updateStatus, workItems: snapshot.workItems };
+  return {
+    refresh,
+    status,
+    summary: snapshot.summary,
+    updateStatus,
+    workItems: snapshot.workItems,
+  };
 }
 
 async function loadLabResultSheetCatalog({
@@ -1438,6 +1447,11 @@ export function LabSidePanel({
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
+  useQueueRealtimeRefresh({
+    onQueueChange: fulfillmentQueue.refresh,
+    scopeKey: `lab:${selectedDate}`,
+    workspaceId,
+  });
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseItems = useMemo(
     () => (legacySalesDemo ? getLabWorkItems() : []),
@@ -1596,6 +1610,11 @@ export function ImagingSidePanel({
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
+  useQueueRealtimeRefresh({
+    onQueueChange: fulfillmentQueue.refresh,
+    scopeKey: `imaging:${selectedDate}`,
+    workspaceId,
+  });
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseItems = useMemo(
     () => (legacySalesDemo ? getImagingWorkItems() : []),
