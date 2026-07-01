@@ -228,12 +228,21 @@ test("chart queue loading uses the shared side-panel body motion state", async (
 
 test("queue panels keep visible queue rows ahead of background loading states", () => {
   const receptionModule = readFileSync("src/features/reception/module.tsx", "utf8");
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
   const orderQueuePanel = readFileSync("src/components/emr/order-queue-side-panel.tsx", "utf8");
   const labImagingModule = readFileSync("src/features/lab-imaging/module.tsx", "utf8");
 
   expect(receptionModule).toContain(
     'const showQueueLoadingState = queueReadStatus === "loading" && visibleQueueGroups.length === 0;',
   );
+  expect(chartModule).toContain('setLiveQueueState({ status: "loading" });');
+  expect(chartModule).not.toContain('setLiveQueueState({ records: [], status: "loading" });');
+  const chartQueueRefreshBlock =
+    chartModule.match(/const refreshLiveQueue = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
+
+  expect(chartQueueRefreshBlock).toContain('setLiveQueueState({ status: "loading" });');
+  expect(chartQueueRefreshBlock).not.toContain("selectedEncounterId,");
+  expect(chartQueueRefreshBlock).not.toContain("explicitQueryEncounterId,");
   expect(orderQueuePanel).toContain(
     "const showLoadingState = loading && groupedItems.length === 0;",
   );
@@ -243,6 +252,15 @@ test("queue panels keep visible queue rows ahead of background loading states", 
   expect(labImagingModule).toContain(
     'const showImagingQueueLoadingState = fulfillmentQueue.status === "loading" && resultCount === 0;',
   );
+});
+
+test("chart content exposes a selected-detail loading skeleton instead of stale chart content", () => {
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(chartModule).toContain("function ChartDetailLoadingState()");
+  expect(chartModule).toContain('data-testid="chart-detail-loading-state"');
+  expect(chartModule).toContain("const detailLoading =");
+  expect(chartModule).toContain("<ChartDetailLoadingState />");
 });
 
 test("reception live read effect does not restart only because profile rows hydrate", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -139,6 +140,7 @@ import { ChartSectionTitle } from "@/features/chart/components/chart-section-tit
 import { SoapRichTextEditor } from "@/features/chart/components/soap-rich-text-editor";
 import { useChartStore } from "@/features/chart/store";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
+import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import {
   getPatientDisplayAge,
   getPatientSexLabel,
@@ -1010,12 +1012,15 @@ export function ChartSidePanel({
     () => liveQueueRecords.map(mapLiveChartQueueRecordToItem),
     [liveQueueRecords],
   );
-  const liveMode = liveQueueStatus === "ready";
+  const liveMode = liveQueueStatus === "ready" || liveQueueRecords.length > 0;
   const items = useMemo(
     () => (liveMode ? liveItems : mockItems),
     [liveItems, liveMode, mockItems],
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
+  const selectedEncounterIdRef = useRef(selectedEncounterId);
+  const explicitQueryEncounterIdRef = useRef(explicitQueryEncounterId);
+  const liveQueueRequestSeqRef = useRef(0);
   const selectWorkspaceEncounter = (itemId: string) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "treatment",
@@ -1039,79 +1044,103 @@ export function ChartSidePanel({
   }, [hydrateAuthSession]);
 
   useEffect(() => {
-    if (!authHydrated) return;
+    selectedEncounterIdRef.current = selectedEncounterId;
+  }, [selectedEncounterId]);
 
-    let cancelled = false;
-    setLiveQueueState({ records: [], status: "loading" });
+  useEffect(() => {
+    explicitQueryEncounterIdRef.current = explicitQueryEncounterId;
+  }, [explicitQueryEncounterId]);
 
-    async function loadLiveQueue() {
-      const result = await loadChartLiveQueue({
-        actorHeaders,
-        date: selectedDate,
-        workspaceId,
+  const refreshLiveQueue = useCallback(async () => {
+    const requestSeq = liveQueueRequestSeqRef.current + 1;
+
+    liveQueueRequestSeqRef.current = requestSeq;
+    setLiveQueueState({ status: "loading" });
+
+    const result = await loadChartLiveQueue({
+      actorHeaders,
+      date: selectedDate,
+      workspaceId,
+    });
+
+    if (liveQueueRequestSeqRef.current !== requestSeq) return;
+
+    if (!result.ok) {
+      setLiveQueueState({
+        error: result.denialReason ?? result.error ?? "db_read_failed",
+        status: "error",
       });
-      if (cancelled) return;
-
-      if (!result.ok) {
-        setLiveQueueState({
-          error: result.denialReason ?? result.error ?? "db_read_failed",
-          records: [],
-          status: "error",
-        });
-        return;
-      }
-
-      result.queue.forEach((record) => {
-        saveChartLiveEncounterHandoff({
-          encounter: record.encounter,
-          patient: record.patient,
-          primaryGuardian: record.primaryGuardian,
-          veterinarianName: record.veterinarianName,
-        });
-      });
-      setLiveQueueState({ records: result.queue, status: "ready" });
-
-      if (
-        explicitQueryEncounterId &&
-        !result.queue.some(
-          (record) => record.encounter.id === explicitQueryEncounterId,
-        )
-      ) {
-        saveSelectedChartEncounterId(workspaceId, explicitQueryEncounterId);
-        if (selectedEncounterId !== explicitQueryEncounterId) {
-          selectEncounter(explicitQueryEncounterId);
-        }
-        return;
-      }
-
-      const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
-        currentEncounterId: selectedEncounterId,
-        explicitEncounterId: explicitQueryEncounterId,
-        records: result.queue,
-        workspaceId,
-      });
-
-      if (nextSelectedEncounterId) {
-        saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId);
-        if (selectedEncounterId !== nextSelectedEncounterId) {
-          selectEncounter(nextSelectedEncounterId);
-        }
-      }
+      return;
     }
 
-    void loadLiveQueue();
+    result.queue.forEach((record) => {
+      saveChartLiveEncounterHandoff({
+        encounter: record.encounter,
+        patient: record.patient,
+        primaryGuardian: record.primaryGuardian,
+        veterinarianName: record.veterinarianName,
+      });
+    });
+    setLiveQueueState({ records: result.queue, status: "ready" });
 
-    return () => {
-      cancelled = true;
-    };
+    const currentExplicitQueryEncounterId = explicitQueryEncounterIdRef.current;
+    const currentSelectedEncounterId = selectedEncounterIdRef.current;
+
+    if (
+      currentExplicitQueryEncounterId &&
+      !result.queue.some(
+        (record) => record.encounter.id === currentExplicitQueryEncounterId,
+      )
+    ) {
+      saveSelectedChartEncounterId(workspaceId, currentExplicitQueryEncounterId);
+      if (currentSelectedEncounterId !== currentExplicitQueryEncounterId) {
+        selectEncounter(currentExplicitQueryEncounterId);
+      }
+      return;
+    }
+
+    const nextSelectedEncounterId = chooseRecoverableLiveEncounterId({
+      currentEncounterId: currentSelectedEncounterId,
+      explicitEncounterId: currentExplicitQueryEncounterId,
+      records: result.queue,
+      workspaceId,
+    });
+
+    if (nextSelectedEncounterId) {
+      saveSelectedChartEncounterId(workspaceId, nextSelectedEncounterId);
+      if (currentSelectedEncounterId !== nextSelectedEncounterId) {
+        selectEncounter(nextSelectedEncounterId);
+      }
+    }
   }, [
     actorHeaders,
-    authHydrated,
-    explicitQueryEncounterId,
     selectedDate,
     selectEncounter,
-    selectedEncounterId,
     setLiveQueueState,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (!authHydrated) return;
+    void refreshLiveQueue();
+  }, [authHydrated, refreshLiveQueue]);
+
+  useQueueRealtimeRefresh({
+    enabled: authHydrated,
+    onQueueChange: refreshLiveQueue,
+    scopeKey: `chart:${selectedDate}`,
+    workspaceId,
+  });
+
+  useEffect(() => {
+    if (!explicitQueryEncounterId) return;
+    if (selectedEncounterId === explicitQueryEncounterId) return;
+    saveSelectedChartEncounterId(workspaceId, explicitQueryEncounterId);
+    selectEncounter(explicitQueryEncounterId);
+  }, [
+    explicitQueryEncounterId,
+    selectEncounter,
+    selectedEncounterId,
     workspaceId,
   ]);
 
@@ -5594,6 +5623,39 @@ function EmptyChartState() {
   );
 }
 
+function ChartDetailLoadingState() {
+  return (
+    <div
+      className="min-h-0 flex-1 overflow-auto px-3 py-5"
+      data-testid="chart-detail-loading-state"
+    >
+      <div className="mx-auto grid w-full max-w-5xl gap-3" aria-hidden="true">
+        <section className="overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)]">
+          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--emr-line-hairline)] px-4 py-3">
+            <div className="h-4 w-32 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+            <div className="h-6 w-20 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </div>
+          <div className="grid gap-3 p-4">
+            <div className="h-4 w-3/5 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+            <div className="h-4 w-4/5 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+            <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </div>
+        </section>
+        <section className="grid gap-3 rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] p-4">
+          <div className="h-4 w-28 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          <div className="h-20 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="h-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+            <div className="h-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+            <div className="h-10 animate-pulse rounded bg-[var(--emr-surface-muted)]" />
+          </div>
+        </section>
+      </div>
+      <span className="sr-only">진료 차트 상세 정보를 불러오는 중입니다</span>
+    </div>
+  );
+}
+
 export function ChartContent({
   onNavigateWorkspaceSurface,
   workspaceId,
@@ -5749,6 +5811,15 @@ export function ChartContent({
     (bundle?.encounter.id === selectedEncounterId
       ? selectedLiveQueueRecord?.queueEntry
       : undefined);
+  const detailLoading =
+    Boolean(activeEncounterId && activeWorkspaceId) &&
+    !allowMockFallback &&
+    (!authHydrated ||
+      persistedSoapState.encounterId !== activeEncounterId ||
+      diagnosisPersistenceState.encounterId !== activeEncounterId ||
+      diagnosisPersistenceState.status === "loading" ||
+      chartCompletionState.encounterId !== activeEncounterId ||
+      chartCompletionState.status === "loading");
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
     const availableHeight = workspace
@@ -6253,6 +6324,7 @@ export function ChartContent({
   }, [isChartResizing]);
 
   if (!bundle || !effectiveBundle) return <EmptyChartState />;
+  if (detailLoading) return <ChartDetailLoadingState />;
 
   const currentBundle = effectiveBundle;
   const consultationCallRooms = getConsultationCallRooms();

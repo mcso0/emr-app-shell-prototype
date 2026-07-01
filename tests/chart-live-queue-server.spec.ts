@@ -188,9 +188,12 @@ test("Cheongdam prepared-empty mode keeps live chart queue records visible", () 
   const moduleSource = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(moduleSource).toContain("const items = useMemo(");
-  expect(moduleSource).toContain("liveMode\n        ? liveItems");
   expect(moduleSource).toContain(
-    "preparedEmptyClinic\n          ? emptyChartQueueItems\n          : mockItems",
+    'const liveMode = liveQueueStatus === "ready" || liveQueueRecords.length > 0;',
+  );
+  expect(moduleSource).toContain("() => (liveMode ? liveItems : mockItems)");
+  expect(moduleSource).toContain(
+    "legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems",
   );
   expect(moduleSource).not.toContain(
     "const items = preparedEmptyClinic ? [] : liveMode ? liveItems : mockItems;",
@@ -212,9 +215,13 @@ test("Cheongdam live chart selection recovers live encounters without legacy fix
   expect(moduleSource).toContain(
     "selectedEncounterId === demoScenarioEncounterId",
   );
-  expect(moduleSource).not.toContain(
-    "selectedEncounterId === explicitQueryEncounterId",
-  );
+  const allowMockFallbackBlocks = [
+    ...moduleSource.matchAll(/const allowMockFallback =[\s\S]*?;/g),
+  ]
+    .map((match) => match[0])
+    .join("\n");
+
+  expect(allowMockFallbackBlocks).not.toContain("explicitQueryEncounterId");
 });
 
 function createFakeChartLiveQueueClient(
