@@ -254,20 +254,32 @@ test("queue panels keep visible queue rows ahead of background loading states", 
   );
 });
 
-test("chart content exposes a selected-detail loading skeleton instead of stale chart content", () => {
+test("chart content keeps the selected shell visible while details hydrate", () => {
   const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 
-  expect(chartModule).toContain("function ChartDetailLoadingState()");
-  expect(chartModule).toContain('data-testid="chart-detail-loading-state"');
   expect(chartModule).toContain("const detailLoading =");
-  expect(chartModule).toContain("const chartDetailSkeletonDelayMs = 200;");
+  expect(chartModule).toContain("const chartDetailPendingDelayMs = 200;");
   expect(chartModule).toContain("function useDelayedBoolean(");
-  expect(chartModule).toContain("const showDetailSkeleton = useDelayedBoolean(");
-  expect(chartModule).toContain("if (showDetailSkeleton) return <ChartDetailLoadingState />;");
+  expect(chartModule).toContain("function ChartDetailPendingIndicator()");
+  expect(chartModule).toContain('data-testid="chart-detail-pending-indicator"');
+  expect(chartModule).toContain("const detailHydrationPending = detailLoading;");
+  expect(chartModule).toContain("const showDetailPendingIndicator = useDelayedBoolean(");
+  expect(chartModule).toContain("writeDisabled={detailHydrationPending}");
+  expect(chartModule).toContain("detailPending={showDetailPendingIndicator}");
+  expect(chartModule).toContain("function SoapPanel({");
+  expect(chartModule).toContain("function AssessmentPanel({");
+  expect(chartModule).toContain("function OrderArea({");
+  expect(chartModule).toContain("writeDisabled: boolean;");
+  expect(chartModule).toContain("disabled={writeDisabled}");
+  expect(chartModule).toContain("confirmDisabled={writeDisabled}");
+  expect(chartModule).toContain("if (detailHydrationPending) return;");
+  expect(chartModule).not.toContain("function ChartDetailLoadingState()");
+  expect(chartModule).not.toContain('data-testid="chart-detail-loading-state"');
+  expect(chartModule).not.toContain("return <ChartDetailLoadingState />");
   expect(chartModule).not.toContain("if (detailLoading) return <ChartDetailLoadingState />;");
 });
 
-test("chart content keeps diagnosis rows scoped while the delayed skeleton grace window is active", () => {
+test("chart content keeps diagnosis rows scoped while the pending grace window is active", () => {
   const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(chartModule).toContain("const rawDiagnosisRows = diagnosisState.rows;");

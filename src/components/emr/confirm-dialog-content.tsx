@@ -19,6 +19,7 @@ type EmrConfirmDialogContentProps = {
   title: ReactNode;
   className?: string;
   closeAriaLabel?: string;
+  confirmDisabled?: boolean;
   confirmButtonVariant?: ComponentProps<typeof Button>["variant"];
   onCancel: () => void;
   onConfirm: () => void;
@@ -28,6 +29,7 @@ export function EmrConfirmDialogContent({
   cancelLabel,
   className,
   closeAriaLabel = "확인 다이얼로그 닫기",
+  confirmDisabled = false,
   confirmButtonVariant,
   confirmLabel,
   description,
@@ -64,7 +66,11 @@ export function EmrConfirmDialogContent({
         <Button variant="outline" onClick={onCancel}>
           {cancelLabel}
         </Button>
-        <Button variant={confirmButtonVariant} onClick={onConfirm}>
+        <Button
+          variant={confirmButtonVariant}
+          disabled={confirmDisabled}
+          onClick={onConfirm}
+        >
           {confirmLabel}
         </Button>
       </DialogFooter>
