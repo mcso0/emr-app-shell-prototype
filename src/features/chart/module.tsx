@@ -384,6 +384,7 @@ const CHART_TOP_MIN_PX = 180;
 const CHART_ORDER_MIN_PX = 170;
 const CHART_RESIZER_HEIGHT_PX = 16;
 const CHART_RESIZER_STEP_PERCENT = 5;
+const chartDetailSkeletonDelayMs = 200;
 const chartSelectedEncounterStoragePrefix =
   "clair-emr:chart-selected-encounter:v1";
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
@@ -5623,6 +5624,20 @@ function EmptyChartState() {
   );
 }
 
+function useDelayedBoolean(value: boolean, delayMs: number) {
+  const [delayedValue, setDelayedValue] = useState(false);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDelayedValue(value);
+    }, value ? delayMs : 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [delayMs, value]);
+
+  return value && delayedValue;
+}
+
 function ChartDetailLoadingState() {
   return (
     <div
@@ -5777,7 +5792,13 @@ export function ChartContent({
     });
   }
 
-  const diagnosisRows = diagnosisState.rows;
+  const rawDiagnosisRows = diagnosisState.rows;
+  const diagnosisRows =
+    diagnosisState.encounterId === activeEncounterId
+      ? rawDiagnosisRows
+      : bundle
+        ? bundle.diagnoses.map(toEditableDiagnosis)
+        : [];
   const setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>> = (
     nextRows,
   ) => {
@@ -5820,6 +5841,10 @@ export function ChartContent({
       diagnosisPersistenceState.status === "loading" ||
       chartCompletionState.encounterId !== activeEncounterId ||
       chartCompletionState.status === "loading");
+  const showDetailSkeleton = useDelayedBoolean(
+    detailLoading,
+    chartDetailSkeletonDelayMs,
+  );
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
     const availableHeight = workspace
@@ -6324,7 +6349,7 @@ export function ChartContent({
   }, [isChartResizing]);
 
   if (!bundle || !effectiveBundle) return <EmptyChartState />;
-  if (detailLoading) return <ChartDetailLoadingState />;
+  if (showDetailSkeleton) return <ChartDetailLoadingState />;
 
   const currentBundle = effectiveBundle;
   const consultationCallRooms = getConsultationCallRooms();

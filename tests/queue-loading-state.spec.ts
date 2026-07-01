@@ -260,7 +260,20 @@ test("chart content exposes a selected-detail loading skeleton instead of stale 
   expect(chartModule).toContain("function ChartDetailLoadingState()");
   expect(chartModule).toContain('data-testid="chart-detail-loading-state"');
   expect(chartModule).toContain("const detailLoading =");
-  expect(chartModule).toContain("<ChartDetailLoadingState />");
+  expect(chartModule).toContain("const chartDetailSkeletonDelayMs = 200;");
+  expect(chartModule).toContain("function useDelayedBoolean(");
+  expect(chartModule).toContain("const showDetailSkeleton = useDelayedBoolean(");
+  expect(chartModule).toContain("if (showDetailSkeleton) return <ChartDetailLoadingState />;");
+  expect(chartModule).not.toContain("if (detailLoading) return <ChartDetailLoadingState />;");
+});
+
+test("chart content keeps diagnosis rows scoped while the delayed skeleton grace window is active", () => {
+  const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+
+  expect(chartModule).toContain("const rawDiagnosisRows = diagnosisState.rows;");
+  expect(chartModule).toContain(
+    "const diagnosisRows =\n    diagnosisState.encounterId === activeEncounterId",
+  );
 });
 
 test("reception live read effect does not restart only because profile rows hydrate", () => {
