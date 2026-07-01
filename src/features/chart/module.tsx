@@ -1033,14 +1033,14 @@ export function ChartSidePanel({
       workspaceId,
     });
 
+    if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
+    selectEncounter(itemId);
+    setSelectedQueueItem("treatment", itemId);
+
     if (onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(href, "treatment");
       return;
     }
-
-    if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
-    selectEncounter(itemId);
-    setSelectedQueueItem("treatment", itemId);
   };
 
   useEffect(() => {
@@ -2183,6 +2183,7 @@ function SoapPanel({
   actorHeaders,
   diagnoses,
   encounterId,
+  loading,
   onPersistedSoapNote,
   soapNote,
   writeDisabled,
@@ -2191,6 +2192,7 @@ function SoapPanel({
   actorHeaders?: Record<string, string>;
   diagnoses: Diagnosis[];
   encounterId: string;
+  loading: boolean;
   onPersistedSoapNote: (soapNote: SoapNote) => void;
   soapNote?: SoapNote;
   writeDisabled: boolean;
@@ -2534,18 +2536,20 @@ function SoapPanel({
     </div>
   );
   const activeStatusText =
-    saveState === "loading"
-      ? "저장 상태 확인 중"
-      : saveState === "saving"
-        ? "자동저장 중"
-        : saveState === "conflict"
-          ? "저장 충돌"
-        : saveState === "error"
-          ? "저장 실패"
-          : getSoapSectionStatusText(
-              activeSection?.status,
-              activeSection?.statusAt,
-            );
+    loading
+      ? "SOAP 정보를 불러오는 중"
+      : saveState === "loading"
+        ? "저장 상태 확인 중"
+        : saveState === "saving"
+          ? "자동저장 중"
+          : saveState === "conflict"
+            ? "저장 충돌"
+            : saveState === "error"
+              ? "저장 실패"
+              : getSoapSectionStatusText(
+                  activeSection?.status,
+                  activeSection?.statusAt,
+                );
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]">
@@ -2621,6 +2625,14 @@ function SoapPanel({
           className="border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-2 text-sm text-[var(--emr-status-warning-text)]"
         >
           다른 탭이나 사용자가 먼저 SOAP를 저장했어. 현재 입력은 유지되며, 최신 내용을 확인한 뒤 다시 저장해.
+        </div>
+      ) : null}
+      {loading ? (
+        <div className="border-b border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-4 py-2">
+          <ChartPanelPendingState
+            title="SOAP 정보를 불러오는 중"
+            description="기록 영역은 유지하면서 최신 SOAP 내용을 확인하고 있습니다."
+          />
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
@@ -2761,6 +2773,7 @@ function SoapPanel({
 
 function AssessmentPanel({
   diagnosisRows,
+  loading,
   onDiagnosisRowsChange,
   saveStatusText,
   setDiagnosisRows,
@@ -2768,6 +2781,7 @@ function AssessmentPanel({
   writeDisabled,
 }: {
   diagnosisRows: EditableDiagnosis[];
+  loading: boolean;
   onDiagnosisRowsChange: (rows: EditableDiagnosis[]) => void;
   saveStatusText: string;
   setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>>;
@@ -3031,6 +3045,14 @@ function AssessmentPanel({
               <span>중점</span>
               <span>수의사</span>
             </div>
+            {loading ? (
+              <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] px-3 py-3">
+                <ChartPanelPendingState
+                  title="진단명 정보를 불러오는 중"
+                  description="진단 목록과 확정 상태를 확인하고 있습니다."
+                />
+              </div>
+            ) : null}
             {diagnosisRows.map((diagnosis) => (
               <div
                 key={diagnosis.id}
@@ -3086,7 +3108,7 @@ function AssessmentPanel({
                 </span>
               </div>
             ))}
-            {!diagnosisRows.length ? (
+            {!loading && !diagnosisRows.length ? (
               <div className="border-t border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] px-3 py-6 text-center emr-text-dense text-muted-foreground">
                 진단 입력 전입니다.
               </div>
@@ -3738,6 +3760,7 @@ function ChartOrderTable({
   density,
   hasCommittedRows,
   invalidOrderIds,
+  loading,
   onAddOrder,
   onDeleteOrder,
   onSort,
@@ -3756,6 +3779,7 @@ function ChartOrderTable({
   density: EmrTableDensity;
   hasCommittedRows: boolean;
   invalidOrderIds: Set<string>;
+  loading: boolean;
   onAddOrder: () => void;
   onDeleteOrder: (orderId: string) => void;
   onSort: (key: ChartOrderSortKey) => void;
@@ -4045,7 +4069,18 @@ function ChartOrderTable({
               </TableRow>
             );
           })}
-          {!rows.length ? (
+          {loading ? (
+            <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
+              <TableCell colSpan={11} className="h-16">
+                <ChartPanelPendingState
+                  title="오더 정보를 불러오는 중"
+                  description="이전 차트 오더와 청구 후보 상태를 확인하고 있습니다."
+                  className="justify-center"
+                />
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {!loading && !rows.length ? (
             <TableRow className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-surface-panel)]">
               <TableCell
                 colSpan={11}
@@ -4069,6 +4104,7 @@ function ChartOrderTable({
                 variant="ghost"
                 size="sm"
                 className="w-fit justify-start"
+                disabled={writeDisabled || loading}
                 onClick={onAddOrder}
               >
                 + Order 추가하기
@@ -4366,11 +4402,13 @@ function ChartOrderCatalogDialog({
 function OrderArea({
   actorHeaders,
   bundle,
+  loading,
   orderGroups,
   writeDisabled,
 }: {
   actorHeaders?: Record<string, string>;
   bundle: ChartBundle;
+  loading: boolean;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
@@ -4414,6 +4452,7 @@ function OrderArea({
     "idle" | "loading" | "saving" | "saved" | "error"
   >("idle");
   const draftTouchedRef = useRef(false);
+  const orderLoading = loading || orderDraftSaveState === "loading";
   const allOrders = useMemo(
     () => draftRows.map(({ order }) => order),
     [draftRows],
@@ -5037,13 +5076,15 @@ function OrderArea({
   const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
   const draftStatusText = hasDraftChanges
     ? ` · 변경 대기 ${changedDraftOrderCount}건${invalidOrderIds.size ? ` · 수량 확인 필요 ${invalidOrderIds.size}건` : ""}`
-    : orderDraftSaveState === "saving"
-      ? " · 저장 중"
-      : orderDraftSaveState === "saved"
-        ? " · 저장됨"
-        : orderDraftSaveState === "error"
-          ? " · 저장 실패"
-          : "";
+    : orderLoading
+      ? " · 오더 정보를 불러오는 중"
+      : orderDraftSaveState === "saving"
+        ? " · 저장 중"
+        : orderDraftSaveState === "saved"
+          ? " · 저장됨"
+          : orderDraftSaveState === "error"
+            ? " · 저장 실패"
+            : "";
   const catalogStatusText =
     catalogSearchStatus === "loading"
       ? "Workspace catalog 후보를 불러오는 중"
@@ -5145,6 +5186,7 @@ function OrderArea({
           density={orderTableDensity}
           hasCommittedRows={committedRowIds.size > 1}
           invalidOrderIds={invalidOrderIds}
+          loading={orderLoading}
           onAddOrder={openCatalogDialog}
           onDeleteOrder={setDeleteOrderId}
           onSort={handleOrderSort}
@@ -5705,6 +5747,38 @@ function ChartDetailPendingIndicator() {
   );
 }
 
+function ChartPanelPendingState({
+  className,
+  description,
+  title,
+}: {
+  className?: string;
+  description?: string;
+  title: string;
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "flex min-w-0 items-center gap-2 emr-text-metadata text-[var(--emr-text-secondary)]",
+        className,
+      )}
+    >
+      <CdsAlertsLoaderIcon
+        className="size-3.5 shrink-0 animate-spin"
+        aria-hidden="true"
+      />
+      <span className="min-w-0">
+        <span className="font-semibold text-foreground">{title}</span>
+        {description ? (
+          <span className="ml-1 text-muted-foreground">{description}</span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 export function ChartContent({
   onNavigateWorkspaceSurface,
   workspaceId,
@@ -5755,7 +5829,8 @@ export function ChartContent({
   const [persistedSoapState, setPersistedSoapState] = useState<{
     encounterId?: string;
     soapNote?: SoapNote | null;
-  }>({});
+    status: "idle" | "loading" | "error";
+  }>({ status: "idle" });
   const [chartCompletionState, setChartCompletionState] = useState<{
     completion?: ChartCompletionSnapshot | null;
     encounterId?: string;
@@ -5866,16 +5941,28 @@ export function ChartContent({
     (bundle?.encounter.id === selectedEncounterId
       ? selectedLiveQueueRecord?.queueEntry
       : undefined);
-  const detailLoading =
+  const soapLoading =
     Boolean(activeEncounterId && activeWorkspaceId) &&
     !allowMockFallback &&
     (!authHydrated ||
       persistedSoapState.encounterId !== activeEncounterId ||
+      persistedSoapState.status === "loading");
+  const diagnosisLoading =
+    Boolean(activeEncounterId && activeWorkspaceId) &&
+    !allowMockFallback &&
+    (!authHydrated ||
       diagnosisPersistenceState.encounterId !== activeEncounterId ||
-      diagnosisPersistenceState.status === "loading" ||
+      diagnosisPersistenceState.status === "loading");
+  const chartCompletionLoading =
+    Boolean(activeEncounterId && activeWorkspaceId) &&
+    !allowMockFallback &&
+    (!authHydrated ||
       chartCompletionState.encounterId !== activeEncounterId ||
       chartCompletionState.status === "loading");
+  const detailLoading =
+    soapLoading || diagnosisLoading || chartCompletionLoading;
   const detailHydrationPending = detailLoading;
+  const orderLoading = detailHydrationPending;
   const showDetailPendingIndicator = useDelayedBoolean(
     detailHydrationPending,
     chartDetailPendingDelayMs,
@@ -6259,6 +6346,13 @@ export function ChartContent({
     let cancelled = false;
 
     async function loadPersistedSoap() {
+      setPersistedSoapState((current) => ({
+        encounterId: activeEncounterId,
+        soapNote:
+          current.encounterId === activeEncounterId ? current.soapNote : null,
+        status: "loading",
+      }));
+
       const result = await loadChartSoapNote({
         actorHeaders,
         encounterId: activeEncounterId!,
@@ -6270,6 +6364,7 @@ export function ChartContent({
       setPersistedSoapState({
         encounterId: activeEncounterId,
         soapNote: result.ok ? result.soapNote : null,
+        status: result.ok ? "idle" : "error",
       });
     }
 
@@ -6425,15 +6520,17 @@ export function ChartContent({
     effectiveQueueEntry?.status === "waiting";
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
   const diagnosisSaveStatusText =
-    diagnosisPersistenceState.encounterId === activeEncounterId
-      ? diagnosisPersistenceState.status === "saving"
-        ? "저장 중"
-        : diagnosisPersistenceState.status === "saved"
-          ? "저장됨"
-          : diagnosisPersistenceState.status === "error"
-            ? "저장 실패"
-            : "저장 대기"
-      : "저장 대기";
+    diagnosisLoading
+      ? "불러오는 중"
+      : diagnosisPersistenceState.encounterId === activeEncounterId
+        ? diagnosisPersistenceState.status === "saving"
+          ? "저장 중"
+          : diagnosisPersistenceState.status === "saved"
+            ? "저장됨"
+            : diagnosisPersistenceState.status === "error"
+              ? "저장 실패"
+              : "저장 대기"
+        : "저장 대기";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
@@ -6954,14 +7051,16 @@ export function ChartContent({
             className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
           >
             <SoapPanel
-              key={`chart-soap-${effectiveLatestSoap?.id ?? selectedEncounterId}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
+              key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
               actorHeaders={actorHeaders}
               diagnoses={diagnosisRows}
               encounterId={bundle.encounter.id}
+              loading={soapLoading}
               onPersistedSoapNote={(soapNote) =>
                 setPersistedSoapState({
                   encounterId: bundle.encounter.id,
                   soapNote,
+                  status: "idle",
                 })
               }
               soapNote={effectiveLatestSoap}
@@ -6971,6 +7070,7 @@ export function ChartContent({
             <AssessmentPanel
               key={`chart-assessment-${bundle.encounter.id}`}
               diagnosisRows={diagnosisRows}
+              loading={diagnosisLoading}
               onDiagnosisRowsChange={handleDiagnosisRowsChange}
               saveStatusText={diagnosisSaveStatusText}
               setDiagnosisRows={setDiagnosisRows}
@@ -7006,6 +7106,7 @@ export function ChartContent({
               key={bundle.encounter.id}
               actorHeaders={actorHeaders}
               bundle={bundle}
+              loading={orderLoading}
               orderGroups={orderGroups}
               writeDisabled={detailHydrationPending}
             />

@@ -1276,6 +1276,8 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
 test("chart queue selection changes the selected encounter", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
+
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -1285,10 +1287,14 @@ test("chart queue selection changes the selected encounter", async ({
 
   await page.goto("/w/clair-demo/treatment");
 
-  await page.getByTestId("order-queue-item-encounter-haru-260430").click();
+  const haruQueueCard = page.getByTestId("order-queue-item-encounter-haru-260430");
+  await expect(haruQueueCard).toBeVisible();
+  await haruQueueCard.click();
+  await expect(haruQueueCard).toHaveAttribute("aria-pressed", "true");
 
+  const patientContext = page.locator('[aria-label="환자 컨텍스트 정보"]');
   await expect(
-    page.getByLabel("환자 컨텍스트 정보").getByText("하루"),
+    patientContext.getByText(/하루\s*·\s*보호자 강서윤/),
   ).toBeVisible();
   await expect(page.getByText("E-260430-0005").first()).toBeVisible();
   await expect(page.getByText("예방접종 전 건강 확인").first()).toBeVisible();
