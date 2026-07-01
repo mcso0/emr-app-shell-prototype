@@ -1033,14 +1033,14 @@ export function ChartSidePanel({
       workspaceId,
     });
 
+    if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
+    selectEncounter(itemId);
+    setSelectedQueueItem("treatment", itemId);
+
     if (onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(href, "treatment");
       return;
     }
-
-    if (liveMode) saveSelectedChartEncounterId(workspaceId, itemId);
-    selectEncounter(itemId);
-    setSelectedQueueItem("treatment", itemId);
   };
 
   useEffect(() => {
@@ -7051,7 +7051,7 @@ export function ChartContent({
             className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 [&>*]:min-w-0"
           >
             <SoapPanel
-              key={`chart-soap-${effectiveLatestSoap?.id ?? selectedEncounterId}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
+              key={`chart-soap-${bundle.encounter.id}-${effectiveLatestSoap?.id ?? "empty"}-${effectiveLatestSoap?.updatedAt ?? "initial"}`}
               actorHeaders={actorHeaders}
               diagnoses={diagnosisRows}
               encounterId={bundle.encounter.id}
