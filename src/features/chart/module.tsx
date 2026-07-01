@@ -62,6 +62,8 @@ import {
 import {
   EmrTableCellText,
   EmrTableHeaderCell,
+  EmrTableSelectionCell,
+  EmrTableSelectionHeaderCell,
 } from "@/components/emr/table-primitives";
 import {
   getTaskQueueEventKindFromStatus,
@@ -3749,10 +3751,8 @@ function ChartOrderTable({
       >
         <TableHeader className="sticky top-0 z-10 bg-[var(--emr-surface-muted)]">
           <TableRow className="border-[var(--emr-line-hairline)] hover:bg-transparent">
-            <EmrTableHeaderCell
+            <EmrTableSelectionHeaderCell
               className={chartOrderTableColumns[0].className}
-              interaction={chartOrderTableColumns[0].interaction}
-              resize={chartOrderTableColumns[0].resize}
             >
               <EmrTableCheckbox
                 aria-label="오더 전체 선택"
@@ -3761,7 +3761,7 @@ function ChartOrderTable({
                 disabled={!rows.length}
                 onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
               />
-            </EmrTableHeaderCell>
+            </EmrTableSelectionHeaderCell>
             <ChartOrderSortableHead
               className={chartOrderTableColumns[1].className}
               columnKey="groupTitle"
@@ -3874,7 +3874,7 @@ function ChartOrderTable({
                 data-state={selected ? "selected" : undefined}
                 className="border-[var(--emr-line-hairline)] bg-[var(--emr-surface-panel)] hover:bg-[var(--emr-state-hover)] data-[dirty=true]:bg-[var(--emr-accent-subtle)]/40 data-[state=selected]:bg-[var(--emr-state-selected)]"
               >
-                <TableCell className="px-3">
+                <EmrTableSelectionCell className="px-3">
                   <EmrTableCheckbox
                     aria-label={`${order.displayName} 선택`}
                     checked={selected}
@@ -3882,7 +3882,7 @@ function ChartOrderTable({
                       onToggleOrder(order.id, Boolean(checked))
                     }
                   />
-                </TableCell>
+                </EmrTableSelectionCell>
                 <TableCell className="overflow-hidden emr-text-metadata font-medium text-muted-foreground">
                   <EmrTableCellText mode="one-line" fullText={groupTitle}>
                     {groupTitle}

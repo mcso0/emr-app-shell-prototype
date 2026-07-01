@@ -8,7 +8,7 @@ import {
   FilterIcon,
   MenuIcon,
 } from "@/components/icons";
-import { TableHead } from "@/components/ui/table";
+import { TableCell, TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type {
   EmrColumnResize,
@@ -45,6 +45,15 @@ type EmrTableCellTextProps = {
   mode?: EmrTableCellTextMode;
   title?: string;
 };
+
+type EmrTableSelectionHeaderCellProps = Omit<
+  React.ComponentProps<typeof EmrTableHeaderCell>,
+  "children" | "interaction" | "resize"
+> & {
+  children: React.ReactNode;
+};
+
+type EmrTableSelectionCellProps = React.ComponentProps<typeof TableCell>;
 
 function getAriaSort(sortDirection: EmrTableHeaderCellProps["sortDirection"]) {
   if (sortDirection === "asc") return "ascending";
@@ -181,6 +190,37 @@ export function EmrTableHeaderCell({
         />
       ) : null}
     </TableHead>
+  );
+}
+
+export function EmrTableSelectionHeaderCell({
+  children,
+  className,
+  ...props
+}: EmrTableSelectionHeaderCellProps) {
+  return (
+    <EmrTableHeaderCell
+      {...props}
+      className={cn("w-10", className)}
+      interaction="static"
+      resize="none"
+    >
+      {children}
+    </EmrTableHeaderCell>
+  );
+}
+
+export function EmrTableSelectionCell({
+  children,
+  className,
+  ...props
+}: EmrTableSelectionCellProps) {
+  return (
+    <TableCell className={cn("w-10", className)} {...props}>
+      <span className="emr-table-cell-content flex min-w-0 items-center gap-1">
+        {children}
+      </span>
+    </TableCell>
   );
 }
 

@@ -280,6 +280,22 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(
     page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }),
   ).not.toBeChecked();
+  const selectAllOrderBox = await page
+    .getByRole("checkbox", { name: "오더 전체 선택" })
+    .boundingBox();
+  const firstOrderCheckboxBox = await page
+    .getByRole("checkbox", { name: "Maropitant 16mg T 선택" })
+    .boundingBox();
+
+  expect(selectAllOrderBox).not.toBeNull();
+  expect(firstOrderCheckboxBox).not.toBeNull();
+  expect(
+    Math.abs(
+      selectAllOrderBox!.x +
+        selectAllOrderBox!.width / 2 -
+        (firstOrderCheckboxBox!.x + firstOrderCheckboxBox!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
   await page.getByRole("menuitem", { name: "첨부" }).click();
   await page.getByRole("button", { name: "기본 SOAP 작업" }).click();
