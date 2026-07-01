@@ -18,7 +18,7 @@ function ProfileLoading() {
       <div className="rounded-[var(--clair-radius-lg)] border border-border bg-card px-6 py-5 text-center shadow-sm">
         <p className="text-[14px] font-semibold">프로필 준비 중</p>
         <p className="mt-1 text-[12px] text-muted-foreground">
-          개인 설정 화면을 불러옵니다.
+          개인 프로필을 불러옵니다.
         </p>
       </div>
     </main>

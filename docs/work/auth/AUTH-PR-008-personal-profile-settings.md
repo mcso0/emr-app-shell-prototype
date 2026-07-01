@@ -24,9 +24,10 @@ Add session-only personal profile settings while keeping user-editable profile d
 
 - Add `/profile` behind the existing auth gate.
 - Add a personal profile settings entry from the auth profile menu.
-- Support editable display name, initials, phone, and notification preference placeholder.
+- Support editable display name and phone in the production profile UI.
+- Derive initials from display name and preserve notification preference internally for the existing profile storage/API contract.
 - Persist editable profile fields to a dedicated session-only personal profile storage contract.
-- Keep role and authorization information read-only in the profile screen.
+- Keep role and authorization information out of editable profile storage; do not expose role management controls in the profile screen.
 - Ensure the personal profile storage contract does not store roles, role labels, or permission fields.
 - Update shell profile display to use saved personal profile data when available.
 - Add Playwright coverage for profile navigation, validation, save behavior, and authorization-source separation.
@@ -77,3 +78,4 @@ Results:
 - This remains session-only. Personal profile data is stored in `clair.personalProfiles.v1`.
 - Authorization still comes from workspace membership and permission policies, not profile storage.
 - Supabase identity profile, email change, password, MFA, and live persistence remain future work.
+- 2026-07-01 production UI pass: the profile screen now shows only personal profile content. `initials` and `notificationOptIn` remain part of the storage/API contract, but are no longer user-facing fields on `/profile`.
