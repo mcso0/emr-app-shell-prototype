@@ -805,58 +805,71 @@ test("role management UI blocks last active hospital admin demotion and deactiva
   await expect(adminRow).toContainText("active");
 });
 
-test("profile menu opens personal profile settings with read-only authorization context", async ({
+test("profile menu opens personal profile settings with personal-only fields", async ({
   page,
 }) => {
-  await page.goto("/login?next=%2Fw%2Fclair-demo%2Freception%3FmodulePanel%3Dopen%26aside%3Dclosed");
+  await page.goto("/login");
+  await page.evaluate((key) => {
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        id: "profile-menu-admin-session",
+        role: "hospital_admin",
+        roleLabel: "병원 관리자",
+        storageMode: "local",
+        issuedAt: "2026-05-17T00:00:00.000Z",
+      })
+    );
+  }, storageKey);
+  await page.goto("/w/clair-demo/reception?modulePanel=open&aside=closed");
 
-  await page.getByRole("button", { name: /병원 관리자/ }).click();
-  await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
-
-  await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
+  await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
   await page.getByTestId("top-menu-mock-user").click();
   await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
 
   await expect(page).toHaveURL(/\/profile/);
-  await expect(page.getByRole("heading", { name: "개인 프로필 설정" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "개인 프로필" })).toBeVisible();
   await expect(page.getByLabel("이름")).toHaveValue("송민재");
-  await expect(page.getByLabel("이니셜")).toHaveValue("MJ");
-  await expect(page.getByText("권한 정보는 워크스페이스 멤버십에서 관리됩니다.")).toBeVisible();
-  await expect(
-    page.getByText("현재 로그인 역할은 병원 관리자이며, 이 화면에서는 역할 변경이나 권한 상승을 할 수 없습니다.")
-  ).toBeVisible();
+  await expect(page.getByLabel("연락처")).toHaveValue("");
+  await expect(page.getByLabel("이니셜")).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "운영 알림 받기" })).toHaveCount(0);
+  await expect(page.getByText("권한 정보는 워크스페이스 멤버십에서 관리됩니다.")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /역할 변경/ })).toHaveCount(0);
 });
 
 test("personal profile settings validate editable fields and save session-only data", async ({
   page,
 }) => {
-  await page.goto("/login?next=%2Fw%2Fclair-demo%2Freception%3FmodulePanel%3Dopen%26aside%3Dclosed");
-
-  await page.getByRole("button", { name: /병원 관리자/ }).click();
-  await page.getByLabel("브라우저에 유지").check();
-  await page.getByRole("button", { name: "로그인" }).click();
+  await page.goto("/login");
+  await page.evaluate((key) => {
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        id: "profile-save-admin-session",
+        role: "hospital_admin",
+        roleLabel: "병원 관리자",
+        storageMode: "local",
+        issuedAt: "2026-05-17T00:00:00.000Z",
+      })
+    );
+  }, storageKey);
+  await page.goto("/w/clair-demo/reception?modulePanel=open&aside=closed");
   await page.getByTestId("top-menu-mock-user").click();
   await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
 
   await page.getByLabel("이름").fill("");
-  await page.getByLabel("이니셜").fill("ADMIN");
-  await page.getByRole("button", { name: "저장" }).click();
+  await page.getByRole("button", { name: "저장하기" }).click();
 
   await expect(page.getByText("이름을 입력하세요.")).toBeVisible();
-  await expect(page.getByText("이니셜은 1~3자로 입력하세요.")).toBeVisible();
 
   await page.getByLabel("이름").fill("김승욱");
-  await page.getByLabel("이니셜").fill("SW");
   await page.getByLabel("연락처").fill("010-1111-2222");
-  await page.getByRole("checkbox", { name: "운영 알림 받기" }).check();
   const profileSaveResponse = page.waitForResponse(
     (response) =>
       response.url().includes("/api/users/me/profile") &&
       response.request().method() === "PATCH"
   );
-  await page.getByRole("button", { name: "저장" }).click();
+  await page.getByRole("button", { name: "저장하기" }).click();
   await expect((await profileSaveResponse).status()).toBe(200);
 
   await expect(page.getByText("프로필이 저장되었습니다.")).toBeVisible();
@@ -868,14 +881,14 @@ test("personal profile settings validate editable fields and save session-only d
 
   expect(stored.profiles[0]).toMatchObject({
     displayName: "김승욱",
-    initials: "SW",
+    initials: "김승",
     phone: "010-1111-2222",
-    notificationOptIn: true,
+    notificationOptIn: false,
   });
   expect(stored.profiles[0]).not.toHaveProperty("roles");
   expect(stored.profiles[0]).not.toHaveProperty("roleLabel");
 
-  await page.getByRole("link", { name: "워크스페이스로 돌아가기" }).click();
+  await page.getByRole("link", { name: /VIP 동물의료센터 청담점/ }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await page.getByTestId("top-menu-mock-user").click();
   await expect(page.getByRole("menu")).toContainText("김승욱");
