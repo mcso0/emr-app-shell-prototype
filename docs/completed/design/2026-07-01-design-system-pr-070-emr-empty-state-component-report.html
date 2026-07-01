@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DESIGN-SYSTEM-PR-070 EmrEmptyState Component Report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f8;
+        --paper: #ffffff;
+        --ink: #111827;
+        --muted: #5f6b7a;
+        --line: #dce3ea;
+        --blue: #1f5fbf;
+        --blue-soft: #eef5ff;
+        --green: #0f766e;
+        --green-soft: #ecfdf5;
+        --amber: #a15c07;
+        --amber-soft: #fff8e7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI",
+          sans-serif;
+        line-height: 1.62;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 44px 24px 72px;
+      }
+
+      header,
+      section {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--paper);
+      }
+
+      header {
+        padding: 30px;
+      }
+
+      section {
+        margin-top: 18px;
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 20px;
+      }
+
+      p,
+      li,
+      td,
+      th {
+        font-size: 14px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 4px 0;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f7f9fc;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 6px;
+        background: #eef1f5;
+        font-size: 12px;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        margin-bottom: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .summary {
+        max-width: 760px;
+        margin-top: 12px;
+        color: var(--muted);
+      }
+
+      .callout {
+        margin-top: 14px;
+        padding: 14px 16px;
+        border: 1px solid #9ee6d2;
+        border-radius: 12px;
+        background: var(--green-soft);
+        color: #064e3b;
+      }
+
+      .warning {
+        border-color: #f2d38b;
+        background: var(--amber-soft);
+        color: #6b3d00;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">DESIGN-SYSTEM-PR-070</div>
+        <h1>EmrEmptyState 컴포넌트 계약과 Storybook 시안화</h1>
+        <p class="summary">
+          Empty state를 화면마다 다르게 해석하지 않도록, 공통 컴포넌트의 상태 이유, 배치 surface,
+          CTA 소유권을 코드와 Storybook에서 먼저 고정했다.
+        </p>
+        <div class="callout">
+          이번 작업은 실제 업무 화면을 일괄 교체하지 않는다. 새 컴포넌트와 Storybook 시안으로 기준을 먼저 고정하고,
+          화면 적용은 chart queue + content 동시 empty 파일럿으로 분리한다.
+        </div>
+      </header>
+
+      <section>
+        <h2>무엇이 바뀌었나</h2>
+        <ul>
+          <li><code>EmrEmptyState</code> 런타임 컴포넌트를 추가했다.</li>
+          <li><code>kind</code>, <code>surface</code>, <code>priority</code>, <code>density</code>, <code>align</code> prop으로 계약을 나눴다.</li>
+          <li>Iconly Motion JSON은 기존 로컬 motion icon 자산과 <code>EmrMotionIcon</code>을 통해 사용한다.</li>
+          <li>Storybook에 queue, content, drawer, table, widget, permission-info, two-action, 6-kind 검토 시안을 추가했다.</li>
+          <li>디자인 시스템 문서와 work item에 새 컴포넌트 기준을 연결했다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>왜 중요한가</h2>
+        <p>
+          기존 보고서에서 정한 핵심은 단순히 empty state 종류가 아니라 “어느 surface가 primary action을 소유하는가”였다.
+          이번 컴포넌트는 그 결정을 props로 드러내서, queue와 content가 동시에 비는 화면에서도 CTA가 중복 primary로 보이지 않게 한다.
+        </p>
+      </section>
+
+      <section>
+        <h2>변경 파일</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>파일</th>
+              <th>내용</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>src/components/emr/empty-state.tsx</code></td>
+              <td>공통 empty state 컴포넌트와 타입 계약 추가</td>
+            </tr>
+            <tr>
+              <td><code>src/components/emr/empty-state.stories.tsx</code></td>
+              <td>surface/action/state별 Storybook 시안 추가</td>
+            </tr>
+            <tr>
+              <td><code>docs/design/system/empty-info-state-contract.md</code></td>
+              <td>새 shared component 계약 반영</td>
+            </tr>
+            <tr>
+              <td><code>docs/design/system/README.md</code></td>
+              <td>Storybook catalog entry 추가</td>
+            </tr>
+            <tr>
+              <td><code>docs/work/design-system/DESIGN-SYSTEM-PR-070-emr-empty-state-component-storybook.md</code></td>
+              <td>작업 범위와 검증 기준 기록</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>검증 상태</h2>
+        <ul>
+          <li><code>npx tsc --noEmit</code> 통과</li>
+          <li><code>npm run lint</code> 통과. 기존 경고 10건은 남아 있음</li>
+          <li><code>npm run docs:check</code> 통과</li>
+          <li><code>npm run build-storybook</code> 통과. 기존 Storybook 빌드 경고는 남아 있음</li>
+          <li><code>npm run storybook -- --ci --smoke-test</code> 통과</li>
+          <li>정적 Storybook iframe에서 6개 <code>data-kind</code> 상태와 주요 action label 렌더 확인</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>다음 단계</h2>
+        <p>
+          다음 작업은 진료/차트 화면을 파일럿으로 삼아 queue와 content가 동시에 비는 상태에
+          <code>EmrEmptyState</code>를 적용하는 것이다.
+        </p>
+        <div class="callout warning">
+          권한 차단, API 실패, degraded read/write는 empty state가 아니라 <code>EmrInlineAlert</code> 경계로 유지해야 한다.
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
