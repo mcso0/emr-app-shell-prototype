@@ -27,6 +27,8 @@ export type WorkspaceInvitationRouteInput = {
   roles: string[];
   permissionRoleId?: string | null;
   jobPositionId?: string | null;
+  permissionRoleKey?: string | null;
+  jobPositionKey?: string | null;
   title: string;
   department: string;
   expiresAt?: string | null;
@@ -38,6 +40,8 @@ export type WorkspaceInvitationWrite = {
   roles: SessionWorkspaceRole[];
   permissionRoleId: string | null;
   jobPositionId: string | null;
+  permissionRoleKey: string | null;
+  jobPositionKey: string | null;
   title: string | null;
   department: string | null;
   invitedByUserId: string;
@@ -166,6 +170,8 @@ export async function createWorkspaceInvitation({
     roles: invitation.invitedRoles,
     permissionRoleId: input.permissionRoleId ?? null,
     jobPositionId: input.jobPositionId ?? null,
+    permissionRoleKey: input.permissionRoleKey ?? invitation.permissionRoleKey ?? null,
+    jobPositionKey: input.jobPositionKey ?? invitation.jobPositionKey ?? null,
     title: invitation.title,
     department: invitation.department,
     invitedByUserId: actorUserId,
@@ -229,6 +235,8 @@ export function createSupabaseWorkspaceInvitationGateway(
         p_invited_roles: write.roles,
         p_permission_role_id: write.permissionRoleId,
         p_job_position_id: write.jobPositionId,
+        p_permission_role_key: write.permissionRoleKey,
+        p_job_position_key: write.jobPositionKey,
         p_title: write.title,
         p_department: write.department,
         p_expires_at: write.expiresAt,
@@ -266,6 +274,8 @@ function normalizeInvitationInput(input: WorkspaceInvitationRouteInput): Workspa
   return {
     email: normalizeWorkspaceInviteEmail(input.email),
     roles: Array.from(new Set(input.roles)).filter(isSessionWorkspaceRole),
+    permissionRoleKey: input.permissionRoleKey ?? null,
+    jobPositionKey: input.jobPositionKey ?? null,
     title: input.title,
     department: input.department,
   };
@@ -319,6 +329,8 @@ function createDemoWorkspaceInvitationGateway(): WorkspaceInvitationGateway {
           {
             email: write.email,
             roles: write.roles,
+            permissionRoleKey: write.permissionRoleKey,
+            jobPositionKey: write.jobPositionKey,
             title: write.title ?? "",
             department: write.department ?? "",
           },
@@ -390,6 +402,14 @@ function mapInvitationRpcData(
     invitedRoles: Array.isArray(value.invitedRoles)
       ? value.invitedRoles.filter(isSessionWorkspaceRole)
       : fallback.roles,
+    permissionRoleKey:
+      typeof value.permissionRoleKey === "string"
+        ? value.permissionRoleKey
+        : fallback.permissionRoleKey,
+    jobPositionKey:
+      typeof value.jobPositionKey === "string"
+        ? value.jobPositionKey
+        : fallback.jobPositionKey,
     title: value.title ?? fallback.title,
     department: value.department ?? fallback.department,
     status: value.status ?? "pending",

@@ -73,6 +73,8 @@ export async function POST(request: Request, { params }: WorkspaceInvitationRout
       roles: Array.isArray(body.roles) ? body.roles.filter(isString) : [],
       permissionRoleId: getOptionalBodyString(body.permissionRoleId),
       jobPositionId: getOptionalBodyString(body.jobPositionId),
+      permissionRoleKey: getOptionalBodyString(body.permissionRoleKey),
+      jobPositionKey: getOptionalBodyString(body.jobPositionKey),
       title: getBodyString(body.title),
       department: getBodyString(body.department),
       expiresAt: typeof body.expiresAt === "string" ? body.expiresAt : null,

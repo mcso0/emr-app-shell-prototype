@@ -7,8 +7,9 @@ test("role management handoff regression matrix covers UI, server, and DB guards
   const writeSpec = readFileSync("tests/workspace-role-status-write-server.spec.ts", "utf8");
   const permissionSpec = readFileSync("tests/permission-resolver.spec.ts", "utf8");
 
-  expect(authSpec).toContain("hospital admin can edit active member roles");
-  expect(authSpec).toContain("role management UI blocks last active hospital admin");
+  expect(authSpec).toContain("hospital admin can edit active member permission role");
+  expect(authSpec).toContain("role management UI blocks last active workspace owner");
+  expect(authSpec).toContain("hospital admin can add safe custom permission roles");
   expect(authSpec).toContain("non-admin roles cannot manage workspace invitations");
   expect(serverSpec).toContain("role update server boundary denies missing, inactive, and unauthorized actors");
   expect(serverSpec).toContain("role update server boundary denies cross-workspace admin access");
@@ -19,6 +20,10 @@ test("role management handoff regression matrix covers UI, server, and DB guards
 test("role management live handoff keeps route and DB boundaries discoverable", () => {
   const roleRoute = readFileSync(
     "src/app/api/workspaces/[workspaceId]/memberships/[membershipId]/roles/route.ts",
+    "utf8"
+  );
+  const membershipManagement = readFileSync(
+    "src/features/auth/workspace-membership-management.tsx",
     "utf8"
   );
   const statusRoute = readFileSync(
@@ -32,6 +37,10 @@ test("role management live handoff keeps route and DB boundaries discoverable", 
 
   expect(roleRoute).toContain("readServerSession");
   expect(roleRoute).toContain("clair_update_workspace_membership_roles");
+  expect(roleRoute).toContain("p_permission_role_key");
+  expect(roleRoute).toContain("p_job_position_key");
+  expect(membershipManagement).toContain("permissionRoleKey: editingPermissionRoleKey");
+  expect(membershipManagement).toContain("jobPositionKey: editingMembership.jobPositionKey");
   expect(statusRoute).toContain("clair_update_workspace_membership_status");
   expect(dbWriteMigration).toContain("protect_last_active_hospital_admin");
   expect(dbWriteMigration).toContain("audit hook");
