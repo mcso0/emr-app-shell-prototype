@@ -198,6 +198,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | AUTH-PR-037                 | human_review | auth                 | P0       | PR 37                | `docs/work/auth/AUTH-PR-037-api-error-telemetry-contract.md`                                           |
 | AUTH-PR-038                 | human_review | auth                 | P0       | PR 38                | `docs/work/auth/AUTH-PR-038-workspace-live-api-rate-limiting.md`                                       |
 | AUTH-PR-039                 | human_review | auth                 | P0       | PR 39                | `docs/work/auth/AUTH-PR-039-workspace-persistence-security-review.md`                                  |
+| AUTH-PR-044                 | in_progress  | auth                 | P0       | PR 44                | `docs/work/auth/AUTH-PR-044-workspace-permission-role-model-mvp.md`                                    |
 | AUTH-PR-040                 | human_review | auth                 | P0       | PR 40                | `docs/work/auth/AUTH-PR-040-project-02-workspace-persistence-closeout.md`                              |
 | AUTH-PR-041                 | done         | auth                 | P0       | Project 03 / DEN-268 | `docs/work/auth/AUTH-PR-041-invite-password-setup-returning-login.md`                                  |
 | AUTH-PR-042                 | human_review | auth                 | P1       | Project 14 / DEN-277 | `docs/work/auth/AUTH-PR-042-login-production-entry-polish.md`                                          |
